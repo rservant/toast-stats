@@ -140,7 +140,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <section className="bg-white rounded-lg shadow-md p-6" aria-busy="true" aria-label="Loading club performance data">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
@@ -149,12 +149,12 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
             ))}
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <section className="bg-white rounded-lg shadow-md p-6" aria-label="Club performance table">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
         <h2 className="text-xl font-bold text-gray-900">Club Performance</h2>
         
@@ -192,13 +192,18 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" aria-label="Club performance data">
           <thead className="bg-gray-50">
             <tr>
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
+                aria-sort={sortField === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleSort('name')}
+                role="button"
+                aria-label={`Sort by club name, currently ${sortField === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'not sorted'}`}
               >
                 <div className="flex items-center gap-1">
                   Club Name
@@ -209,6 +214,11 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('memberCount')}
+                aria-sort={sortField === 'memberCount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleSort('memberCount')}
+                role="button"
+                aria-label={`Sort by member count, currently ${sortField === 'memberCount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'not sorted'}`}
               >
                 <div className="flex items-center gap-1">
                   Members
@@ -219,6 +229,11 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('awards')}
+                aria-sort={sortField === 'awards' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleSort('awards')}
+                role="button"
+                aria-label={`Sort by awards, currently ${sortField === 'awards' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'not sorted'}`}
               >
                 <div className="flex items-center gap-1">
                   Awards
@@ -229,6 +244,11 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('status')}
+                aria-sort={sortField === 'status' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleSort('status')}
+                role="button"
+                aria-label={`Sort by status, currently ${sortField === 'status' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'not sorted'}`}
               >
                 <div className="flex items-center gap-1">
                   Status
@@ -355,7 +375,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

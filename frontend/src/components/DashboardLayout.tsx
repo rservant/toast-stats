@@ -15,14 +15,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-8">
         {header && (
-          <div className="mb-8">
+          <header className="mb-8" role="banner">
             {header}
-          </div>
+          </header>
         )}
         
-        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 ${className}`}>
+        <main 
+          id="main-content" 
+          className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 ${className}`}
+          role="main"
+          aria-label="District statistics dashboard"
+        >
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

@@ -11,6 +11,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route

@@ -39,7 +39,7 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <section className="bg-white rounded-lg shadow-md p-6" aria-busy="true" aria-label="Loading membership trends">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Membership Trends
         </h2>
@@ -49,13 +49,13 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
             <div className="h-4 w-24 bg-gray-300 rounded"></div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   if (isError) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <section className="bg-white rounded-lg shadow-md p-6" role="alert" aria-label="Membership trends error">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Membership Trends
         </h2>
@@ -69,20 +69,20 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
             </p>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <section className="bg-white rounded-lg shadow-md p-6" role="status" aria-label="Membership trends">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Membership Trends
         </h2>
         <div className="flex items-center justify-center h-80">
           <p className="text-gray-600">No membership data available</p>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -150,8 +150,18 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
     return null;
   };
 
+  // Generate text description for screen readers
+  const chartDescription = `Line chart showing membership trends over ${months} months. ${
+    data.length > 0
+      ? `Starting with ${data[0].count} members and ending with ${data[data.length - 1].count} members.`
+      : ''
+  }`;
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <section 
+      className="bg-white rounded-lg shadow-md p-6"
+      aria-label="Membership trends chart"
+    >
       <div className="flex justify-between items-start mb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">
@@ -168,49 +178,59 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
           className="text-sm px-3 py-1.5"
         />
       </div>
-      <ResponsiveContainer width="100%" height={320}>
-        <ComposedChart
-          data={chartData}
-          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis
-            dataKey="date"
-            stroke="#6b7280"
-            style={{ fontSize: '12px' }}
-            angle={-45}
-            textAnchor="end"
-            height={80}
-          />
-          <YAxis
-            stroke="#6b7280"
-            style={{ fontSize: '12px' }}
-            tickFormatter={(value) => value.toLocaleString()}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            wrapperStyle={{ fontSize: '14px' }}
-            verticalAlign="top"
-            height={36}
-          />
-          <Line
-            type="monotone"
-            dataKey="members"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            dot={{ fill: '#3b82f6', r: 4 }}
-            activeDot={{ r: 6 }}
-            name="Total Members"
-          />
-          <Scatter
-            dataKey="significantValue"
-            fill="#9333ea"
-            shape="star"
-            name="Significant Events"
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
+      <div 
+        role="img" 
+        aria-label={chartDescription}
+        aria-describedby="membership-chart-desc"
+      >
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            aria-hidden="true"
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey="date"
+              stroke="#6b7280"
+              style={{ fontSize: '12px' }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis
+              stroke="#6b7280"
+              style={{ fontSize: '12px' }}
+              tickFormatter={(value) => value.toLocaleString()}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ fontSize: '14px' }}
+              verticalAlign="top"
+              height={36}
+            />
+            <Line
+              type="monotone"
+              dataKey="members"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              dot={{ fill: '#3b82f6', r: 4 }}
+              activeDot={{ r: 6 }}
+              name="Total Members"
+            />
+            <Scatter
+              dataKey="significantValue"
+              fill="#9333ea"
+              shape="star"
+              name="Significant Events"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <p id="membership-chart-desc" className="sr-only">
+        {chartDescription}
+      </p>
+    </section>
   );
 };
 

@@ -64,7 +64,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+      <main className="bg-white p-8 rounded-lg shadow-md w-full max-w-md" id="main-content">
         <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">
           Toastmasters District Visualizer
         </h1>
@@ -72,7 +72,7 @@ const LoginPage: React.FC = () => {
           Login
         </h2>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit} noValidate aria-label="Login form">
           {/* General error message */}
           {error && (
             <div
@@ -193,7 +193,7 @@ const LoginPage: React.FC = () => {
             )}
           </button>
         </form>
-      </div>
+      </main>
     </div>
   );
 };

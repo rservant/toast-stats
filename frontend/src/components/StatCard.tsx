@@ -40,21 +40,40 @@ const StatCard: React.FC<StatCardProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+      <article 
+        className="bg-white rounded-lg shadow-md p-6 animate-pulse"
+        aria-busy="true"
+        aria-label="Loading statistics"
+      >
         <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
         <div className="h-8 bg-gray-200 rounded w-3/4 mb-3"></div>
         <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-      </div>
+      </article>
     );
   }
 
+  const trendDescription = trend === 'positive' 
+    ? 'increasing' 
+    : trend === 'negative' 
+    ? 'decreasing' 
+    : 'stable';
+
+  const nameText = typeof name === 'string' ? name : 'Statistic';
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
-      <h3 className="text-sm font-medium text-gray-600 mb-2">{name}</h3>
-      <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
+    <article 
+      className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200"
+      aria-label={`${nameText}: ${value}${changePercent !== undefined ? `, ${trendDescription} by ${Math.abs(changePercent).toFixed(1)}%` : ''}`}
+    >
+      <h3 className="text-sm font-medium text-gray-700 mb-2">{name}</h3>
+      <p className="text-3xl font-bold text-gray-900 mb-2" aria-live="polite">{value}</p>
       
       {(change !== undefined || changePercent !== undefined) && (
-        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTrendBgColor()} ${getTrendColor()}`}>
+        <div 
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTrendBgColor()} ${getTrendColor()}`}
+          role="status"
+          aria-label={`Trend: ${trendDescription}${change !== undefined ? ` by ${Math.abs(change)} units` : ''}${changePercent !== undefined ? ` (${Math.abs(changePercent).toFixed(1)}%)` : ''}`}
+        >
           <span className="mr-1" aria-hidden="true">{getTrendIcon()}</span>
           <span>
             {change !== undefined && (
@@ -72,7 +91,7 @@ const StatCard: React.FC<StatCardProps> = ({
       )}
       
       {footer && <div className="mt-3">{footer}</div>}
-    </div>
+    </article>
   );
 };
 

@@ -65,7 +65,8 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         ${className}
       `}
-      aria-label={label}
+      aria-label={isExporting ? 'Exporting data to CSV file' : `${label} - Download data as CSV file`}
+      aria-busy={isExporting}
     >
       {isExporting ? (
         <>
