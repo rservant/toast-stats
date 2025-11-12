@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
+import districtRoutes from './routes/districts.js'
 import { authenticateToken } from './middleware/auth.js'
 
 dotenv.config()
@@ -25,6 +26,9 @@ app.get('/api', (_req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes)
+
+// District routes
+app.use('/api/districts', districtRoutes)
 
 // Protected test endpoint
 app.get('/api/protected', authenticateToken, (req, res) => {
