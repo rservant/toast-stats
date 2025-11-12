@@ -8,12 +8,15 @@ import MembershipChart from '../components/MembershipChart';
 import ClubPerformanceTable from '../components/ClubPerformanceTable';
 import ClubStatusChart from '../components/ClubStatusChart';
 import EducationalAwardsChart from '../components/EducationalAwardsChart';
+import { DailyReportCalendar } from '../components/DailyReportCalendar';
+import { DailyReportDetail } from '../components/DailyReportDetail';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
 import { useClubs } from '../hooks/useClubs';
 
 const DashboardPage: React.FC = () => {
   const { logout } = useAuth();
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
   // Fetch district statistics and clubs data
   const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
@@ -21,6 +24,14 @@ const DashboardPage: React.FC = () => {
 
   const handleDistrictSelect = (districtId: string) => {
     setSelectedDistrictId(districtId);
+  };
+
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedDate(null);
   };
 
   const header = (
@@ -177,6 +188,25 @@ const DashboardPage: React.FC = () => {
               isLoading={isLoadingClubs}
             />
           </div>
+
+          {/* Daily Report Calendar - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <DailyReportCalendar
+              districtId={selectedDistrictId}
+              onDateSelect={handleDateSelect}
+            />
+          </div>
+
+          {/* Daily Report Detail - Full width (conditionally rendered) */}
+          {selectedDate && (
+            <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+              <DailyReportDetail
+                districtId={selectedDistrictId}
+                selectedDate={selectedDate}
+                onClose={handleCloseDetail}
+              />
+            </div>
+          )}
         </DashboardLayout>
       ) : (
         <div className="min-h-screen bg-gray-100">

@@ -129,7 +129,7 @@
   - Add toggle to switch between different chart views
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 14. Implement daily report calendar and detail views
+- [x] 14. Implement daily report calendar and detail views
   - Create DailyReportCalendar component with month view
   - Implement React Query hook to fetch daily reports for selected month
   - Color-code calendar days based on activity level
