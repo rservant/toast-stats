@@ -5,14 +5,18 @@ import DashboardLayout from '../components/DashboardLayout';
 import StatCard from '../components/StatCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import MembershipChart from '../components/MembershipChart';
+import ClubPerformanceTable from '../components/ClubPerformanceTable';
+import ClubStatusChart from '../components/ClubStatusChart';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
+import { useClubs } from '../hooks/useClubs';
 
 const DashboardPage: React.FC = () => {
   const { logout } = useAuth();
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   
-  // Fetch district statistics
+  // Fetch district statistics and clubs data
   const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
+  const { data: clubsData, isLoading: isLoadingClubs } = useClubs(selectedDistrictId);
 
   const handleDistrictSelect = (districtId: string) => {
     setSelectedDistrictId(districtId);
@@ -104,13 +108,18 @@ const DashboardPage: React.FC = () => {
               />
               <StatCard
                 name="Distinguished Clubs"
-                value={statistics.clubs.distinguished.toString()}
+                value={`${statistics.clubs.distinguished} / ${statistics.clubs.total}`}
                 changePercent={
                   statistics.clubs.total > 0
                     ? (statistics.clubs.distinguished / statistics.clubs.total) * 100
                     : 0
                 }
-                trend="neutral"
+                trend={
+                  statistics.clubs.total > 0 &&
+                  statistics.clubs.distinguished / statistics.clubs.total >= 0.5
+                    ? 'positive'
+                    : 'neutral'
+                }
               />
             </>
           ) : (
@@ -145,6 +154,22 @@ const DashboardPage: React.FC = () => {
           {/* Membership Chart - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
             <MembershipChart districtId={selectedDistrictId} months={12} />
+          </div>
+
+          {/* Club Status Chart - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <ClubStatusChart
+              clubs={clubsData?.clubs || []}
+              isLoading={isLoadingClubs}
+            />
+          </div>
+
+          {/* Club Performance Table - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <ClubPerformanceTable
+              clubs={clubsData?.clubs || []}
+              isLoading={isLoadingClubs}
+            />
           </div>
         </DashboardLayout>
       ) : (

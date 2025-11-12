@@ -44,3 +44,17 @@ export interface DistrictStatistics {
   clubs: ClubStats;
   education: EducationStats;
 }
+
+export interface Club {
+  id: string;
+  name: string;
+  status: 'active' | 'suspended' | 'ineligible';
+  memberCount: number;
+  distinguished: boolean;
+  distinguishedLevel?: 'select' | 'distinguished' | 'president';
+  awards: number;
+}
+
+export interface ClubsResponse {
+  clubs: Club[];
+}

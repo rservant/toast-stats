@@ -1,0 +1,300 @@
+import React, { useState, useMemo } from 'react';
+import type { Club } from '../types/districts';
+
+export interface ClubPerformanceTableProps {
+  clubs: Club[];
+  isLoading?: boolean;
+}
+
+type SortField = 'name' | 'memberCount' | 'awards' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
+  clubs,
+  isLoading = false,
+}) => {
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Filter clubs by status
+  const filteredClubs = useMemo(() => {
+    if (statusFilter === 'all') return clubs;
+    return clubs.filter((club) => club.status === statusFilter);
+  }, [clubs, statusFilter]);
+
+  // Sort clubs
+  const sortedClubs = useMemo(() => {
+    const sorted = [...filteredClubs].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'memberCount':
+          aValue = a.memberCount;
+          bValue = b.memberCount;
+          break;
+        case 'awards':
+          aValue = a.awards;
+          bValue = b.awards;
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [filteredClubs, sortField, sortDirection]);
+
+  // Paginate clubs
+  const totalPages = Math.ceil(sortedClubs.length / itemsPerPage);
+  const paginatedClubs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedClubs.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedClubs, currentPage]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return '↕';
+    return sortDirection === 'asc' ? '↑' : '↓';
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'suspended':
+        return 'bg-red-100 text-red-800';
+      case 'ineligible':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getDistinguishedBadge = (club: Club) => {
+    if (!club.distinguished) return null;
+
+    const levelColors = {
+      select: 'bg-yellow-100 text-yellow-800',
+      distinguished: 'bg-blue-100 text-blue-800',
+      president: 'bg-purple-100 text-purple-800',
+    };
+
+    const levelText = {
+      select: 'Select Distinguished',
+      distinguished: 'Distinguished',
+      president: "President's Distinguished",
+    };
+
+    const color = club.distinguishedLevel
+      ? levelColors[club.distinguishedLevel]
+      : 'bg-blue-100 text-blue-800';
+    const text = club.distinguishedLevel
+      ? levelText[club.distinguishedLevel]
+      : 'Distinguished';
+
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${color}`}
+      >
+        ★ {text}
+      </span>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
+        <h2 className="text-xl font-bold text-gray-900">Club Performance</h2>
+        
+        {/* Status Filter */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
+            Filter by Status:
+          </label>
+          <select
+            id="status-filter"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Clubs</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="ineligible">Ineligible</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('name')}
+              >
+                <div className="flex items-center gap-1">
+                  Club Name
+                  <span aria-hidden="true">{getSortIcon('name')}</span>
+                </div>
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('memberCount')}
+              >
+                <div className="flex items-center gap-1">
+                  Members
+                  <span aria-hidden="true">{getSortIcon('memberCount')}</span>
+                </div>
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('awards')}
+              >
+                <div className="flex items-center gap-1">
+                  Awards
+                  <span aria-hidden="true">{getSortIcon('awards')}</span>
+                </div>
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center gap-1">
+                  Status
+                  <span aria-hidden="true">{getSortIcon('status')}</span>
+                </div>
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Recognition
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {paginatedClubs.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  No clubs found
+                </td>
+              </tr>
+            ) : (
+              paginatedClubs.map((club) => (
+                <tr
+                  key={club.id}
+                  className={`hover:bg-gray-50 ${club.distinguished ? 'bg-blue-50' : ''}`}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {club.name}
+                    </div>
+                    <div className="text-sm text-gray-500">ID: {club.id}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{club.memberCount}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{club.awards}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(club.status)}`}
+                    >
+                      {club.status.charAt(0).toUpperCase() + club.status.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getDistinguishedBadge(club)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-700">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+            {Math.min(currentPage * itemsPerPage, sortedClubs.length)} of{' '}
+            {sortedClubs.length} clubs
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Previous page"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1 text-sm text-gray-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Next page"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ClubPerformanceTable;

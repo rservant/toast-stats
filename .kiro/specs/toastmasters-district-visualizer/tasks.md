@@ -107,7 +107,7 @@
   - Add loading and error states
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 12. Implement club performance table and visualizations
+- [x] 12. Implement club performance table and visualizations
   - Create ClubPerformanceTable component with sortable columns
   - Implement React Query hook to fetch clubs data
   - Add sorting functionality for each column (name, members, awards, status)
