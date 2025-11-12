@@ -1,0 +1,108 @@
+# Toastmasters District Statistics Visualizer
+
+A web application for visualizing Toastmasters district statistics with an intuitive interface for viewing and analyzing district-level performance data.
+
+## Project Structure
+
+This is a monorepo containing:
+
+- `frontend/` - React + TypeScript + Vite application
+- `backend/` - Node.js + Express + TypeScript API server
+
+## Prerequisites
+
+- Node.js 18+ and npm
+
+## Getting Started
+
+### Installation
+
+Install dependencies for both frontend and backend:
+
+```bash
+npm install
+```
+
+### Configuration
+
+1. Copy the example environment files:
+
+```bash
+cp frontend/.env.example frontend/.env
+cp backend/.env.example backend/.env
+```
+
+2. Update the environment variables in the `.env` files as needed.
+
+### Development
+
+Run both frontend and backend in development mode:
+
+```bash
+# Run frontend (in one terminal)
+npm run dev:frontend
+
+# Run backend (in another terminal)
+npm run dev:backend
+```
+
+The frontend will be available at `http://localhost:3000` and the backend at `http://localhost:5000`.
+
+### Building for Production
+
+Build both projects:
+
+```bash
+npm run build:frontend
+npm run build:backend
+```
+
+### Code Quality
+
+Format code with Prettier:
+
+```bash
+npm run format
+```
+
+Lint code:
+
+```bash
+npm run lint
+```
+
+## Technology Stack
+
+### Frontend
+- React 18
+- TypeScript
+- Vite
+- TailwindCSS
+- React Router
+- TanStack Query (React Query)
+- Recharts
+- Axios
+
+### Backend
+- Node.js
+- Express
+- TypeScript
+- JWT for authentication
+- Node-cache for caching
+- Axios for external API calls
+
+## Features
+
+- User authentication with Toastmasters credentials
+- District selection and statistics viewing
+- Membership statistics visualization
+- Club performance metrics
+- Educational achievement tracking
+- Daily report viewing and analysis
+- Data export functionality
+- Responsive design for all devices
+- Accessibility compliant
+
+## License
+
+Private
