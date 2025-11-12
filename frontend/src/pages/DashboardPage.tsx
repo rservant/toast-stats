@@ -10,6 +10,7 @@ import ClubStatusChart from '../components/ClubStatusChart';
 import EducationalAwardsChart from '../components/EducationalAwardsChart';
 import { DailyReportCalendar } from '../components/DailyReportCalendar';
 import { DailyReportDetail } from '../components/DailyReportDetail';
+import { HistoricalDailyReports } from '../components/HistoricalDailyReports';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
 import { useClubs } from '../hooks/useClubs';
 
@@ -207,6 +208,11 @@ const DashboardPage: React.FC = () => {
               />
             </div>
           )}
+
+          {/* Historical Daily Reports - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <HistoricalDailyReports districtId={selectedDistrictId} />
+          </div>
         </DashboardLayout>
       ) : (
         <div className="min-h-screen bg-gray-100">
