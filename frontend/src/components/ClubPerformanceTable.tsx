@@ -1,9 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import type { Club } from '../types/districts';
 import type { ClubWithRecentChanges } from '../utils/dataIntegration';
+import { ExportButton } from './ExportButton';
+import { exportClubs } from '../utils/csvExport';
 
 export interface ClubPerformanceTableProps {
   clubs: (Club | ClubWithRecentChanges)[];
+  districtId: string;
+  districtName: string;
   isLoading?: boolean;
 }
 
@@ -12,6 +16,8 @@ type SortDirection = 'asc' | 'desc';
 
 const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
   clubs,
+  districtId,
+  districtName,
   isLoading = false,
 }) => {
   const [sortField, setSortField] = useState<SortField>('name');
@@ -19,6 +25,12 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const handleExport = () => {
+    if (sortedClubs && sortedClubs.length > 0) {
+      exportClubs(sortedClubs, districtId, districtName);
+    }
+  };
 
   // Filter clubs by status
   const filteredClubs = useMemo(() => {
@@ -146,25 +158,35 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
         <h2 className="text-xl font-bold text-gray-900">Club Performance</h2>
         
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
-            Filter by Status:
-          </label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Clubs</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-            <option value="ineligible">Ineligible</option>
-          </select>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
+              Filter by Status:
+            </label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Clubs</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="ineligible">Ineligible</option>
+            </select>
+          </div>
+          
+          {/* Export Button */}
+          <ExportButton
+            onExport={handleExport}
+            disabled={!sortedClubs || sortedClubs.length === 0}
+            label="Export"
+            className="text-sm px-3 py-1.5"
+          />
         </div>
       </div>
 

@@ -11,14 +11,18 @@ import {
   ComposedChart,
 } from 'recharts';
 import { useEnhancedMembershipData } from '../hooks/useIntegratedData';
+import { ExportButton } from './ExportButton';
+import { exportMembershipHistory } from '../utils/csvExport';
 
 interface MembershipChartProps {
   districtId: string;
+  districtName: string;
   months?: number;
 }
 
 const MembershipChart: React.FC<MembershipChartProps> = ({
   districtId,
+  districtName,
   months = 12,
 }) => {
   const { data, isLoading, error } = useEnhancedMembershipData(
@@ -26,6 +30,12 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
     months
   );
   const isError = !!error;
+
+  const handleExport = () => {
+    if (data && data.length > 0) {
+      exportMembershipHistory(data, districtId, districtName);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -151,6 +161,12 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
             ⭐ marks significant daily events
           </p>
         </div>
+        <ExportButton
+          onExport={handleExport}
+          disabled={!data || data.length === 0}
+          label="Export"
+          className="text-sm px-3 py-1.5"
+        />
       </div>
       <ResponsiveContainer width="100%" height={320}>
         <ComposedChart

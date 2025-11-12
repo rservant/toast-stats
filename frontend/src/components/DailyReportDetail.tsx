@@ -1,14 +1,18 @@
 import { useDailyReportDetail } from '../hooks/useDailyReports';
 import type { ClubChange } from '../types/districts';
+import { ExportButton } from './ExportButton';
+import { exportDailyReportDetail } from '../utils/csvExport';
 
 interface DailyReportDetailProps {
   districtId: string | null;
+  districtName: string;
   selectedDate: string | null;
   onClose: () => void;
 }
 
 export const DailyReportDetail = ({
   districtId,
+  districtName,
   selectedDate,
   onClose,
 }: DailyReportDetailProps) => {
@@ -27,6 +31,12 @@ export const DailyReportDetail = ({
     month: 'long',
     day: 'numeric',
   });
+
+  const handleExport = () => {
+    if (data && districtId) {
+      exportDailyReportDetail(data, districtId, districtName);
+    }
+  };
 
   const getChangeTypeLabel = (changeType: ClubChange['changeType']): string => {
     const labels: Record<ClubChange['changeType'], string> = {
@@ -54,13 +64,21 @@ export const DailyReportDetail = ({
         <h2 className="text-xl font-semibold text-gray-800">
           Daily Report - {formattedDate}
         </h2>
-        <button
-          onClick={onClose}
-          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 transition-colors"
-          aria-label="Close detail view"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExport={handleExport}
+            disabled={!data}
+            label="Export"
+            className="text-sm px-3 py-1.5"
+          />
+          <button
+            onClick={onClose}
+            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 transition-colors"
+            aria-label="Close detail view"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {isLoading && (

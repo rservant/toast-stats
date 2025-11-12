@@ -14,9 +14,12 @@ import {
 } from 'recharts';
 import { useEducationalAwards } from '../hooks/useEducationalAwards';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
+import { ExportButton } from './ExportButton';
+import { exportEducationalAwards } from '../utils/csvExport';
 
 interface EducationalAwardsChartProps {
   districtId: string;
+  districtName: string;
   months?: number;
 }
 
@@ -24,6 +27,7 @@ type ChartView = 'byType' | 'byMonth' | 'topClubs';
 
 const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
   districtId,
+  districtName,
   months = 12,
 }) => {
   const [chartView, setChartView] = useState<ChartView>('byType');
@@ -32,6 +36,12 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
     months
   );
   const { data: statistics } = useDistrictStatistics(districtId);
+
+  const handleExport = () => {
+    if (data) {
+      exportEducationalAwards(data, districtId, districtName);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -167,8 +177,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           </div>
         </div>
 
-        {/* View Toggle Buttons */}
-        <div className="flex gap-2 mt-4 sm:mt-0">
+        {/* View Toggle Buttons and Export */}
+        <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
+          <div className="flex gap-2">
           <button
             onClick={() => setChartView('byType')}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -202,6 +213,13 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           >
             Top Clubs
           </button>
+          </div>
+          <ExportButton
+            onExport={handleExport}
+            disabled={!data}
+            label="Export"
+            className="text-sm px-3 py-1.5"
+          />
         </div>
       </div>
 

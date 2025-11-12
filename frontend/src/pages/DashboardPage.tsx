@@ -15,6 +15,7 @@ import SignificantEventsPanel from '../components/SignificantEventsPanel';
 import RealTimeMembershipCard from '../components/RealTimeMembershipCard';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
 import { useEnhancedClubs } from '../hooks/useIntegratedData';
+import { useDistricts } from '../hooks/useDistricts';
 
 const DashboardPage: React.FC = () => {
   const { logout } = useAuth();
@@ -24,6 +25,12 @@ const DashboardPage: React.FC = () => {
   // Fetch district statistics and enhanced clubs data with recent changes
   const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
   const { clubs: enhancedClubs, isLoading: isLoadingClubs } = useEnhancedClubs(selectedDistrictId, 7);
+  const { data: districtsData } = useDistricts();
+
+  // Get the selected district name
+  const selectedDistrictName = districtsData?.districts?.find(
+    (d) => d.id === selectedDistrictId
+  )?.name || 'Unknown District';
 
   const handleDistrictSelect = (districtId: string) => {
     setSelectedDistrictId(districtId);
@@ -149,7 +156,11 @@ const DashboardPage: React.FC = () => {
 
           {/* Membership Chart - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
-            <MembershipChart districtId={selectedDistrictId} months={12} />
+            <MembershipChart 
+              districtId={selectedDistrictId} 
+              districtName={selectedDistrictName}
+              months={12} 
+            />
           </div>
 
           {/* Club Status Chart - Full width */}
@@ -162,13 +173,19 @@ const DashboardPage: React.FC = () => {
 
           {/* Educational Awards Chart - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
-            <EducationalAwardsChart districtId={selectedDistrictId} months={12} />
+            <EducationalAwardsChart 
+              districtId={selectedDistrictId} 
+              districtName={selectedDistrictName}
+              months={12} 
+            />
           </div>
 
           {/* Club Performance Table with Recent Changes - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
             <ClubPerformanceTable
               clubs={enhancedClubs}
+              districtId={selectedDistrictId}
+              districtName={selectedDistrictName}
               isLoading={isLoadingClubs}
             />
           </div>
@@ -186,6 +203,7 @@ const DashboardPage: React.FC = () => {
             <div className="col-span-1 sm:col-span-2 lg:col-span-4">
               <DailyReportDetail
                 districtId={selectedDistrictId}
+                districtName={selectedDistrictName}
                 selectedDate={selectedDate}
                 onClose={handleCloseDetail}
               />
@@ -194,7 +212,10 @@ const DashboardPage: React.FC = () => {
 
           {/* Historical Daily Reports - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
-            <HistoricalDailyReports districtId={selectedDistrictId} />
+            <HistoricalDailyReports 
+              districtId={selectedDistrictId} 
+              districtName={selectedDistrictName}
+            />
           </div>
         </DashboardLayout>
       ) : (
