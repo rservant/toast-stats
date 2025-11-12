@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import DistrictSelector from '../components/DistrictSelector';
 
 const DashboardPage: React.FC = () => {
   const { logout } = useAuth();
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+
+  const handleDistrictSelect = (districtId: string) => {
+    setSelectedDistrictId(districtId);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -18,9 +24,27 @@ const DashboardPage: React.FC = () => {
             Logout
           </button>
         </div>
-        <p className="text-gray-600">
-          Dashboard content will be implemented in subsequent tasks
-        </p>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <DistrictSelector
+            selectedDistrictId={selectedDistrictId}
+            onDistrictSelect={handleDistrictSelect}
+          />
+        </div>
+
+        {selectedDistrictId ? (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <p className="text-gray-600">
+              District statistics and visualizations will be displayed here in subsequent tasks
+            </p>
+          </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <p className="text-blue-800">
+              Please select a district to view statistics and visualizations
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
