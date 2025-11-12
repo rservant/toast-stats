@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import type { Club } from '../types/districts';
+import type { ClubWithRecentChanges } from '../utils/dataIntegration';
 
 export interface ClubPerformanceTableProps {
-  clubs: Club[];
+  clubs: (Club | ClubWithRecentChanges)[];
   isLoading?: boolean;
 }
 
@@ -218,17 +219,25 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
               >
                 Recognition
               </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Recent Activity (7d)
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedClubs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                   No clubs found
                 </td>
               </tr>
             ) : (
-              paginatedClubs.map((club) => (
+              paginatedClubs.map((club) => {
+                const hasRecentChanges = 'recentChanges' in club && club.recentChanges;
+                return (
                 <tr
                   key={club.id}
                   className={`hover:bg-gray-50 ${club.distinguished ? 'bg-blue-50' : ''}`}
@@ -255,8 +264,39 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getDistinguishedBadge(club)}
                   </td>
+                  <td className="px-6 py-4">
+                    {hasRecentChanges ? (
+                      <div className="text-xs space-y-1">
+                        {club.recentChanges!.newMembers > 0 && (
+                          <div className="text-green-600">
+                            +{club.recentChanges!.newMembers} new
+                          </div>
+                        )}
+                        {club.recentChanges!.renewals > 0 && (
+                          <div className="text-orange-600">
+                            {club.recentChanges!.renewals} renewals
+                          </div>
+                        )}
+                        {club.recentChanges!.recentAwards > 0 && (
+                          <div className="text-blue-600">
+                            {club.recentChanges!.recentAwards} awards
+                          </div>
+                        )}
+                        {club.recentChanges!.membershipChange !== 0 && (
+                          <div className={`font-medium ${club.recentChanges!.membershipChange > 0 ? 'text-green-700' : 'text-red-700'}`}>
+                            Net: {club.recentChanges!.membershipChange > 0 ? '+' : ''}{club.recentChanges!.membershipChange}
+                          </div>
+                        )}
+                        {!club.recentChanges!.newMembers && !club.recentChanges!.renewals && !club.recentChanges!.recentAwards && (
+                          <div className="text-gray-500">No activity</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400">Loading...</div>
+                    )}
+                  </td>
                 </tr>
-              ))
+              )})
             )}
           </tbody>
         </table>

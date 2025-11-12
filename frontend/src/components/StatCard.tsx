@@ -1,12 +1,13 @@
 import React from 'react';
 
 export interface StatCardProps {
-  name: string;
+  name: string | React.ReactNode;
   value: string | number;
   change?: number;
   changePercent?: number;
   trend?: 'positive' | 'negative' | 'neutral';
   isLoading?: boolean;
+  footer?: React.ReactNode;
 }
 
 const StatCard: React.FC<StatCardProps> = ({
@@ -16,6 +17,7 @@ const StatCard: React.FC<StatCardProps> = ({
   changePercent,
   trend = 'neutral',
   isLoading = false,
+  footer,
 }) => {
   // Determine trend color
   const getTrendColor = () => {
@@ -68,6 +70,8 @@ const StatCard: React.FC<StatCardProps> = ({
           </span>
         </div>
       )}
+      
+      {footer && <div className="mt-3">{footer}</div>}
     </div>
   );
 };

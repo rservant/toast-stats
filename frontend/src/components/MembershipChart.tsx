@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -8,8 +7,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Scatter,
+  ComposedChart,
 } from 'recharts';
-import { useMembershipHistory } from '../hooks/useMembershipData';
+import { useEnhancedMembershipData } from '../hooks/useIntegratedData';
 
 interface MembershipChartProps {
   districtId: string;
@@ -20,10 +21,11 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
   districtId,
   months = 12,
 }) => {
-  const { data, isLoading, isError, error } = useMembershipHistory(
+  const { data, isLoading, error } = useEnhancedMembershipData(
     districtId,
     months
   );
+  const isError = !!error;
 
   if (isLoading) {
     return (
@@ -61,7 +63,7 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
     );
   }
 
-  if (!data || data.data.length === 0) {
+  if (!data || data.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -74,17 +76,21 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
     );
   }
 
-  // Format data for the chart
-  const chartData = data.data.map((point) => ({
+  // Format data for the chart with daily events
+  const chartData = data.map((point) => ({
     date: new Date(point.date).toLocaleDateString('en-US', {
       month: 'short',
       year: 'numeric',
     }),
     members: point.count,
     fullDate: point.date,
+    dailyEvents: point.dailyEvents,
+    isSignificant: point.isSignificant,
+    // For scatter plot - only show significant events
+    significantValue: point.isSignificant ? point.count : null,
   }));
 
-  // Custom tooltip component
+  // Custom tooltip component with daily events
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -98,14 +104,36 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
       );
 
       return (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium text-gray-900 mb-1">
+        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
+          <p className="text-sm font-medium text-gray-900 mb-2">
             {formattedDate}
           </p>
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-700 mb-1">
             <span className="font-semibold">Members:</span>{' '}
             {data.members.toLocaleString()}
           </p>
+          {data.dailyEvents && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Daily Activity:</p>
+              <p className="text-xs text-green-600">
+                +{data.dailyEvents.newMembers} new members
+              </p>
+              <p className="text-xs text-orange-600">
+                {data.dailyEvents.renewals} renewals
+              </p>
+              <p className="text-xs text-blue-600">
+                {data.dailyEvents.awards} awards
+              </p>
+              <p className="text-xs text-gray-700 font-medium mt-1">
+                Net: {data.dailyEvents.netChange > 0 ? '+' : ''}{data.dailyEvents.netChange}
+              </p>
+            </div>
+          )}
+          {data.isSignificant && (
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className="text-xs font-semibold text-purple-600">⭐ Significant Event</p>
+            </div>
+          )}
         </div>
       );
     }
@@ -114,11 +142,18 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">
-        Membership Trends ({months} Months)
-      </h2>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Membership Trends ({months} Months)
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            ⭐ marks significant daily events
+          </p>
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={320}>
-        <LineChart
+        <ComposedChart
           data={chartData}
           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
         >
@@ -139,7 +174,6 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
           <Tooltip content={<CustomTooltip />} />
           <Legend
             wrapperStyle={{ fontSize: '14px' }}
-            iconType="line"
             verticalAlign="top"
             height={36}
           />
@@ -152,7 +186,13 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
             activeDot={{ r: 6 }}
             name="Total Members"
           />
-        </LineChart>
+          <Scatter
+            dataKey="significantValue"
+            fill="#9333ea"
+            shape="star"
+            name="Significant Events"
+          />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

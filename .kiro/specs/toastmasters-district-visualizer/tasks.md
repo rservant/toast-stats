@@ -149,7 +149,7 @@
   - Add loading states for date range queries
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 16. Integrate daily reports with other statistics
+- [x] 16. Integrate daily reports with other statistics
   - Combine daily report data with membership statistics for real-time counts
   - Overlay daily report events on membership time-series charts
   - Add recent daily changes to club performance metrics display

@@ -11,17 +11,19 @@ import EducationalAwardsChart from '../components/EducationalAwardsChart';
 import { DailyReportCalendar } from '../components/DailyReportCalendar';
 import { DailyReportDetail } from '../components/DailyReportDetail';
 import { HistoricalDailyReports } from '../components/HistoricalDailyReports';
+import SignificantEventsPanel from '../components/SignificantEventsPanel';
+import RealTimeMembershipCard from '../components/RealTimeMembershipCard';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
-import { useClubs } from '../hooks/useClubs';
+import { useEnhancedClubs } from '../hooks/useIntegratedData';
 
 const DashboardPage: React.FC = () => {
   const { logout } = useAuth();
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
-  // Fetch district statistics and clubs data
+  // Fetch district statistics and enhanced clubs data with recent changes
   const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
-  const { data: clubsData, isLoading: isLoadingClubs } = useClubs(selectedDistrictId);
+  const { clubs: enhancedClubs, isLoading: isLoadingClubs } = useEnhancedClubs(selectedDistrictId, 7);
 
   const handleDistrictSelect = (districtId: string) => {
     setSelectedDistrictId(districtId);
@@ -59,26 +61,15 @@ const DashboardPage: React.FC = () => {
     </>
   );
 
-  // Determine trend based on change percentage
-  const getMembershipTrend = (changePercent: number): 'positive' | 'negative' | 'neutral' => {
-    if (changePercent > 0) return 'positive';
-    if (changePercent < 0) return 'negative';
-    return 'neutral';
-  };
-
   return (
     <ErrorBoundary>
       {selectedDistrictId ? (
         <DashboardLayout header={header}>
-          {/* Membership Statistics */}
+          {/* Membership Statistics - Using Real-Time Integration */}
+          <RealTimeMembershipCard districtId={selectedDistrictId} />
+          
           {isLoadingStats ? (
             <>
-              <StatCard
-                name="Total Members"
-                value="..."
-                changePercent={0}
-                trend="neutral"
-              />
               <StatCard
                 name="Total Clubs"
                 value="..."
@@ -100,13 +91,6 @@ const DashboardPage: React.FC = () => {
             </>
           ) : statistics ? (
             <>
-              <StatCard
-                name="Total Members"
-                value={statistics.membership.total.toLocaleString()}
-                change={statistics.membership.change}
-                changePercent={statistics.membership.changePercent}
-                trend={getMembershipTrend(statistics.membership.changePercent)}
-              />
               <StatCard
                 name="Total Clubs"
                 value={statistics.clubs.total.toString()}
@@ -138,12 +122,6 @@ const DashboardPage: React.FC = () => {
           ) : (
             <>
               <StatCard
-                name="Total Members"
-                value="N/A"
-                changePercent={0}
-                trend="neutral"
-              />
-              <StatCard
                 name="Total Clubs"
                 value="N/A"
                 changePercent={0}
@@ -164,6 +142,11 @@ const DashboardPage: React.FC = () => {
             </>
           )}
 
+          {/* Significant Events Panel - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <SignificantEventsPanel districtId={selectedDistrictId} daysToShow={30} maxEvents={5} />
+          </div>
+
           {/* Membership Chart - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
             <MembershipChart districtId={selectedDistrictId} months={12} />
@@ -172,7 +155,7 @@ const DashboardPage: React.FC = () => {
           {/* Club Status Chart - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
             <ClubStatusChart
-              clubs={clubsData?.clubs || []}
+              clubs={enhancedClubs}
               isLoading={isLoadingClubs}
             />
           </div>
@@ -182,10 +165,10 @@ const DashboardPage: React.FC = () => {
             <EducationalAwardsChart districtId={selectedDistrictId} months={12} />
           </div>
 
-          {/* Club Performance Table - Full width */}
+          {/* Club Performance Table with Recent Changes - Full width */}
           <div className="col-span-1 sm:col-span-2 lg:col-span-4">
             <ClubPerformanceTable
-              clubs={clubsData?.clubs || []}
+              clubs={enhancedClubs}
               isLoading={isLoadingClubs}
             />
           </div>
