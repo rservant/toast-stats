@@ -4,10 +4,15 @@ import DistrictSelector from '../components/DistrictSelector';
 import DashboardLayout from '../components/DashboardLayout';
 import StatCard from '../components/StatCard';
 import ErrorBoundary from '../components/ErrorBoundary';
+import MembershipChart from '../components/MembershipChart';
+import { useDistrictStatistics } from '../hooks/useMembershipData';
 
 const DashboardPage: React.FC = () => {
   const { logout } = useAuth();
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  
+  // Fetch district statistics
+  const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
 
   const handleDistrictSelect = (districtId: string) => {
     setSelectedDistrictId(districtId);
@@ -37,38 +42,110 @@ const DashboardPage: React.FC = () => {
     </>
   );
 
+  // Determine trend based on change percentage
+  const getMembershipTrend = (changePercent: number): 'positive' | 'negative' | 'neutral' => {
+    if (changePercent > 0) return 'positive';
+    if (changePercent < 0) return 'negative';
+    return 'neutral';
+  };
+
   return (
     <ErrorBoundary>
       {selectedDistrictId ? (
         <DashboardLayout header={header}>
-          {/* Example stat cards - these will be populated with real data in subsequent tasks */}
-          <StatCard
-            name="Total Members"
-            value="1,234"
-            change={45}
-            changePercent={3.8}
-            trend="positive"
-          />
-          <StatCard
-            name="Total Clubs"
-            value="56"
-            change={-2}
-            changePercent={-3.4}
-            trend="negative"
-          />
-          <StatCard
-            name="Educational Awards"
-            value="189"
-            change={12}
-            changePercent={6.8}
-            trend="positive"
-          />
-          <StatCard
-            name="Distinguished Clubs"
-            value="42"
-            changePercent={75.0}
-            trend="neutral"
-          />
+          {/* Membership Statistics */}
+          {isLoadingStats ? (
+            <>
+              <StatCard
+                name="Total Members"
+                value="..."
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Total Clubs"
+                value="..."
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Educational Awards"
+                value="..."
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Distinguished Clubs"
+                value="..."
+                changePercent={0}
+                trend="neutral"
+              />
+            </>
+          ) : statistics ? (
+            <>
+              <StatCard
+                name="Total Members"
+                value={statistics.membership.total.toLocaleString()}
+                change={statistics.membership.change}
+                changePercent={statistics.membership.changePercent}
+                trend={getMembershipTrend(statistics.membership.changePercent)}
+              />
+              <StatCard
+                name="Total Clubs"
+                value={statistics.clubs.total.toString()}
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Educational Awards"
+                value={statistics.education.totalAwards.toLocaleString()}
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Distinguished Clubs"
+                value={statistics.clubs.distinguished.toString()}
+                changePercent={
+                  statistics.clubs.total > 0
+                    ? (statistics.clubs.distinguished / statistics.clubs.total) * 100
+                    : 0
+                }
+                trend="neutral"
+              />
+            </>
+          ) : (
+            <>
+              <StatCard
+                name="Total Members"
+                value="N/A"
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Total Clubs"
+                value="N/A"
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Educational Awards"
+                value="N/A"
+                changePercent={0}
+                trend="neutral"
+              />
+              <StatCard
+                name="Distinguished Clubs"
+                value="N/A"
+                changePercent={0}
+                trend="neutral"
+              />
+            </>
+          )}
+
+          {/* Membership Chart - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <MembershipChart districtId={selectedDistrictId} months={12} />
+          </div>
         </DashboardLayout>
       ) : (
         <div className="min-h-screen bg-gray-100">
