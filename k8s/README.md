@@ -92,7 +92,7 @@ spec:
           service:
             name: toastmasters-backend
             port:
-              number: 5000
+              number: 5001
       - path: /
         pathType: Prefix
         backend:
@@ -149,8 +149,8 @@ kubectl logs -f <pod-name>
 
 ```bash
 # Port forward to test locally
-kubectl port-forward service/toastmasters-backend 5000:5000
-curl http://localhost:5000/health
+kubectl port-forward service/toastmasters-backend 5001:5001
+curl http://localhost:5001/health
 
 kubectl port-forward service/toastmasters-frontend 8080:80
 curl http://localhost:8080/health
@@ -211,7 +211,7 @@ kubectl get pods
 # Test service internally
 kubectl run -it --rm debug --image=alpine --restart=Never -- sh
 # Inside the pod:
-wget -O- http://toastmasters-backend:5000/health
+wget -O- http://toastmasters-backend:5001/health
 ```
 
 ## Cleanup

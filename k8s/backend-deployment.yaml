@@ -18,12 +18,12 @@ spec:
       - name: backend
         image: toastmasters-backend:latest
         ports:
-        - containerPort: 5000
+        - containerPort: 5001
         env:
         - name: NODE_ENV
           value: "production"
         - name: PORT
-          value: "5000"
+          value: "5001"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
@@ -55,13 +55,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 5000
+            port: 5001
           initialDelaySeconds: 10
           periodSeconds: 30
         readinessProbe:
           httpGet:
             path: /health
-            port: 5000
+            port: 5001
           initialDelaySeconds: 5
           periodSeconds: 10
 ---
@@ -74,6 +74,6 @@ spec:
     app: toastmasters-backend
   ports:
   - protocol: TCP
-    port: 5000
-    targetPort: 5000
+    port: 5001
+    targetPort: 5001
   type: ClusterIP

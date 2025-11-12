@@ -46,7 +46,7 @@ npm run dev:frontend
 npm run dev:backend
 ```
 
-The frontend will be available at `http://localhost:3000` and the backend at `http://localhost:5000`.
+The frontend will be available at `http://localhost:3000` and the backend at `http://localhost:5001`.
 
 ### Building for Production
 
@@ -91,9 +91,24 @@ npm run lint
 - Node-cache for caching
 - Axios for external API calls
 
+## Data Source
+
+The application can fetch data from the public Toastmasters dashboards at https://dashboards.toastmasters.org using a Playwright-based web scraper.
+
+### Mock Data vs Real Data
+
+- **Mock Data** (default): Fast, fake data for development
+- **Real Data**: Scrapes live data from Toastmasters dashboards
+
+Toggle between them in `backend/.env`:
+```bash
+USE_MOCK_DATA=true   # Use mock data (fast)
+USE_MOCK_DATA=false  # Use real scraping (slower, requires Playwright)
+```
+
 ## Features
 
-- User authentication with Toastmasters credentials
+- User authentication (placeholder for development)
 - District selection and statistics viewing
 - Membership statistics visualization
 - Club performance metrics

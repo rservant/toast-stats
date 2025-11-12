@@ -2,7 +2,8 @@ import { Router, type Request, type Response } from 'express'
 import { cacheMiddleware } from '../middleware/cache.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { generateDistrictCacheKey } from '../utils/cacheKeys.js'
-import { ToastmastersAPIService } from '../services/ToastmastersAPIService.js'
+import { RealToastmastersAPIService } from '../services/RealToastmastersAPIService.js'
+import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
 import {
   transformDistrictsResponse,
   transformDistrictStatisticsResponse,
@@ -23,7 +24,12 @@ import type {
 } from '../types/districts.js'
 
 const router = Router()
-const toastmastersAPI = new ToastmastersAPIService()
+
+// Use mock API in development (USE_MOCK_DATA=true), real scraper otherwise
+const useMockData = process.env.USE_MOCK_DATA === 'true'
+const toastmastersAPI = useMockData
+  ? new MockToastmastersAPIService()
+  : new RealToastmastersAPIService()
 
 /**
  * Validate district ID format

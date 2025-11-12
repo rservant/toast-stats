@@ -32,7 +32,7 @@ docker-compose --env-file .env.production up -d
 
 ```bash
 # Check backend health
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 
 # Check frontend health
 curl http://localhost:80/health
@@ -57,7 +57,7 @@ docker build -t toastmasters-backend:latest .
 ```bash
 docker run -d \
   --name toastmasters-backend \
-  -p 5000:5000 \
+  -p 5001:5001 \
   -e NODE_ENV=production \
   -e JWT_SECRET=your-secret-key \
   -e CORS_ORIGIN=https://yourdomain.com \
@@ -69,7 +69,7 @@ docker run -d \
 #### Health Check
 
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 ```
 
 Expected response:
@@ -97,7 +97,7 @@ docker build -t toastmasters-frontend:latest .
 docker run -d \
   --name toastmasters-frontend \
   -p 80:80 \
-  -e BACKEND_URL=http://backend:5000 \
+  -e BACKEND_URL=http://backend:5001 \
   --restart unless-stopped \
   toastmasters-frontend:latest
 ```
@@ -153,7 +153,7 @@ netlify deploy --prod --dir=dist
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `NODE_ENV` | No | development | Environment mode |
-| `PORT` | No | 5000 | Server port |
+| `PORT` | No | 5001 | Server port |
 | `JWT_SECRET` | Yes | - | Secret key for JWT tokens |
 | `JWT_EXPIRES_IN` | No | 1h | JWT token expiration |
 | `TOASTMASTERS_DASHBOARD_URL` | Yes | - | Toastmasters API URL |
@@ -209,7 +209,7 @@ docker-compose logs -f frontend
 ### Health Monitoring
 
 Set up monitoring for these endpoints:
-- Backend: `http://your-backend:5000/health`
+- Backend: `http://your-backend:5001/health`
 - Frontend: `http://your-frontend:80/health`
 
 Recommended monitoring tools:
@@ -242,9 +242,9 @@ Use nginx or a cloud load balancer to distribute traffic:
 
 ```nginx
 upstream backend {
-    server backend1:5000;
-    server backend2:5000;
-    server backend3:5000;
+    server backend1:5001;
+    server backend2:5001;
+    server backend3:5001;
 }
 
 server {
@@ -260,13 +260,13 @@ server {
 
 1. Check logs: `docker-compose logs backend`
 2. Verify environment variables are set
-3. Ensure port 5000 is not in use
+3. Ensure port 5001 is not in use
 4. Check JWT_SECRET is configured
 
 ### Frontend Can't Connect to Backend
 
 1. Verify CORS_ORIGIN is configured correctly
-2. Check backend is running: `curl http://localhost:5000/health`
+2. Check backend is running: `curl http://localhost:5001/health`
 3. Verify network connectivity between containers
 4. Check nginx proxy configuration
 

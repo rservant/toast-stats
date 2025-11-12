@@ -21,7 +21,7 @@ spec:
         - containerPort: 80
         env:
         - name: BACKEND_URL
-          value: "http://toastmasters-backend:5000"
+          value: "http://toastmasters-backend:5001"
         resources:
           requests:
             memory: "128Mi"
