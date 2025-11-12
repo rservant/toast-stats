@@ -70,7 +70,7 @@ export function transformClubsResponse(apiResponse: unknown): unknown {
 }
 
 /**
- * Example transformer for daily reports
+ * Transformer for daily reports
  * Converts Toastmasters API daily report format to internal format
  */
 export function transformDailyReportsResponse(apiResponse: unknown): unknown {
@@ -78,14 +78,39 @@ export function transformDailyReportsResponse(apiResponse: unknown): unknown {
     throw new Error('Invalid daily reports response format')
   }
 
-  // Example transformation logic
-  // This would parse dates, aggregate metrics, etc.
+  // Transform the API response to match our internal format
+  // This handles aggregated daily reports for a date range
+  const response = apiResponse as any
   
-  return apiResponse
+  if (!Array.isArray(response.reports)) {
+    // If the API returns data in a different structure, adapt it
+    return apiResponse
+  }
+
+  // Calculate day-over-day changes for each report
+  const reports = response.reports.map((report: any, index: number) => {
+    const previousReport = index > 0 ? response.reports[index - 1] : null
+    const dayOverDayChange = previousReport 
+      ? (report.newMembers - report.renewals) - (previousReport.newMembers - previousReport.renewals)
+      : 0
+
+    return {
+      date: report.date,
+      newMembers: report.newMembers || 0,
+      renewals: report.renewals || 0,
+      clubChanges: report.clubChanges || [],
+      awards: report.awards || 0,
+      dayOverDayChange,
+    }
+  })
+
+  return {
+    reports,
+  }
 }
 
 /**
- * Example transformer for daily report detail
+ * Transformer for daily report detail
  * Converts Toastmasters API daily report detail format to internal format
  */
 export function transformDailyReportDetailResponse(apiResponse: unknown): unknown {
@@ -93,10 +118,28 @@ export function transformDailyReportDetailResponse(apiResponse: unknown): unknow
     throw new Error('Invalid daily report detail response format')
   }
 
-  // Example transformation logic
-  // This would parse individual transactions, calculate summaries, etc.
-  
-  return apiResponse
+  const response = apiResponse as any
+
+  // Calculate summary metrics
+  const totalNewMembers = Array.isArray(response.newMembers) ? response.newMembers.length : 0
+  const totalRenewals = Array.isArray(response.renewals) ? response.renewals.length : 0
+  const totalAwards = Array.isArray(response.awards) ? response.awards.length : 0
+  const netMembershipChange = totalNewMembers - totalRenewals
+
+  return {
+    date: response.date,
+    newMembers: response.newMembers || [],
+    renewals: response.renewals || [],
+    clubChanges: response.clubChanges || [],
+    awards: response.awards || [],
+    summary: {
+      totalNewMembers,
+      totalRenewals,
+      totalAwards,
+      netMembershipChange,
+      dayOverDayChange: response.dayOverDayChange || 0,
+    },
+  }
 }
 
 /**

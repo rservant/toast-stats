@@ -8,6 +8,8 @@ import {
   transformDistrictStatisticsResponse,
   transformMembershipHistoryResponse,
   transformClubsResponse,
+  transformDailyReportsResponse,
+  transformDailyReportDetailResponse,
   transformErrorResponse,
 } from '../utils/transformers.js'
 import type {
@@ -15,6 +17,8 @@ import type {
   DistrictStatistics,
   MembershipHistoryResponse,
   ClubsResponse,
+  DailyReportsResponse,
+  DailyReportDetailResponse,
 } from '../types/districts.js'
 
 const router = Router()
@@ -250,6 +254,231 @@ router.get(
         error: {
           code: errorResponse.code || 'FETCH_ERROR',
           message: 'Failed to fetch clubs',
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * Validate date format (YYYY-MM-DD)
+ */
+function validateDateFormat(date: string): boolean {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+  if (!dateRegex.test(date)) {
+    return false
+  }
+  
+  const parsedDate = new Date(date)
+  return !isNaN(parsedDate.getTime())
+}
+
+/**
+ * GET /api/districts/:districtId/daily-reports
+ * Fetch daily reports for a date range
+ */
+router.get(
+  '/:districtId/daily-reports',
+  authenticateToken,
+  cacheMiddleware({
+    ttl: 900, // 15 minutes
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, 'daily-reports', {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      }),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { startDate, endDate } = req.query
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate date parameters
+      if (!startDate || !endDate) {
+        res.status(400).json({
+          error: {
+            code: 'MISSING_DATE_PARAMETERS',
+            message: 'Both startDate and endDate query parameters are required',
+          },
+        })
+        return
+      }
+
+      if (typeof startDate !== 'string' || typeof endDate !== 'string') {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'Date parameters must be strings',
+          },
+        })
+        return
+      }
+
+      if (!validateDateFormat(startDate) || !validateDateFormat(endDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'Dates must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Validate date range
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      
+      if (start > end) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_RANGE',
+            message: 'startDate must be before or equal to endDate',
+          },
+        })
+        return
+      }
+
+      // Limit date range to prevent excessive data requests (e.g., max 90 days)
+      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      if (daysDiff > 90) {
+        res.status(400).json({
+          error: {
+            code: 'DATE_RANGE_TOO_LARGE',
+            message: 'Date range cannot exceed 90 days',
+          },
+        })
+        return
+      }
+
+      // Fetch daily reports from Toastmasters API
+      const apiResponse = await toastmastersAPI.getDailyReports(
+        districtId,
+        startDate,
+        endDate
+      )
+
+      // Transform response to internal format
+      const reports = transformDailyReportsResponse(apiResponse) as DailyReportsResponse
+
+      res.json(reports)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check if it's a 404 error (district not found)
+      if (errorResponse.code.includes('404')) {
+        res.status(404).json({
+          error: {
+            code: 'DISTRICT_NOT_FOUND',
+            message: 'District not found',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'FETCH_ERROR',
+          message: 'Failed to fetch daily reports',
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/daily-reports/:date
+ * Fetch detailed daily report for a specific date
+ */
+router.get(
+  '/:districtId/daily-reports/:date',
+  authenticateToken,
+  cacheMiddleware({
+    ttl: 900, // 15 minutes
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, `daily-reports/${req.params.date}`),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId, date } = req.params
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate date format
+      if (!validateDateFormat(date)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'Date must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Validate date is not in the future
+      const requestedDate = new Date(date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (requestedDate > today) {
+        res.status(400).json({
+          error: {
+            code: 'FUTURE_DATE_NOT_ALLOWED',
+            message: 'Cannot fetch reports for future dates',
+          },
+        })
+        return
+      }
+
+      // Fetch daily report detail from Toastmasters API
+      const apiResponse = await toastmastersAPI.getDailyReportDetail(
+        districtId,
+        date
+      )
+
+      // Transform response to internal format
+      const report = transformDailyReportDetailResponse(apiResponse) as DailyReportDetailResponse
+
+      res.json(report)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check if it's a 404 error (district or report not found)
+      if (errorResponse.code.includes('404')) {
+        res.status(404).json({
+          error: {
+            code: 'REPORT_NOT_FOUND',
+            message: 'Daily report not found for the specified date',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'FETCH_ERROR',
+          message: 'Failed to fetch daily report detail',
           details: errorResponse.details,
         },
       })

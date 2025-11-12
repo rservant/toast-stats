@@ -78,3 +78,55 @@ export interface Club {
 export interface ClubsResponse {
   clubs: Club[]
 }
+
+// Daily Report Types
+
+export interface Member {
+  name: string
+  clubId: string
+  clubName: string
+}
+
+export interface ClubChange {
+  clubId: string
+  clubName: string
+  changeType: 'chartered' | 'suspended' | 'reinstated' | 'closed'
+  details?: string
+}
+
+export interface Award {
+  type: string
+  level?: string
+  recipient: string
+  clubId: string
+  clubName: string
+}
+
+export interface DailyReportSummary {
+  totalNewMembers: number
+  totalRenewals: number
+  totalAwards: number
+  netMembershipChange: number
+  dayOverDayChange: number
+}
+
+export interface DailyReport {
+  date: string
+  newMembers: Member[]
+  renewals: Member[]
+  clubChanges: ClubChange[]
+  awards: Award[]
+  summary: DailyReportSummary
+}
+
+export interface DailyReportsResponse {
+  reports: Array<{
+    date: string
+    newMembers: number
+    renewals: number
+    clubChanges: Array<{ clubId: string; change: string }>
+    awards: number
+  }>
+}
+
+export interface DailyReportDetailResponse extends DailyReport {}
