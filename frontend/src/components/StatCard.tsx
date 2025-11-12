@@ -62,15 +62,15 @@ const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <article 
-      className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200"
+      className="bg-white rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200"
       aria-label={`${nameText}: ${value}${changePercent !== undefined ? `, ${trendDescription} by ${Math.abs(changePercent).toFixed(1)}%` : ''}`}
     >
-      <h3 className="text-sm font-medium text-gray-700 mb-2">{name}</h3>
-      <p className="text-3xl font-bold text-gray-900 mb-2" aria-live="polite">{value}</p>
+      <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-2">{name}</h3>
+      <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words" aria-live="polite">{value}</p>
       
       {(change !== undefined || changePercent !== undefined) && (
         <div 
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTrendBgColor()} ${getTrendColor()}`}
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-medium ${getTrendBgColor()} ${getTrendColor()}`}
           role="status"
           aria-label={`Trend: ${trendDescription}${change !== undefined ? ` by ${Math.abs(change)} units` : ''}${changePercent !== undefined ? ` (${Math.abs(changePercent).toFixed(1)}%)` : ''}`}
         >

@@ -104,3 +104,38 @@ body {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* Mobile-friendly touch targets - minimum 44x44px */
+@media (max-width: 640px) {
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Improve text readability on mobile */
+@media (max-width: 640px) {
+  body {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

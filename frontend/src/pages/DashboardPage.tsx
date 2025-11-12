@@ -93,52 +93,61 @@ const DashboardPage: React.FC = () => {
 
   const header = (
     <>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Toastmasters District Visualizer
-        </h1>
-        <div className="flex items-center gap-3">
-          {selectedDistrictId && (
-            <>
-              <div className="flex flex-col items-end text-sm text-gray-600">
-                <span className="font-medium">Last refreshed:</span>
-                <span>{formatLastRefreshed(lastRefreshed)}</span>
-              </div>
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                aria-label="Refresh data"
-              >
-                <svg
-                  className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Toastmasters District Visualizer
+          </h1>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            {selectedDistrictId && (
+              <>
+                <div className="hidden sm:flex flex-col items-end text-sm text-gray-600">
+                  <span className="font-medium">Last refreshed:</span>
+                  <span>{formatLastRefreshed(lastRefreshed)}</span>
+                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  aria-label="Refresh data"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </>
-          )}
-          <button
-            onClick={logout}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-            aria-label="Logout"
-          >
-            Logout
-          </button>
+                  <svg
+                    className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                  <span className="sm:hidden">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+              </>
+            )}
+            <button
+              onClick={logout}
+              className="min-h-[44px] px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+              aria-label="Logout"
+            >
+              Logout
+            </button>
+          </div>
         </div>
+        {selectedDistrictId && (
+          <div className="sm:hidden text-xs text-gray-600 bg-gray-50 rounded p-2">
+            <span className="font-medium">Last refreshed:</span>{' '}
+            <span>{formatLastRefreshed(lastRefreshed)}</span>
+          </div>
+        )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <DistrictSelector
           selectedDistrictId={selectedDistrictId}
           onDistrictSelect={handleDistrictSelect}
@@ -229,12 +238,12 @@ const DashboardPage: React.FC = () => {
           )}
 
           {/* Significant Events Panel - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <SignificantEventsPanel districtId={selectedDistrictId} daysToShow={30} maxEvents={5} />
           </div>
 
           {/* Membership Chart - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <MembershipChart 
               districtId={selectedDistrictId} 
               districtName={selectedDistrictName}
@@ -243,7 +252,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Club Status Chart - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <ClubStatusChart
               clubs={enhancedClubs}
               isLoading={isLoadingClubs}
@@ -251,7 +260,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Educational Awards Chart - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <EducationalAwardsChart 
               districtId={selectedDistrictId} 
               districtName={selectedDistrictName}
@@ -260,7 +269,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Club Performance Table with Recent Changes - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <ClubPerformanceTable
               clubs={enhancedClubs}
               districtId={selectedDistrictId}
@@ -270,7 +279,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* Daily Report Calendar - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <DailyReportCalendar
               districtId={selectedDistrictId}
               onDateSelect={handleDateSelect}
@@ -279,7 +288,7 @@ const DashboardPage: React.FC = () => {
 
           {/* Daily Report Detail - Full width (conditionally rendered) */}
           {selectedDate && (
-            <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <div className="col-span-full">
               <DailyReportDetail
                 districtId={selectedDistrictId}
                 districtName={selectedDistrictName}
@@ -290,7 +299,7 @@ const DashboardPage: React.FC = () => {
           )}
 
           {/* Historical Daily Reports - Full width */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="col-span-full">
             <HistoricalDailyReports 
               districtId={selectedDistrictId} 
               districtName={selectedDistrictName}
@@ -299,10 +308,10 @@ const DashboardPage: React.FC = () => {
         </DashboardLayout>
       ) : (
         <div className="min-h-screen bg-gray-100">
-          <div className="container mx-auto px-4 py-8">
+          <div className="container mx-auto px-4 py-4 sm:py-8">
             {header}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-6">
-              <p className="text-blue-800">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mt-6">
+              <p className="text-blue-800 text-sm sm:text-base">
                 Please select a district to view statistics and visualizations
               </p>
             </div>

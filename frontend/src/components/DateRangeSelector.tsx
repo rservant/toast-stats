@@ -59,8 +59,8 @@ export const DateRangeSelector = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
         Select Date Range
       </h3>
 
@@ -70,7 +70,7 @@ export const DateRangeSelector = ({
           <div>
             <label
               htmlFor="start-date"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs sm:text-sm font-medium text-gray-700 mb-1"
             >
               Start Date
             </label>
@@ -80,14 +80,14 @@ export const DateRangeSelector = ({
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               max={today}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             />
           </div>
 
           <div>
             <label
               htmlFor="end-date"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-xs sm:text-sm font-medium text-gray-700 mb-1"
             >
               End Date
             </label>
@@ -97,51 +97,51 @@ export const DateRangeSelector = ({
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               max={today}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             />
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+          <div className="text-xs sm:text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
             {error}
           </div>
         )}
 
         {/* Preset Ranges */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
             Quick Select
           </label>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handlePresetRange(7)}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
             >
               Last 7 Days
             </button>
             <button
               onClick={() => handlePresetRange(14)}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
             >
               Last 14 Days
             </button>
             <button
               onClick={() => handlePresetRange(30)}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
             >
               Last 30 Days
             </button>
             <button
               onClick={() => handlePresetRange(60)}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
             >
               Last 60 Days
             </button>
             <button
               onClick={() => handlePresetRange(90)}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
             >
               Last 90 Days
             </button>

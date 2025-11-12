@@ -154,14 +154,14 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
   }
 
   return (
-    <section className="bg-white rounded-lg shadow-md p-6" aria-label="Club performance table">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
-        <h2 className="text-xl font-bold text-gray-900">Club Performance</h2>
+    <section className="bg-white rounded-lg shadow-md p-4 sm:p-6" aria-label="Club performance table">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3 sm:gap-4">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Club Performance</h2>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label htmlFor="status-filter" className="text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
               Filter by Status:
             </label>
             <select
@@ -171,7 +171,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             >
               <option value="all">All Clubs</option>
               <option value="active">Active</option>
@@ -185,19 +185,21 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
             onExport={handleExport}
             disabled={!sortedClubs || sortedClubs.length === 0}
             label="Export"
-            className="text-sm px-3 py-1.5"
+            className="text-xs sm:text-sm px-3 py-2 min-h-[44px]"
           />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200" aria-label="Club performance data">
+      {/* Table - Scrollable on mobile */}
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200" aria-label="Club performance data">
           <thead className="bg-gray-50">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 min-w-[150px]"
                 onClick={() => handleSort('name')}
                 aria-sort={sortField === 'name' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                 tabIndex={0}
@@ -212,7 +214,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('memberCount')}
                 aria-sort={sortField === 'memberCount' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                 tabIndex={0}
@@ -227,7 +229,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('awards')}
                 aria-sort={sortField === 'awards' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                 tabIndex={0}
@@ -242,7 +244,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('status')}
                 aria-sort={sortField === 'status' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
                 tabIndex={0}
@@ -257,13 +259,13 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
               >
                 Recognition
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]"
               >
                 Recent Activity (7d)
               </th>
@@ -284,29 +286,29 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                   key={club.id}
                   className={`hover:bg-gray-50 ${club.distinguished ? 'bg-blue-50' : ''}`}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
+                    <div className="text-xs sm:text-sm font-medium text-gray-900">
                       {club.name}
                     </div>
-                    <div className="text-sm text-gray-500">ID: {club.id}</div>
+                    <div className="text-xs text-gray-500">ID: {club.id}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{club.memberCount}</div>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="text-xs sm:text-sm text-gray-900">{club.memberCount}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{club.awards}</div>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="text-xs sm:text-sm text-gray-900">{club.awards}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(club.status)}`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(club.status)}`}
                     >
                       {club.status.charAt(0).toUpperCase() + club.status.slice(1)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     {getDistinguishedBadge(club)}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4">
                     {hasRecentChanges ? (
                       <div className="text-xs space-y-1">
                         {club.recentChanges!.newMembers > 0 && (
@@ -342,32 +344,34 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
             )}
           </tbody>
         </table>
+          </div>
+        </div>
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-gray-200 gap-3">
+          <div className="text-xs sm:text-sm text-gray-700 text-center sm:text-left">
             Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
             {Math.min(currentPage * itemsPerPage, sortedClubs.length)} of{' '}
             {sortedClubs.length} clubs
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Previous page"
             >
               Previous
             </button>
-            <span className="px-3 py-1 text-sm text-gray-700">
+            <span className="px-2 py-1 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
               Page {currentPage} of {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="Next page"
             >
               Next

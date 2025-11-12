@@ -74,11 +74,11 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
   }
 
   return (
-    <nav className="space-y-2" aria-label="District selection">
-      <div className="flex items-center space-x-4">
+    <nav className="space-y-3" aria-label="District selection">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <label
           htmlFor="district-select"
-          className="text-sm font-medium text-gray-700"
+          className="text-sm font-medium text-gray-700 flex-shrink-0"
         >
           Select District:
         </label>
@@ -86,7 +86,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
           id="district-select"
           value={selectedDistrictId || ''}
           onChange={handleDistrictChange}
-          className="block w-64 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="block w-full sm:w-64 min-h-[44px] px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
           aria-label="Select a Toastmasters district to view statistics"
           aria-required="true"
           aria-describedby={selectedDistrictId ? 'current-district' : undefined}
@@ -102,7 +102,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
       
       {selectedDistrictId && (
         <div className="mt-2">
-          <p id="current-district" className="text-lg font-semibold text-gray-900" role="status" aria-live="polite">
+          <p id="current-district" className="text-base sm:text-lg font-semibold text-gray-900" role="status" aria-live="polite">
             Current District: <span className="text-blue-600">{getSelectedDistrictName()}</span>
           </p>
         </div>

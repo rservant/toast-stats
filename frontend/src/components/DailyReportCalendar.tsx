@@ -139,23 +139,23 @@ export const DailyReportCalendar = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Daily Activity</h2>
-        <div className="flex items-center gap-2">
+    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Daily Activity</h2>
+        <div className="flex items-center justify-center gap-2">
           <button
             onClick={handlePreviousMonth}
-            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 transition-colors"
+            className="min-h-[44px] min-w-[44px] px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 transition-colors flex items-center justify-center"
             aria-label="Previous month"
           >
             ←
           </button>
-          <span className="text-lg font-medium text-gray-700 min-w-[180px] text-center">
+          <span className="text-base sm:text-lg font-medium text-gray-700 min-w-[140px] sm:min-w-[180px] text-center">
             {monthYear}
           </span>
           <button
             onClick={handleNextMonth}
-            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 transition-colors"
+            className="min-h-[44px] min-w-[44px] px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 transition-colors flex items-center justify-center"
             aria-label="Next month"
           >
             →
@@ -169,18 +169,19 @@ export const DailyReportCalendar = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-7 gap-2 mb-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
               <div
                 key={day}
-                className="text-center text-sm font-semibold text-gray-600 py-2"
+                className="text-center text-xs sm:text-sm font-semibold text-gray-600 py-2"
               >
-                {day}
+                <span className="hidden sm:inline">{day}</span>
+                <span className="sm:hidden">{day.charAt(0)}</span>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {calendarDays.map((day, index) => {
               const { date, dateString } = day;
               const future = isFuture(date);
@@ -192,7 +193,7 @@ export const DailyReportCalendar = ({
                   onClick={() => handleDateClick(dateString, date)}
                   disabled={!date || future}
                   className={`
-                    aspect-square p-2 rounded text-sm font-medium transition-colors
+                    aspect-square p-1 sm:p-2 rounded text-xs sm:text-sm font-medium transition-colors min-h-[44px]
                     ${!date ? 'invisible' : ''}
                     ${future ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
                     ${date && !future ? getActivityColor(dateString) : ''}
@@ -214,21 +215,21 @@ export const DailyReportCalendar = ({
             })}
           </div>
 
-          <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+          <div className="mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 rounded"></div>
+              <div className="w-4 h-4 bg-gray-100 rounded flex-shrink-0"></div>
               <span>No activity</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-100 rounded"></div>
+              <div className="w-4 h-4 bg-green-100 rounded flex-shrink-0"></div>
               <span>Low</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-300 rounded"></div>
+              <div className="w-4 h-4 bg-green-300 rounded flex-shrink-0"></div>
               <span>Medium</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
+              <div className="w-4 h-4 bg-green-500 rounded flex-shrink-0"></div>
               <span>High</span>
             </div>
           </div>

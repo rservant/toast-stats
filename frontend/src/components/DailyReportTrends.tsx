@@ -191,49 +191,49 @@ export const DailyReportTrends = ({
   return (
     <div className="space-y-6">
       {/* Summary Statistics */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
           Period Summary
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="text-sm text-blue-600 font-medium">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-blue-50 rounded-lg p-3 sm:p-4">
+            <div className="text-xs sm:text-sm text-blue-600 font-medium">
               Total New Members
             </div>
-            <div className="text-2xl font-bold text-blue-900">
+            <div className="text-xl sm:text-2xl font-bold text-blue-900">
               {summaryStats.totalNewMembers}
             </div>
             <div className="text-xs text-blue-600 mt-1">
               Avg: {summaryStats.avgDailyNewMembers}/day
             </div>
           </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="text-sm text-green-600 font-medium">
+          <div className="bg-green-50 rounded-lg p-3 sm:p-4">
+            <div className="text-xs sm:text-sm text-green-600 font-medium">
               Total Renewals
             </div>
-            <div className="text-2xl font-bold text-green-900">
+            <div className="text-xl sm:text-2xl font-bold text-green-900">
               {summaryStats.totalRenewals}
             </div>
             <div className="text-xs text-green-600 mt-1">
               Avg: {summaryStats.avgDailyRenewals}/day
             </div>
           </div>
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="text-sm text-purple-600 font-medium">
+          <div className="bg-purple-50 rounded-lg p-3 sm:p-4">
+            <div className="text-xs sm:text-sm text-purple-600 font-medium">
               Total Awards
             </div>
-            <div className="text-2xl font-bold text-purple-900">
+            <div className="text-xl sm:text-2xl font-bold text-purple-900">
               {summaryStats.totalAwards}
             </div>
             <div className="text-xs text-purple-600 mt-1">
               Avg: {summaryStats.avgDailyAwards}/day
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-600 font-medium">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+            <div className="text-xs sm:text-sm text-gray-600 font-medium">
               Net Change
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">
               +{summaryStats.totalNetChange}
             </div>
             <div className="text-xs text-gray-600 mt-1">
@@ -244,112 +244,131 @@ export const DailyReportTrends = ({
       </div>
 
       {/* Daily Trends Chart */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
           Daily Trends
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={dailyTrendData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12 }}
-              angle={-45}
-              textAnchor="end"
-              height={80}
-            />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="newMembers"
-              stroke="#3b82f6"
-              name="New Members"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="renewals"
-              stroke="#10b981"
-              name="Renewals"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="awards"
-              stroke="#8b5cf6"
-              name="Awards"
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[320px]">
+            <ResponsiveContainer width="100%" height={280} minWidth={320}>
+              <LineChart data={dailyTrendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval="preserveStartEnd"
+                />
+                <YAxis tick={{ fontSize: 10 }} width={50} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Line
+                  type="monotone"
+                  dataKey="newMembers"
+                  stroke="#3b82f6"
+                  name="New Members"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="renewals"
+                  stroke="#10b981"
+                  name="Renewals"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="awards"
+                  stroke="#8b5cf6"
+                  name="Awards"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Weekly Aggregation */}
       {weeklyData.length > 1 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
             Weekly Summary
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="period"
-                tick={{ fontSize: 12 }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="newMembers" fill="#3b82f6" name="New Members" />
-              <Bar dataKey="renewals" fill="#10b981" name="Renewals" />
-              <Bar dataKey="awards" fill="#8b5cf6" name="Awards" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-[320px]">
+              <ResponsiveContainer width="100%" height={280} minWidth={320}>
+                <BarChart data={weeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fontSize: 10 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis tick={{ fontSize: 10 }} width={50} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Bar dataKey="newMembers" fill="#3b82f6" name="New Members" />
+                  <Bar dataKey="renewals" fill="#10b981" name="Renewals" />
+                  <Bar dataKey="awards" fill="#8b5cf6" name="Awards" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Monthly Comparison */}
       {monthlyData.length > 1 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
             Month-by-Month Comparison
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="newMembers" fill="#3b82f6" name="New Members" />
-              <Bar dataKey="renewals" fill="#10b981" name="Renewals" />
-              <Bar dataKey="awards" fill="#8b5cf6" name="Awards" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-[320px]">
+              <ResponsiveContainer width="100%" height={280} minWidth={320}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
+                  <YAxis tick={{ fontSize: 10 }} width={50} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Bar dataKey="newMembers" fill="#3b82f6" name="New Members" />
+                  <Bar dataKey="renewals" fill="#10b981" name="Renewals" />
+                  <Bar dataKey="awards" fill="#8b5cf6" name="Awards" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
           {/* Monthly Comparison Table */}
-          <div className="mt-6 overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="mt-6 overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Month
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                     New Members
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Renewals
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Awards
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Net Change
                   </th>
                 </tr>
@@ -357,25 +376,27 @@ export const DailyReportTrends = ({
               <tbody className="bg-white divide-y divide-gray-200">
                 {monthlyData.map((month, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                    <td className="px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium text-gray-900">
                       {month.period}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">
+                    <td className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-right text-gray-700">
                       {month.newMembers}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">
+                    <td className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-right text-gray-700">
                       {month.renewals}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">
+                    <td className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-right text-gray-700">
                       {month.awards}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
+                    <td className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-right font-medium text-gray-900">
                       +{month.netChange}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -159,15 +159,15 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
 
   return (
     <section 
-      className="bg-white rounded-lg shadow-md p-6"
+      className="bg-white rounded-lg shadow-md p-4 sm:p-6"
       aria-label="Membership trends chart"
     >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+        <div className="flex-1">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
             Membership Trends ({months} Months)
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             ⭐ marks significant daily events
           </p>
         </div>
@@ -175,57 +175,62 @@ const MembershipChart: React.FC<MembershipChartProps> = ({
           onExport={handleExport}
           disabled={!data || data.length === 0}
           label="Export"
-          className="text-sm px-3 py-1.5"
+          className="text-xs sm:text-sm px-3 py-1.5 self-start"
         />
       </div>
       <div 
         role="img" 
         aria-label={chartDescription}
         aria-describedby="membership-chart-desc"
+        className="w-full overflow-x-auto"
       >
-        <ResponsiveContainer width="100%" height={320}>
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            aria-hidden="true"
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis
-              dataKey="date"
-              stroke="#6b7280"
-              style={{ fontSize: '12px' }}
-              angle={-45}
-              textAnchor="end"
-              height={80}
-            />
-            <YAxis
-              stroke="#6b7280"
-              style={{ fontSize: '12px' }}
-              tickFormatter={(value) => value.toLocaleString()}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{ fontSize: '14px' }}
-              verticalAlign="top"
-              height={36}
-            />
-            <Line
-              type="monotone"
-              dataKey="members"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              dot={{ fill: '#3b82f6', r: 4 }}
-              activeDot={{ r: 6 }}
-              name="Total Members"
-            />
-            <Scatter
-              dataKey="significantValue"
-              fill="#9333ea"
-              shape="star"
-              name="Significant Events"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+        <div className="min-w-[320px]">
+          <ResponsiveContainer width="100%" height={280} minWidth={320}>
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+              aria-hidden="true"
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="date"
+                stroke="#6b7280"
+                style={{ fontSize: '10px' }}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                stroke="#6b7280"
+                style={{ fontSize: '10px' }}
+                tickFormatter={(value) => value.toLocaleString()}
+                width={50}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                wrapperStyle={{ fontSize: '12px' }}
+                verticalAlign="top"
+                height={36}
+              />
+              <Line
+                type="monotone"
+                dataKey="members"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={{ fill: '#3b82f6', r: 3 }}
+                activeDot={{ r: 5 }}
+                name="Total Members"
+              />
+              <Scatter
+                dataKey="significantValue"
+                fill="#9333ea"
+                shape="star"
+                name="Significant Events"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </div>
       <p id="membership-chart-desc" className="sr-only">
         {chartDescription}
