@@ -52,6 +52,14 @@ export class RealToastmastersAPIService {
         club['Club Status']?.toLowerCase() === 'suspended'
       ).length
       
+      const ineligibleClubs = clubData.filter((club: any) => 
+        club['Club Status']?.toLowerCase() === 'ineligible'
+      ).length
+      
+      const lowClubs = clubData.filter((club: any) => 
+        club['Club Status']?.toLowerCase() === 'low'
+      ).length
+      
       const distinguishedClubs = clubData.filter((club: any) => {
         const status = club['Club Distinguished Status'] || ''
         return status.toLowerCase().includes('distinguished') || 
@@ -96,6 +104,8 @@ export class RealToastmastersAPIService {
           total: totalClubs,
           active: activeClubs,
           suspended: suspendedClubs,
+          ineligible: ineligibleClubs,
+          low: lowClubs,
           distinguished: distinguishedClubs,
         },
         education: {
@@ -174,7 +184,7 @@ export class RealToastmastersAPIService {
         return {
           id: row['Club Number'] || '',
           name: row['Club Name'] || 'Unknown Club',
-          status: (row['Club Status']?.toLowerCase() || 'active') as 'active' | 'suspended' | 'ineligible',
+          status: (row['Club Status']?.toLowerCase() || 'active') as 'active' | 'suspended' | 'ineligible' | 'low',
           memberCount: parseInt(row['Active Members'] || '0', 10),
           distinguished,
           distinguishedLevel,

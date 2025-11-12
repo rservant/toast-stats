@@ -34,19 +34,24 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
       {
         name: 'Active',
         count: distribution.active || 0,
-        color: '#10b981',
+        color: '#10b981', // green
+      },
+      {
+        name: 'Low',
+        count: distribution.low || 0,
+        color: '#f59e0b', // amber
       },
       {
         name: 'Suspended',
         count: distribution.suspended || 0,
-        color: '#ef4444',
+        color: '#ef4444', // red
       },
       {
         name: 'Ineligible',
         count: distribution.ineligible || 0,
-        color: '#6b7280',
+        color: '#6b7280', // gray
       },
-    ];
+    ].filter((item) => item.count > 0); // Only show statuses that exist
   }, [clubs]);
 
   // Calculate distinguished distribution
@@ -175,18 +180,30 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
 
       {/* Summary Statistics */}
       <div className="mt-6 pt-6 border-t border-gray-200">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
               {statusData.find((s) => s.name === 'Active')?.count || 0}
             </div>
-            <div className="text-sm text-gray-600">Active Clubs</div>
+            <div className="text-sm text-gray-600">Active</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-amber-600">
+              {statusData.find((s) => s.name === 'Low')?.count || 0}
+            </div>
+            <div className="text-sm text-gray-600">Low</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600">
               {statusData.find((s) => s.name === 'Suspended')?.count || 0}
             </div>
             <div className="text-sm text-gray-600">Suspended</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-600">
+              {statusData.find((s) => s.name === 'Ineligible')?.count || 0}
+            </div>
+            <div className="text-sm text-gray-600">Ineligible</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">

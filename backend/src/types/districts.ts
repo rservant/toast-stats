@@ -28,6 +28,8 @@ export interface ClubStats {
   total: number
   active: number
   suspended: number
+  ineligible: number
+  low: number
   distinguished: number
 }
 
@@ -74,7 +76,7 @@ export interface MembershipHistoryResponse {
 export interface Club {
   id: string
   name: string
-  status: 'active' | 'suspended' | 'ineligible'
+  status: 'active' | 'suspended' | 'ineligible' | 'low'
   memberCount: number
   distinguished: boolean
   distinguishedLevel?: 'select' | 'distinguished' | 'president'

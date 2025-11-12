@@ -41,8 +41,10 @@ export class MockToastmastersAPIService {
       },
       clubs: {
         total: 125,
-        active: 120,
+        active: 115,
         suspended: 3,
+        ineligible: 5,
+        low: 2,
         distinguished: 45,
       },
       education: {
@@ -82,7 +84,10 @@ export class MockToastmastersAPIService {
 
   async getClubs(_districtId: string) {
     const clubs = []
-    const statuses: Array<'active' | 'suspended' | 'ineligible'> = ['active', 'active', 'active', 'active', 'suspended']
+    const statuses: Array<'active' | 'suspended' | 'ineligible' | 'low'> = [
+      'active', 'active', 'active', 'active', 'active', 'active',
+      'suspended', 'ineligible', 'low'
+    ]
     const levels: Array<'select' | 'distinguished' | 'president'> = ['select', 'distinguished', 'president']
     
     for (let i = 1; i <= 20; i++) {
