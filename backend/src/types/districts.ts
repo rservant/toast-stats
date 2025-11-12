@@ -35,6 +35,12 @@ export interface EducationStats {
   totalAwards: number
   byType: AwardTypeCount[]
   topClubs: ClubAwards[]
+  byMonth?: MonthlyAwards[]
+}
+
+export interface MonthlyAwards {
+  month: string
+  count: number
 }
 
 export interface AwardTypeCount {

@@ -7,6 +7,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import MembershipChart from '../components/MembershipChart';
 import ClubPerformanceTable from '../components/ClubPerformanceTable';
 import ClubStatusChart from '../components/ClubStatusChart';
+import EducationalAwardsChart from '../components/EducationalAwardsChart';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
 import { useClubs } from '../hooks/useClubs';
 
@@ -162,6 +163,11 @@ const DashboardPage: React.FC = () => {
               clubs={clubsData?.clubs || []}
               isLoading={isLoadingClubs}
             />
+          </div>
+
+          {/* Educational Awards Chart - Full width */}
+          <div className="col-span-1 sm:col-span-2 lg:col-span-4">
+            <EducationalAwardsChart districtId={selectedDistrictId} months={12} />
           </div>
 
           {/* Club Performance Table - Full width */}

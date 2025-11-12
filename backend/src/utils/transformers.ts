@@ -143,6 +143,27 @@ export function transformDailyReportDetailResponse(apiResponse: unknown): unknow
 }
 
 /**
+ * Transformer for educational awards
+ * Converts Toastmasters API educational awards format to internal format
+ */
+export function transformEducationalAwardsResponse(apiResponse: unknown): unknown {
+  if (!apiResponse || typeof apiResponse !== 'object') {
+    throw new Error('Invalid educational awards response format')
+  }
+
+  // Transform the API response to match our internal format
+  // This handles educational awards with monthly breakdown
+  const response = apiResponse as any
+
+  return {
+    totalAwards: response.totalAwards || 0,
+    byType: response.byType || [],
+    topClubs: response.topClubs || [],
+    byMonth: response.byMonth || [],
+  }
+}
+
+/**
  * Generic error transformer
  * Converts Toastmasters API error responses to internal error format
  */

@@ -366,4 +366,14 @@ export class ToastmastersAPIService {
       `/api/districts/${districtId}/daily-reports/${date}`
     )
   }
+
+  async getEducationalAwards(
+    districtId: string,
+    months: number
+  ): Promise<unknown> {
+    return await this.makeRequest(
+      'get',
+      `/api/districts/${districtId}/educational-awards?months=${months}`
+    )
+  }
 }

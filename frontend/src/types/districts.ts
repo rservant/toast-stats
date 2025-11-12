@@ -33,8 +33,34 @@ export interface ClubStats {
   distinguished: number;
 }
 
+export interface AwardTypeCount {
+  type: string;
+  count: number;
+}
+
+export interface ClubAwards {
+  clubId: string;
+  clubName: string;
+  awards: number;
+}
+
+export interface MonthlyAwards {
+  month: string;
+  count: number;
+}
+
 export interface EducationStats {
   totalAwards: number;
+  byType: AwardTypeCount[];
+  topClubs: ClubAwards[];
+  byMonth: MonthlyAwards[];
+}
+
+export interface EducationalAwardsResponse {
+  totalAwards: number;
+  byType: AwardTypeCount[];
+  topClubs: ClubAwards[];
+  byMonth: MonthlyAwards[];
 }
 
 export interface DistrictStatistics {

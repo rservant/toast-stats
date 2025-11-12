@@ -10,6 +10,7 @@ import {
   transformClubsResponse,
   transformDailyReportsResponse,
   transformDailyReportDetailResponse,
+  transformEducationalAwardsResponse,
   transformErrorResponse,
 } from '../utils/transformers.js'
 import type {
@@ -254,6 +255,83 @@ router.get(
         error: {
           code: errorResponse.code || 'FETCH_ERROR',
           message: 'Failed to fetch clubs',
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/educational-awards
+ * Fetch educational awards history with query parameters
+ */
+router.get(
+  '/:districtId/educational-awards',
+  authenticateToken,
+  cacheMiddleware({
+    ttl: 900, // 15 minutes
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, 'educational-awards', {
+        months: req.query.months,
+      }),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { months } = req.query
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate months parameter
+      const monthsNum = months ? parseInt(months as string, 10) : 12
+      if (isNaN(monthsNum) || monthsNum < 1 || monthsNum > 24) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_MONTHS_PARAMETER',
+            message: 'Months parameter must be a number between 1 and 24',
+          },
+        })
+        return
+      }
+
+      // Fetch educational awards from Toastmasters API
+      const apiResponse = await toastmastersAPI.getEducationalAwards(
+        districtId,
+        monthsNum
+      )
+
+      // Transform response to internal format
+      const awards = transformEducationalAwardsResponse(apiResponse)
+
+      res.json(awards)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check if it's a 404 error (district not found)
+      if (errorResponse.code.includes('404')) {
+        res.status(404).json({
+          error: {
+            code: 'DISTRICT_NOT_FOUND',
+            message: 'District not found',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'FETCH_ERROR',
+          message: 'Failed to fetch educational awards',
           details: errorResponse.details,
         },
       })
