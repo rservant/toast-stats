@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../hooks/useAuth';
 import { enableCacheBypass, disableCacheBypass } from '../services/api';
 import DistrictSelector from '../components/DistrictSelector';
 import DashboardLayout from '../components/DashboardLayout';
@@ -21,7 +20,6 @@ import { useDistricts } from '../hooks/useDistricts';
 
 const DashboardPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { logout } = useAuth();
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -94,50 +92,40 @@ const DashboardPage: React.FC = () => {
   const header = (
     <>
       <div className="flex flex-col gap-4 mb-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Toastmasters District Visualizer
+            Toastmasters District Statistics
           </h1>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            {selectedDistrictId && (
-              <>
-                <div className="hidden sm:flex flex-col items-end text-sm text-gray-600">
-                  <span className="font-medium">Last refreshed:</span>
-                  <span>{formatLastRefreshed(lastRefreshed)}</span>
-                </div>
-                <button
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  aria-label="Refresh data"
+          {selectedDistrictId && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              <div className="hidden sm:flex flex-col items-end text-sm text-gray-600">
+                <span className="font-medium">Last refreshed:</span>
+                <span>{formatLastRefreshed(lastRefreshed)}</span>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                aria-label="Refresh data"
+              >
+                <svg
+                  className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <svg
-                    className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-                  <span className="sm:hidden">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-                </button>
-              </>
-            )}
-            <button
-              onClick={logout}
-              className="min-h-[44px] px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-              aria-label="Logout"
-            >
-              Logout
-            </button>
-          </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+              </button>
+            </div>
+          )}
         </div>
         {selectedDistrictId && (
           <div className="sm:hidden text-xs text-gray-600 bg-gray-50 rounded p-2">

@@ -45,25 +45,28 @@ export class RealToastmastersAPIService {
       // Calculate statistics from club data
       const totalClubs = clubData.length
       const activeClubs = clubData.filter((club: any) => 
-        club.Status?.toLowerCase() === 'active' || !club.Status
+        club['Club Status']?.toLowerCase() === 'active'
       ).length
       
       const suspendedClubs = clubData.filter((club: any) => 
-        club.Status?.toLowerCase() === 'suspended'
+        club['Club Status']?.toLowerCase() === 'suspended'
       ).length
       
-      const distinguishedClubs = clubData.filter((club: any) => 
-        club.Distinguished === 'Yes' || club.Distinguished === true
-      ).length
+      const distinguishedClubs = clubData.filter((club: any) => {
+        const status = club['Club Distinguished Status'] || ''
+        return status.toLowerCase().includes('distinguished') || 
+               status.toLowerCase().includes('select') ||
+               status.toLowerCase().includes('president')
+      }).length
 
       // Calculate membership stats
       const totalMembers = clubData.reduce((sum: number, club: any) => {
-        const members = parseInt(club['Member Count'] || club.Members || club['To Date'] || '0', 10)
+        const members = parseInt(club['Active Members'] || '0', 10)
         return sum + members
       }, 0)
 
       const baseMembership = clubData.reduce((sum: number, club: any) => {
-        const base = parseInt(club.Base || club['Base Members'] || '0', 10)
+        const base = parseInt(club['Mem. Base'] || '0', 10)
         return sum + base
       }, 0)
 
@@ -73,9 +76,9 @@ export class RealToastmastersAPIService {
       // Get top clubs by membership
       const topClubs = clubData
         .map((club: any) => ({
-          clubId: club['Club Number'] || club.Club || club.ID || '',
-          clubName: club['Club Name'] || club.Name || 'Unknown Club',
-          memberCount: parseInt(club['Member Count'] || club.Members || club['To Date'] || '0', 10),
+          clubId: club['Club Number'] || '',
+          clubName: club['Club Name'] || 'Unknown Club',
+          memberCount: parseInt(club['Active Members'] || '0', 10),
         }))
         .sort((a: any, b: any) => b.memberCount - a.memberCount)
         .slice(0, 10)
@@ -146,28 +149,36 @@ export class RealToastmastersAPIService {
       const clubData = await this.scraper.getClubPerformance(districtId)
       
       const clubs = clubData.map((row: any) => {
-        const distinguished = row.Distinguished === 'Yes' || row.Distinguished === true
+        const distinguishedStatus = row['Club Distinguished Status'] || ''
+        const distinguished = distinguishedStatus.trim().length > 0
         let distinguishedLevel: 'select' | 'distinguished' | 'president' | undefined
         
         if (distinguished) {
-          const level = row['Distinguished Level'] || row.Level || ''
-          if (level.toLowerCase().includes('president')) {
+          const status = distinguishedStatus.toLowerCase()
+          if (status.includes('president')) {
             distinguishedLevel = 'president'
-          } else if (level.toLowerCase().includes('select')) {
+          } else if (status.includes('select')) {
             distinguishedLevel = 'select'
           } else {
             distinguishedLevel = 'distinguished'
           }
         }
         
+        // Calculate total awards
+        const level1s = parseInt(row['Level 1s'] || '0', 10)
+        const level2s = parseInt(row['Level 2s'] || '0', 10)
+        const level3s = parseInt(row['Level 3s'] || '0', 10)
+        const level4s = parseInt(row['Level 4s, Path Completions, or DTM Awards'] || '0', 10)
+        const totalAwards = level1s + level2s + level3s + level4s
+        
         return {
-          id: row['Club Number'] || row.Club || row.ID || '',
-          name: row['Club Name'] || row.Name || 'Unknown Club',
-          status: (row.Status?.toLowerCase() || 'active') as 'active' | 'suspended' | 'ineligible',
-          memberCount: parseInt(row['Member Count'] || row.Members || row['To Date'] || '0', 10),
+          id: row['Club Number'] || '',
+          name: row['Club Name'] || 'Unknown Club',
+          status: (row['Club Status']?.toLowerCase() || 'active') as 'active' | 'suspended' | 'ineligible',
+          memberCount: parseInt(row['Active Members'] || '0', 10),
           distinguished,
           distinguishedLevel,
-          awards: parseInt(row.Awards || row['Total Awards'] || '0', 10),
+          awards: totalAwards,
         }
       })
       
