@@ -168,7 +168,7 @@
   - Add loading indicator during export generation
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 18. Implement refresh functionality and cache management
+- [x] 18. Implement refresh functionality and cache management
   - Add refresh button to dashboard header
   - Implement refresh handler that invalidates React Query cache
   - Add backend cache bypass parameter for refresh requests

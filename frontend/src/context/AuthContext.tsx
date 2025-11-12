@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,7 +50,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     sessionStorage.removeItem('auth_token');
     
-    // Optionally call backend logout endpoint
+    // Clear React Query cache on logout
+    queryClient.clear();
+    
+    // Call backend logout endpoint to clear server-side cache
     if (token) {
       axios.post('/api/auth/logout', { token }).catch(() => {
         // Ignore errors on logout

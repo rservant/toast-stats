@@ -1,5 +1,22 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
+// Flag to indicate if we should bypass cache on next requests
+let bypassCache = false;
+
+/**
+ * Enable cache bypass for the next set of requests
+ */
+export const enableCacheBypass = () => {
+  bypassCache = true;
+};
+
+/**
+ * Disable cache bypass
+ */
+export const disableCacheBypass = () => {
+  bypassCache = false;
+};
+
 // Create axios instance with base configuration
 export const apiClient = axios.create({
   baseURL: '/api',
@@ -8,13 +25,21 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add authentication token
+// Request interceptor to add authentication token and cache bypass parameter
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = sessionStorage.getItem('auth_token');
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Add cache bypass parameter if enabled
+    if (bypassCache && config.method === 'get') {
+      config.params = {
+        ...config.params,
+        refresh: 'true',
+      };
     }
     
     return config;

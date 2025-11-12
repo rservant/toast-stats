@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { enableCacheBypass, disableCacheBypass } from '../services/api';
 import DistrictSelector from '../components/DistrictSelector';
 import DashboardLayout from '../components/DashboardLayout';
 import StatCard from '../components/StatCard';
@@ -18,9 +20,12 @@ import { useEnhancedClubs } from '../hooks/useIntegratedData';
 import { useDistricts } from '../hooks/useDistricts';
 
 const DashboardPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const { logout } = useAuth();
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   
   // Fetch district statistics and enhanced clubs data with recent changes
   const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
@@ -44,19 +49,93 @@ const DashboardPage: React.FC = () => {
     setSelectedDate(null);
   };
 
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Enable cache bypass for the next set of requests
+      enableCacheBypass();
+      
+      // Invalidate all queries to force refetch with cache bypass
+      await queryClient.invalidateQueries();
+      
+      // Wait a bit for queries to refetch
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setLastRefreshed(new Date());
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      // Disable cache bypass after refresh
+      disableCacheBypass();
+      setIsRefreshing(false);
+    }
+  };
+
+  const formatLastRefreshed = (date: Date | null): string => {
+    if (!date) return 'Never';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins === 1) return '1 minute ago';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return '1 hour ago';
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    
+    return date.toLocaleString();
+  };
+
   const header = (
     <>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold text-gray-900">
           Toastmasters District Visualizer
         </h1>
-        <button
-          onClick={logout}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-          aria-label="Logout"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedDistrictId && (
+            <>
+              <div className="flex flex-col items-end text-sm text-gray-600">
+                <span className="font-medium">Last refreshed:</span>
+                <span>{formatLastRefreshed(lastRefreshed)}</span>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                aria-label="Refresh data"
+              >
+                <svg
+                  className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </>
+          )}
+          <button
+            onClick={logout}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+            aria-label="Logout"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6">
