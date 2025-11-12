@@ -103,6 +103,27 @@ npm run lint
 - Responsive design for all devices
 - Accessibility compliant
 
+## Deployment
+
+For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+Quick deployment options:
+- **Docker Compose**: `docker-compose --env-file .env.production up -d`
+- **Kubernetes**: See `k8s/` directory for manifests
+- **Static Hosting**: Build frontend and deploy to Vercel/Netlify
+
+## Testing
+
+Run tests:
+
+```bash
+# Frontend tests
+npm run test:frontend
+
+# Backend tests
+npm run test:backend
+```
+
 ## License
 
 Private
