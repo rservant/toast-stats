@@ -1,0 +1,437 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
+import LandingPage from '../LandingPage'
+import { BackfillProvider } from '../../contexts/BackfillContext'
+import * as apiModule from '../../services/api'
+
+// Mock the API client
+vi.mock('../../services/api', () => ({
+  apiClient: {
+    get: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
+
+// Helper to render component with all required providers
+const renderWithProviders = (component: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <BackfillProvider>
+          {component}
+        </BackfillProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
+
+describe('LandingPage - Percentage Formatting', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('formatPercentage function', () => {
+    it('should return "+" prefix and green color for positive percentages', async () => {
+      const apiClient = apiModule.apiClient as any
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          dates: [],
+        },
+      })
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          rankings: [
+            {
+              districtId: 'D1',
+              districtName: 'District 1',
+              region: '1',
+              paidClubs: 100,
+              paidClubBase: 90,
+              clubGrowthPercent: 12.5,
+              totalPayments: 5000,
+              paymentBase: 4500,
+              paymentGrowthPercent: 11.1,
+              activeClubs: 100,
+              distinguishedClubs: 50,
+              selectDistinguished: 20,
+              presidentsDistinguished: 10,
+              distinguishedPercent: 50,
+              clubsRank: 1,
+              paymentsRank: 1,
+              distinguishedRank: 1,
+              aggregateScore: 300,
+            },
+          ],
+          date: '2025-11-22',
+        },
+      })
+
+      renderWithProviders(<LandingPage />)
+
+      // Wait for data to load and check for positive percentage with + prefix
+      const element = await screen.findByText('+12.5%')
+      expect(element).toBeInTheDocument()
+      expect(element).toHaveClass('text-green-600')
+    })
+
+    it('should return "-" prefix and red color for negative percentages', async () => {
+      const apiClient = apiModule.apiClient as any
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          dates: [],
+        },
+      })
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          rankings: [
+            {
+              districtId: 'D1',
+              districtName: 'District 1',
+              region: '1',
+              paidClubs: 80,
+              paidClubBase: 90,
+              clubGrowthPercent: -11.1,
+              totalPayments: 4000,
+              paymentBase: 4500,
+              paymentGrowthPercent: -8.5,
+              activeClubs: 80,
+              distinguishedClubs: 40,
+              selectDistinguished: 15,
+              presidentsDistinguished: 5,
+              distinguishedPercent: 50,
+              clubsRank: 1,
+              paymentsRank: 1,
+              distinguishedRank: 1,
+              aggregateScore: 300,
+            },
+          ],
+          date: '2025-11-22',
+        },
+      })
+
+      renderWithProviders(<LandingPage />)
+
+      // Wait for data to load and check for negative percentage
+      const element = await screen.findByText('-11.1%')
+      expect(element).toBeInTheDocument()
+      expect(element).toHaveClass('text-red-600')
+    })
+
+    it('should return "0.0%" with gray color for zero percentages', async () => {
+      const apiClient = apiModule.apiClient as any
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          dates: [],
+        },
+      })
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          rankings: [
+            {
+              districtId: 'D1',
+              districtName: 'District 1',
+              region: '1',
+              paidClubs: 90,
+              paidClubBase: 90,
+              clubGrowthPercent: 0,
+              totalPayments: 4500,
+              paymentBase: 4500,
+              paymentGrowthPercent: 1.5,
+              activeClubs: 90,
+              distinguishedClubs: 45,
+              selectDistinguished: 15,
+              presidentsDistinguished: 5,
+              distinguishedPercent: 50,
+              clubsRank: 1,
+              paymentsRank: 1,
+              distinguishedRank: 1,
+              aggregateScore: 300,
+            },
+          ],
+          date: '2025-11-22',
+        },
+      })
+
+      renderWithProviders(<LandingPage />)
+
+      // Wait for data to load and check for zero percentage
+      const element = await screen.findByText('0.0%')
+      expect(element).toBeInTheDocument()
+      expect(element).toHaveClass('text-gray-600')
+    })
+
+    it('should format percentages to 1 decimal place precision', async () => {
+      const apiClient = apiModule.apiClient as any
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          dates: [],
+        },
+      })
+      
+      apiClient.get.mockResolvedValueOnce({
+        data: {
+          rankings: [
+            {
+              districtId: 'D1',
+              districtName: 'District 1',
+              region: '1',
+              paidClubs: 100,
+              paidClubBase: 90,
+              clubGrowthPercent: 12.567,
+              totalPayments: 5000,
+              paymentBase: 4500,
+              paymentGrowthPercent: 8.333,
+              activeClubs: 100,
+              distinguishedClubs: 50,
+              selectDistinguished: 20,
+              presidentsDistinguished: 10,
+              distinguishedPercent: 50,
+              clubsRank: 1,
+              paymentsRank: 1,
+              distinguishedRank: 1,
+              aggregateScore: 300,
+            },
+          ],
+          date: '2025-11-22',
+        },
+      })
+
+      renderWithProviders(<LandingPage />)
+
+      // Wait for data to load and check for 1 decimal place formatting
+      const element1 = await screen.findByText('+12.6%')
+      const element2 = await screen.findByText('+8.3%')
+      expect(element1).toBeInTheDocument()
+      expect(element2).toBeInTheDocument()
+    })
+  })
+})
+
+describe('LandingPage - Table Cell Rendering', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should display rank number correctly', async () => {
+    const apiClient = apiModule.apiClient as any
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        dates: [],
+      },
+    })
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 12.5,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 5,
+            paymentsRank: 3,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
+      },
+    })
+
+    renderWithProviders(<LandingPage />)
+
+    // Wait for data to load and check for rank numbers
+    const clubsRank = await screen.findByText('Rank #5')
+    const paymentsRank = await screen.findByText('Rank #3')
+    expect(clubsRank).toBeInTheDocument()
+    expect(clubsRank).toHaveClass('text-blue-600')
+    expect(paymentsRank).toBeInTheDocument()
+    expect(paymentsRank).toHaveClass('text-blue-600')
+  })
+
+  it('should display percentage with correct color', async () => {
+    const apiClient = apiModule.apiClient as any
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        dates: [],
+      },
+    })
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 15.5,
+            totalPayments: 4000,
+            paymentBase: 4500,
+            paymentGrowthPercent: -11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
+      },
+    })
+
+    renderWithProviders(<LandingPage />)
+
+    // Wait for data to load and check for percentage colors
+    const positivePercent = await screen.findByText('+15.5%')
+    const negativePercent = await screen.findByText('-11.1%')
+    expect(positivePercent).toBeInTheDocument()
+    expect(positivePercent).toHaveClass('text-green-600')
+    expect(negativePercent).toBeInTheDocument()
+    expect(negativePercent).toHaveClass('text-red-600')
+  })
+
+  it('should display bullet separator between rank and percentage', async () => {
+    const apiClient = apiModule.apiClient as any
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        dates: [],
+      },
+    })
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 12.5,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
+      },
+    })
+
+    renderWithProviders(<LandingPage />)
+
+    // Wait for data to load and check for bullet separators
+    await screen.findByText('District 1')
+    const bullets = screen.getAllByText('•')
+    // Should have 2 bullets (one for paid clubs, one for total payments)
+    expect(bullets.length).toBeGreaterThanOrEqual(2)
+    bullets.forEach((bullet) => {
+      expect(bullet).toHaveClass('text-gray-400')
+    })
+  })
+
+  it('should display both rank and percentage values visible and properly aligned', async () => {
+    const apiClient = apiModule.apiClient as any
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        dates: [],
+      },
+    })
+    
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 12.5,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 5,
+            paymentsRank: 3,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
+      },
+    })
+
+    renderWithProviders(<LandingPage />)
+
+    // Wait for data to load and verify all elements are present
+    await screen.findByText('District 1')
+    
+    // Check paid clubs column
+    expect(screen.getByText('100')).toBeInTheDocument()
+    expect(screen.getByText('Rank #5')).toBeInTheDocument()
+    expect(screen.getByText('+12.5%')).toBeInTheDocument()
+    
+    // Check total payments column
+    expect(screen.getByText('5,000')).toBeInTheDocument()
+    expect(screen.getByText('Rank #3')).toBeInTheDocument()
+    expect(screen.getByText('+11.1%')).toBeInTheDocument()
+    
+    // Verify the rank and percentage are in the same container (text-xs class)
+    const rankElements = screen.getAllByText(/Rank #\d+/)
+    // Check that rank elements exist and are styled correctly
+    expect(rankElements.length).toBeGreaterThan(0)
+    rankElements.forEach((rankElement) => {
+      expect(rankElement).toHaveClass('text-blue-600')
+    })
+  })
+})

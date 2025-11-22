@@ -14,6 +14,16 @@ export class CacheManager {
   private metadataCache: Map<string, CacheMetadata> = new Map()
   private indexCache: Map<string, DistrictRankSnapshot[]> = new Map()
   private indexLoaded: boolean = false
+  
+  /**
+   * Cache version for tracking data format changes
+   * Increment this when making breaking changes to cached data structure or calculations
+   * 
+   * Version History:
+   * - v1: Initial implementation with simple rank-sum scoring
+   * - v2: Borda count scoring system (November 2025)
+   */
+  private static readonly CACHE_VERSION = 2
 
   constructor(cacheDir: string = './cache') {
     this.cacheDir = cacheDir
@@ -127,6 +137,7 @@ export class CacheManager {
         districtCount,
         source: 'scraper',
         programYear: CacheManager.getProgramYear(new Date(date)),
+        cacheVersion: CacheManager.CACHE_VERSION,
       }
 
       // Save metadata to file
@@ -224,15 +235,31 @@ export class CacheManager {
   }
 
   /**
-   * Clear all cache
+   * Clear all district rankings cache (but preserve individual district data)
    */
   async clearCache(): Promise<void> {
     try {
       const files = await fs.readdir(this.cacheDir)
+      const filesToDelete = files.filter(file => {
+        // Only delete district rankings files and metadata, not the districts subdirectory
+        return file.startsWith('districts_') || 
+               file.startsWith('metadata_') || 
+               file === 'historical_index.json'
+      })
+      
       await Promise.all(
-        files.map(file => fs.unlink(path.join(this.cacheDir, file)))
+        filesToDelete.map(async (file) => {
+          const filePath = path.join(this.cacheDir, file)
+          await fs.unlink(filePath)
+        })
       )
-      logger.info('Cache cleared', { filesDeleted: files.length })
+      
+      // Clear in-memory caches
+      this.metadataCache.clear()
+      this.indexCache.clear()
+      this.indexLoaded = false
+      
+      logger.info('District rankings cache cleared', { filesDeleted: filesToDelete.length })
     } catch (error) {
       logger.error('Failed to clear cache', error)
       throw error
@@ -453,6 +480,89 @@ export class CacheManager {
         programYears: [],
         cacheSize: 0,
       }
+    }
+  }
+
+  /**
+   * Check if cached data is compatible with current cache version
+   * Returns true if cache version matches or is not set (legacy cache)
+   */
+  async isCacheVersionCompatible(date: string): Promise<boolean> {
+    try {
+      const metadata = await this.getMetadata(date)
+      if (!metadata) {
+        return false
+      }
+      
+      // If no version is set, it's legacy cache (v1)
+      const cacheVersion = metadata.cacheVersion || 1
+      
+      if (cacheVersion !== CacheManager.CACHE_VERSION) {
+        logger.warn('Cache version mismatch', {
+          date,
+          cacheVersion,
+          currentVersion: CacheManager.CACHE_VERSION,
+        })
+        return false
+      }
+      
+      return true
+    } catch (error) {
+      logger.error('Failed to check cache version', { date, error })
+      return false
+    }
+  }
+
+  /**
+   * Get current cache version
+   */
+  static getCacheVersion(): number {
+    return CacheManager.CACHE_VERSION
+  }
+
+  /**
+   * Clear cache entries that don't match current version
+   * Useful for automatic migration after version updates
+   */
+  async clearIncompatibleCache(): Promise<number> {
+    try {
+      const dates = await this.getCachedDates('districts')
+      let clearedCount = 0
+      
+      for (const date of dates) {
+        const isCompatible = await this.isCacheVersionCompatible(date)
+        if (!isCompatible) {
+          await this.clearCacheForDate(date, 'districts')
+          
+          // Also clear metadata
+          try {
+            const metadataPath = this.getMetadataFilePath(date)
+            await fs.unlink(metadataPath)
+          } catch {
+            // Ignore if metadata doesn't exist
+          }
+          
+          clearedCount++
+          logger.info('Cleared incompatible cache', { date })
+        }
+      }
+      
+      // Clear historical index if any cache was cleared
+      if (clearedCount > 0) {
+        try {
+          const indexPath = this.getIndexFilePath()
+          await fs.unlink(indexPath)
+          logger.info('Cleared historical index due to version mismatch')
+        } catch {
+          // Ignore if index doesn't exist
+        }
+      }
+      
+      logger.info('Incompatible cache cleanup complete', { clearedCount })
+      return clearedCount
+    } catch (error) {
+      logger.error('Failed to clear incompatible cache', error)
+      throw error
     }
   }
 

@@ -6,9 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { AnalyticsEngine } from '../AnalyticsEngine.js'
 import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import type { DistrictCacheEntry } from '../../types/districts.js'
 import fs from 'fs/promises'
-import path from 'path'
 
 describe('Year-Over-Year Comparison Logic', () => {
   const testCacheDir = 'test-cache-yoy'

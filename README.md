@@ -127,6 +127,14 @@ Quick deployment options:
 - **Kubernetes**: See `k8s/` directory for manifests
 - **Static Hosting**: Build frontend and deploy to Vercel/Netlify
 
+### Cache Management
+
+The application uses a versioned cache system to track changes in data format and calculations. When deploying updates that change cached data structure:
+
+- Review [backend/CACHE_MIGRATION_GUIDE.md](./backend/CACHE_MIGRATION_GUIDE.md) for migration instructions
+- Check [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) for cache clearing requirements
+- Current cache version: **v2** (Borda count scoring system)
+
 ## Testing
 
 Run tests:

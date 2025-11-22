@@ -160,6 +160,7 @@ export interface CacheMetadata {
   districtCount: number
   source: 'scraper' | 'manual' | 'api'
   programYear: string
+  cacheVersion?: number // Cache format version for migration tracking (added v2)
 }
 
 export interface HistoricalDataIndex {

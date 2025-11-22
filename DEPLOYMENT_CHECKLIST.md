@@ -61,6 +61,30 @@ Use this checklist to ensure a secure and successful production deployment.
 
 ## Post-Deployment
 
+### Cache Management
+
+**IMPORTANT: Clear cache after deploying ranking system changes**
+
+The district rankings calculation has been updated to use a Borda count scoring system. Existing cached rankings use the old scoring methodology and must be cleared to ensure users see accurate rankings.
+
+- [ ] Clear all cached district rankings:
+  ```bash
+  # If using Docker:
+  docker exec -it <backend-container> rm -rf /app/cache/districts_*.json
+  docker exec -it <backend-container> rm -rf /app/cache/metadata_*.json
+  docker exec -it <backend-container> rm -rf /app/cache/historical_index.json
+  
+  # If running directly:
+  rm -rf backend/cache/districts_*.json
+  rm -rf backend/cache/metadata_*.json
+  rm -rf backend/cache/historical_index.json
+  ```
+- [ ] Verify cache was cleared (directory should be empty or only contain district-level data)
+- [ ] Trigger fresh data fetch by accessing the rankings page
+- [ ] Verify new rankings display correctly with Borda scores
+
+**Note:** District-level performance data (in `cache/districts/{districtId}/` subdirectories) does not need to be cleared as it is not affected by the ranking calculation changes.
+
 ### Verification
 
 - [ ] Backend health check responds: `curl https://api.yourdomain.com/health`
@@ -71,6 +95,8 @@ Use this checklist to ensure a secure and successful production deployment.
 - [ ] Export functionality works
 - [ ] Mobile responsive design works
 - [ ] All API endpoints respond correctly
+- [ ] District rankings display with correct Borda scores (higher is better)
+- [ ] Percentage values display alongside rank numbers
 
 ### Security Verification
 

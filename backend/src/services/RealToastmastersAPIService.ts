@@ -84,52 +84,69 @@ export class RealToastmastersAPIService {
 
       // Second pass: rank each district in each category (1 = best)
       // Handle ties by giving them the same rank
-      const sortedByClubs = [...districtData].sort((a, b) => b.paidClubs - a.paidClubs)
-      const sortedByPayments = [...districtData].sort((a, b) => b.totalPayments - a.totalPayments)
-      const sortedByDistinguished = [...districtData].sort((a, b) => b.distinguishedClubs - a.distinguishedClubs)
+      // Rank by PERCENTAGES, not absolute counts
+      const sortedByClubs = [...districtData].sort((a, b) => b.clubGrowthPercent - a.clubGrowthPercent)
+      const sortedByPayments = [...districtData].sort((a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent)
+      const sortedByDistinguished = [...districtData].sort((a, b) => b.distinguishedPercent - a.distinguishedPercent)
 
-      // Create ranking maps with tie handling
+      const totalDistricts = districtData.length
+
+      // Create ranking maps with tie handling and Borda points
+      // Borda point formula: bordaPoints = totalDistricts - rank + 1
       const clubsRank = new Map<string, number>()
+      const clubsBordaPoints = new Map<string, number>()
       let currentRank = 1
-      let previousValue = sortedByClubs[0]?.paidClubs
+      let previousValue = sortedByClubs[0]?.clubGrowthPercent
       sortedByClubs.forEach((d, i) => {
-        if (i > 0 && d.paidClubs < previousValue) {
+        if (i > 0 && d.clubGrowthPercent < previousValue) {
           currentRank = i + 1
         }
         clubsRank.set(d.districtId, currentRank)
-        previousValue = d.paidClubs
+        const bordaPoints = totalDistricts - currentRank + 1
+        clubsBordaPoints.set(d.districtId, bordaPoints)
+        previousValue = d.clubGrowthPercent
       })
 
       const paymentsRank = new Map<string, number>()
+      const paymentsBordaPoints = new Map<string, number>()
       currentRank = 1
-      previousValue = sortedByPayments[0]?.totalPayments
+      previousValue = sortedByPayments[0]?.paymentGrowthPercent
       sortedByPayments.forEach((d, i) => {
-        if (i > 0 && d.totalPayments < previousValue) {
+        if (i > 0 && d.paymentGrowthPercent < previousValue) {
           currentRank = i + 1
         }
         paymentsRank.set(d.districtId, currentRank)
-        previousValue = d.totalPayments
+        const bordaPoints = totalDistricts - currentRank + 1
+        paymentsBordaPoints.set(d.districtId, bordaPoints)
+        previousValue = d.paymentGrowthPercent
       })
 
       const distinguishedRank = new Map<string, number>()
+      const distinguishedBordaPoints = new Map<string, number>()
       currentRank = 1
-      previousValue = sortedByDistinguished[0]?.distinguishedClubs
+      previousValue = sortedByDistinguished[0]?.distinguishedPercent
       sortedByDistinguished.forEach((d, i) => {
-        if (i > 0 && d.distinguishedClubs < previousValue) {
+        if (i > 0 && d.distinguishedPercent < previousValue) {
           currentRank = i + 1
         }
         distinguishedRank.set(d.districtId, currentRank)
-        previousValue = d.distinguishedClubs
+        const bordaPoints = totalDistricts - currentRank + 1
+        distinguishedBordaPoints.set(d.districtId, bordaPoints)
+        previousValue = d.distinguishedPercent
       })
 
-      // Third pass: calculate aggregate score (sum of ranks - lower is better)
+      // Third pass: calculate aggregate score using Borda count (sum of Borda points - higher is better)
       const rankings = districtData.map((district) => {
         const clubRank = clubsRank.get(district.districtId) || 999
         const paymentRank = paymentsRank.get(district.districtId) || 999
         const distRank = distinguishedRank.get(district.districtId) || 999
         
-        // Sum of ranks (lower is better, so we'll sort ascending)
-        const aggregateScore = clubRank + paymentRank + distRank
+        const clubBorda = clubsBordaPoints.get(district.districtId) || 1
+        const paymentBorda = paymentsBordaPoints.get(district.districtId) || 1
+        const distBorda = distinguishedBordaPoints.get(district.districtId) || 1
+        
+        // Sum of Borda points (higher is better, so we'll sort descending)
+        const aggregateScore = clubBorda + paymentBorda + distBorda
         
         return {
           ...district,
@@ -138,7 +155,7 @@ export class RealToastmastersAPIService {
           distinguishedRank: distRank,
           aggregateScore,
         }
-      }).sort((a, b) => a.aggregateScore - b.aggregateScore) // Lower score is better
+      }).sort((a, b) => b.aggregateScore - a.aggregateScore) // Higher score is better
       
       logger.info('District rankings calculated', { count: rankings.length })
       

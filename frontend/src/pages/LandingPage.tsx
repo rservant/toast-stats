@@ -115,7 +115,7 @@ const LandingPage: React.FC = () => {
       case 'distinguished':
         return sorted.sort((a, b) => a.distinguishedRank - b.distinguishedRank); // Lower rank is better
       default:
-        return sorted.sort((a, b) => a.aggregateScore - b.aggregateScore); // Lower score is better
+        return sorted.sort((a, b) => b.aggregateScore - a.aggregateScore); // Higher Borda score is better
     }
   }, [filteredRankings, sortBy]);
 
@@ -133,6 +133,25 @@ const LandingPage: React.FC = () => {
 
   const formatNumber = (num: number) => {
     return num.toLocaleString();
+  };
+
+  const formatPercentage = (percent: number): { text: string; color: string } => {
+    if (percent > 0) {
+      return {
+        text: `+${percent.toFixed(1)}%`,
+        color: 'text-green-600'
+      };
+    } else if (percent < 0) {
+      return {
+        text: `${percent.toFixed(1)}%`,
+        color: 'text-red-600'
+      };
+    } else {
+      return {
+        text: '0.0%',
+        color: 'text-gray-600'
+      };
+    }
   };
 
   // Handle region selection for historical tracking
@@ -493,20 +512,32 @@ const LandingPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-gray-900">{formatNumber(district.paidClubs)}</div>
-                        <div className="text-xs text-blue-600">
-                          Rank #{district.clubsRank}
+                        <div className="text-xs flex items-center justify-end gap-1">
+                          <span className="text-blue-600">Rank #{district.clubsRank}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className={formatPercentage(district.clubGrowthPercent).color}>
+                            {formatPercentage(district.clubGrowthPercent).text}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-gray-900">{formatNumber(district.totalPayments)}</div>
-                        <div className="text-xs text-blue-600">
-                          Rank #{district.paymentsRank}
+                        <div className="text-xs flex items-center justify-end gap-1">
+                          <span className="text-blue-600">Rank #{district.paymentsRank}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className={formatPercentage(district.paymentGrowthPercent).color}>
+                            {formatPercentage(district.paymentGrowthPercent).text}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-gray-900">{formatNumber(district.distinguishedClubs)}</div>
-                        <div className="text-xs text-blue-600">
-                          Rank #{district.distinguishedRank}
+                        <div className="text-xs flex items-center justify-end gap-1">
+                          <span className="text-blue-600">Rank #{district.distinguishedRank}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className={formatPercentage(district.distinguishedPercent).color}>
+                            {formatPercentage(district.distinguishedPercent).text}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -535,12 +566,20 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm">
-            <p className="font-medium text-blue-900 mb-2">Ranking Formula:</p>
+            <p className="font-medium text-blue-900 mb-2">Ranking Formula (Borda Count System):</p>
             <p className="text-blue-800">
-              Each district is ranked separately in each category (1 = best). The <strong>Overall Score</strong> is the sum of these three ranks.
+              Each district is ranked in three categories: Paid Clubs, Total Payments, and Distinguished Clubs.
+              Points are awarded based on rank position (higher rank = more points).
+            </p>
+            <p className="text-blue-700 mt-2">
+              <strong>Point Allocation:</strong> If there are N districts, rank #1 receives N points, 
+              rank #2 receives N-1 points, and so on. The <strong>Overall Score</strong> is the sum 
+              of points from all three categories (higher is better).
             </p>
             <p className="text-blue-700 mt-2 text-xs">
-              Example: If a district ranks #5 in Paid Clubs, #3 in Payments, and #8 in Distinguished Clubs, their Overall Score = 5 + 3 + 8 = 16 (lower is better)
+              Example: With 100 districts, if a district ranks #5 in Paid Clubs (96 pts), 
+              #3 in Payments (98 pts), and #8 in Distinguished Clubs (93 pts), 
+              their Overall Score = 96 + 98 + 93 = 287 points
             </p>
           </div>
         </div>

@@ -507,6 +507,176 @@ describe('Districts API Integration Tests', () => {
     })
   })
 
+  describe('Rankings Endpoint', () => {
+    describe('GET /api/districts/rankings', () => {
+      it('should return district rankings with Borda scores', async () => {
+        const response = await request(app)
+          .get('/api/districts/rankings')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200)
+
+        expect(response.body).toHaveProperty('rankings')
+        expect(response.body).toHaveProperty('date')
+        expect(Array.isArray(response.body.rankings)).toBe(true)
+
+        // Verify rankings array has data
+        if (response.body.rankings.length > 0) {
+          const firstDistrict = response.body.rankings[0]
+
+          // Verify all required fields are present
+          expect(firstDistrict).toHaveProperty('districtId')
+          expect(firstDistrict).toHaveProperty('districtName')
+          expect(firstDistrict).toHaveProperty('paidClubs')
+          expect(firstDistrict).toHaveProperty('totalPayments')
+          expect(firstDistrict).toHaveProperty('distinguishedClubs')
+          expect(firstDistrict).toHaveProperty('clubsRank')
+          expect(firstDistrict).toHaveProperty('paymentsRank')
+          expect(firstDistrict).toHaveProperty('distinguishedRank')
+          expect(firstDistrict).toHaveProperty('aggregateScore')
+          expect(firstDistrict).toHaveProperty('clubGrowthPercent')
+          expect(firstDistrict).toHaveProperty('paymentGrowthPercent')
+
+          // Verify rank numbers are positive integers
+          expect(firstDistrict.clubsRank).toBeGreaterThan(0)
+          expect(firstDistrict.paymentsRank).toBeGreaterThan(0)
+          expect(firstDistrict.distinguishedRank).toBeGreaterThan(0)
+
+          // Verify aggregate score is positive (sum of Borda points)
+          expect(firstDistrict.aggregateScore).toBeGreaterThan(0)
+
+          // Verify percentage values are numbers
+          expect(typeof firstDistrict.clubGrowthPercent).toBe('number')
+          expect(typeof firstDistrict.paymentGrowthPercent).toBe('number')
+        }
+      })
+
+      it('should calculate Borda scores correctly', async () => {
+        const response = await request(app)
+          .get('/api/districts/rankings')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200)
+
+        const rankings = response.body.rankings
+
+        if (rankings.length > 0) {
+          const totalDistricts = rankings.length
+
+          // Verify Borda point calculation for each district
+          rankings.forEach((district: any) => {
+            // Borda points = totalDistricts - rank + 1
+            // So for rank 1: points = totalDistricts
+            // For rank N: points = 1
+            
+            // Aggregate score should be sum of three Borda point values
+            // So minimum is 3 (1+1+1) and maximum is 3*totalDistricts
+            expect(district.aggregateScore).toBeGreaterThanOrEqual(3)
+            expect(district.aggregateScore).toBeLessThanOrEqual(3 * totalDistricts)
+          })
+        }
+      })
+
+      it('should sort districts by aggregate Borda score in descending order', async () => {
+        const response = await request(app)
+          .get('/api/districts/rankings')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200)
+
+        const rankings = response.body.rankings
+
+        if (rankings.length > 1) {
+          // Verify descending order (higher Borda scores first)
+          for (let i = 0; i < rankings.length - 1; i++) {
+            expect(rankings[i].aggregateScore).toBeGreaterThanOrEqual(
+              rankings[i + 1].aggregateScore
+            )
+          }
+        }
+      })
+
+      it('should include percentage values in API response', async () => {
+        const response = await request(app)
+          .get('/api/districts/rankings')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200)
+
+        const rankings = response.body.rankings
+
+        if (rankings.length > 0) {
+          rankings.forEach((district: any) => {
+            // Verify percentage fields exist and are numbers
+            expect(district).toHaveProperty('clubGrowthPercent')
+            expect(district).toHaveProperty('paymentGrowthPercent')
+            expect(district).toHaveProperty('distinguishedPercent')
+            
+            expect(typeof district.clubGrowthPercent).toBe('number')
+            expect(typeof district.paymentGrowthPercent).toBe('number')
+            expect(typeof district.distinguishedPercent).toBe('number')
+          })
+        }
+      })
+
+      it('should handle optional date parameter', async () => {
+        // First get available cached dates
+        const datesResponse = await request(app)
+          .get('/api/districts/cache/dates')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200)
+
+        const availableDates = datesResponse.body.dates
+
+        if (availableDates.length > 0) {
+          // Test with a specific cached date
+          const testDate = availableDates[0]
+          const response = await request(app)
+            .get(`/api/districts/rankings?date=${testDate}`)
+            .set('Authorization', `Bearer ${authToken}`)
+            .expect(200)
+
+          expect(response.body).toHaveProperty('rankings')
+          expect(response.body.date).toBe(testDate)
+        }
+      })
+
+      it('should handle ties correctly with same Borda points', async () => {
+        const response = await request(app)
+          .get('/api/districts/rankings')
+          .set('Authorization', `Bearer ${authToken}`)
+          .expect(200)
+
+        const rankings = response.body.rankings
+
+        if (rankings.length > 1) {
+          // Check if there are any ties in the data
+          const clubValues = new Map<number, string[]>()
+          
+          rankings.forEach((district: any) => {
+            const clubValue = district.paidClubs
+            if (!clubValues.has(clubValue)) {
+              clubValues.set(clubValue, [])
+            }
+            clubValues.get(clubValue)!.push(district.districtId)
+          })
+
+          // If we find districts with same values, they should have same rank
+          clubValues.forEach((districtIds) => {
+            if (districtIds.length > 1) {
+              const ranks = districtIds.map(id => {
+                const district = rankings.find((d: any) => d.districtId === id)
+                return district?.clubsRank
+              })
+              
+              // All tied districts should have the same rank
+              const firstRank = ranks[0]
+              ranks.forEach(rank => {
+                expect(rank).toBe(firstRank)
+              })
+            }
+          })
+        }
+      })
+    })
+  })
+
   describe('Export Endpoints', () => {
     describe('GET /api/districts/:districtId/export', () => {
       it('should return 400 for invalid district ID format', async () => {
