@@ -1,12 +1,25 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './config/queryClient';
+import { BackfillProvider, useBackfillContext } from './contexts/BackfillContext';
+import { BackfillProgressBar } from './components/BackfillProgressBar';
 import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 
-function App() {
+function AppContent() {
+  const { activeBackfillId, setActiveBackfillId } = useBackfillContext();
+
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
+      {/* Global Backfill Progress Bar */}
+      {activeBackfillId && (
+        <BackfillProgressBar
+          backfillId={activeBackfillId}
+          onComplete={() => setActiveBackfillId(null)}
+          onCancel={() => setActiveBackfillId(null)}
+        />
+      )}
+      
       <BrowserRouter>
         <a href="#main-content" className="skip-link">
           Skip to main content
@@ -16,6 +29,16 @@ function App() {
           <Route path="/district/:districtId" element={<DashboardPage />} />
         </Routes>
       </BrowserRouter>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BackfillProvider>
+        <AppContent />
+      </BackfillProvider>
     </QueryClientProvider>
   );
 }

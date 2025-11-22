@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 interface BackfillButtonProps {
   className?: string
+  onBackfillStart?: (backfillId: string) => void
 }
 
 interface BackfillRequest {
@@ -11,7 +12,7 @@ interface BackfillRequest {
   endDate?: string
 }
 
-export function BackfillButton({ className = '' }: BackfillButtonProps) {
+export function BackfillButton({ className = '', onBackfillStart }: BackfillButtonProps) {
   const [showModal, setShowModal] = useState(false)
   const [backfillId, setBackfillId] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
@@ -31,9 +32,15 @@ export function BackfillButton({ className = '' }: BackfillButtonProps) {
   // Update backfillId when initiate mutation succeeds
   useEffect(() => {
     if (initiateMutation.isSuccess && initiateMutation.data) {
-      setBackfillId(initiateMutation.data.backfillId)
+      const id = initiateMutation.data.backfillId
+      setBackfillId(id)
+      // Notify parent and close modal
+      if (onBackfillStart) {
+        onBackfillStart(id)
+        setTimeout(() => setShowModal(false), 300)
+      }
     }
-  }, [initiateMutation.isSuccess, initiateMutation.data])
+  }, [initiateMutation.isSuccess, initiateMutation.data, onBackfillStart])
 
   // Handle cancel mutation success
   useEffect(() => {

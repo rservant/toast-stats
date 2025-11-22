@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import HistoricalRankChart from '../components/HistoricalRankChart';
 import { BackfillButton } from '../components/BackfillButton';
+import { useBackfillContext } from '../contexts/BackfillContext';
 import { useRankHistory } from '../hooks/useRankHistory';
 
 interface DistrictRanking {
@@ -33,6 +34,9 @@ const LandingPage: React.FC = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  
+  // Use global backfill context
+  const { setActiveBackfillId } = useBackfillContext();
   
   // Historical rank tracking state
   const [selectedRegionsForHistory, setSelectedRegionsForHistory] = useState<string[]>([]);
@@ -190,7 +194,10 @@ const LandingPage: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-3">
-              <BackfillButton className="text-sm font-medium" />
+              <BackfillButton 
+                className="text-sm font-medium"
+                onBackfillStart={(id) => setActiveBackfillId(id)}
+              />
               <button
                 onClick={() => setShowClearConfirm(true)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"

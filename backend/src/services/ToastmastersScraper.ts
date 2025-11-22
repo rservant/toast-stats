@@ -104,7 +104,23 @@ export class ToastmastersScraper {
         relax_column_count: true, // Allow inconsistent column counts
         relax_quotes: true, // Be lenient with quotes
       })
-      return records
+      
+      // Filter out "Month of" rows (summary/aggregate rows)
+      const filteredRecords = records.filter((record: any) => {
+        // Check if any field contains "Month of"
+        const hasMonthOf = Object.values(record).some(value => 
+          typeof value === 'string' && value.includes('Month of')
+        )
+        return !hasMonthOf
+      })
+      
+      logger.info('CSV parsed and filtered', { 
+        totalRecords: records.length, 
+        filteredRecords: filteredRecords.length,
+        removedRecords: records.length - filteredRecords.length 
+      })
+      
+      return filteredRecords
     } catch (error) {
       logger.error('Failed to parse CSV', error)
       throw new Error(`CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
