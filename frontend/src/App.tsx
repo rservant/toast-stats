@@ -4,7 +4,6 @@ import { queryClient } from './config/queryClient';
 import { BackfillProvider, useBackfillContext } from './contexts/BackfillContext';
 import { BackfillProgressBar } from './components/BackfillProgressBar';
 import LandingPage from './pages/LandingPage';
-import DashboardPage from './pages/DashboardPage';
 import DistrictDetailPage from './pages/DistrictDetailPage';
 
 function AppContent() {
@@ -29,8 +28,7 @@ function AppContent() {
         </a>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/district/:districtId" element={<DashboardPage />} />
-          <Route path="/district/:districtId/detail" element={<DistrictDetailPage />} />
+          <Route path="/district/:districtId" element={<DistrictDetailPage />} />
         </Routes>
       </BrowserRouter>
     </>

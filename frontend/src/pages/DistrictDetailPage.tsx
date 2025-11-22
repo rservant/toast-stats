@@ -17,13 +17,16 @@ import { YearOverYearComparison } from '../components/YearOverYearComparison';
 import { LeadershipInsights } from '../components/LeadershipInsights';
 import { TopGrowthClubs } from '../components/TopGrowthClubs';
 import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis';
+import { DailyReportCalendar } from '../components/DailyReportCalendar';
+import { DailyReportDetail } from '../components/DailyReportDetail';
+import RealTimeMembershipCard from '../components/RealTimeMembershipCard';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay';
 import { DistrictBackfillButton } from '../components/DistrictBackfillButton';
 import { LazyChart } from '../components/LazyChart';
 import { useBackfillContext } from '../contexts/BackfillContext';
 
-type TabType = 'overview' | 'clubs' | 'divisions' | 'trends' | 'analytics';
+type TabType = 'overview' | 'realtime' | 'clubs' | 'divisions' | 'trends' | 'analytics';
 
 const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>();
@@ -65,9 +68,13 @@ const DistrictDetailPage: React.FC = () => {
   // Get available dates sorted in descending order
   const availableDates = cachedDatesData?.dates?.sort((a, b) => b.localeCompare(a)) || [];
 
+  // State for daily report calendar
+  const [selectedReportDate, setSelectedReportDate] = useState<string | null>(null);
+
   // Tab configuration
   const tabs: Array<{ id: TabType; label: string; disabled?: boolean }> = [
     { id: 'overview', label: 'Overview' },
+    { id: 'realtime', label: 'Real-Time' },
     { id: 'clubs', label: 'Clubs' },
     { id: 'divisions', label: 'Divisions & Areas' },
     { id: 'trends', label: 'Trends' },
@@ -118,18 +125,18 @@ const DistrictDetailPage: React.FC = () => {
           {/* Header */}
           <div className="mb-4 sm:mb-6">
             <button
-              onClick={() => navigate(`/district/${districtId}`)}
+              onClick={() => navigate('/')}
               className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors mb-4"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Back to Dashboard
+              Back to Rankings
             </button>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{districtName}</h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-1">District Performance Analytics</p>
+                <p className="text-sm sm:text-base text-gray-600 mt-1">District Statistics & Performance Analytics</p>
               </div>
               
               {/* Global Date Selector and Backfill Button */}
@@ -258,6 +265,32 @@ const DistrictDetailPage: React.FC = () => {
                       isLoading={isLoadingAnalytics}
                     />
                   </LazyChart>
+                )}
+              </>
+            )}
+
+            {activeTab === 'realtime' && districtId && (
+              <>
+                {/* Real-Time Membership Card */}
+                <RealTimeMembershipCard districtId={districtId} />
+
+                {/* Daily Report Calendar */}
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Daily Reports Calendar</h2>
+                  <DailyReportCalendar
+                    districtId={districtId}
+                    onDateSelect={(date) => setSelectedReportDate(date)}
+                  />
+                </div>
+
+                {/* Daily Report Detail */}
+                {selectedReportDate && (
+                  <DailyReportDetail
+                    districtId={districtId}
+                    districtName={districtName}
+                    selectedDate={selectedReportDate}
+                    onClose={() => setSelectedReportDate(null)}
+                  />
                 )}
               </>
             )}
