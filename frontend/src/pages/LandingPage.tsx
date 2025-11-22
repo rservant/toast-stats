@@ -3,11 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import HistoricalRankChart from '../components/HistoricalRankChart';
-import DateSelector from '../components/DateSelector';
-import { ExportButton } from '../components/ExportButton';
 import { BackfillButton } from '../components/BackfillButton';
 import { useRankHistory } from '../hooks/useRankHistory';
-import { exportHistoricalRankData } from '../utils/csvExport';
 
 interface DistrictRanking {
   districtId: string;
@@ -38,8 +35,7 @@ const LandingPage: React.FC = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Historical rank tracking state
-  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
-  const [historicalDate, setHistoricalDate] = useState<string>('');
+  const [selectedRegionsForHistory, setSelectedRegionsForHistory] = useState<string[]>([]);
 
   // Fetch cached dates
   const { data: cachedDatesData } = useQuery({
@@ -66,6 +62,14 @@ const LandingPage: React.FC = () => {
   const rankings: DistrictRanking[] = data?.rankings || [];
   const currentDate: string = data?.date || '';
 
+  // Get district IDs for selected regions
+  const selectedDistricts = React.useMemo(() => {
+    if (selectedRegionsForHistory.length === 0) return [];
+    return rankings
+      .filter(r => selectedRegionsForHistory.includes(r.region))
+      .map(r => r.districtId);
+  }, [rankings, selectedRegionsForHistory]);
+
   // Fetch historical rank data for selected districts
   const {
     data: rankHistoryData,
@@ -74,7 +78,6 @@ const LandingPage: React.FC = () => {
     error: rankHistoryError,
   } = useRankHistory({
     districtIds: selectedDistricts,
-    endDate: historicalDate || undefined,
   });
 
   // Get unique regions for filter
@@ -128,29 +131,16 @@ const LandingPage: React.FC = () => {
     return num.toLocaleString();
   };
 
-  // Handle district selection for historical tracking
-  const handleDistrictSelection = (districtId: string) => {
-    setSelectedDistricts(prev => {
-      if (prev.includes(districtId)) {
-        return prev.filter(id => id !== districtId);
+  // Handle region selection for historical tracking
+  const handleRegionSelection = (region: string) => {
+    setSelectedRegionsForHistory(prev => {
+      if (prev.includes(region)) {
+        return prev.filter(r => r !== region);
       } else {
-        // Limit to 8 districts for readability
-        if (prev.length >= 8) {
-          return prev;
-        }
-        return [...prev, districtId];
+        return [...prev, region];
       }
     });
   };
-
-  // Handle export of historical rank data
-  const handleExportHistoricalData = () => {
-    if (rankHistoryData && rankHistoryData.length > 0) {
-      exportHistoricalRankData(rankHistoryData, rankHistoryData[0]?.programYear);
-    }
-  };
-
-
 
   if (isLoading) {
     return (
@@ -269,40 +259,24 @@ const LandingPage: React.FC = () => {
 
         {/* Historical Rank Tracking Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Historical Rank Progression
-              </h2>
-              <p className="text-gray-600">
-                Select up to 8 districts to compare their rank progression over time
-              </p>
-            </div>
-            <ExportButton
-              onExport={handleExportHistoricalData}
-              disabled={!rankHistoryData || rankHistoryData.length === 0}
-              label="Export Historical Data"
-              className="text-sm px-4 py-2"
-            />
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Historical Rank Progression
+            </h2>
+            <p className="text-gray-600">
+              Select regions to compare district rank progression over time
+            </p>
           </div>
 
-          {/* Date Selector */}
-          <div className="mb-6 pb-4 border-b border-gray-200">
-            <DateSelector
-              onDateChange={setHistoricalDate}
-              selectedDate={historicalDate}
-            />
-          </div>
-
-          {/* District Multi-Select */}
+          {/* Region Multi-Select for Historical Tracking */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <label className="text-sm font-medium text-gray-700">
-                Select Districts to Compare ({selectedDistricts.length}/8):
+                Select Regions to Compare ({selectedRegionsForHistory.length} regions, {selectedDistricts.length} districts):
               </label>
-              {selectedDistricts.length > 0 && (
+              {selectedRegionsForHistory.length > 0 && (
                 <button
-                  onClick={() => setSelectedDistricts([])}
+                  onClick={() => setSelectedRegionsForHistory([])}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
                   Clear Selection
@@ -310,30 +284,27 @@ const LandingPage: React.FC = () => {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {rankings.slice(0, 20).map((district) => {
-                const isSelected = selectedDistricts.includes(district.districtId);
-                const isDisabled = !isSelected && selectedDistricts.length >= 8;
+              {regions.map((region) => {
+                const isSelected = selectedRegionsForHistory.includes(region);
+                const districtCount = rankings.filter(r => r.region === region).length;
                 return (
                   <button
-                    key={district.districtId}
-                    onClick={() => handleDistrictSelection(district.districtId)}
-                    disabled={isDisabled}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    key={region}
+                    onClick={() => handleRegionSelection(region)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isSelected
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : isDisabled
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
-                    {district.districtName}
+                    {region} ({districtCount})
                   </button>
                 );
               })}
             </div>
-            {selectedDistricts.length >= 8 && (
-              <p className="text-sm text-amber-600 mt-2">
-                Maximum of 8 districts reached. Deselect a district to add another.
+            {selectedRegionsForHistory.length > 0 && (
+              <p className="text-sm text-gray-600 mt-2">
+                Showing {selectedDistricts.length} districts from {selectedRegionsForHistory.length} selected region{selectedRegionsForHistory.length !== 1 ? 's' : ''}
               </p>
             )}
           </div>
