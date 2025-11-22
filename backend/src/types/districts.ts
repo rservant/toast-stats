@@ -213,3 +213,19 @@ export interface BackfillResponse {
   progress: BackfillProgress
   error?: string
 }
+
+// District-Level Cache Types
+
+export interface DistrictCacheEntry {
+  districtId: string
+  date: string
+  districtPerformance: any[]  // From District.aspx
+  divisionPerformance: any[]  // From Division.aspx
+  clubPerformance: any[]      // From Club.aspx
+  fetchedAt: string
+}
+
+export interface DistrictDataRange {
+  startDate: string
+  endDate: string
+}

@@ -336,20 +336,52 @@ export class ToastmastersScraper {
   /**
    * Fetch district performance data
    */
-  async getDistrictPerformance(districtId: string): Promise<any[]> {
+  async getDistrictPerformance(districtId: string, dateString?: string): Promise<any[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
     try {
-      const url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
-      logger.info('Fetching district performance', { districtId, url })
+      let url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
+      
+      // Add date parameters if provided
+      if (dateString) {
+        const dateObj = new Date(dateString + 'T00:00:00')
+        const month = dateObj.getMonth() + 1 // 1-12
+        const day = dateObj.getDate()
+        const year = dateObj.getFullYear()
+        const formattedDate = `${month}/${day}/${year}`
+        url += `&month=${month}&day=${formattedDate}`
+      }
+      
+      logger.info('Fetching district performance', { districtId, dateString, url })
       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: this.config.timeout })
+      
+      // Verify the date if requested
+      if (dateString) {
+        const dateObj = new Date(dateString + 'T00:00:00')
+        const month = dateObj.getMonth() + 1
+        const day = dateObj.getDate()
+        const year = dateObj.getFullYear()
+        
+        const actualDate = await this.getSelectedDate(page)
+        if (actualDate) {
+          const { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString } = actualDate
+          if (actualMonth !== month || actualDay !== day || actualYear !== year) {
+            logger.warn('Requested date not available, dashboard returned different date', {
+              requested: { month, day, year, dateString },
+              actual: { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString }
+            })
+            throw new Error(`Date ${dateString} not available (dashboard returned ${actualDateString})`)
+          }
+          logger.info('Date verification successful', { requested: dateString, actual: actualDateString })
+        }
+      }
       
       const csvContent = await this.downloadCsv(page)
       const records = this.parseCsv(csvContent)
       
-      logger.info('District performance fetched', { districtId, count: records.length })
+      logger.info('District performance fetched', { districtId, dateString, count: records.length })
       return records
     } finally {
       await page.close()
@@ -359,20 +391,52 @@ export class ToastmastersScraper {
   /**
    * Fetch division and area performance
    */
-  async getDivisionPerformance(districtId: string): Promise<any[]> {
+  async getDivisionPerformance(districtId: string, dateString?: string): Promise<any[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
     try {
-      const url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
-      logger.info('Fetching division performance', { districtId, url })
+      let url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
+      
+      // Add date parameters if provided
+      if (dateString) {
+        const dateObj = new Date(dateString + 'T00:00:00')
+        const month = dateObj.getMonth() + 1 // 1-12
+        const day = dateObj.getDate()
+        const year = dateObj.getFullYear()
+        const formattedDate = `${month}/${day}/${year}`
+        url += `&month=${month}&day=${formattedDate}`
+      }
+      
+      logger.info('Fetching division performance', { districtId, dateString, url })
       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: this.config.timeout })
+      
+      // Verify the date if requested
+      if (dateString) {
+        const dateObj = new Date(dateString + 'T00:00:00')
+        const month = dateObj.getMonth() + 1
+        const day = dateObj.getDate()
+        const year = dateObj.getFullYear()
+        
+        const actualDate = await this.getSelectedDate(page)
+        if (actualDate) {
+          const { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString } = actualDate
+          if (actualMonth !== month || actualDay !== day || actualYear !== year) {
+            logger.warn('Requested date not available, dashboard returned different date', {
+              requested: { month, day, year, dateString },
+              actual: { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString }
+            })
+            throw new Error(`Date ${dateString} not available (dashboard returned ${actualDateString})`)
+          }
+          logger.info('Date verification successful', { requested: dateString, actual: actualDateString })
+        }
+      }
       
       const csvContent = await this.downloadCsv(page)
       const records = this.parseCsv(csvContent)
       
-      logger.info('Division performance fetched', { districtId, count: records.length })
+      logger.info('Division performance fetched', { districtId, dateString, count: records.length })
       return records
     } finally {
       await page.close()
@@ -382,20 +446,52 @@ export class ToastmastersScraper {
   /**
    * Fetch club performance data
    */
-  async getClubPerformance(districtId: string): Promise<any[]> {
+  async getClubPerformance(districtId: string, dateString?: string): Promise<any[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
     try {
-      const url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
-      logger.info('Fetching club performance', { districtId, url })
+      let url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
+      
+      // Add date parameters if provided
+      if (dateString) {
+        const dateObj = new Date(dateString + 'T00:00:00')
+        const month = dateObj.getMonth() + 1 // 1-12
+        const day = dateObj.getDate()
+        const year = dateObj.getFullYear()
+        const formattedDate = `${month}/${day}/${year}`
+        url += `&month=${month}&day=${formattedDate}`
+      }
+      
+      logger.info('Fetching club performance', { districtId, dateString, url })
       
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: this.config.timeout })
+      
+      // Verify the date if requested
+      if (dateString) {
+        const dateObj = new Date(dateString + 'T00:00:00')
+        const month = dateObj.getMonth() + 1
+        const day = dateObj.getDate()
+        const year = dateObj.getFullYear()
+        
+        const actualDate = await this.getSelectedDate(page)
+        if (actualDate) {
+          const { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString } = actualDate
+          if (actualMonth !== month || actualDay !== day || actualYear !== year) {
+            logger.warn('Requested date not available, dashboard returned different date', {
+              requested: { month, day, year, dateString },
+              actual: { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString }
+            })
+            throw new Error(`Date ${dateString} not available (dashboard returned ${actualDateString})`)
+          }
+          logger.info('Date verification successful', { requested: dateString, actual: actualDateString })
+        }
+      }
       
       const csvContent = await this.downloadCsv(page)
       const records = this.parseCsv(csvContent)
       
-      logger.info('Club performance fetched', { districtId, count: records.length })
+      logger.info('Club performance fetched', { districtId, dateString, count: records.length })
       return records
     } finally {
       await page.close()

@@ -452,3 +452,110 @@ export const exportHistoricalRankData = (
   const filename = `historical_rank_progression_${date}.csv`;
   downloadCSV(csvContent, filename);
 };
+
+/**
+ * Export district analytics data via backend API endpoint
+ * This triggers a server-side CSV generation with comprehensive analytics
+ */
+export const exportDistrictAnalytics = async (
+  districtId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<void> => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams({ format: 'csv' });
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    // Fetch CSV from backend
+    const response = await fetch(
+      `/api/districts/${districtId}/export?${params.toString()}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
+    }
+
+    // Get the filename from Content-Disposition header or generate one
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `district_${districtId}_analytics.csv`;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    // Get the CSV content
+    const csvContent = await response.text();
+
+    // Trigger download
+    downloadCSV(csvContent, filename);
+  } catch (error) {
+    console.error('Failed to export district analytics:', error);
+    throw error;
+  }
+};
+
+/**
+ * Export club performance data to CSV (client-side generation)
+ */
+export const exportClubPerformance = (
+  clubs: Array<{
+    clubId: string;
+    clubName: string;
+    divisionName?: string;
+    areaName?: string;
+    membershipTrend: Array<{ date: string; count: number }>;
+    dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>;
+    currentStatus: string;
+    distinguishedLevel?: string;
+    riskFactors?: string[];
+  }>,
+  districtId: string
+): void => {
+  const headers = [
+    'Club ID',
+    'Club Name',
+    'Division',
+    'Area',
+    'Current Membership',
+    'Current DCP Goals',
+    'Status',
+    'Distinguished Level',
+    'Risk Factors',
+  ];
+
+  const rows = clubs.map((club) => {
+    const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0;
+    const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0;
+    const riskFactors = club.riskFactors?.join('; ') || 'None';
+
+    return [
+      club.clubId,
+      club.clubName,
+      club.divisionName || 'N/A',
+      club.areaName || 'N/A',
+      currentMembership,
+      currentDcpGoals,
+      club.currentStatus,
+      club.distinguishedLevel || 'None',
+      riskFactors,
+    ];
+  });
+
+  const csvData = [
+    [`District ${districtId} - Club Performance`],
+    [`Export Date: ${new Date().toISOString()}`],
+    [`Total Clubs: ${clubs.length}`],
+    [],
+    headers,
+    ...rows,
+  ];
+
+  const csvContent = arrayToCSV(csvData);
+  const filename = generateFilename('club_performance', districtId);
+  downloadCSV(csvContent, filename);
+};

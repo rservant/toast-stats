@@ -5,6 +5,10 @@ import { RealToastmastersAPIService } from '../services/RealToastmastersAPIServi
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
 import { BackfillService } from '../services/BackfillService.js'
 import { CacheManager } from '../services/CacheManager.js'
+import { DistrictBackfillService } from '../services/DistrictBackfillService.js'
+import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
+import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
+import { AnalyticsEngine } from '../services/AnalyticsEngine.js'
 import {
   transformDistrictsResponse,
   transformDistrictStatisticsResponse,
@@ -37,10 +41,23 @@ const toastmastersAPI = useMockData
 const cacheManager = new CacheManager()
 const backfillService = new BackfillService(cacheManager, toastmastersAPI)
 
+// Initialize district-level services
+const districtCacheManager = new DistrictCacheManager()
+const scraper = new ToastmastersScraper()
+const districtBackfillService = new DistrictBackfillService(districtCacheManager, scraper)
+const analyticsEngine = new AnalyticsEngine(districtCacheManager)
+
 // Cleanup old jobs every hour
 setInterval(() => {
   backfillService.cleanupOldJobs().catch(error => {
     console.error('Failed to cleanup old backfill jobs:', error)
+  })
+}, 60 * 60 * 1000)
+
+// Cleanup old district backfill jobs every hour
+setInterval(() => {
+  districtBackfillService.cleanupOldJobs().catch(error => {
+    console.error('Failed to cleanup old district backfill jobs:', error)
   })
 }, 60 * 60 * 1000)
 
@@ -909,5 +926,1213 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
     })
   }
 })
+
+/**
+ * GET /api/districts/:districtId/data/:date
+ * Retrieve cached district data for a specific date
+ */
+router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
+  try {
+    const { districtId, date } = req.params
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Validate date format
+    if (!validateDateFormat(date)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'Date must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Get cached district data
+    const data = await districtCacheManager.getDistrictData(districtId, date)
+
+    if (!data) {
+      res.status(404).json({
+        error: {
+          code: 'DATA_NOT_FOUND',
+          message: 'No cached data found for the specified district and date',
+          details: 'Consider initiating a backfill to fetch historical data',
+        },
+      })
+      return
+    }
+
+    res.json(data)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to retrieve district data',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/:districtId/cached-dates
+ * List all available cached dates for a district
+ */
+router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
+  try {
+    const { districtId } = req.params
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Get cached dates
+    const dates = await districtCacheManager.getCachedDatesForDistrict(districtId)
+
+    // Get date range if dates exist
+    const dateRange = dates.length > 0 
+      ? await districtCacheManager.getDistrictDataRange(districtId)
+      : null
+
+    res.json({
+      districtId,
+      dates,
+      count: dates.length,
+      dateRange,
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to retrieve cached dates',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * POST /api/districts/:districtId/backfill
+ * Initiate backfill of historical data for a specific district
+ */
+router.post('/:districtId/backfill', async (req: Request, res: Response) => {
+  try {
+    const { districtId } = req.params
+    const { startDate, endDate } = req.body
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Validate date formats if provided
+    if (startDate && !validateDateFormat(startDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'startDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    if (endDate && !validateDateFormat(endDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'endDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Validate date range
+    if (startDate && endDate) {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      
+      if (start > end) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_RANGE',
+            message: 'startDate must be before or equal to endDate',
+          },
+        })
+        return
+      }
+
+      // Limit date range to prevent excessive requests (e.g., max 365 days)
+      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      if (daysDiff > 365) {
+        res.status(400).json({
+          error: {
+            code: 'DATE_RANGE_TOO_LARGE',
+            message: 'Date range cannot exceed 365 days',
+          },
+        })
+        return
+      }
+    }
+
+    // Initiate backfill
+    const backfillId = await districtBackfillService.initiateDistrictBackfill({
+      districtId,
+      startDate,
+      endDate,
+    })
+
+    const status = districtBackfillService.getBackfillStatus(backfillId)
+
+    res.json(status)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    // Check for specific error messages
+    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate backfill'
+    
+    if (errorMessage.includes('already cached')) {
+      res.status(400).json({
+        error: {
+          code: 'ALL_DATES_CACHED',
+          message: errorMessage,
+        },
+      })
+      return
+    }
+
+    if (errorMessage.includes('No dates in the specified range')) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_RANGE',
+          message: errorMessage,
+        },
+      })
+      return
+    }
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'BACKFILL_ERROR',
+        message: errorMessage,
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/:districtId/backfill/:backfillId
+ * Check backfill status for a specific district
+ */
+router.get('/:districtId/backfill/:backfillId', async (req: Request, res: Response) => {
+  try {
+    const { districtId, backfillId } = req.params
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    const status = districtBackfillService.getBackfillStatus(backfillId)
+
+    if (!status) {
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found',
+        },
+      })
+      return
+    }
+
+    // Verify the backfill belongs to the requested district
+    if (status.districtId !== districtId) {
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found for this district',
+        },
+      })
+      return
+    }
+
+    res.json(status)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'BACKFILL_ERROR',
+        message: 'Failed to get backfill status',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * DELETE /api/districts/:districtId/backfill/:backfillId
+ * Cancel a backfill job for a specific district
+ */
+router.delete('/:districtId/backfill/:backfillId', async (req: Request, res: Response) => {
+  try {
+    const { districtId, backfillId } = req.params
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Get status first to verify it belongs to this district
+    const status = districtBackfillService.getBackfillStatus(backfillId)
+
+    if (!status) {
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found',
+        },
+      })
+      return
+    }
+
+    // Verify the backfill belongs to the requested district
+    if (status.districtId !== districtId) {
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found for this district',
+        },
+      })
+      return
+    }
+
+    const cancelled = await districtBackfillService.cancelBackfill(backfillId)
+
+    if (!cancelled) {
+      res.status(400).json({
+        error: {
+          code: 'CANNOT_CANCEL',
+          message: 'Backfill job cannot be cancelled (already completed or failed)',
+        },
+      })
+      return
+    }
+
+    res.json({
+      success: true,
+      message: 'Backfill cancelled successfully',
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'BACKFILL_ERROR',
+        message: 'Failed to cancel backfill',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/:districtId/membership-analytics
+ * Generate comprehensive membership analytics for a district
+ * Query params: startDate (optional), endDate (optional)
+ */
+router.get('/:districtId/membership-analytics', async (req: Request, res: Response) => {
+  try {
+    const { districtId } = req.params
+    const { startDate, endDate } = req.query
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Validate date formats if provided
+    if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'startDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'endDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Validate date range
+    if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      
+      if (start > end) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_RANGE',
+            message: 'startDate must be before or equal to endDate',
+          },
+        })
+        return
+      }
+    }
+
+    // Generate membership analytics
+    const analytics = await analyticsEngine.generateMembershipAnalytics(
+      districtId,
+      startDate as string | undefined,
+      endDate as string | undefined
+    )
+
+    res.json(analytics)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    // Check for specific error messages
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate membership analytics'
+    
+    if (errorMessage.includes('No cached data available')) {
+      res.status(404).json({
+        error: {
+          code: 'NO_DATA_AVAILABLE',
+          message: errorMessage,
+          details: 'Consider initiating a backfill to fetch historical data',
+        },
+      })
+      return
+    }
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'ANALYTICS_ERROR',
+        message: errorMessage,
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/:districtId/analytics
+ * Generate comprehensive district analytics
+ * Query params: startDate (optional), endDate (optional)
+ * Requirements: 3.1, 3.2, 4.4, 5.1, 6.1, 7.1, 8.1
+ */
+router.get(
+  '/:districtId/analytics',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache for analytics
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, 'analytics', {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      }),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { startDate, endDate } = req.query
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate date formats if provided
+      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'startDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'endDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Validate date range
+      if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        
+        if (start > end) {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_DATE_RANGE',
+              message: 'startDate must be before or equal to endDate',
+            },
+          })
+          return
+        }
+      }
+
+      // Generate comprehensive district analytics
+      const analytics = await analyticsEngine.generateDistrictAnalytics(
+        districtId,
+        startDate as string | undefined,
+        endDate as string | undefined
+      )
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json(analytics)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check for specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate district analytics'
+      
+      if (errorMessage.includes('No cached data available')) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: errorMessage,
+            details: 'Consider initiating a backfill to fetch historical data',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'ANALYTICS_ERROR',
+          message: errorMessage,
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/clubs/:clubId/trends
+ * Get club-specific trend data
+ * Requirements: 3.2
+ */
+router.get(
+  '/:districtId/clubs/:clubId/trends',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, `clubs/${req.params.clubId}/trends`),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId, clubId } = req.params
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate club ID
+      if (!clubId || clubId.trim() === '') {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_CLUB_ID',
+            message: 'Club ID is required',
+          },
+        })
+        return
+      }
+
+      // Get club trends
+      const clubTrend = await analyticsEngine.getClubTrends(districtId, clubId)
+
+      if (!clubTrend) {
+        res.status(404).json({
+          error: {
+            code: 'CLUB_NOT_FOUND',
+            message: 'Club not found in district analytics',
+            details: 'The club may not exist or no cached data is available',
+          },
+        })
+        return
+      }
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json(clubTrend)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check for specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get club trends'
+      
+      if (errorMessage.includes('No cached data available')) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: errorMessage,
+            details: 'Consider initiating a backfill to fetch historical data',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'ANALYTICS_ERROR',
+          message: errorMessage,
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/at-risk-clubs
+ * Get list of at-risk clubs for a district
+ * Requirements: 4.4
+ */
+router.get(
+  '/:districtId/at-risk-clubs',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, 'at-risk-clubs'),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Identify at-risk clubs
+      const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId)
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json({
+        districtId,
+        totalAtRiskClubs: atRiskClubs.length,
+        criticalClubs: atRiskClubs.filter(c => c.currentStatus === 'critical').length,
+        atRiskClubs: atRiskClubs.filter(c => c.currentStatus === 'at-risk').length,
+        clubs: atRiskClubs,
+      })
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check for specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Failed to identify at-risk clubs'
+      
+      if (errorMessage.includes('No cached data available')) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: errorMessage,
+            details: 'Consider initiating a backfill to fetch historical data',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'ANALYTICS_ERROR',
+          message: errorMessage,
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/leadership-insights
+ * Generate comprehensive leadership effectiveness analytics
+ * Query params: startDate (optional), endDate (optional)
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+ */
+router.get(
+  '/:districtId/leadership-insights',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, 'leadership-insights', {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      }),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { startDate, endDate } = req.query
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate date formats if provided
+      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'startDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'endDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Validate date range
+      if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        
+        if (start > end) {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_DATE_RANGE',
+              message: 'startDate must be before or equal to endDate',
+            },
+          })
+          return
+        }
+      }
+
+      // Generate leadership insights
+      const insights = await analyticsEngine.generateLeadershipInsights(
+        districtId,
+        startDate as string | undefined,
+        endDate as string | undefined
+      )
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json(insights)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check for specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate leadership insights'
+      
+      if (errorMessage.includes('No cached data available')) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: errorMessage,
+            details: 'Consider initiating a backfill to fetch historical data',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'ANALYTICS_ERROR',
+          message: errorMessage,
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/distinguished-club-analytics
+ * Generate comprehensive distinguished club analytics
+ * Query params: startDate (optional), endDate (optional)
+ * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5
+ */
+router.get(
+  '/:districtId/distinguished-club-analytics',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, 'distinguished-club-analytics', {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      }),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { startDate, endDate } = req.query
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate date formats if provided
+      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'startDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'endDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Validate date range
+      if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        
+        if (start > end) {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_DATE_RANGE',
+              message: 'startDate must be before or equal to endDate',
+            },
+          })
+          return
+        }
+      }
+
+      // Generate distinguished club analytics
+      const analytics = await analyticsEngine.generateDistinguishedClubAnalytics(
+        districtId,
+        startDate as string | undefined,
+        endDate as string | undefined
+      )
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json(analytics)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check for specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate distinguished club analytics'
+      
+      if (errorMessage.includes('No cached data available')) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: errorMessage,
+            details: 'Consider initiating a backfill to fetch historical data',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'ANALYTICS_ERROR',
+          message: errorMessage,
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/year-over-year/:date
+ * Calculate year-over-year comparison for a specific date
+ * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+ */
+router.get(
+  '/:districtId/year-over-year/:date',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache
+    keyGenerator: (req) =>
+      generateDistrictCacheKey(req.params.districtId, `year-over-year/${req.params.date}`),
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId, date } = req.params
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate date format
+      if (!validateDateFormat(date)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'Date must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Calculate year-over-year comparison
+      const comparison = await analyticsEngine.calculateYearOverYear(districtId, date)
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json(comparison)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      // Check for specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Failed to calculate year-over-year comparison'
+      
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'ANALYTICS_ERROR',
+          message: errorMessage,
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/export
+ * Export district data to CSV format
+ * Query params: format (csv), startDate (optional), endDate (optional)
+ * Requirements: 10.1, 10.3
+ */
+router.get('/:districtId/export', async (req: Request, res: Response) => {
+  try {
+    const { districtId } = req.params
+    const { format, startDate, endDate } = req.query
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Validate format parameter
+    if (!format || format !== 'csv') {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_FORMAT',
+          message: 'Only CSV format is currently supported. Use format=csv',
+        },
+      })
+      return
+    }
+
+    // Validate date formats if provided
+    if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'startDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'endDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Validate date range
+    if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      
+      if (start > end) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_RANGE',
+            message: 'startDate must be before or equal to endDate',
+          },
+        })
+        return
+      }
+    }
+
+    // Generate analytics data for export
+    const analytics = await analyticsEngine.generateDistrictAnalytics(
+      districtId,
+      startDate as string | undefined,
+      endDate as string | undefined
+    )
+
+    // Generate CSV content
+    const csvContent = generateDistrictAnalyticsCSV(analytics, districtId)
+
+    // Generate filename with date range
+    const dateRangeStr = startDate && endDate 
+      ? `_${startDate}_to_${endDate}`
+      : `_${analytics.dateRange.start}_to_${analytics.dateRange.end}`
+    const filename = `district_${districtId}_analytics${dateRangeStr}.csv`
+
+    // Set headers for CSV download
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Cache-Control', 'no-cache')
+
+    // Stream the CSV content
+    res.send(csvContent)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    // Check for specific error messages
+    const errorMessage = error instanceof Error ? error.message : 'Failed to export district data'
+    
+    if (errorMessage.includes('No cached data available')) {
+      res.status(404).json({
+        error: {
+          code: 'NO_DATA_AVAILABLE',
+          message: errorMessage,
+          details: 'Consider initiating a backfill to fetch historical data',
+        },
+      })
+      return
+    }
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'EXPORT_ERROR',
+        message: errorMessage,
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * Helper function to generate CSV content from district analytics
+ */
+function generateDistrictAnalyticsCSV(analytics: any, districtId: string): string {
+  const lines: string[] = []
+  
+  // Helper to escape CSV values
+  const escapeCSV = (value: any): string => {
+    const str = String(value ?? '')
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`
+    }
+    return str
+  }
+
+  // Header section
+  lines.push(`District Analytics Export`)
+  lines.push(`District ID,${escapeCSV(districtId)}`)
+  lines.push(`Date Range,${escapeCSV(analytics.dateRange.start)} to ${escapeCSV(analytics.dateRange.end)}`)
+  lines.push(`Export Date,${new Date().toISOString()}`)
+  lines.push('')
+
+  // Summary statistics
+  lines.push('Summary Statistics')
+  lines.push('Metric,Value')
+  lines.push(`Total Membership,${analytics.totalMembership}`)
+  lines.push(`Membership Change,${analytics.membershipChange}`)
+  lines.push(`Healthy Clubs,${analytics.healthyClubs}`)
+  lines.push(`At-Risk Clubs,${analytics.atRiskClubs.length}`)
+  lines.push(`Critical Clubs,${analytics.criticalClubs}`)
+  lines.push(`Distinguished Clubs (Total),${analytics.distinguishedClubs.total}`)
+  lines.push(`Distinguished Clubs (President's),${analytics.distinguishedClubs.presidents}`)
+  lines.push(`Distinguished Clubs (Select),${analytics.distinguishedClubs.select}`)
+  lines.push(`Distinguished Clubs (Distinguished),${analytics.distinguishedClubs.distinguished}`)
+  lines.push(`Distinguished Projection,${analytics.distinguishedProjection}`)
+  lines.push('')
+
+  // Membership trend
+  lines.push('Membership Trend')
+  lines.push('Date,Member Count')
+  analytics.membershipTrend.forEach((point: any) => {
+    lines.push(`${escapeCSV(point.date)},${point.count}`)
+  })
+  lines.push('')
+
+  // Top growth clubs
+  if (analytics.topGrowthClubs && analytics.topGrowthClubs.length > 0) {
+    lines.push('Top Growth Clubs')
+    lines.push('Club ID,Club Name,Growth')
+    analytics.topGrowthClubs.forEach((club: any) => {
+      lines.push(`${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${club.growth}`)
+    })
+    lines.push('')
+  }
+
+  // At-risk clubs
+  if (analytics.atRiskClubs && analytics.atRiskClubs.length > 0) {
+    lines.push('At-Risk Clubs')
+    lines.push('Club ID,Club Name,Status,Current Membership,Current DCP Goals,Risk Factors')
+    analytics.atRiskClubs.forEach((club: any) => {
+      const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
+      const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
+      const riskFactors = club.riskFactors.join('; ')
+      lines.push(
+        `${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${escapeCSV(club.currentStatus)},${currentMembership},${currentDcpGoals},${escapeCSV(riskFactors)}`
+      )
+    })
+    lines.push('')
+  }
+
+  // All clubs performance
+  if (analytics.allClubs && analytics.allClubs.length > 0) {
+    lines.push('All Clubs Performance')
+    lines.push('Club ID,Club Name,Division,Area,Current Membership,Current DCP Goals,Status,Distinguished Level')
+    analytics.allClubs.forEach((club: any) => {
+      const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
+      const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
+      lines.push(
+        `${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${escapeCSV(club.divisionName)},${escapeCSV(club.areaName)},${currentMembership},${currentDcpGoals},${escapeCSV(club.currentStatus)},${escapeCSV(club.distinguishedLevel || 'None')}`
+      )
+    })
+    lines.push('')
+  }
+
+  // Division rankings
+  if (analytics.divisionRankings && analytics.divisionRankings.length > 0) {
+    lines.push('Division Rankings')
+    lines.push('Rank,Division ID,Division Name,Total Clubs,Total DCP Goals,Average Club Health,Trend')
+    analytics.divisionRankings.forEach((division: any) => {
+      lines.push(
+        `${division.rank},${escapeCSV(division.divisionId)},${escapeCSV(division.divisionName)},${division.totalClubs},${division.totalDcpGoals},${division.averageClubHealth.toFixed(2)},${escapeCSV(division.trend)}`
+      )
+    })
+    lines.push('')
+  }
+
+  // Top performing areas
+  if (analytics.topPerformingAreas && analytics.topPerformingAreas.length > 0) {
+    lines.push('Top Performing Areas')
+    lines.push('Area ID,Area Name,Division ID,Total Clubs,Total DCP Goals,Average Club Health,Normalized Score')
+    analytics.topPerformingAreas.forEach((area: any) => {
+      lines.push(
+        `${escapeCSV(area.areaId)},${escapeCSV(area.areaName)},${escapeCSV(area.divisionId)},${area.totalClubs},${area.totalDcpGoals},${area.averageClubHealth.toFixed(2)},${area.normalizedScore.toFixed(2)}`
+      )
+    })
+  }
+
+  return lines.join('\n')
+}
 
 export default router

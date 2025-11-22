@@ -5,18 +5,21 @@ import { BackfillProvider, useBackfillContext } from './contexts/BackfillContext
 import { BackfillProgressBar } from './components/BackfillProgressBar';
 import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
+import DistrictDetailPage from './pages/DistrictDetailPage';
 
 function AppContent() {
-  const { activeBackfillId, setActiveBackfillId } = useBackfillContext();
+  const { activeBackfillInfo, setActiveBackfillInfo } = useBackfillContext();
 
   return (
     <>
       {/* Global Backfill Progress Bar */}
-      {activeBackfillId && (
+      {activeBackfillInfo && (
         <BackfillProgressBar
-          backfillId={activeBackfillId}
-          onComplete={() => setActiveBackfillId(null)}
-          onCancel={() => setActiveBackfillId(null)}
+          backfillId={activeBackfillInfo.backfillId}
+          type={activeBackfillInfo.type}
+          districtId={activeBackfillInfo.districtId}
+          onComplete={() => setActiveBackfillInfo(null)}
+          onCancel={() => setActiveBackfillInfo(null)}
         />
       )}
       
@@ -27,6 +30,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/district/:districtId" element={<DashboardPage />} />
+          <Route path="/district/:districtId/detail" element={<DistrictDetailPage />} />
         </Routes>
       </BrowserRouter>
     </>

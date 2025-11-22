@@ -15,6 +15,8 @@ import { DailyReportDetail } from '../components/DailyReportDetail';
 import { HistoricalDailyReports } from '../components/HistoricalDailyReports';
 import SignificantEventsPanel from '../components/SignificantEventsPanel';
 import RealTimeMembershipCard from '../components/RealTimeMembershipCard';
+import { DistrictBackfillButton } from '../components/DistrictBackfillButton';
+import { useBackfillContext } from '../contexts/BackfillContext';
 import { useDistrictStatistics } from '../hooks/useMembershipData';
 import { useEnhancedClubs } from '../hooks/useIntegratedData';
 import { useDistricts } from '../hooks/useDistricts';
@@ -34,6 +36,9 @@ const DashboardPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  
+  // Use backfill context
+  const { setActiveBackfillInfo } = useBackfillContext();
   
   // Fetch district statistics and enhanced clubs data with recent changes
   const { data: statistics, isLoading: isLoadingStats } = useDistrictStatistics(selectedDistrictId);
@@ -115,15 +120,34 @@ const DashboardPage: React.FC = () => {
           </button>
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Toastmasters District Statistics
-          </h1>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Toastmasters District Statistics
+            </h1>
+            {selectedDistrictId && (
+              <button
+                onClick={() => navigate(`/district/${selectedDistrictId}/detail`)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors self-start"
+              >
+                View District Analytics →
+              </button>
+            )}
+          </div>
           {selectedDistrictId && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <div className="hidden sm:flex flex-col items-end text-sm text-gray-600">
                 <span className="font-medium">Last refreshed:</span>
                 <span>{formatLastRefreshed(lastRefreshed)}</span>
               </div>
+              <DistrictBackfillButton
+                districtId={selectedDistrictId}
+                className="min-h-[44px]"
+                onBackfillStart={(id) => setActiveBackfillInfo({ 
+                  backfillId: id, 
+                  type: 'district',
+                  districtId: selectedDistrictId
+                })}
+              />
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}

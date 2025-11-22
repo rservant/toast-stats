@@ -1,0 +1,230 @@
+import React from 'react';
+
+interface TopGrowthClub {
+  clubId: string;
+  clubName: string;
+  growth: number;
+}
+
+interface TopDCPClub {
+  clubId: string;
+  clubName: string;
+  goalsAchieved: number;
+  distinguishedLevel?: 'President' | 'Select' | 'Distinguished';
+}
+
+interface TopGrowthClubsProps {
+  topGrowthClubs: TopGrowthClub[];
+  topDCPClubs?: TopDCPClub[];
+  isLoading: boolean;
+}
+
+export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
+  topGrowthClubs,
+  topDCPClubs,
+  isLoading,
+}) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const getDistinguishedBadge = (level?: 'President' | 'Select' | 'Distinguished'): JSX.Element | null => {
+    if (!level) return null;
+
+    const colors = {
+      President: 'bg-purple-100 text-purple-800',
+      Select: 'bg-blue-100 text-blue-800',
+      Distinguished: 'bg-green-100 text-green-800',
+    };
+
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[level]}`}>
+        {level}
+      </span>
+    );
+  };
+
+  const getGrowthIcon = (growth: number): JSX.Element => {
+    if (growth > 0) {
+      return (
+        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+      </svg>
+    );
+  };
+
+  const getTrophyIcon = (rank: number): JSX.Element => {
+    const colors = ['text-yellow-500', 'text-gray-400', 'text-orange-600'];
+    const color = colors[rank - 1] || 'text-gray-300';
+
+    return (
+      <svg className={`w-6 h-6 ${color}`} fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 00-1.5 1.5v.5h-11v-.5A1.5 1.5 0 002.5 10H2a1 1 0 01-1-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5a1.5 1.5 0 013 0V4h1v-.5z" />
+        <path d="M4 11h12v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z" />
+      </svg>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Growth Clubs */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          <h3 className="text-xl font-semibold text-gray-900">Top Growth Clubs</h3>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Clubs with the highest membership growth over the analyzed period
+        </p>
+
+        {topGrowthClubs.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">No growth data available</p>
+        ) : (
+          <div className="space-y-3">
+            {topGrowthClubs.map((club, index) => (
+              <div
+                key={club.clubId}
+                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="flex-shrink-0">
+                    {index < 3 ? (
+                      getTrophyIcon(index + 1)
+                    ) : (
+                      <div className="w-6 h-6 flex items-center justify-center text-gray-400 font-semibold">
+                        {index + 1}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 truncate">{club.clubName}</h4>
+                    <p className="text-sm text-gray-600">Club #{club.clubId}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  {getGrowthIcon(club.growth)}
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-green-600">
+                      +{club.growth}
+                    </p>
+                    <p className="text-xs text-gray-600">members</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Top DCP Goal Achievement Clubs */}
+      {topDCPClubs && topDCPClubs.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+            <h3 className="text-xl font-semibold text-gray-900">Top DCP Goal Achievement</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Clubs with the highest DCP goal achievement
+          </p>
+
+          <div className="space-y-3">
+            {topDCPClubs.map((club, index) => (
+              <div
+                key={club.clubId}
+                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="flex-shrink-0">
+                    {index < 3 ? (
+                      getTrophyIcon(index + 1)
+                    ) : (
+                      <div className="w-6 h-6 flex items-center justify-center text-gray-400 font-semibold">
+                        {index + 1}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-gray-900 truncate">{club.clubName}</h4>
+                      {getDistinguishedBadge(club.distinguishedLevel)}
+                    </div>
+                    <p className="text-sm text-gray-600">Club #{club.clubId}</p>
+                  </div>
+                </div>
+                <div className="text-right ml-4">
+                  <p className="text-2xl font-bold text-blue-600">
+                    {club.goalsAchieved}
+                  </p>
+                  <p className="text-xs text-gray-600">of 10 goals</p>
+                  <div className="mt-1">
+                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{ width: `${(club.goalsAchieved / 10) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Achievement Summary */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Achievement Highlights</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <h4 className="font-semibold text-gray-900">Total Growth</h4>
+            </div>
+            <p className="text-3xl font-bold text-green-600">
+              +{topGrowthClubs.reduce((sum, club) => sum + club.growth, 0)}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              members across top {topGrowthClubs.length} clubs
+            </p>
+          </div>
+
+          {topDCPClubs && topDCPClubs.length > 0 && (
+            <div className="bg-white rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <h4 className="font-semibold text-gray-900">Average DCP Goals</h4>
+              </div>
+              <p className="text-3xl font-bold text-blue-600">
+                {(topDCPClubs.reduce((sum, club) => sum + club.goalsAchieved, 0) / topDCPClubs.length).toFixed(1)}
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                across top {topDCPClubs.length} clubs
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
