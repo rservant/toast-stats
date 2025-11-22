@@ -26,6 +26,35 @@ export class ToastmastersScraper {
   }
 
   /**
+   * Determine the program year for a given date
+   * Toastmasters program year runs from July 1 to June 30
+   * Returns format like "2024-2025" for dates between July 1, 2024 and June 30, 2025
+   */
+  private getProgramYear(dateString: string): string {
+    const date = new Date(dateString + 'T00:00:00')
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1 // 1-12
+    
+    // If month is July (7) or later, program year starts this year
+    // If month is June (6) or earlier, program year started last year
+    if (month >= 7) {
+      return `${year}-${year + 1}`
+    } else {
+      return `${year - 1}-${year}`
+    }
+  }
+
+  /**
+   * Build the base URL with program year
+   * Format: https://dashboards.toastmasters.org/YYYY-YYYY/
+   * This format works for all program years including the current one
+   */
+  private buildBaseUrl(dateString: string): string {
+    const programYear = this.getProgramYear(dateString)
+    return `${this.config.baseUrl}/${programYear}`
+  }
+
+  /**
    * Initialize browser instance
    */
   private async initBrowser(): Promise<Browser> {
@@ -204,8 +233,9 @@ export class ToastmastersScraper {
       
       logger.info('Fetching all districts summary for specific date', { dateString, formattedDate })
       
-      // Use Default.aspx with date parameters (no id = all districts)
-      const url = `${this.config.baseUrl}/Default.aspx?month=${month}&day=${formattedDate}`
+      // Build URL with program year and date (no id = all districts)
+      const baseUrl = this.buildBaseUrl(dateString)
+      const url = `${baseUrl}/Default.aspx?month=${month}&day=${formattedDate}`
       logger.info('Navigating to URL', { url })
       await page.goto(url, { waitUntil: 'networkidle', timeout: this.config.timeout })
       
@@ -341,16 +371,20 @@ export class ToastmastersScraper {
     const page = await browser.newPage()
 
     try {
-      let url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
+      let url: string
       
-      // Add date parameters if provided
       if (dateString) {
+        // Build URL with program year and date
+        const baseUrl = this.buildBaseUrl(dateString)
         const dateObj = new Date(dateString + 'T00:00:00')
         const month = dateObj.getMonth() + 1 // 1-12
         const day = dateObj.getDate()
         const year = dateObj.getFullYear()
         const formattedDate = `${month}/${day}/${year}`
-        url += `&month=${month}&day=${formattedDate}`
+        url = `${baseUrl}/District.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
+      } else {
+        // No date specified, use current data
+        url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
       }
       
       logger.info('Fetching district performance', { districtId, dateString, url })
@@ -396,16 +430,20 @@ export class ToastmastersScraper {
     const page = await browser.newPage()
 
     try {
-      let url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
+      let url: string
       
-      // Add date parameters if provided
       if (dateString) {
+        // Build URL with program year and date
+        const baseUrl = this.buildBaseUrl(dateString)
         const dateObj = new Date(dateString + 'T00:00:00')
         const month = dateObj.getMonth() + 1 // 1-12
         const day = dateObj.getDate()
         const year = dateObj.getFullYear()
         const formattedDate = `${month}/${day}/${year}`
-        url += `&month=${month}&day=${formattedDate}`
+        url = `${baseUrl}/Division.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
+      } else {
+        // No date specified, use current data
+        url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
       }
       
       logger.info('Fetching division performance', { districtId, dateString, url })
@@ -451,16 +489,20 @@ export class ToastmastersScraper {
     const page = await browser.newPage()
 
     try {
-      let url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
+      let url: string
       
-      // Add date parameters if provided
       if (dateString) {
+        // Build URL with program year and date
+        const baseUrl = this.buildBaseUrl(dateString)
         const dateObj = new Date(dateString + 'T00:00:00')
         const month = dateObj.getMonth() + 1 // 1-12
         const day = dateObj.getDate()
         const year = dateObj.getFullYear()
         const formattedDate = `${month}/${day}/${year}`
-        url += `&month=${month}&day=${formattedDate}`
+        url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
+      } else {
+        // No date specified, use current data
+        url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
       }
       
       logger.info('Fetching club performance', { districtId, dateString, url })
