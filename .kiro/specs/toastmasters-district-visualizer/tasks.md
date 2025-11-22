@@ -240,3 +240,105 @@
   - Configure CORS for production domains
   - Set up logging and monitoring
   - _Requirements: All requirements (deployment support)_
+
+- [x] 23. Implement historical rank tracking backend functionality
+  - [x] 23.1 Create endpoint GET /api/districts/:districtId/rank-history to retrieve historical rank data
+    - Accept optional startDate and endDate query parameters
+    - Default to current program year if no dates provided
+    - Fetch cached data for all dates in the range
+    - Calculate rank for the district on each date
+    - Return historical rank progression data
+    - _Requirements: 12.1, 12.2, 12.5_
+  
+  - [x] 23.2 Create endpoint GET /api/districts/available-dates to list all cached dates
+    - Return list of all dates with cached data
+    - Include month and day information for dropdown population
+    - Include program year information
+    - Sort dates chronologically
+    - _Requirements: 12.3, 12.4, 12.5_
+  
+  - [x] 23.3 Enhance scraper to support date selection
+    - Add method to select specific month and day on dashboard
+    - Implement dropdown interaction for month selection
+    - Implement dropdown interaction for day selection
+    - Verify date selection before scraping
+    - _Requirements: 12.3, 12.4_
+
+- [x] 24. Implement historical rank tracking frontend components
+  - [x] 24.1 Create HistoricalRankChart component
+    - Build line chart using Recharts showing rank progression over time
+    - Support multiple district selection with distinct colors
+    - Add interactive tooltips showing detailed rank information on hover
+    - Implement toggle to switch between ranking metrics (aggregate, clubs, payments, distinguished)
+    - Display program year timeline (July 1 - June 30) on x-axis
+    - Add loading and error states
+    - Make chart responsive to container size
+    - _Requirements: 12.1, 12.2, 12.5, 12.6, 12.7, 12.8_
+  
+  - [x] 24.2 Create DateSelector component with month/day dropdowns
+    - Create month dropdown matching Toastmasters dashboard format
+    - Create day dropdown that updates based on selected month
+    - Fetch available dates from backend
+    - Trigger data refresh when date changes
+    - Show visual indicator for currently selected date
+    - Disable unavailable dates
+    - _Requirements: 12.3, 12.4_
+  
+  - [x] 24.3 Integrate historical rank chart into landing page
+    - Add new section on landing page for historical rank tracking
+    - Implement district multi-select for comparison
+    - Connect DateSelector to data fetching
+    - Add export functionality for historical data
+    - Ensure responsive layout on mobile devices
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
+
+- [x] 25. Enhance cache management for historical tracking
+  - [x] 25.1 Implement automatic historical data aggregation
+    - When fetching rankings for a date, store individual district ranks
+    - Create index of all districts and their ranks by date
+    - Optimize data structure for quick historical queries
+    - _Requirements: 12.1, 12.2_
+  
+  - [x] 25.2 Add cache metadata tracking
+    - Store metadata about each cached date (timestamp, data completeness)
+    - Track which dates have complete vs partial data
+    - Add cache statistics endpoint
+    - _Requirements: 12.1, 12.2_
+
+- [x] 26. Implement historical data backfill functionality
+  - [x] 26.1 Create backend backfill service
+    - Implement POST /api/districts/backfill endpoint to initiate backfill
+    - Create background job system for processing backfill requests
+    - Implement GET /api/districts/backfill/:backfillId for progress tracking
+    - Implement DELETE /api/districts/backfill/:backfillId for cancellation
+    - Generate unique backfill IDs for each request
+    - Store backfill progress in memory
+    - Only fetch dates that are not already cached
+    - _Requirements: 12.1, 12.2_
+  
+  - [x] 26.2 Implement date range processing and API fetching
+    - Generate list of all dates in specified range (defaults to program year start to today)
+    - Check which dates are already cached and skip them
+    - Fetch missing dates sequentially from Dashboard API
+    - Add 1-second delay between requests to avoid overwhelming server
+    - Track progress (total dates, completed, skipped)
+    - Continue processing even if individual dates fail
+    - _Requirements: 12.1, 12.2_
+  
+  - [x] 26.3 Create BackfillButton frontend component
+    - Add button to initiate backfill on landing page
+    - Show modal dialog with optional date range selection
+    - Display progress indicator during backfill process
+    - Show progress percentage, dates processed, and dates skipped
+    - Implement cancel button to abort backfill
+    - Handle error states with user-friendly messages
+    - Refresh cached dates list when complete
+    - _Requirements: 12.1, 12.2_
+  
+  - [x] 26.4 Implement backfill progress polling
+    - Create React Query hook for polling backfill status
+    - Poll backend every 2 seconds during active backfill
+    - Update UI with real-time progress information
+    - Stop polling when backfill completes or errors
+    - Clean up backfill resources after completion
+    - _Requirements: 12.1, 12.2_

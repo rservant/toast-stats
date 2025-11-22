@@ -138,3 +138,78 @@ export interface DailyReportsResponse {
 }
 
 export interface DailyReportDetailResponse extends DailyReport {}
+
+// Historical Cache Types
+
+export interface DistrictRankSnapshot {
+  districtId: string
+  districtName: string
+  aggregateScore: number
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+}
+
+export interface CacheMetadata {
+  date: string
+  timestamp: number // Unix timestamp when cached
+  dataCompleteness: 'complete' | 'partial' | 'empty'
+  districtCount: number
+  source: 'scraper' | 'manual' | 'api'
+  programYear: string
+}
+
+export interface HistoricalDataIndex {
+  dates: string[] // Sorted array of all cached dates
+  districtIds: string[] // All unique district IDs
+  ranksByDate: Map<string, DistrictRankSnapshot[]> // date -> array of district ranks
+  metadata: Map<string, CacheMetadata> // date -> metadata
+}
+
+export interface CacheStatistics {
+  totalDates: number
+  dateRange: {
+    earliest: string | null
+    latest: string | null
+  }
+  completeDates: number
+  partialDates: number
+  emptyDates: number
+  totalDistricts: number
+  programYears: string[]
+  cacheSize: number // Total size in bytes (approximate)
+}
+
+// Backfill Types
+
+export interface BackfillRequest {
+  startDate?: string
+  endDate?: string
+}
+
+export interface BackfillProgress {
+  total: number
+  completed: number
+  skipped: number
+  unavailable: number
+  failed: number
+  current: string
+}
+
+export interface BackfillJob {
+  backfillId: string
+  status: 'processing' | 'complete' | 'error'
+  progress: BackfillProgress
+  error?: string
+  createdAt: number
+}
+
+export interface BackfillResponse {
+  backfillId: string
+  status: 'processing' | 'complete' | 'error'
+  progress: BackfillProgress
+  error?: string
+}

@@ -20,7 +20,7 @@ export class ToastmastersScraper {
   constructor() {
     this.config = {
       baseUrl: process.env.TOASTMASTERS_DASHBOARD_URL || 'https://dashboards.toastmasters.org',
-      headless: process.env.NODE_ENV === 'production',
+      headless: true, // Always run in headless mode
       timeout: 30000,
     }
   }
@@ -165,6 +165,155 @@ export class ToastmastersScraper {
       return records
     } finally {
       await page.close()
+    }
+  }
+
+  /**
+   * Fetch all districts with performance data for a specific date
+   * @param dateString Date in YYYY-MM-DD format
+   */
+  async getAllDistrictsForDate(dateString: string): Promise<any[]> {
+    const browser = await this.initBrowser()
+    const page = await browser.newPage()
+
+    try {
+      // Parse the date string (YYYY-MM-DD)
+      const dateObj = new Date(dateString + 'T00:00:00')
+      const month = dateObj.getMonth() + 1 // 1-12
+      const day = dateObj.getDate()
+      const year = dateObj.getFullYear()
+      
+      // Format as mm/dd/yyyy (no zero padding for month/day)
+      const formattedDate = `${month}/${day}/${year}`
+      
+      logger.info('Fetching all districts summary for specific date', { dateString, formattedDate })
+      
+      // Use Default.aspx with date parameters (no id = all districts)
+      const url = `${this.config.baseUrl}/Default.aspx?month=${month}&day=${formattedDate}`
+      logger.info('Navigating to URL', { url })
+      await page.goto(url, { waitUntil: 'networkidle', timeout: this.config.timeout })
+      
+      // Log the page title for debugging
+      const title = await page.title()
+      logger.info('Page loaded', { title, url: page.url() })
+      
+      // Try to verify the date, but don't fail if we can't
+      const actualDate = await this.getSelectedDate(page)
+      if (actualDate) {
+        const { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString } = actualDate
+        if (actualMonth !== month || actualDay !== day || actualYear !== year) {
+          logger.warn('Requested date not available, dashboard returned different date', {
+            requested: { month, day, year, dateString },
+            actual: { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString }
+          })
+          throw new Error(`Date ${dateString} not available (dashboard returned ${actualDateString})`)
+        }
+        logger.info('Date verification successful', { requested: dateString, actual: actualDateString })
+      } else {
+        logger.warn('Could not verify date from dropdown, proceeding anyway', { dateString })
+      }
+      
+      // Download CSV with the selected date
+      const csvContent = await this.downloadCsv(page)
+      const records = this.parseCsv(csvContent)
+      
+      logger.info('All districts performance data fetched for date', { dateString, count: records.length })
+      return records
+    } finally {
+      await page.close()
+    }
+  }
+
+  /**
+   * Get the currently selected date from the dashboard
+   * Returns the date that's actually displayed (e.g., "As of 27-Jul-2025")
+   */
+  private async getSelectedDate(page: Page): Promise<{ month: number; day: number; year: number; dateString: string } | null> {
+    try {
+      // Get all select elements on the page
+      const allSelects = await page.$$('select')
+      logger.info('Found select elements on page', { count: allSelects.length })
+      
+      // The date dropdown is typically the last select element (after district, year, month)
+      // Try to find it by looking for "As of" in the selected option text
+      let daySelect = null
+      
+      for (const select of allSelects) {
+        const selectedText = await select.evaluate((el) => {
+          const selectedOption = (el as any).options[(el as any).selectedIndex]
+          return selectedOption ? selectedOption.text : null
+        })
+        
+        if (selectedText && selectedText.includes('As of')) {
+          daySelect = select
+          logger.info('Found date dropdown', { selectedText })
+          break
+        }
+      }
+      
+      if (!daySelect) {
+        logger.warn('Day dropdown not found on page')
+        return null
+      }
+      
+      // Get the selected option text (e.g., "As of 10-Oct-2025")
+      const selectedText = await daySelect.evaluate((select) => {
+        const selectedOption = (select as any).options[(select as any).selectedIndex]
+        return selectedOption ? selectedOption.text : null
+      })
+      
+      if (!selectedText) {
+        logger.warn('No selected text in day dropdown')
+        return null
+      }
+      
+      logger.info('Day dropdown selected text', { selectedText })
+      
+      // Parse the date from "As of dd-MMM-yyyy" format
+      // Try multiple patterns to be more flexible
+      let match = selectedText.match(/As of (\d+)-([A-Za-z]+)-(\d{4})/)
+      if (!match) {
+        // Try without "As of" prefix
+        match = selectedText.match(/(\d+)-([A-Za-z]+)-(\d{4})/)
+      }
+      if (!match) {
+        // Try with slashes
+        match = selectedText.match(/(\d+)\/(\d+)\/(\d{4})/)
+        if (match) {
+          // This is mm/dd/yyyy format
+          const month = parseInt(match[1], 10)
+          const day = parseInt(match[2], 10)
+          const year = parseInt(match[3], 10)
+          return { month, day, year, dateString: selectedText }
+        }
+      }
+      
+      if (!match) {
+        logger.warn('Could not parse date from dropdown text', { selectedText })
+        return null
+      }
+      
+      const day = parseInt(match[1], 10)
+      const monthName = match[2]
+      const year = parseInt(match[3], 10)
+      
+      // Convert month name to number
+      const monthMap: { [key: string]: number } = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12
+      }
+      const month = monthMap[monthName]
+      
+      if (!month) {
+        logger.warn('Could not parse month from dropdown text', { monthName, selectedText })
+        return null
+      }
+      
+      logger.info('Successfully parsed date', { month, day, year, selectedText })
+      return { month, day, year, dateString: selectedText }
+    } catch (error) {
+      logger.error('Failed to get selected date', error)
+      return null
     }
   }
 

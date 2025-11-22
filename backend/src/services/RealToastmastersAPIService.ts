@@ -4,13 +4,16 @@
  */
 
 import { ToastmastersScraper } from './ToastmastersScraper.js'
+import { CacheManager } from './CacheManager.js'
 import { logger } from '../utils/logger.js'
 
 export class RealToastmastersAPIService {
   private scraper: ToastmastersScraper
+  private cacheManager: CacheManager
 
   constructor() {
     this.scraper = new ToastmastersScraper()
+    this.cacheManager = new CacheManager()
   }
 
   /**
@@ -37,10 +40,29 @@ export class RealToastmastersAPIService {
 
   /**
    * Get all districts with performance rankings
+   * Uses file-based cache to avoid re-downloading data
    */
-  async getAllDistrictsRankings() {
+  async getAllDistrictsRankings(date?: string) {
     try {
-      const allDistricts = await this.scraper.getAllDistricts()
+      const targetDate = date || CacheManager.getTodayDate()
+      
+      // Check cache first
+      const cachedData = await this.cacheManager.getCache(targetDate, 'districts')
+      if (cachedData) {
+        logger.info('Using cached district rankings', { date: targetDate })
+        return cachedData
+      }
+
+      // Cache miss - fetch from scraper
+      logger.info('Fetching fresh district rankings', { date: targetDate })
+      
+      // If a specific date is requested, use date selection
+      let allDistricts
+      if (date) {
+        allDistricts = await this.scraper.getAllDistrictsForDate(date)
+      } else {
+        allDistricts = await this.scraper.getAllDistricts()
+      }
       
       // First pass: collect all metrics
       const districtData = allDistricts.map((row: any) => ({
@@ -119,11 +141,31 @@ export class RealToastmastersAPIService {
       }).sort((a, b) => a.aggregateScore - b.aggregateScore) // Lower score is better
       
       logger.info('District rankings calculated', { count: rankings.length })
-      return { rankings }
+      
+      const result = { rankings, date: targetDate }
+      
+      // Cache the result
+      await this.cacheManager.setCache(targetDate, result, 'districts')
+      
+      return result
     } catch (error) {
       logger.error('Failed to get district rankings', error)
       throw error
     }
+  }
+
+  /**
+   * Get all cached dates
+   */
+  async getCachedDates(): Promise<string[]> {
+    return this.cacheManager.getCachedDates('districts')
+  }
+
+  /**
+   * Clear all cache
+   */
+  async clearCache(): Promise<void> {
+    return this.cacheManager.clearCache()
   }
 
   /**
@@ -357,6 +399,110 @@ export class RealToastmastersAPIService {
       }
     } catch (error) {
       logger.error('Failed to get daily report detail', { districtId, date, error })
+      throw error
+    }
+  }
+
+  /**
+   * Get available dates with month/day information
+   */
+  async getAvailableDates() {
+    try {
+      const cachedDates = await this.cacheManager.getCachedDates('districts')
+      
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ]
+      
+      const dates = cachedDates.map(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00')
+        return {
+          date: dateStr,
+          month: date.getMonth() + 1, // 1-12
+          day: date.getDate(),
+          monthName: monthNames[date.getMonth()],
+        }
+      })
+      
+      const programYearStart = CacheManager.getProgramYearStart()
+      
+      return {
+        dates,
+        programYear: {
+          startDate: programYearStart.toISOString().split('T')[0],
+          endDate: new Date(programYearStart.getFullYear() + 1, 5, 30).toISOString().split('T')[0], // June 30
+          year: CacheManager.getProgramYear(),
+        },
+      }
+    } catch (error) {
+      logger.error('Failed to get available dates', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get rank history for a specific district
+   * Uses optimized historical index for faster queries
+   */
+  async getDistrictRankHistory(districtId: string, startDate?: string, endDate?: string) {
+    try {
+      // Determine date range - default to current program year
+      const start = startDate || CacheManager.getProgramYearStart().toISOString().split('T')[0]
+      const end = endDate || new Date().toISOString().split('T')[0]
+      
+      // Use optimized index-based query
+      const snapshots = await this.cacheManager.getDistrictRankHistory(districtId, start, end)
+      
+      // Transform snapshots to history format
+      const history = snapshots.map(snapshot => ({
+        date: snapshot.date,
+        aggregateScore: snapshot.aggregateScore,
+        clubsRank: snapshot.clubsRank,
+        paymentsRank: snapshot.paymentsRank,
+        distinguishedRank: snapshot.distinguishedRank,
+      }))
+      
+      const districtName = snapshots.length > 0 
+        ? snapshots[0].districtName 
+        : `District ${districtId}`
+      
+      return {
+        districtId,
+        districtName,
+        history,
+        programYear: {
+          startDate: start,
+          endDate: end,
+          year: CacheManager.getProgramYear(),
+        },
+      }
+    } catch (error) {
+      logger.error('Failed to get district rank history', { districtId, error })
+      throw error
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getCacheStatistics() {
+    try {
+      return await this.cacheManager.getCacheStatistics()
+    } catch (error) {
+      logger.error('Failed to get cache statistics', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get cache metadata for a specific date
+   */
+  async getCacheMetadata(date: string) {
+    try {
+      return await this.cacheManager.getMetadata(date)
+    } catch (error) {
+      logger.error('Failed to get cache metadata', { date, error })
       throw error
     }
   }

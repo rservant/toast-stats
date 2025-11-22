@@ -37,3 +37,7 @@ lerna-debug.log*
 
 # Vite
 .vite
+
+# Cache
+cache/
+downloads/

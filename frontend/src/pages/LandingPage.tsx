@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
+import HistoricalRankChart from '../components/HistoricalRankChart';
+import DateSelector from '../components/DateSelector';
+import { ExportButton } from '../components/ExportButton';
+import { BackfillButton } from '../components/BackfillButton';
+import { useRankHistory } from '../hooks/useRankHistory';
+import { exportHistoricalRankData } from '../utils/csvExport';
 
 interface DistrictRanking {
   districtId: string;
@@ -28,17 +34,48 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<'aggregate' | 'clubs' | 'payments' | 'distinguished'>('aggregate');
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  
+  // Historical rank tracking state
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
+  const [historicalDate, setHistoricalDate] = useState<string>('');
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['district-rankings'],
+  // Fetch cached dates
+  const { data: cachedDatesData } = useQuery({
+    queryKey: ['cached-dates'],
     queryFn: async () => {
-      const response = await apiClient.get('/districts/rankings');
+      const response = await apiClient.get('/districts/cache/dates');
+      return response.data;
+    },
+  });
+
+  const cachedDates: string[] = cachedDatesData?.dates || [];
+
+  // Fetch rankings for selected date
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['district-rankings', selectedDate],
+    queryFn: async () => {
+      const params = selectedDate ? { date: selectedDate } : {};
+      const response = await apiClient.get('/districts/rankings', { params });
       return response.data;
     },
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
 
   const rankings: DistrictRanking[] = data?.rankings || [];
+  const currentDate: string = data?.date || '';
+
+  // Fetch historical rank data for selected districts
+  const {
+    data: rankHistoryData,
+    isLoading: isLoadingRankHistory,
+    isError: isErrorRankHistory,
+    error: rankHistoryError,
+  } = useRankHistory({
+    districtIds: selectedDistricts,
+    endDate: historicalDate || undefined,
+  });
 
   // Get unique regions for filter
   const regions = React.useMemo(() => {
@@ -91,6 +128,28 @@ const LandingPage: React.FC = () => {
     return num.toLocaleString();
   };
 
+  // Handle district selection for historical tracking
+  const handleDistrictSelection = (districtId: string) => {
+    setSelectedDistricts(prev => {
+      if (prev.includes(districtId)) {
+        return prev.filter(id => id !== districtId);
+      } else {
+        // Limit to 8 districts for readability
+        if (prev.length >= 8) {
+          return prev;
+        }
+        return [...prev, districtId];
+      }
+    });
+  };
+
+  // Handle export of historical rank data
+  const handleExportHistoricalData = () => {
+    if (rankHistoryData && rankHistoryData.length > 0) {
+      exportHistoricalRankData(rankHistoryData, rankHistoryData[0]?.programYear);
+    }
+  };
+
 
 
   if (isLoading) {
@@ -131,12 +190,161 @@ const LandingPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Toastmasters District Rankings
-          </h1>
-          <p className="text-gray-600">
-            Compare district performance across paid clubs, payments, and distinguished clubs
-          </p>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Toastmasters District Rankings
+              </h1>
+              <p className="text-gray-600">
+                Compare district performance across paid clubs, payments, and distinguished clubs
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <BackfillButton className="text-sm font-medium" />
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                Clear Cache
+              </button>
+            </div>
+          </div>
+
+          {/* Date Selector */}
+          {cachedDates.length > 0 && (
+            <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+              <label htmlFor="date-select" className="text-sm font-medium text-gray-700">
+                View Historical Data:
+              </label>
+              <select
+                id="date-select"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg font-medium text-gray-900 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <option value="">Today ({currentDate})</option>
+                {cachedDates.map((date) => (
+                  <option key={date} value={date}>
+                    {date}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Clear Cache Confirmation Dialog */}
+        {showClearConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Clear Cache?</h3>
+              <p className="text-gray-600 mb-6">
+                This will delete all cached district data. The next data fetch will download fresh data from the Toastmasters dashboard.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.delete('/districts/cache');
+                      setShowClearConfirm(false);
+                      refetch();
+                    } catch (err) {
+                      console.error('Failed to clear cache:', err);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Clear Cache
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Historical Rank Tracking Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Historical Rank Progression
+              </h2>
+              <p className="text-gray-600">
+                Select up to 8 districts to compare their rank progression over time
+              </p>
+            </div>
+            <ExportButton
+              onExport={handleExportHistoricalData}
+              disabled={!rankHistoryData || rankHistoryData.length === 0}
+              label="Export Historical Data"
+              className="text-sm px-4 py-2"
+            />
+          </div>
+
+          {/* Date Selector */}
+          <div className="mb-6 pb-4 border-b border-gray-200">
+            <DateSelector
+              onDateChange={setHistoricalDate}
+              selectedDate={historicalDate}
+            />
+          </div>
+
+          {/* District Multi-Select */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-medium text-gray-700">
+                Select Districts to Compare ({selectedDistricts.length}/8):
+              </label>
+              {selectedDistricts.length > 0 && (
+                <button
+                  onClick={() => setSelectedDistricts([])}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {rankings.slice(0, 20).map((district) => {
+                const isSelected = selectedDistricts.includes(district.districtId);
+                const isDisabled = !isSelected && selectedDistricts.length >= 8;
+                return (
+                  <button
+                    key={district.districtId}
+                    onClick={() => handleDistrictSelection(district.districtId)}
+                    disabled={isDisabled}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : isDisabled
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {district.districtName}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedDistricts.length >= 8 && (
+              <p className="text-sm text-amber-600 mt-2">
+                Maximum of 8 districts reached. Deselect a district to add another.
+              </p>
+            )}
+          </div>
+
+          {/* Historical Rank Chart */}
+          <HistoricalRankChart
+            data={rankHistoryData || []}
+            isLoading={isLoadingRankHistory}
+            isError={isErrorRankHistory}
+            error={rankHistoryError}
+          />
         </div>
 
         {/* Sort Controls */}

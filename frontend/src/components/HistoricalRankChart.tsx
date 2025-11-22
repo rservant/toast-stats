@@ -1,0 +1,312 @@
+import React, { useState } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
+import type { RankHistoryResponse } from '../types/districts';
+
+interface HistoricalRankChartProps {
+  data: RankHistoryResponse[];
+  isLoading: boolean;
+  isError: boolean;
+  error?: Error | null;
+}
+
+type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished';
+
+const DISTRICT_COLORS = [
+  '#3b82f6', // blue
+  '#ef4444', // red
+  '#10b981', // green
+  '#f59e0b', // amber
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f97316', // orange
+];
+
+const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
+  data,
+  isLoading,
+  isError,
+  error,
+}) => {
+  const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate');
+
+  if (isLoading) {
+    return (
+      <section className="bg-white rounded-lg shadow-md p-6" aria-busy="true" aria-label="Loading historical rank data">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Historical Rank Progression
+        </h2>
+        <div className="flex items-center justify-center h-80">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (isError) {
+    return (
+      <section className="bg-white rounded-lg shadow-md p-6" role="alert" aria-label="Historical rank data error">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Historical Rank Progression
+        </h2>
+        <div className="flex items-center justify-center h-80">
+          <div className="text-center">
+            <p className="text-red-600 font-medium mb-2">
+              Failed to load historical rank data
+            </p>
+            <p className="text-gray-600 text-sm">
+              {error?.message || 'An unexpected error occurred'}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <section className="bg-white rounded-lg shadow-md p-6" role="status" aria-label="Historical rank data">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Historical Rank Progression
+        </h2>
+        <div className="flex items-center justify-center h-80">
+          <p className="text-gray-600">No historical rank data available. Select districts to view their progression.</p>
+        </div>
+      </section>
+    );
+  }
+
+  // Get program year info from first district
+  const programYear = data[0]?.programYear;
+
+  // Combine all dates from all districts
+  const allDates = new Set<string>();
+  data.forEach(district => {
+    district.history.forEach(point => {
+      allDates.add(point.date);
+    });
+  });
+
+  // Sort dates chronologically
+  const sortedDates = Array.from(allDates).sort();
+
+  // Transform data for chart
+  const chartData = sortedDates.map(date => {
+    const dataPoint: any = { date };
+    
+    data.forEach(district => {
+      const point = district.history.find(p => p.date === date);
+      if (point) {
+        let value: number;
+        switch (selectedMetric) {
+          case 'clubs':
+            value = point.clubsRank;
+            break;
+          case 'payments':
+            value = point.paymentsRank;
+            break;
+          case 'distinguished':
+            value = point.distinguishedRank;
+            break;
+          default:
+            value = point.aggregateScore;
+        }
+        dataPoint[district.districtId] = value;
+      }
+    });
+    
+    return dataPoint;
+  });
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const date = payload[0].payload.date;
+      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
+      return (
+        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
+          <p className="text-sm font-medium text-gray-900 mb-2">
+            {formattedDate}
+          </p>
+          {payload.map((entry: any, index: number) => {
+            const districtData = data.find(d => d.districtId === entry.dataKey);
+            return (
+              <p key={index} className="text-sm" style={{ color: entry.color }}>
+                <span className="font-semibold">{districtData?.districtName || entry.dataKey}:</span>{' '}
+                {selectedMetric === 'aggregate' ? `Score ${Math.round(entry.value)}` : `Rank #${entry.value}`}
+              </p>
+            );
+          })}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Generate chart description for accessibility
+  const metricLabel = {
+    aggregate: 'Overall Score',
+    clubs: 'Paid Clubs Rank',
+    payments: 'Total Payments Rank',
+    distinguished: 'Distinguished Clubs Rank',
+  }[selectedMetric];
+
+  const chartDescription = `Line chart showing ${metricLabel} progression for ${data.length} district${data.length !== 1 ? 's' : ''} over the program year from ${programYear?.startDate || 'July 1'} to ${programYear?.endDate || 'June 30'}.`;
+
+  return (
+    <section 
+      className="bg-white rounded-lg shadow-md p-4 sm:p-6"
+      aria-label="Historical rank progression chart"
+    >
+      <div className="flex flex-col gap-4 mb-4">
+        <div className="flex-1">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+            Historical Rank Progression
+          </h2>
+          {programYear && (
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+              Program Year: {programYear.year} ({programYear.startDate} to {programYear.endDate})
+            </p>
+          )}
+        </div>
+
+        {/* Metric Toggle */}
+        <div className="flex flex-wrap gap-2">
+          <span className="text-sm font-medium text-gray-700 self-center mr-2">View:</span>
+          <button
+            onClick={() => setSelectedMetric('aggregate')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              selectedMetric === 'aggregate'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={selectedMetric === 'aggregate'}
+          >
+            Overall Score
+          </button>
+          <button
+            onClick={() => setSelectedMetric('clubs')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              selectedMetric === 'clubs'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={selectedMetric === 'clubs'}
+          >
+            Paid Clubs
+          </button>
+          <button
+            onClick={() => setSelectedMetric('payments')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              selectedMetric === 'payments'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={selectedMetric === 'payments'}
+          >
+            Total Payments
+          </button>
+          <button
+            onClick={() => setSelectedMetric('distinguished')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              selectedMetric === 'distinguished'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={selectedMetric === 'distinguished'}
+          >
+            Distinguished
+          </button>
+        </div>
+      </div>
+
+      <div 
+        role="img" 
+        aria-label={chartDescription}
+        aria-describedby="rank-chart-desc"
+        className="w-full overflow-x-auto"
+      >
+        <div className="min-w-[320px]">
+          <ResponsiveContainer width="100%" height={400} minWidth={320}>
+            <LineChart
+              data={chartData}
+              margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+              aria-hidden="true"
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="date"
+                stroke="#6b7280"
+                style={{ fontSize: '10px' }}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                }}
+              />
+              <YAxis
+                stroke="#6b7280"
+                style={{ fontSize: '10px' }}
+                width={50}
+                reversed={selectedMetric !== 'aggregate'}
+                label={
+                  selectedMetric === 'aggregate'
+                    ? { value: 'Score (lower is better)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }
+                    : { value: 'Rank (lower is better)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }
+                }
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                wrapperStyle={{ fontSize: '12px' }}
+                verticalAlign="top"
+                height={36}
+                formatter={(value) => {
+                  const district = data.find(d => d.districtId === value);
+                  return district?.districtName || value;
+                }}
+              />
+              {data.map((district, index) => (
+                <Line
+                  key={district.districtId}
+                  type="monotone"
+                  dataKey={district.districtId}
+                  stroke={DISTRICT_COLORS[index % DISTRICT_COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ fill: DISTRICT_COLORS[index % DISTRICT_COLORS.length], r: 3 }}
+                  activeDot={{ r: 5 }}
+                  name={district.districtId}
+                  connectNulls
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <p id="rank-chart-desc" className="sr-only">
+        {chartDescription}
+      </p>
+    </section>
+  );
+};
+
+export default HistoricalRankChart;

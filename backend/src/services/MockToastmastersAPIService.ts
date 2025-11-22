@@ -97,7 +97,7 @@ export class MockToastmastersAPIService {
                      (distinguishedRank.get(district.districtId) || 999),
     })).sort((a, b) => a.aggregateScore - b.aggregateScore)
     
-    return { rankings }
+    return { rankings, date: new Date().toISOString().split('T')[0] }
   }
 
   async getDistrictStatistics(_districtId: string) {
@@ -268,6 +268,124 @@ export class MockToastmastersAPIService {
         netMembershipChange: newMembers.length - 2,
         dayOverDayChange: 3,
       },
+    }
+  }
+
+  async getCachedDates(): Promise<string[]> {
+    // Return some mock cached dates
+    const dates = []
+    const today = new Date()
+    for (let i = 0; i < 10; i++) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i * 7) // Weekly dates
+      dates.push(date.toISOString().split('T')[0])
+    }
+    return dates.reverse()
+  }
+
+  async clearCache(): Promise<void> {
+    // Mock implementation - does nothing
+    return Promise.resolve()
+  }
+
+  async getAvailableDates() {
+    const cachedDates = await this.getCachedDates()
+    
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+    
+    const dates = cachedDates.map(dateStr => {
+      const date = new Date(dateStr + 'T00:00:00')
+      return {
+        date: dateStr,
+        month: date.getMonth() + 1,
+        day: date.getDate(),
+        monthName: monthNames[date.getMonth()],
+      }
+    })
+    
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + 1
+    
+    const programYearStart = month >= 7 
+      ? new Date(year, 6, 1) 
+      : new Date(year - 1, 6, 1)
+    
+    return {
+      dates,
+      programYear: {
+        startDate: programYearStart.toISOString().split('T')[0],
+        endDate: new Date(programYearStart.getFullYear() + 1, 5, 30).toISOString().split('T')[0],
+        year: month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`,
+      },
+    }
+  }
+
+  async getDistrictRankHistory(districtId: string, startDate?: string, endDate?: string) {
+    const cachedDates = await this.getCachedDates()
+    const start = startDate || cachedDates[0]
+    const end = endDate || cachedDates[cachedDates.length - 1]
+    
+    const datesInRange = cachedDates.filter(date => date >= start && date <= end)
+    
+    // Generate mock historical rank data
+    const history = datesInRange.map((date) => ({
+      date,
+      aggregateScore: 15 + Math.floor(Math.random() * 10) - 5,
+      clubsRank: 5 + Math.floor(Math.random() * 3) - 1,
+      paymentsRank: 4 + Math.floor(Math.random() * 4) - 2,
+      distinguishedRank: 6 + Math.floor(Math.random() * 3) - 1,
+    }))
+    
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + 1
+    
+    return {
+      districtId,
+      districtName: `District ${districtId}`,
+      history,
+      programYear: {
+        startDate: start,
+        endDate: end,
+        year: month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`,
+      },
+    }
+  }
+
+  async getCacheStatistics() {
+    const dates = await this.getCachedDates()
+    return {
+      totalDates: dates.length,
+      dateRange: {
+        earliest: dates[0] || null,
+        latest: dates[dates.length - 1] || null,
+      },
+      completeDates: dates.length,
+      partialDates: 0,
+      emptyDates: 0,
+      totalDistricts: 8,
+      programYears: ['2024-2025'],
+      cacheSize: 0,
+    }
+  }
+
+  async getCacheMetadata(date: string) {
+    const dates = await this.getCachedDates()
+    if (!dates.includes(date)) {
+      return null
+    }
+    
+    return {
+      date,
+      timestamp: Date.now(),
+      dataCompleteness: 'complete' as const,
+      districtCount: 8,
+      source: 'mock' as const,
+      programYear: '2024-2025',
     }
   }
 }

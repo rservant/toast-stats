@@ -3,6 +3,8 @@ import { cacheMiddleware } from '../middleware/cache.js'
 import { generateDistrictCacheKey } from '../utils/cacheKeys.js'
 import { RealToastmastersAPIService } from '../services/RealToastmastersAPIService.js'
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
+import { BackfillService } from '../services/BackfillService.js'
+import { CacheManager } from '../services/CacheManager.js'
 import {
   transformDistrictsResponse,
   transformDistrictStatisticsResponse,
@@ -20,6 +22,7 @@ import type {
   ClubsResponse,
   DailyReportsResponse,
   DailyReportDetailResponse,
+  BackfillRequest,
 } from '../types/districts.js'
 
 const router = Router()
@@ -29,6 +32,17 @@ const useMockData = process.env.USE_MOCK_DATA === 'true'
 const toastmastersAPI = useMockData
   ? new MockToastmastersAPIService()
   : new RealToastmastersAPIService()
+
+// Initialize services
+const cacheManager = new CacheManager()
+const backfillService = new BackfillService(cacheManager, toastmastersAPI)
+
+// Cleanup old jobs every hour
+setInterval(() => {
+  backfillService.cleanupOldJobs().catch(error => {
+    console.error('Failed to cleanup old backfill jobs:', error)
+  })
+}, 60 * 60 * 1000)
 
 /**
  * Validate district ID format
@@ -74,16 +88,19 @@ router.get(
 /**
  * GET /api/districts/rankings
  * Fetch all districts with performance rankings
+ * Optional query param: date (YYYY-MM-DD)
  */
 router.get(
   '/rankings',
   cacheMiddleware({
     ttl: 900, // 15 minutes
   }),
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
-      // Fetch district rankings
-      const rankings = await toastmastersAPI.getAllDistrictsRankings()
+      const date = req.query.date as string | undefined
+      
+      // Fetch district rankings (with optional date)
+      const rankings = await toastmastersAPI.getAllDistrictsRankings(date)
 
       res.json(rankings)
     } catch (error) {
@@ -99,6 +116,130 @@ router.get(
     }
   }
 )
+
+/**
+ * GET /api/districts/cache/dates
+ * Get all cached dates
+ */
+router.get('/cache/dates', async (_req: Request, res: Response) => {
+  try {
+    const dates = await toastmastersAPI.getCachedDates()
+    res.json({ dates })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to get cached dates',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/cache/statistics
+ * Get cache statistics including metadata
+ */
+router.get('/cache/statistics', async (_req: Request, res: Response) => {
+  try {
+    const statistics = await toastmastersAPI.getCacheStatistics()
+    res.json(statistics)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to get cache statistics',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/cache/metadata/:date
+ * Get metadata for a specific cached date
+ */
+router.get('/cache/metadata/:date', async (req: Request, res: Response) => {
+  try {
+    const { date } = req.params
+    
+    // Validate date format
+    if (!validateDateFormat(date)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'Date must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+    
+    const metadata = await toastmastersAPI.getCacheMetadata(date)
+    
+    if (!metadata) {
+      res.status(404).json({
+        error: {
+          code: 'METADATA_NOT_FOUND',
+          message: 'No metadata found for the specified date',
+        },
+      })
+      return
+    }
+    
+    res.json(metadata)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to get cache metadata',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * DELETE /api/districts/cache
+ * Clear all cache
+ */
+router.delete('/cache', async (_req: Request, res: Response) => {
+  try {
+    await toastmastersAPI.clearCache()
+    res.json({ success: true, message: 'Cache cleared successfully' })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to clear cache',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/available-dates
+ * Get all available dates with month/day information
+ */
+router.get('/available-dates', async (_req: Request, res: Response) => {
+  try {
+    const availableDates = await toastmastersAPI.getAvailableDates()
+    res.json(availableDates)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to get available dates',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
 
 /**
  * GET /api/districts/:districtId/statistics
@@ -590,5 +731,183 @@ router.get(
     }
   }
 )
+
+/**
+ * GET /api/districts/:districtId/rank-history
+ * Fetch historical rank data for a district
+ * Query params: startDate (optional), endDate (optional)
+ */
+router.get(
+  '/:districtId/rank-history',
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { startDate, endDate } = req.query
+
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Fetch rank history from Toastmasters API
+      const rankHistory = await toastmastersAPI.getDistrictRankHistory(
+        districtId,
+        startDate as string | undefined,
+        endDate as string | undefined
+      )
+
+      res.json(rankHistory)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'FETCH_ERROR',
+          message: 'Failed to fetch district rank history',
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
+ * POST /api/districts/backfill
+ * Initiate backfill of historical data (only fetches missing dates)
+ */
+router.post('/backfill', async (req: Request, res: Response) => {
+  try {
+    const request: BackfillRequest = req.body
+
+    // Validate date formats if provided
+    if (request.startDate && !validateDateFormat(request.startDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'startDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    if (request.endDate && !validateDateFormat(request.endDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'endDate must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Validate date range
+    if (request.startDate && request.endDate) {
+      const start = new Date(request.startDate)
+      const end = new Date(request.endDate)
+      
+      if (start > end) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_RANGE',
+            message: 'startDate must be before or equal to endDate',
+          },
+        })
+        return
+      }
+    }
+
+    const backfillId = await backfillService.initiateBackfill(request)
+    const status = backfillService.getBackfillStatus(backfillId)
+
+    res.json(status)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'BACKFILL_ERROR',
+        message: error instanceof Error ? error.message : 'Failed to initiate backfill',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/backfill/:backfillId
+ * Get backfill progress/status
+ */
+router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
+  try {
+    const { backfillId } = req.params
+
+    const status = backfillService.getBackfillStatus(backfillId)
+
+    if (!status) {
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found',
+        },
+      })
+      return
+    }
+
+    res.json(status)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'BACKFILL_ERROR',
+        message: 'Failed to get backfill status',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * DELETE /api/districts/backfill/:backfillId
+ * Cancel a backfill job
+ */
+router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
+  try {
+    const { backfillId } = req.params
+
+    const cancelled = await backfillService.cancelBackfill(backfillId)
+
+    if (!cancelled) {
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found or cannot be cancelled',
+        },
+      })
+      return
+    }
+
+    res.json({
+      success: true,
+      message: 'Backfill cancelled successfully',
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'BACKFILL_ERROR',
+        message: 'Failed to cancel backfill',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
 
 export default router

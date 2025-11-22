@@ -138,3 +138,42 @@ export interface DailyReportsResponse {
 }
 
 export interface DailyReportDetailResponse extends DailyReport {}
+
+// Historical Rank Types
+
+export interface HistoricalRankPoint {
+  date: string;
+  aggregateScore: number;
+  clubsRank: number;
+  paymentsRank: number;
+  distinguishedRank: number;
+}
+
+export interface DistrictRankHistory {
+  districtId: string;
+  districtName: string;
+  history: HistoricalRankPoint[];
+}
+
+export interface ProgramYearInfo {
+  startDate: string;
+  endDate: string;
+  year: string;
+}
+
+export interface RankHistoryResponse {
+  districtId: string;
+  districtName: string;
+  history: HistoricalRankPoint[];
+  programYear: ProgramYearInfo;
+}
+
+export interface AvailableDatesResponse {
+  dates: Array<{
+    date: string;
+    month: number;
+    day: number;
+    monthName: string;
+  }>;
+  programYear: ProgramYearInfo;
+}

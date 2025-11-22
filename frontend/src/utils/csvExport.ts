@@ -377,3 +377,78 @@ export const exportDistrictStatistics = (
   const filename = generateFilename('district_statistics', statistics.districtId);
   downloadCSV(csvContent, filename);
 };
+
+/**
+ * Export historical rank data to CSV
+ */
+export const exportHistoricalRankData = (
+  data: Array<{
+    districtId: string;
+    districtName: string;
+    history: Array<{
+      date: string;
+      aggregateScore: number;
+      clubsRank: number;
+      paymentsRank: number;
+      distinguishedRank: number;
+    }>;
+  }>,
+  programYear?: { startDate: string; endDate: string; year: string }
+): void => {
+  // Get all unique dates across all districts
+  const allDates = new Set<string>();
+  data.forEach(district => {
+    district.history.forEach(point => allDates.add(point.date));
+  });
+  const sortedDates = Array.from(allDates).sort();
+
+  const csvData: (string | number)[][] = [
+    ['Historical Rank Progression'],
+    [`Export Date: ${new Date().toISOString()}`],
+  ];
+
+  if (programYear) {
+    csvData.push([`Program Year: ${programYear.year} (${programYear.startDate} to ${programYear.endDate})`]);
+  }
+
+  csvData.push([`Districts: ${data.map(d => d.districtName).join(', ')}`]);
+  csvData.push([]);
+
+  // Create headers
+  const headers = ['Date'];
+  data.forEach(district => {
+    headers.push(
+      `${district.districtName} - Overall Score`,
+      `${district.districtName} - Clubs Rank`,
+      `${district.districtName} - Payments Rank`,
+      `${district.districtName} - Distinguished Rank`
+    );
+  });
+  csvData.push(headers);
+
+  // Create rows for each date
+  sortedDates.forEach(date => {
+    const row: (string | number)[] = [date];
+    
+    data.forEach(district => {
+      const point = district.history.find(p => p.date === date);
+      if (point) {
+        row.push(
+          Math.round(point.aggregateScore),
+          point.clubsRank,
+          point.paymentsRank,
+          point.distinguishedRank
+        );
+      } else {
+        row.push('', '', '', '');
+      }
+    });
+    
+    csvData.push(row);
+  });
+
+  const csvContent = arrayToCSV(csvData);
+  const date = new Date().toISOString().split('T')[0];
+  const filename = `historical_rank_progression_${date}.csv`;
+  downloadCSV(csvContent, filename);
+};

@@ -125,6 +125,34 @@ The system follows a modern web architecture with a React-based frontend for ric
 - Generates CSV files
 - Handles file download
 
+**HistoricalRankChart Component**
+- Line chart showing district rank progression over program year
+- Multi-district selection capability
+- Interactive tooltips with detailed rank information
+- Toggle between different ranking metrics
+- Responsive to container size
+- Color-coded lines for each district
+
+**DateSelector Component**
+- Month and day dropdown selectors
+- Matches Toastmasters dashboard date format
+- Triggers data fetch when date changes
+- Shows available dates based on cached data
+
+**BackfillButton Component**
+- Initiates backfill of missing historical data
+- Modal dialog with optional date range selection (defaults to program year)
+- Real-time progress indicator showing:
+  - Percentage complete
+  - Dates processed / total dates
+  - Breakdown: skipped (cached), unavailable (blackout), failed (errors)
+  - Current date being processed
+- Allows cancellation of in-progress backfills
+- Polls backend every 2 seconds for status updates
+- Automatically refreshes cached dates list when complete
+- Handles error states with user-friendly messages
+- Only fetches dates not already in cache
+
 ### Backend API Endpoints
 
 #### Authentication Endpoints
@@ -199,6 +227,89 @@ Response: {
 }
 ```
 
+```
+GET /api/districts/:districtId/rank-history
+Query: { startDate?: string, endDate?: string }
+Response: {
+  districtId: string,
+  districtName: string,
+  history: Array<{
+    date: string,
+    aggregateScore: number,
+    clubsRank: number,
+    paymentsRank: number,
+    distinguishedRank: number
+  }>,
+  programYear: {
+    startDate: string,
+    endDate: string,
+    year: string
+  }
+}
+```
+
+```
+GET /api/districts/available-dates
+Response: {
+  dates: Array<{
+    date: string,
+    month: number,
+    day: number,
+    monthName: string
+  }>,
+  programYear: {
+    startDate: string,
+    endDate: string,
+    year: string
+  }
+}
+```
+
+```
+POST /api/districts/backfill
+Request: {
+  startDate?: string,  // Defaults to program year start (July 1)
+  endDate?: string     // Defaults to today
+}
+Response: {
+  backfillId: string,
+  status: 'processing' | 'complete' | 'error',
+  progress: {
+    total: number,      // Total missing dates to process
+    completed: number,  // Dates processed so far
+    skipped: number,    // Dates already cached
+    unavailable: number, // Dates in blackout/reconciliation
+    failed: number,     // Dates that errored
+    current: string     // Current date being processed
+  }
+}
+```
+
+```
+GET /api/districts/backfill/:backfillId
+Response: {
+  backfillId: string,
+  status: 'processing' | 'complete' | 'error',
+  progress: {
+    total: number,
+    completed: number,
+    skipped: number,
+    unavailable: number,
+    failed: number,
+    current: string
+  },
+  error?: string
+}
+```
+
+```
+DELETE /api/districts/backfill/:backfillId
+Response: {
+  success: boolean,
+  message: string
+}
+```
+
 #### Daily Report Endpoints
 
 ```
@@ -251,19 +362,71 @@ Handles all communication with dashboard.toastmasters.org:
 - `getDailyReports(districtId, startDate, endDate)`: Fetches daily reports
 - `getDailyReportDetail(districtId, date)`: Fetches specific day's report
 
-#### CacheService
+#### CacheManager
 
-Manages data caching to reduce API calls:
-- In-memory cache with TTL (15 minutes default)
-- Cache key generation based on endpoint and parameters
-- Cache invalidation on user logout
-- Manual refresh bypass
+Manages file-based caching for historical district data:
+- File-based cache storage (JSON files by date)
+- Metadata tracking for each cached date
+- Historical index for quick lookups
+- Program year calculation and date range management
 
 **Key Methods:**
-- `get(key)`: Retrieves cached data
-- `set(key, value, ttl)`: Stores data with expiration
-- `invalidate(key)`: Removes specific cache entry
-- `clear()`: Clears all cache
+- `getCache(date, type)`: Retrieves cached data for a specific date
+- `setCache(date, data, type)`: Stores data with automatic metadata and index updates
+- `getCachedDates(type)`: Returns list of all cached dates
+- `getMetadata(date)`: Returns metadata for a cached date
+- `getCacheStatistics()`: Returns comprehensive cache statistics
+- `getDistrictRankHistory(districtId, startDate, endDate)`: Returns rank history for a district
+- `clearCache()`: Removes all cached data
+
+#### BackfillService
+
+Manages background processing of historical data backfill requests:
+- Generates date ranges (defaults to program year start to today)
+- Identifies missing dates by comparing requested range with cached dates
+- Fetches only missing dates from Dashboard API
+- Distinguishes between unavailable dates (blackout periods) and actual errors
+- Tracks detailed progress (total, completed, skipped, unavailable, failed)
+- Supports cancellation of in-progress backfills
+- Auto-cleanup of old jobs after 1 hour
+
+**Key Methods:**
+- `initiateBackfill(request)`: Starts a backfill job and returns job ID
+- `getBackfillStatus(backfillId)`: Returns current status and progress
+- `cancelBackfill(backfillId)`: Cancels an active backfill job
+- `cleanupOldJobs()`: Removes completed jobs older than 1 hour
+
+**Backfill Process:**
+1. User initiates backfill with optional date range
+2. System generates all dates in range
+3. Filters out already-cached dates (marked as "skipped")
+4. For each missing date:
+   - Navigates to dashboard with date parameters
+   - Verifies returned date matches requested date
+   - If mismatch: marks as "unavailable" (blackout/reconciliation period)
+   - If match: downloads CSV, processes data, caches result
+   - If error: marks as "failed" (actual error)
+5. Returns completion summary with counts for each category
+
+#### ToastmastersScraper
+
+Handles web scraping of Toastmasters dashboard using Playwright:
+- Headless browser automation
+- CSV export download and parsing
+- Date verification to ensure correct data
+- Handles dashboard's blackout and reconciliation periods
+
+**Key Methods:**
+- `getAllDistricts()`: Fetches all districts for current date
+- `getAllDistrictsForDate(dateString)`: Fetches all districts for specific date (YYYY-MM-DD)
+- `getDistrictPerformance(districtId)`: Fetches specific district data
+- `getClubPerformance(districtId)`: Fetches club-level data
+
+**Date Handling:**
+- Uses URL parameters: `/Default.aspx?month=7&day=7/27/2025`
+- Verifies date by finding dropdown with "As of" text
+- Parses date from "As of dd-MMM-yyyy" format
+- Throws error if requested date doesn't match returned date
 
 #### AuthService
 
@@ -431,6 +594,48 @@ interface ExportData {
     exportDate: Date;
     dataType: string;
   };
+}
+```
+
+### Historical Rank Data
+
+```typescript
+interface HistoricalRankPoint {
+  date: string; // YYYY-MM-DD
+  aggregateScore: number;
+  clubsRank: number;
+  paymentsRank: number;
+  distinguishedRank: number;
+}
+
+interface DistrictRankHistory {
+  districtId: string;
+  districtName: string;
+  history: HistoricalRankPoint[];
+}
+
+interface ProgramYearInfo {
+  startDate: string; // July 1
+  endDate: string; // June 30
+  year: string; // e.g., "2024-2025"
+}
+
+interface BulkDownloadRequest {
+  startDate?: string;
+  endDate?: string;
+  includeMissing?: boolean; // Fetch missing dates from API
+}
+
+interface BulkDownloadProgress {
+  downloadId: string;
+  status: 'processing' | 'complete' | 'error';
+  progress: {
+    total: number;
+    completed: number;
+    current: string; // Current date being processed
+  };
+  downloadUrl?: string;
+  error?: string;
 }
 ```
 
