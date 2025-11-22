@@ -204,12 +204,11 @@ export class DistrictCacheManager {
           .map(f => f.replace('.json', ''))
           .sort()
         
-        logger.debug('Retrieved cached dates for district', { districtId, count: dates.length })
+        // Removed debug log to reduce noise - this is called frequently
         return dates
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          // Directory doesn't exist yet
-          logger.debug('No cached dates for district', { districtId })
+          // Directory doesn't exist yet - no need to log, this is expected
           return []
         }
         throw error

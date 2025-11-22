@@ -54,16 +54,16 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
   };
 
   const dcpGoalNames: { [key: number]: string } = {
-    1: 'Add New Members',
-    2: 'Add New Members (Additional)',
-    3: 'Retain Members',
-    4: 'Retain Members (Additional)',
-    5: 'Training Completion',
-    6: 'Training Completion (Additional)',
-    7: 'Club Officer Training',
-    8: 'Club Officer Training (Additional)',
-    9: 'Distinguished Club Status',
-    10: 'Distinguished Club Status (Additional)',
+    1: 'Level 1 awards (4 required)',
+    2: 'Level 2 awards (2 required)',
+    3: 'More Level 2 awards (2 required)',
+    4: 'Level 3 awards (2 required)',
+    5: 'Level 4, Path Completion, or DTM award (1 required)',
+    6: 'One more Level 4, Path Completion, or DTM award (1 required)',
+    7: 'New members (4 required)',
+    8: 'More new members (4 required)',
+    9: 'Club officer roles trained (4 June-Aug, 4 Nov-Feb)',
+    10: 'Membership-renewal dues on time & Club officer list on time',
   };
 
   const renderGoalBar = (goal: DCPGoalAnalysis) => (

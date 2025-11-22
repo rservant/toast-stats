@@ -579,7 +579,7 @@ export class AnalyticsEngine {
    */
   private countAtRiskClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
       
       // At-risk: membership >= 12 but has issues
@@ -592,7 +592,7 @@ export class AnalyticsEngine {
    */
   private countCriticalClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
       return membership < 12
     }).length
   }
@@ -752,7 +752,7 @@ export class AnalyticsEngine {
   private getTotalMembership(entry: DistrictCacheEntry): number {
     // Sum up membership from all clubs
     return entry.clubPerformance.reduce((sum, club) => {
-      const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
       return sum + (isNaN(membership) ? 0 : membership)
     }, 0)
   }
@@ -810,7 +810,7 @@ export class AnalyticsEngine {
         if (!clubId || !clubMap.has(clubId)) continue
 
         const clubTrend = clubMap.get(clubId)!
-        const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
         const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
 
         clubTrend.membershipTrend.push({
@@ -1124,7 +1124,7 @@ export class AnalyticsEngine {
    */
   private countHealthyClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
       
       return membership >= 12 && dcpGoals > 0
@@ -1550,17 +1550,51 @@ export class AnalyticsEngine {
     const goalCounts = new Array(10).fill(0)
     const totalClubs = entry.clubPerformance.length
 
-    // Count how many clubs achieved each goal
-    // Note: We're inferring goal achievement from total goals met
-    // In reality, we'd need individual goal data from the CSV
+    // Count how many clubs achieved each goal using actual CSV data
     for (const club of entry.clubPerformance) {
-      const goalsAchieved = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
-      
-      // Assume clubs achieve goals sequentially (1, 2, 3, etc.)
-      // This is a simplification - actual data may vary
-      for (let i = 0; i < Math.min(goalsAchieved, 10); i++) {
-        goalCounts[i]++
-      }
+      // Goal 1: Level 1 awards (need 4)
+      const level1s = parseInt(club['Level 1s'] || '0')
+      if (level1s >= 4) goalCounts[0]++
+
+      // Goal 2: Level 2 awards (need 2)
+      const level2s = parseInt(club['Level 2s'] || '0')
+      if (level2s >= 2) goalCounts[1]++
+
+      // Goal 3: More Level 2 awards (need 2 additional, so 4 total)
+      const addLevel2s = parseInt(club['Add. Level 2s'] || '0')
+      if (addLevel2s >= 2) goalCounts[2]++
+
+      // Goal 4: Level 3 awards (need 2)
+      const level3s = parseInt(club['Level 3s'] || '0')
+      if (level3s >= 2) goalCounts[3]++
+
+      // Goal 5: Level 4, Path Completion, or DTM award (need 1)
+      const level4s = parseInt(club['Level 4s, Path Completions, or DTM Awards'] || '0')
+      if (level4s >= 1) goalCounts[4]++
+
+      // Goal 6: One more Level 4, Path Completion, or DTM award (need 1 additional, so 2 total)
+      const addLevel4s = parseInt(club['Add. Level 4s, Path Completions, or DTM award'] || '0')
+      if (addLevel4s >= 1) goalCounts[5]++
+
+      // Goal 7: New members (need 4)
+      const newMembers = parseInt(club['New Members'] || '0')
+      if (newMembers >= 4) goalCounts[6]++
+
+      // Goal 8: More new members (need 4 additional, so 8 total)
+      const addNewMembers = parseInt(club['Add. New Members'] || '0')
+      if (addNewMembers >= 4) goalCounts[7]++
+
+      // Goal 9: Club officer roles trained (need 4 in Round 1 and 4 in Round 2)
+      const trainedRound1 = parseInt(club['Off. Trained Round 1'] || '0')
+      const trainedRound2 = parseInt(club['Off. Trained Round 2'] || '0')
+      if (trainedRound1 >= 4 && trainedRound2 >= 4) goalCounts[8]++
+
+      // Goal 10: Membership-renewal dues on time & Club officer list on time
+      const duesOct = parseInt(club['Mem. dues on time Oct'] || '0')
+      const duesApr = parseInt(club['Mem. dues on time Apr'] || '0')
+      const officerList = parseInt(club['Off. List On Time'] || '0')
+      // Goal 10 requires officer list on time AND at least one dues payment on time
+      if (officerList >= 1 && (duesOct >= 1 || duesApr >= 1)) goalCounts[9]++
     }
 
     // Create analysis for each goal
@@ -1744,7 +1778,7 @@ export class AnalyticsEngine {
     let clubsWithMinimumMembers = 0
 
     for (const club of clubs) {
-      const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
 
       totalMembership += membership
@@ -1786,7 +1820,7 @@ export class AnalyticsEngine {
     // Calculate total membership for each date
     const membershipByDate = historicalData.map(entry => {
       const totalMembership = entry.clubs.reduce((sum, club) => {
-        const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
         return sum + membership
       }, 0)
       return { date: entry.date, membership: totalMembership }
@@ -2036,7 +2070,7 @@ export class AnalyticsEngine {
 
       for (const club of area.clubs) {
         const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
-        const membership = parseInt(club['Active Membership'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
 
         totalDcpGoals += dcpGoals
         totalMembership += membership

@@ -317,24 +317,44 @@ export class DistrictBackfillService {
             divisionPerformance.length > 0 ||
             clubPerformance.length > 0
           ) {
-            // Cache all three reports together (atomic operation)
-            await this.cacheManager.cacheDistrictData(
-              districtId,
-              date,
-              districtPerformance,
-              divisionPerformance,
-              clubPerformance
-            )
+            // Validate data quality - check if membership data looks reasonable
+            const totalMembers = clubPerformance.reduce((sum, club) => {
+              const members = parseInt(club['Active Members'] || club['Membership'] || '0')
+              return sum + (isNaN(members) ? 0 : members)
+            }, 0)
+            
+            // If we have clubs but suspiciously low membership (< 100 total), skip this date
+            // This indicates a data reconciliation period where the dashboard shows incomplete data
+            if (clubPerformance.length > 0 && totalMembers < 100) {
+              job.progress.unavailable++
+              logger.warn('Skipping date with suspiciously low membership data (likely reconciliation period)', {
+                backfillId,
+                districtId,
+                date,
+                clubCount: clubPerformance.length,
+                totalMembers,
+              })
+            } else {
+              // Cache all three reports together (atomic operation)
+              await this.cacheManager.cacheDistrictData(
+                districtId,
+                date,
+                districtPerformance,
+                divisionPerformance,
+                clubPerformance
+              )
 
-            successCount++
-            logger.info('Successfully fetched and cached district data for date', {
-              backfillId,
-              districtId,
-              date,
-              districtRecords: districtPerformance.length,
-              divisionRecords: divisionPerformance.length,
-              clubRecords: clubPerformance.length,
-            })
+              successCount++
+              logger.info('Successfully fetched and cached district data for date', {
+                backfillId,
+                districtId,
+                date,
+                districtRecords: districtPerformance.length,
+                divisionRecords: divisionPerformance.length,
+                clubRecords: clubPerformance.length,
+                totalMembers,
+              })
+            }
           } else {
             // No data available (blackout period or reconciliation)
             job.progress.unavailable++

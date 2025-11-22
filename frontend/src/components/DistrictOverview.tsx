@@ -117,7 +117,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                   </Tooltip>
                 </div>
                 <p className="text-3xl font-bold text-blue-900 mt-1">
-                  {analytics.healthyClubs + analytics.atRiskClubs.length + analytics.criticalClubs}
+                  {analytics.allClubs.length}
                 </p>
               </div>
               <div className="bg-blue-200 rounded-full p-3">

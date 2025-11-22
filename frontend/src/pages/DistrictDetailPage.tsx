@@ -254,11 +254,7 @@ const DistrictDetailPage: React.FC = () => {
                     <DistinguishedProgressChart
                       distinguishedClubs={analytics.distinguishedClubs}
                       distinguishedProjection={analytics.distinguishedProjection}
-                      totalClubs={
-                        analytics.healthyClubs +
-                        analytics.atRiskClubs.length +
-                        analytics.criticalClubs
-                      }
+                      totalClubs={analytics.allClubs.length}
                       isLoading={isLoadingAnalytics}
                     />
                   </LazyChart>
@@ -321,10 +317,7 @@ const DistrictDetailPage: React.FC = () => {
                         totalMembership: analytics.totalMembership,
                         distinguishedClubs: analytics.distinguishedClubs.total,
                         healthyClubs: analytics.healthyClubs,
-                        totalClubs:
-                          analytics.healthyClubs +
-                          analytics.atRiskClubs.length +
-                          analytics.criticalClubs,
+                        totalClubs: analytics.allClubs.length,
                       }}
                       isLoading={isLoadingAnalytics}
                     />
