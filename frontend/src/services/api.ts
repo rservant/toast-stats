@@ -25,15 +25,9 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add authentication token and cache bypass parameter
+// Request interceptor to add cache bypass parameter
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = sessionStorage.getItem('auth_token');
-    
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
     // Add cache bypass parameter if enabled
     if (bypassCache && config.method === 'get') {
       config.params = {
@@ -49,45 +43,13 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for token refresh logic
+// Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-
-    // If error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const token = sessionStorage.getItem('auth_token');
-        
-        if (token) {
-          // Attempt to refresh the token
-          const response = await axios.post('/api/auth/refresh', { token });
-          const { token: newToken } = response.data;
-
-          // Update stored token
-          sessionStorage.setItem('auth_token', newToken);
-
-          // Update the authorization header
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          }
-
-          // Retry the original request
-          return apiClient(originalRequest);
-        }
-      } catch (refreshError) {
-        // If refresh fails, clear token and redirect to login
-        sessionStorage.removeItem('auth_token');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
-
+  (error: AxiosError) => {
+    // Just pass through errors without auth logic
     return Promise.reject(error);
   }
 );

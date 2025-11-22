@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from 'express'
 import { cacheMiddleware } from '../middleware/cache.js'
-import { authenticateToken } from '../middleware/auth.js'
 import { generateDistrictCacheKey } from '../utils/cacheKeys.js'
 import { RealToastmastersAPIService } from '../services/RealToastmastersAPIService.js'
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
@@ -46,7 +45,6 @@ function validateDistrictId(districtId: string): boolean {
  */
 router.get(
   '/',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
   }),
@@ -79,7 +77,6 @@ router.get(
  */
 router.get(
   '/:districtId/statistics',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: (req) =>
@@ -138,7 +135,6 @@ router.get(
  */
 router.get(
   '/:districtId/membership-history',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: (req) =>
@@ -215,7 +211,6 @@ router.get(
  */
 router.get(
   '/:districtId/clubs',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: (req) =>
@@ -274,7 +269,6 @@ router.get(
  */
 router.get(
   '/:districtId/educational-awards',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: (req) =>
@@ -364,7 +358,6 @@ function validateDateFormat(date: string): boolean {
  */
 router.get(
   '/:districtId/daily-reports',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: (req) =>
@@ -488,7 +481,6 @@ router.get(
  */
 router.get(
   '/:districtId/daily-reports/:date',
-  authenticateToken,
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: (req) =>
