@@ -72,6 +72,35 @@ router.get(
 )
 
 /**
+ * GET /api/districts/rankings
+ * Fetch all districts with performance rankings
+ */
+router.get(
+  '/rankings',
+  cacheMiddleware({
+    ttl: 900, // 15 minutes
+  }),
+  async (_req: Request, res: Response) => {
+    try {
+      // Fetch district rankings
+      const rankings = await toastmastersAPI.getAllDistrictsRankings()
+
+      res.json(rankings)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'FETCH_ERROR',
+          message: 'Failed to fetch district rankings',
+          details: errorResponse.details,
+        },
+      })
+    }
+  }
+)
+
+/**
  * GET /api/districts/:districtId/statistics
  * Fetch district statistics with caching
  */

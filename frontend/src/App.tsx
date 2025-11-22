@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './config/queryClient';
+import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 
 function App() {
@@ -11,7 +12,8 @@ function App() {
           Skip to main content
         </a>
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/district/:districtId" element={<DashboardPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

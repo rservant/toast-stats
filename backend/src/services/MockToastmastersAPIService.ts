@@ -21,6 +21,85 @@ export class MockToastmastersAPIService {
     }
   }
 
+  async getAllDistrictsRankings() {
+    const districtIds = ['1', '2', '10', '25', '46', '61', '101', '120']
+    const mockData = []
+    
+    for (let i = 0; i < districtIds.length; i++) {
+      const id = districtIds[i]
+      const paidClubs = 80 + Math.floor(Math.random() * 100)
+      const totalPayments = 2000 + Math.floor(Math.random() * 3000)
+      const distinguishedClubs = Math.floor(Math.random() * 40)
+      
+      mockData.push({
+        districtId: id,
+        districtName: `District ${id}`,
+        region: `0${Math.floor(i / 2) + 1}`,
+        paidClubs,
+        paidClubBase: paidClubs + Math.floor(Math.random() * 20) - 10,
+        clubGrowthPercent: (Math.random() * 20) - 10,
+        totalPayments,
+        paymentBase: totalPayments + Math.floor(Math.random() * 1000) - 500,
+        paymentGrowthPercent: (Math.random() * 30) - 15,
+        activeClubs: paidClubs + Math.floor(Math.random() * 10),
+        distinguishedClubs,
+        selectDistinguished: Math.floor(distinguishedClubs * 0.3),
+        presidentsDistinguished: Math.floor(distinguishedClubs * 0.2),
+        distinguishedPercent: (distinguishedClubs / paidClubs) * 100,
+      })
+    }
+
+    // Rank by each category with tie handling
+    const sortedByClubs = [...mockData].sort((a, b) => b.paidClubs - a.paidClubs)
+    const sortedByPayments = [...mockData].sort((a, b) => b.totalPayments - a.totalPayments)
+    const sortedByDistinguished = [...mockData].sort((a, b) => b.distinguishedClubs - a.distinguishedClubs)
+
+    const clubsRank = new Map<string, number>()
+    let currentRank = 1
+    let previousValue = sortedByClubs[0]?.paidClubs
+    sortedByClubs.forEach((d, i) => {
+      if (i > 0 && d.paidClubs < previousValue) {
+        currentRank = i + 1
+      }
+      clubsRank.set(d.districtId, currentRank)
+      previousValue = d.paidClubs
+    })
+
+    const paymentsRank = new Map<string, number>()
+    currentRank = 1
+    previousValue = sortedByPayments[0]?.totalPayments
+    sortedByPayments.forEach((d, i) => {
+      if (i > 0 && d.totalPayments < previousValue) {
+        currentRank = i + 1
+      }
+      paymentsRank.set(d.districtId, currentRank)
+      previousValue = d.totalPayments
+    })
+
+    const distinguishedRank = new Map<string, number>()
+    currentRank = 1
+    previousValue = sortedByDistinguished[0]?.distinguishedClubs
+    sortedByDistinguished.forEach((d, i) => {
+      if (i > 0 && d.distinguishedClubs < previousValue) {
+        currentRank = i + 1
+      }
+      distinguishedRank.set(d.districtId, currentRank)
+      previousValue = d.distinguishedClubs
+    })
+
+    const rankings = mockData.map((district) => ({
+      ...district,
+      clubsRank: clubsRank.get(district.districtId) || 999,
+      paymentsRank: paymentsRank.get(district.districtId) || 999,
+      distinguishedRank: distinguishedRank.get(district.districtId) || 999,
+      aggregateScore: (clubsRank.get(district.districtId) || 999) + 
+                     (paymentsRank.get(district.districtId) || 999) + 
+                     (distinguishedRank.get(district.districtId) || 999),
+    })).sort((a, b) => a.aggregateScore - b.aggregateScore)
+    
+    return { rankings }
+  }
+
   async getDistrictStatistics(_districtId: string) {
     const baseMembers = 3000
     const baseMemberCount = baseMembers + Math.floor(Math.random() * 500)

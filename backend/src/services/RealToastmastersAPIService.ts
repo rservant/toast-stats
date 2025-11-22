@@ -21,16 +21,107 @@ export class RealToastmastersAPIService {
   }
 
   /**
-   * Get list of all districts
+   * Get list of all districts (simple list)
    */
   async getDistricts() {
     try {
-      const districts = await this.scraper.getAllDistricts()
+      const districts = await this.scraper.getAllDistrictsList()
       
       logger.info('Districts fetched', { count: districts.length })
       return { districts }
     } catch (error) {
       logger.error('Failed to get districts', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get all districts with performance rankings
+   */
+  async getAllDistrictsRankings() {
+    try {
+      const allDistricts = await this.scraper.getAllDistricts()
+      
+      // First pass: collect all metrics
+      const districtData = allDistricts.map((row: any) => ({
+        districtId: row['DISTRICT'] || '',
+        districtName: `District ${row['DISTRICT']}`,
+        region: row['REGION'] || '',
+        paidClubs: parseInt(row['Paid Clubs'] || '0', 10),
+        paidClubBase: parseInt(row['Paid Club Base'] || '0', 10),
+        clubGrowthPercent: parseFloat(row['% Club Growth']?.replace('%', '') || '0'),
+        totalPayments: parseInt(row['Total YTD Payments'] || '0', 10),
+        paymentBase: parseInt(row['Payment Base'] || '0', 10),
+        paymentGrowthPercent: parseFloat(row['% Payment Growth']?.replace('%', '') || '0'),
+        activeClubs: parseInt(row['Active Clubs'] || '0', 10),
+        distinguishedClubs: parseInt(row['Total Distinguished Clubs'] || '0', 10),
+        selectDistinguished: parseInt(row['Select Distinguished Clubs'] || '0', 10),
+        presidentsDistinguished: parseInt(row['Presidents Distinguished Clubs'] || '0', 10),
+        distinguishedPercent: parseFloat(row['% Distinguished Clubs']?.replace('%', '') || '0'),
+      }))
+
+      // Second pass: rank each district in each category (1 = best)
+      // Handle ties by giving them the same rank
+      const sortedByClubs = [...districtData].sort((a, b) => b.paidClubs - a.paidClubs)
+      const sortedByPayments = [...districtData].sort((a, b) => b.totalPayments - a.totalPayments)
+      const sortedByDistinguished = [...districtData].sort((a, b) => b.distinguishedClubs - a.distinguishedClubs)
+
+      // Create ranking maps with tie handling
+      const clubsRank = new Map<string, number>()
+      let currentRank = 1
+      let previousValue = sortedByClubs[0]?.paidClubs
+      sortedByClubs.forEach((d, i) => {
+        if (i > 0 && d.paidClubs < previousValue) {
+          currentRank = i + 1
+        }
+        clubsRank.set(d.districtId, currentRank)
+        previousValue = d.paidClubs
+      })
+
+      const paymentsRank = new Map<string, number>()
+      currentRank = 1
+      previousValue = sortedByPayments[0]?.totalPayments
+      sortedByPayments.forEach((d, i) => {
+        if (i > 0 && d.totalPayments < previousValue) {
+          currentRank = i + 1
+        }
+        paymentsRank.set(d.districtId, currentRank)
+        previousValue = d.totalPayments
+      })
+
+      const distinguishedRank = new Map<string, number>()
+      currentRank = 1
+      previousValue = sortedByDistinguished[0]?.distinguishedClubs
+      sortedByDistinguished.forEach((d, i) => {
+        if (i > 0 && d.distinguishedClubs < previousValue) {
+          currentRank = i + 1
+        }
+        distinguishedRank.set(d.districtId, currentRank)
+        previousValue = d.distinguishedClubs
+      })
+
+      // Third pass: calculate aggregate score (sum of ranks - lower is better)
+      const rankings = districtData.map((district) => {
+        const clubRank = clubsRank.get(district.districtId) || 999
+        const paymentRank = paymentsRank.get(district.districtId) || 999
+        const distRank = distinguishedRank.get(district.districtId) || 999
+        
+        // Sum of ranks (lower is better, so we'll sort ascending)
+        const aggregateScore = clubRank + paymentRank + distRank
+        
+        return {
+          ...district,
+          clubsRank: clubRank,
+          paymentsRank: paymentRank,
+          distinguishedRank: distRank,
+          aggregateScore,
+        }
+      }).sort((a, b) => a.aggregateScore - b.aggregateScore) // Lower score is better
+      
+      logger.info('District rankings calculated', { count: rankings.length })
+      return { rankings }
+    } catch (error) {
+      logger.error('Failed to get district rankings', error)
       throw error
     }
   }

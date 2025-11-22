@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { enableCacheBypass, disableCacheBypass } from '../services/api';
 import DistrictSelector from '../components/DistrictSelector';
@@ -19,8 +20,17 @@ import { useEnhancedClubs } from '../hooks/useIntegratedData';
 import { useDistricts } from '../hooks/useDistricts';
 
 const DashboardPage: React.FC = () => {
+  const { districtId } = useParams<{ districtId: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(districtId || null);
+
+  // Update selected district when URL changes
+  useEffect(() => {
+    if (districtId) {
+      setSelectedDistrictId(districtId);
+    }
+  }, [districtId]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
@@ -37,6 +47,7 @@ const DashboardPage: React.FC = () => {
 
   const handleDistrictSelect = (districtId: string) => {
     setSelectedDistrictId(districtId);
+    navigate(`/district/${districtId}`);
   };
 
   const handleDateSelect = (date: string) => {
@@ -92,6 +103,17 @@ const DashboardPage: React.FC = () => {
   const header = (
     <>
       <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Rankings
+          </button>
+        </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Toastmasters District Statistics

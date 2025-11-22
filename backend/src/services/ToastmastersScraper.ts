@@ -112,9 +112,9 @@ export class ToastmastersScraper {
   }
 
   /**
-   * Fetch all districts from the dropdown selector
+   * Fetch all districts list (just names and IDs from dropdown)
    */
-  async getAllDistricts(): Promise<any[]> {
+  async getAllDistrictsList(): Promise<any[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
@@ -142,6 +142,27 @@ export class ToastmastersScraper {
       
       logger.info('Districts fetched from dropdown', { count: districts.length })
       return districts
+    } finally {
+      await page.close()
+    }
+  }
+
+  /**
+   * Fetch all districts with performance data from CSV export
+   */
+  async getAllDistricts(): Promise<any[]> {
+    const browser = await this.initBrowser()
+    const page = await browser.newPage()
+
+    try {
+      logger.info('Fetching all districts summary with performance data')
+      await page.goto(this.config.baseUrl, { waitUntil: 'networkidle', timeout: this.config.timeout })
+      
+      const csvContent = await this.downloadCsv(page)
+      const records = this.parseCsv(csvContent)
+      
+      logger.info('All districts performance data fetched', { count: records.length })
+      return records
     } finally {
       await page.close()
     }
