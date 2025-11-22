@@ -4,7 +4,7 @@
 
 export type ClubHealthStatus = 'healthy' | 'at-risk' | 'critical'
 export type TrendDirection = 'improving' | 'stable' | 'declining'
-export type DistinguishedLevel = 'President' | 'Select' | 'Distinguished'
+export type DistinguishedLevel = 'Smedley' | 'President' | 'Select' | 'Distinguished'
 
 export interface ClubTrend {
   clubId: string
@@ -80,6 +80,7 @@ export interface DCPGoalAnalysis {
 export interface DistinguishedClubAnalytics {
   // Current counts by level (Requirement 7.1)
   distinguishedClubs: {
+    smedley: number
     presidents: number
     select: number
     distinguished: number
@@ -88,6 +89,7 @@ export interface DistinguishedClubAnalytics {
   
   // Projection for final count (Requirement 7.2)
   distinguishedProjection: {
+    smedley: number
     presidents: number
     select: number
     distinguished: number
@@ -104,11 +106,13 @@ export interface DistinguishedClubAnalytics {
     change: number
     percentageChange: number
     currentByLevel: {
+      smedley: number
       presidents: number
       select: number
       distinguished: number
     }
     previousByLevel: {
+      smedley: number
       presidents: number
       select: number
       distinguished: number
@@ -192,6 +196,7 @@ export interface YearOverYearComparison {
       change: number
       percentageChange: number
       byLevel: {
+        smedley: { current: number; previous: number; change: number }
         presidents: { current: number; previous: number; change: number }
         select: { current: number; previous: number; change: number }
         distinguished: { current: number; previous: number; change: number }
@@ -244,6 +249,7 @@ export interface DistrictAnalytics {
   
   // Distinguished status
   distinguishedClubs: {
+    smedley: number
     presidents: number
     select: number
     distinguished: number

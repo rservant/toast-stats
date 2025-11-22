@@ -130,7 +130,7 @@ export class AnalyticsEngine {
 
       // Analyze clubs
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
-      const atRiskClubs = clubTrends.filter(c => c.currentStatus !== 'healthy')
+      const atRiskClubs = clubTrends.filter(c => c.currentStatus === 'at-risk')
       const criticalClubs = clubTrends.filter(c => c.currentStatus === 'critical').length
       const healthyClubs = clubTrends.filter(c => c.currentStatus === 'healthy').length
 
@@ -327,6 +327,7 @@ export class AnalyticsEngine {
       change: number
       percentageChange: number
       byLevel: {
+        smedley: { current: number; previous: number; change: number }
         presidents: { current: number; previous: number; change: number }
         select: { current: number; previous: number; change: number }
         distinguished: { current: number; previous: number; change: number }
@@ -390,6 +391,11 @@ export class AnalyticsEngine {
         change: distinguishedChange,
         percentageChange: distinguishedPercentageChange,
         byLevel: {
+          smedley: {
+            current: currentDistinguished.smedley,
+            previous: previousDistinguished.smedley,
+            change: currentDistinguished.smedley - previousDistinguished.smedley,
+          },
           presidents: {
             current: currentDistinguished.presidents,
             previous: previousDistinguished.presidents,
@@ -900,34 +906,62 @@ export class AnalyticsEngine {
 
   /**
    * Calculate distinguished clubs from latest data
+   * 
+   * Official DCP Levels (2025-2026):
+   * - Smedley Distinguished: 10 goals + 25 members
+   * - President's Distinguished: 9 goals + 20 members
+   * - Select Distinguished: 7 goals + (20 members OR net growth of 5)
+   * - Distinguished: 5 goals + (20 members OR net growth of 3)
+   * 
+   * IMPORTANT: Membership counts reflect members who have paid their April renewal dues.
+   * - Clubs can be officially declared distinguished on or after April 1st once April renewals are processed
+   * - The "Active Members" field represents the membership count at the snapshot date
+   * - For dates April 1 - June 30: membership counts are valid for official distinguished status
+   * - For dates before April 1: membership counts are preliminary/in-progress tracking only
+   * 
+   * Note: Net growth requirements are simplified in this implementation and only check
+   * absolute membership count. Full implementation would require comparing to base membership.
    */
   private calculateDistinguishedClubs(entry: DistrictCacheEntry): {
+    smedley: number
     presidents: number
     select: number
     distinguished: number
     total: number
   } {
+    let smedley = 0
     let presidents = 0
     let select = 0
     let distinguished = 0
 
     for (const club of entry.clubPerformance) {
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
       
-      if (dcpGoals >= 9) {
+      // Smedley Distinguished: 10 goals + 25 members
+      if (dcpGoals >= 10 && membership >= 25) {
+        smedley++
+      }
+      // President's Distinguished: 9 goals + 20 members
+      else if (dcpGoals >= 9 && membership >= 20) {
         presidents++
-      } else if (dcpGoals >= 7) {
+      }
+      // Select Distinguished: 7 goals + 20 members (simplified - net growth check would require historical data)
+      else if (dcpGoals >= 7 && membership >= 20) {
         select++
-      } else if (dcpGoals >= 5) {
+      }
+      // Distinguished: 5 goals + 20 members (simplified - net growth check would require historical data)
+      else if (dcpGoals >= 5 && membership >= 20) {
         distinguished++
       }
     }
 
     return {
+      smedley,
       presidents,
       select,
       distinguished,
-      total: presidents + select + distinguished,
+      total: smedley + presidents + select + distinguished,
     }
   }
 
@@ -1328,6 +1362,7 @@ export class AnalyticsEngine {
   private calculateDistinguishedProjection(
     dataEntries: DistrictCacheEntry[]
   ): {
+    smedley: number
     presidents: number
     select: number
     distinguished: number
@@ -1341,6 +1376,7 @@ export class AnalyticsEngine {
 
     // Calculate trend for each level
     const trends = {
+      smedley: [] as number[],
       presidents: [] as number[],
       select: [] as number[],
       distinguished: [] as number[],
@@ -1348,6 +1384,7 @@ export class AnalyticsEngine {
 
     for (const entry of dataEntries) {
       const counts = this.calculateDistinguishedClubs(entry)
+      trends.smedley.push(counts.smedley)
       trends.presidents.push(counts.presidents)
       trends.select.push(counts.select)
       trends.distinguished.push(counts.distinguished)
@@ -1374,15 +1411,17 @@ export class AnalyticsEngine {
       return Math.max(0, Math.round(projection))
     }
 
+    const smedley = projectLevel(trends.smedley)
     const presidents = projectLevel(trends.presidents)
     const select = projectLevel(trends.select)
     const distinguished = projectLevel(trends.distinguished)
 
     return {
+      smedley,
       presidents,
       select,
       distinguished,
-      total: presidents + select + distinguished,
+      total: smedley + presidents + select + distinguished,
     }
   }
 
@@ -1402,15 +1441,19 @@ export class AnalyticsEngine {
         const clubId = club['Club Number'] || club['Club ID'] || club['ClubID'] || ''
         const clubName = club['Club Name'] || club['ClubName'] || ''
         const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
 
         if (!clubId) continue
 
         let currentLevel: string | undefined
-        if (dcpGoals >= 9) {
+        // Check levels from highest to lowest
+        if (dcpGoals >= 10 && membership >= 25) {
+          currentLevel = 'Smedley'
+        } else if (dcpGoals >= 9 && membership >= 20) {
           currentLevel = 'President'
-        } else if (dcpGoals >= 7) {
+        } else if (dcpGoals >= 7 && membership >= 20) {
           currentLevel = 'Select'
-        } else if (dcpGoals >= 5) {
+        } else if (dcpGoals >= 5 && membership >= 20) {
           currentLevel = 'Distinguished'
         }
 
@@ -1422,7 +1465,7 @@ export class AnalyticsEngine {
           achievements.push({
             clubId,
             clubName,
-            level: currentLevel as 'President' | 'Select' | 'Distinguished',
+            level: currentLevel as 'Smedley' | 'President' | 'Select' | 'Distinguished',
             achievedDate: entry.date,
             goalsAchieved: dcpGoals,
           })
@@ -1436,7 +1479,7 @@ export class AnalyticsEngine {
           achievements.push({
             clubId,
             clubName,
-            level: currentLevel as 'President' | 'Select' | 'Distinguished',
+            level: currentLevel as 'Smedley' | 'President' | 'Select' | 'Distinguished',
             achievedDate: entry.date,
             goalsAchieved: dcpGoals,
           })
@@ -1460,7 +1503,7 @@ export class AnalyticsEngine {
    * Check if level1 is higher than level2
    */
   private isHigherLevel(level1: string, level2: string): boolean {
-    const levels = { Distinguished: 1, Select: 2, President: 3 }
+    const levels = { Distinguished: 1, Select: 2, President: 3, Smedley: 4 }
     return (levels[level1 as keyof typeof levels] || 0) > (levels[level2 as keyof typeof levels] || 0)
   }
 
@@ -1477,11 +1520,13 @@ export class AnalyticsEngine {
     change: number
     percentageChange: number
     currentByLevel: {
+      smedley: number
       presidents: number
       select: number
       distinguished: number
     }
     previousByLevel: {
+      smedley: number
       presidents: number
       select: number
       distinguished: number
@@ -1518,11 +1563,13 @@ export class AnalyticsEngine {
         change,
         percentageChange,
         currentByLevel: {
+          smedley: currentCounts.smedley,
           presidents: currentCounts.presidents,
           select: currentCounts.select,
           distinguished: currentCounts.distinguished,
         },
         previousByLevel: {
+          smedley: previousCounts.smedley,
           presidents: previousCounts.presidents,
           select: previousCounts.select,
           distinguished: previousCounts.distinguished,

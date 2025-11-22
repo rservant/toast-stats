@@ -180,7 +180,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
               <div>
                 <div className="flex items-center gap-1">
                   <p className="text-sm font-medium text-purple-700">Distinguished Clubs</p>
-                  <Tooltip content="Clubs that have achieved 5+ DCP goals (Distinguished, Select, or President's)">
+                  <Tooltip content="Clubs achieving DCP goals + membership requirements (valid from April 1 onwards): Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)">
                     <InfoIcon />
                   </Tooltip>
                 </div>
@@ -195,6 +195,11 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
               </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
+              {analytics.distinguishedClubs.smedley > 0 && (
+                <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded font-semibold">
+                  {analytics.distinguishedClubs.smedley} Smedley
+                </span>
+              )}
               {analytics.distinguishedClubs.presidents > 0 && (
                 <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
                   {analytics.distinguishedClubs.presidents} President's

@@ -17,12 +17,14 @@ interface DistinguishedClubAchievement {
 
 export interface DistinguishedClubAnalytics {
   distinguishedClubs: {
+    smedley: number;
     presidents: number;
     select: number;
     distinguished: number;
     total: number;
   };
   distinguishedProjection: {
+    smedley: number;
     presidents: number;
     select: number;
     distinguished: number;
@@ -35,11 +37,13 @@ export interface DistinguishedClubAnalytics {
     change: number;
     percentageChange: number;
     currentByLevel: {
+      smedley: number;
       presidents: number;
       select: number;
       distinguished: number;
     };
     previousByLevel: {
+      smedley: number;
       presidents: number;
       select: number;
       distinguished: number;
