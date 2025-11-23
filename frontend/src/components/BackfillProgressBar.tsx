@@ -159,18 +159,25 @@ export function BackfillProgressBar({
                     style={{ width: `${progressPercentage}%` }}
                   />
                 </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span>
-                    {backfillStatus.progress.completed}/{backfillStatus.progress.total} dates
-                  </span>
-                  {backfillStatus.progress.skipped > 0 && (
-                    <span>• {backfillStatus.progress.skipped} cached</span>
-                  )}
-                  {backfillStatus.progress.unavailable > 0 && (
-                    <span>• {backfillStatus.progress.unavailable} unavailable</span>
-                  )}
-                  {backfillStatus.progress.failed > 0 && (
-                    <span className="text-red-600">• {backfillStatus.progress.failed} failed</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span>
+                      {backfillStatus.progress.completed}/{backfillStatus.progress.total} dates
+                    </span>
+                    {backfillStatus.progress.skipped > 0 && (
+                      <span>• {backfillStatus.progress.skipped} cached</span>
+                    )}
+                    {backfillStatus.progress.unavailable > 0 && (
+                      <span>• {backfillStatus.progress.unavailable} unavailable</span>
+                    )}
+                    {backfillStatus.progress.failed > 0 && (
+                      <span className="text-red-600">• {backfillStatus.progress.failed} failed</span>
+                    )}
+                  </div>
+                  {backfillStatus.progress.current && (
+                    <div className="text-xs text-gray-600 font-medium">
+                      Current: {backfillStatus.progress.current}
+                    </div>
                   )}
                 </div>
               </>

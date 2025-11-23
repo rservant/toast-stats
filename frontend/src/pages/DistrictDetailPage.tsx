@@ -34,7 +34,7 @@ const DistrictDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
-  const { setActiveBackfillInfo } = useBackfillContext();
+  const { addBackfill } = useBackfillContext();
 
   // Fetch district info
   const { data: districtsData } = useDistricts();
@@ -110,7 +110,7 @@ const DistrictDetailPage: React.FC = () => {
   // Handle backfill start
   const handleBackfillStart = (backfillId: string) => {
     if (districtId) {
-      setActiveBackfillInfo({
+      addBackfill({
         backfillId,
         type: 'district',
         districtId,

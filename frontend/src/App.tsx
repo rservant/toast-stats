@@ -7,20 +7,21 @@ import LandingPage from './pages/LandingPage';
 import DistrictDetailPage from './pages/DistrictDetailPage';
 
 function AppContent() {
-  const { activeBackfillInfo, setActiveBackfillInfo } = useBackfillContext();
+  const { activeBackfills, removeBackfill } = useBackfillContext();
 
   return (
     <>
-      {/* Global Backfill Progress Bar */}
-      {activeBackfillInfo && (
+      {/* Backfill Progress Bars - Show all active backfills */}
+      {activeBackfills.map((backfillInfo) => (
         <BackfillProgressBar
-          backfillId={activeBackfillInfo.backfillId}
-          type={activeBackfillInfo.type}
-          districtId={activeBackfillInfo.districtId}
-          onComplete={() => setActiveBackfillInfo(null)}
-          onCancel={() => setActiveBackfillInfo(null)}
+          key={backfillInfo.backfillId}
+          backfillId={backfillInfo.backfillId}
+          type={backfillInfo.type}
+          districtId={backfillInfo.districtId}
+          onComplete={() => removeBackfill(backfillInfo.backfillId)}
+          onCancel={() => removeBackfill(backfillInfo.backfillId)}
         />
-      )}
+      ))}
       
       <BrowserRouter>
         <a href="#main-content" className="skip-link">

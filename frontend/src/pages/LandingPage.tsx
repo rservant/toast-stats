@@ -36,7 +36,7 @@ const LandingPage: React.FC = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Use global backfill context
-  const { setActiveBackfillInfo } = useBackfillContext();
+  const { addBackfill } = useBackfillContext();
   
   // Historical rank tracking state
   const [selectedRegionsForHistory, setSelectedRegionsForHistory] = useState<string[]>([]);
@@ -215,7 +215,7 @@ const LandingPage: React.FC = () => {
             <div className="flex gap-3">
               <BackfillButton 
                 className="text-sm font-medium"
-                onBackfillStart={(id) => setActiveBackfillInfo({ backfillId: id, type: 'global' })}
+                onBackfillStart={(id) => addBackfill({ backfillId: id, type: 'global' })}
               />
               <button
                 onClick={() => setShowClearConfirm(true)}

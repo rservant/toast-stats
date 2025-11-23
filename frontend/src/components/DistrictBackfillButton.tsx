@@ -55,7 +55,7 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const queryClient = useQueryClient()
-  const { setActiveBackfillInfo } = useBackfillContext()
+  const { addBackfill, removeBackfill } = useBackfillContext()
 
   // Hooks
   const initiateMutation = useInitiateDistrictBackfill(districtId)
@@ -74,7 +74,7 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
       const id = initiateMutation.data.backfillId
       setBackfillId(id)
       // Set as active backfill in global context
-      setActiveBackfillInfo({
+      addBackfill({
         backfillId: id,
         type: 'district',
         districtId: districtId
@@ -85,16 +85,16 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
         setTimeout(() => setShowModal(false), 300)
       }
     }
-  }, [initiateMutation.isSuccess, initiateMutation.data, onBackfillStart, setActiveBackfillInfo, districtId])
+  }, [initiateMutation.isSuccess, initiateMutation.data, onBackfillStart, addBackfill, districtId])
 
   // Handle cancel mutation success
   useEffect(() => {
     if (cancelMutation.isSuccess) {
       setBackfillId(null)
-      setActiveBackfillInfo(null)
+      removeBackfill(backfillId || '')
       setShowModal(false)
     }
-  }, [cancelMutation.isSuccess, setActiveBackfillInfo])
+  }, [cancelMutation.isSuccess, removeBackfill, backfillId])
 
   // Refresh cached dates when backfill completes
   useEffect(() => {

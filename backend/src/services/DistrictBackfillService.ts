@@ -143,6 +143,9 @@ export class DistrictBackfillService {
       throw new Error('All dates in the range are already cached for this district')
     }
 
+    // Reverse the dates to start with most recent and go backwards
+    missingDates.reverse()
+
     // Create job
     const job: DistrictBackfillJob = {
       backfillId,
