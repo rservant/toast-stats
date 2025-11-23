@@ -43,21 +43,21 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
 
   describe('4.1 Test Borda point calculation accuracy', () => {
     it('should calculate correct Borda points for 10 districts', async () => {
-      // Create 10 districts with descending values
+      // Create 10 districts with descending PERCENTAGE values (ranking is now based on percentages)
       const mockDistricts = Array.from({ length: 10 }, (_, i) => ({
         'DISTRICT': `D${i + 1}`,
         'REGION': 'Region 1',
-        'Paid Clubs': String(100 - i * 10), // 100, 90, 80, ..., 10
+        'Paid Clubs': '100',
         'Paid Club Base': '100',
-        '% Club Growth': '0%',
-        'Total YTD Payments': String(1000 - i * 100), // 1000, 900, 800, ..., 100
+        '% Club Growth': `${10 - i}%`, // 10%, 9%, 8%, ..., 1%
+        'Total YTD Payments': '1000',
         'Payment Base': '1000',
-        '% Payment Growth': '0%',
+        '% Payment Growth': `${10 - i}%`, // 10%, 9%, 8%, ..., 1%
         'Active Clubs': '100',
-        'Total Distinguished Clubs': String(50 - i * 5), // 50, 45, 40, ..., 5
+        'Total Distinguished Clubs': '50',
         'Select Distinguished Clubs': '0',
         'Presidents Distinguished Clubs': '0',
-        '% Distinguished Clubs': '0%',
+        '% Distinguished Clubs': `${10 - i}%`, // 10%, 9%, 8%, ..., 1%
       }))
 
       mockCacheManager.getCache.mockResolvedValue(null)
@@ -70,14 +70,14 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
       const district1 = result.rankings.find((d: any) => d.districtId === 'D1')
       const district10 = result.rankings.find((d: any) => d.districtId === 'D10')
 
-      // D1 has highest values in all categories, so rank 1 in all (10 points each)
+      // D1 has highest percentages in all categories, so rank 1 in all (10 points each)
       expect(district1.clubsRank).toBe(1)
       expect(district1.paymentsRank).toBe(1)
       expect(district1.distinguishedRank).toBe(1)
       // Aggregate score = 10 + 10 + 10 = 30
       expect(district1.aggregateScore).toBe(30)
 
-      // D10 has lowest values in all categories, so rank 10 in all (1 point each)
+      // D10 has lowest percentages in all categories, so rank 10 in all (1 point each)
       expect(district10.clubsRank).toBe(10)
       expect(district10.paymentsRank).toBe(10)
       expect(district10.distinguishedRank).toBe(10)
@@ -86,21 +86,21 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
     })
 
     it('should calculate correct Borda points for 100 districts', async () => {
-      // Create 100 districts with descending values
+      // Create 100 districts with descending PERCENTAGE values (ranking is based on percentages)
       const mockDistricts = Array.from({ length: 100 }, (_, i) => ({
         'DISTRICT': `D${i + 1}`,
         'REGION': 'Region 1',
-        'Paid Clubs': String(1000 - i * 10),
+        'Paid Clubs': '1000',
         'Paid Club Base': '1000',
-        '% Club Growth': '0%',
-        'Total YTD Payments': String(10000 - i * 100),
+        '% Club Growth': `${100 - i}%`, // D1 has 100%, D100 has 1%
+        'Total YTD Payments': '10000',
         'Payment Base': '10000',
-        '% Payment Growth': '0%',
+        '% Payment Growth': `${100 - i}%`, // D1 has 100%, D100 has 1%
         'Active Clubs': '1000',
-        'Total Distinguished Clubs': String(500 - i * 5),
+        'Total Distinguished Clubs': '500',
         'Select Distinguished Clubs': '0',
         'Presidents Distinguished Clubs': '0',
-        '% Distinguished Clubs': '0%',
+        '% Distinguished Clubs': `${100 - i}%`, // D1 has 100%, D100 has 1%
       }))
 
       mockCacheManager.getCache.mockResolvedValue(null)
@@ -113,14 +113,14 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
       const district1 = result.rankings.find((d: any) => d.districtId === 'D1')
       const district100 = result.rankings.find((d: any) => d.districtId === 'D100')
 
-      // D1 has highest values in all categories, so rank 1 in all (100 points each)
+      // D1 has highest percentages in all categories, so rank 1 in all (100 points each)
       expect(district1.clubsRank).toBe(1)
       expect(district1.paymentsRank).toBe(1)
       expect(district1.distinguishedRank).toBe(1)
       // Aggregate score = 100 + 100 + 100 = 300
       expect(district1.aggregateScore).toBe(300)
 
-      // D100 has lowest values in all categories, so rank 100 in all (1 point each)
+      // D100 has lowest percentages in all categories, so rank 100 in all (1 point each)
       expect(district100.clubsRank).toBe(100)
       expect(district100.paymentsRank).toBe(100)
       expect(district100.distinguishedRank).toBe(100)
@@ -129,21 +129,21 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
     })
 
     it('should calculate correct Borda points for various district counts', async () => {
-      // Test with 5 districts
+      // Test with 5 districts - ranking is based on PERCENTAGES
       const mockDistricts = Array.from({ length: 5 }, (_, i) => ({
         'DISTRICT': `D${i + 1}`,
         'REGION': 'Region 1',
-        'Paid Clubs': String(50 - i * 10),
+        'Paid Clubs': '50',
         'Paid Club Base': '50',
-        '% Club Growth': '0%',
-        'Total YTD Payments': String(500 - i * 100),
+        '% Club Growth': `${50 - i * 10}%`, // D1=50%, D2=40%, D3=30%, D4=20%, D5=10%
+        'Total YTD Payments': '500',
         'Payment Base': '500',
-        '% Payment Growth': '0%',
+        '% Payment Growth': `${50 - i * 10}%`,
         'Active Clubs': '50',
-        'Total Distinguished Clubs': String(25 - i * 5),
+        'Total Distinguished Clubs': '25',
         'Select Distinguished Clubs': '0',
         'Presidents Distinguished Clubs': '0',
-        '% Distinguished Clubs': '0%',
+        '% Distinguished Clubs': `${50 - i * 10}%`,
       }))
 
       mockCacheManager.getCache.mockResolvedValue(null)
@@ -169,82 +169,82 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
 
   describe('4.2 Test tie handling with Borda points', () => {
     it('should assign same Borda points to tied districts', async () => {
-      // Create scenario with 3 districts tied for rank 2
+      // Create scenario with 3 districts tied for rank 2 - ranking is based on PERCENTAGES
       const mockDistricts = [
         {
           'DISTRICT': 'D1',
           'REGION': 'Region 1',
-          'Paid Clubs': '100', // Rank 1
+          'Paid Clubs': '100',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '50%', // Rank 1 - highest percentage
           'Total YTD Payments': '1000',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '50%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '50',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '50%',
         },
         {
           'DISTRICT': 'D2',
           'REGION': 'Region 1',
-          'Paid Clubs': '80', // Rank 2 (tied)
+          'Paid Clubs': '80',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '20%', // Rank 2 (tied)
           'Total YTD Payments': '800',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '20%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '40',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '20%',
         },
         {
           'DISTRICT': 'D3',
           'REGION': 'Region 1',
-          'Paid Clubs': '80', // Rank 2 (tied)
+          'Paid Clubs': '80',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '20%', // Rank 2 (tied)
           'Total YTD Payments': '800',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '20%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '40',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '20%',
         },
         {
           'DISTRICT': 'D4',
           'REGION': 'Region 1',
-          'Paid Clubs': '80', // Rank 2 (tied)
+          'Paid Clubs': '80',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '20%', // Rank 2 (tied)
           'Total YTD Payments': '800',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '20%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '40',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '20%',
         },
         {
           'DISTRICT': 'D5',
           'REGION': 'Region 1',
-          'Paid Clubs': '60', // Rank 5
+          'Paid Clubs': '60',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '10%', // Rank 5 - lowest percentage
           'Total YTD Payments': '600',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '10%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '30',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '10%',
         },
       ]
 
@@ -285,51 +285,52 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
 
   describe('4.3 Test aggregate score calculation', () => {
     it('should calculate aggregate score as sum of Borda points from all categories', async () => {
+      // Ranking is based on PERCENTAGES, not absolute values
       const mockDistricts = [
         {
           'DISTRICT': 'D1',
           'REGION': 'Region 1',
-          'Paid Clubs': '100', // Rank 1 in clubs
+          'Paid Clubs': '100',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
-          'Total YTD Payments': '500', // Rank 3 in payments
+          '% Club Growth': '30%', // Rank 1 in clubs - highest percentage
+          'Total YTD Payments': '500',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '10%', // Rank 3 in payments - lowest percentage
           'Active Clubs': '100',
-          'Total Distinguished Clubs': '30', // Rank 2 in distinguished
+          'Total Distinguished Clubs': '30',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '20%', // Rank 2 in distinguished - middle percentage
         },
         {
           'DISTRICT': 'D2',
           'REGION': 'Region 1',
-          'Paid Clubs': '80', // Rank 2 in clubs
+          'Paid Clubs': '80',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
-          'Total YTD Payments': '1000', // Rank 1 in payments
+          '% Club Growth': '20%', // Rank 2 in clubs - middle percentage
+          'Total YTD Payments': '1000',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '30%', // Rank 1 in payments - highest percentage
           'Active Clubs': '100',
-          'Total Distinguished Clubs': '20', // Rank 3 in distinguished
+          'Total Distinguished Clubs': '20',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '10%', // Rank 3 in distinguished - lowest percentage
         },
         {
           'DISTRICT': 'D3',
           'REGION': 'Region 1',
-          'Paid Clubs': '60', // Rank 3 in clubs
+          'Paid Clubs': '60',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
-          'Total YTD Payments': '800', // Rank 2 in payments
+          '% Club Growth': '10%', // Rank 3 in clubs - lowest percentage
+          'Total YTD Payments': '800',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '20%', // Rank 2 in payments - middle percentage
           'Active Clubs': '100',
-          'Total Distinguished Clubs': '40', // Rank 1 in distinguished
+          'Total Distinguished Clubs': '40',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '30%', // Rank 1 in distinguished - highest percentage
         },
       ]
 
@@ -363,51 +364,52 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
     })
 
     it('should sort districts by aggregate score in descending order', async () => {
+      // Ranking is based on PERCENTAGES
       const mockDistricts = [
         {
           'DISTRICT': 'D1',
           'REGION': 'Region 1',
           'Paid Clubs': '100',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '30%', // Highest percentage
           'Total YTD Payments': '1000',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '30%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '50',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '30%',
         },
         {
           'DISTRICT': 'D2',
           'REGION': 'Region 1',
           'Paid Clubs': '50',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '10%', // Lowest percentage
           'Total YTD Payments': '500',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '10%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '25',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '10%',
         },
         {
           'DISTRICT': 'D3',
           'REGION': 'Region 1',
           'Paid Clubs': '75',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '20%', // Middle percentage
           'Total YTD Payments': '750',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '20%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '37',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '20%',
         },
       ]
 
@@ -420,29 +422,30 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
       expect(result.rankings[0].aggregateScore).toBeGreaterThanOrEqual(result.rankings[1].aggregateScore)
       expect(result.rankings[1].aggregateScore).toBeGreaterThanOrEqual(result.rankings[2].aggregateScore)
 
-      // D1 should be first (highest in all categories)
+      // D1 should be first (highest percentages in all categories)
       expect(result.rankings[0].districtId).toBe('D1')
-      // D3 should be second (middle in all categories)
+      // D3 should be second (middle percentages in all categories)
       expect(result.rankings[1].districtId).toBe('D3')
-      // D2 should be last (lowest in all categories)
+      // D2 should be last (lowest percentages in all categories)
       expect(result.rankings[2].districtId).toBe('D2')
     })
 
     it('should ensure higher aggregate scores appear first in rankings', async () => {
+      // Ranking is based on PERCENTAGES
       const mockDistricts = Array.from({ length: 10 }, (_, i) => ({
         'DISTRICT': `D${i + 1}`,
         'REGION': 'Region 1',
-        'Paid Clubs': String(100 - i * 10),
+        'Paid Clubs': '100',
         'Paid Club Base': '100',
-        '% Club Growth': '0%',
-        'Total YTD Payments': String(1000 - i * 100),
+        '% Club Growth': `${100 - i * 10}%`, // D1=100%, D2=90%, ..., D10=10%
+        'Total YTD Payments': '1000',
         'Payment Base': '1000',
-        '% Payment Growth': '0%',
+        '% Payment Growth': `${100 - i * 10}%`,
         'Active Clubs': '100',
-        'Total Distinguished Clubs': String(50 - i * 5),
+        'Total Distinguished Clubs': '50',
         'Select Distinguished Clubs': '0',
         'Presidents Distinguished Clubs': '0',
-        '% Distinguished Clubs': '0%',
+        '% Distinguished Clubs': `${100 - i * 10}%`,
       }))
 
       mockCacheManager.getCache.mockResolvedValue(null)
@@ -501,28 +504,29 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
     })
 
     it('should handle district with 0 values in all categories', async () => {
+      // Ranking is based on PERCENTAGES - both have 0% growth, so they tie at rank 1
       const mockDistricts = [
         {
           'DISTRICT': 'D1',
           'REGION': 'Region 1',
           'Paid Clubs': '100',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '10%', // Higher percentage
           'Total YTD Payments': '1000',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '10%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '50',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '10%',
         },
         {
           'DISTRICT': 'D2',
           'REGION': 'Region 1',
-          'Paid Clubs': '0', // Zero values
+          'Paid Clubs': '0', // Zero absolute values
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '0%', // Lower percentage
           'Total YTD Payments': '0',
           'Payment Base': '1000',
           '% Payment Growth': '0%',
@@ -591,36 +595,37 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
     })
 
     it('should handle missing or null values', async () => {
+      // Ranking is based on PERCENTAGES
       const mockDistricts = [
         {
           'DISTRICT': 'D1',
           'REGION': 'Region 1',
           'Paid Clubs': '100',
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '10%', // Higher percentage
           'Total YTD Payments': '1000',
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': '10%',
           'Active Clubs': '100',
           'Total Distinguished Clubs': '50',
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': '10%',
         },
         {
           'DISTRICT': 'D2',
           'REGION': 'Region 1',
           'Paid Clubs': '', // Missing value
           'Paid Club Base': '100',
-          '% Club Growth': '0%',
+          '% Club Growth': '', // Missing percentage - treated as 0%
           'Total YTD Payments': null, // Null value
           'Payment Base': '1000',
-          '% Payment Growth': '0%',
+          '% Payment Growth': null, // Null percentage - treated as 0%
           'Active Clubs': '100',
           'Total Distinguished Clubs': undefined, // Undefined value
           'Select Distinguished Clubs': '0',
           'Presidents Distinguished Clubs': '0',
-          '% Distinguished Clubs': '0%',
+          '% Distinguished Clubs': undefined, // Undefined percentage - treated as 0%
         },
       ]
 
@@ -636,7 +641,7 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
       expect(d2.totalPayments).toBe(0)
       expect(d2.distinguishedClubs).toBe(0)
 
-      // D2 should rank 2 in all categories (lowest values)
+      // D2 should rank 2 in all categories (lowest percentages)
       expect(d2.clubsRank).toBe(2)
       expect(d2.paymentsRank).toBe(2)
       expect(d2.distinguishedRank).toBe(2)

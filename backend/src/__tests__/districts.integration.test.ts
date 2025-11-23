@@ -4,42 +4,11 @@ import { createTestApp } from './setup.js'
 
 describe('Districts API Integration Tests', () => {
   const app = createTestApp()
-  let authToken: string
-
-  beforeAll(async () => {
-    // Get auth token for protected routes
-    const response = await request(app)
-      .post('/api/auth/login')
-      .send({
-        username: 'testuser',
-        password: 'password123',
-      })
-
-    authToken = response.body.token
-  })
-
-  describe('Authentication Required', () => {
-    it('should return 401 when accessing districts without token', async () => {
-      await request(app).get('/api/districts').expect(401)
-    })
-
-    it('should return 401 when accessing district statistics without token', async () => {
-      await request(app).get('/api/districts/D123/statistics').expect(401)
-    })
-
-    it('should return 401 with invalid token', async () => {
-      await request(app)
-        .get('/api/districts')
-        .set('Authorization', 'Bearer invalid-token')
-        .expect(401)
-    })
-  })
 
   describe('GET /api/districts/:districtId/statistics', () => {
     it('should return 400 for invalid district ID format', async () => {
       const response = await request(app)
         .get('/api/districts/invalid@id/statistics')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -50,7 +19,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid district ID format', async () => {
       const response = await request(app)
         .get('/api/districts/invalid@id/membership-history')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -59,7 +27,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid months parameter', async () => {
       const response = await request(app)
         .get('/api/districts/D123/membership-history?months=invalid')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_MONTHS_PARAMETER')
@@ -68,7 +35,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for months parameter out of range', async () => {
       const response = await request(app)
         .get('/api/districts/D123/membership-history?months=30')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_MONTHS_PARAMETER')
@@ -79,7 +45,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid district ID format', async () => {
       const response = await request(app)
         .get('/api/districts/invalid@id/clubs')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -90,7 +55,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 when date parameters are missing', async () => {
       const response = await request(app)
         .get('/api/districts/D123/daily-reports')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('MISSING_DATE_PARAMETERS')
@@ -99,7 +63,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid date format', async () => {
       const response = await request(app)
         .get('/api/districts/D123/daily-reports?startDate=2024-13-01&endDate=2024-12-31')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -108,7 +71,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 when startDate is after endDate', async () => {
       const response = await request(app)
         .get('/api/districts/D123/daily-reports?startDate=2024-12-31&endDate=2024-01-01')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DATE_RANGE')
@@ -117,7 +79,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 when date range exceeds 90 days', async () => {
       const response = await request(app)
         .get('/api/districts/D123/daily-reports?startDate=2024-01-01&endDate=2024-12-31')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('DATE_RANGE_TOO_LARGE')
@@ -128,7 +89,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid date format', async () => {
       const response = await request(app)
         .get('/api/districts/D123/daily-reports/invalid-date')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -141,7 +101,6 @@ describe('Districts API Integration Tests', () => {
 
       const response = await request(app)
         .get(`/api/districts/D123/daily-reports/${futureDateStr}`)
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('FUTURE_DATE_NOT_ALLOWED')
@@ -152,7 +111,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid district ID format', async () => {
       const response = await request(app)
         .get('/api/districts/invalid@id/educational-awards')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -161,7 +119,6 @@ describe('Districts API Integration Tests', () => {
     it('should return 400 for invalid months parameter', async () => {
       const response = await request(app)
         .get('/api/districts/D123/educational-awards?months=invalid')
-        .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_MONTHS_PARAMETER')
@@ -173,7 +130,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/data/2024-01-01')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -182,7 +138,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid date format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/data/invalid-date')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -191,7 +146,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D123/data/2024-01-01')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('DATA_NOT_FOUND')
@@ -202,7 +156,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/cached-dates')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -211,7 +164,6 @@ describe('Districts API Integration Tests', () => {
       it('should return empty array when no cached dates exist', async () => {
         const response = await request(app)
           .get('/api/districts/D999/cached-dates')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         expect(response.body.dates).toEqual([])
@@ -224,7 +176,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .post('/api/districts/invalid@id/backfill')
-          .set('Authorization', `Bearer ${authToken}`)
           .send({})
           .expect(400)
 
@@ -234,7 +185,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid startDate format', async () => {
         const response = await request(app)
           .post('/api/districts/D123/backfill')
-          .set('Authorization', `Bearer ${authToken}`)
           .send({ startDate: 'invalid-date' })
           .expect(400)
 
@@ -244,7 +194,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid endDate format', async () => {
         const response = await request(app)
           .post('/api/districts/D123/backfill')
-          .set('Authorization', `Bearer ${authToken}`)
           .send({ endDate: 'invalid-date' })
           .expect(400)
 
@@ -254,7 +203,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 when startDate is after endDate', async () => {
         const response = await request(app)
           .post('/api/districts/D123/backfill')
-          .set('Authorization', `Bearer ${authToken}`)
           .send({
             startDate: '2024-12-31',
             endDate: '2024-01-01',
@@ -267,7 +215,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 when date range exceeds 365 days', async () => {
         const response = await request(app)
           .post('/api/districts/D123/backfill')
-          .set('Authorization', `Bearer ${authToken}`)
           .send({
             startDate: '2023-01-01',
             endDate: '2024-12-31',
@@ -282,7 +229,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/backfill/test-id')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -291,7 +237,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 for non-existent backfill job', async () => {
         const response = await request(app)
           .get('/api/districts/D123/backfill/non-existent-id')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('BACKFILL_NOT_FOUND')
@@ -302,7 +247,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .delete('/api/districts/invalid@id/backfill/test-id')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -311,7 +255,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 for non-existent backfill job', async () => {
         const response = await request(app)
           .delete('/api/districts/D123/backfill/non-existent-id')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('BACKFILL_NOT_FOUND')
@@ -324,7 +267,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/analytics')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -333,7 +275,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid startDate format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/analytics?startDate=invalid-date')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -342,7 +283,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid endDate format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/analytics?endDate=invalid-date')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -351,7 +291,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 when startDate is after endDate', async () => {
         const response = await request(app)
           .get('/api/districts/D123/analytics?startDate=2024-12-31&endDate=2024-01-01')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_RANGE')
@@ -360,7 +299,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D999/analytics')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('NO_DATA_AVAILABLE')
@@ -371,7 +309,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/clubs/12345/trends')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -380,7 +317,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for missing club ID', async () => {
         const response = await request(app)
           .get('/api/districts/D123/clubs/ /trends')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_CLUB_ID')
@@ -389,7 +325,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when club not found', async () => {
         const response = await request(app)
           .get('/api/districts/D999/clubs/12345/trends')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('CLUB_NOT_FOUND')
@@ -400,7 +335,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/at-risk-clubs')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -409,7 +343,6 @@ describe('Districts API Integration Tests', () => {
       it('should return empty array when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D999/at-risk-clubs')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         expect(response.body.clubs).toEqual([])
@@ -421,7 +354,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/leadership-insights')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -430,7 +362,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid date format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/leadership-insights?startDate=invalid')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -439,7 +370,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D999/leadership-insights')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('NO_DATA_AVAILABLE')
@@ -450,7 +380,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/distinguished-club-analytics')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -459,7 +388,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D999/distinguished-club-analytics')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('NO_DATA_AVAILABLE')
@@ -470,7 +398,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/year-over-year/2024-01-01')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -479,7 +406,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid date format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/year-over-year/invalid-date')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -490,7 +416,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/membership-analytics')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -499,7 +424,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D999/membership-analytics')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('NO_DATA_AVAILABLE')
@@ -512,7 +436,6 @@ describe('Districts API Integration Tests', () => {
       it('should return district rankings with Borda scores', async () => {
         const response = await request(app)
           .get('/api/districts/rankings')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         expect(response.body).toHaveProperty('rankings')
@@ -553,7 +476,6 @@ describe('Districts API Integration Tests', () => {
       it('should calculate Borda scores correctly', async () => {
         const response = await request(app)
           .get('/api/districts/rankings')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         const rankings = response.body.rankings
@@ -578,7 +500,6 @@ describe('Districts API Integration Tests', () => {
       it('should sort districts by aggregate Borda score in descending order', async () => {
         const response = await request(app)
           .get('/api/districts/rankings')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         const rankings = response.body.rankings
@@ -596,7 +517,6 @@ describe('Districts API Integration Tests', () => {
       it('should include percentage values in API response', async () => {
         const response = await request(app)
           .get('/api/districts/rankings')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         const rankings = response.body.rankings
@@ -619,7 +539,6 @@ describe('Districts API Integration Tests', () => {
         // First get available cached dates
         const datesResponse = await request(app)
           .get('/api/districts/cache/dates')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         const availableDates = datesResponse.body.dates
@@ -629,7 +548,6 @@ describe('Districts API Integration Tests', () => {
           const testDate = availableDates[0]
           const response = await request(app)
             .get(`/api/districts/rankings?date=${testDate}`)
-            .set('Authorization', `Bearer ${authToken}`)
             .expect(200)
 
           expect(response.body).toHaveProperty('rankings')
@@ -640,25 +558,24 @@ describe('Districts API Integration Tests', () => {
       it('should handle ties correctly with same Borda points', async () => {
         const response = await request(app)
           .get('/api/districts/rankings')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
 
         const rankings = response.body.rankings
 
         if (rankings.length > 1) {
-          // Check if there are any ties in the data
-          const clubValues = new Map<number, string[]>()
+          // Check if there are any ties in the data - ranking is based on PERCENTAGES
+          const clubPercentages = new Map<number, string[]>()
           
           rankings.forEach((district: any) => {
-            const clubValue = district.paidClubs
-            if (!clubValues.has(clubValue)) {
-              clubValues.set(clubValue, [])
+            const clubPercent = district.clubGrowthPercent
+            if (!clubPercentages.has(clubPercent)) {
+              clubPercentages.set(clubPercent, [])
             }
-            clubValues.get(clubValue)!.push(district.districtId)
+            clubPercentages.get(clubPercent)!.push(district.districtId)
           })
 
-          // If we find districts with same values, they should have same rank
-          clubValues.forEach((districtIds) => {
+          // If we find districts with same percentage values, they should have same rank
+          clubPercentages.forEach((districtIds) => {
             if (districtIds.length > 1) {
               const ranks = districtIds.map(id => {
                 const district = rankings.find((d: any) => d.districtId === id)
@@ -682,7 +599,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
           .get('/api/districts/invalid@id/export?format=csv')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -691,7 +607,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for missing format parameter', async () => {
         const response = await request(app)
           .get('/api/districts/D123/export')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_FORMAT')
@@ -700,7 +615,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for unsupported format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/export?format=pdf')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_FORMAT')
@@ -709,7 +623,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 for invalid date format', async () => {
         const response = await request(app)
           .get('/api/districts/D123/export?format=csv&startDate=invalid')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -718,7 +631,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 400 when startDate is after endDate', async () => {
         const response = await request(app)
           .get('/api/districts/D123/export?format=csv&startDate=2024-12-31&endDate=2024-01-01')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_RANGE')
@@ -727,7 +639,6 @@ describe('Districts API Integration Tests', () => {
       it('should return 404 when no cached data exists', async () => {
         const response = await request(app)
           .get('/api/districts/D999/export?format=csv')
-          .set('Authorization', `Bearer ${authToken}`)
           .expect(404)
 
         expect(response.body.error.code).toBe('NO_DATA_AVAILABLE')
