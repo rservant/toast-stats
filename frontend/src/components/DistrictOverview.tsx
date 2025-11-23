@@ -10,17 +10,19 @@ interface DistrictOverviewProps {
   districtId: string;
   districtName: string;
   selectedDate?: string;
+  programYearStartDate?: string;
 }
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   districtId,
   districtName,
   selectedDate,
+  programYearStartDate,
 }) => {
-  // Fetch analytics with the provided selectedDate
+  // Fetch analytics with program year boundaries
   const { data: analytics, isLoading: isLoadingAnalytics, error } = useDistrictAnalytics(
     districtId,
-    undefined,
+    programYearStartDate,
     selectedDate
   );
 

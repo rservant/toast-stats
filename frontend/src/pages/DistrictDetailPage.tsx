@@ -75,11 +75,11 @@ const DistrictDetailPage: React.FC = () => {
     }
   }, [selectedProgramYear, cachedDatesInProgramYear, allCachedDates, selectedDate, setSelectedDate]);
 
-  // Fetch analytics with selected date
+  // Fetch analytics with program year boundaries
   const { data: analytics, isLoading: isLoadingAnalytics, error: analyticsError, refetch: refetchAnalytics } = useDistrictAnalytics(
     districtId || null,
-    undefined,
-    selectedDate
+    selectedProgramYear.startDate,
+    selectedDate || selectedProgramYear.endDate
   );
 
   // Fetch leadership insights for analytics tab - use program year boundaries
@@ -297,6 +297,7 @@ const DistrictDetailPage: React.FC = () => {
                   districtId={districtId} 
                   districtName={districtName}
                   selectedDate={selectedDate}
+                  programYearStartDate={selectedProgramYear.startDate}
                 />
 
                 {/* At-Risk Clubs Panel */}
