@@ -4,10 +4,6 @@
  */
 
 export class MockToastmastersAPIService {
-  async authenticate(_username: string, _password: string): Promise<boolean> {
-    return true
-  }
-
   async getDistricts() {
     return {
       districts: [

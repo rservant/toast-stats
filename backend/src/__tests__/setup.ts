@@ -1,6 +1,5 @@
 import express, { type Express } from 'express'
 import cors from 'cors'
-import authRoutes from '../routes/auth.js'
 import districtRoutes from '../routes/districts.js'
 
 export function createTestApp(): Express {
@@ -11,7 +10,6 @@ export function createTestApp(): Express {
   app.use(express.json())
 
   // Routes
-  app.use('/api/auth', authRoutes)
   app.use('/api/districts', districtRoutes)
 
   return app

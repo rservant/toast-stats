@@ -7,10 +7,6 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   toastmastersDashboardUrl:
     process.env.TOASTMASTERS_DASHBOARD_URL || 'https://dashboard.toastmasters.org',
-  jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
-  },
   cache: {
     ttl: parseInt(process.env.CACHE_TTL || '900', 10),
   },

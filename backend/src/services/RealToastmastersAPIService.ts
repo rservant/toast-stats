@@ -524,10 +524,4 @@ export class RealToastmastersAPIService {
     }
   }
 
-  /**
-   * No authentication needed for public dashboards
-   */
-  async authenticate(_username: string, _password: string): Promise<boolean> {
-    return true
-  }
 }
