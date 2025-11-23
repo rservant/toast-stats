@@ -5,6 +5,13 @@ import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics';
 import { useLeadershipInsights } from '../hooks/useLeadershipInsights';
 import { useDistinguishedClubAnalytics } from '../hooks/useDistinguishedClubAnalytics';
 import { useDistrictCachedDates } from '../hooks/useDistrictData';
+import { useProgramYear } from '../contexts/ProgramYearContext';
+import { ProgramYearSelector } from '../components/ProgramYearSelector';
+import {
+  getAvailableProgramYears,
+  filterDatesByProgramYear,
+  getMostRecentDateInProgramYear,
+} from '../utils/programYear';
 import { DistrictOverview } from '../components/DistrictOverview';
 import { AtRiskClubsPanel } from '../components/AtRiskClubsPanel';
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart';
@@ -33,8 +40,10 @@ const DistrictDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const { addBackfill } = useBackfillContext();
+
+  // Use program year context
+  const { selectedProgramYear, setSelectedProgramYear, selectedDate, setSelectedDate } = useProgramYear();
 
   // Fetch district info
   const { data: districtsData } = useDistricts();
@@ -42,6 +51,29 @@ const DistrictDetailPage: React.FC = () => {
 
   // Fetch cached dates for date selector
   const { data: cachedDatesData } = useDistrictCachedDates(districtId || '');
+
+  // Get all cached dates
+  const allCachedDates = cachedDatesData?.dates || [];
+
+  // Get available program years from cached dates
+  const availableProgramYears = React.useMemo(() => {
+    return getAvailableProgramYears(allCachedDates);
+  }, [allCachedDates]);
+
+  // Filter cached dates by selected program year
+  const cachedDatesInProgramYear = React.useMemo(() => {
+    return filterDatesByProgramYear(allCachedDates, selectedProgramYear);
+  }, [allCachedDates, selectedProgramYear]);
+
+  // Auto-select most recent date in program year when program year changes
+  React.useEffect(() => {
+    if (cachedDatesInProgramYear.length > 0 && !selectedDate) {
+      const mostRecent = getMostRecentDateInProgramYear(allCachedDates, selectedProgramYear);
+      if (mostRecent) {
+        setSelectedDate(mostRecent);
+      }
+    }
+  }, [selectedProgramYear, cachedDatesInProgramYear, allCachedDates, selectedDate, setSelectedDate]);
 
   // Fetch analytics with selected date
   const { data: analytics, isLoading: isLoadingAnalytics, error: analyticsError, refetch: refetchAnalytics } = useDistrictAnalytics(
@@ -65,8 +97,8 @@ const DistrictDetailPage: React.FC = () => {
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || [];
 
-  // Get available dates sorted in descending order
-  const availableDates = cachedDatesData?.dates?.sort((a, b) => b.localeCompare(a)) || [];
+  // Get available dates sorted in descending order (filtered by program year)
+  const availableDates = cachedDatesInProgramYear.sort((a, b) => b.localeCompare(a));
 
   // State for daily report calendar
   const [selectedReportDate, setSelectedReportDate] = useState<string | null>(null);
@@ -139,27 +171,43 @@ const DistrictDetailPage: React.FC = () => {
                 <p className="text-sm sm:text-base text-gray-600 mt-1">District Statistics & Performance Analytics</p>
               </div>
               
-              {/* Global Date Selector and Backfill Button */}
+              {/* Program Year, Date Selector and Backfill Button */}
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-start">
-                {/* Date Selector - Works across all tabs */}
+                {/* Program Year Selector */}
+                {availableProgramYears.length > 0 && (
+                  <div className="flex-shrink-0">
+                    <ProgramYearSelector
+                      availableProgramYears={availableProgramYears}
+                      selectedProgramYear={selectedProgramYear}
+                      onProgramYearChange={setSelectedProgramYear}
+                      showProgress={true}
+                    />
+                  </div>
+                )}
+
+                {/* Date Selector - Shows only dates in selected program year */}
                 {availableDates.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <label htmlFor="global-date-selector" className="text-xs sm:text-sm font-medium text-gray-700">
-                      View Historical Data
+                      View Specific Date
                     </label>
                     <select
                       id="global-date-selector"
                       value={selectedDate || 'latest'}
                       onChange={handleDateChange}
-                      className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                      className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 text-sm"
+                      style={{ color: '#111827' }}
                     >
-                      <option value="latest">Latest Data</option>
+                      <option value="latest" className="text-gray-900 bg-white">Latest in Program Year</option>
                       {availableDates.map((date) => (
-                        <option key={date} value={date}>
+                        <option key={date} value={date} className="text-gray-900 bg-white">
                           {formatDate(date)}
                         </option>
                       ))}
                     </select>
+                    <div className="text-xs text-gray-500">
+                      {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} in program year
+                    </div>
                   </div>
                 )}
 

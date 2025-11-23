@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './config/queryClient';
 import { BackfillProvider, useBackfillContext } from './contexts/BackfillContext';
+import { ProgramYearProvider } from './contexts/ProgramYearContext';
 import { BackfillProgressBar } from './components/BackfillProgressBar';
 import LandingPage from './pages/LandingPage';
 import DistrictDetailPage from './pages/DistrictDetailPage';
@@ -39,9 +40,11 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BackfillProvider>
-        <AppContent />
-      </BackfillProvider>
+      <ProgramYearProvider>
+        <BackfillProvider>
+          <AppContent />
+        </BackfillProvider>
+      </ProgramYearProvider>
     </QueryClientProvider>
   );
 }

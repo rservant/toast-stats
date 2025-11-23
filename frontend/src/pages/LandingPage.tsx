@@ -5,7 +5,14 @@ import { apiClient } from '../services/api';
 import HistoricalRankChart from '../components/HistoricalRankChart';
 import { BackfillButton } from '../components/BackfillButton';
 import { useBackfillContext } from '../contexts/BackfillContext';
+import { useProgramYear } from '../contexts/ProgramYearContext';
+import { ProgramYearSelector } from '../components/ProgramYearSelector';
 import { useRankHistory } from '../hooks/useRankHistory';
+import {
+  getAvailableProgramYears,
+  filterDatesByProgramYear,
+  getMostRecentDateInProgramYear,
+} from '../utils/programYear';
 
 interface DistrictRanking {
   districtId: string;
@@ -32,11 +39,13 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<'aggregate' | 'clubs' | 'payments' | 'distinguished'>('aggregate');
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Use global backfill context
   const { addBackfill } = useBackfillContext();
+  
+  // Use program year context
+  const { selectedProgramYear, setSelectedProgramYear, selectedDate, setSelectedDate } = useProgramYear();
   
   // Historical rank tracking state
   const [selectedRegionsForHistory, setSelectedRegionsForHistory] = useState<string[]>([]);
@@ -50,7 +59,27 @@ const LandingPage: React.FC = () => {
     },
   });
 
-  const cachedDates: string[] = cachedDatesData?.dates || [];
+  const allCachedDates: string[] = cachedDatesData?.dates || [];
+
+  // Get available program years from cached dates
+  const availableProgramYears = React.useMemo(() => {
+    return getAvailableProgramYears(allCachedDates);
+  }, [allCachedDates]);
+
+  // Filter cached dates by selected program year
+  const cachedDates = React.useMemo(() => {
+    return filterDatesByProgramYear(allCachedDates, selectedProgramYear);
+  }, [allCachedDates, selectedProgramYear]);
+
+  // Auto-select most recent date in program year when program year changes
+  React.useEffect(() => {
+    if (cachedDates.length > 0 && !selectedDate) {
+      const mostRecent = getMostRecentDateInProgramYear(allCachedDates, selectedProgramYear);
+      if (mostRecent) {
+        setSelectedDate(mostRecent);
+      }
+    }
+  }, [selectedProgramYear, cachedDates, allCachedDates, selectedDate, setSelectedDate]);
 
   // Fetch rankings for selected date
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -226,27 +255,50 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Date Selector */}
-          {cachedDates.length > 0 && (
-            <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-              <label htmlFor="date-select" className="text-sm font-medium text-gray-700">
-                View Historical Data:
-              </label>
-              <select
-                id="date-select"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-4 py-2 border-2 border-gray-300 rounded-lg font-medium text-gray-900 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-              >
-                <option value="">Today ({currentDate})</option>
-                {cachedDates.map((date) => (
-                  <option key={date} value={date}>
-                    {date}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Program Year and Date Selectors */}
+          <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-200">
+            {/* Program Year Selector */}
+            {availableProgramYears.length > 0 && (
+              <div className="flex-shrink-0">
+                <ProgramYearSelector
+                  availableProgramYears={availableProgramYears}
+                  selectedProgramYear={selectedProgramYear}
+                  onProgramYearChange={setSelectedProgramYear}
+                  showProgress={true}
+                />
+              </div>
+            )}
+
+            {/* Date Selector - Shows only dates in selected program year */}
+            {cachedDates.length > 0 && (
+              <div className="flex flex-col gap-2 flex-1">
+                <label htmlFor="date-select" className="text-xs sm:text-sm font-medium text-gray-700">
+                  View Specific Date
+                </label>
+                <select
+                  id="date-select"
+                  value={selectedDate || ''}
+                  onChange={(e) => setSelectedDate(e.target.value || undefined)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-white"
+                  style={{ color: '#111827' }}
+                >
+                  <option value="" className="text-gray-900 bg-white">Latest in Program Year ({currentDate})</option>
+                  {cachedDates.sort((a, b) => b.localeCompare(a)).map((date) => (
+                    <option key={date} value={date} className="text-gray-900 bg-white">
+                      {new Date(date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </option>
+                  ))}
+                </select>
+                <div className="text-xs text-gray-500">
+                  {cachedDates.length} date{cachedDates.length !== 1 ? 's' : ''} available in this program year
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Clear Cache Confirmation Dialog */}
