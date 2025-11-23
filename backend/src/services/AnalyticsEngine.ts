@@ -632,7 +632,7 @@ export class AnalyticsEngine {
    */
   private countAtRiskClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
       
       // At-risk: membership >= 12 but has issues
@@ -645,7 +645,7 @@ export class AnalyticsEngine {
    */
   private countCriticalClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
       return membership < 12
     }).length
   }
@@ -805,7 +805,7 @@ export class AnalyticsEngine {
   private getTotalMembership(entry: DistrictCacheEntry): number {
     // Sum up membership from all clubs
     return entry.clubPerformance.reduce((sum, club) => {
-      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
       return sum + (isNaN(membership) ? 0 : membership)
     }, 0)
   }
@@ -863,7 +863,7 @@ export class AnalyticsEngine {
         if (!clubId || !clubMap.has(clubId)) continue
 
         const clubTrend = clubMap.get(clubId)!
-        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
         const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
 
         clubTrend.membershipTrend.push({
@@ -983,7 +983,7 @@ export class AnalyticsEngine {
 
     for (const club of entry.clubPerformance) {
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
-      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
       
       // Smedley Distinguished: 10 goals + 25 members
       if (dcpGoals >= 10 && membership >= 25) {
@@ -1205,7 +1205,7 @@ export class AnalyticsEngine {
    */
   private countHealthyClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
       
       return membership >= 12 && dcpGoals > 0
@@ -1488,7 +1488,7 @@ export class AnalyticsEngine {
         const clubId = club['Club Number'] || club['Club ID'] || club['ClubID'] || ''
         const clubName = club['Club Name'] || club['ClubName'] || ''
         const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
-        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
 
         if (!clubId) continue
 
@@ -1872,7 +1872,7 @@ export class AnalyticsEngine {
     let clubsWithMinimumMembers = 0
 
     for (const club of clubs) {
-      const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
       const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
 
       totalMembership += membership
@@ -1914,7 +1914,7 @@ export class AnalyticsEngine {
     // Calculate total membership for each date
     const membershipByDate = historicalData.map(entry => {
       const totalMembership = entry.clubs.reduce((sum, club) => {
-        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
         return sum + membership
       }, 0)
       return { date: entry.date, membership: totalMembership }
@@ -2164,7 +2164,7 @@ export class AnalyticsEngine {
 
       for (const club of area.clubs) {
         const dcpGoals = parseInt(club['Goals Met'] || club['DCP Goals'] || '0')
-        const membership = parseInt(club['Active Members'] || club['Membership'] || '0')
+        const membership = parseInt(club['Active Members'] || club['Active Membership'] || club['Membership'] || '0')
 
         totalDcpGoals += dcpGoals
         totalMembership += membership
