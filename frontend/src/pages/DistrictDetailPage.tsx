@@ -82,14 +82,18 @@ const DistrictDetailPage: React.FC = () => {
     selectedDate
   );
 
-  // Fetch leadership insights for analytics tab
+  // Fetch leadership insights for analytics tab - use program year boundaries
   const { data: leadershipInsights, isLoading: isLoadingLeadership } = useLeadershipInsights(
-    districtId || null
+    districtId || null,
+    selectedProgramYear.startDate,
+    selectedDate || selectedProgramYear.endDate
   );
 
-  // Fetch distinguished club analytics for analytics tab
+  // Fetch distinguished club analytics for analytics tab - use program year boundaries
   const { data: distinguishedAnalytics, isLoading: isLoadingDistinguished } = useDistinguishedClubAnalytics(
-    districtId || null
+    districtId || null,
+    selectedProgramYear.startDate,
+    selectedDate || selectedProgramYear.endDate
   );
 
   const districtName = selectedDistrict?.name || 'Unknown District';

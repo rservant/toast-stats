@@ -147,6 +147,13 @@ export class AnalyticsEngine {
       // Calculate distinguished projection (simple linear projection)
       const distinguishedProjection = this.projectDistinguishedClubs(dataEntries)
 
+      // Generate comprehensive distinguished club analytics including DCP goal analysis
+      const distinguishedClubAnalytics = await this.generateDistinguishedClubAnalytics(
+        districtId,
+        startDate,
+        endDate
+      )
+
       // Calculate year-over-year comparison if previous year data available
       const yearOverYearData = await this.calculateMembershipYearOverYear(districtId, dataEntries)
       let yearOverYear: { membershipChange: number; distinguishedChange: number; clubHealthChange: number } | undefined
@@ -206,6 +213,7 @@ export class AnalyticsEngine {
         criticalClubs,
         distinguishedClubs,
         distinguishedProjection,
+        distinguishedClubAnalytics,
         divisionRankings,
         topPerformingAreas,
         yearOverYear,
@@ -1633,6 +1641,49 @@ export class AnalyticsEngine {
   }
 
   /**
+   * Get the appropriate field name for Level 4/Path Completion/DTM awards
+   * based on the data structure (handles different program year formats)
+   */
+  private getLevel4FieldName(club: any): {
+    baseField: string
+    additionalField: string
+  } {
+    // Check for 2025+ format (Path Completions)
+    if ('Level 4s, Path Completions, or DTM Awards' in club) {
+      return {
+        baseField: 'Level 4s, Path Completions, or DTM Awards',
+        additionalField: 'Add. Level 4s, Path Completions, or DTM award',
+      }
+    }
+
+    // Check for 2020-2024 format (Level 5s)
+    if ('Level 4s, Level 5s, or DTM award' in club) {
+      return {
+        baseField: 'Level 4s, Level 5s, or DTM award',
+        additionalField: 'Add. Level 4s, Level 5s, or DTM award',
+      }
+    }
+
+    // Check for 2019 and earlier format (CL/AL/DTMs)
+    if ('CL/AL/DTMs' in club) {
+      return {
+        baseField: 'CL/AL/DTMs',
+        additionalField: 'Add. CL/AL/DTMs',
+      }
+    }
+
+    // Fallback to 2025+ format if no match
+    logger.debug('No matching Level 4 field found, using 2025+ format as fallback', {
+      clubId: club['Club Number'] || club['Club ID'] || 'unknown',
+      availableFields: Object.keys(club),
+    })
+    return {
+      baseField: 'Level 4s, Path Completions, or DTM Awards',
+      additionalField: 'Add. Level 4s, Path Completions, or DTM award',
+    }
+  }
+
+  /**
    * Analyze DCP goals to identify most/least commonly achieved
    * Requirement 7.5
    */
@@ -1654,29 +1705,32 @@ export class AnalyticsEngine {
       const level2s = parseInt(club['Level 2s'] || '0')
       if (level2s >= 2) goalCounts[1]++
 
-      // Goal 3: More Level 2 awards (need 2 additional, so 4 total)
+      // Goal 3: More Level 2 awards (need 2 base + 2 additional = 4 total)
       const addLevel2s = parseInt(club['Add. Level 2s'] || '0')
-      if (addLevel2s >= 2) goalCounts[2]++
+      if (level2s >= 2 && addLevel2s >= 2) goalCounts[2]++
 
       // Goal 4: Level 3 awards (need 2)
       const level3s = parseInt(club['Level 3s'] || '0')
       if (level3s >= 2) goalCounts[3]++
 
-      // Goal 5: Level 4, Path Completion, or DTM award (need 1)
-      const level4s = parseInt(club['Level 4s, Path Completions, or DTM Awards'] || '0')
+      // Goal 5 & 6: Level 4/Path Completion/DTM awards
+      const { baseField, additionalField } = this.getLevel4FieldName(club)
+      const level4s = parseInt(club[baseField] || '0')
+      const addLevel4s = parseInt(club[additionalField] || '0')
+      
+      // Goal 5: Need 1 Level 4 award
       if (level4s >= 1) goalCounts[4]++
-
-      // Goal 6: One more Level 4, Path Completion, or DTM award (need 1 additional, so 2 total)
-      const addLevel4s = parseInt(club['Add. Level 4s, Path Completions, or DTM award'] || '0')
-      if (addLevel4s >= 1) goalCounts[5]++
+      
+      // Goal 6: Need 1 base + 1 additional = 2 total
+      if (level4s >= 1 && addLevel4s >= 1) goalCounts[5]++
 
       // Goal 7: New members (need 4)
       const newMembers = parseInt(club['New Members'] || '0')
       if (newMembers >= 4) goalCounts[6]++
 
-      // Goal 8: More new members (need 4 additional, so 8 total)
+      // Goal 8: More new members (need 4 base + 4 additional = 8 total)
       const addNewMembers = parseInt(club['Add. New Members'] || '0')
-      if (addNewMembers >= 4) goalCounts[7]++
+      if (newMembers >= 4 && addNewMembers >= 4) goalCounts[7]++
 
       // Goal 9: Club officer roles trained (need 4 in Round 1 and 4 in Round 2)
       const trainedRound1 = parseInt(club['Off. Trained Round 1'] || '0')

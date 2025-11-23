@@ -257,6 +257,9 @@ export interface DistrictAnalytics {
   }
   distinguishedProjection: number
   
+  // Distinguished club analytics with DCP goal analysis
+  distinguishedClubAnalytics: DistinguishedClubAnalytics
+  
   // Division/Area performance
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: AreaAnalytics[]
