@@ -67,10 +67,10 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ### Phase 3 Tasks
 
-- [ ] T013 [P] Create `backend/src/modules/assessment/services/assessmentCalculator.ts` with Goal 1 calculation
-- [ ] T014 [P] Extend assessmentCalculator.ts with Goal 2 calculation
-- [ ] T015 [P] Extend assessmentCalculator.ts with Goal 3 calculation (actual + CSP fallback)
-- [ ] T016 Create `backend/src/modules/assessment/__tests__/assessmentCalculator.test.ts`
+- [x] T013 [P] Create `backend/src/modules/assessment/services/assessmentCalculator.ts` with Goal 1 calculation
+- [x] T014 [P] Extend assessmentCalculator.ts with Goal 2 calculation
+- [x] T015 [P] Extend assessmentCalculator.ts with Goal 3 calculation (actual + CSP fallback)
+- [x] T016 Create `backend/src/modules/assessment/__tests__/assessmentCalculator.test.ts`
 - [ ] T017 Create test fixtures with 12 months of July 2024–June 2025 sample data
 - [ ] T018 Validate calculator output against Excel workbook reference (manual verification step)
 
