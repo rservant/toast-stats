@@ -91,11 +91,11 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ### Phase 4 Tasks
 
-- [ ] T019 [P] Create `backend/src/modules/assessment/services/assessmentReportGenerator.ts` with JSON report structure
-- [ ] T020 [P] Implement monthly report template (mirrors Excel monthly sheet structure)
-- [ ] T021 [P] Implement year-end summary report template
-- [ ] T022 Create `backend/src/modules/assessment/__tests__/assessmentReportGenerator.test.ts`
-- [ ] T023 Test report generation performance (<2s target)
+- [x] T019 [P] Create `backend/src/modules/assessment/services/assessmentReportGenerator.ts` with JSON report structure
+- [x] T020 [P] Implement monthly report template (mirrors Excel monthly sheet structure)
+- [x] T021 [P] Implement year-end summary report template
+- [x] T022 Create `backend/src/modules/assessment/__tests__/assessmentReportGenerator.test.ts`
+- [x] T023 Test report generation performance (<2s target)
 
 ### Phase 4 Acceptance Criteria
 
