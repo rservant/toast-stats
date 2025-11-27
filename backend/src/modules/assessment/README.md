@@ -242,6 +242,62 @@ Configuration is cached after initial load. Changes are detected via file system
 - Invalidated on: `POST /api/assessment/config`
 - Versioned keys: Supports multiple program years/districts
 
+## Environment Variables (Cache)
+
+This module (and the wider backend) reads district-level cache files from the filesystem. By default the service will look for a `cache/` directory relative to the running process. To make the cache location explicit (useful in Docker, CI, or when running from the repository root), set the `DISTRICT_CACHE_DIR` environment variable.
+
+- `DISTRICT_CACHE_DIR`: absolute or relative path to the cache directory containing `districts/{districtId}/{YYYY-MM-DD}.json` files. If unset the service will attempt these locations (in order):
+  1. `process.cwd()/cache`
+  2. `process.cwd()/backend/cache`
+  3. `./cache` (relative fallback)
+
+Examples
+
+Docker Compose (service `backend`):
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    environment:
+      - NODE_ENV=production
+      - DISTRICT_CACHE_DIR=/data/backend/cache
+    volumes:
+      - ./backend/cache:/data/backend/cache:ro
+    ports:
+      - 3000:3000
+```
+
+Dockerfile (set at container runtime):
+
+```dockerfile
+ENV DISTRICT_CACHE_DIR=/app/cache
+# Ensure cache files are available at /app/cache when the container starts
+VOLUME ["/app/cache"]
+```
+
+GitHub Actions (CI) — set cache path for running tests in the repository root:
+
+```yaml
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install deps
+        run: npm ci
+        working-directory: ./backend
+      - name: Run tests
+        env:
+          DISTRICT_CACHE_DIR: ${{ github.workspace }}/backend/cache
+        run: npm test --silent
+        working-directory: ./backend
+```
+
 ## Performance Targets
 
 - **Report generation**: < 2 seconds for complete monthly data

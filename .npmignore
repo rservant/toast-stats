@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+*.log
+*.log.*
+.env
+.env.*
+/.vscode
+.DS_Store
+__tests__/
+test-cache*/
+backend/dist/
+frontend/dist/
+*.test.ts
+*.test.tsx
+vitest.config.ts

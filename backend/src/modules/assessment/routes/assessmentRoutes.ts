@@ -13,7 +13,9 @@ import * as districtLeaderGoalService from '../services/districtLeaderGoalServic
 import * as assessmentReportGenerator from '../services/assessmentReportGenerator.js';
 import * as assessmentStore from '../storage/assessmentStore.js';
 import { loadConfig } from '../services/configService.js';
-import type { MonthlyAssessment } from '../types/assessment.js';
+// types used by services and storage
+import AssessmentGenerationService from '../services/assessmentGenerationService.js';
+import CacheIntegrationService from '../services/cacheIntegrationService.js';
 
 const router = Router();
 
@@ -42,6 +44,18 @@ router.post(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { district_number, program_year, month, ...data } = req.body;
 
+    // Manual entry is no longer supported. Direct clients to the generation endpoint.
+    if (data && (data.membership_payments_ytd !== undefined || data.paid_clubs_ytd !== undefined || data.distinguished_clubs_ytd !== undefined || data.csp_submissions_ytd !== undefined)) {
+      res.status(400).json({
+        error: {
+          code: 'MANUAL_ENTRY_NOT_SUPPORTED',
+          message: 'Manual entry is disabled. Use POST /api/assessment/generate to create assessments from cached data.',
+          suggestion: 'POST /api/assessment/generate with district_number, program_year, month, cache_date (optional)'
+        }
+      });
+      return;
+    }
+
     if (!district_number || !program_year || !month) {
       res.status(400).json({
         error: {
@@ -52,21 +66,37 @@ router.post(
       return;
     }
 
-    const assessment: MonthlyAssessment = {
-      district_number,
-      program_year,
-      month,
-      ...data,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    await assessmentStore.saveMonthlyAssessment(assessment);
-
-    res.status(201).json({
-      success: true,
-      data: assessment,
+    // This route is deprecated for manual submissions - guide clients to generate endpoint
+    res.status(301).json({
+      error: 'Manual submission removed. Use POST /api/assessment/generate instead.'
     });
+  })
+);
+
+/**
+ * POST /api/assessment/generate
+ * Generate an assessment from cache (automated)
+ */
+router.post(
+  '/generate',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { district_number, program_year, month, cache_date } = req.body;
+
+    if (!district_number || !program_year || !month) {
+      res.status(400).json({
+        error: { code: 'INVALID_REQUEST', message: 'district_number, program_year and month are required' },
+      });
+      return;
+    }
+
+    const generator = new AssessmentGenerationService();
+
+    try {
+      const assessment = await generator.generateMonthlyAssessment({ district_number, program_year, month, cache_date });
+      res.status(201).json({ success: true, data: { assessment } });
+    } catch (err) {
+      res.status(400).json({ error: { code: 'GENERATION_FAILED', message: (err as Error).message } });
+    }
   })
 );
 
@@ -95,10 +125,39 @@ router.get(
       return;
     }
 
+    // Include audit trail and immutable flag in response
+    const audit = await assessmentStore.getAuditTrail(parseInt(districtId, 10), programYear, month)
+
     res.json({
       success: true,
-      data: assessment,
+      data: {
+        assessment,
+        audit_trail: audit,
+        read_only: !!(assessment as any)?.read_only,
+        immutable: true,
+      },
     });
+  })
+);
+
+/**
+ * GET /api/assessment/available-dates/:districtId
+ * List cached dates and completeness info for a district
+ */
+router.get(
+  '/available-dates/:districtId',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { districtId } = req.params;
+
+    if (!districtId) {
+      res.status(400).json({ error: { code: 'INVALID_REQUEST', message: 'districtId required' } });
+      return;
+    }
+
+    const cacheSvc = new CacheIntegrationService();
+    const dates = await cacheSvc.getAvailableDates(districtId);
+
+    res.json({ success: true, data: { district_id: districtId, available_dates: dates, recommended_date: dates.length > 0 ? dates[dates.length - 1].date : null } });
   })
 );
 

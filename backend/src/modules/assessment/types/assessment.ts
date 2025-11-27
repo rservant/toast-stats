@@ -44,6 +44,11 @@ export interface MonthlyAssessment {
   paid_clubs_ytd: number;
   distinguished_clubs_ytd: number | null; // May be null; fallback to CSP if unavailable
   csp_submissions_ytd: number;
+  // Auto-generated metadata (for cache-generated assessments)
+  generated_at?: string;
+  generated_from_cache_date?: string;
+  read_only?: boolean;
+  data_sources?: Record<string, any>;
   notes?: string;
   created_at: string; // ISO 8601 timestamp
   updated_at: string;
