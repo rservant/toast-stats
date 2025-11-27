@@ -13,7 +13,7 @@ interface CacheEntry {
   timestamp: number;
 }
 
-const CONFIG_DIR = path.join(process.cwd(), 'backend', 'src', 'modules', 'assessment', 'config');
+const CONFIG_DIR = path.join(process.cwd(), 'src', 'modules', 'assessment', 'config');
 const DEFAULT_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const cache = new Map<string, CacheEntry>();
 let fileWatcher: fsSync.FSWatcher | null = null;
@@ -210,7 +210,7 @@ export function validateConfig(config: DistrictConfig): string[] {
     errors.push('csp_submission_target must be a positive number');
   }
   
-  if (typeof config.csp_to_distinguished_clubs_ratio !== 'number' || config.csp_to_distinguished_clubs_ratio <= 0 || config.csp_to_distinguished_clubs_ratio > 1) {
+  if (typeof config.csp_to_distinguished_clubs_ratio !== 'number' || config.csp_to_distinguished_clubs_ratio < 0 || config.csp_to_distinguished_clubs_ratio > 1) {
     errors.push('csp_to_distinguished_clubs_ratio must be a number between 0 and 1');
   }
   
