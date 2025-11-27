@@ -212,7 +212,7 @@ describe('assessmentCalculator', () => {
     it('should use CSP fallback when distinguished_clubs_ytd is null', () => {
       const assessment: MonthlyAssessment = {
         ...baseAssessment,
-        month: 'March',
+        month: 'September',
         distinguished_clubs_ytd: null,
         csp_submissions_ytd: 20, // 20 * 0.5 = 10 estimated distinguished clubs
       };
@@ -258,12 +258,12 @@ describe('assessmentCalculator', () => {
         ...baseAssessment,
         month: 'June',
         distinguished_clubs_ytd: null,
-        csp_submissions_ytd: 25, // 25 * 0.5 = 12.5 → rounds to 12 or 13
+        csp_submissions_ytd: 25, // 25 * 0.5 = 12.5 → rounds to 13
       };
 
       const goal3 = calculateGoal3(assessment, mockConfig);
 
-      expect(goal3.actual).toBe(12); // Math.round(12.5) in some JS engines = 12
+      expect(goal3.actual).toBe(13); // Math.round(12.5) = 13
     });
   });
 
@@ -274,7 +274,7 @@ describe('assessmentCalculator', () => {
         month: 'August',
         membership_payments_ytd: 25,
         paid_clubs_ytd: 2,
-        distinguished_clubs_ytd: 3,
+        distinguished_clubs_ytd: 4, // >= (24/12)*2 = 4
         csp_submissions_ytd: 8,
       };
 
@@ -284,8 +284,8 @@ describe('assessmentCalculator', () => {
       expect(result.goal_2_status.goal_number).toBe(2);
       expect(result.goal_3_status.goal_number).toBe(3);
       expect(result.goal_1_status.status).toBe('On Track');
-      expect(result.goal_2_status.status).toBe('Off Track');
-      expect(result.goal_3_status.status).toBe('On Track');
+      expect(result.goal_2_status.status).toBe('On Track'); // 2 >= (12/12)*2 = 2
+      expect(result.goal_3_status.status).toBe('On Track'); // 4 >= (24/12)*2 = 4
     });
   });
 

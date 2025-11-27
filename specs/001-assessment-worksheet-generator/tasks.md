@@ -113,11 +113,11 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ### Phase 5 Tasks
 
-- [ ] T024 [P] Create `backend/src/modules/assessment/services/districtLeaderGoalService.ts` with CRUD operations
-- [ ] T025 [P] Implement goal query interface (filter by role, month, date range, status)
-- [ ] T026 [P] Implement goal status transitions (in_progress → completed, mark overdue)
-- [ ] T027 Create `backend/src/modules/assessment/__tests__/districtLeaderGoalService.test.ts`
-- [ ] T028 Implement goal storage persistence (file-based JSON)
+- [x] T024 [P] Create `backend/src/modules/assessment/services/districtLeaderGoalService.ts` with CRUD operations
+- [x] T025 [P] Implement goal query interface (filter by role, month, date range, status)
+- [x] T026 [P] Implement goal status transitions (in_progress → completed, mark overdue)
+- [x] T027 Create `backend/src/modules/assessment/__tests__/districtLeaderGoalService.test.ts`
+- [x] T028 Implement goal storage persistence (file-based JSON)
 
 ### Phase 5 Acceptance Criteria
 
@@ -136,16 +136,16 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ### Phase 6 Tasks
 
-- [ ] T029 Create `backend/src/modules/assessment/routes/assessmentRoutes.ts` with 7 endpoints
-- [ ] T030 [P] Implement POST /api/assessment/monthly (submit monthly data + validation)
-- [ ] T031 [P] Implement GET /api/assessment/monthly/:month (retrieve monthly report)
-- [ ] T032 [P] Implement GET /api/assessment/year-end (retrieve year-end summary)
-- [ ] T033 [P] Implement POST /api/assessment/goals (create leader goal)
-- [ ] T034 [P] Implement GET /api/assessment/goals (query goals with filters)
-- [ ] T035 [P] Implement PUT /api/assessment/goals/:id (update goal status)
-- [ ] T036 [P] Implement POST /api/assessment/config (load/update configuration)
-- [ ] T037 Mount assessment routes on main Express app in `backend/src/index.ts`
-- [ ] T038 Create `backend/src/modules/assessment/__tests__/integration.test.ts` (Supertest)
+- [x] T029 Create `backend/src/modules/assessment/routes/assessmentRoutes.ts` with 7 endpoints
+- [x] T030 [P] Implement POST /api/assessment/monthly (submit monthly data + validation)
+- [x] T031 [P] Implement GET /api/assessment/monthly/:month (retrieve monthly report)
+- [x] T032 [P] Implement GET /api/assessment/year-end (retrieve year-end summary)
+- [x] T033 [P] Implement POST /api/assessment/goals (create leader goal)
+- [x] T034 [P] Implement GET /api/assessment/goals (query goals with filters)
+- [x] T035 [P] Implement PUT /api/assessment/goals/:id (update goal status)
+- [x] T036 [P] Implement POST /api/assessment/config (load/update configuration)
+- [x] T037 Mount assessment routes on main Express app in `backend/src/index.ts`
+- [x] T038 Create `backend/src/modules/assessment/__tests__/integration.test.ts` (Supertest)
 
 ### Phase 6 Acceptance Criteria
 
@@ -164,14 +164,14 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ### Phase 7 Tasks
 
-- [ ] T039 Create `backend/src/modules/assessment/README.md` (setup, usage, testing)
-- [ ] T040 Add JSDoc comments to all service methods (focus on Goal 1–3 formulas)
-- [ ] T041 Create `ASSESSMENT_API.md` with OpenAPI contract (all 7 routes, request/response schemas)
-- [ ] T042 Create test data seeding script for demo dataset (12 months of sample data)
-- [ ] T043 Run full test suite and verify >80% code coverage for business logic
-- [ ] T044 Performance benchmark: confirm <2s report generation, <5s config reload
-- [ ] T045 Final validation: generate 12-month reports and compare against Excel reference
-- [ ] T046 Add to main backend index and verify no import errors
+- [x] T039 Create `backend/src/modules/assessment/README.md` (setup, usage, testing)
+- [x] T040 Add JSDoc comments to all service methods (focus on Goal 1–3 formulas)
+- [x] T041 Create `ASSESSMENT_API.md` with OpenAPI contract (all 7 routes, request/response schemas)
+- [x] T042 Create test data seeding script for demo dataset (12 months of sample data)
+- [x] T043 Run full test suite and verify >80% code coverage for business logic
+- [x] T044 Performance benchmark: confirm <2s report generation, <5s config reload
+- [x] T045 Final validation: generate 12-month reports and compare against Excel reference
+- [x] T046 Add to main backend index and verify no import errors
 
 ### Phase 7 Acceptance Criteria
 

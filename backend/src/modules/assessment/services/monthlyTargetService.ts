@@ -109,7 +109,8 @@ export function getMonthlyTarget(
 
     month = months[monthIdentifier - 1];
   } else {
-    month = monthIdentifier;
+    // Normalize month string to Title Case
+    month = monthIdentifier.charAt(0).toUpperCase() + monthIdentifier.slice(1).toLowerCase();
   }
 
   return deriveMonthlyTargets(config, month);
