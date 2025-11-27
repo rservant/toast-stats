@@ -47,6 +47,19 @@ function getConfigPath(districtNumber: number, programYear: string): string {
 export async function saveMonthlyAssessment(data: MonthlyAssessment): Promise<void> {
   await ensureDataDir();
   const filePath = getAssessmentPath(data.district_number, data.program_year, data.month);
+  // Enforce immutability for auto-generated assessments: do not overwrite existing file
+  try {
+    await fs.access(filePath);
+    // If file exists, throw - caller should delete first to regenerate
+    throw new Error('Assessment already exists and is immutable. Delete before regenerating.');
+  } catch (err) {
+    // If ENOENT, file does not exist and we can proceed
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      // rethrow other access errors
+      throw err;
+    }
+  }
+
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
@@ -97,6 +110,49 @@ export async function listMonthlyAssessments(
     }
     throw err;
   }
+}
+
+/**
+ * Delete a monthly assessment file (used for regeneration workflows)
+ */
+export async function deleteMonthlyAssessment(
+  districtNumber: number,
+  programYear: string,
+  month: string
+): Promise<boolean> {
+  try {
+    const filePath = getAssessmentPath(districtNumber, programYear, month)
+    await fs.unlink(filePath)
+    return true
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw err
+  }
+}
+
+/**
+ * Get audit trail for a monthly assessment (created_at, generated_from_cache_date, cache_files_used)
+ */
+export async function getAuditTrail(
+  districtNumber: number,
+  programYear: string,
+  month: string
+): Promise<{ created_at: string | null; generated_from_cache_date?: string | null; cache_files_used?: string[] } > {
+  const assessment = await getMonthlyAssessment(districtNumber, programYear, month)
+  if (!assessment) return { created_at: null }
+
+  const created_at = assessment.created_at ?? null
+  const generated_from_cache_date = (assessment as any).generated_from_cache_date ?? null
+  const cache_files_used: string[] = []
+
+  if ((assessment as any).data_sources) {
+    for (const key of Object.keys((assessment as any).data_sources)) {
+      const entry = (assessment as any).data_sources[key]
+      if (entry && entry.cache_file) cache_files_used.push(entry.cache_file)
+    }
+  }
+
+  return { created_at, generated_from_cache_date, cache_files_used }
 }
 
 /**
