@@ -9,12 +9,11 @@
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
-import * as assessmentCalculator from '../services/assessmentCalculator.js';
 import * as districtLeaderGoalService from '../services/districtLeaderGoalService.js';
 import * as assessmentReportGenerator from '../services/assessmentReportGenerator.js';
-import { assessmentStore } from '../storage/assessmentStore.js';
+import * as assessmentStore from '../storage/assessmentStore.js';
 import { loadConfig } from '../services/configService.js';
-import type { MonthlyAssessment, DistrictLeaderGoal } from '../types/assessment.js';
+import type { MonthlyAssessment } from '../types/assessment.js';
 
 const router = Router();
 
@@ -27,9 +26,9 @@ interface ApiError extends Error {
 }
 
 function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
-): (req: Request, res: Response, next: NextFunction) => Promise<void> {
-  return (req: Request, res: Response, next: NextFunction) => {
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>,
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
@@ -40,7 +39,7 @@ function asyncHandler(
  */
 router.post(
   '/monthly',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { district_number, program_year, month, ...data } = req.body;
 
     if (!district_number || !program_year || !month) {
@@ -62,7 +61,7 @@ router.post(
       updated_at: new Date().toISOString(),
     };
 
-    await assessmentStore.save(assessment);
+    await assessmentStore.saveMonthlyAssessment(assessment);
 
     res.status(201).json({
       success: true,
@@ -77,10 +76,10 @@ router.post(
  */
 router.get(
   '/monthly/:districtId/:programYear/:month',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear, month } = req.params;
 
-    const assessment = await assessmentStore.get(
+    const assessment = await assessmentStore.getMonthlyAssessment(
       parseInt(districtId, 10),
       programYear,
       month
@@ -109,15 +108,15 @@ router.get(
  */
 router.get(
   '/goals',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const {
       districtNumber,
       programYear,
       assignedTo,
       month,
       status,
-      deadlineAfter,
-      deadlineBefore,
+      startDate,
+      endDate,
     } = req.query;
 
     if (!districtNumber || !programYear) {
@@ -133,11 +132,11 @@ router.get(
     const goals = await districtLeaderGoalService.queryGoals({
       district_number: parseInt(districtNumber as string, 10),
       program_year: programYear as string,
-      assigned_to: assignedTo as 'DD' | 'PQD' | 'CGD' | undefined,
+      role: assignedTo as 'DD' | 'PQD' | 'CGD' | undefined,
       month: month as string | undefined,
-      status: status as string | undefined,
-      deadline_after: deadlineAfter as string | undefined,
-      deadline_before: deadlineBefore as string | undefined,
+      status: (status as 'in_progress' | 'completed' | 'overdue' | undefined),
+      startDate: startDate as string | undefined,
+      endDate: endDate as string | undefined,
     });
 
     res.json({
@@ -154,29 +153,29 @@ router.get(
  */
 router.post(
   '/goals',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { district_number, program_year, text, assigned_to, deadline, month } =
       req.body;
 
-    if (!district_number || !program_year || !text || !assigned_to || !deadline || !month) {
+    if (!district_number || !program_year || !text || !assigned_to || !deadline) {
       res.status(400).json({
         error: {
           code: 'INVALID_REQUEST',
           message:
-            'district_number, program_year, text, assigned_to, deadline, and month are required',
+            'district_number, program_year, text, assigned_to, and deadline are required',
         },
       });
       return;
     }
 
-    const goal = await districtLeaderGoalService.createGoal({
+    const goal = await districtLeaderGoalService.createGoal(
       district_number,
       program_year,
       text,
       assigned_to,
       deadline,
       month,
-    });
+    );
 
     res.status(201).json({
       success: true,
@@ -191,7 +190,7 @@ router.post(
  */
 router.put(
   '/goals/:goalId/status',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { goalId } = req.params;
     const { status } = req.body;
 
@@ -220,10 +219,27 @@ router.put(
  */
 router.delete(
   '/goals/:goalId',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { goalId } = req.params;
 
-    const result = await districtLeaderGoalService.deleteGoalById(goalId);
+    // Get goal to retrieve district and program year
+    const goal = await districtLeaderGoalService.getGoalById(goalId);
+
+    if (!goal) {
+      res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Goal not found',
+        },
+      });
+      return;
+    }
+
+    const result = await districtLeaderGoalService.deleteGoalById(
+      goalId,
+      goal.district_number,
+      goal.program_year,
+    );
 
     if (!result) {
       res.status(404).json({
@@ -248,7 +264,7 @@ router.delete(
  */
 router.get(
   '/report/:districtId/:programYear',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear } = req.params;
 
     const districtNumber = parseInt(districtId, 10);
@@ -282,37 +298,24 @@ router.get(
       'June',
     ];
 
-    const monthlyReports: Record<string, unknown> = {};
-    let allGoalsOnTrack = true;
+    const monthlyReports: assessmentReportGenerator.MonthlyReport[] = [];
 
     for (const month of months) {
-      const assessment = await assessmentStore.get(districtNumber, programYear, month);
+      const assessment = await assessmentStore.getMonthlyAssessment(districtNumber, programYear, month);
 
       if (assessment) {
-        const goals = assessmentCalculator.calculateAllGoals(assessment, config);
         const monthReport = assessmentReportGenerator.renderMonthlyReport(
           assessment,
-          goals,
           config
         );
-        monthlyReports[month] = monthReport;
-
-        if (
-          monthReport.goal_1.status === 'Off Track' ||
-          monthReport.goal_2.status === 'Off Track' ||
-          monthReport.goal_3.status === 'Off Track'
-        ) {
-          allGoalsOnTrack = false;
-        }
+        monthlyReports.push(monthReport);
       }
     }
 
     // Generate year-end summary
     const yearEndSummary = assessmentReportGenerator.renderYearEndSummary(
-      districtNumber,
-      programYear,
-      config,
-      monthlyReports as Record<string, assessmentReportGenerator.MonthlyReport>
+      monthlyReports,
+      config
     );
 
     res.json({
@@ -334,7 +337,7 @@ router.get(
  */
 router.get(
   '/goals/statistics/:districtId/:programYear',
-  asyncHandler(async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear } = req.params;
 
     const stats = await districtLeaderGoalService.getGoalStatistics(
@@ -353,7 +356,7 @@ router.get(
  * Error handling middleware for this router
  */
 router.use(
-  (err: ApiError, _req: Request, res: Response, _next: NextFunction) => {
+  (err: ApiError, _req: Request, res: Response, _next: NextFunction): void => {
     const status = err.status || 500;
     const code = err.code || 'INTERNAL_SERVER_ERROR';
 
