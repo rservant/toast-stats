@@ -32,6 +32,7 @@ import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay';
 import { DistrictBackfillButton } from '../components/DistrictBackfillButton';
 import { LazyChart } from '../components/LazyChart';
 import { useBackfillContext } from '../contexts/BackfillContext';
+import AssessmentPanel from '../components/AssessmentPanel';
 
 type TabType = 'overview' | 'realtime' | 'clubs' | 'divisions' | 'trends' | 'analytics';
 
@@ -115,6 +116,7 @@ const DistrictDetailPage: React.FC = () => {
     { id: 'divisions', label: 'Divisions & Areas' },
     { id: 'trends', label: 'Trends' },
     { id: 'analytics', label: 'Analytics' },
+    { id: 'assessment', label: 'Assessment' },
   ];
 
   // Handle club click
@@ -450,6 +452,15 @@ const DistrictDetailPage: React.FC = () => {
               </>
             )}
           </div>
+            {activeTab === 'assessment' && districtId && (
+              <>
+                <AssessmentPanel
+                  districtId={districtId}
+                  selectedProgramYear={selectedProgramYear}
+                  selectedDate={selectedDate}
+                />
+              </>
+            )}
         </div>
       </div>
     </ErrorBoundary>
