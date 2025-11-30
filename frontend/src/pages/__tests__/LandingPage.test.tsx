@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
 import LandingPage from '../LandingPage'
-import { BackfillProvider } from '../../contexts/BackfillContext'
 import * as apiModule from '../../services/api'
+import { renderWithProviders } from '../../tests/test-utils'
 
 // Mock the API client
 vi.mock('../../services/api', () => ({
@@ -14,26 +12,7 @@ vi.mock('../../services/api', () => ({
   },
 }))
 
-// Helper to render component with all required providers
-const renderWithProviders = (component: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  })
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <BackfillProvider>
-          {component}
-        </BackfillProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  )
-}
+// renderWithProviders is provided by test-utils to include ProgramYearProvider and common wrappers
 
 describe('LandingPage - Percentage Formatting', () => {
   beforeEach(() => {
