@@ -4,6 +4,7 @@ import { Tooltip, InfoIcon } from './Tooltip';
 
 interface DistinguishedProgressChartProps {
   distinguishedClubs: {
+    smedley: number;
     presidents: number;
     select: number;
     distinguished: number;
@@ -25,6 +26,9 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
   const projectedPercentage = totalClubs > 0 ? (distinguishedProjection / totalClubs) * 100 : 0;
 
   // Calculate individual level percentages for the breakdown
+  const smedleyPercentage = distinguishedClubs.total > 0 
+    ? (distinguishedClubs.smedley / distinguishedClubs.total) * 100 
+    : 0;
   const presidentsPercentage = distinguishedClubs.total > 0 
     ? (distinguishedClubs.presidents / distinguishedClubs.total) * 100 
     : 0;
@@ -39,7 +43,7 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center gap-2 mb-6">
         <h3 className="text-xl font-bold text-gray-900">Distinguished Club Progress</h3>
-        <Tooltip content="Track clubs achieving Distinguished (5+ goals), Select (7+ goals), or President's (9+ goals) status">
+        <Tooltip content="Track clubs achieving Distinguished (5+ goals), Select (7+ goals), President's (9+ goals), or Smedley (10+ goals) status">
           <InfoIcon />
         </Tooltip>
       </div>
@@ -104,6 +108,25 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
           <div className="border-t pt-4">
             <h4 className="text-sm font-semibold text-gray-900 mb-3">Breakdown by Level</h4>
             <div className="space-y-3">
+              {/* Smedley Distinguished */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
+                    <span className="text-sm text-gray-700">Smedley Distinguished</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">
+                    {distinguishedClubs.smedley}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-yellow-600 transition-all duration-500"
+                    style={{ width: `${smedleyPercentage}%` }}
+                  ></div>
+                </div>
+              </div>
+
               {/* President's Distinguished */}
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -164,17 +187,21 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
           </div>
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+          <div className="grid grid-cols-4 gap-3 pt-4 border-t">
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-700">{distinguishedClubs.presidents}</p>
+              <p className="text-xl font-bold text-yellow-600">{distinguishedClubs.smedley}</p>
+              <p className="text-xs text-gray-600 mt-1">Smedley</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-purple-700">{distinguishedClubs.presidents}</p>
               <p className="text-xs text-gray-600 mt-1">President's</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{distinguishedClubs.select}</p>
+              <p className="text-xl font-bold text-purple-600">{distinguishedClubs.select}</p>
               <p className="text-xs text-gray-600 mt-1">Select</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-500">{distinguishedClubs.distinguished}</p>
+              <p className="text-xl font-bold text-purple-500">{distinguishedClubs.distinguished}</p>
               <p className="text-xs text-gray-600 mt-1">Distinguished</p>
             </div>
           </div>
