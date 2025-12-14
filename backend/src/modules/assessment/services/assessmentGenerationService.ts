@@ -1,5 +1,7 @@
 import CacheIntegrationService from './cacheIntegrationService.js'
 import { saveMonthlyAssessment, getMonthlyAssessment } from '../storage/assessmentStore.js'
+import { calculateAllGoals } from './assessmentCalculator.js'
+import { loadConfig } from './configService.js'
 
 export class AssessmentGenerationService {
   private cacheService: CacheIntegrationService
@@ -77,6 +79,20 @@ export class AssessmentGenerationService {
       read_only: true,
       created_at: now,
       updated_at: now
+    }
+
+    // Calculate goals using assessmentCalculator
+    try {
+      const config = await loadConfig(district_number, program_year)
+      if (config) {
+        const goals = calculateAllGoals(assessment, config)
+        assessment.goal_1_status = goals.goal_1_status
+        assessment.goal_2_status = goals.goal_2_status
+        assessment.goal_3_status = goals.goal_3_status
+      }
+    } catch (err) {
+      // If config loading fails, log but continue - goals will be empty
+      console.warn('Failed to calculate goals during assessment generation:', err)
     }
 
     await saveMonthlyAssessment(assessment)

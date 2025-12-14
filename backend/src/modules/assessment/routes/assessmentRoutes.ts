@@ -92,8 +92,37 @@ router.post(
     const generator = new AssessmentGenerationService();
 
     try {
-      const assessment = await generator.generateMonthlyAssessment({ district_number, program_year, month, cache_date });
-      res.status(201).json({ success: true, data: { assessment } });
+        // Server-side enforcement: only allow generation for the current month if the previous month is complete
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const currentMonth = todayIso.slice(0, 7); // YYYY-MM
+
+        // compute previous month's last calendar day string YYYY-MM-DD
+        const prev = new Date();
+        prev.setDate(1);
+        prev.setMonth(prev.getMonth() - 1);
+        const prevYear = prev.getFullYear();
+        const prevMonthIdx = prev.getMonth();
+        const prevLastDay = new Date(prevYear, prevMonthIdx + 1, 0).getDate();
+        const prevLastStr = `${prevYear.toString().padStart(4, '0')}-${String(prevMonthIdx + 1).padStart(2, '0')}-${String(prevLastDay).padStart(2, '0')}`;
+
+        // If client requests generation for the current month, verify cache contains prevLastStr
+        if (month === currentMonth) {
+          const cacheSvc = new CacheIntegrationService();
+          const dates = await cacheSvc.getAvailableDates(String(district_number));
+          const available = (dates || []).map((d: any) => d.date);
+          if (!available.includes(prevLastStr)) {
+            res.status(400).json({
+              error: {
+                code: 'PREVIOUS_MONTH_INCOMPLETE',
+                message: `Previous month is not complete. Cache must include ${prevLastStr} before generating current month's assessment.`,
+              },
+            });
+            return;
+          }
+        }
+
+        const assessment = await generator.generateMonthlyAssessment({ district_number, program_year, month, cache_date });
+        res.status(201).json({ success: true, data: { assessment } });
     } catch (err) {
       res.status(400).json({ error: { code: 'GENERATION_FAILED', message: (err as Error).message } });
     }
@@ -109,9 +138,12 @@ router.get(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear, month } = req.params;
 
+    // Sanitize programYear (replace slashes with underscores to match storage)
+    const sanitizedProgramYear = programYear.replace(/\//g, '_');
+
     const assessment = await assessmentStore.getMonthlyAssessment(
       parseInt(districtId, 10),
-      programYear,
+      sanitizedProgramYear,
       month
     );
 
@@ -126,16 +158,44 @@ router.get(
     }
 
     // Include audit trail and immutable flag in response
-    const audit = await assessmentStore.getAuditTrail(parseInt(districtId, 10), programYear, month)
+    const audit = await assessmentStore.getAuditTrail(parseInt(districtId, 10), sanitizedProgramYear, month)
 
     res.json({
       success: true,
+      data: assessment,
+      audit_trail: audit,
+      read_only: !!(assessment as any)?.read_only,
+      immutable: true,
+    });
+  })
+);
+
+/**
+ * DELETE /api/assessment/monthly/:districtId/:programYear/:month
+ * Delete a monthly assessment (allows regeneration)
+ */
+router.delete(
+  '/monthly/:districtId/:programYear/:month',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { districtId, programYear, month } = req.params;
+
+    // Sanitize programYear (replace slashes with underscores to match storage)
+    const sanitizedProgramYear = programYear.replace(/\//g, '_');
+
+    await assessmentStore.deleteMonthlyAssessment(
+      parseInt(districtId, 10),
+      sanitizedProgramYear,
+      month
+    );
+
+    res.json({
+      success: true,
+      message: 'Assessment deleted successfully',
       data: {
-        assessment,
-        audit_trail: audit,
-        read_only: !!(assessment as any)?.read_only,
-        immutable: true,
-      },
+        district_id: districtId,
+        program_year: programYear,
+        month,
+      }
     });
   })
 );
