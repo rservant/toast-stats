@@ -101,19 +101,21 @@ export const useAssessment = () => {
 
   const generateAssessment = async (payload: { districtId: string; programYearStart: string; programYearEnd: string; month: string }) => {
     // POST to backend to persist immutable assessment
-    const resp = await apiClient.post('/assessment/generate', payload);
+    // Backend expects district_number, program_year, month (transform from frontend payload)
+    const backendPayload = {
+      district_number: Number(payload.districtId),
+      program_year: `${payload.programYearStart}/${payload.programYearEnd}`,
+      month: payload.month,
+    };
+    console.log('useAssessment.generateAssessment - transformed payload:', backendPayload);
+    const resp = await apiClient.post('/assessment/generate', backendPayload);
     return resp.data;
   };
 
   const fetchAssessment = async (districtId: string, programYear: string, month: string) => {
-    // GET persisted assessment from server. Backend expects month param in path and district/program as query params.
+    // GET persisted assessment from server. Backend expects path params: /monthly/:districtId/:programYear/:month
     try {
-      const resp = await apiClient.get(`/assessment/monthly/${encodeURIComponent(month)}`, {
-        params: {
-          district_number: Number(districtId),
-          program_year: programYear,
-        },
-      });
+      const resp = await apiClient.get(`/assessment/monthly/${districtId}/${encodeURIComponent(programYear)}/${encodeURIComponent(month)}`);
       return resp.data;
     } catch (err: any) {
       // If server returns 404 or no assessment, we return null for caller to decide
@@ -122,12 +124,19 @@ export const useAssessment = () => {
     }
   };
 
+  const deleteAssessment = async (districtId: string, programYear: string, month: string) => {
+    // DELETE persisted assessment from server
+    const resp = await apiClient.delete(`/assessment/monthly/${districtId}/${encodeURIComponent(programYear)}/${encodeURIComponent(month)}`);
+    return resp.data;
+  };
+
   return {
     isComputing,
     error,
     computeMonthlySummary,
     generateAssessment,
     fetchAssessment,
+    deleteAssessment,
   };
 };
 

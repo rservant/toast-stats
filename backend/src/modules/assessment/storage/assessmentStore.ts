@@ -7,7 +7,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { MonthlyAssessment, DistrictLeaderGoal, DistrictConfig } from '../types/assessment.js';
 
-const DATA_DIR = path.join(process.cwd(), 'backend', 'src', 'modules', 'assessment', 'storage', 'data');
+const DATA_DIR = path.join(process.cwd(), 'src', 'modules', 'assessment', 'storage', 'data');
 
 /**
  * Ensure data directory exists
@@ -24,21 +24,27 @@ async function ensureDataDir(): Promise<void> {
  * Get file path for monthly assessment data
  */
 function getAssessmentPath(districtNumber: number, programYear: string, month: string): string {
-  return path.join(DATA_DIR, `assessment_${districtNumber}_${programYear}_${month}.json`);
+  // Sanitize programYear to remove path separators (e.g., "2025-07-01/2026-06-30" -> "2025-07-01_2026-06-30")
+  const sanitizedYear = programYear.replace(/\//g, '_');
+  return path.join(DATA_DIR, `assessment_${districtNumber}_${sanitizedYear}_${month}.json`);
 }
 
 /**
  * Get file path for goals
  */
 function getGoalsPath(districtNumber: number, programYear: string): string {
-  return path.join(DATA_DIR, `goals_${districtNumber}_${programYear}.json`);
+  // Sanitize programYear to remove path separators
+  const sanitizedYear = programYear.replace(/\//g, '_');
+  return path.join(DATA_DIR, `goals_${districtNumber}_${sanitizedYear}.json`);
 }
 
 /**
  * Get file path for configuration
  */
 function getConfigPath(districtNumber: number, programYear: string): string {
-  return path.join(DATA_DIR, `config_${districtNumber}_${programYear}.json`);
+  // Sanitize programYear to remove path separators
+  const sanitizedYear = programYear.replace(/\//g, '_');
+  return path.join(DATA_DIR, `config_${districtNumber}_${sanitizedYear}.json`);
 }
 
 /**
@@ -84,6 +90,26 @@ export async function getMonthlyAssessment(
 }
 
 /**
+ * Delete monthly assessment data (allows regeneration)
+ */
+export async function deleteMonthlyAssessment(
+  districtNumber: number,
+  programYear: string,
+  month: string
+): Promise<void> {
+  try {
+    const filePath = getAssessmentPath(districtNumber, programYear, month);
+    await fs.unlink(filePath);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      // File doesn't exist, return silently (idempotent)
+      return;
+    }
+    throw err;
+  }
+}
+
+/**
  * List all assessments for a district and year
  */
 export async function listMonthlyAssessments(
@@ -109,24 +135,6 @@ export async function listMonthlyAssessments(
       return [];
     }
     throw err;
-  }
-}
-
-/**
- * Delete a monthly assessment file (used for regeneration workflows)
- */
-export async function deleteMonthlyAssessment(
-  districtNumber: number,
-  programYear: string,
-  month: string
-): Promise<boolean> {
-  try {
-    const filePath = getAssessmentPath(districtNumber, programYear, month)
-    await fs.unlink(filePath)
-    return true
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false
-    throw err
   }
 }
 
