@@ -32,6 +32,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
+import type { DistrictStatistics } from '../types/districts.js'
 
 export interface DistrictBackfillRequest {
   districtId: string
@@ -64,6 +65,14 @@ export interface DistrictBackfillResponse {
   status: 'processing' | 'complete' | 'error'
   progress: DistrictBackfillProgress
   error?: string
+}
+
+export interface ReconciliationDataFetchResult {
+  success: boolean
+  data?: DistrictStatistics
+  sourceDataDate?: string
+  error?: string
+  isDataAvailable: boolean
 }
 
 export class DistrictBackfillService {
@@ -262,6 +271,191 @@ export class DistrictBackfillService {
   }
 
   /**
+   * Fetch current district data for reconciliation monitoring
+   * 
+   * This method is specifically designed for reconciliation processes to fetch
+   * the latest available data from the dashboard and extract the source data date.
+   * 
+   * @param districtId - The district ID to fetch data for
+   * @param targetDate - The target date to fetch data for (usually month-end date)
+   * @returns ReconciliationDataFetchResult with data and source date information
+   */
+  async fetchReconciliationData(
+    districtId: string, 
+    targetDate: string
+  ): Promise<ReconciliationDataFetchResult> {
+    logger.info('Fetching reconciliation data', { districtId, targetDate })
+
+    try {
+      // Fetch all three report types for the specific date
+      const [districtPerformance, divisionPerformance, clubPerformance] = await Promise.all([
+        this.scraper.getDistrictPerformance(districtId, targetDate),
+        this.scraper.getDivisionPerformance(districtId, targetDate),
+        this.scraper.getClubPerformance(districtId, targetDate)
+      ])
+
+      // Check if we got valid data
+      if (
+        districtPerformance.length === 0 &&
+        divisionPerformance.length === 0 &&
+        clubPerformance.length === 0
+      ) {
+        logger.info('No data available for reconciliation date', { districtId, targetDate })
+        return {
+          success: true,
+          isDataAvailable: false,
+          error: 'No data available for the specified date'
+        }
+      }
+
+      // Extract source data date from the dashboard
+      const sourceDataDate = this.extractSourceDataDate(
+        districtPerformance,
+        divisionPerformance,
+        clubPerformance,
+        targetDate
+      )
+
+      // Convert raw data to DistrictStatistics format
+      const districtStats = this.convertToDistrictStatistics(
+        districtId,
+        sourceDataDate,
+        districtPerformance,
+        divisionPerformance,
+        clubPerformance
+      )
+
+      logger.info('Reconciliation data fetched successfully', {
+        districtId,
+        targetDate,
+        sourceDataDate,
+        districtRecords: districtPerformance.length,
+        divisionRecords: divisionPerformance.length,
+        clubRecords: clubPerformance.length,
+        totalMembers: districtStats.membership.total
+      })
+
+      return {
+        success: true,
+        data: districtStats,
+        sourceDataDate,
+        isDataAvailable: true
+      }
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      
+      // Check if it's a "date not available" error vs actual failure
+      if (
+        errorMessage.includes('not available') ||
+        errorMessage.includes('dashboard returned') ||
+        errorMessage.includes('Date selection failed') ||
+        errorMessage.includes('not found') ||
+        errorMessage.includes('404')
+      ) {
+        logger.info('Date not available on dashboard for reconciliation', {
+          districtId,
+          targetDate,
+          error: errorMessage
+        })
+        return {
+          success: true,
+          isDataAvailable: false,
+          error: errorMessage
+        }
+      }
+
+      // Actual error
+      logger.error('Failed to fetch reconciliation data', {
+        districtId,
+        targetDate,
+        error: errorMessage
+      })
+
+      return {
+        success: false,
+        isDataAvailable: false,
+        error: errorMessage
+      }
+    }
+  }
+
+  /**
+   * Get cached district data for reconciliation comparison
+   * 
+   * @param districtId - The district ID
+   * @param targetDate - The target date (usually month-end date)
+   * @returns DistrictStatistics from cache or null if not found
+   */
+  async getCachedReconciliationData(
+    districtId: string, 
+    targetDate: string
+  ): Promise<DistrictStatistics | null> {
+    logger.debug('Getting cached reconciliation data', { districtId, targetDate })
+
+    try {
+      // Check if we have cached data for this date
+      const cachedDates = await this.cacheManager.getCachedDatesForDistrict(districtId)
+      
+      if (!cachedDates.includes(targetDate)) {
+        logger.debug('No cached data found for reconciliation date', { districtId, targetDate })
+        return null
+      }
+
+      // Get the cached data
+      const cachedData = await this.cacheManager.getDistrictData(districtId, targetDate)
+      
+      if (!cachedData) {
+        logger.warn('Cached date exists but data not found', { districtId, targetDate })
+        return null
+      }
+
+      // Convert cached data to DistrictStatistics format
+      const districtStats = this.convertToDistrictStatistics(
+        districtId,
+        targetDate, // Use target date as source date for cached data
+        cachedData.districtPerformance,
+        cachedData.divisionPerformance,
+        cachedData.clubPerformance
+      )
+
+      logger.debug('Cached reconciliation data retrieved', {
+        districtId,
+        targetDate,
+        totalMembers: districtStats.membership.total
+      })
+
+      return districtStats
+
+    } catch (error) {
+      logger.error('Failed to get cached reconciliation data', {
+        districtId,
+        targetDate,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      return null
+    }
+  }
+
+  /**
+   * Register a reconciliation monitoring hook
+   * 
+   * This allows the reconciliation system to be notified when new data
+   * is fetched during regular backfill operations.
+   * 
+   * @param callback - Function to call when data is fetched
+   */
+  onDataFetched(callback: (districtId: string, date: string, data: DistrictStatistics) => void): void {
+    // Store the callback for use in processBackfill
+    this.reconciliationHooks = this.reconciliationHooks || []
+    this.reconciliationHooks.push(callback)
+    
+    logger.debug('Reconciliation monitoring hook registered')
+  }
+
+  private reconciliationHooks: Array<(districtId: string, date: string, data: DistrictStatistics) => void> = []
+
+  /**
    * Get program year start date (July 1 of current or previous year)
    */
   private getProgramYearStart(): Date {
@@ -273,6 +467,192 @@ export class DistrictBackfillService {
     // Otherwise use current year's July 1
     const programYearStartYear = currentMonth < 6 ? currentYear - 1 : currentYear
     return new Date(programYearStartYear, 6, 1) // Month 6 = July
+  }
+
+  /**
+   * Extract source data date from dashboard data
+   * 
+   * This method attempts to extract the "as of" date from the dashboard data.
+   * The dashboard often shows data with a note like "Data as of November 15, 2024"
+   * 
+   * @param districtPerformance - District performance data
+   * @param divisionPerformance - Division performance data  
+   * @param clubPerformance - Club performance data
+   * @param fallbackDate - Fallback date if no source date can be extracted
+   * @returns The extracted source data date or fallback date
+   */
+  private extractSourceDataDate(
+    districtPerformance: any[],
+    divisionPerformance: any[],
+    clubPerformance: any[],
+    fallbackDate: string
+  ): string {
+    // Look for date indicators in the data
+    // The dashboard sometimes includes metadata about when the data was last updated
+    
+    // Check district performance data first (most likely to have metadata)
+    const sourceDate = this.findSourceDateInData(districtPerformance) ||
+                      this.findSourceDateInData(divisionPerformance) ||
+                      this.findSourceDateInData(clubPerformance)
+
+    if (sourceDate) {
+      logger.debug('Source data date extracted from dashboard', { 
+        sourceDate, 
+        fallbackDate 
+      })
+      return sourceDate
+    }
+
+    // If no source date found, use the fallback date
+    logger.debug('No source data date found, using fallback', { fallbackDate })
+    return fallbackDate
+  }
+
+  /**
+   * Search for source date indicators in data records
+   * 
+   * @param data - Array of data records to search
+   * @returns Extracted date string or null if not found
+   */
+  private findSourceDateInData(data: any[]): string | null {
+    if (!data || data.length === 0) {
+      return null
+    }
+
+    // Look through the data for date-related fields or metadata
+    for (const record of data) {
+      if (typeof record === 'object' && record !== null) {
+        // Check for common date field names
+        const dateFields = ['asOfDate', 'dataDate', 'reportDate', 'lastUpdated', 'timestamp']
+        
+        for (const field of dateFields) {
+          if (record[field] && typeof record[field] === 'string') {
+            // Validate that it looks like a date
+            const dateMatch = record[field].match(/\d{4}-\d{2}-\d{2}/)
+            if (dateMatch) {
+              return dateMatch[0]
+            }
+          }
+        }
+
+        // Look for date patterns in any string field
+        for (const [key, value] of Object.entries(record)) {
+          if (typeof value === 'string') {
+            // Look for patterns like "as of November 15, 2024" or "Data as of 2024-11-15"
+            const asOfMatch = value.match(/as of\s+(\w+\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2})/i)
+            if (asOfMatch) {
+              const dateStr = asOfMatch[1]
+              // Try to parse and convert to YYYY-MM-DD format
+              try {
+                const parsedDate = new Date(dateStr)
+                if (!isNaN(parsedDate.getTime())) {
+                  return parsedDate.toISOString().split('T')[0]
+                }
+              } catch (e) {
+                // Continue searching
+              }
+            }
+
+            // Look for direct date patterns
+            const directDateMatch = value.match(/\d{4}-\d{2}-\d{2}/)
+            if (directDateMatch) {
+              return directDateMatch[0]
+            }
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Convert raw dashboard data to DistrictStatistics format
+   * 
+   * @param districtId - The district ID
+   * @param asOfDate - The source data date
+   * @param districtPerformance - District performance data
+   * @param divisionPerformance - Division performance data
+   * @param clubPerformance - Club performance data
+   * @returns DistrictStatistics object
+   */
+  private convertToDistrictStatistics(
+    districtId: string,
+    asOfDate: string,
+    districtPerformance: any[],
+    divisionPerformance: any[],
+    clubPerformance: any[]
+  ): DistrictStatistics {
+    // Calculate membership statistics from club data
+    const totalMembers = clubPerformance.reduce((sum, club) => {
+      const members = parseInt(club['Active Members'] || club['Membership'] || '0')
+      return sum + (isNaN(members) ? 0 : members)
+    }, 0)
+
+    // Calculate club statistics
+    const totalClubs = clubPerformance.length
+    const activeClubs = clubPerformance.filter(club => 
+      club['Status'] === 'Active' || !club['Status'] || club['Status'] === ''
+    ).length
+    
+    const suspendedClubs = clubPerformance.filter(club => 
+      club['Status'] === 'Suspended'
+    ).length
+
+    const ineligibleClubs = clubPerformance.filter(club => 
+      club['Status'] === 'Ineligible'
+    ).length
+
+    const lowClubs = clubPerformance.filter(club => {
+      const members = parseInt(club['Active Members'] || club['Membership'] || '0')
+      return !isNaN(members) && members < 20 // Typically low membership threshold
+    }).length
+
+    // Calculate distinguished clubs
+    const distinguishedClubs = clubPerformance.filter(club => {
+      // Look for distinguished status indicators
+      return club['Distinguished Status'] === 'Distinguished' ||
+             club['Distinguished Status'] === 'Select Distinguished' ||
+             club['Distinguished Status'] === "President's Distinguished" ||
+             club['DCP Status'] === 'Distinguished' ||
+             club['DCP Status'] === 'Select Distinguished' ||
+             club['DCP Status'] === "President's Distinguished"
+    }).length
+
+    // Calculate education statistics (simplified)
+    const totalAwards = clubPerformance.reduce((sum, club) => {
+      const awards = parseInt(club['Awards'] || club['Total Awards'] || '0')
+      return sum + (isNaN(awards) ? 0 : awards)
+    }, 0)
+
+    return {
+      districtId,
+      asOfDate,
+      membership: {
+        total: totalMembers,
+        change: 0, // Would need historical data to calculate
+        changePercent: 0, // Would need historical data to calculate
+        byClub: clubPerformance.map(club => ({
+          clubId: club['Club Number'] || club['Club ID'] || '',
+          clubName: club['Club Name'] || '',
+          memberCount: parseInt(club['Active Members'] || club['Membership'] || '0') || 0
+        }))
+      },
+      clubs: {
+        total: totalClubs,
+        active: activeClubs,
+        suspended: suspendedClubs,
+        ineligible: ineligibleClubs,
+        low: lowClubs,
+        distinguished: distinguishedClubs
+      },
+      education: {
+        totalAwards,
+        byType: [], // Would need more detailed parsing
+        topClubs: [], // Would need more detailed parsing
+        byMonth: [] // Would need historical data
+      }
+    }
   }
 
   /**
@@ -346,6 +726,39 @@ export class DistrictBackfillService {
                 divisionPerformance,
                 clubPerformance
               )
+
+              // Trigger reconciliation hooks if any are registered
+              if (this.reconciliationHooks && this.reconciliationHooks.length > 0) {
+                try {
+                  const districtStats = this.convertToDistrictStatistics(
+                    districtId,
+                    date,
+                    districtPerformance,
+                    divisionPerformance,
+                    clubPerformance
+                  )
+
+                  for (const hook of this.reconciliationHooks) {
+                    try {
+                      hook(districtId, date, districtStats)
+                    } catch (hookError) {
+                      logger.warn('Reconciliation hook failed', {
+                        backfillId,
+                        districtId,
+                        date,
+                        error: hookError instanceof Error ? hookError.message : String(hookError)
+                      })
+                    }
+                  }
+                } catch (conversionError) {
+                  logger.warn('Failed to convert data for reconciliation hooks', {
+                    backfillId,
+                    districtId,
+                    date,
+                    error: conversionError instanceof Error ? conversionError.message : String(conversionError)
+                  })
+                }
+              }
 
               successCount++
               logger.info('Successfully fetched and cached district data for date', {

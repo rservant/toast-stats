@@ -9,7 +9,12 @@
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "reconciliation:init": "tsx src/scripts/init-reconciliation.ts",
+    "reconciliation:migrate": "tsx src/scripts/reconciliation-migrations.ts migrate",
+    "reconciliation:rollback": "tsx src/scripts/reconciliation-migrations.ts rollback",
+    "reconciliation:status": "tsx src/scripts/reconciliation-migrations.ts status",
+    "reconciliation:validate": "tsx src/scripts/reconciliation-migrations.ts validate"
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",
@@ -33,6 +38,7 @@
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "eslint": "^8.55.0",
+    "fast-check": "^4.4.0",
     "supertest": "^6.3.3",
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",

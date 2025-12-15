@@ -1,0 +1,12 @@
+{
+  "maxReconciliationDays": 5,
+  "stabilityPeriodDays": 3,
+  "checkFrequencyHours": 15,
+  "significantChangeThresholds": {
+    "membershipPercent": 2,
+    "clubCountAbsolute": 2,
+    "distinguishedPercent": 4
+  },
+  "autoExtensionEnabled": false,
+  "maxExtensionDays": 4
+}
