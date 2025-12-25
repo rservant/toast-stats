@@ -27,27 +27,18 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Install backend dependencies
-      working-directory: backend
-      run: npm ci
-    
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-    
     - name: Check Backend TypeScript Compilation
       id: backend-ts
-      working-directory: backend
       run: |
         echo "Checking backend TypeScript compilation..."
-        ERROR_COUNT=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+        ERROR_COUNT=$(npm run typecheck:backend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
         echo "Backend TypeScript errors: $ERROR_COUNT"
         echo "backend_errors=$ERROR_COUNT" >> $GITHUB_OUTPUT
         
         if [ "$ERROR_COUNT" -gt 0 ]; then
           echo "❌ Backend has $ERROR_COUNT TypeScript errors"
           echo "Detailed errors:"
-          npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | head -20
+          npm run typecheck:backend 2>&1 | grep -E "error TS[0-9]+" | head -20
           exit 1
         else
           echo "✅ Backend TypeScript compilation successful"
@@ -55,17 +46,16 @@ jobs:
     
     - name: Check Frontend TypeScript Compilation
       id: frontend-ts
-      working-directory: frontend
       run: |
         echo "Checking frontend TypeScript compilation..."
-        ERROR_COUNT=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+        ERROR_COUNT=$(npm run typecheck:frontend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
         echo "Frontend TypeScript errors: $ERROR_COUNT"
         echo "frontend_errors=$ERROR_COUNT" >> $GITHUB_OUTPUT
         
         if [ "$ERROR_COUNT" -gt 0 ]; then
           echo "❌ Frontend has $ERROR_COUNT TypeScript errors"
           echo "Detailed errors:"
-          npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | head -20
+          npm run typecheck:frontend 2>&1 | grep -E "error TS[0-9]+" | head -20
           exit 1
         else
           echo "✅ Frontend TypeScript compilation successful"
@@ -114,20 +104,7 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Install backend dependencies
-      working-directory: backend
-      run: npm ci
-    
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-    
-    - name: Lint backend
-      working-directory: backend
-      run: npm run lint
-    
-    - name: Lint frontend
-      working-directory: frontend
+    - name: Lint code
       run: npm run lint
     
     - name: Check code formatting
@@ -160,21 +137,12 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Install backend dependencies
-      working-directory: backend
-      run: npm ci
-    
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-    
-    - name: Run backend tests
-      working-directory: backend
-      run: npm test
-    
-    - name: Run frontend tests
-      working-directory: frontend
-      run: npm test
+    - name: Run tests
+      run: |
+        echo "Running backend tests..."
+        npm run test:backend
+        echo "Running frontend tests..."
+        npm run test:frontend
 
   build:
     name: Build Applications
@@ -194,27 +162,18 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
-    - name: Install backend dependencies
-      working-directory: backend
-      run: npm ci
-    
-    - name: Install frontend dependencies
-      working-directory: frontend
-      run: npm ci
-    
-    - name: Build backend
-      working-directory: backend
-      run: npm run build
-    
-    - name: Build frontend
-      working-directory: frontend
-      run: npm run build
+    - name: Build applications
+      run: |
+        echo "Building backend..."
+        npm run build:backend
+        echo "Building frontend..."
+        npm run build:frontend
     
     - name: Build success summary
       run: |
         echo "## Build Results" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Backend build successful" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Frontend build successful" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Backend build completed" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Frontend build completed" >> $GITHUB_STEP_SUMMARY
         echo "✅ All TypeScript compilation checks passed" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🎉 **Ready for deployment!**" >> $GITHUB_STEP_SUMMARY
