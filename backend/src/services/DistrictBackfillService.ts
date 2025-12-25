@@ -30,6 +30,9 @@
 
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
+import { RetryManager } from '../utils/RetryManager.js'
+import { CircuitBreaker, CircuitBreakerManager } from '../utils/CircuitBreaker.js'
+import { AlertManager } from '../utils/AlertManager.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import type { DistrictStatistics } from '../types/districts.js'
@@ -79,10 +82,26 @@ export class DistrictBackfillService {
   private jobs: Map<string, DistrictBackfillJob> = new Map()
   private cacheManager: DistrictCacheManager
   private scraper: ToastmastersScraper
+  private dashboardCircuitBreaker: CircuitBreaker
+  private cacheCircuitBreaker: CircuitBreaker
+  private alertManager: AlertManager
+  private reconciliationHooks: Array<(districtId: string, date: string, data: DistrictStatistics) => void> = []
 
   constructor(cacheManager: DistrictCacheManager, scraper: ToastmastersScraper) {
     this.cacheManager = cacheManager
     this.scraper = scraper
+    this.alertManager = AlertManager.getInstance()
+    
+    // Initialize circuit breakers
+    const circuitManager = CircuitBreakerManager.getInstance()
+    this.dashboardCircuitBreaker = circuitManager.getCircuitBreaker(
+      'dashboard-api',
+      CircuitBreaker.createDashboardCircuitBreaker('dashboard-api').getStats()
+    )
+    this.cacheCircuitBreaker = circuitManager.getCircuitBreaker(
+      'cache-operations',
+      CircuitBreaker.createCacheCircuitBreaker('cache-operations').getStats()
+    )
   }
 
   /**
@@ -275,6 +294,7 @@ export class DistrictBackfillService {
    * 
    * This method is specifically designed for reconciliation processes to fetch
    * the latest available data from the dashboard and extract the source data date.
+   * Uses comprehensive error handling with retry logic and circuit breaker.
    * 
    * @param districtId - The district ID to fetch data for
    * @param targetDate - The target date to fetch data for (usually month-end date)
@@ -286,13 +306,65 @@ export class DistrictBackfillService {
   ): Promise<ReconciliationDataFetchResult> {
     logger.info('Fetching reconciliation data', { districtId, targetDate })
 
+    const context = { districtId, targetDate, operation: 'fetchReconciliationData' }
+
     try {
-      // Fetch all three report types for the specific date
-      const [districtPerformance, divisionPerformance, clubPerformance] = await Promise.all([
-        this.scraper.getDistrictPerformance(districtId, targetDate),
-        this.scraper.getDivisionPerformance(districtId, targetDate),
-        this.scraper.getClubPerformance(districtId, targetDate)
-      ])
+      // Execute with circuit breaker and retry logic
+      const result = await this.dashboardCircuitBreaker.execute(async () => {
+        return await RetryManager.executeWithRetry(
+          async () => {
+            // Fetch all three report types for the specific date
+            const [districtPerformance, divisionPerformance, clubPerformance] = await Promise.all([
+              this.scraper.getDistrictPerformance(districtId, targetDate),
+              this.scraper.getDivisionPerformance(districtId, targetDate),
+              this.scraper.getClubPerformance(districtId, targetDate)
+            ])
+
+            return { districtPerformance, divisionPerformance, clubPerformance }
+          },
+          RetryManager.getDashboardRetryOptions(),
+          context
+        )
+      }, context)
+
+      if (!result.success) {
+        // Check if it's a "date not available" error vs actual failure
+        const errorMessage = result.error?.message || 'Unknown error'
+        
+        if (this.isDateUnavailableError(errorMessage)) {
+          logger.info('No data available for reconciliation date', { districtId, targetDate })
+          return {
+            success: true,
+            isDataAvailable: false,
+            error: 'No data available for the specified date'
+          }
+        }
+
+        // Actual error - send alert for extended failures
+        if (result.attempts >= 3) {
+          await this.alertManager.sendDashboardUnavailableAlert(
+            result.totalDuration,
+            errorMessage,
+            ['reconciliation-data-fetch']
+          )
+        }
+
+        logger.error('Failed to fetch reconciliation data after retries', {
+          districtId,
+          targetDate,
+          attempts: result.attempts,
+          totalDuration: result.totalDuration,
+          error: errorMessage
+        })
+
+        return {
+          success: false,
+          isDataAvailable: false,
+          error: errorMessage
+        }
+      }
+
+      const { districtPerformance, divisionPerformance, clubPerformance } = result.result!
 
       // Check if we got valid data
       if (
@@ -325,6 +397,17 @@ export class DistrictBackfillService {
         clubPerformance
       )
 
+      // Validate data quality
+      const qualityIssues = this.validateDataQuality(districtStats, districtId, targetDate)
+      if (qualityIssues.length > 0) {
+        await this.alertManager.sendDataQualityAlert(
+          districtId,
+          targetDate,
+          'Data quality validation failed',
+          { issues: qualityIssues }
+        )
+      }
+
       logger.info('Reconciliation data fetched successfully', {
         districtId,
         targetDate,
@@ -332,7 +415,9 @@ export class DistrictBackfillService {
         districtRecords: districtPerformance.length,
         divisionRecords: divisionPerformance.length,
         clubRecords: clubPerformance.length,
-        totalMembers: districtStats.membership.total
+        totalMembers: districtStats.membership.total,
+        attempts: result.attempts,
+        duration: result.totalDuration
       })
 
       return {
@@ -345,32 +430,20 @@ export class DistrictBackfillService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
-      // Check if it's a "date not available" error vs actual failure
-      if (
-        errorMessage.includes('not available') ||
-        errorMessage.includes('dashboard returned') ||
-        errorMessage.includes('Date selection failed') ||
-        errorMessage.includes('not found') ||
-        errorMessage.includes('404')
-      ) {
-        logger.info('Date not available on dashboard for reconciliation', {
-          districtId,
-          targetDate,
-          error: errorMessage
-        })
-        return {
-          success: true,
-          isDataAvailable: false,
-          error: errorMessage
-        }
-      }
-
-      // Actual error
-      logger.error('Failed to fetch reconciliation data', {
+      logger.error('Critical error in reconciliation data fetch', {
         districtId,
         targetDate,
         error: errorMessage
       })
+
+      // Send alert for critical errors
+      await this.alertManager.sendAlert(
+        AlertManager.AlertSeverity.HIGH,
+        AlertManager.AlertCategory.RECONCILIATION,
+        'Reconciliation Data Fetch Failed',
+        `Critical error fetching reconciliation data for district ${districtId}, date ${targetDate}: ${errorMessage}`,
+        { districtId, targetDate, error: errorMessage }
+      )
 
       return {
         success: false,
@@ -393,20 +466,48 @@ export class DistrictBackfillService {
   ): Promise<DistrictStatistics | null> {
     logger.debug('Getting cached reconciliation data', { districtId, targetDate })
 
+    const context = { districtId, targetDate, operation: 'getCachedReconciliationData' }
+
     try {
-      // Check if we have cached data for this date
-      const cachedDates = await this.cacheManager.getCachedDatesForDistrict(districtId)
-      
-      if (!cachedDates.includes(targetDate)) {
-        logger.debug('No cached data found for reconciliation date', { districtId, targetDate })
+      // Execute with circuit breaker and retry logic for cache operations
+      const result = await this.cacheCircuitBreaker.execute(async () => {
+        return await RetryManager.executeWithRetry(
+          async () => {
+            // Check if we have cached data for this date
+            const cachedDates = await this.cacheManager.getCachedDatesForDistrict(districtId)
+            
+            if (!cachedDates.includes(targetDate)) {
+              return null
+            }
+
+            // Get the cached data
+            const cachedData = await this.cacheManager.getDistrictData(districtId, targetDate)
+            
+            if (!cachedData) {
+              logger.warn('Cached date exists but data not found', { districtId, targetDate })
+              return null
+            }
+
+            return cachedData
+          },
+          RetryManager.getCacheRetryOptions(),
+          context
+        )
+      }, context)
+
+      if (!result.success) {
+        logger.error('Failed to get cached reconciliation data', {
+          districtId,
+          targetDate,
+          attempts: result.attempts,
+          error: result.error?.message
+        })
         return null
       }
 
-      // Get the cached data
-      const cachedData = await this.cacheManager.getDistrictData(districtId, targetDate)
-      
+      const cachedData = result.result
       if (!cachedData) {
-        logger.warn('Cached date exists but data not found', { districtId, targetDate })
+        logger.debug('No cached data found for reconciliation date', { districtId, targetDate })
         return null
       }
 
@@ -428,7 +529,7 @@ export class DistrictBackfillService {
       return districtStats
 
     } catch (error) {
-      logger.error('Failed to get cached reconciliation data', {
+      logger.error('Critical error getting cached reconciliation data', {
         districtId,
         targetDate,
         error: error instanceof Error ? error.message : String(error)
@@ -453,7 +554,60 @@ export class DistrictBackfillService {
     logger.debug('Reconciliation monitoring hook registered')
   }
 
-  private reconciliationHooks: Array<(districtId: string, date: string, data: DistrictStatistics) => void> = []
+  /**
+   * Check if an error indicates date unavailability vs actual failure
+   */
+  private isDateUnavailableError(errorMessage: string): boolean {
+    const message = errorMessage.toLowerCase()
+    return (
+      message.includes('not available') ||
+      message.includes('dashboard returned') ||
+      message.includes('date selection failed') ||
+      message.includes('not found') ||
+      message.includes('404')
+    )
+  }
+
+  /**
+   * Validate data quality and return list of issues
+   */
+  private validateDataQuality(
+    districtStats: DistrictStatistics,
+    districtId: string,
+    date: string
+  ): string[] {
+    const issues: string[] = []
+
+    // Check for suspiciously low membership
+    if (districtStats.clubs.total > 0 && districtStats.membership.total < 100) {
+      issues.push(`Suspiciously low membership: ${districtStats.membership.total} total members`)
+    }
+
+    // Check for zero clubs but positive membership
+    if (districtStats.clubs.total === 0 && districtStats.membership.total > 0) {
+      issues.push('Zero clubs but positive membership count')
+    }
+
+    // Check for negative values
+    if (districtStats.membership.total < 0) {
+      issues.push('Negative membership count')
+    }
+
+    if (districtStats.clubs.total < 0) {
+      issues.push('Negative club count')
+    }
+
+    // Check for impossible ratios
+    if (districtStats.clubs.distinguished > districtStats.clubs.total) {
+      issues.push('More distinguished clubs than total clubs')
+    }
+
+    if (districtStats.clubs.active + districtStats.clubs.suspended + districtStats.clubs.ineligible > districtStats.clubs.total) {
+      issues.push('Sum of club statuses exceeds total clubs')
+    }
+
+    return issues
+  }
 
   /**
    * Get program year start date (July 1 of current or previous year)

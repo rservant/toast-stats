@@ -940,3 +940,423 @@ router.get('/status/:districtId/:targetMonth', async (req: Request, res: Respons
 })
 
 export default router
+// Import metrics service
+import { ReconciliationMetricsService } from '../services/ReconciliationMetricsService.js'
+
+// Initialize metrics service
+const metricsService = ReconciliationMetricsService.getInstance()
+
+/**
+ * GET /api/reconciliation/metrics
+ * Get comprehensive reconciliation metrics for monitoring
+ */
+router.get('/metrics', async (req: Request, res: Response) => {
+  try {
+    const { districtId } = req.query
+
+    // Validate district ID if provided
+    if (districtId && typeof districtId === 'string' && !validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Get metrics (district-specific or global)
+    const metrics = districtId 
+      ? metricsService.getDistrictMetrics(districtId as string)
+      : metricsService.getMetrics()
+
+    // Get performance patterns
+    const performancePatterns = metricsService.getPerformancePatterns()
+
+    // Get job duration metrics for analysis
+    const jobDurations = metricsService.getJobDurationMetrics()
+      .filter(job => !districtId || job.districtId === districtId)
+      .map(job => ({
+        jobId: job.jobId,
+        districtId: job.districtId,
+        targetMonth: job.targetMonth,
+        startDate: job.startDate.toISOString(),
+        endDate: job.endDate?.toISOString(),
+        duration: job.duration,
+        status: job.status,
+        wasExtended: job.wasExtended,
+        extensionCount: job.extensionCount,
+        finalStabilityDays: job.finalStabilityDays
+      }))
+
+    // Calculate additional monitoring metrics
+    const now = new Date()
+    const last24Hours = now.getTime() - 24 * 60 * 60 * 1000
+    const last7Days = now.getTime() - 7 * 24 * 60 * 60 * 1000
+
+    const recentJobs = jobDurations.filter(job => 
+      new Date(job.startDate).getTime() > last7Days
+    )
+
+    const todayJobs = jobDurations.filter(job => 
+      new Date(job.startDate).getTime() > last24Hours
+    )
+
+    const monitoringMetrics = {
+      overview: {
+        totalJobs: metrics.totalJobs,
+        successRate: metrics.successRate,
+        failureRate: metrics.failureRate,
+        activeJobs: metrics.activeJobs,
+        averageDuration: metrics.averageDuration,
+        extensionRate: metrics.extensionRate,
+        timeoutRate: metrics.timeoutRate
+      },
+      performance: {
+        averageDurationHours: Math.round(metrics.averageDuration / (60 * 60 * 1000) * 100) / 100,
+        medianDurationHours: Math.round(metrics.medianDuration / (60 * 60 * 1000) * 100) / 100,
+        longestDurationHours: Math.round(metrics.longestDuration / (60 * 60 * 1000) * 100) / 100,
+        shortestDurationHours: Math.round(metrics.shortestDuration / (60 * 60 * 1000) * 100) / 100,
+        averageStabilityPeriod: metrics.averageStabilityPeriod
+      },
+      recent: {
+        last7Days: {
+          totalJobs: recentJobs.length,
+          successfulJobs: recentJobs.filter(job => job.status === 'completed').length,
+          failedJobs: recentJobs.filter(job => job.status === 'failed').length,
+          extendedJobs: recentJobs.filter(job => job.wasExtended).length
+        },
+        last24Hours: {
+          totalJobs: todayJobs.length,
+          successfulJobs: todayJobs.filter(job => job.status === 'completed').length,
+          failedJobs: todayJobs.filter(job => job.status === 'failed').length,
+          activeJobs: todayJobs.filter(job => job.status === 'active').length
+        }
+      },
+      patterns: performancePatterns.map(pattern => ({
+        pattern: pattern.pattern,
+        description: pattern.description,
+        severity: pattern.severity,
+        affectedJobCount: pattern.affectedJobs.length,
+        recommendation: pattern.recommendation
+      })),
+      health: metricsService.getHealthStatus()
+    }
+
+    res.json({
+      success: true,
+      timestamp: now.toISOString(),
+      districtId: districtId || null,
+      metrics: monitoringMetrics,
+      jobDurations: jobDurations.slice(0, 50) // Limit to recent 50 jobs for performance
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'METRICS_ERROR',
+        message: 'Failed to get reconciliation metrics',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+/**
+ * GET /api/reconciliation/monitoring/alerts
+ * Get active reconciliation alerts and their status
+ */
+router.get('/monitoring/alerts', async (req: Request, res: Response) => {
+  try {
+    const { category, severity } = req.query
+
+    // Validate category if provided
+    const validCategories = ['RECONCILIATION', 'CIRCUIT_BREAKER', 'DATA_QUALITY', 'SYSTEM', 'NETWORK']
+    if (category && typeof category === 'string' && !validCategories.includes(category)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_CATEGORY',
+          message: `Category must be one of: ${validCategories.join(', ')}`,
+        },
+      })
+      return
+    }
+
+    // Validate severity if provided
+    const validSeverities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+    if (severity && typeof severity === 'string' && !validSeverities.includes(severity)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_SEVERITY',
+          message: `Severity must be one of: ${validSeverities.join(', ')}`,
+        },
+      })
+      return
+    }
+
+    // Get alerts from AlertManager
+    const alertManager = AlertManager.getInstance()
+    const activeAlerts = alertManager.getActiveAlerts(category as any)
+    const alertStats = alertManager.getAlertStats()
+
+    // Filter by severity if provided
+    const filteredAlerts = severity 
+      ? activeAlerts.filter(alert => alert.severity === severity)
+      : activeAlerts
+
+    // Transform alerts for API response
+    const transformedAlerts = filteredAlerts.map(alert => ({
+      id: alert.id,
+      timestamp: alert.timestamp.toISOString(),
+      severity: alert.severity,
+      category: alert.category,
+      title: alert.title,
+      message: alert.message,
+      context: alert.context,
+      resolved: alert.resolved,
+      resolvedAt: alert.resolvedAt?.toISOString(),
+      acknowledgedBy: alert.acknowledgedBy,
+      acknowledgedAt: alert.acknowledgedAt?.toISOString()
+    }))
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      filters: {
+        category: category || null,
+        severity: severity || null
+      },
+      alerts: transformedAlerts,
+      statistics: {
+        total: alertStats.total,
+        active: alertStats.active,
+        resolved: alertStats.resolved,
+        bySeverity: alertStats.bySeverity,
+        byCategory: alertStats.byCategory
+      }
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'ALERTS_ERROR',
+        message: 'Failed to get reconciliation alerts',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * POST /api/reconciliation/monitoring/alerts/:alertId/resolve
+ * Resolve a specific alert
+ */
+router.post('/monitoring/alerts/:alertId/resolve', async (req: Request, res: Response) => {
+  try {
+    const { alertId } = req.params
+    const { resolvedBy } = req.body
+
+    // Validate alert ID
+    if (!alertId || typeof alertId !== 'string' || alertId.trim() === '') {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_ALERT_ID',
+          message: 'Alert ID is required and must be a non-empty string',
+        },
+      })
+      return
+    }
+
+    // Validate resolvedBy if provided
+    if (resolvedBy && typeof resolvedBy !== 'string') {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_RESOLVED_BY',
+          message: 'resolvedBy must be a string',
+        },
+      })
+      return
+    }
+
+    // Resolve the alert
+    const alertManager = AlertManager.getInstance()
+    const resolved = await alertManager.resolveAlert(alertId, resolvedBy)
+
+    if (!resolved) {
+      res.status(404).json({
+        error: {
+          code: 'ALERT_NOT_FOUND',
+          message: 'Alert not found or already resolved',
+        },
+      })
+      return
+    }
+
+    res.json({
+      success: true,
+      message: 'Alert resolved successfully',
+      alertId,
+      resolvedBy: resolvedBy || null,
+      resolvedAt: new Date().toISOString()
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'RESOLVE_ERROR',
+        message: 'Failed to resolve alert',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+/**
+ * GET /api/reconciliation/monitoring/health
+ * Get health status of reconciliation monitoring system
+ */
+router.get('/monitoring/health', async (req: Request, res: Response) => {
+  try {
+    // Get health status from various components
+    const metricsHealth = metricsService.getHealthStatus()
+    const alertManager = AlertManager.getInstance()
+    const alertStats = alertManager.getAlertStats()
+
+    // Check active jobs status
+    const activeJobs = await storageManager.getJobs({ status: 'active' })
+    const longRunningJobs = activeJobs.filter(job => {
+      const daysSinceStart = (Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
+      return daysSinceStart > job.config.maxReconciliationDays
+    })
+
+    // Check for critical alerts
+    const criticalAlerts = alertManager.getActiveAlerts().filter(alert => 
+      alert.severity === 'CRITICAL' || alert.severity === 'HIGH'
+    )
+
+    // Determine overall health
+    const isHealthy = 
+      metricsHealth.isHealthy &&
+      criticalAlerts.length === 0 &&
+      longRunningJobs.length === 0
+
+    const healthStatus = {
+      overall: {
+        isHealthy,
+        status: isHealthy ? 'healthy' : 'degraded',
+        timestamp: new Date().toISOString()
+      },
+      components: {
+        metricsService: {
+          isHealthy: metricsHealth.isHealthy,
+          lastCleanup: metricsHealth.lastCleanup,
+          totalJobs: metricsHealth.totalJobs,
+          activeJobs: metricsHealth.activeJobs
+        },
+        alerting: {
+          isHealthy: alertStats.active < 10, // Consider unhealthy if too many active alerts
+          activeAlerts: alertStats.active,
+          criticalAlerts: criticalAlerts.length,
+          totalAlerts: alertStats.total
+        },
+        reconciliationJobs: {
+          isHealthy: longRunningJobs.length === 0,
+          activeJobs: activeJobs.length,
+          longRunningJobs: longRunningJobs.length,
+          maxAllowedDuration: 15 // days
+        }
+      },
+      issues: []
+    }
+
+    // Add specific issues if any
+    if (criticalAlerts.length > 0) {
+      healthStatus.issues.push({
+        type: 'critical_alerts',
+        message: `${criticalAlerts.length} critical alerts active`,
+        severity: 'high',
+        details: criticalAlerts.map(alert => ({
+          id: alert.id,
+          title: alert.title,
+          category: alert.category
+        }))
+      })
+    }
+
+    if (longRunningJobs.length > 0) {
+      healthStatus.issues.push({
+        type: 'long_running_jobs',
+        message: `${longRunningJobs.length} jobs running longer than expected`,
+        severity: 'medium',
+        details: longRunningJobs.map(job => ({
+          id: job.id,
+          districtId: job.districtId,
+          targetMonth: job.targetMonth,
+          daysSinceStart: Math.round((Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
+        }))
+      })
+    }
+
+    if (alertStats.active > 5) {
+      healthStatus.issues.push({
+        type: 'high_alert_volume',
+        message: `${alertStats.active} active alerts may indicate system issues`,
+        severity: 'low',
+        details: { activeAlerts: alertStats.active }
+      })
+    }
+
+    res.json(healthStatus)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      overall: {
+        isHealthy: false,
+        status: 'error',
+        timestamp: new Date().toISOString()
+      },
+      error: {
+        code: errorResponse.code || 'HEALTH_CHECK_ERROR',
+        message: 'Failed to get health status',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * POST /api/reconciliation/monitoring/cleanup
+ * Trigger cleanup of old metrics and alerts
+ */
+router.post('/monitoring/cleanup', async (req: Request, res: Response) => {
+  try {
+    // Clean up old metrics
+    const cleanedMetrics = await metricsService.cleanupOldMetrics()
+    
+    // Clean up old alerts
+    const alertManager = AlertManager.getInstance()
+    const cleanedAlerts = await alertManager.cleanupOldAlerts()
+
+    res.json({
+      success: true,
+      message: 'Cleanup completed successfully',
+      results: {
+        cleanedMetrics,
+        cleanedAlerts,
+        timestamp: new Date().toISOString()
+      }
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'CLEANUP_ERROR',
+        message: 'Failed to perform cleanup',
+        details: errorResponse.details,
+      },
+    })
+  }
+})

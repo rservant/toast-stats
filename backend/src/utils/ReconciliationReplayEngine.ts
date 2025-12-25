@@ -1,0 +1,620 @@
+/**
+ * Reconciliation Replay Engine for Debugging
+ * 
+ * Provides capabilities to replay reconciliation scenarios for debugging,
+ * analysis, and testing purposes. Supports step-by-step execution and
+ * detailed state inspection.
+ */
+
+import { logger } from './logger.js'
+import { ChangeDetectionEngine } from '../services/ChangeDetectionEngine.js'
+import type { 
+  ReconciliationJob,
+  ReconciliationTimeline,
+  ReconciliationEntry,
+  DataChanges,
+  ReconciliationStatus
+} from '../types/reconciliation.js'
+import type { DistrictStatistics } from '../types/districts.js'
+
+export interface ReplaySession {
+  id: string
+  name: string
+  description: string
+  originalJob: ReconciliationJob
+  originalTimeline: ReconciliationTimeline
+  dataSequence: DistrictStatistics[]
+  currentStep: number
+  replayState: ReplayState
+  createdAt: Date
+  lastUpdated: Date
+}
+
+export interface ReplayState {
+  currentJob: ReconciliationJob
+  currentTimeline: ReconciliationTimeline
+  processedEntries: ReconciliationEntry[]
+  currentData: DistrictStatistics | null
+  previousData: DistrictStatistics | null
+  stepResults: StepResult[]
+  debugInfo: DebugInfo
+}
+
+export interface StepResult {
+  stepNumber: number
+  timestamp: Date
+  action: 'data_update' | 'change_detection' | 'status_calculation' | 'extension' | 'finalization'
+  input: any
+  output: any
+  changes: DataChanges | null
+  isSignificant: boolean
+  newStatus: ReconciliationStatus
+  notes: string[]
+  warnings: string[]
+  errors: string[]
+}
+
+export interface DebugInfo {
+  totalSteps: number
+  significantChanges: number
+  extensionCount: number
+  stabilityDays: number
+  configViolations: string[]
+  performanceMetrics: {
+    averageStepTime: number
+    totalProcessingTime: number
+    memoryUsage: number
+  }
+}
+
+export interface ReplayOptions {
+  stepByStep: boolean
+  includeDebugInfo: boolean
+  validateAtEachStep: boolean
+  pauseOnSignificantChanges: boolean
+  pauseOnErrors: boolean
+  maxSteps?: number
+}
+
+export class ReconciliationReplayEngine {
+  private sessions: Map<string, ReplaySession> = new Map()
+  private changeDetectionEngine: ChangeDetectionEngine
+  private sessionCounter: number = 1
+
+  constructor(changeDetectionEngine?: ChangeDetectionEngine) {
+    this.changeDetectionEngine = changeDetectionEngine || new ChangeDetectionEngine()
+  }
+
+  /**
+   * Create a new replay session from historical data
+   */
+  createReplaySession(
+    name: string,
+    description: string,
+    job: ReconciliationJob,
+    timeline: ReconciliationTimeline,
+    dataSequence: DistrictStatistics[]
+  ): ReplaySession {
+    const sessionId = `replay-${this.sessionCounter++}-${Date.now()}`
+    
+    const session: ReplaySession = {
+      id: sessionId,
+      name,
+      description,
+      originalJob: { ...job },
+      originalTimeline: { ...timeline },
+      dataSequence: [...dataSequence],
+      currentStep: 0,
+      replayState: this.initializeReplayState(job, timeline),
+      createdAt: new Date(),
+      lastUpdated: new Date()
+    }
+
+    this.sessions.set(sessionId, session)
+    
+    logger.info('Replay session created', {
+      sessionId,
+      name,
+      dataPoints: dataSequence.length,
+      originalEntries: timeline.entries.length
+    })
+
+    return session
+  }
+
+  /**
+   * Execute a complete replay of a reconciliation scenario
+   */
+  async executeReplay(
+    sessionId: string, 
+    options: ReplayOptions = { stepByStep: false, includeDebugInfo: true, validateAtEachStep: true, pauseOnSignificantChanges: false, pauseOnErrors: false }
+  ): Promise<ReplaySession> {
+    const session = this.sessions.get(sessionId)
+    if (!session) {
+      throw new Error(`Replay session not found: ${sessionId}`)
+    }
+
+    logger.info('Starting replay execution', { sessionId, options })
+
+    const startTime = Date.now()
+    session.currentStep = 0
+    session.replayState = this.initializeReplayState(session.originalJob, session.originalTimeline)
+
+    try {
+      while (session.currentStep < session.dataSequence.length) {
+        const stepStartTime = Date.now()
+        
+        // Execute next step
+        const stepResult = await this.executeStep(session, options)
+        
+        // Record performance metrics
+        const stepTime = Date.now() - stepStartTime
+        this.updatePerformanceMetrics(session, stepTime)
+
+        // Check pause conditions
+        if (options.stepByStep || 
+           (options.pauseOnSignificantChanges && stepResult.isSignificant) ||
+           (options.pauseOnErrors && stepResult.errors.length > 0)) {
+          logger.debug('Replay paused', { 
+            sessionId, 
+            step: session.currentStep, 
+            reason: this.getPauseReason(options, stepResult) 
+          })
+          break
+        }
+
+        // Check max steps limit
+        if (options.maxSteps && session.currentStep >= options.maxSteps) {
+          logger.debug('Replay stopped - max steps reached', { sessionId, maxSteps: options.maxSteps })
+          break
+        }
+
+        session.currentStep++
+      }
+
+      // Finalize replay
+      const totalTime = Date.now() - startTime
+      session.replayState.debugInfo.totalProcessingTime = totalTime
+      session.lastUpdated = new Date()
+
+      logger.info('Replay execution completed', {
+        sessionId,
+        totalSteps: session.currentStep,
+        totalTime,
+        significantChanges: session.replayState.debugInfo.significantChanges
+      })
+
+    } catch (error) {
+      logger.error('Replay execution failed', {
+        sessionId,
+        step: session.currentStep,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      throw error
+    }
+
+    return session
+  }
+
+  /**
+   * Execute a single step in the replay
+   */
+  async executeStep(session: ReplaySession, options: ReplayOptions): Promise<StepResult> {
+    const stepNumber = session.currentStep
+    const currentData = session.dataSequence[stepNumber]
+    const previousData = stepNumber > 0 ? session.dataSequence[stepNumber - 1] : null
+
+    const stepResult: StepResult = {
+      stepNumber,
+      timestamp: new Date(),
+      action: 'data_update',
+      input: { currentData, previousData },
+      output: null,
+      changes: null,
+      isSignificant: false,
+      newStatus: session.replayState.currentTimeline.status,
+      notes: [],
+      warnings: [],
+      errors: []
+    }
+
+    try {
+      // Step 1: Update current data
+      session.replayState.currentData = currentData
+      session.replayState.previousData = previousData
+      stepResult.notes.push(`Updated to data point ${stepNumber + 1}/${session.dataSequence.length}`)
+
+      // Step 2: Detect changes (if not first step)
+      if (previousData) {
+        stepResult.action = 'change_detection'
+        stepResult.changes = this.changeDetectionEngine.detectChanges(
+          currentData.districtId,
+          previousData,
+          currentData
+        )
+
+        // Check significance
+        stepResult.isSignificant = this.changeDetectionEngine.isSignificantChange(
+          stepResult.changes,
+          session.replayState.currentJob.config.significantChangeThresholds
+        )
+
+        if (stepResult.changes.hasChanges) {
+          stepResult.notes.push(`Changes detected: ${stepResult.changes.changedFields.join(', ')}`)
+          if (stepResult.isSignificant) {
+            stepResult.notes.push('Changes are SIGNIFICANT')
+            session.replayState.debugInfo.significantChanges++
+          }
+        } else {
+          stepResult.notes.push('No changes detected')
+        }
+      }
+
+      // Step 3: Create timeline entry
+      if (stepResult.changes) {
+        const entry: ReconciliationEntry = {
+          date: new Date(session.originalJob.startDate.getTime() + stepNumber * 24 * 60 * 60 * 1000),
+          sourceDataDate: currentData.asOfDate,
+          changes: stepResult.changes,
+          isSignificant: stepResult.isSignificant,
+          cacheUpdated: stepResult.changes.hasChanges,
+          notes: stepResult.isSignificant ? 'Significant change detected during replay' : undefined
+        }
+
+        session.replayState.processedEntries.push(entry)
+        session.replayState.currentTimeline.entries = [...session.replayState.processedEntries]
+      }
+
+      // Step 4: Calculate new status
+      stepResult.action = 'status_calculation'
+      stepResult.newStatus = this.calculateReplayStatus(session, stepNumber)
+      session.replayState.currentTimeline.status = stepResult.newStatus
+
+      // Step 5: Check for extensions
+      if (stepResult.isSignificant && this.shouldTriggerExtension(session, stepNumber)) {
+        stepResult.action = 'extension'
+        this.applyExtension(session, stepResult)
+      }
+
+      // Step 6: Validation (if enabled)
+      if (options.validateAtEachStep) {
+        this.validateReplayState(session, stepResult)
+      }
+
+      stepResult.output = {
+        status: stepResult.newStatus,
+        timelineEntries: session.replayState.processedEntries.length,
+        extensionCount: session.replayState.debugInfo.extensionCount
+      }
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      stepResult.errors.push(`Step execution failed: ${errorMessage}`)
+      logger.error('Replay step failed', { sessionId: session.id, stepNumber, error: errorMessage })
+    }
+
+    session.replayState.stepResults.push(stepResult)
+    return stepResult
+  }
+
+  /**
+   * Get replay session by ID
+   */
+  getReplaySession(sessionId: string): ReplaySession | null {
+    return this.sessions.get(sessionId) || null
+  }
+
+  /**
+   * Get all replay sessions
+   */
+  getAllReplaySessions(): ReplaySession[] {
+    return Array.from(this.sessions.values())
+  }
+
+  /**
+   * Delete a replay session
+   */
+  deleteReplaySession(sessionId: string): boolean {
+    const deleted = this.sessions.delete(sessionId)
+    if (deleted) {
+      logger.info('Replay session deleted', { sessionId })
+    }
+    return deleted
+  }
+
+  /**
+   * Export replay session for analysis
+   */
+  exportReplaySession(sessionId: string): any {
+    const session = this.sessions.get(sessionId)
+    if (!session) {
+      throw new Error(`Replay session not found: ${sessionId}`)
+    }
+
+    return {
+      session: {
+        id: session.id,
+        name: session.name,
+        description: session.description,
+        createdAt: session.createdAt,
+        lastUpdated: session.lastUpdated,
+        currentStep: session.currentStep
+      },
+      originalData: {
+        job: session.originalJob,
+        timeline: session.originalTimeline,
+        dataSequence: session.dataSequence
+      },
+      replayResults: {
+        finalState: session.replayState,
+        stepResults: session.replayState.stepResults,
+        debugInfo: session.replayState.debugInfo
+      },
+      analysis: this.analyzeReplayResults(session)
+    }
+  }
+
+  /**
+   * Compare replay results with original timeline
+   */
+  compareWithOriginal(sessionId: string): any {
+    const session = this.sessions.get(sessionId)
+    if (!session) {
+      throw new Error(`Replay session not found: ${sessionId}`)
+    }
+
+    const originalEntries = session.originalTimeline.entries
+    const replayEntries = session.replayState.processedEntries
+
+    const comparison = {
+      entryCount: {
+        original: originalEntries.length,
+        replay: replayEntries.length,
+        difference: replayEntries.length - originalEntries.length
+      },
+      significantChanges: {
+        original: originalEntries.filter(e => e.isSignificant).length,
+        replay: replayEntries.filter(e => e.isSignificant).length
+      },
+      finalStatus: {
+        original: session.originalTimeline.status,
+        replay: session.replayState.currentTimeline.status
+      },
+      differences: [] as any[]
+    }
+
+    // Compare individual entries
+    const maxEntries = Math.max(originalEntries.length, replayEntries.length)
+    for (let i = 0; i < maxEntries; i++) {
+      const original = originalEntries[i]
+      const replay = replayEntries[i]
+
+      if (!original && replay) {
+        comparison.differences.push({
+          index: i,
+          type: 'extra_replay_entry',
+          replay: replay
+        })
+      } else if (original && !replay) {
+        comparison.differences.push({
+          index: i,
+          type: 'missing_replay_entry',
+          original: original
+        })
+      } else if (original && replay) {
+        if (original.isSignificant !== replay.isSignificant) {
+          comparison.differences.push({
+            index: i,
+            type: 'significance_mismatch',
+            original: original.isSignificant,
+            replay: replay.isSignificant
+          })
+        }
+      }
+    }
+
+    return comparison
+  }
+
+  /**
+   * Initialize replay state
+   */
+  private initializeReplayState(job: ReconciliationJob, timeline: ReconciliationTimeline): ReplayState {
+    return {
+      currentJob: { ...job },
+      currentTimeline: {
+        ...timeline,
+        entries: [],
+        status: {
+          phase: 'monitoring',
+          daysActive: 0,
+          daysStable: 0,
+          message: 'Replay initialized'
+        }
+      },
+      processedEntries: [],
+      currentData: null,
+      previousData: null,
+      stepResults: [],
+      debugInfo: {
+        totalSteps: 0,
+        significantChanges: 0,
+        extensionCount: 0,
+        stabilityDays: 0,
+        configViolations: [],
+        performanceMetrics: {
+          averageStepTime: 0,
+          totalProcessingTime: 0,
+          memoryUsage: 0
+        }
+      }
+    }
+  }
+
+  /**
+   * Calculate replay status
+   */
+  private calculateReplayStatus(session: ReplaySession, stepNumber: number): ReconciliationStatus {
+    const config = session.replayState.currentJob.config
+    const entries = session.replayState.processedEntries
+    
+    // Calculate stability days
+    let stabilityDays = 0
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (!entries[i].isSignificant) {
+        stabilityDays++
+      } else {
+        break
+      }
+    }
+
+    session.replayState.debugInfo.stabilityDays = stabilityDays
+
+    // Determine phase
+    if (stabilityDays >= config.stabilityPeriodDays) {
+      return {
+        phase: 'completed',
+        daysActive: stepNumber,
+        daysStable: stabilityDays,
+        message: `Replay completed - ${stabilityDays} stable days achieved`
+      }
+    } else if (stabilityDays > 0) {
+      return {
+        phase: 'stabilizing',
+        daysActive: stepNumber,
+        daysStable: stabilityDays,
+        message: `Stabilizing - ${stabilityDays}/${config.stabilityPeriodDays} stable days`
+      }
+    } else {
+      return {
+        phase: 'monitoring',
+        daysActive: stepNumber,
+        daysStable: 0,
+        message: 'Monitoring for changes'
+      }
+    }
+  }
+
+  /**
+   * Check if extension should be triggered
+   */
+  private shouldTriggerExtension(session: ReplaySession, stepNumber: number): boolean {
+    const config = session.replayState.currentJob.config
+    const maxDays = config.maxReconciliationDays + (session.replayState.debugInfo.extensionCount * 3)
+    
+    return config.autoExtensionEnabled && 
+           stepNumber > maxDays - 3 && 
+           session.replayState.debugInfo.extensionCount < Math.floor(config.maxExtensionDays / 3)
+  }
+
+  /**
+   * Apply extension during replay
+   */
+  private applyExtension(session: ReplaySession, stepResult: StepResult): void {
+    session.replayState.debugInfo.extensionCount++
+    stepResult.notes.push(`Extension ${session.replayState.debugInfo.extensionCount} triggered`)
+    
+    // Update job max end date
+    const extensionMs = 3 * 24 * 60 * 60 * 1000 // 3 days
+    session.replayState.currentJob.maxEndDate = new Date(
+      session.replayState.currentJob.maxEndDate.getTime() + extensionMs
+    )
+  }
+
+  /**
+   * Validate replay state
+   */
+  private validateReplayState(session: ReplaySession, stepResult: StepResult): void {
+    const config = session.replayState.currentJob.config
+    const violations: string[] = []
+
+    // Check configuration compliance
+    if (session.replayState.debugInfo.stabilityDays > config.stabilityPeriodDays) {
+      violations.push('Stability period exceeded without completion')
+    }
+
+    if (session.replayState.debugInfo.extensionCount > Math.floor(config.maxExtensionDays / 3)) {
+      violations.push('Extension count exceeds maximum allowed')
+    }
+
+    if (violations.length > 0) {
+      stepResult.warnings.push(...violations)
+      session.replayState.debugInfo.configViolations.push(...violations)
+    }
+  }
+
+  /**
+   * Update performance metrics
+   */
+  private updatePerformanceMetrics(session: ReplaySession, stepTime: number): void {
+    const metrics = session.replayState.debugInfo.performanceMetrics
+    const totalSteps = session.replayState.stepResults.length + 1
+    
+    metrics.averageStepTime = ((metrics.averageStepTime * (totalSteps - 1)) + stepTime) / totalSteps
+    
+    // Estimate memory usage (simplified)
+    metrics.memoryUsage = session.replayState.processedEntries.length * 1024 // Rough estimate
+  }
+
+  /**
+   * Get pause reason
+   */
+  private getPauseReason(options: ReplayOptions, stepResult: StepResult): string {
+    if (options.stepByStep) return 'step_by_step_mode'
+    if (options.pauseOnSignificantChanges && stepResult.isSignificant) return 'significant_change'
+    if (options.pauseOnErrors && stepResult.errors.length > 0) return 'errors_detected'
+    return 'unknown'
+  }
+
+  /**
+   * Analyze replay results
+   */
+  private analyzeReplayResults(session: ReplaySession): any {
+    const stepResults = session.replayState.stepResults
+    const debugInfo = session.replayState.debugInfo
+
+    return {
+      summary: {
+        totalSteps: stepResults.length,
+        significantChanges: debugInfo.significantChanges,
+        extensionCount: debugInfo.extensionCount,
+        finalStabilityDays: debugInfo.stabilityDays,
+        configViolations: debugInfo.configViolations.length
+      },
+      performance: debugInfo.performanceMetrics,
+      patterns: {
+        changeFrequency: stepResults.filter(s => s.changes?.hasChanges).length / stepResults.length,
+        significanceRate: debugInfo.significantChanges / stepResults.length,
+        errorRate: stepResults.filter(s => s.errors.length > 0).length / stepResults.length
+      },
+      recommendations: this.generateRecommendations(session)
+    }
+  }
+
+  /**
+   * Generate recommendations based on replay analysis
+   */
+  private generateRecommendations(session: ReplaySession): string[] {
+    const recommendations: string[] = []
+    const debugInfo = session.replayState.debugInfo
+    const config = session.replayState.currentJob.config
+
+    if (debugInfo.significantChanges > 5) {
+      recommendations.push('Consider increasing significance thresholds to reduce noise')
+    }
+
+    if (debugInfo.extensionCount > 2) {
+      recommendations.push('Consider increasing initial reconciliation period')
+    }
+
+    if (debugInfo.configViolations.length > 0) {
+      recommendations.push('Review configuration parameters for compliance')
+    }
+
+    if (debugInfo.performanceMetrics.averageStepTime > 1000) {
+      recommendations.push('Consider optimizing change detection performance')
+    }
+
+    return recommendations
+  }
+}
