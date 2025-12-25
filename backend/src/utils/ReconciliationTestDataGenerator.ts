@@ -500,7 +500,9 @@ export class ReconciliationTestDataGenerator {
             },
             performance: {
               ...currentData.performance,
-              distinguishedPercent: (adjustedDistinguished / newTotal) * 100
+              distinguishedPercent: (adjustedDistinguished / newTotal) * 100,
+              membershipNet: currentData.performance?.membershipNet ?? 0,
+              clubsNet: currentData.performance?.clubsNet ?? 0
             }
           }
 
@@ -567,7 +569,9 @@ export class ReconciliationTestDataGenerator {
             },
             performance: {
               ...currentData.performance,
-              distinguishedPercent: (newDistinguished / currentData.clubs.total) * 100
+              distinguishedPercent: (newDistinguished / currentData.clubs.total) * 100,
+              membershipNet: currentData.performance?.membershipNet ?? 0,
+              clubsNet: currentData.performance?.clubsNet ?? 0
             }
           }
 
@@ -691,7 +695,7 @@ export class ReconciliationTestDataGenerator {
     baseData.clubs.distinguished = 0
     baseData.membership.total = 15
     // Update performance percentage to match the modified data
-    baseData.performance.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
+    baseData.performance!.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
 
     return {
       districtData: [baseData],
@@ -718,7 +722,7 @@ export class ReconciliationTestDataGenerator {
     baseData.clubs.distinguished = 80
     baseData.membership.total = 2500
     // Update performance percentage to match the modified data
-    baseData.performance.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
+    baseData.performance!.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
 
     return {
       districtData: [baseData],
@@ -741,7 +745,7 @@ export class ReconciliationTestDataGenerator {
     const baseData = this.generateBaseDistrictData('EDGE-ALL-DIST', () => 0.7)
     baseData.clubs.distinguished = baseData.clubs.total
     // Update performance percentage to match the modified data
-    baseData.performance.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
+    baseData.performance!.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
 
     return {
       districtData: [baseData],
@@ -764,7 +768,7 @@ export class ReconciliationTestDataGenerator {
     const baseData = this.generateBaseDistrictData('EDGE-NO-DIST', () => 0.3)
     baseData.clubs.distinguished = 0
     // Update performance percentage to match the modified data
-    baseData.performance.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
+    baseData.performance!.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
 
     return {
       districtData: [baseData],
@@ -852,9 +856,9 @@ export class ReconciliationTestDataGenerator {
 
     // Recalculate performance percentage to match the modified data
     if (baseData.clubs.total > 0) {
-      baseData.performance.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
+      baseData.performance!.distinguishedPercent = (baseData.clubs.distinguished / baseData.clubs.total) * 100
     } else {
-      baseData.performance.distinguishedPercent = 0
+      baseData.performance!.distinguishedPercent = 0
     }
 
     return baseData
