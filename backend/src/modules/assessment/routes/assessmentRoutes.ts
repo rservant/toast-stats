@@ -141,10 +141,28 @@ router.get(
     // Sanitize programYear (replace slashes with underscores to match storage)
     const sanitizedProgramYear = programYear.replace(/\//g, '_');
 
+    // Validate month to prevent unsafe path usage
+    const normalizedMonth = month.toLowerCase();
+    const allowedMonths = new Set([
+      '01', '02', '03', '04', '05', '06',
+      '07', '08', '09', '10', '11', '12',
+      'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+      'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+    ]);
+    if (!allowedMonths.has(normalizedMonth)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_MONTH',
+          message: 'Month parameter is invalid',
+        },
+      });
+      return;
+    }
+
     const assessment = await assessmentStore.getMonthlyAssessment(
       parseInt(districtId, 10),
       sanitizedProgramYear,
-      month
+      normalizedMonth
     );
 
     if (!assessment) {
@@ -158,7 +176,11 @@ router.get(
     }
 
     // Include audit trail and immutable flag in response
-    const audit = await assessmentStore.getAuditTrail(parseInt(districtId, 10), sanitizedProgramYear, month)
+    const audit = await assessmentStore.getAuditTrail(
+      parseInt(districtId, 10),
+      sanitizedProgramYear,
+      normalizedMonth
+    );
 
     res.json({
       success: true,
@@ -179,13 +201,31 @@ router.delete(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear, month } = req.params;
 
+    // Validate month to prevent unsafe path usage
+    const normalizedMonth = month.toLowerCase();
+    const allowedMonths = new Set([
+      '01', '02', '03', '04', '05', '06',
+      '07', '08', '09', '10', '11', '12',
+      'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+      'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+    ]);
+    if (!allowedMonths.has(normalizedMonth)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_MONTH',
+          message: 'Month parameter is invalid',
+        },
+      });
+      return;
+    }
+
     // Sanitize programYear (replace slashes with underscores to match storage)
     const sanitizedProgramYear = programYear.replace(/\//g, '_');
 
     await assessmentStore.deleteMonthlyAssessment(
       parseInt(districtId, 10),
       sanitizedProgramYear,
-      month
+      normalizedMonth
     );
 
     res.json({
@@ -194,7 +234,7 @@ router.delete(
       data: {
         district_id: districtId,
         program_year: programYear,
-        month,
+        month: normalizedMonth,
       }
     });
   })
