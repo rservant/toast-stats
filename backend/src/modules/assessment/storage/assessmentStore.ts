@@ -10,6 +10,14 @@ import { MonthlyAssessment, DistrictLeaderGoal, DistrictConfig } from '../types/
 const DATA_DIR = path.join(process.cwd(), 'src', 'modules', 'assessment', 'storage', 'data');
 
 /**
+ * Sanitize a value so it is safe to use in a filename.
+ * Allows only alphanumerics, underscore, and dash; replaces everything else with "_".
+ */
+function sanitizeForFilename(input: string): string {
+  return input.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+/**
  * Ensure data directory exists
  */
 async function ensureDataDir(): Promise<void> {
@@ -24,27 +32,28 @@ async function ensureDataDir(): Promise<void> {
  * Get file path for monthly assessment data
  */
 function getAssessmentPath(districtNumber: number, programYear: string, month: string): string {
-  // Sanitize programYear to remove path separators (e.g., "2025-07-01/2026-06-30" -> "2025-07-01_2026-06-30")
-  const sanitizedYear = programYear.replace(/\//g, '_');
-  return path.join(DATA_DIR, `assessment_${districtNumber}_${sanitizedYear}_${month}.json`);
+  const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
+  const sanitizedYear = sanitizeForFilename(programYear);
+  const sanitizedMonth = sanitizeForFilename(month);
+  return path.join(DATA_DIR, `assessment_${sanitizedDistrict}_${sanitizedYear}_${sanitizedMonth}.json`);
 }
 
 /**
  * Get file path for goals
  */
 function getGoalsPath(districtNumber: number, programYear: string): string {
-  // Sanitize programYear to remove path separators
-  const sanitizedYear = programYear.replace(/\//g, '_');
-  return path.join(DATA_DIR, `goals_${districtNumber}_${sanitizedYear}.json`);
+  const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
+  const sanitizedYear = sanitizeForFilename(programYear);
+  return path.join(DATA_DIR, `goals_${sanitizedDistrict}_${sanitizedYear}.json`);
 }
 
 /**
  * Get file path for configuration
  */
 function getConfigPath(districtNumber: number, programYear: string): string {
-  // Sanitize programYear to remove path separators
-  const sanitizedYear = programYear.replace(/\//g, '_');
-  return path.join(DATA_DIR, `config_${districtNumber}_${sanitizedYear}.json`);
+  const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
+  const sanitizedYear = sanitizeForFilename(programYear);
+  return path.join(DATA_DIR, `config_${sanitizedDistrict}_${sanitizedYear}.json`);
 }
 
 /**
