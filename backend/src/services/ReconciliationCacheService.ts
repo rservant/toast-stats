@@ -326,7 +326,7 @@ export class ReconciliationCacheService {
     if (cache.size >= this.config.maxSize) {
       // Find LRU entry
       let lruKey: string | null = null
-      let lruTime = Date.now()
+      let lruTime = Number.MAX_SAFE_INTEGER // Initialize to max value to find minimum
 
       for (const [key, entry] of cache.entries()) {
         if (entry.lastAccessed < lruTime) {

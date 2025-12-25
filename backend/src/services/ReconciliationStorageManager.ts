@@ -100,6 +100,20 @@ export class ReconciliationStorageManager {
   }
 
   /**
+   * Create an empty index structure
+   */
+  private createEmptyIndex(): ReconciliationIndex {
+    return {
+      version: '1.0.0',
+      jobs: {},
+      districts: {},
+      months: {},
+      byStatus: {},
+      lastUpdated: new Date().toISOString()
+    }
+  }
+
+  /**
    * Initialize empty index if it doesn't exist
    */
   private async initializeIndex(): Promise<void> {
@@ -155,6 +169,16 @@ export class ReconciliationStorageManager {
 
     try {
       const indexContent = await fs.readFile(this.indexFile, 'utf-8')
+      
+      // Handle empty or whitespace-only files
+      if (!indexContent.trim()) {
+        logger.warn('Index file is empty, creating new index')
+        const newIndex = this.createEmptyIndex()
+        await this.saveIndex(newIndex)
+        this.indexCache = newIndex
+        return this.indexCache
+      }
+      
       let index = JSON.parse(indexContent) as any
       
       // Migrate old index format to new format
@@ -163,6 +187,22 @@ export class ReconciliationStorageManager {
       this.indexCache = index as ReconciliationIndex
       return this.indexCache
     } catch (error) {
+      if ((error as any).code === 'ENOENT') {
+        // File doesn't exist, create new index
+        logger.info('Index file does not exist, creating new index')
+        const newIndex = this.createEmptyIndex()
+        await this.saveIndex(newIndex)
+        this.indexCache = newIndex
+        return this.indexCache
+      } else if (error instanceof SyntaxError) {
+        // JSON parsing error, recreate index
+        logger.error('Index file corrupted, recreating index', error)
+        const newIndex = this.createEmptyIndex()
+        await this.saveIndex(newIndex)
+        this.indexCache = newIndex
+        return this.indexCache
+      }
+      
       logger.error('Failed to load reconciliation index', error)
       throw error
     }
@@ -254,6 +294,12 @@ export class ReconciliationStorageManager {
       endDate: record.endDate ? new Date(record.endDate) : undefined,
       maxEndDate: new Date(record.maxEndDate),
       finalizedDate: record.finalizedDate ? new Date(record.finalizedDate) : undefined,
+      progress: {
+        ...record.progress,
+        estimatedCompletion: record.progress.estimatedCompletion 
+          ? new Date(record.progress.estimatedCompletion) 
+          : undefined
+      },
       metadata: {
         createdAt: new Date(record.metadata.createdAt),
         updatedAt: new Date(record.metadata.updatedAt),

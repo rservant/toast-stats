@@ -29,6 +29,7 @@ describe('ReconciliationErrorHandler', () => {
     mockAlertManager = {
       sendAlert: vi.fn().mockResolvedValue('alert-id'),
       sendReconciliationFailureAlert: vi.fn().mockResolvedValue('alert-id'),
+      sendReconciliationTimeoutAlert: vi.fn().mockResolvedValue('alert-id'),
       sendDashboardUnavailableAlert: vi.fn().mockResolvedValue('alert-id'),
       sendDataQualityAlert: vi.fn().mockResolvedValue('alert-id'),
     } as any

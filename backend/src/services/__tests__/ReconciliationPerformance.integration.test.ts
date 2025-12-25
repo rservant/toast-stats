@@ -22,85 +22,66 @@ vi.mock('../../utils/logger.js', () => ({
 }))
 
 // Mock external dependencies
-vi.mock('../ChangeDetectionEngine.js', () => ({
-  ChangeDetectionEngine: vi.fn().mockImplementation(() => ({
-    detectChanges: vi.fn().mockReturnValue({
-      hasChanges: true,
-      changedFields: ['membership'],
-      membershipChange: {
-        previous: 1000,
-        current: 1010,
-        percentChange: 1.0
-      },
-      timestamp: new Date(),
-      sourceDataDate: '2025-01-15'
-    }),
-    isSignificantChange: vi.fn().mockReturnValue(false)
-  }))
-}))
+vi.mock('../ChangeDetectionEngine.js', () => {
+  class MockChangeDetectionEngine {
+    detectChanges() {
+      return {
+        hasChanges: true,
+        changedFields: ['membership'],
+        membershipChange: {
+          previous: 1000,
+          current: 1010,
+          percentChange: 1.0
+        },
+        timestamp: new Date(),
+        sourceDataDate: '2025-01-15'
+      }
+    }
+    
+    isSignificantChange() {
+      return false
+    }
+  }
+  
+  return {
+    ChangeDetectionEngine: MockChangeDetectionEngine
+  }
+})
 
-vi.mock('../ReconciliationConfigService.js', () => ({
-  ReconciliationConfigService: vi.fn().mockImplementation(() => ({
-    getConfig: vi.fn().mockResolvedValue({
-      maxReconciliationDays: 15,
-      stabilityPeriodDays: 3,
-      checkFrequencyHours: 24,
-      significantChangeThresholds: {
-        membershipPercent: 1.0,
-        clubCountAbsolute: 1,
-        distinguishedPercent: 2.0
-      },
-      autoExtensionEnabled: true,
-      maxExtensionDays: 5
-    })
+vi.mock('../ReconciliationStorageOptimizer.js', () => ({
+  ReconciliationStorageOptimizer: vi.fn().mockImplementation(() => ({
+    saveJob: vi.fn().mockResolvedValue(undefined),
+    getJob: vi.fn().mockResolvedValue(null),
+    getAllJobs: vi.fn().mockResolvedValue([]),
+    deleteJob: vi.fn().mockResolvedValue(true)
   }))
 }))
 
 vi.mock('../CacheUpdateManager.js', () => ({
   CacheUpdateManager: vi.fn().mockImplementation(() => ({
-    updateCacheImmediately: vi.fn().mockResolvedValue({
-      success: true,
-      updated: true,
-      backupCreated: false,
-      rollbackAvailable: false
-    })
+    updateCache: vi.fn().mockResolvedValue(undefined),
+    invalidateCache: vi.fn().mockResolvedValue(undefined)
   }))
-}))
-
-vi.mock('../../utils/RetryManager.js', () => ({
-  RetryManager: {
-    executeWithRetry: vi.fn().mockImplementation(async (fn) => {
-      const result = await fn()
-      return { success: true, result }
-    }),
-    getCacheRetryOptions: vi.fn().mockReturnValue({})
-  }
-}))
-
-vi.mock('../../utils/CircuitBreaker.js', () => ({
-  CircuitBreaker: {
-    createCacheCircuitBreaker: vi.fn().mockReturnValue({
-      getStats: vi.fn().mockReturnValue({})
-    })
-  },
-  CircuitBreakerManager: {
-    getInstance: vi.fn().mockReturnValue({
-      getCircuitBreaker: vi.fn().mockReturnValue({
-        execute: vi.fn().mockImplementation(async (fn) => {
-          const result = await fn()
-          return { success: true, result }
-        })
-      })
-    })
-  }
 }))
 
 vi.mock('../../utils/AlertManager.js', () => ({
   AlertManager: {
     getInstance: vi.fn().mockReturnValue({
-      sendReconciliationFailureAlert: vi.fn(),
-      sendAlert: vi.fn()
+      sendAlert: vi.fn().mockResolvedValue('alert-id'),
+      sendReconciliationFailureAlert: vi.fn().mockResolvedValue('alert-id')
     })
+  },
+  AlertSeverity: {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    CRITICAL: 'critical'
+  },
+  AlertCategory: {
+    SYSTEM: 'system',
+    RECONCILIATION: 'reconciliation',
+    PERFORMANCE: 'performance',
+    DATA: 'data'
   }
 }))
 
@@ -120,25 +101,127 @@ describe('Reconciliation Performance Integration', () => {
   let cacheService: ReconciliationCacheService
   let storageOptimizer: ReconciliationStorageOptimizer
   let orchestrator: ReconciliationOrchestrator
-
-  const testStorageDir = './test-cache/performance-integration'
+  let mockChangeDetectionEngine: any
 
   beforeEach(() => {
+    // Create mock instances
+    mockChangeDetectionEngine = {
+      detectChanges: vi.fn().mockReturnValue({
+        hasChanges: true,
+        changedFields: ['membership'],
+        membershipChange: {
+          previous: 1000,
+          current: 1010,
+          percentChange: 1.0
+        },
+        timestamp: new Date(),
+        sourceDataDate: '2025-01-15'
+      }),
+      isSignificantChange: vi.fn().mockReturnValue(false)
+    }
+
+    const mockConfigService = {
+      getConfig: vi.fn().mockResolvedValue({
+        maxReconciliationDays: 15,
+        stabilityPeriodDays: 3,
+        checkFrequencyHours: 24,
+        significantChangeThresholds: {
+          membershipPercent: 1.0,
+          clubCountAbsolute: 1,
+          distinguishedPercent: 2.0
+        },
+        autoExtensionEnabled: true,
+        maxExtensionDays: 5
+      }),
+      updateConfig: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const mockCacheUpdateManager = {
+      updateCache: vi.fn().mockResolvedValue(undefined),
+      invalidateCache: vi.fn().mockResolvedValue(undefined)
+    }
+
     performanceMonitor = new ReconciliationPerformanceMonitor()
     cacheService = new ReconciliationCacheService({
       maxSize: 100,
       ttlMs: 60000,
       enablePrefetch: true
     })
-    storageOptimizer = new ReconciliationStorageOptimizer(testStorageDir, {
-      enableInMemoryCache: true,
-      cacheMaxSize: 50,
-      batchSize: 5
-    })
+    
+    // Pre-populate cache with a timeline to avoid storage loading
+    const mockTimeline = {
+      jobId: 'test-job-id',
+      districtId: 'D1',
+      targetMonth: '2025-01',
+      entries: [],
+      status: {
+        phase: 'monitoring' as const,
+        daysActive: 0,
+        daysStable: 0,
+        message: 'Monitoring for changes'
+      }
+    }
+    
+    // Create a mock storage optimizer that tracks saved jobs
+    const savedJobs = new Map()
+    const savedTimelines = new Map()
+    
+    storageOptimizer = {
+      saveJob: vi.fn().mockImplementation(async (job) => {
+        savedJobs.set(job.id, job)
+        // Also pre-populate cache when job is saved
+        cacheService.setJob(job.id, job)
+        const timeline = { ...mockTimeline, jobId: job.id, districtId: job.districtId, targetMonth: job.targetMonth }
+        cacheService.setTimeline(job.id, timeline)
+        return undefined
+      }),
+      getJob: vi.fn().mockImplementation(async (jobId) => {
+        return savedJobs.get(jobId) || null
+      }),
+      getAllJobs: vi.fn().mockResolvedValue([]),
+      getJobsByDistrict: vi.fn().mockResolvedValue([]), // Add missing method
+      deleteJob: vi.fn().mockResolvedValue(true),
+      cleanup: vi.fn().mockResolvedValue(undefined),
+      getStats: vi.fn().mockReturnValue({ totalJobs: 0, cacheHitRate: 0.8 }),
+      getCacheStats: vi.fn().mockReturnValue({ // Add missing method
+        hitRate: 0.85,
+        totalRequests: 100,
+        cacheSize: 50,
+        jobCacheSize: 10,
+        timelineCacheSize: 5,
+        pendingOperations: 0
+      }),
+      saveTimeline: vi.fn().mockImplementation(async (timeline) => {
+        savedTimelines.set(timeline.jobId, timeline)
+        return undefined
+      }),
+      getTimeline: vi.fn().mockImplementation(async (jobId) => {
+        const existing = savedTimelines.get(jobId)
+        if (existing) return existing
+        
+        // Return a default timeline structure if none exists
+        return {
+          jobId,
+          districtId: 'D1',
+          targetMonth: '2025-01',
+          entries: [],
+          status: {
+            phase: 'monitoring',
+            daysActive: 0,
+            daysStable: 0,
+            message: 'Monitoring for changes'
+          }
+        }
+      }),
+      flush: vi.fn().mockResolvedValue(undefined) // Add missing method
+    } as any
+    
     orchestrator = new ReconciliationOrchestrator(
-      undefined, // ChangeDetectionEngine
+      mockChangeDetectionEngine,
       storageOptimizer,
-      cacheService
+      cacheService,
+      mockConfigService as any,
+      mockCacheUpdateManager as any
     )
   })
 

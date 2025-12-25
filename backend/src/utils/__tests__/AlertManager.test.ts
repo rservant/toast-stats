@@ -255,13 +255,16 @@ describe('AlertManager', () => {
   describe('alert statistics', () => {
     it('should provide accurate statistics', async () => {
       // Send various alerts with unique titles to avoid throttling
-      await alertManager.sendAlert(AlertSeverity.HIGH, AlertCategory.RECONCILIATION, 'Unique Alert 1', 'Message')
+      const alert1Id = await alertManager.sendAlert(AlertSeverity.HIGH, AlertCategory.RECONCILIATION, 'Unique Alert 1', 'Message')
+      
+      // Advance time to avoid throttling for the second RECONCILIATION alert
+      vi.advanceTimersByTime(31 * 60 * 1000) // 31 minutes
+      
       await alertManager.sendAlert(AlertSeverity.MEDIUM, AlertCategory.RECONCILIATION, 'Unique Alert 2', 'Message')
       await alertManager.sendAlert(AlertSeverity.CRITICAL, AlertCategory.CIRCUIT_BREAKER, 'Unique Alert 3', 'Message')
       
-      // Resolve one alert
-      const alerts = alertManager.getActiveAlerts()
-      await alertManager.resolveAlert(alerts[0].id)
+      // Resolve the HIGH severity alert specifically
+      await alertManager.resolveAlert(alert1Id!)
       
       const stats = alertManager.getAlertStats()
       

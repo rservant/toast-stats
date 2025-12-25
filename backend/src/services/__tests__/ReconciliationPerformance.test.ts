@@ -261,8 +261,9 @@ describe('ReconciliationCacheService', () => {
       }
 
       // Cache should not exceed max size due to eviction
-      const stats = smallCache.getStats()
-      expect(stats.size).toBeLessThanOrEqual(cacheSize)
+      // Check job cache size specifically since we're only adding jobs
+      const jobCacheSize = (smallCache as any).jobCache.size
+      expect(jobCacheSize).toBeLessThanOrEqual(cacheSize)
       
       // The most recently added item should still be in cache
       expect(smallCache.getJob(`eviction-test-${cacheSize}`)).toBeDefined()

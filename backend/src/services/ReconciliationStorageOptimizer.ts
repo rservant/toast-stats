@@ -152,6 +152,13 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   }
 
   /**
+   * Force immediate processing of all pending operations
+   */
+  async flush(): Promise<void> {
+    await this.processBatch()
+  }
+
+  /**
    * Process batch of pending operations
    */
   private async processBatch(): Promise<void> {
@@ -164,20 +171,23 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       return
     }
 
-    const operations = Array.from(this.pendingOperations.values())
+    const operations = Array.from(this.pendingOperations.entries()) // Get [key, operation] pairs
     this.pendingOperations.clear()
 
     logger.debug('Processing batch operations', { count: operations.length })
 
     try {
+      // Ensure storage is initialized before processing operations
+      await this.init()
+      
       // Group operations by type for efficient processing
-      const jobOperations = operations.filter(op => op.key.includes('job-'))
-      const timelineOperations = operations.filter(op => op.key.includes('timeline-'))
+      const jobOperations = operations.filter(([mapKey, _op]) => mapKey.startsWith('job-'))
+      const timelineOperations = operations.filter(([mapKey, _op]) => mapKey.startsWith('timeline-'))
 
       // Process jobs in parallel
       if (jobOperations.length > 0) {
         await Promise.all(
-          jobOperations.map(op => 
+          jobOperations.map(([_mapKey, op]) => 
             op.type === 'save' 
               ? super.saveJob(op.data as ReconciliationJob)
               : super.deleteJob(op.key)
@@ -188,12 +198,18 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       // Process timelines in parallel
       if (timelineOperations.length > 0) {
         await Promise.all(
-          timelineOperations.map(op => 
+          timelineOperations.map(([_mapKey, op]) => 
             op.type === 'save' 
               ? super.saveTimeline(op.data as ReconciliationTimeline)
               : Promise.resolve() // No delete timeline method in parent
           )
         )
+      }
+
+      // Invalidate index cache after batch operations to ensure fresh data
+      if (jobOperations.length > 0) {
+        this.indexCache = null
+        this.indexCacheTimestamp = 0
       }
 
       logger.debug('Batch operations completed', { 
@@ -327,14 +343,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     return results
   }
 
-  /**
-   * Force flush all pending operations
-   */
-  async flush(): Promise<void> {
-    if (this.pendingOperations.size > 0) {
-      await this.processBatch()
-    }
-  }
+
 
   /**
    * Clear all caches
@@ -346,6 +355,21 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     this.indexCacheTimestamp = 0
     
     logger.info('All caches cleared')
+  }
+
+  /**
+   * Override getAllJobs to include both cached and persisted jobs
+   */
+  async getAllJobs(): Promise<ReconciliationJob[]> {
+    // First flush any pending operations to ensure all jobs are persisted
+    await this.flush()
+    
+    // Force index cache invalidation to ensure fresh data
+    this.indexCache = null
+    this.indexCacheTimestamp = 0
+    
+    // Then get all jobs from parent (which will use fresh index after flush)
+    return super.getAllJobs()
   }
 
   /**

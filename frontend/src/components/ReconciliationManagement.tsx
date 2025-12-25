@@ -363,10 +363,10 @@ export const ReconciliationManagement: React.FC<ReconciliationManagementProps> =
                 <strong>Auto Extension:</strong> {config.autoExtensionEnabled ? 'Enabled' : 'Disabled'}
               </div>
               <div>
-                <strong>Membership Threshold:</strong> {config.significantChangeThresholds.membershipPercent}%
+                <strong>Membership Threshold:</strong> {config.significantChangeThresholds?.membershipPercent ?? 'N/A'}%
               </div>
               <div>
-                <strong>Club Count Threshold:</strong> {config.significantChangeThresholds.clubCountAbsolute}
+                <strong>Club Count Threshold:</strong> {config.significantChangeThresholds?.clubCountAbsolute ?? 'N/A'}
               </div>
             </div>
           </div>

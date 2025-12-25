@@ -46,8 +46,13 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
     fc.integer({ min: 1, max: 150 }).map(n => n.toString())
 
   const generateDate = (): fc.Arbitrary<string> =>
-    fc.date({ min: new Date('2024-01-01'), max: new Date('2024-12-31') })
-      .map(date => date.toISOString().split('T')[0])
+    fc.date({ min: new Date('2024-01-01T00:00:00.000Z'), max: new Date('2024-12-31T23:59:59.999Z') })
+      .map(date => {
+        if (isNaN(date.getTime())) {
+          return '2024-06-15' // fallback date
+        }
+        return date.toISOString().split('T')[0]
+      })
 
   const generateDistrictStatistics = (
     districtId: string, 

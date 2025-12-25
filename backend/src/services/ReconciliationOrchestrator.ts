@@ -92,6 +92,7 @@ export class ReconciliationOrchestrator {
       }
 
       // Check if there's already an active reconciliation for this district/month
+      await this.storageManager.flush() // Ensure any pending writes are completed
       const existingJobs = await this.storageManager.getJobsByDistrict(districtId)
       const activeJob = existingJobs.find(job => 
         job.targetMonth === targetMonth && 
@@ -895,8 +896,8 @@ export class ReconciliationOrchestrator {
    * @returns Unique job ID
    */
   private generateJobId(districtId: string, targetMonth: string): string {
-    const timestamp = Date.now()
-    return `reconciliation-${districtId}-${targetMonth}-${timestamp}`
+    // Use deterministic ID for duplicate detection
+    return `reconciliation-${districtId}-${targetMonth}`
   }
 
   /**

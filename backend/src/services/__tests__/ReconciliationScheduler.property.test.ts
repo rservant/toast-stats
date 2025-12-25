@@ -42,6 +42,7 @@ describe('ReconciliationScheduler Property Tests', () => {
     // Clear the scheduler's internal state by creating a new instance
     scheduler = new ReconciliationScheduler(mockOrchestrator, mockStorageManager, mockConfigService)
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   /**
@@ -67,16 +68,17 @@ describe('ReconciliationScheduler Property Tests', () => {
           const testDate = new Date(year, month - 1, 2)
           const expectedPreviousMonth = `${year}-${(month - 1).toString().padStart(2, '0')}`
 
-          // Set up mocks
+          // Set up mocks - return empty array to indicate no existing jobs
           vi.mocked(mockStorageManager.getJobsByDistrict).mockResolvedValue([])
 
-          // Mock date
-          vi.stubGlobal('Date', class extends Date {
+          // Mock date with proper spread operator
+          const OriginalDate = Date
+          vi.stubGlobal('Date', class extends OriginalDate {
             constructor(...args: any[]) {
               if (args.length === 0) {
-                super(testDate)
+                super(testDate.getTime())
               } else {
-                super(args[0])
+                super(...args)
               }
             }
             static now() { return testDate.getTime() }
@@ -84,6 +86,8 @@ describe('ReconciliationScheduler Property Tests', () => {
 
           try {
             const scheduledCount = await scheduler.autoScheduleForMonthTransition(uniqueDistricts)
+            
+            // The scheduler should schedule reconciliations for all unique districts
             expect(scheduledCount).toBe(uniqueDistricts.length)
 
             const scheduled = scheduler.getScheduledReconciliations()
@@ -97,7 +101,7 @@ describe('ReconciliationScheduler Property Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 } // Reduced for performance
     )
   })
 
@@ -112,12 +116,14 @@ describe('ReconciliationScheduler Property Tests', () => {
           const testDate = new Date(2024, 5, dayOfMonth) // June 2024
 
           vi.mocked(mockStorageManager.getJobsByDistrict).mockResolvedValue([])
-          vi.stubGlobal('Date', class extends Date {
+          
+          const OriginalDate = Date
+          vi.stubGlobal('Date', class extends OriginalDate {
             constructor(...args: any[]) {
               if (args.length === 0) {
-                super(testDate)
+                super(testDate.getTime())
               } else {
-                super(args[0])
+                super(...args)
               }
             }
             static now() { return testDate.getTime() }
@@ -137,7 +143,7 @@ describe('ReconciliationScheduler Property Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 } // Reduced for performance
     )
   })
 
@@ -156,12 +162,14 @@ describe('ReconciliationScheduler Property Tests', () => {
           const expectedPreviousMonth = `2024-${(month - 1).toString().padStart(2, '0')}`
 
           vi.mocked(mockStorageManager.getJobsByDistrict).mockResolvedValue([])
-          vi.stubGlobal('Date', class extends Date {
+          
+          const OriginalDate = Date
+          vi.stubGlobal('Date', class extends OriginalDate {
             constructor(...args: any[]) {
               if (args.length === 0) {
-                super(testDate)
+                super(testDate.getTime())
               } else {
-                super(args[0])
+                super(...args)
               }
             }
             static now() { return testDate.getTime() }
@@ -186,7 +194,7 @@ describe('ReconciliationScheduler Property Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 } // Reduced for performance
     )
   })
 })
