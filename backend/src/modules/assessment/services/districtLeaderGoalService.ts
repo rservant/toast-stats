@@ -79,6 +79,12 @@ export async function createGoal(
     throw new Error('Invalid deadline format (must be ISO 8601)');
   }
 
+  // Validate program year format (e.g., "2024-2025")
+  const programYearPattern = /^\d{4}-\d{4}$/;
+  if (!programYearPattern.test(programYear)) {
+    throw new Error('Invalid program year format (expected "YYYY-YYYY")');
+  }
+
   const goal: DistrictLeaderGoal = {
     id: uuidv4(),
     district_number: districtNumber,
