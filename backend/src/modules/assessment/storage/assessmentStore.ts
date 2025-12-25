@@ -7,7 +7,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { MonthlyAssessment, DistrictLeaderGoal, DistrictConfig } from '../types/assessment.js';
 
-const DATA_DIR = path.join(process.cwd(), 'src', 'modules', 'assessment', 'storage', 'data');
+const DATA_DIR = path.resolve(__dirname, 'data');
 
 /**
  * Sanitize a value so it is safe to use in a filename.
