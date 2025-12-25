@@ -14,7 +14,8 @@
     "reconciliation:migrate": "tsx src/scripts/reconciliation-migrations.ts migrate",
     "reconciliation:rollback": "tsx src/scripts/reconciliation-migrations.ts rollback",
     "reconciliation:status": "tsx src/scripts/reconciliation-migrations.ts status",
-    "reconciliation:validate": "tsx src/scripts/reconciliation-migrations.ts validate"
+    "reconciliation:validate": "tsx src/scripts/reconciliation-migrations.ts validate",
+    "clear-rankings-cache": "tsx scripts/clear-rankings-cache.ts"
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",

@@ -239,6 +239,75 @@ router.delete('/cache', async (_req: Request, res: Response) => {
 })
 
 /**
+ * GET /api/districts/cache/version
+ * Get cache version information
+ */
+router.get('/cache/version', async (_req: Request, res: Response) => {
+  try {
+    const cacheManager = (toastmastersAPI as any).cacheManager
+    if (!cacheManager) {
+      return res.status(500).json({
+        error: {
+          code: 'CACHE_UNAVAILABLE',
+          message: 'Cache manager not available',
+        },
+      })
+    }
+
+    const currentVersion = (cacheManager.constructor as any).getCacheVersion()
+    const statistics = await cacheManager.getCacheStatistics()
+    
+    res.json({
+      currentVersion,
+      statistics,
+      versionHistory: {
+        1: 'Simple rank-sum scoring system (legacy)',
+        2: 'Borda count scoring with percentage-based ranking (current)',
+      },
+    })
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'CACHE_ERROR',
+        message: 'Failed to get cache version information',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
+ * GET /api/districts/cache/stats
+ * Get detailed cache statistics
+ */
+router.get('/cache/stats', async (_req: Request, res: Response) => {
+  try {
+    const cacheManager = (toastmastersAPI as any).cacheManager
+    if (!cacheManager) {
+      return res.status(500).json({
+        error: {
+          code: 'CACHE_UNAVAILABLE',
+          message: 'Cache manager not available',
+        },
+      })
+    }
+
+    const statistics = await cacheManager.getCacheStatistics()
+    res.json(statistics)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'CACHE_ERROR',
+        message: 'Failed to get cache statistics',
+        details: errorResponse.details,
+      },
+    })
+  }
+})
+
+/**
  * GET /api/districts/available-dates
  * Get all available dates with month/day information
  */

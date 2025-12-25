@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Update backend ranking calculation to use Borda count system with percentage-based ranking
+- [x] 1. Update backend ranking calculation to use Borda count system with percentage-based ranking
   - Modify `RealToastmastersAPIService.ts` to calculate Borda points instead of simple rank sums
   - Change paid clubs ranking: rank by `clubGrowthPercent` (highest positive % = rank 1) instead of absolute `paidClubs` count
   - Change total payments ranking: rank by `paymentGrowthPercent` (highest positive % = rank 1) instead of absolute `totalPayments` count
@@ -34,7 +34,7 @@
     - Ensure proper text alignment (right-aligned)
     - _Requirements: 1.2, 3.2, 3.7_
 
-  - [ ] 2.4 Update Distinguished Clubs column display
+  - [x] 2.4 Update Distinguished Clubs column display
     - Modify table cell JSX to show metric value on first line
     - Add second line with rank number and percentage separated by bullet
     - Apply color coding to percentage value
@@ -48,40 +48,40 @@
     - Clarify that higher aggregate score is better
     - _Requirements: 2.2, 2.3, 2.5_
 
-- [ ] 3. Update MockToastmastersAPIService for consistency
+- [x] 3. Update MockToastmastersAPIService for consistency
   - Apply same Borda count calculation logic to mock service
   - Update ranking logic to use percentage-based ranking for clubs and payments
   - Ensure mock data includes percentage values for testing
   - Maintain consistency with real service implementation
   - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8_
 
-- [ ] 4. Add backend tests for Borda count system with percentage-based ranking
-  - [ ] 4.1 Test percentage-based ranking for all categories
+- [x] 4. Add backend tests for Borda count system with percentage-based ranking
+  - [x] 4.1 Test percentage-based ranking for all categories
     - Test that clubs are ranked by clubGrowthPercent (not absolute paidClubs count)
     - Test that payments are ranked by paymentGrowthPercent (not absolute totalPayments count)
     - Test that distinguished clubs are ranked by distinguishedPercent (not absolute distinguishedClubs count)
     - Verify highest positive percentage gets rank 1 for all three categories
     - _Requirements: 2.6, 2.7, 2.8_
 
-  - [ ] 4.2 Test Borda point calculation accuracy
+  - [x] 4.2 Test Borda point calculation accuracy
     - Test with 10 districts: verify rank 1 gets 10 points, rank 10 gets 1 point
     - Test with 100 districts: verify rank 1 gets 100 points, rank 100 gets 1 point
     - Test with various district counts to ensure formula correctness
     - _Requirements: 2.2, 2.3_
 
-  - [ ] 4.3 Test tie handling with Borda points
+  - [x] 4.3 Test tie handling with Borda points
     - Create test scenario with 3 districts tied for rank 2 (same percentage)
     - Verify all tied districts receive same Borda points
     - Verify next rank after tie is calculated correctly (should be 5)
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 4.4 Test aggregate score calculation
+  - [x] 4.4 Test aggregate score calculation
     - Verify aggregate score equals sum of Borda points from all three categories
     - Verify districts are sorted by aggregate score in descending order
     - Test that higher aggregate scores appear first in rankings
     - _Requirements: 2.4, 2.5_
 
-  - [ ] 4.5 Test edge cases
+  - [x] 4.5 Test edge cases
     - Test scenario where all districts have same percentage (all rank 1)
     - Test district with 0 or negative percentages
     - Test single district in system
@@ -103,7 +103,7 @@
     - Test both values are visible and properly aligned
     - _Requirements: 3.1, 3.2, 3.7_
 
-- [ ] 6. Add integration tests
+- [x] 6. Add integration tests
   - Test end-to-end ranking API call
   - Verify ranks are based on percentages for clubs and payments categories
   - Verify Borda scores calculated correctly in response
@@ -111,7 +111,7 @@
   - Verify sorting by aggregate Borda score (descending)
   - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
-- [ ] 7. Clear existing cache to ensure fresh rankings
+- [x] 7. Clear existing cache to ensure fresh rankings
   - Document that existing cached rankings use old scoring system (absolute counts instead of percentages)
   - Add note in deployment checklist to clear cache after deployment
   - Consider adding cache version indicator for future migrations

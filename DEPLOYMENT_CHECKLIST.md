@@ -65,9 +65,24 @@ Use this checklist to ensure a secure and successful production deployment.
 
 **IMPORTANT: Clear cache after deploying ranking system changes**
 
-The district rankings calculation has been updated to use a Borda count scoring system. Existing cached rankings use the old scoring methodology and must be cleared to ensure users see accurate rankings.
+The district rankings calculation has been updated to use a Borda count scoring system with percentage-based ranking. Existing cached rankings use the old scoring methodology (absolute counts instead of percentages) and must be cleared to ensure users see accurate rankings.
 
-- [ ] Clear all cached district rankings:
+#### Automated Cache Clearing (Recommended)
+
+- [ ] Use the automated cache clearing script:
+  ```bash
+  # If using Docker:
+  docker exec -it <backend-container> npm run clear-rankings-cache
+  
+  # If running directly:
+  cd backend && npm run clear-rankings-cache
+  ```
+- [ ] Verify script output shows successful cache clearing
+- [ ] Check that cache version compatibility was verified
+
+#### Manual Cache Clearing (Alternative)
+
+- [ ] Clear all cached district rankings manually:
   ```bash
   # If using Docker:
   docker exec -it <backend-container> rm -rf /app/cache/districts_*.json
@@ -80,10 +95,18 @@ The district rankings calculation has been updated to use a Borda count scoring 
   rm -rf backend/cache/historical_index.json
   ```
 - [ ] Verify cache was cleared (directory should be empty or only contain district-level data)
+
+#### Post-Cache Clearing Verification
+
+- [ ] Restart the application if it's currently running
 - [ ] Trigger fresh data fetch by accessing the rankings page
-- [ ] Verify new rankings display correctly with Borda scores
+- [ ] Verify new rankings display correctly with Borda scores (higher scores = better)
+- [ ] Verify percentage values display alongside rank numbers
+- [ ] Confirm rankings are based on growth percentages, not absolute counts
 
 **Note:** District-level performance data (in `cache/districts/{districtId}/` subdirectories) does not need to be cleared as it is not affected by the ranking calculation changes.
+
+**Cache Version:** The system now uses cache version 2 (Borda count system). Version 1 cache entries (simple rank-sum system) will be automatically detected and cleared.
 
 ### Verification
 

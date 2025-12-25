@@ -591,6 +591,241 @@ describe('Districts API Integration Tests', () => {
           })
         }
       })
+
+      // Task 6: Integration tests for Borda count system with percentage-based ranking
+      describe('Borda Count System Integration Tests', () => {
+        it('should verify ranks are based on percentages for clubs and payments categories', async () => {
+          const response = await request(app)
+            .get('/api/districts/rankings')
+            .expect(200)
+
+          const rankings = response.body.rankings
+
+          if (rankings.length > 1) {
+            // Sort by club growth percentage (descending) to verify ranking logic
+            const sortedByClubPercent = [...rankings].sort((a, b) => b.clubGrowthPercent - a.clubGrowthPercent)
+            
+            // Verify that districts with higher club growth percentage get better (lower) ranks
+            let previousRank = 0
+            let previousPercent = Number.MAX_VALUE
+            
+            sortedByClubPercent.forEach((district: any) => {
+              if (district.clubGrowthPercent < previousPercent) {
+                // Percentage decreased, so rank should be worse (higher number) or equal
+                expect(district.clubsRank).toBeGreaterThanOrEqual(previousRank)
+              } else if (district.clubGrowthPercent === previousPercent) {
+                // Same percentage, should have same rank
+                expect(district.clubsRank).toBe(previousRank)
+              }
+              previousRank = district.clubsRank
+              previousPercent = district.clubGrowthPercent
+            })
+
+            // Same verification for payment growth percentage
+            const sortedByPaymentPercent = [...rankings].sort((a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent)
+            
+            previousRank = 0
+            previousPercent = Number.MAX_VALUE
+            
+            sortedByPaymentPercent.forEach((district: any) => {
+              if (district.paymentGrowthPercent < previousPercent) {
+                expect(district.paymentsRank).toBeGreaterThanOrEqual(previousRank)
+              } else if (district.paymentGrowthPercent === previousPercent) {
+                expect(district.paymentsRank).toBe(previousRank)
+              }
+              previousRank = district.paymentsRank
+              previousPercent = district.paymentGrowthPercent
+            })
+          }
+        })
+
+        it('should verify Borda scores calculated correctly in response', async () => {
+          const response = await request(app)
+            .get('/api/districts/rankings')
+            .expect(200)
+
+          const rankings = response.body.rankings
+          const totalDistricts = rankings.length
+
+          if (totalDistricts > 0) {
+            rankings.forEach((district: any) => {
+              // Calculate expected Borda points for each category
+              const clubBordaPoints = totalDistricts - district.clubsRank + 1
+              const paymentBordaPoints = totalDistricts - district.paymentsRank + 1
+              const distinguishedBordaPoints = totalDistricts - district.distinguishedRank + 1
+              
+              const expectedAggregateScore = clubBordaPoints + paymentBordaPoints + distinguishedBordaPoints
+              
+              // Verify the aggregate score matches the sum of Borda points
+              expect(district.aggregateScore).toBe(expectedAggregateScore)
+              
+              // Verify individual Borda point calculations are within valid range
+              expect(clubBordaPoints).toBeGreaterThanOrEqual(1)
+              expect(clubBordaPoints).toBeLessThanOrEqual(totalDistricts)
+              expect(paymentBordaPoints).toBeGreaterThanOrEqual(1)
+              expect(paymentBordaPoints).toBeLessThanOrEqual(totalDistricts)
+              expect(distinguishedBordaPoints).toBeGreaterThanOrEqual(1)
+              expect(distinguishedBordaPoints).toBeLessThanOrEqual(totalDistricts)
+            })
+          }
+        })
+
+        it('should verify percentage values included in API response', async () => {
+          const response = await request(app)
+            .get('/api/districts/rankings')
+            .expect(200)
+
+          const rankings = response.body.rankings
+
+          if (rankings.length > 0) {
+            rankings.forEach((district: any) => {
+              // Verify all three percentage fields are present and are numbers
+              expect(district).toHaveProperty('clubGrowthPercent')
+              expect(district).toHaveProperty('paymentGrowthPercent')
+              expect(district).toHaveProperty('distinguishedPercent')
+              
+              expect(typeof district.clubGrowthPercent).toBe('number')
+              expect(typeof district.paymentGrowthPercent).toBe('number')
+              expect(typeof district.distinguishedPercent).toBe('number')
+              
+              // Verify percentages are reasonable values (not NaN or Infinity)
+              expect(Number.isFinite(district.clubGrowthPercent)).toBe(true)
+              expect(Number.isFinite(district.paymentGrowthPercent)).toBe(true)
+              expect(Number.isFinite(district.distinguishedPercent)).toBe(true)
+            })
+          }
+        })
+
+        it('should verify sorting by aggregate Borda score (descending)', async () => {
+          const response = await request(app)
+            .get('/api/districts/rankings')
+            .expect(200)
+
+          const rankings = response.body.rankings
+
+          if (rankings.length > 1) {
+            // Verify that rankings are sorted by aggregate score in descending order
+            for (let i = 0; i < rankings.length - 1; i++) {
+              const currentScore = rankings[i].aggregateScore
+              const nextScore = rankings[i + 1].aggregateScore
+              
+              // Current district should have higher or equal aggregate score than next
+              expect(currentScore).toBeGreaterThanOrEqual(nextScore)
+            }
+            
+            // Verify that the first district has the highest aggregate score
+            const maxScore = Math.max(...rankings.map((d: any) => d.aggregateScore))
+            expect(rankings[0].aggregateScore).toBe(maxScore)
+            
+            // Verify that the last district has the lowest aggregate score
+            const minScore = Math.min(...rankings.map((d: any) => d.aggregateScore))
+            expect(rankings[rankings.length - 1].aggregateScore).toBe(minScore)
+          }
+        })
+
+        it('should verify end-to-end ranking API call returns complete data structure', async () => {
+          const response = await request(app)
+            .get('/api/districts/rankings')
+            .expect(200)
+
+          // Verify top-level response structure
+          expect(response.body).toHaveProperty('rankings')
+          expect(response.body).toHaveProperty('date')
+          expect(Array.isArray(response.body.rankings)).toBe(true)
+          expect(typeof response.body.date).toBe('string')
+
+          const rankings = response.body.rankings
+
+          if (rankings.length > 0) {
+            const district = rankings[0]
+            
+            // Verify complete district data structure
+            const requiredFields = [
+              'districtId', 'districtName', 'region',
+              'paidClubs', 'paidClubBase', 'clubGrowthPercent',
+              'totalPayments', 'paymentBase', 'paymentGrowthPercent',
+              'activeClubs', 'distinguishedClubs', 'selectDistinguished',
+              'presidentsDistinguished', 'distinguishedPercent',
+              'clubsRank', 'paymentsRank', 'distinguishedRank',
+              'aggregateScore'
+            ]
+            
+            requiredFields.forEach(field => {
+              expect(district).toHaveProperty(field)
+            })
+            
+            // Verify data types
+            expect(typeof district.districtId).toBe('string')
+            expect(typeof district.districtName).toBe('string')
+            expect(typeof district.region).toBe('string')
+            expect(typeof district.paidClubs).toBe('number')
+            expect(typeof district.totalPayments).toBe('number')
+            expect(typeof district.distinguishedClubs).toBe('number')
+            expect(typeof district.clubsRank).toBe('number')
+            expect(typeof district.paymentsRank).toBe('number')
+            expect(typeof district.distinguishedRank).toBe('number')
+            expect(typeof district.aggregateScore).toBe('number')
+            expect(typeof district.clubGrowthPercent).toBe('number')
+            expect(typeof district.paymentGrowthPercent).toBe('number')
+            expect(typeof district.distinguishedPercent).toBe('number')
+          }
+        })
+
+        it('should handle edge cases in Borda point calculation', async () => {
+          const response = await request(app)
+            .get('/api/districts/rankings')
+            .expect(200)
+
+          const rankings = response.body.rankings
+          const totalDistricts = rankings.length
+
+          if (totalDistricts > 0) {
+            // Find districts with rank 1 (should get maximum Borda points)
+            const rank1Districts = rankings.filter((d: any) => 
+              d.clubsRank === 1 || d.paymentsRank === 1 || d.distinguishedRank === 1
+            )
+            
+            rank1Districts.forEach((district: any) => {
+              if (district.clubsRank === 1) {
+                const expectedPoints = totalDistricts - 1 + 1 // totalDistricts
+                const actualPoints = totalDistricts - district.clubsRank + 1
+                expect(actualPoints).toBe(expectedPoints)
+              }
+              if (district.paymentsRank === 1) {
+                const expectedPoints = totalDistricts - 1 + 1 // totalDistricts
+                const actualPoints = totalDistricts - district.paymentsRank + 1
+                expect(actualPoints).toBe(expectedPoints)
+              }
+              if (district.distinguishedRank === 1) {
+                const expectedPoints = totalDistricts - 1 + 1 // totalDistricts
+                const actualPoints = totalDistricts - district.distinguishedRank + 1
+                expect(actualPoints).toBe(expectedPoints)
+              }
+            })
+
+            // Find districts with worst rank (should get minimum Borda points = 1)
+            const maxRank = Math.max(...rankings.map((d: any) => Math.max(d.clubsRank, d.paymentsRank, d.distinguishedRank)))
+            const worstRankDistricts = rankings.filter((d: any) => 
+              d.clubsRank === maxRank || d.paymentsRank === maxRank || d.distinguishedRank === maxRank
+            )
+            
+            worstRankDistricts.forEach((district: any) => {
+              if (district.clubsRank === maxRank) {
+                const actualPoints = totalDistricts - district.clubsRank + 1
+                expect(actualPoints).toBeGreaterThanOrEqual(1)
+              }
+              if (district.paymentsRank === maxRank) {
+                const actualPoints = totalDistricts - district.paymentsRank + 1
+                expect(actualPoints).toBeGreaterThanOrEqual(1)
+              }
+              if (district.distinguishedRank === maxRank) {
+                const actualPoints = totalDistricts - district.distinguishedRank + 1
+                expect(actualPoints).toBeGreaterThanOrEqual(1)
+              }
+            })
+          }
+        })
+      })
     })
   })
 

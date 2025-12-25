@@ -45,10 +45,10 @@ export class MockToastmastersAPIService {
       })
     }
 
-    // Rank by each category with tie handling
-    const sortedByClubs = [...mockData].sort((a, b) => b.paidClubs - a.paidClubs)
-    const sortedByPayments = [...mockData].sort((a, b) => b.totalPayments - a.totalPayments)
-    const sortedByDistinguished = [...mockData].sort((a, b) => b.distinguishedClubs - a.distinguishedClubs)
+    // Rank by each category with tie handling - RANK BY PERCENTAGES, not absolute counts
+    const sortedByClubs = [...mockData].sort((a, b) => b.clubGrowthPercent - a.clubGrowthPercent)
+    const sortedByPayments = [...mockData].sort((a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent)
+    const sortedByDistinguished = [...mockData].sort((a, b) => b.distinguishedPercent - a.distinguishedPercent)
 
     const totalDistricts = mockData.length
 
@@ -57,43 +57,43 @@ export class MockToastmastersAPIService {
     const clubsRank = new Map<string, number>()
     const clubsBordaPoints = new Map<string, number>()
     let currentRank = 1
-    let previousValue = sortedByClubs[0]?.paidClubs
+    let previousValue = sortedByClubs[0]?.clubGrowthPercent
     sortedByClubs.forEach((d, i) => {
-      if (i > 0 && d.paidClubs < previousValue) {
+      if (i > 0 && d.clubGrowthPercent < previousValue) {
         currentRank = i + 1
       }
       clubsRank.set(d.districtId, currentRank)
       const bordaPoints = totalDistricts - currentRank + 1
       clubsBordaPoints.set(d.districtId, bordaPoints)
-      previousValue = d.paidClubs
+      previousValue = d.clubGrowthPercent
     })
 
     const paymentsRank = new Map<string, number>()
     const paymentsBordaPoints = new Map<string, number>()
     currentRank = 1
-    previousValue = sortedByPayments[0]?.totalPayments
+    previousValue = sortedByPayments[0]?.paymentGrowthPercent
     sortedByPayments.forEach((d, i) => {
-      if (i > 0 && d.totalPayments < previousValue) {
+      if (i > 0 && d.paymentGrowthPercent < previousValue) {
         currentRank = i + 1
       }
       paymentsRank.set(d.districtId, currentRank)
       const bordaPoints = totalDistricts - currentRank + 1
       paymentsBordaPoints.set(d.districtId, bordaPoints)
-      previousValue = d.totalPayments
+      previousValue = d.paymentGrowthPercent
     })
 
     const distinguishedRank = new Map<string, number>()
     const distinguishedBordaPoints = new Map<string, number>()
     currentRank = 1
-    previousValue = sortedByDistinguished[0]?.distinguishedClubs
+    previousValue = sortedByDistinguished[0]?.distinguishedPercent
     sortedByDistinguished.forEach((d, i) => {
-      if (i > 0 && d.distinguishedClubs < previousValue) {
+      if (i > 0 && d.distinguishedPercent < previousValue) {
         currentRank = i + 1
       }
       distinguishedRank.set(d.districtId, currentRank)
       const bordaPoints = totalDistricts - currentRank + 1
       distinguishedBordaPoints.set(d.districtId, bordaPoints)
-      previousValue = d.distinguishedClubs
+      previousValue = d.distinguishedPercent
     })
 
     const rankings = mockData.map((district) => {

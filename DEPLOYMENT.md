@@ -304,6 +304,40 @@ docker-compose build
 docker-compose --env-file .env.production up -d
 ```
 
+### Cache Management for Ranking Updates
+
+**Important**: When deploying updates that change ranking calculations, cached data must be cleared to ensure accuracy.
+
+The application uses a cache versioning system to track changes in ranking methodologies:
+
+- **Version 1**: Simple rank-sum scoring (legacy)
+- **Version 2**: Borda count scoring with percentage-based ranking (current)
+
+#### Automated Cache Clearing
+
+Use the provided script for safe cache clearing:
+
+```bash
+# Docker deployment
+docker exec -it <backend-container> npm run clear-rankings-cache
+
+# Direct deployment
+cd backend && npm run clear-rankings-cache
+```
+
+#### Manual Cache Clearing
+
+If the automated script is unavailable:
+
+```bash
+# Remove only rankings cache (preserves district performance data)
+rm -rf backend/cache/districts_*.json
+rm -rf backend/cache/metadata_*.json
+rm -rf backend/cache/historical_index.json
+```
+
+**Note**: See `backend/CACHE_MIGRATION_GUIDE.md` for detailed information about cache versioning and migration procedures.
+
 ### Zero-Downtime Updates
 
 1. Build new images with version tags

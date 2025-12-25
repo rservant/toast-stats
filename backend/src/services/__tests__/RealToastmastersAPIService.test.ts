@@ -1,11 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { RealToastmastersAPIService } from '../RealToastmastersAPIService.js'
-import { ToastmastersScraper } from '../ToastmastersScraper.js'
-import { CacheManager } from '../CacheManager.js'
-
-// Mock the dependencies
-vi.mock('../ToastmastersScraper.js')
-vi.mock('../CacheManager.js')
 
 describe('RealToastmastersAPIService - Borda Count System', () => {
   let apiService: RealToastmastersAPIService
@@ -13,32 +7,314 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
   let mockCacheManager: any
 
   beforeEach(() => {
-    // Create mock instances
+    // Create a service instance and manually inject mocks
+    apiService = new RealToastmastersAPIService()
+    
+    // Create mock scraper
     mockScraper = {
       getAllDistricts: vi.fn(),
       getAllDistrictsForDate: vi.fn(),
       closeBrowser: vi.fn(),
     }
-
+    
+    // Create mock cache manager
     mockCacheManager = {
-      getCache: vi.fn(),
+      getCache: vi.fn().mockResolvedValue(null), // Always cache miss for testing
       setCache: vi.fn(),
       getCachedDates: vi.fn(),
       clearCache: vi.fn(),
     }
-
-    // Mock the constructors
-    vi.mocked(ToastmastersScraper).mockImplementation(() => mockScraper)
-    vi.mocked(CacheManager).mockImplementation(() => mockCacheManager)
-
-    // Mock CacheManager static methods
-    vi.spyOn(CacheManager, 'getTodayDate').mockReturnValue('2025-11-22')
-
-    apiService = new RealToastmastersAPIService()
+    
+    // Inject mocks directly
+    ;(apiService as any).scraper = mockScraper
+    ;(apiService as any).cacheManager = mockCacheManager
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  describe('4.1 Test percentage-based ranking for all categories', () => {
+    it('should rank clubs by clubGrowthPercent (not absolute paidClubs count)', async () => {
+      // Create districts where absolute counts don't match percentage rankings
+      const mockDistricts = [
+        {
+          'DISTRICT': 'D1',
+          'REGION': 'Region 1',
+          'Paid Clubs': '50', // Lower absolute count
+          'Paid Club Base': '100',
+          '% Club Growth': '25%', // Highest percentage - should be rank 1
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '0%',
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '0%',
+        },
+        {
+          'DISTRICT': 'D2',
+          'REGION': 'Region 1',
+          'Paid Clubs': '200', // Higher absolute count
+          'Paid Club Base': '100',
+          '% Club Growth': '15%', // Lower percentage - should be rank 2
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '0%',
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '0%',
+        },
+        {
+          'DISTRICT': 'D3',
+          'REGION': 'Region 1',
+          'Paid Clubs': '300', // Highest absolute count
+          'Paid Club Base': '100',
+          '% Club Growth': '5%', // Lowest percentage - should be rank 3
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '0%',
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '0%',
+        },
+      ]
+
+      mockCacheManager.getCache.mockResolvedValue(null)
+      mockScraper.getAllDistricts.mockResolvedValue(mockDistricts)
+
+      const result = await apiService.getAllDistrictsRankings()
+
+      const d1 = result.rankings.find((d: any) => d.districtId === 'D1')
+      const d2 = result.rankings.find((d: any) => d.districtId === 'D2')
+      const d3 = result.rankings.find((d: any) => d.districtId === 'D3')
+
+      // Verify ranking is by percentage, not absolute count
+      expect(d1.clubsRank).toBe(1) // Highest percentage (25%)
+      expect(d2.clubsRank).toBe(2) // Middle percentage (15%)
+      expect(d3.clubsRank).toBe(3) // Lowest percentage (5%)
+
+      // Verify absolute counts are different from ranking order
+      expect(d1.paidClubs).toBe(50) // Lowest absolute count but rank 1
+      expect(d3.paidClubs).toBe(300) // Highest absolute count but rank 3
+    })
+
+    it('should rank payments by paymentGrowthPercent (not absolute totalPayments count)', async () => {
+      // Create districts where absolute counts don't match percentage rankings
+      const mockDistricts = [
+        {
+          'DISTRICT': 'D1',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '0%',
+          'Total YTD Payments': '500', // Lower absolute amount
+          'Payment Base': '1000',
+          '% Payment Growth': '30%', // Highest percentage - should be rank 1
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '0%',
+        },
+        {
+          'DISTRICT': 'D2',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '0%',
+          'Total YTD Payments': '2000', // Higher absolute amount
+          'Payment Base': '1000',
+          '% Payment Growth': '20%', // Lower percentage - should be rank 2
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '0%',
+        },
+        {
+          'DISTRICT': 'D3',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '0%',
+          'Total YTD Payments': '5000', // Highest absolute amount
+          'Payment Base': '1000',
+          '% Payment Growth': '10%', // Lowest percentage - should be rank 3
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '0%',
+        },
+      ]
+
+      mockCacheManager.getCache.mockResolvedValue(null)
+      mockScraper.getAllDistricts.mockResolvedValue(mockDistricts)
+
+      const result = await apiService.getAllDistrictsRankings()
+
+      const d1 = result.rankings.find((d: any) => d.districtId === 'D1')
+      const d2 = result.rankings.find((d: any) => d.districtId === 'D2')
+      const d3 = result.rankings.find((d: any) => d.districtId === 'D3')
+
+      // Verify ranking is by percentage, not absolute amount
+      expect(d1.paymentsRank).toBe(1) // Highest percentage (30%)
+      expect(d2.paymentsRank).toBe(2) // Middle percentage (20%)
+      expect(d3.paymentsRank).toBe(3) // Lowest percentage (10%)
+
+      // Verify absolute amounts are different from ranking order
+      expect(d1.totalPayments).toBe(500) // Lowest absolute amount but rank 1
+      expect(d3.totalPayments).toBe(5000) // Highest absolute amount but rank 3
+    })
+
+    it('should rank distinguished clubs by distinguishedPercent (not absolute distinguishedClubs count)', async () => {
+      // Create districts where absolute counts don't match percentage rankings
+      const mockDistricts = [
+        {
+          'DISTRICT': 'D1',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '0%',
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '0%',
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '10', // Lower absolute count
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '50%', // Highest percentage - should be rank 1
+        },
+        {
+          'DISTRICT': 'D2',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '0%',
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '0%',
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '30', // Higher absolute count
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '30%', // Lower percentage - should be rank 2
+        },
+        {
+          'DISTRICT': 'D3',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '0%',
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '0%',
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '80', // Highest absolute count
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '20%', // Lowest percentage - should be rank 3
+        },
+      ]
+
+      mockCacheManager.getCache.mockResolvedValue(null)
+      mockScraper.getAllDistricts.mockResolvedValue(mockDistricts)
+
+      const result = await apiService.getAllDistrictsRankings()
+
+      const d1 = result.rankings.find((d: any) => d.districtId === 'D1')
+      const d2 = result.rankings.find((d: any) => d.districtId === 'D2')
+      const d3 = result.rankings.find((d: any) => d.districtId === 'D3')
+
+      // Verify ranking is by percentage, not absolute count
+      expect(d1.distinguishedRank).toBe(1) // Highest percentage (50%)
+      expect(d2.distinguishedRank).toBe(2) // Middle percentage (30%)
+      expect(d3.distinguishedRank).toBe(3) // Lowest percentage (20%)
+
+      // Verify absolute counts are different from ranking order
+      expect(d1.distinguishedClubs).toBe(10) // Lowest absolute count but rank 1
+      expect(d3.distinguishedClubs).toBe(80) // Highest absolute count but rank 3
+    })
+
+    it('should verify highest positive percentage gets rank 1 for all three categories', async () => {
+      const mockDistricts = [
+        {
+          'DISTRICT': 'D1',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '25%', // Highest positive percentage
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '15%', // Middle percentage
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '35%', // Highest positive percentage
+        },
+        {
+          'DISTRICT': 'D2',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '15%', // Middle percentage
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '25%', // Highest positive percentage
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '25%', // Middle percentage
+        },
+        {
+          'DISTRICT': 'D3',
+          'REGION': 'Region 1',
+          'Paid Clubs': '100',
+          'Paid Club Base': '100',
+          '% Club Growth': '5%', // Lowest positive percentage
+          'Total YTD Payments': '1000',
+          'Payment Base': '1000',
+          '% Payment Growth': '5%', // Lowest positive percentage
+          'Active Clubs': '100',
+          'Total Distinguished Clubs': '25',
+          'Select Distinguished Clubs': '0',
+          'Presidents Distinguished Clubs': '0',
+          '% Distinguished Clubs': '15%', // Lowest positive percentage
+        },
+      ]
+
+      mockCacheManager.getCache.mockResolvedValue(null)
+      mockScraper.getAllDistricts.mockResolvedValue(mockDistricts)
+
+      const result = await apiService.getAllDistrictsRankings()
+
+      const d1 = result.rankings.find((d: any) => d.districtId === 'D1')
+      const d2 = result.rankings.find((d: any) => d.districtId === 'D2')
+      const d3 = result.rankings.find((d: any) => d.districtId === 'D3')
+
+      // Verify highest positive percentage gets rank 1 in each category
+      expect(d1.clubsRank).toBe(1) // D1 has highest club growth (25%)
+      expect(d2.paymentsRank).toBe(1) // D2 has highest payment growth (25%)
+      expect(d1.distinguishedRank).toBe(1) // D1 has highest distinguished percentage (35%)
+
+      // Verify other ranks are assigned correctly
+      expect(d2.clubsRank).toBe(2) // D2 has middle club growth (15%)
+      expect(d3.clubsRank).toBe(3) // D3 has lowest club growth (5%)
+
+      expect(d1.paymentsRank).toBe(2) // D1 has middle payment growth (15%)
+      expect(d3.paymentsRank).toBe(3) // D3 has lowest payment growth (5%)
+
+      expect(d2.distinguishedRank).toBe(2) // D2 has middle distinguished percentage (25%)
+      expect(d3.distinguishedRank).toBe(3) // D3 has lowest distinguished percentage (15%)
+    })
   })
 
   describe('4.1 Test Borda point calculation accuracy', () => {
