@@ -28,15 +28,17 @@ jobs:
       run: npm ci
     
     - name: Install backend dependencies
-      run: cd backend && npm ci
+      working-directory: backend
+      run: npm ci
     
     - name: Install frontend dependencies
-      run: cd frontend && npm ci
+      working-directory: frontend
+      run: npm ci
     
     - name: Check Backend TypeScript Compilation
       id: backend-ts
+      working-directory: backend
       run: |
-        cd backend
         echo "Checking backend TypeScript compilation..."
         ERROR_COUNT=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
         echo "Backend TypeScript errors: $ERROR_COUNT"
@@ -53,8 +55,8 @@ jobs:
     
     - name: Check Frontend TypeScript Compilation
       id: frontend-ts
+      working-directory: frontend
       run: |
-        cd frontend
         echo "Checking frontend TypeScript compilation..."
         ERROR_COUNT=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
         echo "Frontend TypeScript errors: $ERROR_COUNT"
@@ -113,16 +115,20 @@ jobs:
       run: npm ci
     
     - name: Install backend dependencies
-      run: cd backend && npm ci
+      working-directory: backend
+      run: npm ci
     
     - name: Install frontend dependencies
-      run: cd frontend && npm ci
+      working-directory: frontend
+      run: npm ci
     
     - name: Lint backend
-      run: cd backend && npm run lint
+      working-directory: backend
+      run: npm run lint
     
     - name: Lint frontend
-      run: cd frontend && npm run lint
+      working-directory: frontend
+      run: npm run lint
     
     - name: Check code formatting
       run: |
@@ -155,16 +161,20 @@ jobs:
       run: npm ci
     
     - name: Install backend dependencies
-      run: cd backend && npm ci
+      working-directory: backend
+      run: npm ci
     
     - name: Install frontend dependencies
-      run: cd frontend && npm ci
+      working-directory: frontend
+      run: npm ci
     
     - name: Run backend tests
-      run: cd backend && npm test
+      working-directory: backend
+      run: npm test
     
     - name: Run frontend tests
-      run: cd frontend && npm test
+      working-directory: frontend
+      run: npm test
 
   build:
     name: Build Applications
@@ -185,16 +195,20 @@ jobs:
       run: npm ci
     
     - name: Install backend dependencies
-      run: cd backend && npm ci
+      working-directory: backend
+      run: npm ci
     
     - name: Install frontend dependencies
-      run: cd frontend && npm ci
+      working-directory: frontend
+      run: npm ci
     
     - name: Build backend
-      run: cd backend && npm run build
+      working-directory: backend
+      run: npm run build
     
     - name: Build frontend
-      run: cd frontend && npm run build
+      working-directory: frontend
+      run: npm run build
     
     - name: Build success summary
       run: |
