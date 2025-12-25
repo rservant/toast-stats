@@ -344,11 +344,20 @@ export class ProgressTracker {
     oldestEntry?: Date
     changeFrequency: number
     stabilityTrend: 'improving' | 'stable' | 'declining' | 'unknown'
+    stabilityPeriod: {
+      consecutiveStableDays: number
+      stabilityStartDate?: Date
+      lastSignificantChangeDate?: Date
+      isInStabilityPeriod: boolean
+      stabilityPeriodProgress: number
+      requiredStabilityDays: number
+    }
   }> {
     logger.debug('Getting progress statistics', { jobId })
 
     try {
       const timeline = await this.getReconciliationTimeline(jobId)
+      const job = await this.storageManager.getJob(jobId)
       
       if (timeline.entries.length === 0) {
         return {
@@ -358,7 +367,13 @@ export class ProgressTracker {
           noChangeEntries: 0,
           averageTimeBetweenEntries: 0,
           changeFrequency: 0,
-          stabilityTrend: 'unknown'
+          stabilityTrend: 'unknown',
+          stabilityPeriod: {
+            consecutiveStableDays: 0,
+            isInStabilityPeriod: false,
+            stabilityPeriodProgress: 0,
+            requiredStabilityDays: job?.config.stabilityPeriodDays || 3
+          }
         }
       }
 
@@ -386,6 +401,13 @@ export class ProgressTracker {
       // Analyze stability trend
       const stabilityTrend = this.analyzeStabilityTrend(timeline)
 
+      // Get detailed stability period information
+      const stabilityInfo = this.getStabilityPeriodInfo(timeline, job?.config.stabilityPeriodDays || 3)
+      const stabilityPeriod = {
+        ...stabilityInfo,
+        requiredStabilityDays: job?.config.stabilityPeriodDays || 3
+      }
+
       return {
         totalEntries,
         significantChanges,
@@ -395,7 +417,8 @@ export class ProgressTracker {
         mostRecentEntry,
         oldestEntry,
         changeFrequency,
-        stabilityTrend
+        stabilityTrend,
+        stabilityPeriod
       }
 
     } catch (error) {
@@ -414,7 +437,8 @@ export class ProgressTracker {
   private calculateTimelineStatus(timeline: ReconciliationTimeline, job: ReconciliationJob): ReconciliationStatus {
     const now = new Date()
     const daysActive = this.calculateDaysActive(job)
-    const daysStable = this.calculateDaysStable(timeline)
+    const stabilityInfo = this.getStabilityPeriodInfo(timeline, job.config.stabilityPeriodDays)
+    const daysStable = stabilityInfo.consecutiveStableDays
 
     // Check if job is already completed
     if (job.status === 'completed') {
@@ -422,6 +446,7 @@ export class ProgressTracker {
         phase: 'completed',
         daysActive,
         daysStable,
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
         message: 'Reconciliation completed and finalized'
       }
     }
@@ -432,38 +457,54 @@ export class ProgressTracker {
         phase: 'finalizing',
         daysActive,
         daysStable,
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
         message: 'Maximum reconciliation period reached - ready for finalization'
       }
     }
 
     // Check if stability period has been met
     if (daysStable >= job.config.stabilityPeriodDays) {
+      const stabilityMessage = stabilityInfo.stabilityStartDate 
+        ? `Stability period met (${daysStable}/${job.config.stabilityPeriodDays} days since ${stabilityInfo.stabilityStartDate.toISOString().split('T')[0]}) - ready for finalization`
+        : `Stability period met (${daysStable}/${job.config.stabilityPeriodDays} days) - ready for finalization`
+
       return {
         phase: 'finalizing',
         daysActive,
         daysStable,
-        message: `Stability period met (${daysStable}/${job.config.stabilityPeriodDays} days) - ready for finalization`
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
+        message: stabilityMessage
       }
     }
 
     // Check if we're in stabilizing phase (some stable days but not enough)
     if (daysStable > 0) {
+      const stabilityMessage = stabilityInfo.stabilityStartDate
+        ? `Stabilizing since ${stabilityInfo.stabilityStartDate.toISOString().split('T')[0]} - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+        : `Stabilizing - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+
       return {
         phase: 'stabilizing',
         daysActive,
         daysStable,
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
         nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-        message: `Stabilizing - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+        message: stabilityMessage
       }
     }
 
     // Still monitoring for changes
+    const monitoringMessage = stabilityInfo.lastSignificantChangeDate
+      ? `Monitoring for changes (last significant change: ${stabilityInfo.lastSignificantChangeDate.toISOString().split('T')[0]})`
+      : 'Monitoring for changes'
+
     return {
       phase: 'monitoring',
       daysActive,
       daysStable,
+      lastChangeDate: stabilityInfo.lastSignificantChangeDate,
       nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-      message: 'Monitoring for changes'
+      message: monitoringMessage
     }
   }
 
@@ -522,6 +563,141 @@ export class ProgressTracker {
     }
 
     return stableDays
+  }
+
+  /**
+   * Get detailed stability period information
+   * 
+   * @param timeline - The reconciliation timeline
+   * @param requiredStabilityDays - The number of required stability days from job config
+   * @returns Detailed stability period information
+   */
+  getStabilityPeriodInfo(timeline: ReconciliationTimeline, requiredStabilityDays: number = 3): {
+    consecutiveStableDays: number
+    stabilityStartDate?: Date
+    lastSignificantChangeDate?: Date
+    isInStabilityPeriod: boolean
+    stabilityPeriodProgress: number
+    requiredStabilityDays: number
+  } {
+    if (timeline.entries.length === 0) {
+      return {
+        consecutiveStableDays: 0,
+        isInStabilityPeriod: false,
+        stabilityPeriodProgress: 0,
+        requiredStabilityDays
+      }
+    }
+
+    // Sort entries by date (most recent first)
+    const sortedEntries = [...timeline.entries].sort((a, b) => b.date.getTime() - a.date.getTime())
+
+    let consecutiveStableDays = 0
+    let stabilityStartDate: Date | undefined
+    let lastSignificantChangeDate: Date | undefined
+
+    // Count consecutive stable days from most recent
+    for (let i = 0; i < sortedEntries.length; i++) {
+      const entry = sortedEntries[i]
+      
+      if (!entry.isSignificant) {
+        consecutiveStableDays++
+        // Set stability start date to the earliest stable entry in the sequence
+        stabilityStartDate = entry.date
+      } else {
+        // Found a significant change, this is where stability period started
+        lastSignificantChangeDate = entry.date
+        break
+      }
+    }
+
+    // If we went through all entries without finding a significant change,
+    // check if there are any significant changes at all
+    if (!lastSignificantChangeDate && sortedEntries.length > 0) {
+      const hasAnySignificantChanges = sortedEntries.some(entry => entry.isSignificant)
+      if (!hasAnySignificantChanges && consecutiveStableDays > 0) {
+        // All entries are stable, stability started with the first entry
+        stabilityStartDate = sortedEntries[sortedEntries.length - 1].date
+      }
+    }
+
+    const isInStabilityPeriod = consecutiveStableDays > 0
+    const stabilityPeriodProgress = Math.min(consecutiveStableDays / requiredStabilityDays, 1.0)
+
+    return {
+      consecutiveStableDays,
+      stabilityStartDate,
+      lastSignificantChangeDate,
+      isInStabilityPeriod,
+      stabilityPeriodProgress,
+      requiredStabilityDays
+    }
+  }
+
+  /**
+   * Check if reconciliation is ready for finalization based on stability period
+   * 
+   * @param jobId - The reconciliation job ID
+   * @returns Whether the reconciliation is ready for finalization
+   */
+  async isReadyForFinalization(jobId: string): Promise<{
+    isReady: boolean
+    reason: string
+    stabilityInfo: {
+      consecutiveStableDays: number
+      stabilityStartDate?: Date
+      lastSignificantChangeDate?: Date
+      isInStabilityPeriod: boolean
+      stabilityPeriodProgress: number
+      requiredStabilityDays: number
+    }
+  }> {
+    try {
+      const job = await this.storageManager.getJob(jobId)
+      if (!job) {
+        throw new Error(`Reconciliation job not found: ${jobId}`)
+      }
+
+      const timeline = await this.getReconciliationTimeline(jobId)
+      const stabilityInfo = this.getStabilityPeriodInfo(timeline, job.config.stabilityPeriodDays)
+
+      // Update required stability days from job config
+      const updatedStabilityInfo = {
+        ...stabilityInfo,
+        requiredStabilityDays: job.config.stabilityPeriodDays
+      }
+
+      // Check if stability period requirement is met
+      if (updatedStabilityInfo.consecutiveStableDays >= job.config.stabilityPeriodDays) {
+        return {
+          isReady: true,
+          reason: `Stability period met: ${updatedStabilityInfo.consecutiveStableDays}/${job.config.stabilityPeriodDays} consecutive stable days`,
+          stabilityInfo: updatedStabilityInfo
+        }
+      }
+
+      // Check if maximum reconciliation period is reached
+      const now = new Date()
+      if (now >= job.maxEndDate) {
+        return {
+          isReady: true,
+          reason: `Maximum reconciliation period reached (${job.maxEndDate.toISOString()})`,
+          stabilityInfo: updatedStabilityInfo
+        }
+      }
+
+      // Not ready for finalization
+      const remainingDays = job.config.stabilityPeriodDays - updatedStabilityInfo.consecutiveStableDays
+      return {
+        isReady: false,
+        reason: `Need ${remainingDays} more consecutive stable days for finalization`,
+        stabilityInfo: updatedStabilityInfo
+      }
+
+    } catch (error) {
+      logger.error('Failed to check finalization readiness', { jobId, error })
+      throw error
+    }
   }
 
   /**

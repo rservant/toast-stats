@@ -460,13 +460,32 @@ export const exportHistoricalRankData = (
 export const exportDistrictAnalytics = async (
   districtId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  reconciliationMetadata?: {
+    reconciliationStatus: string;
+    dataCollectionDate: string;
+    exportTimestamp: string;
+    isPreliminary: boolean;
+    isFinal: boolean;
+    reconciliationPhase?: string;
+  }
 ): Promise<void> => {
   try {
     // Build query parameters
     const params = new URLSearchParams({ format: 'csv' });
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
+    
+    // Add reconciliation metadata as query parameters
+    if (reconciliationMetadata) {
+      params.append('reconciliationStatus', reconciliationMetadata.reconciliationStatus);
+      params.append('dataCollectionDate', reconciliationMetadata.dataCollectionDate);
+      params.append('isPreliminary', reconciliationMetadata.isPreliminary.toString());
+      params.append('isFinal', reconciliationMetadata.isFinal.toString());
+      if (reconciliationMetadata.reconciliationPhase) {
+        params.append('reconciliationPhase', reconciliationMetadata.reconciliationPhase);
+      }
+    }
 
     // Fetch CSV from backend
     const response = await fetch(

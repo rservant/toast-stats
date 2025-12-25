@@ -43,19 +43,30 @@ export class ReconciliationOrchestrator {
    * 
    * @param districtId - The district ID to reconcile
    * @param targetMonth - The target month in YYYY-MM format
+   * @param configOverride - Optional configuration overrides for this job
    * @param triggeredBy - Whether this was triggered automatically or manually
    * @returns The created reconciliation job
    */
   async startReconciliation(
     districtId: string, 
     targetMonth: string,
-    triggeredBy: 'automatic' | 'manual' = 'automatic'
+    configOverride?: Partial<ReconciliationConfig>,
+    triggeredBy: 'automatic' | 'manual' = 'manual'
   ): Promise<ReconciliationJob> {
-    logger.info('Starting reconciliation', { districtId, targetMonth, triggeredBy })
+    logger.info('Starting reconciliation', { districtId, targetMonth, triggeredBy, configOverride })
 
     try {
-      // Get configuration
-      const config = await this.configService.getConfig()
+      // Get base configuration and merge with overrides
+      const baseConfig = await this.configService.getConfig()
+      const config = configOverride ? { ...baseConfig, ...configOverride } : baseConfig
+
+      // Validate the final configuration if overrides were provided
+      if (configOverride) {
+        const validationResult = await this.validateConfiguration(configOverride)
+        if (!validationResult.isValid) {
+          throw new Error(`Invalid configuration: ${validationResult.errors?.join(', ')}`)
+        }
+      }
 
       // Check if there's already an active reconciliation for this district/month
       const existingJobs = await this.storageManager.getJobsByDistrict(districtId)
@@ -709,6 +720,143 @@ export class ReconciliationOrchestrator {
   private generateJobId(districtId: string, targetMonth: string): string {
     const timestamp = Date.now()
     return `reconciliation-${districtId}-${targetMonth}-${timestamp}`
+  }
+
+  /**
+   * Get the default reconciliation configuration
+   * 
+   * @returns The default configuration
+   */
+  async getDefaultConfiguration(): Promise<ReconciliationConfig> {
+    return await this.configService.getConfig()
+  }
+
+  /**
+   * Update the reconciliation configuration
+   * 
+   * @param configUpdate - Partial configuration update
+   * @returns The updated configuration
+   */
+  async updateConfiguration(configUpdate: Partial<ReconciliationConfig>): Promise<ReconciliationConfig> {
+    // Validate the configuration first
+    const validationResult = await this.validateConfiguration(configUpdate)
+    
+    if (!validationResult.isValid) {
+      throw new Error(`Configuration validation failed: ${validationResult.errors?.join(', ')}`)
+    }
+
+    // Update the configuration
+    return await this.configService.updateConfig(configUpdate)
+  }
+
+  /**
+   * Validate a reconciliation configuration
+   * 
+   * @param config - Configuration to validate
+   * @returns Validation result with errors and warnings
+   */
+  async validateConfiguration(config: Partial<ReconciliationConfig>): Promise<{
+    isValid: boolean
+    errors?: string[]
+    warnings?: string[]
+    validatedConfig?: ReconciliationConfig
+  }> {
+    const errors: string[] = []
+    const warnings: string[] = []
+
+    // Get current config to merge with updates
+    const currentConfig = await this.configService.getConfig()
+    const mergedConfig = { ...currentConfig, ...config }
+
+    // Validate maxReconciliationDays
+    if (config.maxReconciliationDays !== undefined) {
+      if (!Number.isInteger(config.maxReconciliationDays) || config.maxReconciliationDays < 1) {
+        errors.push('maxReconciliationDays must be a positive integer')
+      } else if (config.maxReconciliationDays > 30) {
+        warnings.push('maxReconciliationDays is very high (>30 days), consider reducing for better performance')
+      }
+    }
+
+    // Validate stabilityPeriodDays
+    if (config.stabilityPeriodDays !== undefined) {
+      if (!Number.isInteger(config.stabilityPeriodDays) || config.stabilityPeriodDays < 1) {
+        errors.push('stabilityPeriodDays must be a positive integer')
+      } else if (config.stabilityPeriodDays > mergedConfig.maxReconciliationDays) {
+        errors.push('stabilityPeriodDays cannot be greater than maxReconciliationDays')
+      }
+    }
+
+    // Validate checkFrequencyHours
+    if (config.checkFrequencyHours !== undefined) {
+      if (!Number.isInteger(config.checkFrequencyHours) || config.checkFrequencyHours < 1) {
+        errors.push('checkFrequencyHours must be a positive integer')
+      } else if (config.checkFrequencyHours < 6) {
+        warnings.push('checkFrequencyHours is very low (<6 hours), this may cause excessive API calls')
+      } else if (config.checkFrequencyHours > 48) {
+        warnings.push('checkFrequencyHours is very high (>48 hours), changes may be detected late')
+      }
+    }
+
+    // Validate maxExtensionDays
+    if (config.maxExtensionDays !== undefined) {
+      if (!Number.isInteger(config.maxExtensionDays) || config.maxExtensionDays < 0) {
+        errors.push('maxExtensionDays must be a non-negative integer')
+      } else if (config.maxExtensionDays > 15) {
+        warnings.push('maxExtensionDays is very high (>15 days), consider reducing to avoid indefinite reconciliation')
+      }
+    }
+
+    // Validate significantChangeThresholds
+    if (config.significantChangeThresholds) {
+      const thresholds = config.significantChangeThresholds
+
+      if (thresholds.membershipPercent !== undefined) {
+        if (typeof thresholds.membershipPercent !== 'number' || thresholds.membershipPercent < 0) {
+          errors.push('significantChangeThresholds.membershipPercent must be a non-negative number')
+        } else if (thresholds.membershipPercent > 10) {
+          warnings.push('membershipPercent threshold is very high (>10%), significant changes may be missed')
+        }
+      }
+
+      if (thresholds.clubCountAbsolute !== undefined) {
+        if (!Number.isInteger(thresholds.clubCountAbsolute) || thresholds.clubCountAbsolute < 0) {
+          errors.push('significantChangeThresholds.clubCountAbsolute must be a non-negative integer')
+        }
+      }
+
+      if (thresholds.distinguishedPercent !== undefined) {
+        if (typeof thresholds.distinguishedPercent !== 'number' || thresholds.distinguishedPercent < 0) {
+          errors.push('significantChangeThresholds.distinguishedPercent must be a non-negative number')
+        } else if (thresholds.distinguishedPercent > 20) {
+          warnings.push('distinguishedPercent threshold is very high (>20%), significant changes may be missed')
+        }
+      }
+    }
+
+    // Validate autoExtensionEnabled
+    if (config.autoExtensionEnabled !== undefined) {
+      if (typeof config.autoExtensionEnabled !== 'boolean') {
+        errors.push('autoExtensionEnabled must be a boolean')
+      }
+    }
+
+    // Cross-validation checks
+    if (mergedConfig.stabilityPeriodDays > mergedConfig.maxReconciliationDays) {
+      errors.push('stabilityPeriodDays cannot be greater than maxReconciliationDays')
+    }
+
+    if (mergedConfig.maxExtensionDays > 0 && !mergedConfig.autoExtensionEnabled) {
+      warnings.push('maxExtensionDays is set but autoExtensionEnabled is false - extensions will not be automatic')
+    }
+
+    const isValid = errors.length === 0
+
+    return {
+      isValid,
+      errors: errors.length > 0 ? errors : undefined,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      validatedConfig: isValid ? mergedConfig : undefined
+    }
   }
 
   /**

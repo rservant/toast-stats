@@ -1,9 +1,9 @@
 {
-  "maxReconciliationDays": 5,
-  "stabilityPeriodDays": 3,
-  "checkFrequencyHours": 15,
+  "maxReconciliationDays": 20,
+  "stabilityPeriodDays": 5,
+  "checkFrequencyHours": 12,
   "significantChangeThresholds": {
-    "membershipPercent": 2,
+    "membershipPercent": 2.5,
     "clubCountAbsolute": 2,
     "distinguishedPercent": 4
   },

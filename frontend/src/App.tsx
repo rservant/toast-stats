@@ -6,6 +6,7 @@ import { ProgramYearProvider } from './contexts/ProgramYearContext';
 import { BackfillProgressBar } from './components/BackfillProgressBar';
 import LandingPage from './pages/LandingPage';
 import DistrictDetailPage from './pages/DistrictDetailPage';
+import ReconciliationManagementPage from './pages/ReconciliationManagementPage';
 
 function AppContent() {
   const { activeBackfills, removeBackfill } = useBackfillContext();
@@ -31,6 +32,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/district/:districtId" element={<DistrictDetailPage />} />
+          <Route path="/admin/reconciliation" element={<ReconciliationManagementPage />} />
         </Routes>
       </BrowserRouter>
     </>

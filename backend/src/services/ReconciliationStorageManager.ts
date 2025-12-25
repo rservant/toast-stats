@@ -375,6 +375,59 @@ export class ReconciliationStorageManager {
   }
 
   /**
+   * Get jobs with flexible filtering options
+   */
+  async getJobs(options?: {
+    districtId?: string
+    status?: ReconciliationJob['status']
+    limit?: number
+  }): Promise<ReconciliationJob[]> {
+    try {
+      const index = await this.loadIndex()
+      let jobIds: string[] = []
+
+      // Apply filters
+      if (options?.districtId && options?.status) {
+        // Both filters - need to intersect
+        const districtJobs = index.byDistrict[options.districtId] || []
+        const statusJobs = index.byStatus[options.status] || []
+        jobIds = districtJobs.filter(id => statusJobs.includes(id))
+      } else if (options?.districtId) {
+        // District filter only
+        jobIds = index.byDistrict[options.districtId] || []
+      } else if (options?.status) {
+        // Status filter only
+        jobIds = index.byStatus[options.status] || []
+      } else {
+        // No filters - get all jobs
+        jobIds = Object.keys(index.jobs)
+      }
+
+      // Load full job objects
+      const jobs: ReconciliationJob[] = []
+      for (const jobId of jobIds) {
+        const job = await this.getJob(jobId)
+        if (job) {
+          jobs.push(job)
+        }
+      }
+
+      // Sort by creation date (newest first)
+      jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
+
+      // Apply limit
+      if (options?.limit && options.limit > 0) {
+        return jobs.slice(0, options.limit)
+      }
+
+      return jobs
+    } catch (error) {
+      logger.error('Failed to get jobs with filters', { options, error })
+      return []
+    }
+  }
+
+  /**
    * Delete reconciliation job
    */
   async deleteJob(jobId: string): Promise<boolean> {
