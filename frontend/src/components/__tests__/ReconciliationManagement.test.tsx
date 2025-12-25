@@ -22,7 +22,17 @@ Object.defineProperty(window, 'confirm', {
 
 describe('ReconciliationManagement', () => {
   beforeEach(() => {
+    // Clear all mocks completely
     mockFetch.mockClear();
+    mockFetch.mockReset();
+    mockWindowOpen.mockClear();
+    mockConfirm.mockClear();
+  });
+
+  afterEach(() => {
+    // Clean up after each test
+    mockFetch.mockClear();
+    mockFetch.mockReset();
     mockWindowOpen.mockClear();
     mockConfirm.mockClear();
   });
@@ -36,13 +46,59 @@ describe('ReconciliationManagement', () => {
       startDate: new Date('2024-11-01'),
       currentDataDate: '2024-10-31',
     },
+  ];
+
+  const mockJobsForStatusTest = [
+    {
+      id: 'job-1',
+      districtId: 'D1',
+      targetMonth: '2024-10',
+      status: 'active',
+      startDate: new Date('2024-11-01'),
+      currentDataDate: '2024-10-31',
+    },
     {
       id: 'job-2',
       districtId: 'D2',
       targetMonth: '2024-09',
-      status: 'active',
+      status: 'completed',
       startDate: new Date('2024-10-01'),
       currentDataDate: '2024-09-30',
+    },
+  ];
+
+  const mockJobsWithAllStatuses = [
+    {
+      id: 'job-1',
+      districtId: 'D1',
+      targetMonth: '2024-10',
+      status: 'active',
+      startDate: new Date('2024-11-01'),
+      currentDataDate: '2024-10-31',
+    },
+    {
+      id: 'job-2',
+      districtId: 'D2',
+      targetMonth: '2024-09',
+      status: 'completed',
+      startDate: new Date('2024-10-01'),
+      currentDataDate: '2024-09-30',
+    },
+    {
+      id: 'job-3',
+      districtId: 'D3',
+      targetMonth: '2024-08',
+      status: 'failed',
+      startDate: new Date('2024-09-01'),
+      currentDataDate: '2024-08-31',
+    },
+    {
+      id: 'job-4',
+      districtId: 'D4',
+      targetMonth: '2024-07',
+      status: 'cancelled',
+      startDate: new Date('2024-08-01'),
+      currentDataDate: '2024-07-31',
     },
   ];
 
@@ -57,6 +113,19 @@ describe('ReconciliationManagement', () => {
     },
     autoExtensionEnabled: true,
     maxExtensionDays: 5,
+  };
+
+  // Helper function to setup successful mocks
+  const setupSuccessfulMocks = (jobs: any[] = [], config = mockConfig) => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ jobs }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ config }),
+      });
   };
 
   describe('Access Control', () => {
@@ -88,15 +157,7 @@ describe('ReconciliationManagement', () => {
 
   describe('Data Loading', () => {
     it('should load active jobs and configuration on mount', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: mockActiveJobs }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
+      setupSuccessfulMocks(mockJobsForStatusTest);
 
       render(<ReconciliationManagement isAdmin={true} />);
 
@@ -128,7 +189,7 @@ describe('ReconciliationManagement', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/Error:/)).toBeInTheDocument();
-        expect(screen.getByText(/Failed to load data/)).toBeInTheDocument();
+        expect(screen.getByText(/Failed to load data: Network error/)).toBeInTheDocument();
       });
     });
 
@@ -152,38 +213,20 @@ describe('ReconciliationManagement', () => {
   });
 
   describe('Job Management', () => {
-    beforeEach(async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: mockActiveJobs }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
-    });
-
     it('should display active jobs correctly', async () => {
+      setupSuccessfulMocks(mockJobsForStatusTest);
+
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
         expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument();
         expect(screen.getByText('District D2 - 2024-09')).toBeInTheDocument();
-        expect(screen.getAllByText('active')).toHaveLength(2);
+        expect(screen.getAllByText('active')).toHaveLength(1);
       });
     });
 
     it('should show empty state when no active jobs', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: [] }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
+      setupSuccessfulMocks([]); // Empty jobs array
 
       render(<ReconciliationManagement isAdmin={true} />);
 
@@ -193,6 +236,8 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should open job details in new window', async () => {
+      setupSuccessfulMocks(mockActiveJobs);
+
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
@@ -205,11 +250,23 @@ describe('ReconciliationManagement', () => {
 
     it('should cancel job with confirmation', async () => {
       mockConfirm.mockReturnValue(true);
+      
+      // Initial load
       mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ jobs: mockActiveJobs }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ config: mockConfig }),
+        })
+        // Cancel job
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({}),
         })
+        // Refresh after cancel
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ jobs: [] }),
@@ -237,6 +294,7 @@ describe('ReconciliationManagement', () => {
 
     it('should not cancel job if user declines confirmation', async () => {
       mockConfirm.mockReturnValue(false);
+      setupSuccessfulMocks(mockActiveJobs);
 
       render(<ReconciliationManagement isAdmin={true} />);
 
@@ -251,19 +309,9 @@ describe('ReconciliationManagement', () => {
   });
 
   describe('Start Reconciliation Form', () => {
-    beforeEach(async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: [] }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
-    });
-
     it('should open start reconciliation form', async () => {
+      setupSuccessfulMocks([]);
+
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
@@ -277,6 +325,8 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should close start reconciliation form', async () => {
+      setupSuccessfulMocks([]);
+
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
@@ -291,6 +341,8 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should validate required fields', async () => {
+      setupSuccessfulMocks([]);
+
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
@@ -298,7 +350,7 @@ describe('ReconciliationManagement', () => {
         fireEvent.click(startButton);
       });
 
-      const submitButton = screen.getByRole('button', { name: /Start Reconciliation/i });
+      const submitButton = screen.getByRole('button', { name: /Submit/i });
       expect(submitButton).toBeDisabled();
 
       // Fill in district ID only
@@ -313,11 +365,22 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should submit start reconciliation form successfully', async () => {
+      // Initial load
       mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ jobs: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ config: mockConfig }),
+        })
+        // Submit form
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ success: true }),
         })
+        // Reload after submit
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ jobs: [] }),
@@ -341,7 +404,7 @@ describe('ReconciliationManagement', () => {
       fireEvent.change(monthInput, { target: { value: '2024-10' } });
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: /Start Reconciliation/i });
+      const submitButton = screen.getByRole('button', { name: /Submit/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -357,12 +420,8 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should handle start reconciliation errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: () => Promise.resolve({
-          error: { message: 'District already has active reconciliation' }
-        }),
-      });
+      // Initial load
+      setupSuccessfulMocks([]);
 
       render(<ReconciliationManagement isAdmin={true} />);
 
@@ -371,41 +430,40 @@ describe('ReconciliationManagement', () => {
         fireEvent.click(startButton);
       });
 
+      // Error response for form submission
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Bad Request',
+        json: () => Promise.resolve({
+          error: { message: 'District already has active reconciliation' }
+        }),
+      });
+
       // Fill and submit form
       const districtInput = screen.getByLabelText('District ID');
       const monthInput = screen.getByLabelText('Target Month');
       fireEvent.change(districtInput, { target: { value: 'D1' } });
       fireEvent.change(monthInput, { target: { value: '2024-10' } });
 
-      const submitButton = screen.getByRole('button', { name: /Start Reconciliation/i });
+      const submitButton = screen.getByRole('button', { name: /Submit/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/District already has active reconciliation/)).toBeInTheDocument();
+        expect(screen.getByText('District already has active reconciliation')).toBeInTheDocument();
       });
     });
   });
 
   describe('Configuration Management', () => {
-    beforeEach(async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: [] }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
+    it('should open configuration form', async () => {
+      setupSuccessfulMocks([]);
 
       render(<ReconciliationManagement isAdmin={true} />);
       
       await waitFor(() => {
         expect(screen.getByText('Configure')).toBeInTheDocument();
       });
-    });
 
-    it('should open configuration form', async () => {
       const configButton = screen.getByText('Configure');
       fireEvent.click(configButton);
 
@@ -416,6 +474,16 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should close configuration form', async () => {
+      setupSuccessfulMocks();
+
+      render(<ReconciliationManagement isAdmin={true} />);
+      
+      // Wait for component to load completely
+      await waitFor(() => {
+        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
+        expect(screen.getByText('Configure')).toBeInTheDocument();
+      });
+
       const configButton = screen.getByText('Configure');
       fireEvent.click(configButton);
 
@@ -434,6 +502,14 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should update configuration values', async () => {
+      setupSuccessfulMocks([]);
+
+      render(<ReconciliationManagement isAdmin={true} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Configure')).toBeInTheDocument();
+      });
+
       const configButton = screen.getByText('Configure');
       fireEvent.click(configButton);
 
@@ -463,11 +539,22 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should submit configuration updates successfully', async () => {
+      // Initial load
       mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ jobs: [] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ config: mockConfig }),
+        })
+        // Update config
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ success: true, config: mockConfig }),
         })
+        // Reload after update
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ jobs: [] }),
@@ -476,6 +563,12 @@ describe('ReconciliationManagement', () => {
           ok: true,
           json: () => Promise.resolve({ config: mockConfig }),
         });
+
+      render(<ReconciliationManagement isAdmin={true} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Configure')).toBeInTheDocument();
+      });
 
       const configButton = screen.getByText('Configure');
       fireEvent.click(configButton);
@@ -502,6 +595,16 @@ describe('ReconciliationManagement', () => {
     });
 
     it('should handle configuration update errors', async () => {
+      setupSuccessfulMocks([]);
+
+      render(<ReconciliationManagement isAdmin={true} />);
+      
+      // Wait for component to load completely
+      await waitFor(() => {
+        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
+        expect(screen.getByText('Configure')).toBeInTheDocument();
+      });
+
       const configButton = screen.getByText('Configure');
       fireEvent.click(configButton);
 
@@ -509,8 +612,10 @@ describe('ReconciliationManagement', () => {
         expect(screen.getByRole('button', { name: /Update Configuration/i })).toBeInTheDocument();
       });
 
+      // Error response for config update
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        statusText: 'Bad Request',
         json: () => Promise.resolve({
           error: { message: 'Invalid configuration values' }
         }),
@@ -520,11 +625,21 @@ describe('ReconciliationManagement', () => {
       fireEvent.click(updateButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Invalid configuration values/)).toBeInTheDocument();
+        expect(screen.getByText('Invalid configuration values')).toBeInTheDocument();
       });
     });
 
     it('should cancel configuration changes', async () => {
+      setupSuccessfulMocks([]);
+
+      render(<ReconciliationManagement isAdmin={true} />);
+      
+      // Wait for component to load completely
+      await waitFor(() => {
+        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
+        expect(screen.getByText('Configure')).toBeInTheDocument();
+      });
+
       const configButton = screen.getByText('Configure');
       fireEvent.click(configButton);
 
@@ -550,31 +665,19 @@ describe('ReconciliationManagement', () => {
 
   describe('Refresh Functionality', () => {
     it('should refresh data when refresh button is clicked', async () => {
-      // Initial load
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: [] }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        })
-        // Refresh load
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: mockActiveJobs }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
+      // Initial load with empty jobs
+      setupSuccessfulMocks([]);
 
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
         expect(screen.getByText('No active reconciliation jobs')).toBeInTheDocument();
+        expect(screen.getByText('Refresh')).toBeInTheDocument();
       });
+
+      // Set up mocks for refresh - need to clear previous mocks first
+      mockFetch.mockClear();
+      setupSuccessfulMocks([mockActiveJobs[0]]);
 
       const refreshButton = screen.getByText('Refresh');
       fireEvent.click(refreshButton);
@@ -583,33 +686,18 @@ describe('ReconciliationManagement', () => {
         expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument();
       });
 
-      expect(mockFetch).toHaveBeenCalledTimes(4); // Initial load + refresh
+      expect(mockFetch).toHaveBeenCalledTimes(2); // Refresh calls
     });
   });
 
   describe('Status Colors', () => {
     it('should display correct status colors for different job statuses', async () => {
-      const jobsWithDifferentStatuses = [
-        { ...mockActiveJobs[0], status: 'active' },
-        { ...mockActiveJobs[0], id: 'job-2', status: 'completed' },
-        { ...mockActiveJobs[0], id: 'job-3', status: 'failed' },
-        { ...mockActiveJobs[0], id: 'job-4', status: 'cancelled' },
-      ];
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ jobs: jobsWithDifferentStatuses }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ config: mockConfig }),
-        });
+      setupSuccessfulMocks(mockJobsWithAllStatuses);
 
       render(<ReconciliationManagement isAdmin={true} />);
 
       await waitFor(() => {
-        expect(screen.getByText('active')).toBeInTheDocument();
+        expect(screen.getAllByText('active')).toHaveLength(1);
         expect(screen.getByText('completed')).toBeInTheDocument();
         expect(screen.getByText('failed')).toBeInTheDocument();
         expect(screen.getByText('cancelled')).toBeInTheDocument();

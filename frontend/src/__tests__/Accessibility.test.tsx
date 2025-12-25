@@ -7,7 +7,8 @@ import LoginPage from '../pages/LoginPage'
 import { AuthProvider } from '../context/AuthContext'
 import StatCard from '../components/StatCard'
 
-expect.extend({ toHaveNoViolations })
+// Extend expect with jest-axe matchers
+expect.extend(toHaveNoViolations as any)
 
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
