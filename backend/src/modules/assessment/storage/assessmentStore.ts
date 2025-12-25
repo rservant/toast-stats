@@ -225,7 +225,7 @@ export async function getGoal(id: string): Promise<DistrictLeaderGoal | null> {
     
     for (const file of files) {
       if (file.startsWith('goals_') && file.endsWith('.json')) {
-        const data = await fs.readFile(path.join(DATA_DIR, file), 'utf-8');
+        const data = await fs.readFile(resolveDataPath(file), 'utf-8');
         const goals = JSON.parse(data) as DistrictLeaderGoal[];
         const goal = goals.find(g => g.id === id);
         if (goal) {
