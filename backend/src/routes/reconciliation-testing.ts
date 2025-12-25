@@ -11,7 +11,8 @@ import { ReconciliationSimulator } from '../utils/ReconciliationSimulator.js'
 import { ReconciliationTestDataGenerator } from '../utils/ReconciliationTestDataGenerator.js'
 import { ReconciliationReplayEngine } from '../utils/ReconciliationReplayEngine.js'
 import type { Request, Response } from 'express'
-import type { SimulationScenario, ReplayOptions } from '../utils/ReconciliationSimulator.js'
+import type { SimulationScenario } from '../utils/ReconciliationSimulator.js'
+import type { ReplayOptions } from '../utils/ReconciliationReplayEngine.js'
 
 const router = Router()
 
@@ -24,7 +25,7 @@ const replayEngine = new ReconciliationReplayEngine()
  * GET /api/reconciliation-testing/scenarios
  * Get all available simulation scenarios
  */
-router.get('/scenarios', async (req: Request, res: Response) => {
+router.get('/scenarios', async (_req: Request, res: Response) => {
   try {
     const scenarios = simulator.getAvailableScenarios()
     
@@ -56,9 +57,9 @@ router.get('/scenarios', async (req: Request, res: Response) => {
  * POST /api/reconciliation-testing/scenarios
  * Create a custom simulation scenario
  */
-router.post('/scenarios', async (req: Request, res: Response) => {
+router.post('/scenarios', async (_req: Request, res: Response) => {
   try {
-    const scenario: SimulationScenario = req.body
+    const scenario: SimulationScenario = _req.body
     
     // Validate required fields
     if (!scenario.name || !scenario.description || !scenario.districtId || !scenario.targetMonth) {
@@ -92,9 +93,9 @@ router.post('/scenarios', async (req: Request, res: Response) => {
  * POST /api/reconciliation-testing/simulate/:scenarioName
  * Run a simulation for a specific scenario
  */
-router.post('/simulate/:scenarioName', async (req: Request, res: Response) => {
+router.post('/simulate/:scenarioName', async (_req: Request, res: Response) => {
   try {
-    const { scenarioName } = req.params
+    const { scenarioName } = _req.params
     
     const result = await simulator.simulateScenario(scenarioName)
     
@@ -117,7 +118,7 @@ router.post('/simulate/:scenarioName', async (req: Request, res: Response) => {
       }
     })
   } catch (error) {
-    logger.error('Simulation failed', { scenarioName: req.params.scenarioName, error })
+    logger.error('Simulation failed', { scenarioName: _req.params.scenarioName, error })
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Simulation failed'
@@ -129,9 +130,9 @@ router.post('/simulate/:scenarioName', async (req: Request, res: Response) => {
  * POST /api/reconciliation-testing/simulate/batch
  * Run batch simulation for multiple scenarios
  */
-router.post('/simulate/batch', async (req: Request, res: Response) => {
+router.post('/simulate/batch', async (_req: Request, res: Response) => {
   try {
-    const { scenarioNames } = req.body
+    const { scenarioNames } = _req.body
     
     if (!Array.isArray(scenarioNames) || scenarioNames.length === 0) {
       return res.status(400).json({
@@ -176,7 +177,7 @@ router.post('/simulate/batch', async (req: Request, res: Response) => {
  * GET /api/reconciliation-testing/test-data/patterns
  * Get all available test data patterns
  */
-router.get('/test-data/patterns', async (req: Request, res: Response) => {
+router.get('/test-data/patterns', async (_req: Request, res: Response) => {
   try {
     const patterns = testDataGenerator.getAvailablePatterns()
     
@@ -200,10 +201,10 @@ router.get('/test-data/patterns', async (req: Request, res: Response) => {
  * POST /api/reconciliation-testing/test-data/generate/:pattern
  * Generate test data for a specific pattern
  */
-router.post('/test-data/generate/:pattern', async (req: Request, res: Response) => {
+router.post('/test-data/generate/:pattern', async (_req: Request, res: Response) => {
   try {
-    const { pattern } = req.params
-    const { seed } = req.body
+    const { pattern } = _req.params
+    const { seed } = _req.body
     
     const testData = testDataGenerator.generateTestData(pattern, seed)
     
@@ -222,7 +223,7 @@ router.post('/test-data/generate/:pattern', async (req: Request, res: Response) 
       }
     })
   } catch (error) {
-    logger.error('Test data generation failed', { pattern: req.params.pattern, error })
+    logger.error('Test data generation failed', { pattern: _req.params.pattern, error })
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Test data generation failed'
@@ -234,9 +235,9 @@ router.post('/test-data/generate/:pattern', async (req: Request, res: Response) 
  * POST /api/reconciliation-testing/test-data/batch
  * Generate batch test data for multiple patterns
  */
-router.post('/test-data/batch', async (req: Request, res: Response) => {
+router.post('/test-data/batch', async (_req: Request, res: Response) => {
   try {
-    const { patterns, count = 5 } = req.body
+    const { patterns, count = 5 } = _req.body
     
     if (!Array.isArray(patterns) || patterns.length === 0) {
       return res.status(400).json({
@@ -290,7 +291,7 @@ router.post('/test-data/batch', async (req: Request, res: Response) => {
  * GET /api/reconciliation-testing/test-data/edge-cases
  * Generate edge case test data
  */
-router.get('/test-data/edge-cases', async (req: Request, res: Response) => {
+router.get('/test-data/edge-cases', async (_req: Request, res: Response) => {
   try {
     const edgeCases = testDataGenerator.generateEdgeCases()
     
@@ -321,10 +322,10 @@ router.get('/test-data/edge-cases', async (req: Request, res: Response) => {
  * POST /api/reconciliation-testing/test-data/property-tests/:property
  * Generate property-based test cases
  */
-router.post('/test-data/property-tests/:property', async (req: Request, res: Response) => {
+router.post('/test-data/property-tests/:property', async (_req: Request, res: Response) => {
   try {
-    const { property } = req.params
-    const { count = 10 } = req.body
+    const { property } = _req.params
+    const { count = 10 } = _req.body
     
     if (count < 1 || count > 200) {
       return res.status(400).json({
@@ -352,7 +353,7 @@ router.post('/test-data/property-tests/:property', async (req: Request, res: Res
       }
     })
   } catch (error) {
-    logger.error('Property test case generation failed', { property: req.params.property, error })
+    logger.error('Property test case generation failed', { property: _req.params.property, error })
     res.status(500).json({
       success: false,
       error: 'Property test case generation failed'
@@ -364,9 +365,9 @@ router.post('/test-data/property-tests/:property', async (req: Request, res: Res
  * POST /api/reconciliation-testing/replay/sessions
  * Create a new replay session
  */
-router.post('/replay/sessions', async (req: Request, res: Response) => {
+router.post('/replay/sessions', async (_req: Request, res: Response) => {
   try {
-    const { name, description, job, timeline, dataSequence } = req.body
+    const { name, description, job, timeline, dataSequence } = _req.body
     
     if (!name || !description || !job || !timeline || !dataSequence) {
       return res.status(400).json({
@@ -403,7 +404,7 @@ router.post('/replay/sessions', async (req: Request, res: Response) => {
  * GET /api/reconciliation-testing/replay/sessions
  * Get all replay sessions
  */
-router.get('/replay/sessions', async (req: Request, res: Response) => {
+router.get('/replay/sessions', async (_req: Request, res: Response) => {
   try {
     const sessions = replayEngine.getAllReplaySessions()
     
@@ -435,9 +436,9 @@ router.get('/replay/sessions', async (req: Request, res: Response) => {
  * GET /api/reconciliation-testing/replay/sessions/:sessionId
  * Get a specific replay session
  */
-router.get('/replay/sessions/:sessionId', async (req: Request, res: Response) => {
+router.get('/replay/sessions/:sessionId', async (_req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params
+    const { sessionId } = _req.params
     const session = replayEngine.getReplaySession(sessionId)
     
     if (!session) {
@@ -467,7 +468,7 @@ router.get('/replay/sessions/:sessionId', async (req: Request, res: Response) =>
       }
     })
   } catch (error) {
-    logger.error('Failed to get replay session', { sessionId: req.params.sessionId, error })
+    logger.error('Failed to get replay session', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve replay session'
@@ -479,16 +480,16 @@ router.get('/replay/sessions/:sessionId', async (req: Request, res: Response) =>
  * POST /api/reconciliation-testing/replay/sessions/:sessionId/execute
  * Execute a replay session
  */
-router.post('/replay/sessions/:sessionId/execute', async (req: Request, res: Response) => {
+router.post('/replay/sessions/:sessionId/execute', async (_req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params
+    const { sessionId } = _req.params
     const options: ReplayOptions = {
-      stepByStep: req.body.stepByStep || false,
-      includeDebugInfo: req.body.includeDebugInfo !== false, // Default true
-      validateAtEachStep: req.body.validateAtEachStep || false,
-      pauseOnSignificantChanges: req.body.pauseOnSignificantChanges || false,
-      pauseOnErrors: req.body.pauseOnErrors || false,
-      maxSteps: req.body.maxSteps
+      stepByStep: _req.body.stepByStep || false,
+      includeDebugInfo: _req.body.includeDebugInfo !== false, // Default true
+      validateAtEachStep: _req.body.validateAtEachStep || false,
+      pauseOnSignificantChanges: _req.body.pauseOnSignificantChanges || false,
+      pauseOnErrors: _req.body.pauseOnErrors || false,
+      maxSteps: _req.body.maxSteps
     }
     
     const session = await replayEngine.executeReplay(sessionId, options)
@@ -511,7 +512,7 @@ router.post('/replay/sessions/:sessionId/execute', async (req: Request, res: Res
       }
     })
   } catch (error) {
-    logger.error('Replay execution failed', { sessionId: req.params.sessionId, error })
+    logger.error('Replay execution failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Replay execution failed'
@@ -523,9 +524,9 @@ router.post('/replay/sessions/:sessionId/execute', async (req: Request, res: Res
  * GET /api/reconciliation-testing/replay/sessions/:sessionId/export
  * Export replay session data
  */
-router.get('/replay/sessions/:sessionId/export', async (req: Request, res: Response) => {
+router.get('/replay/sessions/:sessionId/export', async (_req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params
+    const { sessionId } = _req.params
     const exportData = replayEngine.exportReplaySession(sessionId)
     
     logger.info('Replay session exported', { sessionId })
@@ -535,7 +536,7 @@ router.get('/replay/sessions/:sessionId/export', async (req: Request, res: Respo
       data: exportData
     })
   } catch (error) {
-    logger.error('Replay export failed', { sessionId: req.params.sessionId, error })
+    logger.error('Replay export failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Replay export failed'
@@ -547,9 +548,9 @@ router.get('/replay/sessions/:sessionId/export', async (req: Request, res: Respo
  * GET /api/reconciliation-testing/replay/sessions/:sessionId/compare
  * Compare replay results with original timeline
  */
-router.get('/replay/sessions/:sessionId/compare', async (req: Request, res: Response) => {
+router.get('/replay/sessions/:sessionId/compare', async (_req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params
+    const { sessionId } = _req.params
     const comparison = replayEngine.compareWithOriginal(sessionId)
     
     logger.info('Replay comparison completed', { sessionId })
@@ -559,7 +560,7 @@ router.get('/replay/sessions/:sessionId/compare', async (req: Request, res: Resp
       data: comparison
     })
   } catch (error) {
-    logger.error('Replay comparison failed', { sessionId: req.params.sessionId, error })
+    logger.error('Replay comparison failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Replay comparison failed'
@@ -571,9 +572,9 @@ router.get('/replay/sessions/:sessionId/compare', async (req: Request, res: Resp
  * DELETE /api/reconciliation-testing/replay/sessions/:sessionId
  * Delete a replay session
  */
-router.delete('/replay/sessions/:sessionId', async (req: Request, res: Response) => {
+router.delete('/replay/sessions/:sessionId', async (_req: Request, res: Response) => {
   try {
-    const { sessionId } = req.params
+    const { sessionId } = _req.params
     const deleted = replayEngine.deleteReplaySession(sessionId)
     
     if (!deleted) {
@@ -592,7 +593,7 @@ router.delete('/replay/sessions/:sessionId', async (req: Request, res: Response)
       }
     })
   } catch (error) {
-    logger.error('Replay session deletion failed', { sessionId: req.params.sessionId, error })
+    logger.error('Replay session deletion failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
       error: 'Failed to delete replay session'

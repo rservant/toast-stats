@@ -12,7 +12,6 @@ import { ReconciliationSimulator } from '../ReconciliationSimulator.js'
 import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.js'
 import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.js'
 import type { SimulationScenario, DataPattern } from '../ReconciliationSimulator.js'
-import type { TestDataSet } from '../ReconciliationTestDataGenerator.js'
 import type { ReconciliationJob, ReconciliationTimeline } from '../../types/reconciliation.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 

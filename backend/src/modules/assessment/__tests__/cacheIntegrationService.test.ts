@@ -5,7 +5,7 @@ import { CspExtractorService } from '../services/cspExtractorService.js'
 class MockCacheManager {
   private data: any
   constructor(data: any) { this.data = data }
-  async getDistrictData(districtId: string, date: string) { return this.data }
+  async getDistrictData(_districtId: string, _date: string) { return this.data }
   async getDistrictDataRange() { return { startDate: '2024-07-30', endDate: '2024-07-31' } }
 }
 

@@ -5,8 +5,8 @@ describe('AssessmentGenerationService', () => {
   it('generates assessment when cache available and no existing assessment', async () => {
     // Mock cache service
     const mockCacheSvc: any = {
-      getLatestCacheDate: async (id: string) => '2024-07-31',
-      getCompleteAssessmentDataByDate: async (id:string, date:string) => ({
+      getLatestCacheDate: async (_id: string) => '2024-07-31',
+      getCompleteAssessmentDataByDate: async (_id: string, _date: string) => ({
         membership_payments_ytd: 1000,
         paid_clubs_ytd: 10,
         distinguished_clubs_ytd: 3,

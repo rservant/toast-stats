@@ -8,9 +8,10 @@
 import { logger } from '../utils/logger.js'
 import { RetryManager } from '../utils/RetryManager.js'
 import { CircuitBreaker, CircuitBreakerManager } from '../utils/CircuitBreaker.js'
-import { AlertManager } from '../utils/AlertManager.js'
+import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
 import { ChangeDetectionEngine } from './ChangeDetectionEngine.js'
-import { ReconciliationStorageManager } from './ReconciliationStorageManager.js'
+import { ReconciliationStorageOptimizer } from './ReconciliationStorageOptimizer.js'
+import { ReconciliationCacheService } from './ReconciliationCacheService.js'
 import { ReconciliationConfigService } from './ReconciliationConfigService.js'
 import { CacheUpdateManager } from './CacheUpdateManager.js'
 import { ReconciliationMetricsService } from './ReconciliationMetricsService.js'
@@ -19,14 +20,14 @@ import type {
   ReconciliationStatus,
   ReconciliationTimeline,
   ReconciliationEntry,
-  DataChanges,
   ReconciliationConfig
 } from '../types/reconciliation.js'
 import type { DistrictStatistics } from '../types/districts.js'
 
 export class ReconciliationOrchestrator {
   private changeDetectionEngine: ChangeDetectionEngine
-  private storageManager: ReconciliationStorageManager
+  private storageManager: ReconciliationStorageOptimizer
+  private cacheService: ReconciliationCacheService
   private configService: ReconciliationConfigService
   private cacheUpdateManager: CacheUpdateManager
   private alertManager: AlertManager
@@ -35,12 +36,14 @@ export class ReconciliationOrchestrator {
 
   constructor(
     changeDetectionEngine?: ChangeDetectionEngine,
-    storageManager?: ReconciliationStorageManager,
+    storageManager?: ReconciliationStorageOptimizer,
+    cacheService?: ReconciliationCacheService,
     configService?: ReconciliationConfigService,
     cacheUpdateManager?: CacheUpdateManager
   ) {
     this.changeDetectionEngine = changeDetectionEngine || new ChangeDetectionEngine()
-    this.storageManager = storageManager || new ReconciliationStorageManager()
+    this.storageManager = storageManager || new ReconciliationStorageOptimizer()
+    this.cacheService = cacheService || new ReconciliationCacheService()
     this.configService = configService || new ReconciliationConfigService()
     this.cacheUpdateManager = cacheUpdateManager || new CacheUpdateManager()
     this.alertManager = AlertManager.getInstance()
@@ -50,7 +53,11 @@ export class ReconciliationOrchestrator {
     const circuitManager = CircuitBreakerManager.getInstance()
     this.storageCircuitBreaker = circuitManager.getCircuitBreaker(
       'reconciliation-storage',
-      CircuitBreaker.createCacheCircuitBreaker('reconciliation-storage').getStats()
+      {
+        failureThreshold: 3,
+        recoveryTimeout: 30000,
+        monitoringPeriod: 120000
+      }
     )
   }
 
@@ -112,6 +119,11 @@ export class ReconciliationOrchestrator {
         startDate: now,
         maxEndDate,
         config,
+        triggeredBy,
+        progress: {
+          phase: 'monitoring',
+          completionPercentage: 0
+        },
         metadata: {
           createdAt: now,
           updatedAt: now,
@@ -169,50 +181,60 @@ export class ReconciliationOrchestrator {
     const context = { jobId, operation: 'processReconciliationCycle' }
 
     try {
-      // Execute with circuit breaker and retry logic for storage operations
-      const result = await this.storageCircuitBreaker.execute(async () => {
-        return await RetryManager.executeWithRetry(
-          async () => {
-            // Get job and timeline
-            const job = await this.storageManager.getJob(jobId)
-            if (!job) {
-              throw new Error(`Reconciliation job not found: ${jobId}`)
-            }
+      // Check cache first for job and timeline
+      let job = this.cacheService.getJob(jobId)
+      let timeline = this.cacheService.getTimeline(jobId)
 
-            if (job.status !== 'active') {
-              logger.warn('Attempting to process inactive reconciliation job', { 
-                jobId, 
-                status: job.status 
-              })
-              return this.getJobStatus(job)
-            }
+      // If not in cache, load from storage with circuit breaker and retry logic
+      if (!job || !timeline) {
+        const result = await this.storageCircuitBreaker.execute(async () => {
+          return await RetryManager.executeWithRetry(
+            async () => {
+              const loadedJob = job || await this.storageManager.getJob(jobId)
+              const loadedTimeline = timeline || await this.storageManager.getTimeline(jobId)
+              
+              if (!loadedJob) {
+                throw new Error(`Reconciliation job not found: ${jobId}`)
+              }
+              if (!loadedTimeline) {
+                throw new Error(`Reconciliation timeline not found: ${jobId}`)
+              }
 
-            const timeline = await this.storageManager.getTimeline(jobId)
-            if (!timeline) {
-              throw new Error(`Reconciliation timeline not found: ${jobId}`)
-            }
+              return { job: loadedJob, timeline: loadedTimeline }
+            },
+            RetryManager.getCacheRetryOptions(),
+            context
+          )
+        }, context)
 
-            return { job, timeline }
-          },
-          RetryManager.getCacheRetryOptions(),
-          context
-        )
-      }, context)
+        if (!result.success) {
+          const errorMessage = result.error?.message || 'Failed to load reconciliation data'
+          
+          await this.alertManager.sendReconciliationFailureAlert(
+            'unknown',
+            'unknown',
+            errorMessage,
+            jobId
+          )
 
-      if (!result.success) {
-        const errorMessage = result.error?.message || 'Failed to load reconciliation data'
-        
-        await this.alertManager.sendReconciliationFailureAlert(
-          'unknown',
-          'unknown',
-          errorMessage,
-          jobId
-        )
+          throw new Error(errorMessage)
+        }
 
-        throw new Error(errorMessage)
+        job = result.result!.job
+        timeline = result.result!.timeline
+
+        // Cache the loaded data
+        this.cacheService.setJob(jobId, job)
+        this.cacheService.setTimeline(jobId, timeline)
       }
 
-      const { job, timeline } = result.result!
+      if (job.status !== 'active') {
+        logger.warn('Attempting to process inactive reconciliation job', { 
+          jobId, 
+          status: job.status 
+        })
+        return this.getJobStatus(job)
+      }
 
       // Detect changes with error handling
       let changes
@@ -227,8 +249,8 @@ export class ReconciliationOrchestrator {
         logger.error('Change detection failed', { jobId, error: errorMessage })
         
         await this.alertManager.sendAlert(
-          AlertManager.AlertSeverity.MEDIUM,
-          AlertManager.AlertCategory.RECONCILIATION,
+          AlertSeverity.MEDIUM,
+          AlertCategory.RECONCILIATION,
           'Change Detection Failed',
           `Change detection failed for job ${jobId}: ${errorMessage}`,
           { jobId, districtId: job.districtId, error: errorMessage }
@@ -267,8 +289,8 @@ export class ReconciliationOrchestrator {
 
             // Send alert for cache update failures
             await this.alertManager.sendAlert(
-              AlertManager.AlertSeverity.MEDIUM,
-              AlertManager.AlertCategory.SYSTEM,
+              AlertSeverity.MEDIUM,
+              AlertCategory.SYSTEM,
               'Cache Update Failed',
               `Cache update failed during reconciliation for district ${job.districtId}: ${cacheUpdateResult.error}`,
               { jobId, districtId: job.districtId, date: monthEndDate, error: cacheUpdateResult.error }
@@ -279,8 +301,8 @@ export class ReconciliationOrchestrator {
           logger.error('Critical cache update error', { jobId, error: errorMessage })
           
           await this.alertManager.sendAlert(
-            AlertManager.AlertSeverity.HIGH,
-            AlertManager.AlertCategory.SYSTEM,
+            AlertSeverity.HIGH,
+            AlertCategory.SYSTEM,
             'Critical Cache Update Error',
             `Critical error updating cache during reconciliation for job ${jobId}: ${errorMessage}`,
             { jobId, districtId: job.districtId, error: errorMessage }
@@ -336,8 +358,8 @@ export class ReconciliationOrchestrator {
 
             // Send alert for extension failures
             await this.alertManager.sendAlert(
-              AlertManager.AlertSeverity.MEDIUM,
-              AlertManager.AlertCategory.RECONCILIATION,
+              AlertSeverity.MEDIUM,
+              AlertCategory.RECONCILIATION,
               'Auto-Extension Failed',
               `Automatic reconciliation extension failed for job ${jobId}: ${errorMessage}`,
               { jobId, extensionDays: extensionInfo.extensionDays, error: errorMessage }
@@ -352,13 +374,18 @@ export class ReconciliationOrchestrator {
       // Update timeline status
       timeline.status = status
 
-      // Save updates with error handling
+      // Save updates with error handling and caching
       try {
         await this.storageCircuitBreaker.execute(async () => {
           return await RetryManager.executeWithRetry(
             async () => {
               await this.storageManager.saveJob(job)
               await this.storageManager.saveTimeline(timeline)
+              
+              // Update cache with latest data
+              this.cacheService.setJob(jobId, job)
+              this.cacheService.setTimeline(jobId, timeline)
+              this.cacheService.setStatus(jobId, status)
             },
             RetryManager.getCacheRetryOptions(),
             { ...context, operation: 'saveUpdates' }
@@ -369,8 +396,8 @@ export class ReconciliationOrchestrator {
         logger.error('Failed to save reconciliation updates', { jobId, error: errorMessage })
         
         await this.alertManager.sendAlert(
-          AlertManager.AlertSeverity.HIGH,
-          AlertManager.AlertCategory.SYSTEM,
+          AlertSeverity.HIGH,
+          AlertCategory.SYSTEM,
           'Reconciliation Save Failed',
           `Failed to save reconciliation updates for job ${jobId}: ${errorMessage}`,
           { jobId, error: errorMessage }

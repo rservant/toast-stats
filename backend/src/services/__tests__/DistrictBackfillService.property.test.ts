@@ -49,15 +49,6 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
     fc.date({ min: new Date('2024-01-01'), max: new Date('2024-12-31') })
       .map(date => date.toISOString().split('T')[0])
 
-  const generateSourceDataDate = (targetDate: string): fc.Arbitrary<string> => {
-    const target = new Date(targetDate + 'T00:00:00.000Z')
-    // Source data date should be the same or later than target date (reconciliation period)
-    return fc.integer({ min: 0, max: 15 }).map(daysOffset => {
-      const sourceDate = new Date(target.getTime() + daysOffset * 24 * 60 * 60 * 1000)
-      return sourceDate.toISOString().split('T')[0]
-    })
-  }
-
   const generateDistrictStatistics = (
     districtId: string, 
     asOfDate: string
@@ -211,8 +202,6 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           // Property: For any set of data points, the latest source date should be selected
           const uniqueSourceDates = [...new Set(dataPoints.map(dp => dp.sourceDate))].sort()
           if (uniqueSourceDates.length > 1) {
-            const expectedLatestDate = uniqueSourceDates[uniqueSourceDates.length - 1]
-            
             // Test the source date extraction logic directly
             const testData = expectedLatest.rawData
             const extractedDate = (testBackfillService as any).extractSourceDataDate(

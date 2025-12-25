@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { ReconciliationMetricsService } from '../ReconciliationMetricsService.js'
 import { AlertManager } from '../../utils/AlertManager.js'
 import type { ReconciliationJob } from '../../types/reconciliation.js'
+import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
 // Mock AlertManager
 vi.mock('../../utils/AlertManager.js', () => ({
@@ -32,6 +33,41 @@ vi.mock('../../utils/AlertManager.js', () => ({
     NETWORK: 'NETWORK'
   }
 }))
+
+// Helper function to create a complete ReconciliationJob
+function createTestJob(overrides: Partial<ReconciliationJob> = {}): ReconciliationJob {
+  return {
+    id: 'job-1',
+    districtId: 'D1',
+    targetMonth: '2024-01',
+    status: 'active',
+    startDate: new Date('2024-01-01T00:00:00Z'),
+    maxEndDate: new Date('2024-01-16T00:00:00Z'),
+    triggeredBy: 'automatic',
+    progress: {
+      phase: 'monitoring',
+      completionPercentage: 0
+    },
+    config: {
+      maxReconciliationDays: 15,
+      stabilityPeriodDays: 3,
+      checkFrequencyHours: 24,
+      significantChangeThresholds: {
+        membershipPercent: 1,
+        clubCountAbsolute: 1,
+        distinguishedPercent: 2
+      },
+      autoExtensionEnabled: true,
+      maxExtensionDays: 5
+    },
+    metadata: {
+      createdAt: new Date('2024-01-01T00:00:00Z'),
+      updatedAt: new Date('2024-01-01T00:00:00Z'),
+      triggeredBy: 'automatic'
+    },
+    ...overrides
+  }
+}
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -76,31 +112,7 @@ describe('ReconciliationMetricsService', () => {
 
   describe('recordJobStart', () => {
     it('should record job start metrics', () => {
-      const job: ReconciliationJob = {
-        id: 'job-1',
-        districtId: 'D1',
-        targetMonth: '2024-01',
-        status: 'active',
-        startDate: new Date('2024-01-01T00:00:00Z'),
-        maxEndDate: new Date('2024-01-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
-        metadata: {
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          updatedAt: new Date('2024-01-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
-      }
+      const job = createTestJob()
 
       metricsService.recordJobStart(job)
 
@@ -120,7 +132,7 @@ describe('ReconciliationMetricsService', () => {
 
   describe('recordJobCompletion', () => {
     it('should record successful job completion', () => {
-      const job: ReconciliationJob = {
+      const job = createTestReconciliationJob({
         id: 'job-1',
         districtId: 'D1',
         targetMonth: '2024-01',
@@ -128,24 +140,12 @@ describe('ReconciliationMetricsService', () => {
         startDate: new Date('2024-01-01T00:00:00Z'),
         endDate: new Date('2024-01-05T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
+        progress: {
+          phase: 'completed',
+          completionPercentage: 100
         },
-        metadata: {
-          createdAt: new Date('2024-01-01T00:00:00Z'),
-          updatedAt: new Date('2024-01-05T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
-      }
+        triggeredBy: 'automatic'
+      })
 
       metricsService.recordJobStart(job)
       metricsService.recordJobCompletion(job, 3)

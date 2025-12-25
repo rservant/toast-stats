@@ -6,21 +6,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import reconciliationRouter from '../reconciliation.js'
-import { ReconciliationStorageManager } from '../../services/ReconciliationStorageManager.js'
+import _reconciliationRouter from '../reconciliation.js'
+import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.js'
 import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.js'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
 import type { ReconciliationJob } from '../../types/reconciliation.js'
 
 describe('Reconciliation API - New Status Endpoints', () => {
   let app: express.Application
-  let storageManager: ReconciliationStorageManager
+  let storageManager: ReconciliationStorageOptimizer
   let orchestrator: ReconciliationOrchestrator
   let testJob: ReconciliationJob
 
   beforeEach(async () => {
     // Setup test app with shared storage manager
-    storageManager = new ReconciliationStorageManager('./cache/test-reconciliation-api')
+    storageManager = new ReconciliationStorageOptimizer('./cache/test-reconciliation-api')
     await storageManager.init()
 
     const changeDetectionEngine = new ChangeDetectionEngine()
@@ -34,9 +34,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
     const testRouter = express.Router()
     
     // We need to create endpoints that use our test storage manager
-    testRouter.get('/jobs/:jobId/status', async (req, res) => {
+    testRouter.get('/jobs/:jobId/status', async (_req, res) => {
       try {
-        const { jobId } = req.params
+        const { jobId } = _req.params
 
         if (!jobId || typeof jobId !== 'string' || jobId.trim() === '') {
           res.status(400).json({
@@ -99,9 +99,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
       }
     })
 
-    testRouter.get('/jobs/:jobId/timeline', async (req, res) => {
+    testRouter.get('/jobs/:jobId/timeline', async (_req, res) => {
       try {
-        const { jobId } = req.params
+        const { jobId } = _req.params
 
         if (!jobId || typeof jobId !== 'string' || jobId.trim() === '') {
           res.status(400).json({
@@ -149,9 +149,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
       }
     })
 
-    testRouter.get('/jobs/:jobId/estimate', async (req, res) => {
+    testRouter.get('/jobs/:jobId/estimate', async (_req, res) => {
       try {
-        const { jobId } = req.params
+        const { jobId } = _req.params
 
         if (!jobId || typeof jobId !== 'string' || jobId.trim() === '') {
           res.status(400).json({
@@ -182,7 +182,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           jobStatus: job.status,
           currentTime: new Date().toISOString(),
           estimatedCompletion: null,
-          maxEndDate: job.maxEndDate.toISOString(),
+          maxEndDate: job.maxEndDate?.toISOString(),
           daysUntilMaxEnd: 10,
           finalization: {
             isReady: false,
@@ -220,7 +220,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
     })
 
     // Add configuration endpoints for testing
-    testRouter.get('/config', async (req, res) => {
+    testRouter.get('/config', async (_req, res) => {
       try {
         const config = await orchestrator.getDefaultConfiguration()
         
@@ -251,9 +251,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
       }
     })
 
-    testRouter.put('/config', async (req, res) => {
+    testRouter.put('/config', async (_req, res) => {
       try {
-        const configUpdate = req.body
+        const configUpdate = _req.body
 
         // Check for invalid body types (arrays, null, strings, booleans, undefined, etc.)
         if (typeof configUpdate === 'string' || typeof configUpdate === 'boolean' || configUpdate === null || configUpdate === undefined || typeof configUpdate !== 'object' || Array.isArray(configUpdate)) {
@@ -321,9 +321,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
       }
     })
 
-    testRouter.post('/config/validate', async (req, res) => {
+    testRouter.post('/config/validate', async (_req, res) => {
       try {
-        const configToValidate = req.body
+        const configToValidate = _req.body
 
         // Check for invalid body types (arrays, null, strings, booleans, etc.)
         if (typeof configToValidate === 'string' || typeof configToValidate === 'boolean' || configToValidate === null || typeof configToValidate !== 'object' || Array.isArray(configToValidate)) {
@@ -363,7 +363,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
   afterEach(async () => {
     // Cleanup test data
     try {
-      await storageManager.clearAllData()
+      await storageManager.clearAll()
     } catch (error) {
       // Ignore cleanup errors
     }

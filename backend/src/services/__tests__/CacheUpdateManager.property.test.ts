@@ -8,10 +8,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { CacheUpdateManager } from '../CacheUpdateManager'
 import { DistrictCacheManager } from '../DistrictCacheManager'
-import type { DistrictStatistics, DistrictCacheEntry } from '../../types/districts'
+import type { DistrictStatistics } from '../../types/districts'
 import type { DataChanges } from '../../types/reconciliation'
 import fs from 'fs/promises'
-import path from 'path'
 
 describe('CacheUpdateManager - Property-Based Tests', () => {
   let cacheUpdateManager: CacheUpdateManager
@@ -129,8 +128,8 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
     if (seed > 0.8) {
       changes.changedFields.push('distinguished')
       changes.distinguishedChange = {
-        previous: { president: 5, select: 3, distinguished: 2 },
-        current: { president: 6, select: 4, distinguished: 3 },
+        previous: { president: 5, select: 3, distinguished: 2, total: 10 },
+        current: { president: 6, select: 4, distinguished: 3, total: 13 },
         percentChange: seed * 20
       }
     }

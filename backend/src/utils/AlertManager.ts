@@ -387,7 +387,7 @@ export class AlertManager {
   /**
    * Update throttle tracker
    */
-  private updateThrottle(alertId: string, category: AlertCategory): void {
+  private updateThrottle(alertId: string, _category: AlertCategory): void {
     this.throttleTracker.set(alertId, new Date())
   }
 

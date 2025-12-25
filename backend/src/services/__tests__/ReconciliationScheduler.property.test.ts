@@ -10,7 +10,6 @@ import { ReconciliationScheduler } from '../ReconciliationScheduler.js'
 import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.js'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager.js'
 import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
-import type { ReconciliationJob } from '../../types/reconciliation.js'
 
 describe('ReconciliationScheduler Property Tests', () => {
   let scheduler: ReconciliationScheduler

@@ -24,7 +24,6 @@ export interface ScheduledReconciliation {
 export class ReconciliationScheduler {
   private orchestrator: ReconciliationOrchestrator
   private storageManager: ReconciliationStorageManager
-  private configService: ReconciliationConfigService
   private scheduledReconciliations: Map<string, ScheduledReconciliation> = new Map()
   private isRunning: boolean = false
   private checkInterval?: NodeJS.Timeout
@@ -32,11 +31,10 @@ export class ReconciliationScheduler {
   constructor(
     orchestrator?: ReconciliationOrchestrator,
     storageManager?: ReconciliationStorageManager,
-    configService?: ReconciliationConfigService
+    _configService?: ReconciliationConfigService
   ) {
     this.orchestrator = orchestrator || new ReconciliationOrchestrator()
     this.storageManager = storageManager || new ReconciliationStorageManager()
-    this.configService = configService || new ReconciliationConfigService()
   }
 
   /**
@@ -189,7 +187,7 @@ export class ReconciliationScheduler {
       await this.orchestrator.cancelReconciliation(jobId)
 
       // Also remove from scheduled reconciliations if it exists
-      for (const [key, scheduled] of this.scheduledReconciliations.entries()) {
+      for (const [_key, scheduled] of this.scheduledReconciliations.entries()) {
         if (scheduled.status === 'pending') {
           // We don't have the job ID for pending schedules, so we can't match directly
           // This is handled by the orchestrator for active jobs
@@ -224,7 +222,6 @@ export class ReconciliationScheduler {
     logger.info('Auto-scheduling reconciliations for month transition')
 
     const now = new Date()
-    const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`
     
     // Calculate previous month
     const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -302,6 +299,7 @@ export class ReconciliationScheduler {
           const job = await this.orchestrator.startReconciliation(
             scheduled.districtId,
             scheduled.targetMonth,
+            undefined,
             'automatic'
           )
 

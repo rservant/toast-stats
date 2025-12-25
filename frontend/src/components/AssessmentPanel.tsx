@@ -18,7 +18,7 @@ const uniqueMonths = (dates: string[]) => {
 
 const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, selectedDate }) => {
   const { data: cachedDatesData } = useDistrictCachedDates(districtId || '');
-  const { isComputing, computeMonthlySummary, generateAssessment, fetchAssessment, deleteAssessment } = useAssessment();
+  const { isComputing, generateAssessment, fetchAssessment, deleteAssessment } = useAssessment();
 
   const allDates = cachedDatesData?.dates || [];
 
@@ -70,7 +70,7 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
     ? months[months.length - 1]
     : undefined;
   const [month, setMonth] = React.useState<string | undefined>(defaultMonth);
-  const [summary, setSummary] = React.useState<AssessmentSummary | null>(null);
+  const [summary] = React.useState<AssessmentSummary | null>(null);
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [genResult, setGenResult] = React.useState<any>(null);
   const [persisted, setPersisted] = React.useState<any | null>(null);

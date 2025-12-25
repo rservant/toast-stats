@@ -380,7 +380,7 @@ describe('ReconciliationSimulator', () => {
 
     it('should handle autoExtensionEnabled correctly', async () => {
       // Test with extension enabled
-      const result1 = await simulator.simulateScenario('sudden_change_extension')
+      await simulator.simulateScenario('sudden_change_extension')
       
       // Test with extension disabled
       const noExtensionScenario: SimulationScenario = {

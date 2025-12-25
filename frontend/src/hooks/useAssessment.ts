@@ -52,7 +52,7 @@ export const useAssessment = () => {
       const validResponses = responses.filter(Boolean) as any[];
       // Determine latest available date in the month
       const latest = [...datesInMonth]
-        .filter((d, i) => !!responses[i])
+        .filter((_, i) => !!responses[i])
         .sort()
         .pop();
 

@@ -178,7 +178,7 @@ describe('AlertManager', () => {
       expect(activeAlerts[0].category).toBe(AlertCategory.RECONCILIATION)
       expect(activeAlerts[0].severity).toBe(AlertSeverity.MEDIUM)
     })
-  }))
+  })
 
   describe('alert resolution', () => {
     it('should resolve an alert', async () => {
@@ -274,7 +274,7 @@ describe('AlertManager', () => {
       expect(stats.byCategory[AlertCategory.RECONCILIATION]).toBe(1)
       expect(stats.byCategory[AlertCategory.CIRCUIT_BREAKER]).toBe(1)
     })
-  }))
+  })
 
   describe('cleanup', () => {
     it('should clean up old resolved alerts', async () => {

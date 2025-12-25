@@ -12,9 +12,13 @@ import type {
   DataChanges,
   ReconciliationTimeline,
   ReconciliationEntry,
-  DistinguishedCounts
+  DistinguishedCounts,
+  ReplayOptions
 } from '../types/reconciliation.js'
 import type { DistrictStatistics } from '../types/districts.js'
+
+// Re-export ReplayOptions for convenience
+export type { ReplayOptions } from '../types/reconciliation.js'
 
 export interface SimulationScenario {
   name: string
@@ -325,7 +329,7 @@ export class ReconciliationSimulator {
   private applyDataChange(
     data: DistrictStatistics, 
     pattern: DataPattern, 
-    day: number
+    _day: number
   ): DistrictStatistics {
     const newData = { ...data }
     
@@ -387,7 +391,6 @@ export class ReconciliationSimulator {
     let extensionCount = 0
     let currentDay = 0
     let stableDays = 0
-    let lastSignificantChangeDay = 0
 
     // Simulate daily reconciliation cycles
     for (let day = 1; day < dataTimeline.length && currentDay < scenario.config.maxReconciliationDays + 10; day++) {

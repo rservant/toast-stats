@@ -11,7 +11,6 @@ import { RetryManager, RetryOptions } from '../utils/RetryManager.js'
 import { CircuitBreaker, CircuitBreakerManager, CircuitState } from '../utils/CircuitBreaker.js'
 import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
 import { DistrictBackfillService } from './DistrictBackfillService.js'
-import type { DistrictStatistics } from '../types/districts.js'
 import type { ReconciliationDataFetchResult } from './DistrictBackfillService.js'
 
 export interface ErrorHandlingConfig {
@@ -57,12 +56,20 @@ export class ReconciliationErrorHandler {
     // Initialize circuit breakers
     this.dashboardCircuitBreaker = this.circuitManager.getCircuitBreaker(
       'reconciliation-dashboard',
-      CircuitBreaker.createDashboardCircuitBreaker('reconciliation-dashboard').getStats()
+      {
+        failureThreshold: 5,
+        recoveryTimeout: 60000,
+        monitoringPeriod: 300000
+      }
     )
     
     this.cacheCircuitBreaker = this.circuitManager.getCircuitBreaker(
       'reconciliation-cache',
-      CircuitBreaker.createCacheCircuitBreaker('reconciliation-cache').getStats()
+      {
+        failureThreshold: 3,
+        recoveryTimeout: 30000,
+        monitoringPeriod: 120000
+      }
     )
 
     logger.info('ReconciliationErrorHandler initialized', { config: this.config })
@@ -415,16 +422,4 @@ export class ReconciliationErrorHandler {
     }
   }
 
-  /**
-   * Clean up old failure tracking entries
-   */
-  private cleanupFailureTracking(): void {
-    const cutoff = new Date(Date.now() - this.config.failureTimeoutMs)
-    
-    for (const [key, value] of this.failureTracker.entries()) {
-      if (value.lastFailure < cutoff) {
-        this.failureTracker.delete(key)
-      }
-    }
-  }
 }

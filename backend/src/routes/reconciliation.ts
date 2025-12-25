@@ -1,23 +1,36 @@
 import { Router, type Request, type Response } from 'express'
 import { ReconciliationOrchestrator } from '../services/ReconciliationOrchestrator.js'
 import { ReconciliationStorageManager } from '../services/ReconciliationStorageManager.js'
+import { ReconciliationStorageOptimizer } from '../services/ReconciliationStorageOptimizer.js'
+import { ReconciliationCacheService } from '../services/ReconciliationCacheService.js'
 import { ProgressTracker } from '../services/ProgressTracker.js'
 import { ChangeDetectionEngine } from '../services/ChangeDetectionEngine.js'
+import { AlertManager } from '../utils/AlertManager.js'
 import { transformErrorResponse } from '../utils/transformers.js'
 import { logger } from '../utils/logger.js'
+import performanceRoutes from './reconciliation-performance.js'
 
 const router = Router()
 
-// Initialize services
+// Initialize services with performance optimizations
 const storageManager = new ReconciliationStorageManager()
+const storageOptimizer = new ReconciliationStorageOptimizer()
+const cacheService = new ReconciliationCacheService()
 const changeDetectionEngine = new ChangeDetectionEngine()
-const orchestrator = new ReconciliationOrchestrator(changeDetectionEngine, storageManager)
-const progressTracker = new ProgressTracker(storageManager)
+const orchestrator = new ReconciliationOrchestrator(
+  changeDetectionEngine, 
+  storageOptimizer,
+  cacheService
+)
+const progressTracker = new ProgressTracker(storageOptimizer)
 
 // Initialize storage on startup
-storageManager.init().catch(error => {
+storageOptimizer.init().catch(error => {
   logger.error('Failed to initialize reconciliation storage', { error })
 })
+
+// Mount performance routes
+router.use('/performance', performanceRoutes)
 
 /**
  * Validate job ID format
@@ -56,9 +69,9 @@ function validateTargetMonth(targetMonth: string): boolean {
  * List active reconciliation jobs with optional filtering
  * Query params: districtId (optional), status (optional), limit (optional)
  */
-router.get('/jobs', async (req: Request, res: Response) => {
+router.get('/jobs', async (_req: Request, res: Response) => {
   try {
-    const { districtId, status, limit } = req.query
+    const { districtId, status, limit } = _req.query
 
     // Validate district ID if provided
     if (districtId && typeof districtId === 'string' && !validateDistrictId(districtId)) {
@@ -110,7 +123,7 @@ router.get('/jobs', async (req: Request, res: Response) => {
       status: job.status,
       startDate: job.startDate.toISOString(),
       endDate: job.endDate?.toISOString(),
-      maxEndDate: job.maxEndDate.toISOString(),
+      maxEndDate: job.maxEndDate?.toISOString(),
       currentDataDate: job.currentDataDate,
       finalizedDate: job.finalizedDate?.toISOString(),
       config: {
@@ -154,9 +167,9 @@ router.get('/jobs', async (req: Request, res: Response) => {
  * Initiate a new reconciliation job
  * Body: { districtId: string, targetMonth: string, config?: Partial<ReconciliationConfig> }
  */
-router.post('/start', async (req: Request, res: Response) => {
+router.post('/start', async (_req: Request, res: Response) => {
   try {
-    const { districtId, targetMonth, config } = req.body
+    const { districtId, targetMonth, config } = _req.body
 
     // Validate required fields
     if (!districtId || typeof districtId !== 'string') {
@@ -244,7 +257,7 @@ router.post('/start', async (req: Request, res: Response) => {
       status: job.status,
       startDate: job.startDate.toISOString(),
       endDate: job.endDate?.toISOString(),
-      maxEndDate: job.maxEndDate.toISOString(),
+      maxEndDate: job.maxEndDate?.toISOString(),
       currentDataDate: job.currentDataDate,
       finalizedDate: job.finalizedDate?.toISOString(),
       config: {
@@ -306,9 +319,9 @@ router.post('/start', async (req: Request, res: Response) => {
  * DELETE /api/reconciliation/jobs/:jobId
  * Cancel a reconciliation job
  */
-router.delete('/jobs/:jobId', async (req: Request, res: Response) => {
+router.delete('/jobs/:jobId', async (_req: Request, res: Response) => {
   try {
-    const { jobId } = req.params
+    const { jobId } = _req.params
 
     // Validate job ID
     if (!jobId || typeof jobId !== 'string' || jobId.trim() === '') {
@@ -370,9 +383,9 @@ router.delete('/jobs/:jobId', async (req: Request, res: Response) => {
  * GET /api/reconciliation/jobs/:jobId/status
  * Get detailed status information for a reconciliation job
  */
-router.get('/jobs/:jobId/status', async (req: Request, res: Response) => {
+router.get('/jobs/:jobId/status', async (_req: Request, res: Response) => {
   try {
-    const { jobId } = req.params
+    const { jobId } = _req.params
 
     // Validate job ID
     if (!validateJobId(jobId)) {
@@ -415,7 +428,7 @@ router.get('/jobs/:jobId/status', async (req: Request, res: Response) => {
       status: job.status,
       startDate: job.startDate.toISOString(),
       endDate: job.endDate?.toISOString(),
-      maxEndDate: job.maxEndDate.toISOString(),
+      maxEndDate: job.maxEndDate?.toISOString(),
       currentDataDate: job.currentDataDate,
       finalizedDate: job.finalizedDate?.toISOString(),
       config: {
@@ -481,9 +494,9 @@ router.get('/jobs/:jobId/status', async (req: Request, res: Response) => {
  * GET /api/reconciliation/jobs/:jobId/timeline
  * Get the progress timeline for a reconciliation job
  */
-router.get('/jobs/:jobId/timeline', async (req: Request, res: Response) => {
+router.get('/jobs/:jobId/timeline', async (_req: Request, res: Response) => {
   try {
-    const { jobId } = req.params
+    const { jobId } = _req.params
 
     // Validate job ID
     if (!validateJobId(jobId)) {
@@ -572,9 +585,9 @@ router.get('/jobs/:jobId/timeline', async (req: Request, res: Response) => {
  * GET /api/reconciliation/jobs/:jobId/estimate
  * Get completion estimation for a reconciliation job
  */
-router.get('/jobs/:jobId/estimate', async (req: Request, res: Response) => {
+router.get('/jobs/:jobId/estimate', async (_req: Request, res: Response) => {
   try {
-    const { jobId } = req.params
+    const { jobId } = _req.params
 
     // Validate job ID
     if (!validateJobId(jobId)) {
@@ -608,7 +621,7 @@ router.get('/jobs/:jobId/estimate', async (req: Request, res: Response) => {
     const finalizationStatus = await progressTracker.isReadyForFinalization(jobId)
 
     const now = new Date()
-    const timeUntilMaxEnd = job.maxEndDate.getTime() - now.getTime()
+    const timeUntilMaxEnd = job.maxEndDate ? job.maxEndDate.getTime() - now.getTime() : 0
     const daysUntilMaxEnd = Math.max(0, Math.ceil(timeUntilMaxEnd / (24 * 60 * 60 * 1000)))
 
     // Calculate time until estimated completion
@@ -629,7 +642,7 @@ router.get('/jobs/:jobId/estimate', async (req: Request, res: Response) => {
       estimatedCompletion: estimatedCompletion?.toISOString() || null,
       timeUntilEstimatedCompletion: timeUntilEstimatedCompletion,
       daysUntilEstimatedCompletion: daysUntilEstimatedCompletion,
-      maxEndDate: job.maxEndDate.toISOString(),
+      maxEndDate: job.maxEndDate?.toISOString(),
       timeUntilMaxEnd: timeUntilMaxEnd,
       daysUntilMaxEnd: daysUntilMaxEnd,
       finalization: {
@@ -675,7 +688,7 @@ router.get('/jobs/:jobId/estimate', async (req: Request, res: Response) => {
  * GET /api/reconciliation/config
  * Get current reconciliation configuration
  */
-router.get('/config', async (req: Request, res: Response) => {
+router.get('/config', async (_req: Request, res: Response) => {
   try {
     // Get the default configuration from the orchestrator
     const config = await orchestrator.getDefaultConfiguration()
@@ -716,9 +729,9 @@ router.get('/config', async (req: Request, res: Response) => {
  * Update reconciliation configuration
  * Body: Partial<ReconciliationConfig>
  */
-router.put('/config', async (req: Request, res: Response) => {
+router.put('/config', async (_req: Request, res: Response) => {
   try {
-    const configUpdate = req.body
+    const configUpdate = _req.body
 
     // Validate that body is an object
     if (typeof configUpdate === 'string' || typeof configUpdate === 'boolean' || configUpdate === null || configUpdate === undefined || typeof configUpdate !== 'object' || Array.isArray(configUpdate)) {
@@ -798,9 +811,9 @@ router.put('/config', async (req: Request, res: Response) => {
  * Validate reconciliation configuration without updating
  * Body: Partial<ReconciliationConfig>
  */
-router.post('/config/validate', async (req: Request, res: Response) => {
+router.post('/config/validate', async (_req: Request, res: Response) => {
   try {
-    const configToValidate = req.body
+    const configToValidate = _req.body
 
     // Validate that body is an object
     if (typeof configToValidate === 'string' || typeof configToValidate === 'boolean' || configToValidate === null || typeof configToValidate !== 'object' || Array.isArray(configToValidate)) {
@@ -840,9 +853,9 @@ router.post('/config/validate', async (req: Request, res: Response) => {
  * GET /api/reconciliation/status/:districtId/:targetMonth
  * Get reconciliation status for a specific district and month
  */
-router.get('/status/:districtId/:targetMonth', async (req: Request, res: Response) => {
+router.get('/status/:districtId/:targetMonth', async (_req: Request, res: Response) => {
   try {
-    const { districtId, targetMonth } = req.params
+    const { districtId, targetMonth } = _req.params
 
     // Validate district ID
     if (!validateDistrictId(districtId)) {
@@ -950,9 +963,9 @@ const metricsService = ReconciliationMetricsService.getInstance()
  * GET /api/reconciliation/metrics
  * Get comprehensive reconciliation metrics for monitoring
  */
-router.get('/metrics', async (req: Request, res: Response) => {
+router.get('/metrics', async (_req: Request, res: Response) => {
   try {
-    const { districtId } = req.query
+    const { districtId } = _req.query
 
     // Validate district ID if provided
     if (districtId && typeof districtId === 'string' && !validateDistrictId(districtId)) {
@@ -1066,9 +1079,9 @@ router.get('/metrics', async (req: Request, res: Response) => {
  * GET /api/reconciliation/monitoring/alerts
  * Get active reconciliation alerts and their status
  */
-router.get('/monitoring/alerts', async (req: Request, res: Response) => {
+router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
   try {
-    const { category, severity } = req.query
+    const { category, severity } = _req.query
 
     // Validate category if provided
     const validCategories = ['RECONCILIATION', 'CIRCUIT_BREAKER', 'DATA_QUALITY', 'SYSTEM', 'NETWORK']
@@ -1152,10 +1165,10 @@ router.get('/monitoring/alerts', async (req: Request, res: Response) => {
  * POST /api/reconciliation/monitoring/alerts/:alertId/resolve
  * Resolve a specific alert
  */
-router.post('/monitoring/alerts/:alertId/resolve', async (req: Request, res: Response) => {
+router.post('/monitoring/alerts/:alertId/resolve', async (_req: Request, res: Response) => {
   try {
-    const { alertId } = req.params
-    const { resolvedBy } = req.body
+    const { alertId } = _req.params
+    const { resolvedBy } = _req.body
 
     // Validate alert ID
     if (!alertId || typeof alertId !== 'string' || alertId.trim() === '') {
@@ -1216,7 +1229,7 @@ router.post('/monitoring/alerts/:alertId/resolve', async (req: Request, res: Res
  * GET /api/reconciliation/monitoring/health
  * Get health status of reconciliation monitoring system
  */
-router.get('/monitoring/health', async (req: Request, res: Response) => {
+router.get('/monitoring/health', async (_req: Request, res: Response) => {
   try {
     // Get health status from various components
     const metricsHealth = metricsService.getHealthStatus()
@@ -1241,7 +1254,22 @@ router.get('/monitoring/health', async (req: Request, res: Response) => {
       criticalAlerts.length === 0 &&
       longRunningJobs.length === 0
 
-    const healthStatus = {
+    interface HealthIssue {
+      type: string
+      message: string
+      severity: string
+      details: any
+    }
+
+    const healthStatus: {
+      overall: {
+        isHealthy: boolean
+        status: string
+        timestamp: string
+      }
+      components: any
+      issues: HealthIssue[]
+    } = {
       overall: {
         isHealthy,
         status: isHealthy ? 'healthy' : 'degraded',
@@ -1330,7 +1358,7 @@ router.get('/monitoring/health', async (req: Request, res: Response) => {
  * POST /api/reconciliation/monitoring/cleanup
  * Trigger cleanup of old metrics and alerts
  */
-router.post('/monitoring/cleanup', async (req: Request, res: Response) => {
+router.post('/monitoring/cleanup', async (_req: Request, res: Response) => {
   try {
     // Clean up old metrics
     const cleanedMetrics = await metricsService.cleanupOldMetrics()

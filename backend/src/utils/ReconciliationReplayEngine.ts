@@ -597,7 +597,6 @@ export class ReconciliationReplayEngine {
   private generateRecommendations(session: ReplaySession): string[] {
     const recommendations: string[] = []
     const debugInfo = session.replayState.debugInfo
-    const config = session.replayState.currentJob.config
 
     if (debugInfo.significantChanges > 5) {
       recommendations.push('Consider increasing significance thresholds to reduce noise')

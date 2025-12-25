@@ -23,7 +23,7 @@ export class ReconciliationStorageManager {
   private configFile: string
   private indexFile: string
   private schemaFile: string
-  private indexCache: ReconciliationIndex | null = null
+  protected indexCache: ReconciliationIndex | null = null
   
   /**
    * Current schema version for reconciliation data
@@ -107,9 +107,10 @@ export class ReconciliationStorageManager {
       await fs.access(this.indexFile)
     } catch {
       const emptyIndex: ReconciliationIndex = {
+        version: '1.0.0',
         jobs: {},
-        byDistrict: {},
-        byMonth: {},
+        districts: {},
+        months: {},
         byStatus: {},
         lastUpdated: new Date().toISOString()
       }
@@ -147,19 +148,68 @@ export class ReconciliationStorageManager {
   /**
    * Load index into memory
    */
-  private async loadIndex(): Promise<ReconciliationIndex> {
+  protected async loadIndex(): Promise<ReconciliationIndex> {
     if (this.indexCache) {
       return this.indexCache
     }
 
     try {
       const indexContent = await fs.readFile(this.indexFile, 'utf-8')
-      this.indexCache = JSON.parse(indexContent) as ReconciliationIndex
+      let index = JSON.parse(indexContent) as any
+      
+      // Migrate old index format to new format
+      index = this.migrateIndex(index)
+      
+      this.indexCache = index as ReconciliationIndex
       return this.indexCache
     } catch (error) {
       logger.error('Failed to load reconciliation index', error)
       throw error
     }
+  }
+
+  /**
+   * Migrate old index format to new format
+   */
+  private migrateIndex(index: any): ReconciliationIndex {
+    // Ensure all required properties exist
+    if (!index.version) {
+      index.version = '1.0.0'
+    }
+    
+    if (!index.jobs) {
+      index.jobs = {}
+    }
+    
+    // Migrate byDistrict to districts
+    if (index.byDistrict && !index.districts) {
+      index.districts = index.byDistrict
+      delete index.byDistrict
+    }
+    
+    if (!index.districts) {
+      index.districts = {}
+    }
+    
+    // Migrate byMonth to months
+    if (index.byMonth && !index.months) {
+      index.months = index.byMonth
+      delete index.byMonth
+    }
+    
+    if (!index.months) {
+      index.months = {}
+    }
+    
+    if (!index.byStatus) {
+      index.byStatus = {}
+    }
+    
+    if (!index.lastUpdated) {
+      index.lastUpdated = new Date().toISOString()
+    }
+    
+    return index as ReconciliationIndex
   }
 
   /**
@@ -264,30 +314,36 @@ export class ReconciliationStorageManager {
       const index = await this.loadIndex()
       
       index.jobs[job.id] = {
+        id: job.id,
         districtId: job.districtId,
         targetMonth: job.targetMonth,
         status: job.status,
-        createdAt: job.metadata.createdAt.toISOString(),
-        filePath: filePath
+        startDate: job.startDate.toISOString(),
+        endDate: job.endDate?.toISOString(),
+        progress: job.progress,
+        triggeredBy: job.triggeredBy
       }
 
       // Update district index
-      if (!index.byDistrict[job.districtId]) {
-        index.byDistrict[job.districtId] = []
+      if (!index.districts[job.districtId]) {
+        index.districts[job.districtId] = []
       }
-      if (!index.byDistrict[job.districtId].includes(job.id)) {
-        index.byDistrict[job.districtId].push(job.id)
+      if (!index.districts[job.districtId].includes(job.id)) {
+        index.districts[job.districtId].push(job.id)
       }
 
       // Update month index
-      if (!index.byMonth[job.targetMonth]) {
-        index.byMonth[job.targetMonth] = []
+      if (!index.months[job.targetMonth]) {
+        index.months[job.targetMonth] = []
       }
-      if (!index.byMonth[job.targetMonth].includes(job.id)) {
-        index.byMonth[job.targetMonth].push(job.id)
+      if (!index.months[job.targetMonth].includes(job.id)) {
+        index.months[job.targetMonth].push(job.id)
       }
 
       // Update status index
+      if (!index.byStatus) {
+        index.byStatus = {}
+      }
       if (!index.byStatus[job.status]) {
         index.byStatus[job.status] = []
       }
@@ -298,9 +354,9 @@ export class ReconciliationStorageManager {
       // Remove from old status if it changed
       for (const [status, jobIds] of Object.entries(index.byStatus)) {
         if (status !== job.status) {
-          const jobIndex = jobIds.indexOf(job.id)
+          const jobIndex = (jobIds as string[]).indexOf(job.id)
           if (jobIndex > -1) {
-            jobIds.splice(jobIndex, 1)
+            (jobIds as string[]).splice(jobIndex, 1)
           }
         }
       }
@@ -357,7 +413,7 @@ export class ReconciliationStorageManager {
   async getJobsByDistrict(districtId: string): Promise<ReconciliationJob[]> {
     try {
       const index = await this.loadIndex()
-      const jobIds = index.byDistrict[districtId] || []
+      const jobIds = index.districts[districtId] || []
       const jobs: ReconciliationJob[] = []
       
       for (const jobId of jobIds) {
@@ -380,7 +436,7 @@ export class ReconciliationStorageManager {
   async getJobsByStatus(status: ReconciliationJob['status']): Promise<ReconciliationJob[]> {
     try {
       const index = await this.loadIndex()
-      const jobIds = index.byStatus[status] || []
+      const jobIds = (index.byStatus && index.byStatus[status]) ? index.byStatus[status] : []
       const jobs: ReconciliationJob[] = []
       
       for (const jobId of jobIds) {
@@ -412,15 +468,15 @@ export class ReconciliationStorageManager {
       // Apply filters
       if (options?.districtId && options?.status) {
         // Both filters - need to intersect
-        const districtJobs = index.byDistrict[options.districtId] || []
-        const statusJobs = index.byStatus[options.status] || []
+        const districtJobs = index.districts[options.districtId] || []
+        const statusJobs = (index.byStatus && index.byStatus[options.status]) ? index.byStatus[options.status] : []
         jobIds = districtJobs.filter(id => statusJobs.includes(id))
       } else if (options?.districtId) {
         // District filter only
-        jobIds = index.byDistrict[options.districtId] || []
+        jobIds = index.districts[options.districtId] || []
       } else if (options?.status) {
         // Status filter only
-        jobIds = index.byStatus[options.status] || []
+        jobIds = (index.byStatus && index.byStatus[options.status]) ? index.byStatus[options.status] : []
       } else {
         // No filters - get all jobs
         jobIds = Object.keys(index.jobs)
@@ -478,23 +534,23 @@ export class ReconciliationStorageManager {
       delete index.jobs[jobId]
       
       // Remove from district index
-      if (index.byDistrict[job.districtId]) {
-        const districtIndex = index.byDistrict[job.districtId].indexOf(jobId)
+      if (index.districts[job.districtId]) {
+        const districtIndex = index.districts[job.districtId].indexOf(jobId)
         if (districtIndex > -1) {
-          index.byDistrict[job.districtId].splice(districtIndex, 1)
+          index.districts[job.districtId].splice(districtIndex, 1)
         }
       }
 
       // Remove from month index
-      if (index.byMonth[job.targetMonth]) {
-        const monthIndex = index.byMonth[job.targetMonth].indexOf(jobId)
+      if (index.months[job.targetMonth]) {
+        const monthIndex = index.months[job.targetMonth].indexOf(jobId)
         if (monthIndex > -1) {
-          index.byMonth[job.targetMonth].splice(monthIndex, 1)
+          index.months[job.targetMonth].splice(monthIndex, 1)
         }
       }
 
       // Remove from status index
-      if (index.byStatus[job.status]) {
+      if (index.byStatus && index.byStatus[job.status]) {
         const statusIndex = index.byStatus[job.status].indexOf(jobId)
         if (statusIndex > -1) {
           index.byStatus[job.status].splice(statusIndex, 1)
@@ -614,12 +670,12 @@ export class ReconciliationStorageManager {
       const jobsByStatus: Record<string, number> = {}
       const jobsByDistrict: Record<string, number> = {}
       
-      for (const [status, jobIds] of Object.entries(index.byStatus)) {
-        jobsByStatus[status] = jobIds.length
+      for (const [status, jobIds] of Object.entries(index.byStatus || {})) {
+        jobsByStatus[status] = (jobIds as string[]).length
       }
       
-      for (const [districtId, jobIds] of Object.entries(index.byDistrict)) {
-        jobsByDistrict[districtId] = jobIds.length
+      for (const [districtId, jobIds] of Object.entries(index.districts)) {
+        jobsByDistrict[districtId] = (jobIds as string[]).length
       }
       
       // Calculate storage size
@@ -693,6 +749,39 @@ export class ReconciliationStorageManager {
     } catch (error) {
       logger.error('Failed to clear reconciliation data', error)
       throw error
+    }
+  }
+
+  /**
+   * Clean up old completed jobs (older than 7 days)
+   */
+  async cleanupOldJobs(): Promise<void> {
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      const index = await this.loadIndex()
+      const jobsToDelete: string[] = []
+
+      // Find old completed/failed/cancelled jobs
+      for (const [jobId, jobInfo] of Object.entries(index.jobs)) {
+        if (
+          (jobInfo.status === 'completed' || jobInfo.status === 'failed' || jobInfo.status === 'cancelled') &&
+          jobInfo.endDate &&
+          new Date(jobInfo.endDate) < sevenDaysAgo
+        ) {
+          jobsToDelete.push(jobId)
+        }
+      }
+
+      // Delete old jobs
+      for (const jobId of jobsToDelete) {
+        await this.deleteJob(jobId)
+      }
+
+      if (jobsToDelete.length > 0) {
+        logger.info('Cleaned up old reconciliation jobs', { count: jobsToDelete.length })
+      }
+    } catch (error) {
+      logger.error('Failed to cleanup old reconciliation jobs', { error })
     }
   }
 }

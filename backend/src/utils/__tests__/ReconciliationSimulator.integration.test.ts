@@ -8,7 +8,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ReconciliationSimulator } from '../ReconciliationSimulator.js'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
-import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.js'
 import type { SimulationResult } from '../ReconciliationSimulator.js'
 
 // Mock logger

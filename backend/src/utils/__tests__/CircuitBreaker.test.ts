@@ -204,7 +204,7 @@ describe('CircuitBreakerManager', () => {
     const manager = CircuitBreakerManager.getInstance()
     
     const breaker1 = manager.getCircuitBreaker('stats-test-1')
-    const breaker2 = manager.getCircuitBreaker('stats-test-2')
+    manager.getCircuitBreaker('stats-test-2')
     
     // Execute some operations to generate stats
     await breaker1.execute(() => Promise.resolve('success'))

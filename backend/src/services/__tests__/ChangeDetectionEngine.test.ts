@@ -2,6 +2,7 @@
  * Tests for ChangeDetectionEngine
  */
 
+import { describe, it, expect, beforeEach } from 'vitest'
 import { ChangeDetectionEngine } from '../ChangeDetectionEngine'
 import type { DistrictStatistics } from '../../types/districts'
 import type { ChangeThresholds } from '../../types/reconciliation'

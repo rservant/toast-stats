@@ -2,16 +2,60 @@
  * Type definitions for month-end data reconciliation system
  */
 
+// Re-export commonly used types from districts for convenience
+export type { DistrictStatistics } from './districts.js'
+
+// Additional types for reconciliation system
+export interface BatchJob {
+  id: string
+  districtIds: string[]
+  targetMonth: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  createdAt: Date
+  completedAt?: Date
+  results?: BatchJobResult[]
+}
+
+export interface BatchJobResult {
+  districtId: string
+  jobId?: string
+  status: 'success' | 'failed'
+  error?: string
+}
+
+export interface DebugInfo {
+  stepCount: number
+  processingTime: number
+  totalProcessingTime: number
+  cacheHits: number
+  cacheMisses: number
+  errors: string[]
+}
+
+export interface StepResult {
+  success: boolean
+  data?: any
+  error?: string
+  timestamp: Date
+}
+
+export type ReconciliationJobStatus = 'active' | 'completed' | 'failed' | 'cancelled'
+
 export interface ReconciliationJob {
   id: string
   districtId: string
-  targetMonth: string // YYYY-MM format
-  status: 'active' | 'completed' | 'failed' | 'cancelled'
+  targetMonth: string
+  status: ReconciliationJobStatus
   startDate: Date
   endDate?: Date
-  maxEndDate: Date // Configuration-based limit
-  currentDataDate?: string // Latest "as of" date from dashboard
+  maxEndDate: Date
+  currentDataDate?: string
   finalizedDate?: Date
+  progress: ReconciliationProgress
+  results?: ReconciliationResults
+  error?: string
+  triggeredBy: 'manual' | 'automatic' | 'scheduled'
+  configOverride?: Partial<ReconciliationConfig>
   config: ReconciliationConfig
   metadata: {
     createdAt: Date
@@ -162,25 +206,37 @@ export interface ReconciliationTimelineRecord extends Omit<ReconciliationTimelin
 // Storage Index Types
 
 export interface ReconciliationIndex {
-  jobs: {
-    [jobId: string]: {
-      districtId: string
-      targetMonth: string
-      status: ReconciliationJob['status']
-      createdAt: string
-      filePath: string
-    }
-  }
-  byDistrict: {
-    [districtId: string]: string[] // Array of job IDs
-  }
-  byMonth: {
-    [month: string]: string[] // Array of job IDs (YYYY-MM format)
-  }
-  byStatus: {
-    [status: string]: string[] // Array of job IDs
-  }
+  version: string
   lastUpdated: string
+  jobs: Record<string, ReconciliationJobInfo>
+  districts: Record<string, string[]> // districtId -> jobIds
+  months: Record<string, string[]> // month -> jobIds
+  byStatus?: Record<string, string[]> // status -> jobIds (optional for backward compatibility)
+}
+
+export interface ReconciliationJobInfo {
+  id: string
+  districtId: string
+  targetMonth: string
+  status: ReconciliationJobStatus
+  startDate: string
+  endDate?: string
+  progress: ReconciliationProgress
+  triggeredBy: 'manual' | 'automatic' | 'scheduled'
+}
+
+export interface ReconciliationProgress {
+  phase: string
+  completionPercentage: number
+  estimatedCompletion?: Date
+}
+
+export interface ReconciliationResults {
+  finalDataDate: string
+  totalChanges: number
+  significantChanges: number
+  stabilityAchieved: boolean
+  cacheUpdates: number
 }
 
 // Migration Types

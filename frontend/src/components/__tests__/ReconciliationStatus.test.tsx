@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, cleanup } from '@testing-library/react';
 import { ReconciliationStatus } from '../ReconciliationStatus';
 import { ReconciliationStatus as ReconciliationStatusType } from '../../types/reconciliation';

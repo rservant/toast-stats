@@ -32,7 +32,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
 import { RetryManager } from '../utils/RetryManager.js'
 import { CircuitBreaker, CircuitBreakerManager } from '../utils/CircuitBreaker.js'
-import { AlertManager } from '../utils/AlertManager.js'
+import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import type { DistrictStatistics } from '../types/districts.js'
@@ -96,11 +96,19 @@ export class DistrictBackfillService {
     const circuitManager = CircuitBreakerManager.getInstance()
     this.dashboardCircuitBreaker = circuitManager.getCircuitBreaker(
       'dashboard-api',
-      CircuitBreaker.createDashboardCircuitBreaker('dashboard-api').getStats()
+      {
+        failureThreshold: 5,
+        recoveryTimeout: 60000,
+        monitoringPeriod: 10000
+      }
     )
     this.cacheCircuitBreaker = circuitManager.getCircuitBreaker(
       'cache-operations',
-      CircuitBreaker.createCacheCircuitBreaker('cache-operations').getStats()
+      {
+        failureThreshold: 3,
+        recoveryTimeout: 30000,
+        monitoringPeriod: 5000
+      }
     )
   }
 
@@ -438,8 +446,8 @@ export class DistrictBackfillService {
 
       // Send alert for critical errors
       await this.alertManager.sendAlert(
-        AlertManager.AlertSeverity.HIGH,
-        AlertManager.AlertCategory.RECONCILIATION,
+        AlertSeverity.HIGH,
+        AlertCategory.RECONCILIATION,
         'Reconciliation Data Fetch Failed',
         `Critical error fetching reconciliation data for district ${districtId}, date ${targetDate}: ${errorMessage}`,
         { districtId, targetDate, error: errorMessage }
@@ -573,8 +581,8 @@ export class DistrictBackfillService {
    */
   private validateDataQuality(
     districtStats: DistrictStatistics,
-    districtId: string,
-    date: string
+    _districtId: string,
+    _date: string
   ): string[] {
     const issues: string[] = []
 
@@ -690,7 +698,7 @@ export class DistrictBackfillService {
         }
 
         // Look for date patterns in any string field
-        for (const [key, value] of Object.entries(record)) {
+        for (const [_key, value] of Object.entries(record)) {
           if (typeof value === 'string') {
             // Look for patterns like "as of November 15, 2024" or "Data as of 2024-11-15"
             const asOfMatch = value.match(/as of\s+(\w+\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2})/i)
@@ -733,8 +741,8 @@ export class DistrictBackfillService {
   private convertToDistrictStatistics(
     districtId: string,
     asOfDate: string,
-    districtPerformance: any[],
-    divisionPerformance: any[],
+    _districtPerformance: any[],
+    _divisionPerformance: any[],
     clubPerformance: any[]
   ): DistrictStatistics {
     // Calculate membership statistics from club data

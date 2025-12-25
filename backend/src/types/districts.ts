@@ -16,6 +16,9 @@ export interface MembershipStats {
   change: number
   changePercent: number
   byClub: ClubMembership[]
+  new?: number // Optional for backward compatibility
+  renewed?: number // Optional for backward compatibility
+  dual?: number // Optional for backward compatibility
 }
 
 export interface ClubMembership {
@@ -31,6 +34,7 @@ export interface ClubStats {
   ineligible: number
   low: number
   distinguished: number
+  chartered?: number // Optional for backward compatibility
 }
 
 export interface EducationStats {
@@ -56,12 +60,30 @@ export interface ClubAwards {
   awards: number
 }
 
+export interface DistrictGoals {
+  clubsGoal: number
+  membershipGoal: number
+  distinguishedGoal: number
+}
+
+export interface DistrictPerformance {
+  membershipNet: number
+  clubsNet: number
+  distinguishedPercent: number
+}
+
 export interface DistrictStatistics {
   districtId: string
   asOfDate: string
   membership: MembershipStats
   clubs: ClubStats
   education: EducationStats
+  goals?: DistrictGoals
+  performance?: DistrictPerformance
+  // Raw data arrays from scraper (for caching purposes)
+  districtPerformance?: any[]
+  divisionPerformance?: any[]
+  clubPerformance?: any[]
 }
 
 export interface MembershipHistoryPoint {

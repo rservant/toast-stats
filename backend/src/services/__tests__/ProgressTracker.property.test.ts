@@ -11,22 +11,18 @@ import { ProgressTracker } from '../ProgressTracker'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
 import type { 
   ReconciliationJob, 
-  ReconciliationTimeline, 
-  ReconciliationEntry,
   ReconciliationConfig,
   DataChanges,
   DistinguishedCounts
 } from '../../types/reconciliation'
 
 describe('ProgressTracker - Property-Based Tests', () => {
-  let progressTracker: ProgressTracker
   let storageManager: ReconciliationStorageManager
 
   beforeEach(async () => {
     // Use unique temporary storage for each test
     const testId = Math.random().toString(36).substring(7)
     storageManager = new ReconciliationStorageManager(`./cache/test-progress-tracker-${testId}`)
-    progressTracker = new ProgressTracker(storageManager)
     
     await storageManager.init()
   })
@@ -113,6 +109,11 @@ describe('ProgressTracker - Property-Based Tests', () => {
       finalizedDate: fc.option(fc.integer({ min: Date.parse('2024-01-01T00:00:00.000Z'), max: Date.parse('2024-12-31T23:59:59.999Z') })
         .map(ms => createValidDate(ms))),
       config: generateConfig(),
+      triggeredBy: fc.constantFrom('manual', 'automatic', 'scheduled'),
+      progress: fc.record({
+        phase: fc.constantFrom('monitoring', 'stabilizing', 'finalizing', 'completed'),
+        completionPercentage: fc.float({ min: 0, max: 100 })
+      }),
       metadata: fc.record({
         createdAt: fc.integer({ min: Date.parse('2024-01-01T00:00:00.000Z'), max: Date.parse('2024-06-30T23:59:59.999Z') })
           .map(ms => createValidDate(ms)),
@@ -141,16 +142,6 @@ describe('ProgressTracker - Property-Based Tests', () => {
       }
       
       return job
-    })
-
-  const generateTimelineEntry = (): fc.Arbitrary<ReconciliationEntry> =>
-    fc.record({
-      date: fc.date({ min: new Date('2024-01-01T00:00:00.000Z'), max: new Date('2024-12-30T23:59:59.999Z') }),
-      sourceDataDate: fc.constantFrom('2024-01-01', '2024-01-02', '2024-01-03', '2024-02-01', '2024-03-01'),
-      changes: generateDataChanges(),
-      isSignificant: fc.boolean(),
-      cacheUpdated: fc.boolean(),
-      notes: fc.option(fc.string({ maxLength: 100 }))
     })
 
   /**

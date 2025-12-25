@@ -4,7 +4,7 @@ import express from 'express'
 import reconciliationRouter from '../reconciliation.js'
 import { ReconciliationStorageManager } from '../../services/ReconciliationStorageManager.js'
 import { ProgressTracker } from '../../services/ProgressTracker.js'
-import { ReconciliationJob } from '../../types/reconciliation.js'
+// import { ReconciliationJob } from '../../types/reconciliation.js'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -19,7 +19,6 @@ const createTestApp = () => {
 describe('Reconciliation Status API Integration Tests', () => {
   const testCacheDir = path.join(process.cwd(), 'test-cache-status')
   let storageManager: ReconciliationStorageManager
-  let progressTracker: ProgressTracker
 
   beforeEach(async () => {
     // Clean up test cache directory
@@ -34,7 +33,7 @@ describe('Reconciliation Status API Integration Tests', () => {
     await storageManager.init()
     
     // Initialize progress tracker
-    progressTracker = new ProgressTracker(storageManager)
+    new ProgressTracker(storageManager)
   })
 
   afterEach(async () => {

@@ -180,7 +180,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-08'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
         
         // Manually set the job to be close to max end date (within 2 days)
         const now = new Date()
@@ -243,7 +243,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-09'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
         
         // Set job close to max end date
         const now = new Date()
@@ -281,7 +281,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-10'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
         const originalMaxEndDate = new Date(job.maxEndDate)
 
         // Test manual extension within limits
@@ -324,7 +324,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-11'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
         
         // Set job far from max end date (more than 2 days)
         const now = new Date()
@@ -362,7 +362,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-12'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
         
         // Manually set job status to non-active
         job.status = status
@@ -401,7 +401,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2025-01'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
         const originalStartDate = new Date(job.startDate)
         const originalMaxEndDate = new Date(job.maxEndDate)
 
@@ -444,7 +444,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
       await configService.updateConfig(config)
 
       // Test case 1: Extension with minimum days
-      const job1 = await orchestrator.startReconciliation('D7001', '2025-02', 'manual')
+      const job1 = await orchestrator.startReconciliation('D7001', '2025-02', undefined, 'manual')
       const originalEnd1 = new Date(job1.maxEndDate)
       
       await orchestrator.extendReconciliation(job1.id, 1)
@@ -454,7 +454,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
       expect(extended1!.maxEndDate.getTime()).toBe(expectedEnd1.getTime())
 
       // Test case 2: Extension with zero days (should be handled gracefully)
-      const job2 = await orchestrator.startReconciliation('D7002', '2025-03', 'manual')
+      const job2 = await orchestrator.startReconciliation('D7002', '2025-03', undefined, 'manual')
       const originalEnd2 = new Date(job2.maxEndDate)
       
       await orchestrator.extendReconciliation(job2.id, 0)
@@ -487,7 +487,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-01'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
 
         // Create a timeline with exactly the required stability period
         const timeline = generateTimelineWithStablePeriod(
@@ -534,7 +534,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-02'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
 
         // Create a timeline with insufficient stability period (one day less than required)
         const insufficientStableDays = config.stabilityPeriodDays - 1
@@ -574,7 +574,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-03'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
 
         // Create a timeline with mixed changes:
         // - 3 stable days (most recent)
@@ -644,7 +644,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
       const targetMonth = '2024-04'
 
       // Start reconciliation
-      const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+      const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
 
       // Create timeline with exactly 1 stable day
       const timeline = generateTimelineWithStablePeriod(job.id, districtId, targetMonth, 1)
@@ -670,7 +670,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
         const targetMonth = '2024-05'
 
         // Start reconciliation
-        const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+        const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
 
         // Create different timeline patterns
         let timeline: ReconciliationTimeline
@@ -726,7 +726,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
       const targetMonth = '2024-06'
 
       // Start reconciliation
-      const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+      const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
 
       // Create timeline with sufficient stability
       const timeline = generateTimelineWithStablePeriod(job.id, districtId, targetMonth, 1)
@@ -755,7 +755,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
       const targetMonth = '2024-07'
 
       // Start reconciliation with a past start date to simulate time passage
-      const job = await orchestrator.startReconciliation(districtId, targetMonth, 'manual')
+      const job = await orchestrator.startReconciliation(districtId, targetMonth, undefined, 'manual')
       
       // Manually adjust the job to simulate it being past the max end date
       job.startDate = new Date(Date.now() - (6 * 24 * 60 * 60 * 1000)) // 6 days ago

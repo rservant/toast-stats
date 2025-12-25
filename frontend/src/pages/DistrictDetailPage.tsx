@@ -33,7 +33,7 @@ import { LazyChart } from '../components/LazyChart';
 import { useBackfillContext } from '../contexts/BackfillContext';
 import AssessmentPanel from '../components/AssessmentPanel';
 
-type TabType = 'overview' | 'clubs' | 'divisions' | 'trends' | 'analytics';
+type TabType = 'overview' | 'clubs' | 'divisions' | 'trends' | 'analytics' | 'assessment';
 
 const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>();
