@@ -168,6 +168,11 @@ describe('ReconciliationMetricsService', () => {
         status: 'active',
         startDate: new Date('2024-01-01T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
+        progress: {
+          phase: 'monitoring',
+          completionPercentage: 50
+        },
+        triggeredBy: 'manual',
         config: {
           maxReconciliationDays: 15,
           stabilityPeriodDays: 3,
@@ -203,6 +208,11 @@ describe('ReconciliationMetricsService', () => {
         status: 'active',
         startDate: new Date('2024-01-01T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
+        progress: {
+          phase: 'monitoring',
+          completionPercentage: 50
+        },
+        triggeredBy: 'manual',
         config: {
           maxReconciliationDays: 15,
           stabilityPeriodDays: 3,
@@ -239,6 +249,11 @@ describe('ReconciliationMetricsService', () => {
         status: 'failed',
         startDate: new Date('2024-01-01T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
+        progress: {
+          phase: 'monitoring',
+          completionPercentage: 50
+        },
+        triggeredBy: 'manual',
         config: {
           maxReconciliationDays: 15,
           stabilityPeriodDays: 3,
@@ -277,7 +292,7 @@ describe('ReconciliationMetricsService', () => {
 
   describe('getMetrics', () => {
     it('should return comprehensive metrics', () => {
-      const job1: ReconciliationJob = {
+      const job1: ReconciliationJob = createTestReconciliationJob({
         id: 'job-1',
         districtId: 'D1',
         targetMonth: '2024-01',
@@ -285,50 +300,27 @@ describe('ReconciliationMetricsService', () => {
         startDate: new Date('2024-01-01T00:00:00Z'),
         endDate: new Date('2024-01-05T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-05T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
-      const job2: ReconciliationJob = {
+      const job2: ReconciliationJob = createTestReconciliationJob({
         id: 'job-2',
         districtId: 'D2',
         targetMonth: '2024-01',
         status: 'failed',
         startDate: new Date('2024-01-01T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
+        triggeredBy: 'manual',
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
           triggeredBy: 'manual'
         }
-      }
+      })
 
       metricsService.recordJobStart(job1)
       metricsService.recordJobCompletion(job1, 3)
@@ -355,7 +347,7 @@ describe('ReconciliationMetricsService', () => {
 
   describe('getDistrictMetrics', () => {
     it('should return metrics for specific district', () => {
-      const job1: ReconciliationJob = {
+      const job1: ReconciliationJob = createTestReconciliationJob({
         id: 'job-1',
         districtId: 'D1',
         targetMonth: '2024-01',
@@ -363,26 +355,14 @@ describe('ReconciliationMetricsService', () => {
         startDate: new Date('2024-01-01T00:00:00Z'),
         endDate: new Date('2024-01-05T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-05T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
-      const job2: ReconciliationJob = {
+      const job2: ReconciliationJob = createTestReconciliationJob({
         id: 'job-2',
         districtId: 'D2',
         targetMonth: '2024-01',
@@ -390,24 +370,13 @@ describe('ReconciliationMetricsService', () => {
         startDate: new Date('2024-01-01T00:00:00Z'),
         endDate: new Date('2024-01-03T00:00:00Z'),
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
+        triggeredBy: 'manual',
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-03T00:00:00Z'),
           triggeredBy: 'manual'
         }
-      }
+      })
 
       metricsService.recordJobStart(job1)
       metricsService.recordJobCompletion(job1, 3)
@@ -426,38 +395,14 @@ describe('ReconciliationMetricsService', () => {
   })
   describe('performance pattern detection', () => {
     it('should detect frequent failures pattern', async () => {
-      const baseJob = {
-        districtId: 'D1',
-        targetMonth: '2024-01',
-        status: 'failed' as const,
-        startDate: new Date(),
-        maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          triggeredBy: 'automatic' as const
-        }
-      }
-
       // Create 3 failed jobs to trigger frequent failures pattern
       for (let i = 1; i <= 3; i++) {
-        const job: ReconciliationJob = {
-          ...baseJob,
+        const job: ReconciliationJob = createTestReconciliationJob({
           id: `job-${i}`,
-          targetMonth: `2024-0${i}`
-        }
+          districtId: 'D1',
+          targetMonth: `2024-0${i}`,
+          status: 'failed'
+        })
         
         metricsService.recordJobStart(job)
         await metricsService.recordJobFailure(job, `Error ${i}`)
@@ -479,39 +424,14 @@ describe('ReconciliationMetricsService', () => {
     })
 
     it('should detect extended reconciliation pattern', () => {
-      const baseJob = {
-        districtId: 'D1',
-        targetMonth: '2024-01',
-        status: 'completed' as const,
-        startDate: new Date(),
-        endDate: new Date(),
-        maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          triggeredBy: 'automatic' as const
-        }
-      }
-
       // Create 2 jobs with multiple extensions
       for (let i = 1; i <= 2; i++) {
-        const job: ReconciliationJob = {
-          ...baseJob,
+        const job: ReconciliationJob = createTestReconciliationJob({
           id: `job-${i}`,
-          targetMonth: `2024-0${i}`
-        }
+          districtId: 'D1',
+          targetMonth: `2024-0${i}`,
+          status: 'completed'
+        })
         
         metricsService.recordJobStart(job)
         metricsService.recordJobExtension(`job-${i}`, 2)
@@ -528,39 +448,22 @@ describe('ReconciliationMetricsService', () => {
     })
 
     it('should detect timeout pattern', async () => {
-      const baseJob = {
-        districtId: 'D1',
-        targetMonth: '2024-01',
-        status: 'failed' as const,
-        startDate: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000), // 16 days ago
-        endDate: new Date(), // Set end date for duration calculation
-        maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
-        metadata: {
-          createdAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000),
-          updatedAt: new Date(),
-          triggeredBy: 'automatic' as const
-        }
-      }
-
       // Create 2 jobs that exceeded maximum period (timeout)
       for (let i = 1; i <= 2; i++) {
-        const job: ReconciliationJob = {
-          ...baseJob,
+        const job: ReconciliationJob = createTestReconciliationJob({
           id: `job-${i}`,
-          targetMonth: `2024-0${i}`
-        }
+          districtId: 'D1',
+          targetMonth: `2024-0${i}`,
+          status: 'failed',
+          startDate: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000), // 16 days ago
+          endDate: new Date(), // Set end date for duration calculation
+          maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+          metadata: {
+            createdAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(),
+            triggeredBy: 'automatic'
+          }
+        })
         
         metricsService.recordJobStart(job)
         await metricsService.recordJobFailure(job, 'Timeout')
@@ -580,7 +483,7 @@ describe('ReconciliationMetricsService', () => {
       const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) // 100 days ago
       const recentDate = new Date()
 
-      const oldJob: ReconciliationJob = {
+      const oldJob: ReconciliationJob = createTestReconciliationJob({
         id: 'old-job',
         districtId: 'D1',
         targetMonth: '2023-01',
@@ -588,26 +491,14 @@ describe('ReconciliationMetricsService', () => {
         startDate: oldDate,
         endDate: oldDate,
         maxEndDate: new Date(oldDate.getTime() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: oldDate,
           updatedAt: oldDate,
           triggeredBy: 'automatic'
         }
-      }
+      })
 
-      const recentJob: ReconciliationJob = {
+      const recentJob: ReconciliationJob = createTestReconciliationJob({
         id: 'recent-job',
         districtId: 'D1',
         targetMonth: '2024-01',
@@ -615,24 +506,12 @@ describe('ReconciliationMetricsService', () => {
         startDate: recentDate,
         endDate: recentDate,
         maxEndDate: new Date(recentDate.getTime() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: recentDate,
           updatedAt: recentDate,
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       metricsService.recordJobStart(oldJob)
       metricsService.recordJobCompletion(oldJob, 3)
@@ -652,31 +531,19 @@ describe('ReconciliationMetricsService', () => {
     it('should not clean up active jobs regardless of age', async () => {
       const oldDate = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000) // 100 days ago
 
-      const activeJob: ReconciliationJob = {
+      const activeJob: ReconciliationJob = createTestReconciliationJob({
         id: 'active-job',
         districtId: 'D1',
         targetMonth: '2023-01',
         status: 'active',
         startDate: oldDate,
         maxEndDate: new Date(oldDate.getTime() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: oldDate,
           updatedAt: oldDate,
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       metricsService.recordJobStart(activeJob)
 
@@ -689,31 +556,19 @@ describe('ReconciliationMetricsService', () => {
 
   describe('getHealthStatus', () => {
     it('should return health status', () => {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: 'job-1',
         districtId: 'D1',
         targetMonth: '2024-01',
         status: 'active',
         startDate: new Date(),
         maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       metricsService.recordJobStart(job)
 
@@ -729,7 +584,7 @@ describe('ReconciliationMetricsService', () => {
 
   describe('resetMetrics', () => {
     it('should reset all metrics', () => {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: 'job-1',
         districtId: 'D1',
         targetMonth: '2024-01',
@@ -737,24 +592,12 @@ describe('ReconciliationMetricsService', () => {
         startDate: new Date(),
         endDate: new Date(),
         maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       metricsService.recordJobStart(job)
       metricsService.recordJobCompletion(job, 3)
@@ -786,7 +629,7 @@ describe('ReconciliationMetricsService', () => {
       ]
 
       jobs.forEach(({ duration, id }) => {
-        const job: ReconciliationJob = {
+        const job: ReconciliationJob = createTestReconciliationJob({
           id,
           districtId: 'D1',
           targetMonth: '2024-01',
@@ -794,24 +637,12 @@ describe('ReconciliationMetricsService', () => {
           startDate: new Date(Date.now() - duration),
           endDate: new Date(),
           maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-          config: {
-            maxReconciliationDays: 15,
-            stabilityPeriodDays: 3,
-            checkFrequencyHours: 24,
-            significantChangeThresholds: {
-              membershipPercent: 1,
-              clubCountAbsolute: 1,
-              distinguishedPercent: 2
-            },
-            autoExtensionEnabled: true,
-            maxExtensionDays: 5
-          },
           metadata: {
             createdAt: new Date(),
             updatedAt: new Date(),
             triggeredBy: 'automatic'
           }
-        }
+        })
 
         metricsService.recordJobStart(job)
         metricsService.recordJobCompletion(job, 3)

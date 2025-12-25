@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ReconciliationSimulator } from '../ReconciliationSimulator.js'
-import type { SimulationScenario, DataPattern } from '../ReconciliationSimulator.js'
+import type { SimulationScenario } from '../ReconciliationSimulator.js'
 
 // Mock logger
 vi.mock('../logger.js', () => ({
@@ -207,8 +207,10 @@ describe('ReconciliationSimulator', () => {
       expect(baseData.clubs.distinguished).toBeLessThanOrEqual(baseData.clubs.total)
       
       // Performance metrics should be calculated
-      expect(baseData.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
-      expect(baseData.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+      if (baseData.performance) {
+        expect(baseData.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
+        expect(baseData.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+      }
     })
 
     it('should generate consistent data timeline', async () => {

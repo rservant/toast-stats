@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import LandingPage from '../LandingPage'
 import * as apiModule from '../../services/api'
 import { renderWithProviders } from '../../tests/test-utils'

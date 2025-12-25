@@ -10,13 +10,11 @@ import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.js'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
 import type { 
   ReplaySession, 
-  ReplayOptions, 
-  StepResult 
+  ReplayOptions
 } from '../ReconciliationReplayEngine.js'
 import type { 
-  ReconciliationJob, 
-  ReconciliationTimeline, 
-  ReconciliationEntry 
+  ReconciliationJob,
+  ReconciliationTimeline
 } from '../../types/reconciliation.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 
@@ -35,7 +33,7 @@ vi.mock('../../services/ChangeDetectionEngine.js')
 
 describe('ReconciliationReplayEngine', () => {
   let replayEngine: ReconciliationReplayEngine
-  let mockChangeDetectionEngine: vi.Mocked<ChangeDetectionEngine>
+  let mockChangeDetectionEngine: any
 
   // Test data
   const mockJob: ReconciliationJob = {
@@ -46,6 +44,11 @@ describe('ReconciliationReplayEngine', () => {
     startDate: new Date('2024-01-01T00:00:00Z'),
     endDate: new Date('2024-01-10T00:00:00Z'),
     maxEndDate: new Date('2024-01-16T00:00:00Z'),
+    progress: {
+      phase: 'completed',
+      completionPercentage: 100
+    },
+    triggeredBy: 'automatic',
     config: {
       maxReconciliationDays: 15,
       stabilityPeriodDays: 3,
@@ -100,24 +103,27 @@ describe('ReconciliationReplayEngine', () => {
     {
       districtId: 'D123',
       asOfDate: '2024-01-01',
-      clubs: { total: 50, chartered: 48, suspended: 2, distinguished: 20 },
-      membership: { total: 1000, new: 50, renewed: 900, dual: 50 },
+      clubs: { total: 50, active: 48, chartered: 48, suspended: 2, ineligible: 0, low: 0, distinguished: 20 },
+      membership: { total: 1000, change: 0, changePercent: 0, byClub: [], new: 50, renewed: 900, dual: 50 },
+      education: { totalAwards: 0, byType: [], topClubs: [] },
       goals: { clubsGoal: 55, membershipGoal: 1100, distinguishedGoal: 25 },
       performance: { clubsNet: 0, membershipNet: 0, distinguishedPercent: 40 }
     },
     {
       districtId: 'D123',
       asOfDate: '2024-01-02',
-      clubs: { total: 50, chartered: 48, suspended: 2, distinguished: 20 },
-      membership: { total: 1005, new: 55, renewed: 900, dual: 50 },
+      clubs: { total: 50, active: 48, chartered: 48, suspended: 2, ineligible: 0, low: 0, distinguished: 20 },
+      membership: { total: 1005, change: 5, changePercent: 0.5, byClub: [], new: 55, renewed: 900, dual: 50 },
+      education: { totalAwards: 0, byType: [], topClubs: [] },
       goals: { clubsGoal: 55, membershipGoal: 1100, distinguishedGoal: 25 },
       performance: { clubsNet: 0, membershipNet: 5, distinguishedPercent: 40 }
     },
     {
       districtId: 'D123',
       asOfDate: '2024-01-03',
-      clubs: { total: 51, chartered: 49, suspended: 2, distinguished: 21 },
-      membership: { total: 1010, new: 60, renewed: 900, dual: 50 },
+      clubs: { total: 51, active: 49, chartered: 49, suspended: 2, ineligible: 0, low: 0, distinguished: 21 },
+      membership: { total: 1010, change: 10, changePercent: 1.0, byClub: [], new: 60, renewed: 900, dual: 50 },
+      education: { totalAwards: 0, byType: [], topClubs: [] },
       goals: { clubsGoal: 55, membershipGoal: 1100, distinguishedGoal: 25 },
       performance: { clubsNet: 1, membershipNet: 10, distinguishedPercent: 41.2 }
     }
@@ -236,7 +242,7 @@ describe('ReconciliationReplayEngine', () => {
       expect(session.currentStep).toBe(mockDataSequence.length - 1)
       expect(session.replayState.stepResults.length).toBeGreaterThan(0)
       expect(session.replayState.processedEntries.length).toBeGreaterThan(0)
-      expect(session.replayState.debugInfo.totalProcessingTime).toBeGreaterThan(0)
+      expect(session.replayState.debugInfo.performanceMetrics.totalProcessingTime).toBeGreaterThan(0)
     })
 
     it('should pause on step-by-step mode', async () => {
@@ -304,7 +310,15 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should throw error for non-existent session', async () => {
-      await expect(replayEngine.executeReplay('non-existent', {})).rejects.toThrow('Replay session not found: non-existent')
+      const options: ReplayOptions = {
+        stepByStep: false,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false
+      }
+
+      await expect(replayEngine.executeReplay('non-existent', options)).rejects.toThrow('Replay session not found: non-existent')
     })
   })
 
@@ -593,7 +607,7 @@ describe('ReconciliationReplayEngine', () => {
       const comparison = replayEngine.compareWithOriginal(session.id)
 
       expect(comparison.differences.length).toBeGreaterThan(0)
-      const significanceDiff = comparison.differences.find(d => d.type === 'significance_mismatch')
+      const significanceDiff = comparison.differences.find((d: any) => d.type === 'significance_mismatch')
       expect(significanceDiff).toBeDefined()
     })
 

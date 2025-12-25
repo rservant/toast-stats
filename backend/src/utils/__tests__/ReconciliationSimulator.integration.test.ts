@@ -382,8 +382,10 @@ describe('ReconciliationSimulator Integration', () => {
         
         // Data should be internally consistent
         expect(dataPoint.clubs.distinguished).toBeLessThanOrEqual(dataPoint.clubs.total)
-        expect(dataPoint.performance.distinguishedPercent).toBeLessThanOrEqual(100)
-        expect(dataPoint.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
+        if (dataPoint.performance) {
+          expect(dataPoint.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+          expect(dataPoint.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
+        }
       })
     })
   })

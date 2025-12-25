@@ -1,11 +1,10 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { ReconciliationManagement } from '../ReconciliationManagement';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+(globalThis as any).fetch = mockFetch;
 
 describe('ReconciliationManagement Minimal Coverage', () => {
   beforeEach(() => {

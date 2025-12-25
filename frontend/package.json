@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "typecheck:count": "tsc --noEmit --skipLibCheck 2>&1 | grep -E \"error TS[0-9]+\" | wc -l || echo \"0\"",
+    "typecheck:errors": "tsc --noEmit --skipLibCheck 2>&1 | grep -E \"error TS[0-9]+\" || echo \"No TypeScript errors found\""
   },
   "dependencies": {
     "@tanstack/react-query": "^5.12.0",

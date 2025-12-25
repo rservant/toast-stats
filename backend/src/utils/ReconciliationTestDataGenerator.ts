@@ -10,7 +10,6 @@ import type {
   ReconciliationJob,
   ReconciliationConfig,
   DataChanges,
-  ReconciliationTimeline,
   ReconciliationEntry,
   DistinguishedCounts
 } from '../types/reconciliation.js'
@@ -785,15 +784,26 @@ export class ReconciliationTestDataGenerator {
       asOfDate: '2024-01-31',
       clubs: {
         total: clubCount,
+        active: clubCount - Math.floor(rng() * 2),
         chartered: clubCount - Math.floor(rng() * 3),
         suspended: Math.floor(rng() * 3),
+        ineligible: Math.floor(rng() * 2),
+        low: Math.floor(rng() * 2),
         distinguished
       },
       membership: {
         total: membership,
+        change: Math.floor(rng() * 20) - 10,
+        changePercent: (rng() * 4) - 2,
+        byClub: [],
         new: Math.floor(membership * 0.1),
         renewed: Math.floor(membership * 0.8),
         dual: Math.floor(membership * 0.05)
+      },
+      education: {
+        totalAwards: Math.floor(rng() * 50),
+        byType: [],
+        topClubs: []
       },
       goals: {
         clubsGoal: clubCount + Math.floor(rng() * 5),
@@ -827,6 +837,11 @@ export class ReconciliationTestDataGenerator {
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      progress: {
+        phase: 'monitoring',
+        completionPercentage: Math.floor(seed * 100)
+      },
+      triggeredBy: 'manual',
       config: this.generateTestConfig(seed),
       metadata: {
         createdAt: new Date(),

@@ -8,10 +8,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator'
 import { ChangeDetectionEngine } from '../ChangeDetectionEngine'
-import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
+import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer'
 import { ReconciliationConfigService } from '../ReconciliationConfigService'
+import { ReconciliationCacheService } from '../ReconciliationCacheService'
 import type { 
-  ReconciliationJob, 
   ReconciliationTimeline, 
   ReconciliationEntry,
   ReconciliationConfig,
@@ -21,18 +21,21 @@ import type { DistrictStatistics } from '../../types/districts'
 
 describe('ReconciliationOrchestrator - Property-Based Tests', () => {
   let orchestrator: ReconciliationOrchestrator
-  let storageManager: ReconciliationStorageManager
+  let storageManager: ReconciliationStorageOptimizer
   let configService: ReconciliationConfigService
+  let cacheService: ReconciliationCacheService
   let changeDetectionEngine: ChangeDetectionEngine
 
   beforeEach(async () => {
     // Use temporary storage for tests
-    storageManager = new ReconciliationStorageManager('./cache/test-reconciliation')
+    storageManager = new ReconciliationStorageOptimizer('./cache/test-reconciliation')
     configService = new ReconciliationConfigService()
+    cacheService = new ReconciliationCacheService()
     changeDetectionEngine = new ChangeDetectionEngine()
     orchestrator = new ReconciliationOrchestrator(
       changeDetectionEngine,
       storageManager,
+      cacheService,
       configService
     )
     

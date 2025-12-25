@@ -1,11 +1,10 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { ReconciliationManagement } from '../ReconciliationManagement';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+(globalThis as any).fetch = mockFetch;
 
 // Mock window.open and confirm
 const mockWindowOpen = vi.fn();
@@ -355,7 +354,7 @@ describe('ReconciliationManagement Extended Coverage', () => {
         json: () => Promise.resolve({ config: mockConfig }),
       });
 
-    const { rerender } = render(<ReconciliationManagement isAdmin={true} />);
+    const { } = render(<ReconciliationManagement isAdmin={true} />);
 
     await waitFor(() => {
       const configButton = screen.getByText('Configure');

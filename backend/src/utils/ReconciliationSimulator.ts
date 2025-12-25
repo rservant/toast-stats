@@ -7,18 +7,15 @@
 
 import { logger } from './logger.js'
 import type { 
-  ReconciliationJob,
   ReconciliationConfig,
   DataChanges,
   ReconciliationTimeline,
   ReconciliationEntry,
-  DistinguishedCounts,
-  ReplayOptions
+  DistinguishedCounts
 } from '../types/reconciliation.js'
 import type { DistrictStatistics } from '../types/districts.js'
 
-// Re-export ReplayOptions for convenience
-export type { ReplayOptions } from '../types/reconciliation.js'
+
 
 export interface SimulationScenario {
   name: string
@@ -244,15 +241,26 @@ export class ReconciliationSimulator {
       asOfDate: this.getMonthEndDate('2024-01'),
       clubs: {
         total: baseClubCount,
+        active: baseClubCount - Math.floor(Math.random() * 2),
         chartered: baseClubCount - Math.floor(Math.random() * 3),
         suspended: Math.floor(Math.random() * 3),
+        ineligible: Math.floor(Math.random() * 2),
+        low: Math.floor(Math.random() * 2),
         distinguished: baseDistinguished
       },
       membership: {
         total: baseMembership,
+        change: Math.floor(Math.random() * 20) - 10,
+        changePercent: (Math.random() * 4) - 2,
+        byClub: [],
         new: Math.floor(baseMembership * 0.1),
         renewed: Math.floor(baseMembership * 0.8),
         dual: Math.floor(baseMembership * 0.05)
+      },
+      education: {
+        totalAwards: Math.floor(Math.random() * 50),
+        byType: [],
+        topClubs: []
       },
       goals: {
         clubsGoal: baseClubCount + Math.floor(Math.random() * 5),
@@ -359,10 +367,12 @@ export class ReconciliationSimulator {
     }
 
     // Update performance metrics
-    newData.performance.membershipNet = newData.membership.total - data.membership.total
-    newData.performance.clubsNet = newData.clubs.total - data.clubs.total
-    newData.performance.distinguishedPercent = 
-      (newData.clubs.distinguished / newData.clubs.total) * 100
+    if (newData.performance) {
+      newData.performance.membershipNet = newData.membership.total - data.membership.total
+      newData.performance.clubsNet = newData.clubs.total - data.clubs.total
+      newData.performance.distinguishedPercent = 
+        (newData.clubs.distinguished / newData.clubs.total) * 100
+    }
 
     return newData
   }
@@ -403,7 +413,6 @@ export class ReconciliationSimulator {
       const isSignificant = this.isSignificantChange(changes, scenario.config.significantChangeThresholds)
 
       if (isSignificant) {
-        lastSignificantChangeDay = day
         stableDays = 0
       } else {
         stableDays++

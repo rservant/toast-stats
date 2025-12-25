@@ -50,7 +50,7 @@ export const ReconciliationManagement: React.FC<ReconciliationManagementProps> =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showStartForm, setShowStartForm] = useState(false);
-  const [showConfigForm] = useState(false);
+  const [, setShowConfigForm] = useState(false);
   const [startFormData, setStartFormData] = useState({
     districtId: '',
     targetMonth: ''

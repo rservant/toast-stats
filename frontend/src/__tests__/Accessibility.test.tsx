@@ -7,7 +7,7 @@ import LoginPage from '../pages/LoginPage'
 import { AuthProvider } from '../context/AuthContext'
 import StatCard from '../components/StatCard'
 
-expect.extend(toHaveNoViolations)
+expect.extend({ toHaveNoViolations })
 
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
@@ -30,7 +30,7 @@ describe('Accessibility Tests', () => {
   it('LoginPage should have no accessibility violations', async () => {
     const { container } = renderWithProviders(<LoginPage />)
     const results = await axe(container)
-    expect(results).toHaveNoViolations()
+    ;(expect(results) as any).toHaveNoViolations()
   })
 
   it('StatCard should have no accessibility violations', async () => {
@@ -38,12 +38,12 @@ describe('Accessibility Tests', () => {
       <StatCard name="Total Members" value={1250} change={50} changePercent={4.2} trend="positive" />
     )
     const results = await axe(container)
-    expect(results).toHaveNoViolations()
+    ;(expect(results) as any).toHaveNoViolations()
   })
 
   it('StatCard with loading state should have no accessibility violations', async () => {
     const { container } = render(<StatCard name="Total Members" value={1250} isLoading={true} />)
     const results = await axe(container)
-    expect(results).toHaveNoViolations()
+    ;(expect(results) as any).toHaveNoViolations()
   })
 })

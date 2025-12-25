@@ -9,6 +9,7 @@ import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimize
 import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
 import type { ReconciliationJob, DistrictStatistics } from '../../types/reconciliation.js'
+import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -153,6 +154,27 @@ describe('Reconciliation Performance Integration', () => {
 
     // Create mock district data
     const currentData: DistrictStatistics = {
+      districtId,
+      asOfDate: '2025-01-15',
+      membership: {
+        total: 950,
+        change: 50,
+        changePercent: 5.6,
+        byClub: []
+      },
+      clubs: {
+        total: 100,
+        active: 95,
+        suspended: 3,
+        ineligible: 1,
+        low: 1,
+        distinguished: 35
+      },
+      education: {
+        totalAwards: 150,
+        byType: [],
+        topClubs: []
+      },
       districtPerformance: [
         {
           districtId,
@@ -168,6 +190,27 @@ describe('Reconciliation Performance Integration', () => {
     }
 
     const cachedData: DistrictStatistics = {
+      districtId,
+      asOfDate: '2025-01-14',
+      membership: {
+        total: 940,
+        change: 40,
+        changePercent: 4.4,
+        byClub: []
+      },
+      clubs: {
+        total: 100,
+        active: 94,
+        suspended: 4,
+        ineligible: 1,
+        low: 1,
+        distinguished: 34
+      },
+      education: {
+        totalAwards: 145,
+        byType: [],
+        topClubs: []
+      },
       districtPerformance: [
         {
           districtId,
@@ -228,31 +271,20 @@ describe('Reconciliation Performance Integration', () => {
 
   it('should show cache hit performance benefits', async () => {
     const jobId = 'test-job-cache-performance'
-    const job: ReconciliationJob = {
+    const job: ReconciliationJob = createTestReconciliationJob({
       id: jobId,
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 86400000),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
+      triggeredBy: 'manual',
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
         triggeredBy: 'manual'
       }
-    }
+    })
 
     // Cache the job
     cacheService.setJob(jobId, job)
@@ -292,31 +324,19 @@ describe('Reconciliation Performance Integration', () => {
     // Test that storage optimizer can handle multiple operations
     const jobs: ReconciliationJob[] = []
     for (let i = 0; i < 3; i++) {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: `batch-test-${i}`,
         districtId: `D${i}`,
         targetMonth: '2025-01',
         status: 'active',
         startDate: new Date(),
         maxEndDate: new Date(Date.now() + 86400000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1.0,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2.0
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
           triggeredBy: 'automatic'
         }
-      }
+      })
       jobs.push(job)
     }
 

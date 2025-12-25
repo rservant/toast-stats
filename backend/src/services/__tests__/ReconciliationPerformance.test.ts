@@ -6,9 +6,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
 import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
-import { ReconciliationBatchProcessor } from '../ReconciliationBatchProcessor.js'
+import { ReconciliationBatchProcessor, type BatchJob } from '../ReconciliationBatchProcessor.js'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
-import type { ReconciliationJob, ReconciliationTimeline, BatchJob } from '../../types/reconciliation.js'
+import type { ReconciliationJob } from '../../types/reconciliation.js'
+import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -37,31 +38,20 @@ describe('ReconciliationStorageOptimizer', () => {
   })
 
   it('should cache jobs in memory for faster retrieval', async () => {
-    const job: ReconciliationJob = {
+    const job: ReconciliationJob = createTestReconciliationJob({
       id: 'test-job-1',
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 86400000),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
+      triggeredBy: 'manual',
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
         triggeredBy: 'manual'
       }
-    }
+    })
 
     // First save should write to storage and cache
     await optimizer.saveJob(job)
@@ -81,31 +71,19 @@ describe('ReconciliationStorageOptimizer', () => {
     
     // Create multiple jobs
     for (let i = 0; i < 10; i++) {
-      jobs.push({
+      jobs.push(createTestReconciliationJob({
         id: `batch-job-${i}`,
         districtId: `D${i}`,
         targetMonth: '2025-01',
         status: 'active',
         startDate: new Date(),
         maxEndDate: new Date(Date.now() + 86400000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1.0,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2.0
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
           triggeredBy: 'automatic'
         }
-      })
+      }))
     }
 
     // Save all jobs (should be batched)
@@ -126,25 +104,13 @@ describe('ReconciliationStorageOptimizer', () => {
 
   it('should efficiently bulk load multiple jobs', async () => {
     const jobIds = ['bulk-1', 'bulk-2', 'bulk-3', 'bulk-4', 'bulk-5']
-    const jobs: ReconciliationJob[] = jobIds.map(id => ({
+    const jobs: ReconciliationJob[] = jobIds.map(id => createTestReconciliationJob({
       id,
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 86400000),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -188,31 +154,20 @@ describe('ReconciliationCacheService', () => {
   })
 
   it('should provide fast cache hits for frequently accessed jobs', async () => {
-    const job: ReconciliationJob = {
+    const job: ReconciliationJob = createTestReconciliationJob({
       id: 'cache-test-job',
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 86400000),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
+      triggeredBy: 'manual',
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
         triggeredBy: 'manual'
       }
-    }
+    })
 
     // Cache the job
     cacheService.setJob(job.id, job)
@@ -239,31 +194,19 @@ describe('ReconciliationCacheService', () => {
     
     // Create and cache multiple jobs
     for (let i = 0; i < 30; i++) {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: `load-test-${i}`,
         districtId: `D${i % 5}`, // 5 districts
         targetMonth: '2025-01',
         status: 'active',
         startDate: new Date(),
         maxEndDate: new Date(Date.now() + 86400000),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1.0,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2.0
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
           triggeredBy: 'automatic'
         }
-      }
+      })
       
       jobs.push(job)
       cacheService.setJob(job.id, job)
@@ -295,31 +238,19 @@ describe('ReconciliationCacheService', () => {
     try {
       // Fill cache to capacity + 1 to trigger eviction
       for (let i = 0; i < cacheSize + 1; i++) {
-        const job: ReconciliationJob = {
+        const job: ReconciliationJob = createTestReconciliationJob({
           id: `eviction-test-${i}`,
           districtId: 'D1',
           targetMonth: '2025-01',
           status: 'active',
           startDate: new Date(),
           maxEndDate: new Date(Date.now() + 86400000),
-          config: {
-            maxReconciliationDays: 15,
-            stabilityPeriodDays: 3,
-            checkFrequencyHours: 24,
-            significantChangeThresholds: {
-              membershipPercent: 1.0,
-              clubCountAbsolute: 1,
-              distinguishedPercent: 2.0
-            },
-            autoExtensionEnabled: true,
-            maxExtensionDays: 5
-          },
           metadata: {
             createdAt: new Date(),
             updatedAt: new Date(),
             triggeredBy: 'automatic'
           }
-        }
+        })
         
         smallCache.setJob(job.id, job)
         

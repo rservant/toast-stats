@@ -10,8 +10,6 @@ import type {
   ReconciliationConfig, 
   ReconciliationJob, 
   DataChanges, 
-  ReconciliationTimeline,
-  ReconciliationEntry,
   DistinguishedCounts
 } from '../reconciliation'
 
@@ -44,6 +42,11 @@ describe('Reconciliation Data Models - Property-Based Tests', () => {
       maxEndDate: new Date(startDate.getTime() + config.maxReconciliationDays * 24 * 60 * 60 * 1000),
       currentDataDate: seed > 0.5 ? `2024-${String(Math.floor(seed * 12) + 1).padStart(2, '0')}-${String(Math.floor(seed * 28) + 1).padStart(2, '0')}` : undefined,
       finalizedDate: seed > 0.7 ? new Date(startDate.getTime() + Math.floor(seed * 10) * 24 * 60 * 60 * 1000) : undefined,
+      progress: {
+        phase: 'monitoring',
+        completionPercentage: Math.floor(seed * 100)
+      },
+      triggeredBy: seed > 0.5 ? 'automatic' : 'manual',
       config,
       metadata: {
         createdAt: startDate,

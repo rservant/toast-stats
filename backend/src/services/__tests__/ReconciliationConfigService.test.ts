@@ -38,7 +38,7 @@ vi.mock('path', () => ({
 
 describe('ReconciliationConfigService', () => {
   let configService: ReconciliationConfigService
-  const mockCacheService = cacheService as {
+  const mockCacheService = cacheService as unknown as {
     get: Mock
     set: Mock
     invalidate: Mock
@@ -159,7 +159,9 @@ describe('ReconciliationConfigService', () => {
 
       const updates = {
         significantChangeThresholds: {
-          membershipPercent: 2.5
+          membershipPercent: 2.5,
+          clubCountAbsolute: 1,
+          distinguishedPercent: 2
         }
       }
       const result = await configService.updateConfig(updates)

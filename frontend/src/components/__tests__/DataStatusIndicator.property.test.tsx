@@ -1,7 +1,5 @@
-import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import { DataStatusIndicator } from '../DataStatusIndicator';
-import { DataStatus } from '../../types/reconciliation';
 import fc from 'fast-check';
 
 /**
@@ -169,7 +167,7 @@ describe('DataStatusIndicator Property Tests', () => {
     fc.assert(
       fc.property(dataStatusArb, fc.boolean(), fc.string(), (dataStatus, showDetails, className) => {
         expect(() => {
-          const { container } = render(
+          render(
             <DataStatusIndicator 
               dataStatus={dataStatus} 
               showDetails={showDetails}
@@ -214,7 +212,7 @@ describe('DataStatusIndicator Property Tests', () => {
         }).filter(status => !(status.isPreliminary && status.isFinal)),
         (dataStatus) => {
           expect(() => {
-            const { container } = render(<DataStatusIndicator dataStatus={dataStatus} showDetails={true} />);
+            render(<DataStatusIndicator dataStatus={dataStatus} showDetails={true} />);
             
             // Verify the date was parsed and formatted correctly
             const parsedDate = new Date(dataStatus.dataCollectionDate);

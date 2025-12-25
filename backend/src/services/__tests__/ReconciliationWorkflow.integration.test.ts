@@ -9,8 +9,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.js'
 import { DistrictBackfillService } from '../DistrictBackfillService.js'
 import { ReconciliationScheduler } from '../ReconciliationScheduler.js'
-import { ReconciliationStorageManager } from '../ReconciliationStorageManager.js'
+import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
 import { DistrictCacheManager } from '../DistrictCacheManager.js'
+import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
 import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
 import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
@@ -22,8 +23,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
   let orchestrator: ReconciliationOrchestrator
   let backfillService: DistrictBackfillService
   let scheduler: ReconciliationScheduler
-  let storageManager: ReconciliationStorageManager
+  let storageManager: ReconciliationStorageOptimizer
   let cacheManager: DistrictCacheManager
+  let cacheService: ReconciliationCacheService
   let scraper: ToastmastersScraper
   let changeDetectionEngine: ChangeDetectionEngine
   let configService: ReconciliationConfigService
@@ -75,7 +77,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
   beforeEach(async () => {
     // Initialize test storage with unique paths
     const testCachePath = `./cache/test-reconciliation-workflow-${Date.now()}`
-    storageManager = new ReconciliationStorageManager(testCachePath)
+    storageManager = new ReconciliationStorageOptimizer(testCachePath)
     await storageManager.init()
 
     cacheManager = new DistrictCacheManager(testCachePath)
@@ -90,10 +92,12 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
     // Initialize services with test dependencies
     changeDetectionEngine = new ChangeDetectionEngine()
     configService = new ReconciliationConfigService()
+    cacheService = new ReconciliationCacheService()
     
     orchestrator = new ReconciliationOrchestrator(
       changeDetectionEngine,
       storageManager,
+      cacheService,
       configService
     )
 
@@ -489,7 +493,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         expect(status).toBeDefined()
       } catch (error) {
         // If it fails, verify it's the expected error
-        expect(error.message).toContain('Storage unavailable')
+        expect((error as Error).message).toContain('Storage unavailable')
       }
 
       // Job should still exist in original state

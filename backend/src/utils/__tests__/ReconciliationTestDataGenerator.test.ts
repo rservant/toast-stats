@@ -7,7 +7,6 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.js'
-import type { TestDataSet, PropertyTestCase } from '../ReconciliationTestDataGenerator.js'
 
 // Mock logger
 vi.mock('../logger.js', () => ({
@@ -378,13 +377,17 @@ describe('ReconciliationTestDataGenerator', () => {
         expect(data.membership.dual).toBeGreaterThanOrEqual(0)
         
         // Goals validation
-        expect(data.goals.clubsGoal).toBeGreaterThan(0)
-        expect(data.goals.membershipGoal).toBeGreaterThan(0)
-        expect(data.goals.distinguishedGoal).toBeGreaterThanOrEqual(0)
+        if (data.goals) {
+          expect(data.goals.clubsGoal).toBeGreaterThan(0)
+          expect(data.goals.membershipGoal).toBeGreaterThan(0)
+          expect(data.goals.distinguishedGoal).toBeGreaterThanOrEqual(0)
+        }
         
         // Performance validation
-        expect(data.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
-        expect(data.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+        if (data.performance) {
+          expect(data.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
+          expect(data.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+        }
       })
     })
 

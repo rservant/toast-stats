@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ReconciliationErrorHandler } from '../ReconciliationErrorHandler.js'
-import { DistrictBackfillService } from '../DistrictBackfillService.js'
 import { AlertManager } from '../../utils/AlertManager.js'
 import { CircuitBreakerManager, CircuitState } from '../../utils/CircuitBreaker.js'
 
@@ -11,8 +10,8 @@ vi.mock('../../utils/CircuitBreaker.js')
 
 describe('ReconciliationErrorHandler', () => {
   let errorHandler: ReconciliationErrorHandler
-  let mockBackfillService: vi.Mocked<DistrictBackfillService>
-  let mockAlertManager: vi.Mocked<AlertManager>
+  let mockBackfillService: any
+  let mockAlertManager: any
 
   beforeEach(() => {
     vi.useFakeTimers()

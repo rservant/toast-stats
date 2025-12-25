@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager.js'
 import type { ReconciliationJob, ReconciliationConfig } from '../../types/reconciliation.js'
+import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -51,31 +52,19 @@ describe('ReconciliationStorageManager', () => {
 
   describe('job management', () => {
     it('should save and retrieve reconciliation jobs', async () => {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: 'test-job-1',
         districtId: 'D42',
         targetMonth: '2024-11',
         status: 'active',
         startDate: new Date('2024-12-01T00:00:00Z'),
         maxEndDate: new Date('2024-12-16T00:00:00Z'),
-        config: {
-          maxReconciliationDays: 15,
-          stabilityPeriodDays: 3,
-          checkFrequencyHours: 24,
-          significantChangeThresholds: {
-            membershipPercent: 1,
-            clubCountAbsolute: 1,
-            distinguishedPercent: 2
-          },
-          autoExtensionEnabled: true,
-          maxExtensionDays: 5
-        },
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       await storageManager.saveJob(job)
       const retrievedJob = await storageManager.getJob('test-job-1')
@@ -93,7 +82,7 @@ describe('ReconciliationStorageManager', () => {
     })
 
     it('should get jobs by district', async () => {
-      const job1: ReconciliationJob = {
+      const job1: ReconciliationJob = createTestReconciliationJob({
         id: 'job-1',
         districtId: 'D42',
         targetMonth: '2024-11',
@@ -106,9 +95,9 @@ describe('ReconciliationStorageManager', () => {
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
-      const job2: ReconciliationJob = {
+      const job2: ReconciliationJob = createTestReconciliationJob({
         id: 'job-2',
         districtId: 'D43',
         targetMonth: '2024-11',
@@ -116,12 +105,13 @@ describe('ReconciliationStorageManager', () => {
         startDate: new Date('2024-12-01T00:00:00Z'),
         maxEndDate: new Date('2024-12-16T00:00:00Z'),
         config: await storageManager.getConfig(),
+        triggeredBy: 'manual',
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'manual'
         }
-      }
+      })
 
       await storageManager.saveJob(job1)
       await storageManager.saveJob(job2)
@@ -136,7 +126,7 @@ describe('ReconciliationStorageManager', () => {
     })
 
     it('should get jobs by status', async () => {
-      const activeJob: ReconciliationJob = {
+      const activeJob: ReconciliationJob = createTestReconciliationJob({
         id: 'active-job',
         districtId: 'D42',
         targetMonth: '2024-11',
@@ -149,9 +139,9 @@ describe('ReconciliationStorageManager', () => {
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
-      const completedJob: ReconciliationJob = {
+      const completedJob: ReconciliationJob = createTestReconciliationJob({
         id: 'completed-job',
         districtId: 'D43',
         targetMonth: '2024-11',
@@ -159,12 +149,13 @@ describe('ReconciliationStorageManager', () => {
         startDate: new Date('2024-12-01T00:00:00Z'),
         maxEndDate: new Date('2024-12-16T00:00:00Z'),
         config: await storageManager.getConfig(),
+        triggeredBy: 'manual',
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'manual'
         }
-      }
+      })
 
       await storageManager.saveJob(activeJob)
       await storageManager.saveJob(completedJob)
@@ -179,7 +170,7 @@ describe('ReconciliationStorageManager', () => {
     })
 
     it('should delete jobs', async () => {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: 'delete-test',
         districtId: 'D42',
         targetMonth: '2024-11',
@@ -192,7 +183,7 @@ describe('ReconciliationStorageManager', () => {
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       await storageManager.saveJob(job)
       expect(await storageManager.getJob('delete-test')).not.toBeNull()
@@ -227,7 +218,7 @@ describe('ReconciliationStorageManager', () => {
 
   describe('storage statistics', () => {
     it('should provide storage statistics', async () => {
-      const job: ReconciliationJob = {
+      const job: ReconciliationJob = createTestReconciliationJob({
         id: 'stats-test',
         districtId: 'D42',
         targetMonth: '2024-11',
@@ -240,7 +231,7 @@ describe('ReconciliationStorageManager', () => {
           updatedAt: new Date('2024-12-01T00:00:00Z'),
           triggeredBy: 'automatic'
         }
-      }
+      })
 
       await storageManager.saveJob(job)
       const stats = await storageManager.getStorageStats()

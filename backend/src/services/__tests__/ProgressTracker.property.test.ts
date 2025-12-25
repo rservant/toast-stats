@@ -102,12 +102,12 @@ describe('ProgressTracker - Property-Based Tests', () => {
       startDate: fc.integer({ min: Date.parse('2024-01-01T00:00:00.000Z'), max: Date.parse('2024-06-30T23:59:59.999Z') })
         .map(ms => createValidDate(ms)),
       endDate: fc.option(fc.integer({ min: Date.parse('2024-01-01T00:00:00.000Z'), max: Date.parse('2024-12-31T23:59:59.999Z') })
-        .map(ms => createValidDate(ms))),
+        .map(ms => createValidDate(ms)), { nil: undefined }),
       maxEndDate: fc.integer({ min: Date.parse('2024-01-15T00:00:00.000Z'), max: Date.parse('2024-12-31T23:59:59.999Z') })
         .map(ms => createValidDate(ms)),
-      currentDataDate: fc.option(fc.constantFrom('2024-01-01', '2024-01-02', '2024-02-01')),
+      currentDataDate: fc.option(fc.constantFrom('2024-01-01', '2024-01-02', '2024-02-01'), { nil: undefined }),
       finalizedDate: fc.option(fc.integer({ min: Date.parse('2024-01-01T00:00:00.000Z'), max: Date.parse('2024-12-31T23:59:59.999Z') })
-        .map(ms => createValidDate(ms))),
+        .map(ms => createValidDate(ms)), { nil: undefined }),
       config: generateConfig(),
       triggeredBy: fc.constantFrom('manual', 'automatic', 'scheduled'),
       progress: fc.record({

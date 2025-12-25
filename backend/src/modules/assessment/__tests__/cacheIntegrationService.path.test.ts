@@ -22,7 +22,7 @@ describe('CacheIntegrationService.selectCachePath', () => {
   })
 
   it('prefers cwd/cache when present', () => {
-    vi.spyOn(fs, 'existsSync').mockImplementation((p: string) => {
+    vi.spyOn(fs, 'existsSync').mockImplementation((p) => {
       if (p === path.resolve(process.cwd(), 'cache')) return true
       return false
     })
@@ -32,7 +32,7 @@ describe('CacheIntegrationService.selectCachePath', () => {
   })
 
   it('falls back to backend/cache when cwd/cache absent', () => {
-    vi.spyOn(fs, 'existsSync').mockImplementation((p: string) => {
+    vi.spyOn(fs, 'existsSync').mockImplementation((p) => {
       if (p === path.resolve(process.cwd(), 'cache')) return false
       if (p === path.resolve(process.cwd(), 'backend', 'cache')) return true
       return false

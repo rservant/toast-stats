@@ -174,7 +174,7 @@ export class ReconciliationReplayEngine {
 
       // Finalize replay
       const totalTime = Date.now() - startTime
-      session.replayState.debugInfo.totalProcessingTime = totalTime
+      session.replayState.debugInfo.performanceMetrics.totalProcessingTime = totalTime
       session.lastUpdated = new Date()
 
       logger.info('Replay execution completed', {

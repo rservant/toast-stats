@@ -76,7 +76,7 @@ describe('ReconciliationScheduler Property Tests', () => {
               if (args.length === 0) {
                 super(testDate)
               } else {
-                super(...args)
+                super(args[0])
               }
             }
             static now() { return testDate.getTime() }
@@ -117,7 +117,7 @@ describe('ReconciliationScheduler Property Tests', () => {
               if (args.length === 0) {
                 super(testDate)
               } else {
-                super(...args)
+                super(args[0])
               }
             }
             static now() { return testDate.getTime() }
@@ -161,7 +161,7 @@ describe('ReconciliationScheduler Property Tests', () => {
               if (args.length === 0) {
                 super(testDate)
               } else {
-                super(...args)
+                super(args[0])
               }
             }
             static now() { return testDate.getTime() }

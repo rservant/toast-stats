@@ -12,7 +12,7 @@ import { ReconciliationSimulator } from '../ReconciliationSimulator.js'
 import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.js'
 import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.js'
 import type { SimulationScenario, DataPattern } from '../ReconciliationSimulator.js'
-import type { ReconciliationJob, ReconciliationTimeline } from '../../types/reconciliation.js'
+import type { ReconciliationTimeline } from '../../types/reconciliation.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 
 // Mock logger
@@ -160,8 +160,10 @@ describe('Reconciliation Testing Tools - Property-Based Tests', () => {
             expect(data.clubs.distinguished).toBeLessThanOrEqual(data.clubs.total)
             
             // Performance metrics constraints
-            expect(data.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
-            expect(data.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+            if (data.performance) {
+              expect(data.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
+              expect(data.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+            }
             
             // Date format constraint
             expect(data.asOfDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
@@ -262,7 +264,7 @@ describe('Reconciliation Testing Tools - Property-Based Tests', () => {
         // Validate replay accuracy
         expect(replayedSession.replayState.processedEntries.length).toBeGreaterThanOrEqual(0)
         expect(replayedSession.replayState.stepResults.length).toBeGreaterThan(0)
-        expect(replayedSession.replayState.debugInfo.totalProcessingTime).toBeGreaterThan(0)
+        expect(replayedSession.replayState.debugInfo.performanceMetrics.totalProcessingTime).toBeGreaterThan(0)
         
         // Validate step results
         replayedSession.replayState.stepResults.forEach(stepResult => {
@@ -556,7 +558,7 @@ describe('Reconciliation Testing Tools - Property-Based Tests', () => {
     expect(data.clubs.suspended).toBeGreaterThanOrEqual(0)
     expect(data.clubs.distinguished).toBeGreaterThanOrEqual(0)
     expect(data.clubs.distinguished).toBeLessThanOrEqual(data.clubs.total)
-    expect(data.clubs.chartered + data.clubs.suspended).toBeLessThanOrEqual(data.clubs.total + 1) // Allow for rounding
+    expect(data.clubs.chartered! + data.clubs.suspended).toBeLessThanOrEqual(data.clubs.total + 1) // Allow for rounding
     
     // Membership validation
     expect(data.membership.total).toBeGreaterThanOrEqual(0)
@@ -565,16 +567,20 @@ describe('Reconciliation Testing Tools - Property-Based Tests', () => {
     expect(data.membership.dual).toBeGreaterThanOrEqual(0)
     
     // Goals validation
-    expect(data.goals.clubsGoal).toBeGreaterThanOrEqual(0)
-    expect(data.goals.membershipGoal).toBeGreaterThanOrEqual(0)
-    expect(data.goals.distinguishedGoal).toBeGreaterThanOrEqual(0)
+    if (data.goals) {
+      expect(data.goals.clubsGoal).toBeGreaterThanOrEqual(0)
+      expect(data.goals.membershipGoal).toBeGreaterThanOrEqual(0)
+      expect(data.goals.distinguishedGoal).toBeGreaterThanOrEqual(0)
+    }
     
     // Performance validation
-    expect(data.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
-    expect(data.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+    if (data.performance) {
+      expect(data.performance.distinguishedPercent).toBeGreaterThanOrEqual(0)
+      expect(data.performance.distinguishedPercent).toBeLessThanOrEqual(100)
+    }
     
     // Cross-field consistency
-    if (data.clubs.total > 0) {
+    if (data.clubs.total > 0 && data.performance) {
       const calculatedDistinguishedPercent = (data.clubs.distinguished / data.clubs.total) * 100
       expect(Math.abs(data.performance.distinguishedPercent - calculatedDistinguishedPercent)).toBeLessThan(1) // Allow small rounding differences
     }

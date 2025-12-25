@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
 import type { ReconciliationJob, ReconciliationTimeline, ReconciliationStatus } from '../../types/reconciliation.js'
+import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -34,31 +35,20 @@ describe('ReconciliationCacheService Unit Tests', () => {
   })
 
   it('should cache and retrieve jobs correctly', () => {
-    const job: ReconciliationJob = {
+    const job: ReconciliationJob = createTestReconciliationJob({
       id: 'test-job-1',
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date('2025-01-01'),
       maxEndDate: new Date('2025-01-16'),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
+      triggeredBy: 'manual',
       metadata: {
         createdAt: new Date('2025-01-01'),
         updatedAt: new Date('2025-01-01'),
         triggeredBy: 'manual'
       }
-    }
+    })
 
     // Cache miss initially
     expect(cacheService.getJob(job.id)).toBeNull()
@@ -147,31 +137,20 @@ describe('ReconciliationCacheService Unit Tests', () => {
 
   it('should invalidate cache entries correctly', () => {
     const jobId = 'test-job-invalidate'
-    const job: ReconciliationJob = {
+    const job: ReconciliationJob = createTestReconciliationJob({
       id: jobId,
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 86400000),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
+      triggeredBy: 'manual',
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
         triggeredBy: 'manual'
       }
-    }
+    })
 
     // Cache job, timeline, and status
     cacheService.setJob(jobId, job)
@@ -210,31 +189,20 @@ describe('ReconciliationCacheService Unit Tests', () => {
     expect(stats.totalMisses).toBe(0)
 
     // Add some cache entries
-    const job: ReconciliationJob = {
+    const job: ReconciliationJob = createTestReconciliationJob({
       id: 'stats-job',
       districtId: 'D1',
       targetMonth: '2025-01',
       status: 'active',
       startDate: new Date(),
       maxEndDate: new Date(Date.now() + 86400000),
-      config: {
-        maxReconciliationDays: 15,
-        stabilityPeriodDays: 3,
-        checkFrequencyHours: 24,
-        significantChangeThresholds: {
-          membershipPercent: 1.0,
-          clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
-        },
-        autoExtensionEnabled: true,
-        maxExtensionDays: 5
-      },
+      triggeredBy: 'manual',
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
         triggeredBy: 'manual'
       }
-    }
+    })
 
     cacheService.setJob('stats-job', job)
 
