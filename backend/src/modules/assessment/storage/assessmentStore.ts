@@ -18,6 +18,18 @@ function sanitizeForFilename(input: string): string {
 }
 
 /**
+ * Resolve a filename within the DATA_DIR and ensure it does not escape the directory.
+ */
+function resolveDataPath(fileName: string): string {
+  const fullPath = path.resolve(DATA_DIR, fileName);
+  const dataDirWithSep = DATA_DIR.endsWith(path.sep) ? DATA_DIR : DATA_DIR + path.sep;
+  if (!(fullPath === DATA_DIR || fullPath.startsWith(dataDirWithSep))) {
+    throw new Error('Resolved path escapes data directory');
+  }
+  return fullPath;
+}
+
+/**
  * Ensure data directory exists
  */
 async function ensureDataDir(): Promise<void> {
@@ -35,7 +47,8 @@ function getAssessmentPath(districtNumber: number, programYear: string, month: s
   const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
   const sanitizedYear = sanitizeForFilename(programYear);
   const sanitizedMonth = sanitizeForFilename(month);
-  return path.join(DATA_DIR, `assessment_${sanitizedDistrict}_${sanitizedYear}_${sanitizedMonth}.json`);
+  const fileName = `assessment_${sanitizedDistrict}_${sanitizedYear}_${sanitizedMonth}.json`;
+  return resolveDataPath(fileName);
 }
 
 /**
@@ -44,7 +57,8 @@ function getAssessmentPath(districtNumber: number, programYear: string, month: s
 function getGoalsPath(districtNumber: number, programYear: string): string {
   const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
   const sanitizedYear = sanitizeForFilename(programYear);
-  return path.join(DATA_DIR, `goals_${sanitizedDistrict}_${sanitizedYear}.json`);
+  const fileName = `goals_${sanitizedDistrict}_${sanitizedYear}.json`;
+  return resolveDataPath(fileName);
 }
 
 /**
@@ -53,7 +67,8 @@ function getGoalsPath(districtNumber: number, programYear: string): string {
 function getConfigPath(districtNumber: number, programYear: string): string {
   const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
   const sanitizedYear = sanitizeForFilename(programYear);
-  return path.join(DATA_DIR, `config_${sanitizedDistrict}_${sanitizedYear}.json`);
+  const fileName = `config_${sanitizedDistrict}_${sanitizedYear}.json`;
+  return resolveDataPath(fileName);
 }
 
 /**
