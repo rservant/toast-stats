@@ -213,17 +213,40 @@ export class ReconciliationStorageManager {
   }
 
   /**
+   * Build a safe file path for a job-scoped JSON file
+   * Ensures the jobId does not lead to path traversal outside baseDir.
+   */
+  private getSafeJobScopedFilePath(baseDir: string, jobId: string): string {
+    // Allow only simple identifier characters in job IDs to prevent path traversal
+    const JOB_ID_PATTERN = /^[A-Za-z0-9_-]+$/
+    if (!JOB_ID_PATTERN.test(jobId)) {
+      throw new Error('Invalid job ID format')
+    }
+
+    const fileName = `${jobId}.json`
+    const resolvedPath = path.resolve(baseDir, fileName)
+
+    // Ensure the resolved path is still within the base directory
+    const normalizedBase = path.resolve(baseDir) + path.sep
+    if (!resolvedPath.startsWith(normalizedBase)) {
+      throw new Error('Resolved path is outside of the storage directory')
+    }
+
+    return resolvedPath
+  }
+
+  /**
    * Get job file path
    */
   private getJobFilePath(jobId: string): string {
-    return path.join(this.jobsDir, `${jobId}.json`)
+    return this.getSafeJobScopedFilePath(this.jobsDir, jobId)
   }
 
   /**
    * Get timeline file path
    */
   private getTimelineFilePath(jobId: string): string {
-    return path.join(this.timelinesDir, `${jobId}.json`)
+    return this.getSafeJobScopedFilePath(this.timelinesDir, jobId)
   }
 
   /**
