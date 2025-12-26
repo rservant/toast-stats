@@ -5,9 +5,10 @@ import { ReconciliationStorageOptimizer } from '../services/ReconciliationStorag
 import { ReconciliationCacheService } from '../services/ReconciliationCacheService.js'
 import { ProgressTracker } from '../services/ProgressTracker.js'
 import { ChangeDetectionEngine } from '../services/ChangeDetectionEngine.js'
-import { AlertManager } from '../utils/AlertManager.js'
+import { AlertManager, AlertCategory } from '../utils/AlertManager.js'
 import { transformErrorResponse } from '../utils/transformers.js'
 import { logger } from '../utils/logger.js'
+import { ReconciliationJob } from '../types/reconciliation.js'
 import performanceRoutes from './reconciliation-performance.js'
 
 const router = Router()
@@ -111,7 +112,7 @@ router.get('/jobs', async (_req: Request, res: Response) => {
     // Get jobs with filtering
     const jobs = await storageManager.getJobs({
       districtId: districtId as string | undefined,
-      status: status as any,
+      status: status as ReconciliationJob['status'] | undefined,
       limit: limitNum,
     })
 
@@ -1109,7 +1110,7 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
 
     // Get alerts from AlertManager
     const alertManager = AlertManager.getInstance()
-    const activeAlerts = alertManager.getActiveAlerts(category as any)
+    const activeAlerts = alertManager.getActiveAlerts(category as AlertCategory | undefined)
     const alertStats = alertManager.getAlertStats()
 
     // Filter by severity if provided

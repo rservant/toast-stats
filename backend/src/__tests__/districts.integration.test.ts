@@ -539,7 +539,7 @@ describe('Districts API Integration Tests', () => {
         const rankings = response.body.rankings
 
         if (rankings.length > 0) {
-          rankings.forEach((district: any) => {
+          rankings.forEach((district: DistrictRanking) => {
             // Verify percentage fields exist and are numbers
             expect(district).toHaveProperty('clubGrowthPercent')
             expect(district).toHaveProperty('paymentGrowthPercent')
@@ -583,7 +583,7 @@ describe('Districts API Integration Tests', () => {
           // Check if there are any ties in the data - ranking is based on PERCENTAGES
           const clubPercentages = new Map<number, string[]>()
           
-          rankings.forEach((district: any) => {
+          rankings.forEach((district: DistrictRanking) => {
             const clubPercent = district.clubGrowthPercent
             if (!clubPercentages.has(clubPercent)) {
               clubPercentages.set(clubPercent, [])
@@ -595,7 +595,7 @@ describe('Districts API Integration Tests', () => {
           clubPercentages.forEach((districtIds) => {
             if (districtIds.length > 1) {
               const ranks = districtIds.map(id => {
-                const district = rankings.find((d: any) => d.districtId === id)
+                const district = rankings.find((d: DistrictRanking) => d.districtId === id)
                 return district?.clubsRank
               })
               
@@ -626,7 +626,7 @@ describe('Districts API Integration Tests', () => {
             let previousRank = 0
             let previousPercent = Number.MAX_VALUE
             
-            sortedByClubPercent.forEach((district: any) => {
+            sortedByClubPercent.forEach((district: DistrictRanking) => {
               if (district.clubGrowthPercent < previousPercent) {
                 // Percentage decreased, so rank should be worse (higher number) or equal
                 expect(district.clubsRank).toBeGreaterThanOrEqual(previousRank)
@@ -644,7 +644,7 @@ describe('Districts API Integration Tests', () => {
             previousRank = 0
             previousPercent = Number.MAX_VALUE
             
-            sortedByPaymentPercent.forEach((district: any) => {
+            sortedByPaymentPercent.forEach((district: DistrictRanking) => {
               if (district.paymentGrowthPercent < previousPercent) {
                 expect(district.paymentsRank).toBeGreaterThanOrEqual(previousRank)
               } else if (district.paymentGrowthPercent === previousPercent) {
@@ -665,7 +665,7 @@ describe('Districts API Integration Tests', () => {
           const totalDistricts = rankings.length
 
           if (totalDistricts > 0) {
-            rankings.forEach((district: any) => {
+            rankings.forEach((district: DistrictRanking) => {
               // Calculate expected Borda points for each category
               const clubBordaPoints = totalDistricts - district.clubsRank + 1
               const paymentBordaPoints = totalDistricts - district.paymentsRank + 1
@@ -695,7 +695,7 @@ describe('Districts API Integration Tests', () => {
           const rankings = response.body.rankings
 
           if (rankings.length > 0) {
-            rankings.forEach((district: any) => {
+            rankings.forEach((district: DistrictRanking) => {
               // Verify all three percentage fields are present and are numbers
               expect(district).toHaveProperty('clubGrowthPercent')
               expect(district).toHaveProperty('paymentGrowthPercent')
@@ -731,11 +731,11 @@ describe('Districts API Integration Tests', () => {
             }
             
             // Verify that the first district has the highest aggregate score
-            const maxScore = Math.max(...rankings.map((d: any) => d.aggregateScore))
+            const maxScore = Math.max(...rankings.map((d: DistrictRanking) => d.aggregateScore))
             expect(rankings[0].aggregateScore).toBe(maxScore)
             
             // Verify that the last district has the lowest aggregate score
-            const minScore = Math.min(...rankings.map((d: any) => d.aggregateScore))
+            const minScore = Math.min(...rankings.map((d: DistrictRanking) => d.aggregateScore))
             expect(rankings[rankings.length - 1].aggregateScore).toBe(minScore)
           }
         })
@@ -798,11 +798,11 @@ describe('Districts API Integration Tests', () => {
 
           if (totalDistricts > 0) {
             // Find districts with rank 1 (should get maximum Borda points)
-            const rank1Districts = rankings.filter((d: any) => 
+            const rank1Districts = rankings.filter((d: DistrictRanking) => 
               d.clubsRank === 1 || d.paymentsRank === 1 || d.distinguishedRank === 1
             )
             
-            rank1Districts.forEach((district: any) => {
+            rank1Districts.forEach((district: DistrictRanking) => {
               if (district.clubsRank === 1) {
                 const expectedPoints = totalDistricts - 1 + 1 // totalDistricts
                 const actualPoints = totalDistricts - district.clubsRank + 1
@@ -821,12 +821,12 @@ describe('Districts API Integration Tests', () => {
             })
 
             // Find districts with worst rank (should get minimum Borda points = 1)
-            const maxRank = Math.max(...rankings.map((d: any) => Math.max(d.clubsRank, d.paymentsRank, d.distinguishedRank)))
-            const worstRankDistricts = rankings.filter((d: any) => 
+            const maxRank = Math.max(...rankings.map((d: DistrictRanking) => Math.max(d.clubsRank, d.paymentsRank, d.distinguishedRank)))
+            const worstRankDistricts = rankings.filter((d: DistrictRanking) => 
               d.clubsRank === maxRank || d.paymentsRank === maxRank || d.distinguishedRank === maxRank
             )
             
-            worstRankDistricts.forEach((district: any) => {
+            worstRankDistricts.forEach((district: DistrictRanking) => {
               if (district.clubsRank === maxRank) {
                 const actualPoints = totalDistricts - district.clubsRank + 1
                 expect(actualPoints).toBeGreaterThanOrEqual(1)

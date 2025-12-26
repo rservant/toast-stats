@@ -245,8 +245,8 @@ router.delete('/cache', async (_req: Request, res: Response) => {
  */
 router.get('/cache/version', async (_req: Request, res: Response) => {
   try {
-    const cacheManager = (toastmastersAPI as any).cacheManager
-    if (!cacheManager) {
+    const cacheManagerInstance = cacheManager
+    if (!cacheManagerInstance) {
       return res.status(500).json({
         error: {
           code: 'CACHE_UNAVAILABLE',
@@ -255,8 +255,8 @@ router.get('/cache/version', async (_req: Request, res: Response) => {
       })
     }
 
-    const currentVersion = (cacheManager.constructor as any).getCacheVersion()
-    const statistics = await cacheManager.getCacheStatistics()
+    const currentVersion = (cacheManagerInstance.constructor as typeof CacheManager).getCacheVersion()
+    const statistics = await cacheManagerInstance.getCacheStatistics()
     
     res.json({
       currentVersion,
@@ -284,8 +284,8 @@ router.get('/cache/version', async (_req: Request, res: Response) => {
  */
 router.get('/cache/stats', async (_req: Request, res: Response) => {
   try {
-    const cacheManager = (toastmastersAPI as any).cacheManager
-    if (!cacheManager) {
+    const cacheManagerInstance = cacheManager
+    if (!cacheManagerInstance) {
       return res.status(500).json({
         error: {
           code: 'CACHE_UNAVAILABLE',
@@ -294,7 +294,7 @@ router.get('/cache/stats', async (_req: Request, res: Response) => {
       })
     }
 
-    const statistics = await cacheManager.getCacheStatistics()
+    const statistics = await cacheManagerInstance.getCacheStatistics()
     res.json(statistics)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)

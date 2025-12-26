@@ -23,7 +23,7 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (error) {
+    } catch {
       // Directory might not exist, ignore
     }
 
@@ -36,7 +36,7 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   })

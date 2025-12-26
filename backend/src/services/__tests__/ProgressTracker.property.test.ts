@@ -31,7 +31,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
     // Clean up test data
     try {
       await storageManager.clearAll()
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   })
@@ -205,7 +205,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Clean up
             try {
               await freshStorageManager.clearAll()
-            } catch (error) {
+            } catch {
               // Ignore cleanup errors
             }
           }
@@ -265,7 +265,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Clean up
             try {
               await freshStorageManager.clearAll()
-            } catch (error) {
+            } catch {
               // Ignore cleanup errors
             }
           }
@@ -335,7 +335,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
           // Clean up
           try {
             await freshStorageManager.clearAll()
-          } catch (error) {
+          } catch {
             // Ignore cleanup errors
           }
 
@@ -433,7 +433,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Clean up
             try {
               await freshStorageManager.clearAll()
-            } catch (error) {
+            } catch {
               // Ignore cleanup errors
             }
           }
@@ -479,7 +479,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Clean up
             try {
               await freshStorageManager.clearAll()
-            } catch (error) {
+            } catch {
               // Ignore cleanup errors
             }
           }
@@ -545,7 +545,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
           // Clean up
           try {
             await freshStorageManager.clearAll()
-          } catch (error) {
+          } catch {
             // Ignore cleanup errors
           }
           const entry = timeline.entries[0]
@@ -636,7 +636,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
           // Clean up
           try {
             await freshStorageManager.clearAll()
-          } catch (error) {
+          } catch {
             // Ignore cleanup errors
           }
           
@@ -824,14 +824,14 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Clean up after all assertions
             try {
               await freshStorageManager.clearAll()
-            } catch (error) {
+            } catch {
               // Ignore cleanup errors
             }
           } catch (error) {
             // Clean up on error
             try {
               await freshStorageManager.clearAll()
-            } catch (cleanupError) {
+            } catch {
               // Ignore cleanup errors
             }
             throw error
