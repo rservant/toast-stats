@@ -81,7 +81,7 @@ export function matchesCacheKeyPattern(key: string, pattern: string): boolean {
   const escapedPattern = escapeRegex(pattern)
   const regexPattern = escapedPattern
     .replace(/\\\*/g, '.*') // '*' wildcard -> match any sequence of characters
-    .replace(/\\\?/g, '.')  // '?' wildcard -> match any single character
+    .replace(/\\\?/g, '.') // '?' wildcard -> match any single character
 
   const regex = new RegExp(`^${regexPattern}$`)
   return regex.test(key)
