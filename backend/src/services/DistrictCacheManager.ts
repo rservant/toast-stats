@@ -37,6 +37,22 @@ interface ErrnoException extends Error {
   syscall?: string
 }
 
+/**
+ * Sanitize a district identifier before using it in filesystem paths.
+ *
+ * Allows only alphanumeric characters, underscores, and dashes. This prevents
+ * directory traversal and other unsafe path constructions using user-controlled
+ * input while preserving existing valid district ID formats.
+ */
+function sanitizeDistrictId(districtId: string): string {
+  const trimmed = districtId.trim()
+  // Allow only letters, numbers, underscore and dash
+  if (!/^[A-Za-z0-9_-]+$/.test(trimmed)) {
+    throw new Error('Invalid district ID')
+  }
+  return trimmed
+}
+
 export class DistrictCacheManager {
   private cacheDir: string
   /**
@@ -261,7 +277,8 @@ export class DistrictCacheManager {
    */
   async getCachedDatesForDistrict(districtId: string): Promise<string[]> {
     try {
-      const districtDir = path.join(this.cacheDir, 'districts', districtId)
+      const safeDistrictId = sanitizeDistrictId(districtId)
+      const districtDir = path.join(this.cacheDir, 'districts', safeDistrictId)
 
       try {
         const files = await fs.readdir(districtDir)
