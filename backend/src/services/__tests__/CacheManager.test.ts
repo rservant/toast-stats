@@ -20,6 +20,115 @@ describe('CacheManager - Historical Data Aggregation', () => {
     }
   })
 
+  describe('Security Validation', () => {
+    it('should reject invalid date formats that could be path traversal', async () => {
+      const maliciousDates = [
+        '../../../etc/passwd',
+        '..\\..\\windows\\system32',
+        '2024/../../../etc',
+        '2024-11/../passwd',
+        '2024/11/22',
+        '2024.11.22',
+        '2024-13-01', // Invalid month
+        '2024-11-32', // Invalid day
+        '1999-11-22', // Year too old
+        '2101-11-22', // Year too new
+        '', // Empty string
+        'not-a-date',
+      ]
+
+      for (const maliciousDate of maliciousDates) {
+        // Should reject caching with malicious date
+        await expect(
+          cacheManager.setCache(maliciousDate, { test: 'data' }, 'districts')
+        ).rejects.toThrow()
+
+        // Should reject reading with malicious date
+        const result = await cacheManager.getCache(maliciousDate, 'districts')
+        expect(result).toBeNull()
+
+        // Should reject checking cache with malicious date
+        const hasCache = await cacheManager.hasCache(maliciousDate, 'districts')
+        expect(hasCache).toBe(false)
+
+        // Should reject metadata access with malicious date
+        const metadata = await cacheManager.getMetadata(maliciousDate)
+        expect(metadata).toBeNull()
+      }
+    })
+
+    it('should reject invalid type parameters that could be path traversal', async () => {
+      const validDate = '2024-11-22'
+      const maliciousTypes = [
+        '../../../etc/passwd',
+        '..\\..\\windows\\system32',
+        'districts/../../../etc',
+        'test/path',
+        'test\\path',
+        'test:path',
+        'test*path',
+        'test?path',
+        'test<path',
+        'test>path',
+        'test|path',
+        '', // Empty string
+      ]
+
+      for (const maliciousType of maliciousTypes) {
+        // Should reject caching with malicious type
+        await expect(
+          cacheManager.setCache(validDate, { test: 'data' }, maliciousType)
+        ).rejects.toThrow()
+
+        // Should reject reading with malicious type
+        const result = await cacheManager.getCache(validDate, maliciousType)
+        expect(result).toBeNull()
+
+        // Should reject checking cache with malicious type
+        const hasCache = await cacheManager.hasCache(validDate, maliciousType)
+        expect(hasCache).toBe(false)
+
+        // Should reject getting cached dates with malicious type
+        const dates = await cacheManager.getCachedDates(maliciousType)
+        expect(dates).toEqual([])
+      }
+    })
+
+    it('should accept valid date and type parameters', async () => {
+      const validDate = '2024-11-22'
+      const validTypes = [
+        'districts',
+        'clubs',
+        'test-data',
+        'test_data',
+        'TestData123',
+      ]
+      const testData = { test: 'data' }
+
+      for (const validType of validTypes) {
+        // Should accept valid parameters
+        await expect(
+          cacheManager.setCache(validDate, testData, validType)
+        ).resolves.not.toThrow()
+
+        // Should be able to read back the data
+        const result = await cacheManager.getCache(validDate, validType)
+        expect(result).toEqual(testData)
+
+        // Should report cache exists
+        const hasCache = await cacheManager.hasCache(validDate, validType)
+        expect(hasCache).toBe(true)
+
+        // Should include in cached dates
+        const dates = await cacheManager.getCachedDates(validType)
+        expect(dates).toContain(validDate)
+
+        // Clean up for next iteration
+        await cacheManager.clearCacheForDate(validDate, validType)
+      }
+    })
+  })
+
   describe('Metadata Tracking', () => {
     it('should create metadata when caching district data', async () => {
       const testDate = '2024-11-22'

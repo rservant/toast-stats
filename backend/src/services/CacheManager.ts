@@ -38,6 +38,21 @@ export class CacheManager {
    * This constrains the value used in file paths to a simple, safe filename suffix.
    */
   private isValidDateKey(date: string): boolean {
+    // Reject null, undefined, or non-string values
+    if (!date || typeof date !== 'string') {
+      return false
+    }
+
+    // Reject strings that are too long or contain suspicious characters
+    if (
+      date.length !== 10 ||
+      date.includes('..') ||
+      date.includes('/') ||
+      date.includes('\\')
+    ) {
+      return false
+    }
+
     // Accept only digits and hyphens in strict YYYY-MM-DD format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return false
@@ -46,6 +61,11 @@ export class CacheManager {
     // Additional validation: check if it's a valid date
     const [year, month, day] = date.split('-').map(Number)
     if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return false
+    }
+
+    // Ensure reasonable year range (prevent extreme dates)
+    if (year < 2000 || year > 2100) {
       return false
     }
 
@@ -80,10 +100,26 @@ export class CacheManager {
       throw new Error(`Invalid date format for cache file path: ${date}`)
     }
 
-    // Sanitize type parameter to prevent path traversal
-    const sanitizedType = type.replace(/[^A-Za-z0-9_-]/g, '_')
+    // Sanitize type parameter to prevent path traversal - only allow alphanumeric, underscore, hyphen
+    if (!type || typeof type !== 'string' || !/^[A-Za-z0-9_-]+$/.test(type)) {
+      throw new Error(`Invalid type parameter for cache file path: ${type}`)
+    }
 
-    return path.join(this.cacheDir, `${sanitizedType}_${date}.json`)
+    // Construct the filename using only validated components
+    const filename = `${type}_${date}.json`
+
+    // Use path.resolve to get absolute path and ensure it's within cache directory
+    const filePath = path.resolve(this.cacheDir, filename)
+    const cacheDir = path.resolve(this.cacheDir)
+
+    // Ensure the resolved path is within the cache directory (prevent directory traversal)
+    if (!filePath.startsWith(cacheDir + path.sep) && filePath !== cacheDir) {
+      throw new Error(
+        `Constructed path is outside cache directory: ${filePath}`
+      )
+    }
+
+    return filePath
   }
 
   /**
@@ -95,14 +131,39 @@ export class CacheManager {
       throw new Error(`Invalid date format for metadata file path: ${date}`)
     }
 
-    return path.join(this.cacheDir, `metadata_${date}.json`)
+    // Construct the filename using only validated components
+    const filename = `metadata_${date}.json`
+
+    // Use path.resolve to get absolute path and ensure it's within cache directory
+    const filePath = path.resolve(this.cacheDir, filename)
+    const cacheDir = path.resolve(this.cacheDir)
+
+    // Ensure the resolved path is within the cache directory (prevent directory traversal)
+    if (!filePath.startsWith(cacheDir + path.sep) && filePath !== cacheDir) {
+      throw new Error(
+        `Constructed path is outside cache directory: ${filePath}`
+      )
+    }
+
+    return filePath
   }
 
   /**
    * Get index file path
    */
   private getIndexFilePath(): string {
-    return path.join(this.cacheDir, 'historical_index.json')
+    // Use path.resolve to get absolute path and ensure it's within cache directory
+    const filePath = path.resolve(this.cacheDir, 'historical_index.json')
+    const cacheDir = path.resolve(this.cacheDir)
+
+    // Ensure the resolved path is within the cache directory (prevent directory traversal)
+    if (!filePath.startsWith(cacheDir + path.sep) && filePath !== cacheDir) {
+      throw new Error(
+        `Constructed path is outside cache directory: ${filePath}`
+      )
+    }
+
+    return filePath
   }
 
   /**
@@ -312,9 +373,12 @@ export class CacheManager {
       await this.init()
       const files = await fs.readdir(this.cacheDir)
 
-      // Sanitize type parameter to prevent path traversal
-      const sanitizedType = type.replace(/[^A-Za-z0-9_-]/g, '_')
-      const prefix = `${sanitizedType}_`
+      // Validate type parameter to prevent path traversal
+      if (!type || typeof type !== 'string' || !/^[A-Za-z0-9_-]+$/.test(type)) {
+        throw new Error(`Invalid type parameter: ${type}`)
+      }
+
+      const prefix = `${type}_`
 
       const dates = files
         .filter(f => f.startsWith(prefix) && f.endsWith('.json'))
