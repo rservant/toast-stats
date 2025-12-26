@@ -91,7 +91,7 @@ export function invalidateCacheMiddleware(
           const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
           const regexPattern = escapedPattern
             .replace(/\\\*/g, '.*') // * => any sequence of characters
-            .replace(/\\\?/g, '.')  // ? => any single character
+            .replace(/\\\?/g, '.') // ? => any single character
             .replace(/\//g, '\\/')
           const regex = new RegExp(`^${regexPattern}$`)
           return regex.test(key)
