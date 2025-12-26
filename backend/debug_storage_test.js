@@ -1,5 +1,4 @@
-/* eslint-env node */
-/* eslint-disable no-console */
+/* global console */
 import { ReconciliationStorageOptimizer } from './dist/services/ReconciliationStorageOptimizer.js';
 
 async function testStorage() {
