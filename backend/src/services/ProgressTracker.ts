@@ -844,10 +844,11 @@ export class ProgressTracker {
 
     // Check distinguished club changes
     if (changes.distinguishedChange) {
-      if (
-        Math.abs(changes.distinguishedChange.percentChange) >=
-        thresholds.distinguishedPercent
-      ) {
+      const percentChange = changes.distinguishedChange.percentChange
+      // Handle NaN/null values - treat NaN or null as 0 for comparison purposes
+      const safePercentChange =
+        isNaN(percentChange) || percentChange === null ? 0 : percentChange
+      if (Math.abs(safePercentChange) >= thresholds.distinguishedPercent) {
         return true
       }
     }

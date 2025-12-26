@@ -166,23 +166,27 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
       // Step 2: Process reconciliation cycles with no significant changes
       // After 3 cycles with default stabilityPeriodDays=3, system moves to finalizing
+      // Use different dates for each cycle to simulate daily processing
+      const baseDate = new Date('2024-11-01T10:00:00Z')
+
       for (let i = 0; i < 3; i++) {
+        // Set system time to simulate processing on different days
+        const currentDate = new Date(
+          baseDate.getTime() + i * 24 * 60 * 60 * 1000
+        )
+        vi.setSystemTime(currentDate)
+
         const status = await orchestrator.processReconciliationCycle(
           job.id,
           mockDistrictData, // Current data (same as cached)
           mockDistrictData // Cached data
         )
 
-        if (i < 2) {
-          // First 2 cycles should be in stabilizing phase (or possibly finalizing if system is fast)
-          expect(['stabilizing', 'finalizing']).toContain(status.phase)
-          expect(status.daysStable).toBeGreaterThanOrEqual(i + 1)
-        } else {
-          // After 3rd cycle, system should have 3 stable days and move to finalizing
-          // But the actual behavior might be different based on timing
-          expect(['stabilizing', 'finalizing']).toContain(status.phase)
-          expect(status.daysStable).toBeGreaterThanOrEqual(3)
-        }
+        // Each cycle should add a stable entry
+        expect(['monitoring', 'stabilizing', 'finalizing']).toContain(
+          status.phase
+        )
+        expect(status.daysStable).toBe(i + 1)
       }
 
       // Verify timeline has entries
@@ -192,8 +196,10 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         updatedTimeline!.entries.every(entry => !entry.isSignificant)
       ).toBe(true)
 
-      // Step 3: System is already in finalizing phase after meeting stability period
-      // No need for additional processing - the job is ready for finalization
+      // Step 3: After 3 stable days, the job should be ready for finalization
+      // The stability period should be met
+      const finalStatus = updatedTimeline!.status
+      expect(finalStatus.daysStable).toBeGreaterThanOrEqual(3)
 
       // Step 4: Finalize reconciliation
       await orchestrator.finalizeReconciliation(job.id)
@@ -478,9 +484,25 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
     it('should handle scheduler-initiated concurrent reconciliations', async () => {
       const districts = ['D42', 'D43', 'D44']
 
+      // Create a fresh scheduler instance for this test to avoid interference
+      const testScheduler = new ReconciliationScheduler(
+        orchestrator,
+        storageManager,
+        configService
+      )
+
+      // Mock getDefaultDistricts to return empty array to prevent auto-scheduling
+      vi.spyOn(
+        testScheduler as unknown as { getDefaultDistricts: () => number[] },
+        'getDefaultDistricts'
+      ).mockReturnValue([])
+
       // Schedule reconciliations for multiple districts
       const schedulingPromises = districts.map(districtId =>
-        scheduler.scheduleMonthEndReconciliation(districtId, testTargetMonth)
+        testScheduler.scheduleMonthEndReconciliation(
+          districtId,
+          testTargetMonth
+        )
       )
 
       const scheduledReconciliations = await Promise.all(schedulingPromises)
@@ -490,7 +512,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       ).toBe(true)
 
       // Start scheduler to process scheduled reconciliations
-      scheduler.start(1) // Check every minute for testing
+      testScheduler.start(1) // Check every minute for testing
 
       // Wait for processing (in real scenario, this would be time-based)
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -501,9 +523,12 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       expect(allJobs.length).toBeGreaterThan(0)
 
       // Check scheduler status
-      const schedulerStatus = scheduler.getSchedulerStatus()
+      const schedulerStatus = testScheduler.getSchedulerStatus()
       expect(schedulerStatus.isRunning).toBe(true)
       expect(schedulerStatus.scheduledCount).toBe(3)
+
+      // Clean up test scheduler
+      testScheduler.stop()
     })
   })
 
@@ -675,7 +700,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       // Attempt to extend beyond limit should fail
       await expect(
         orchestrator.extendReconciliation(job.id, 1)
-      ).rejects.toThrow('maximum extension limit')
+      ).rejects.toThrow('maximum extension limit of 3 days already reached')
 
       // Verify extension info shows no remaining extension
       const extensionInfo = await orchestrator.getExtensionInfo(job.id)

@@ -805,9 +805,11 @@ describe('ProgressTracker - Property-Based Tests', () => {
             expect(entry.changes.clubCountChange?.absoluteChange).toBe(
               clubCountChange
             )
-            // Handle NaN values properly - if the generated value is NaN, the stored value should also be NaN
+            // Handle NaN values properly - JSON serialization converts NaN to null
             if (isNaN(distinguishedChangePercent)) {
-              expect(entry.changes.distinguishedChange?.percentChange).toBeNaN()
+              expect(
+                entry.changes.distinguishedChange?.percentChange
+              ).toBeNull()
             } else {
               expect(entry.changes.distinguishedChange?.percentChange).toBe(
                 distinguishedChangePercent
