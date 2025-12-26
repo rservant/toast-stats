@@ -34,6 +34,15 @@ export class CacheManager {
   }
 
   /**
+   * Validate that a cache key date is in YYYY-MM-DD format.
+   * This constrains the value used in file paths to a simple, safe filename suffix.
+   */
+  private isValidDateKey(date: string): boolean {
+    // Accept only digits and hyphens in strict YYYY-MM-DD format
+    return /^\d{4}-\d{2}-\d{2}$/.test(date)
+  }
+
+  /**
    * Initialize cache directory
    */
   async init(): Promise<void> {
@@ -334,6 +343,14 @@ export class CacheManager {
    */
   async getMetadata(date: string): Promise<CacheMetadata | null> {
     try {
+      // Validate date key format defensively to avoid unsafe path usage
+      if (!this.isValidDateKey(date)) {
+        logger.warn('Rejected cache metadata request with invalid date key', {
+          date,
+        })
+        return null
+      }
+
       // Check in-memory cache first
       if (this.metadataCache.has(date)) {
         return this.metadataCache.get(date)!
