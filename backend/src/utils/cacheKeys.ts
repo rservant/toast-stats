@@ -77,12 +77,20 @@ export function extractDistrictIdFromKey(key: string): string | null {
  * @returns true if key matches pattern
  */
 export function matchesCacheKeyPattern(key: string, pattern: string): boolean {
-  // Convert pattern to regex (simple wildcard support)
-  const regexPattern = pattern
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.')
-    .replace(/\//g, '\\/')
+  // Escape regex metacharacters first, then apply simple wildcard support (* and ?)
+  const escapedPattern = escapeRegex(pattern)
+  const regexPattern = escapedPattern
+    .replace(/\\\*/g, '.*') // '*' wildcard -> match any sequence of characters
+    .replace(/\\\?/g, '.') // '?' wildcard -> match any single character
 
   const regex = new RegExp(`^${regexPattern}$`)
   return regex.test(key)
+}
+
+/**
+ * Escape all regular expression metacharacters in a string so it can be used
+ * safely inside a RegExp constructor.
+ */
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
