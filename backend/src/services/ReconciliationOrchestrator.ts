@@ -1017,7 +1017,9 @@ export class ReconciliationOrchestrator {
    */
   private generateJobId(districtId: string, targetMonth: string): string {
     // Use deterministic ID for duplicate detection
-    return `reconciliation-${districtId}-${targetMonth}`
+    // Replace hyphens in targetMonth with underscores to avoid file system issues
+    const safeTargetMonth = targetMonth.replace(/-/g, '_')
+    return `reconciliation_${districtId}_${safeTargetMonth}`
   }
 
   /**

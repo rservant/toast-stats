@@ -24,7 +24,7 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
 
   beforeEach(() => {
     // Create a service instance and manually inject mocks
-    apiService = new RealToastmastersAPIService()
+    apiService = new RealToastmastersAPIService(true) // Allow in test environment
 
     // Create mock scraper
     mockScraper = {

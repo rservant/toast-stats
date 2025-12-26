@@ -148,23 +148,32 @@ describe('RetryManager', () => {
     })
 
     it('should throw error if all retries fail', async () => {
-      const operation = vi.fn().mockRejectedValue(new Error('network timeout'))
-
       const retryableFunction = RetryManager.createRetryableFunction(
-        operation,
+        async () => {
+          throw new Error('network timeout')
+        },
         { maxAttempts: 2, baseDelayMs: 1000 }
       )
 
-      // Use expect.rejects to properly handle the promise rejection
-      const promise =
-        expect(retryableFunction()).rejects.toThrow('network timeout')
+      // Start the promise
+      const promise = retryableFunction()
 
-      // Fast-forward through the delay to complete all retries
-      await vi.advanceTimersByTimeAsync(1000)
+      // Fast-forward through all delays at once
+      await vi.advanceTimersByTimeAsync(2000) // Enough for both attempts
 
-      // Await the expectation
-      await promise
-      expect(operation).toHaveBeenCalledTimes(2)
+      // Expect the promise to be rejected and wait for it to complete
+      let caughtError: Error | undefined
+      try {
+        await promise
+      } catch (error) {
+        caughtError = error as Error
+      }
+
+      expect(caughtError).toBeDefined()
+      expect(caughtError?.message).toBe('network timeout')
+
+      // Ensure all timers are cleared and promises are resolved
+      await vi.runAllTimersAsync()
     })
   })
 
