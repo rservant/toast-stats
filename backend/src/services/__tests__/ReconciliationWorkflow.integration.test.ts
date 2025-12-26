@@ -124,7 +124,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
     try {
       await storageManager.clearAll()
       // DistrictCacheManager doesn't have a clearCache method, but cleanup happens automatically
-    } catch (error: unknown) {
+    } catch {
       // Ignore cleanup errors
     }
   })

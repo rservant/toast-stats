@@ -21,7 +21,7 @@ import type {
   LeadershipChange,
   AreaDirectorCorrelation,
 } from '../types/analytics.js'
-import type { DistrictCacheEntry } from '../types/districts.js'
+import type { DistrictCacheEntry, ScrapedRecord } from '../types/districts.js'
 
 export class AnalyticsEngine {
   private cacheManager: DistrictCacheManager
@@ -321,7 +321,14 @@ export class AnalyticsEngine {
    * Calculate year-over-year metrics
    * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
    */
-  async calculateYearOverYear(districtId: string, currentDate: string): Promise<any> {
+  async calculateYearOverYear(districtId: string, currentDate: string): Promise<{
+    currentDate: string;
+    previousYearDate: string;
+    dataAvailable: boolean;
+    message?: string;
+    metrics?: unknown;
+    multiYearTrends?: unknown;
+  } | null> {
     try {
       // Find same date in previous program year (Requirement 9.1)
       const previousYearDate = this.findPreviousProgramYearDate(currentDate)
@@ -1662,7 +1669,7 @@ export class AnalyticsEngine {
    * Get the appropriate field name for Level 4/Path Completion/DTM awards
    * based on the data structure (handles different program year formats)
    */
-  private getLevel4FieldName(club: any): {
+  private getLevel4FieldName(club: ScrapedRecord): {
     baseField: string
     additionalField: string
   } {
@@ -1856,8 +1863,8 @@ export class AnalyticsEngine {
     const divisionMap = new Map<string, {
       divisionId: string
       divisionName: string
-      clubs: any[]
-      historicalData: Array<{ date: string; clubs: any[] }>
+      clubs: ScrapedRecord[]
+      historicalData: Array<{ date: string; clubs: ScrapedRecord[] }>
     }>()
 
     // Build division data structure
@@ -1936,7 +1943,7 @@ export class AnalyticsEngine {
   /**
    * Calculate division health score based on club health metrics
    */
-  private calculateDivisionHealthScore(clubs: any[]): number {
+  private calculateDivisionHealthScore(clubs: ScrapedRecord[]): number {
     if (clubs.length === 0) return 0
 
     let healthyClubs = 0
@@ -1979,7 +1986,7 @@ export class AnalyticsEngine {
    * Calculate division growth score based on membership trends
    */
   private calculateDivisionGrowthScore(
-    historicalData: Array<{ date: string; clubs: any[] }>
+    historicalData: Array<{ date: string; clubs: ScrapedRecord[] }>
   ): number {
     if (historicalData.length < 2) return 50 // Neutral score if no trend data
 
@@ -2009,7 +2016,7 @@ export class AnalyticsEngine {
   /**
    * Calculate division DCP score based on goal achievement
    */
-  private calculateDivisionDCPScore(clubs: any[]): number {
+  private calculateDivisionDCPScore(clubs: ScrapedRecord[]): number {
     if (clubs.length === 0) return 0
 
     let totalDcpGoals = 0
@@ -2200,7 +2207,7 @@ export class AnalyticsEngine {
       areaId: string
       areaName: string
       divisionId: string
-      clubs: any[]
+      clubs: ScrapedRecord[]
       performanceScore: number
     }>()
 

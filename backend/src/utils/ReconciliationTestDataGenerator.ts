@@ -37,8 +37,8 @@ export interface TestDataSet {
 export interface PropertyTestCase {
   name: string
   property: string
-  inputs: any[]
-  expectedResult: any
+  inputs: unknown[]
+  expectedResult: unknown
   seed: number
 }
 

@@ -17,7 +17,7 @@ async function inspectStatuses() {
       console.log(`Fetching District ${districtId}...`)
       const clubs = await scraper.getClubPerformance(districtId)
       
-      clubs.forEach((club: any) => {
+      clubs.forEach((club: Record<string, unknown>) => {
         const status = club['Club Status']
         if (status) {
           allStatuses.add(status.trim())

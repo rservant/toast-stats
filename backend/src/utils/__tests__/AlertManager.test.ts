@@ -7,7 +7,7 @@ describe('AlertManager', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     // Reset singleton instance for testing
-    ;(AlertManager as any).instance = undefined
+    ;(AlertManager as { instance?: AlertManager }).instance = undefined
     alertManager = AlertManager.getInstance()
   })
 

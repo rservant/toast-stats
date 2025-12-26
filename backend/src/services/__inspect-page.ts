@@ -40,7 +40,7 @@ async function inspectPage() {
       elements.map(el => ({
         tag: el.tagName,
         text: el.textContent?.trim() || '',
-        value: (el as HTMLInputElement).value || '',
+        value: 'value' in el ? (el as { value: string }).value : '',
         id: el.id,
         class: el.className,
       }))

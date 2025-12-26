@@ -79,7 +79,7 @@ export class CacheManager {
   /**
    * Get cached data for a given date
    */
-  async getCache(date: string, type: string = 'districts'): Promise<any | null> {
+  async getCache(date: string, type: string = 'districts'): Promise<unknown | null> {
     try {
       const filePath = this.getCacheFilePath(date, type)
       const data = await fs.readFile(filePath, 'utf-8')
@@ -94,7 +94,7 @@ export class CacheManager {
   /**
    * Save data to cache with automatic metadata and index updates
    */
-  async setCache(date: string, data: any, type: string = 'districts'): Promise<void> {
+  async setCache(date: string, data: unknown, type: string = 'districts'): Promise<void> {
     try {
       await this.init() // Ensure directory exists
       const filePath = this.getCacheFilePath(date, type)
@@ -115,9 +115,9 @@ export class CacheManager {
   /**
    * Update metadata for a cached date
    */
-  private async updateMetadata(date: string, data: any): Promise<void> {
+  private async updateMetadata(date: string, data: unknown): Promise<void> {
     try {
-      const rankings = data.rankings || []
+      const rankings = (data && typeof data === 'object' && 'rankings' in data) ? (data as { rankings: unknown[] }).rankings : []
       const districtCount = rankings.length
 
       let dataCompleteness: 'complete' | 'partial' | 'empty' = 'empty'
@@ -157,28 +157,31 @@ export class CacheManager {
   /**
    * Update historical index with new data
    */
-  private async updateHistoricalIndex(date: string, data: any): Promise<void> {
+  private async updateHistoricalIndex(date: string, data: unknown): Promise<void> {
     try {
-      const rankings = data.rankings || []
+      const rankings = (data && typeof data === 'object' && 'rankings' in data) ? (data as { rankings: unknown[] }).rankings : []
       
       // Extract district rank snapshots
-      const snapshots: DistrictRankSnapshot[] = rankings.map((r: any) => ({
-        districtId: r.districtId,
-        districtName: r.districtName,
-        aggregateScore: r.aggregateScore,
-        clubsRank: r.clubsRank,
-        paymentsRank: r.paymentsRank,
-        distinguishedRank: r.distinguishedRank,
-        paidClubs: r.paidClubs,
-        totalPayments: r.totalPayments,
-        distinguishedClubs: r.distinguishedClubs,
-      }))
+      const snapshots: DistrictRankSnapshot[] = rankings.map((r: unknown) => {
+        const ranking = r as Record<string, unknown>
+        return {
+          districtId: String(ranking.districtId || ''),
+          districtName: String(ranking.districtName || ''),
+          aggregateScore: Number(ranking.aggregateScore || 0),
+          clubsRank: Number(ranking.clubsRank || 0),
+          paymentsRank: Number(ranking.paymentsRank || 0),
+          distinguishedRank: Number(ranking.distinguishedRank || 0),
+          paidClubs: Number(ranking.paidClubs || 0),
+          totalPayments: Number(ranking.totalPayments || 0),
+          distinguishedClubs: Number(ranking.distinguishedClubs || 0),
+        }
+      })
 
       // Update in-memory index
       this.indexCache.set(date, snapshots)
 
       // Load existing index or create new one
-      let indexData: any = {}
+      let indexData: Record<string, unknown> = {}
       try {
         const indexPath = this.getIndexFilePath()
         const indexContent = await fs.readFile(indexPath, 'utf-8')
@@ -349,18 +352,22 @@ export class CacheManager {
       for (const date of indexData.dates || []) {
         if (!this.indexCache.has(date)) {
           const cachedData = await this.getCache(date, 'districts')
-          if (cachedData && cachedData.rankings) {
-            const snapshots: DistrictRankSnapshot[] = cachedData.rankings.map((r: any) => ({
-              districtId: r.districtId,
-              districtName: r.districtName,
-              aggregateScore: r.aggregateScore,
-              clubsRank: r.clubsRank,
-              paymentsRank: r.paymentsRank,
-              distinguishedRank: r.distinguishedRank,
-              paidClubs: r.paidClubs,
-              totalPayments: r.totalPayments,
-              distinguishedClubs: r.distinguishedClubs,
-            }))
+          if (cachedData && typeof cachedData === 'object' && 'rankings' in cachedData) {
+            const rankings = (cachedData as { rankings: unknown[] }).rankings
+            const snapshots: DistrictRankSnapshot[] = rankings.map((r: unknown) => {
+              const ranking = r as Record<string, unknown>
+              return {
+                districtId: String(ranking.districtId || ''),
+                districtName: String(ranking.districtName || ''),
+                aggregateScore: Number(ranking.aggregateScore || 0),
+                clubsRank: Number(ranking.clubsRank || 0),
+                paymentsRank: Number(ranking.paymentsRank || 0),
+                distinguishedRank: Number(ranking.distinguishedRank || 0),
+                paidClubs: Number(ranking.paidClubs || 0),
+                totalPayments: Number(ranking.totalPayments || 0),
+                distinguishedClubs: Number(ranking.distinguishedClubs || 0),
+              }
+            })
             this.indexCache.set(date, snapshots)
           }
         }

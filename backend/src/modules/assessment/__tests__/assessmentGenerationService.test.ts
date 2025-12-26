@@ -1,40 +1,47 @@
 import { describe, it, expect, vi } from 'vitest'
 import AssessmentGenerationService from '../services/assessmentGenerationService.js'
+import CacheIntegrationService from '../services/cacheIntegrationService.js'
 import type { MonthlyAssessment } from '../types/assessment.js'
+import type { CompleteAssessmentData } from '../services/cacheIntegrationService.js'
 
-interface MockCacheService {
-  getLatestCacheDate: (id: string) => Promise<string>;
-  getCompleteAssessmentDataByDate?: (id: string, date: string) => Promise<{
-    membership_payments_ytd: number;
-    paid_clubs_ytd: number;
-    distinguished_clubs_ytd: number;
-    csp_submissions_ytd: number;
-    csv_row_count: number;
-    cache_file: string;
-  }>;
+class MockCacheIntegrationService extends CacheIntegrationService {
+  private mockLatestDate: string | null
+  private mockCompleteData: CompleteAssessmentData | null
+
+  constructor(latestDate: string | null = '2024-07-31', completeData: CompleteAssessmentData | null = null) {
+    super()
+    this.mockLatestDate = latestDate
+    this.mockCompleteData = completeData
+  }
+
+  async getLatestCacheDate(_id: string): Promise<string | null> {
+    return this.mockLatestDate
+  }
+
+  async getCompleteAssessmentDataByDate(_id: string, _date: string): Promise<CompleteAssessmentData | null> {
+    return this.mockCompleteData
+  }
 }
 
 describe('AssessmentGenerationService', () => {
   it('generates assessment when cache available and no existing assessment', async () => {
-    // Mock cache service
-    const mockCacheSvc: MockCacheService = {
-      getLatestCacheDate: async (_id: string) => '2024-07-31',
-      getCompleteAssessmentDataByDate: async (_id: string, _date: string) => ({
-        membership_payments_ytd: 1000,
-        paid_clubs_ytd: 10,
-        distinguished_clubs_ytd: 3,
-        csp_submissions_ytd: 4,
-        csv_row_count: 10,
-        cache_file: 'districts_2024-07-31.json'
-      })
+    // Mock cache service with complete data
+    const mockCompleteData: CompleteAssessmentData = {
+      membership_payments_ytd: 1000,
+      paid_clubs_ytd: 10,
+      distinguished_clubs_ytd: 3,
+      csp_submissions_ytd: 4,
+      csv_row_count: 10,
+      cache_file: 'districts_2024-07-31.json'
     }
+    const mockCacheSvc = new MockCacheIntegrationService('2024-07-31', mockCompleteData)
 
     // Stub storage functions
     const mod = await import('../storage/assessmentStore.js')
     const saveSpy = vi.spyOn(mod, 'saveMonthlyAssessment').mockImplementation(async () => {})
     const getSpy = vi.spyOn(mod, 'getMonthlyAssessment').mockImplementation(async () => null)
 
-    const svc = new AssessmentGenerationService(mockCacheSvc as any)
+    const svc = new AssessmentGenerationService(mockCacheSvc)
 
     const result = await svc.generateMonthlyAssessment({ district_number: 61, program_year: '2024-2025', month: 'July' })
 
@@ -48,7 +55,7 @@ describe('AssessmentGenerationService', () => {
   })
 
   it('throws when assessment already exists', async () => {
-    const mockCacheSvc: MockCacheService = { getLatestCacheDate: async ()=>'2024-07-31' }
+    const mockCacheSvc = new MockCacheIntegrationService('2024-07-31', null)
     const mod = await import('../storage/assessmentStore.js')
     const getSpy = vi.spyOn(mod, 'getMonthlyAssessment').mockImplementation(async (): Promise<MonthlyAssessment | null> => ({ 
       district_number: 61, 
@@ -62,7 +69,7 @@ describe('AssessmentGenerationService', () => {
       updated_at: '2024-07-31T00:00:00Z'
     }))
 
-    const svc = new AssessmentGenerationService(mockCacheSvc as any)
+    const svc = new AssessmentGenerationService(mockCacheSvc)
 
     await expect(svc.generateMonthlyAssessment({ district_number: 61, program_year: '2024-2025', month: 'July' })).rejects.toThrow()
 
