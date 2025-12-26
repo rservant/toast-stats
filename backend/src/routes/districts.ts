@@ -38,7 +38,10 @@ import type {
 const router = Router()
 
 // Use mock API in development (USE_MOCK_DATA=true), real scraper otherwise
-const useMockData = process.env.USE_MOCK_DATA === 'true'
+// Force mock data in test environment
+const useMockData =
+  process.env.USE_MOCK_DATA === 'true' || process.env.NODE_ENV === 'test'
+
 const toastmastersAPI = useMockData
   ? new MockToastmastersAPIService()
   : new RealToastmastersAPIService()
@@ -138,6 +141,7 @@ router.get(
 
       res.json(rankings)
     } catch (error) {
+      console.error('Error in rankings endpoint:', error)
       const errorResponse = transformErrorResponse(error)
 
       res.status(500).json({

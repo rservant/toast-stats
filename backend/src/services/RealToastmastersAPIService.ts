@@ -16,6 +16,13 @@ export class RealToastmastersAPIService {
   private cacheManager: CacheManager
 
   constructor() {
+    // Prevent accidental use in test environment
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(
+        'RealToastmastersAPIService should not be used in test environment. Use MockToastmastersAPIService instead.'
+      )
+    }
+
     this.scraper = new ToastmastersScraper()
     this.cacheManager = new CacheManager()
   }
