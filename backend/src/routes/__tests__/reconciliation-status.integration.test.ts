@@ -24,7 +24,7 @@ describe('Reconciliation Status API Integration Tests', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (error) {
+    } catch {
       // Directory might not exist, ignore error
     }
 
@@ -40,7 +40,7 @@ describe('Reconciliation Status API Integration Tests', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   })

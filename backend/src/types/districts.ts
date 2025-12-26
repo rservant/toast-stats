@@ -72,6 +72,15 @@ export interface DistrictPerformance {
   distinguishedPercent: number
 }
 
+// Raw scraped data types (CSV records with dynamic columns)
+export type ScrapedRecord = Record<string, string | number | null>
+
+// District list from dropdown
+export interface DistrictInfo {
+  id: string
+  name: string
+}
+
 export interface DistrictStatistics {
   districtId: string
   asOfDate: string
@@ -81,9 +90,9 @@ export interface DistrictStatistics {
   goals?: DistrictGoals
   performance?: DistrictPerformance
   // Raw data arrays from scraper (for caching purposes)
-  districtPerformance?: any[]
-  divisionPerformance?: any[]
-  clubPerformance?: any[]
+  districtPerformance?: ScrapedRecord[]
+  divisionPerformance?: ScrapedRecord[]
+  clubPerformance?: ScrapedRecord[]
 }
 
 export interface MembershipHistoryPoint {
@@ -242,9 +251,9 @@ export interface BackfillResponse {
 export interface DistrictCacheEntry {
   districtId: string
   date: string
-  districtPerformance: any[]  // From District.aspx
-  divisionPerformance: any[]  // From Division.aspx
-  clubPerformance: any[]      // From Club.aspx
+  districtPerformance: ScrapedRecord[]  // From District.aspx
+  divisionPerformance: ScrapedRecord[]  // From Division.aspx
+  clubPerformance: ScrapedRecord[]      // From Club.aspx
   fetchedAt: string
 }
 

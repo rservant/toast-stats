@@ -66,7 +66,7 @@ async function inspectPage() {
     console.log('\n\nPress Ctrl+C to close the browser...')
     await page.waitForTimeout(300000) // Wait 5 minutes so you can inspect manually
   } catch (error) {
-    console.error('Error:', _error)
+    console.error('Error:', error)
   } finally {
     await browser.close()
   }

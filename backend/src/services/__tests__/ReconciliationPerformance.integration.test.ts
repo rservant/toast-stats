@@ -265,7 +265,7 @@ describe('Reconciliation Performance Integration', () => {
           totalClubs: 100,
           paidClubs: 95,
           totalPayments: 950,
-          distinguishedClubs: { select: 10, distinguished: 20, president: 5, total: 35 }
+          distinguishedClubs: 35
         }
       ],
       divisionPerformance: [],
@@ -301,7 +301,7 @@ describe('Reconciliation Performance Integration', () => {
           totalClubs: 100,
           paidClubs: 94,
           totalPayments: 940,
-          distinguishedClubs: { select: 10, distinguished: 19, president: 5, total: 34 }
+          distinguishedClubs: 34
         }
       ],
       divisionPerformance: [],

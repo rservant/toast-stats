@@ -6,6 +6,7 @@
 import { chromium, Browser, Page } from 'playwright'
 import { parse } from 'csv-parse/sync'
 import { logger } from '../utils/logger.js'
+import { ScrapedRecord, DistrictInfo } from '../types/districts.js'
 
 interface ScraperConfig {
   baseUrl: string
@@ -159,7 +160,7 @@ export class ToastmastersScraper {
   /**
    * Fetch all districts list (just names and IDs from dropdown)
    */
-  async getAllDistrictsList(): Promise<any[]> {
+  async getAllDistrictsList(): Promise<DistrictInfo[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
@@ -195,7 +196,7 @@ export class ToastmastersScraper {
   /**
    * Fetch all districts with performance data from CSV export
    */
-  async getAllDistricts(): Promise<any[]> {
+  async getAllDistricts(): Promise<ScrapedRecord[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
@@ -217,7 +218,7 @@ export class ToastmastersScraper {
    * Fetch all districts with performance data for a specific date
    * @param dateString Date in YYYY-MM-DD format
    */
-  async getAllDistrictsForDate(dateString: string): Promise<any[]> {
+  async getAllDistrictsForDate(dateString: string): Promise<ScrapedRecord[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
@@ -366,7 +367,7 @@ export class ToastmastersScraper {
   /**
    * Fetch district performance data
    */
-  async getDistrictPerformance(districtId: string, dateString?: string): Promise<any[]> {
+  async getDistrictPerformance(districtId: string, dateString?: string): Promise<ScrapedRecord[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
@@ -425,7 +426,7 @@ export class ToastmastersScraper {
   /**
    * Fetch division and area performance
    */
-  async getDivisionPerformance(districtId: string, dateString?: string): Promise<any[]> {
+  async getDivisionPerformance(districtId: string, dateString?: string): Promise<ScrapedRecord[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
@@ -484,7 +485,7 @@ export class ToastmastersScraper {
   /**
    * Fetch club performance data
    */
-  async getClubPerformance(districtId: string, dateString?: string): Promise<any[]> {
+  async getClubPerformance(districtId: string, dateString?: string): Promise<ScrapedRecord[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 

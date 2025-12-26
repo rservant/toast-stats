@@ -32,9 +32,9 @@ export interface DebugInfo {
   errors: string[]
 }
 
-export interface StepResult {
+export interface StepResult<T = unknown> {
   success: boolean
-  data?: any
+  data?: T
   error?: string
   timestamp: Date
 }

@@ -85,7 +85,7 @@ export class CacheManager {
       const data = await fs.readFile(filePath, 'utf-8')
       logger.info('Cache hit', { date, type })
       return JSON.parse(data)
-    } catch (error) {
+    } catch {
       logger.info('Cache miss', { date, type })
       return null
     }

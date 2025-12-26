@@ -6,12 +6,12 @@
 
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
-import type { BackfillRequest, BackfillJob, BackfillResponse } from '../types/districts.js'
+import type { BackfillRequest, BackfillJob, BackfillResponse, ScrapedRecord } from '../types/districts.js'
 import { CacheManager } from './CacheManager.js'
 
 // Interface for API service that can fetch rankings
 interface ToastmastersAPIService {
-  getAllDistrictsRankings(date?: string): Promise<{ rankings: any[]; date: string }>
+  getAllDistrictsRankings(date?: string): Promise<{ rankings: ScrapedRecord[]; date: string }>
 }
 
 export class BackfillService {

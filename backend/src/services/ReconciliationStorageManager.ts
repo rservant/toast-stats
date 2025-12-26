@@ -425,7 +425,7 @@ export class ReconciliationStorageManager {
       const content = await fs.readFile(filePath, 'utf-8')
       const record = JSON.parse(content) as ReconciliationJobRecord
       return this.recordToJob(record)
-    } catch (error) {
+    } catch {
       logger.info('Reconciliation job not found', { jobId })
       return null
     }
@@ -668,7 +668,7 @@ export class ReconciliationStorageManager {
       }
       
       return timeline
-    } catch (error) {
+    } catch {
       logger.info('Reconciliation timeline not found', { jobId })
       return null
     }

@@ -2,6 +2,23 @@ import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { createTestApp } from './setup.js'
 
+// Interface for district ranking data used in tests
+interface DistrictRanking {
+  districtId: string
+  districtName: string
+  region: string
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  aggregateScore: number
+  clubGrowthPercent: number
+  paymentGrowthPercent: number
+  distinguishedPercent: number
+}
+
 describe('Districts API Integration Tests', () => {
   const app = createTestApp()
 
@@ -484,7 +501,7 @@ describe('Districts API Integration Tests', () => {
           const totalDistricts = rankings.length
 
           // Verify Borda point calculation for each district
-          rankings.forEach((district: any) => {
+          rankings.forEach((district: DistrictRanking) => {
             // Borda points = totalDistricts - rank + 1
             // So for rank 1: points = totalDistricts
             // For rank N: points = 1

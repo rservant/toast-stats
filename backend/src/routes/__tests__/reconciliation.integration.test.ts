@@ -88,7 +88,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         res.json(jobStatus)
-      } catch (error) {
+      } catch {
         res.status(500).json({
           error: {
             code: 'STATUS_ERROR',
@@ -138,7 +138,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         res.json(timelineResponse)
-      } catch (error) {
+      } catch {
         res.status(500).json({
           error: {
             code: 'TIMELINE_ERROR',
@@ -208,7 +208,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         res.json(estimateResponse)
-      } catch (error) {
+      } catch {
         res.status(500).json({
           error: {
             code: 'ESTIMATE_ERROR',
@@ -240,7 +240,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           success: true,
           config: configResponse,
         })
-      } catch (error) {
+      } catch {
         res.status(500).json({
           error: {
             code: 'CONFIG_ERROR',
@@ -343,7 +343,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           warnings: validationResult.warnings || [],
           validatedConfig: validationResult.isValid ? validationResult.validatedConfig : null,
         })
-      } catch (error) {
+      } catch {
         res.status(500).json({
           error: {
             code: 'VALIDATION_ERROR',
@@ -363,7 +363,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
     // Cleanup test data
     try {
       await storageManager.clearAll()
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   })

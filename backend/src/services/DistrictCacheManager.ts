@@ -24,7 +24,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import type { DistrictCacheEntry, DistrictDataRange } from '../types/districts.js'
+import type { DistrictCacheEntry, DistrictDataRange, ScrapedRecord } from '../types/districts.js'
 
 interface ErrnoException extends Error {
   code?: string;
@@ -94,9 +94,9 @@ export class DistrictCacheManager {
   async cacheDistrictData(
     districtId: string,
     date: string,
-    districtPerformance: any[],
-    divisionPerformance: any[],
-    clubPerformance: any[]
+    districtPerformance: ScrapedRecord[],
+    divisionPerformance: ScrapedRecord[],
+    clubPerformance: ScrapedRecord[]
   ): Promise<void> {
     try {
       // Ensure directory exists

@@ -54,7 +54,7 @@ async function inspectClubPage() {
     console.log('\nScreenshot saved to club-page-screenshot.png')
 
   } catch (error) {
-    console.error('Error:', _error)
+    console.error('Error:', error)
   } finally {
     await browser.close()
   }

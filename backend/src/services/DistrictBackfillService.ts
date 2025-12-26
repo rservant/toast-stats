@@ -864,7 +864,7 @@ export class DistrictBackfillService {
           ) {
             // Validate data quality - check if membership data looks reasonable
             const totalMembers = clubPerformance.reduce((sum, club) => {
-              const members = parseInt(club['Active Members'] || club['Membership'] || '0')
+              const members = parseInt(String(club['Active Members'] || club['Membership'] || '0'))
               return sum + (isNaN(members) ? 0 : members)
             }, 0)
             
