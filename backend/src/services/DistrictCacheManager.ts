@@ -39,6 +39,10 @@ interface ErrnoException extends Error {
 
 export class DistrictCacheManager {
   private cacheDir: string
+  /**
+   * Absolute root directory for all district cache data
+   */
+  private districtRoot: string
 
   /**
    * Creates a new DistrictCacheManager instance
@@ -47,6 +51,8 @@ export class DistrictCacheManager {
    */
   constructor(cacheDir: string = './cache') {
     this.cacheDir = cacheDir
+    // Normalize and fix the root directory for all district cache files
+    this.districtRoot = path.resolve(this.cacheDir, 'districts')
   }
 
   /**
@@ -54,7 +60,20 @@ export class DistrictCacheManager {
    */
   private async initDistrictDir(districtId: string): Promise<void> {
     try {
-      const districtDir = path.join(this.cacheDir, 'districts', districtId)
+      // Validate districtId to avoid path traversal or unexpected characters
+      if (!/^[A-Za-z0-9_-]+$/.test(districtId)) {
+        throw new Error(`Invalid districtId for cache directory: ${districtId}`)
+      }
+
+      const districtDir = path.resolve(this.districtRoot, districtId)
+
+      // Ensure the resolved district directory is still under the districtRoot
+      if (!districtDir.startsWith(this.districtRoot + path.sep)) {
+        throw new Error(
+          `Resolved district cache directory escapes root: ${districtDir}`
+        )
+      }
+
       await fs.mkdir(districtDir, { recursive: true })
       logger.debug('District cache directory initialized', {
         districtId,
@@ -73,7 +92,30 @@ export class DistrictCacheManager {
    * Get cache file path for a district and date
    */
   private getDistrictCacheFilePath(districtId: string, date: string): string {
-    return path.join(this.cacheDir, 'districts', districtId, `${date}.json`)
+    // Validate identifiers to ensure they cannot contain path separators
+    if (!/^[A-Za-z0-9_-]+$/.test(districtId)) {
+      throw new Error(`Invalid districtId for cache file path: ${districtId}`)
+    }
+
+    // Basic YYYY-MM-DD format check; also prevents '/' or '\' in date
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new Error(`Invalid date for cache file path: ${date}`)
+    }
+
+    const resolvedPath = path.resolve(
+      this.districtRoot,
+      districtId,
+      `${date}.json`
+    )
+
+    // Ensure the resolved path is contained within the districtRoot
+    if (!resolvedPath.startsWith(this.districtRoot + path.sep)) {
+      throw new Error(
+        `Resolved district cache file path escapes root: ${resolvedPath}`
+      )
+    }
+
+    return resolvedPath
   }
 
   /**
