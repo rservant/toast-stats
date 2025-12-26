@@ -22,21 +22,17 @@ export const DateRangeSelector = ({
   const [endDate, setEndDate] = useState(today);
   const [error, setError] = useState<string | null>(null);
 
-  // Validate and emit when dates change
-  useEffect(() => {
-    setError(null);
-
+  // Validation using useMemo instead of useEffect
+  const validationError = useMemo(() => {
     if (!startDate || !endDate) {
-      setError('Both start and end dates are required');
-      return;
+      return 'Both start and end dates are required';
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
 
     if (start > end) {
-      setError('Start date must be before end date');
-      return;
+      return 'Start date must be before end date';
     }
 
     const daysDiff = Math.ceil(
@@ -44,12 +40,23 @@ export const DateRangeSelector = ({
     );
 
     if (daysDiff > maxDays) {
-      setError(`Date range cannot exceed ${maxDays} days`);
-      return;
+      return `Date range cannot exceed ${maxDays} days`;
     }
 
-    onDateRangeChange(startDate, endDate);
-  }, [startDate, endDate, maxDays, onDateRangeChange]);
+    return null;
+  }, [startDate, endDate, maxDays]);
+
+  // Update error state when validation changes
+  useEffect(() => {
+    setError(validationError);
+  }, [validationError]);
+
+  // Emit valid date ranges
+  useEffect(() => {
+    if (!validationError) {
+      onDateRangeChange(startDate, endDate);
+    }
+  }, [startDate, endDate, validationError, onDateRangeChange]);
 
   const handlePresetRange = (days: number) => {
     const end = new Date();

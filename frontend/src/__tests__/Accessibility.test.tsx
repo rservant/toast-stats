@@ -9,7 +9,8 @@ import { AuthProvider } from '../context/AuthContext'
 import StatCard from '../components/StatCard'
 
 // Extend expect with jest-axe matchers
-expect.extend(toHaveNoViolations as any)
+// @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
+expect.extend(toHaveNoViolations)
 
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({

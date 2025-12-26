@@ -59,7 +59,7 @@ const LandingPage: React.FC = () => {
     },
   });
 
-  const allCachedDates: string[] = cachedDatesData?.dates || [];
+  const allCachedDates: string[] = React.useMemo(() => cachedDatesData?.dates || [], [cachedDatesData?.dates]);
 
   // Get available program years from cached dates
   const availableProgramYears = React.useMemo(() => {
@@ -92,7 +92,7 @@ const LandingPage: React.FC = () => {
     staleTime: 15 * 60 * 1000, // 15 minutes
   });
 
-  const rankings: DistrictRanking[] = data?.rankings || [];
+  const rankings: DistrictRanking[] = React.useMemo(() => data?.rankings || [], [data?.rankings]);
   const currentDate: string = data?.date || '';
 
   // Get district IDs for selected regions

@@ -12,7 +12,22 @@ interface ApiError {
   message?: string;
   response?: {
     status?: number;
+    data?: {
+      error?: {
+        message?: string;
+      };
+    };
   };
+}
+
+interface PersistedAssessment {
+  message?: string;
+  data?: unknown;
+  created_at?: string;
+  timestamp?: string;
+  goal_1_status?: string;
+  goal_2_status?: string;
+  goal_3_status?: string;
 }
 
 const monthFromDate = (d: string) => d.slice(0, 7); // YYYY-MM
@@ -27,7 +42,7 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
   const { data: cachedDatesData } = useDistrictCachedDates(districtId || '');
   const { isComputing, generateAssessment, fetchAssessment, deleteAssessment } = useAssessment();
 
-  const allDates = cachedDatesData?.dates || [];
+  const allDates = React.useMemo(() => cachedDatesData?.dates || [], [cachedDatesData?.dates]);
 
   // Months available within the program year
   // Compute months and default selection from available cached dates within the program year.
@@ -55,14 +70,14 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
   const previousMonthComplete = !!latestDateInRange && latestDateInRange >= prevLastStr;
 
   // Helper: check if a given YYYY-MM month is complete according to cached dates
-  const isMonthComplete = (m: string) => {
+  const isMonthComplete = React.useCallback((m: string) => {
     const [yStr, monStr] = m.split('-');
     const y = Number(yStr);
     const mon = Number(monStr) - 1;
     const lastDay = new Date(y, mon + 1, 0).getDate();
     const lastDayStr = `${yStr}-${String(mon + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     return datesInRange.includes(lastDayStr);
-  };
+  }, [datesInRange]);
 
   // Default month logic:
   // - If previous month is complete, prefer the current month (we generate assessments for current month using the completed previous-month snapshot)
@@ -79,8 +94,8 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
   const [month, setMonth] = React.useState<string | undefined>(defaultMonth);
   const [summary] = React.useState<AssessmentSummary | null>(null);
   const [isGenerating, setIsGenerating] = React.useState(false);
-  const [genResult, setGenResult] = React.useState<any>(null);
-  const [persisted, setPersisted] = React.useState<any | null>(null);
+  const [genResult, setGenResult] = React.useState<{ message?: string; data?: unknown } | null>(null);
+  const [persisted, setPersisted] = React.useState<PersistedAssessment | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -94,7 +109,7 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
     if (month === currentMonth) return previousMonthComplete;
     // Otherwise require that the month itself is complete in cached dates
     return isMonthComplete(month);
-  }, [month, currentMonth, previousMonthComplete, datesInRange]);
+  }, [month, currentMonth, previousMonthComplete, isMonthComplete]);
 
   const handleCompute = async () => {
     // For option A (thin client): fetch authoritative persisted assessment from server

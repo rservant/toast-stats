@@ -53,7 +53,7 @@ const DistrictDetailPage: React.FC = () => {
   const { data: cachedDatesData } = useDistrictCachedDates(districtId || '');
 
   // Get all cached dates
-  const allCachedDates = cachedDatesData?.dates || [];
+  const allCachedDates = React.useMemo(() => cachedDatesData?.dates || [], [cachedDatesData?.dates]);
 
   // Get available program years from cached dates
   const availableProgramYears = React.useMemo(() => {

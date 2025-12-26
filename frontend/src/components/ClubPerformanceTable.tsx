@@ -38,9 +38,9 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
     return clubs.filter((club) => club.status === statusFilter);
   }, [clubs, statusFilter]);
 
-  // Sort clubs
-  const sortedClubs = useMemo(() => {
-    const sorted = [...filteredClubs].sort((a, b) => {
+  // Sort clubs - removed useMemo to avoid React Compiler issues
+  const getSortedClubs = () => {
+    return [...filteredClubs].sort((a, b) => {
       let aValue: string | number;
       let bValue: string | number;
 
@@ -69,9 +69,9 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
+  };
 
-    return sorted;
-  }, [filteredClubs, sortField, sortDirection]);
+  const sortedClubs = getSortedClubs();
 
   // Paginate clubs
   const totalPages = Math.ceil(sortedClubs.length / itemsPerPage);

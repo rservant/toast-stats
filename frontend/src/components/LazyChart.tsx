@@ -21,6 +21,7 @@ export const LazyChart: React.FC<LazyChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const container = containerRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -36,13 +37,13 @@ export const LazyChart: React.FC<LazyChartProps> = ({
       }
     );
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
+    if (container) {
+      observer.observe(container);
     }
 
     return () => {
-      if (containerRef.current) {
-        observer.unobserve(containerRef.current);
+      if (container) {
+        observer.unobserve(container);
       }
     };
   }, [threshold, hasLoaded]);

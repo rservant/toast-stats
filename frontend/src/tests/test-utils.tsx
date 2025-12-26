@@ -7,9 +7,10 @@ import { ProgramYearProvider } from '../contexts/ProgramYearContext'
 
 // Ensure a minimal localStorage is available in the test environment
 // Some test setups (or JSDOM versions) may not provide a working localStorage
-if (typeof (globalThis as any).localStorage === 'undefined' || typeof (globalThis as any).localStorage.getItem !== 'function') {
+const globalObj = globalThis as Record<string, unknown>;
+if (typeof globalObj.localStorage === 'undefined' || typeof (globalObj.localStorage as { getItem?: unknown }).getItem !== 'function') {
   const store: Record<string, string> = {};
-  (globalThis as any).localStorage = {
+  globalObj.localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
       store[key] = String(value);

@@ -116,7 +116,7 @@ describe('LandingPage - Percentage Formatting', () => {
     })
 
     it('should return "0.0%" with gray color for zero percentages', async () => {
-      const apiClient = apiModule.apiClient as MockApiClient
+      const apiClient = apiModule.apiClient as unknown as MockApiClient
       
       apiClient.get.mockResolvedValueOnce({
         data: {
@@ -161,7 +161,7 @@ describe('LandingPage - Percentage Formatting', () => {
     })
 
     it('should format percentages to 1 decimal place precision', async () => {
-      const apiClient = apiModule.apiClient as MockApiClient
+      const apiClient = apiModule.apiClient as unknown as MockApiClient
       
       apiClient.get.mockResolvedValueOnce({
         data: {
@@ -214,7 +214,7 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display rank number correctly', async () => {
-    const apiClient = apiModule.apiClient as MockApiClient
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
     
     apiClient.get.mockResolvedValueOnce({
       data: {
@@ -262,7 +262,7 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display percentage with correct color', async () => {
-    const apiClient = apiModule.apiClient as MockApiClient
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
     
     apiClient.get.mockResolvedValueOnce({
       data: {
@@ -310,7 +310,7 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display bullet separator between rank and percentage', async () => {
-    const apiClient = apiModule.apiClient as MockApiClient
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
     
     apiClient.get.mockResolvedValueOnce({
       data: {
@@ -359,7 +359,7 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display both rank and percentage values visible and properly aligned', async () => {
-    const apiClient = apiModule.apiClient as MockApiClient
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
     
     apiClient.get.mockResolvedValueOnce({
       data: {
