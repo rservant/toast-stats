@@ -11,7 +11,7 @@ process.env.NODE_ENV = 'test'
 
 // Suppress unhandled promise rejection warnings in tests
 // This is specifically for the RetryManager test which intentionally creates rejected promises
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', reason => {
   // Only suppress if it's from a test context and the error is expected
   if (process.env.NODE_ENV === 'test' && reason instanceof Error) {
     // Suppress test-related unhandled rejections for RetryManager tests
