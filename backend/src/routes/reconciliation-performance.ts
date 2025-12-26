@@ -201,11 +201,62 @@ router.post('/batch/process', async (req, res) => {
       }
     }
 
+    // Validate and sanitize batch processing config to prevent resource exhaustion
+    const safeConfig: any = {}
+    if (config && typeof config === 'object') {
+      const {
+        maxConcurrentJobs,
+        batchSize,
+        retryAttempts,
+        retryDelayMs,
+        timeoutMs,
+        enableResourceThrottling,
+        memoryThresholdMB,
+      } = config
+
+      const clampNumber = (
+        value: unknown,
+        min: number,
+        max: number,
+        defaultValue: number
+      ): number => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          return defaultValue
+        }
+        if (value < min) return min
+        if (value > max) return max
+        return value
+      }
+
+      safeConfig.maxConcurrentJobs = clampNumber(
+        maxConcurrentJobs,
+        1,
+        20,
+        5
+      )
+      safeConfig.batchSize = clampNumber(batchSize, 1, 100, 20)
+      safeConfig.retryAttempts = clampNumber(retryAttempts, 0, 10, 3)
+      safeConfig.retryDelayMs = clampNumber(retryDelayMs, 100, 600000, 5000)
+      // Constrain timeout to a reasonable range (e.g. 1s to 30min)
+      safeConfig.timeoutMs = clampNumber(timeoutMs, 1000, 1800000, 300000)
+      safeConfig.enableResourceThrottling =
+        typeof enableResourceThrottling === 'boolean'
+          ? enableResourceThrottling
+          : true
+      // Cap memory threshold to a safe upper bound (e.g. 4GB)
+      safeConfig.memoryThresholdMB = clampNumber(
+        memoryThresholdMB,
+        128,
+        4096,
+        1024
+      )
+    }
+
     const batchProcessor = new ReconciliationBatchProcessor(
       undefined, // Use default orchestrator
       cacheService,
       storageOptimizer,
-      config
+      safeConfig
     )
 
     // Start batch processing asynchronously
