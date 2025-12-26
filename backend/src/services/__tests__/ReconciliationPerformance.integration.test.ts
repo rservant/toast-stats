@@ -245,6 +245,14 @@ describe('Reconciliation Performance Integration', () => {
         .mockResolvedValue({ compressionRatio: 1.0, spaceSaved: 0 }),
       scheduleOptimization: vi.fn().mockResolvedValue(undefined),
       cancelOptimization: vi.fn().mockResolvedValue(undefined),
+      getCacheStats: vi.fn().mockReturnValue({
+        jobCacheSize: 0,
+        timelineCacheSize: 0,
+        pendingOperations: 0,
+        indexCacheAge: 0,
+      }),
+      flush: vi.fn().mockResolvedValue(undefined),
+      cleanup: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReconciliationStorageOptimizer
 
     // Create performance monitor

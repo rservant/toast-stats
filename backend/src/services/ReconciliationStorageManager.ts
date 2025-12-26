@@ -891,4 +891,14 @@ export class ReconciliationStorageManager {
       logger.error('Failed to cleanup old reconciliation jobs', { error })
     }
   }
+
+  /**
+   * Flush any pending writes to disk
+   * This is a no-op for file-based storage as writes are synchronous
+   */
+  async flush(): Promise<void> {
+    // File-based storage writes are synchronous, so no need to flush
+    // This method exists for compatibility with other storage implementations
+    logger.debug('Storage flush requested (no-op for file-based storage)')
+  }
 }
