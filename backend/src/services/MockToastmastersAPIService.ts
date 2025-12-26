@@ -356,13 +356,8 @@ export class MockToastmastersAPIService {
   }
 
   async clearCache() {
-    try {
-      // Mock implementation - just return success
-      return { success: true, message: 'Mock cache cleared' }
-    } catch (error) {
-      console.error('Error in MockToastmastersAPIService.clearCache:', error)
-      return { success: false, message: 'Mock cache clear failed' }
-    }
+    // Mock implementation - just return success
+    return { success: true, message: 'Mock cache cleared' }
   }
 
   async getAvailableDates() {
