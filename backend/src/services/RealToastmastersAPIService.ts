@@ -57,7 +57,20 @@ export class RealToastmastersAPIService {
     date?: string
   ): Promise<DistrictRankingsResponse> {
     try {
-      const targetDate = date || CacheManager.getTodayDate()
+      // Sanitize date input to prevent path traversal in cache filenames
+      let sanitizedDate: string | undefined
+      if (date && typeof date === 'string') {
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/
+        if (datePattern.test(date)) {
+          sanitizedDate = date
+        } else {
+          logger.warn('Invalid date format received, falling back to today', {
+            date,
+          })
+        }
+      }
+
+      const targetDate = sanitizedDate || CacheManager.getTodayDate()
 
       // Check cache first
       const cachedData = await this.cacheManager.getCache(
@@ -72,10 +85,10 @@ export class RealToastmastersAPIService {
       // Cache miss - fetch from scraper
       logger.info('Fetching fresh district rankings', { date: targetDate })
 
-      // If a specific date is requested, use date selection
+      // If a specific sanitized date is requested, use date selection
       let allDistricts
-      if (date) {
-        allDistricts = await this.scraper.getAllDistrictsForDate(date)
+      if (sanitizedDate) {
+        allDistricts = await this.scraper.getAllDistrictsForDate(sanitizedDate)
       } else {
         allDistricts = await this.scraper.getAllDistricts()
       }
