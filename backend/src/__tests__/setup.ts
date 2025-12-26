@@ -3,6 +3,9 @@ import cors from 'cors'
 import districtRoutes from '../routes/districts.js'
 
 export function createTestApp(): Express {
+  // Force mock data for tests
+  process.env.USE_MOCK_DATA = 'true'
+  
   const app = express()
 
   // Middleware

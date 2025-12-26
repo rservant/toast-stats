@@ -57,3 +57,4 @@ debug_*.js
 # Temporary files
 *.tmp
 *.temp
+backend/reconciliation-config.json
