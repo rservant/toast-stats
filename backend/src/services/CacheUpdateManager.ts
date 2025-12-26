@@ -30,7 +30,7 @@ export interface CacheConsistencyCheck {
 
 export class CacheUpdateManager {
   private cacheManager: DistrictCacheManager
-  private backupSuffix = '.backup'
+  private backupSuffix = '-backup'
 
   constructor(cacheManager?: DistrictCacheManager) {
     this.cacheManager = cacheManager || new DistrictCacheManager()
