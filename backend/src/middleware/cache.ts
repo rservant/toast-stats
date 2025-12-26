@@ -87,10 +87,11 @@ export function invalidateCacheMiddleware(
 
         // Find keys matching the pattern
         const keysToInvalidate = allKeys.filter(key => {
-          // Simple wildcard matching
-          const regexPattern = pattern
-            .replace(/\*/g, '.*')
-            .replace(/\?/g, '.')
+          // Simple wildcard matching: escape regex metacharacters, then expand * and ?
+          const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const regexPattern = escapedPattern
+            .replace(/\\\*/g, '.*') // * => any sequence of characters
+            .replace(/\\\?/g, '.') // ? => any single character
             .replace(/\//g, '\\/')
           const regex = new RegExp(`^${regexPattern}$`)
           return regex.test(key)
