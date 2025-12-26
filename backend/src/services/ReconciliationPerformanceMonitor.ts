@@ -61,7 +61,7 @@ export class ReconciliationPerformanceMonitor {
       duration,
       timestamp: Date.now(),
       success,
-      metadata
+      metadata,
     }
 
     this.metrics.push(metric)
@@ -72,12 +72,13 @@ export class ReconciliationPerformanceMonitor {
     }
 
     // Log slow operations
-    if (duration > 5000) { // 5 seconds
+    if (duration > 5000) {
+      // 5 seconds
       logger.warn('Slow operation detected', {
         operationName,
         duration,
         success,
-        metadata
+        metadata,
       })
     }
   }
@@ -109,7 +110,10 @@ export class ReconciliationPerformanceMonitor {
   /**
    * Get performance statistics for an operation
    */
-  getOperationStats(operationName: string, timeWindowMs?: number): PerformanceStats | null {
+  getOperationStats(
+    operationName: string,
+    timeWindowMs?: number
+  ): PerformanceStats | null {
     const cutoffTime = timeWindowMs ? Date.now() - timeWindowMs : 0
     const operationMetrics = this.metrics.filter(
       m => m.operationName === operationName && m.timestamp >= cutoffTime
@@ -119,23 +123,34 @@ export class ReconciliationPerformanceMonitor {
       return null
     }
 
-    const durations = operationMetrics.map(m => m.duration).sort((a, b) => a - b)
+    const durations = operationMetrics
+      .map(m => m.duration)
+      .sort((a, b) => a - b)
     const successfulCalls = operationMetrics.filter(m => m.success).length
     const totalCalls = operationMetrics.length
-    const timeSpanMs = Math.max(1, operationMetrics[operationMetrics.length - 1].timestamp - operationMetrics[0].timestamp)
+    const timeSpanMs = Math.max(
+      1,
+      operationMetrics[operationMetrics.length - 1].timestamp -
+        operationMetrics[0].timestamp
+    )
 
     return {
       operationName,
       totalCalls,
       successfulCalls,
       failedCalls: totalCalls - successfulCalls,
-      averageDuration: durations.reduce((sum, d) => sum + d, 0) / durations.length,
+      averageDuration:
+        durations.reduce((sum, d) => sum + d, 0) / durations.length,
       minDuration: durations[0],
       maxDuration: durations[durations.length - 1],
-      p95Duration: durations[Math.floor(durations.length * 0.95)] || durations[durations.length - 1],
-      p99Duration: durations[Math.floor(durations.length * 0.99)] || durations[durations.length - 1],
+      p95Duration:
+        durations[Math.floor(durations.length * 0.95)] ||
+        durations[durations.length - 1],
+      p99Duration:
+        durations[Math.floor(durations.length * 0.99)] ||
+        durations[durations.length - 1],
       successRate: successfulCalls / totalCalls,
-      callsPerSecond: (totalCalls / timeSpanMs) * 1000
+      callsPerSecond: (totalCalls / timeSpanMs) * 1000,
     }
   }
 
@@ -171,13 +186,15 @@ export class ReconciliationPerformanceMonitor {
 
     for (const stats of allStats) {
       // Check for slow operations
-      if (stats.averageDuration > 10000) { // 10 seconds
+      if (stats.averageDuration > 10000) {
+        // 10 seconds
         bottlenecks.push({
           operationName: stats.operationName,
           issue: `High average duration: ${stats.averageDuration.toFixed(0)}ms`,
           severity: stats.averageDuration > 30000 ? 'high' : 'medium',
-          recommendation: 'Consider optimizing database queries or adding caching',
-          stats
+          recommendation:
+            'Consider optimizing database queries or adding caching',
+          stats,
         })
       }
 
@@ -188,7 +205,7 @@ export class ReconciliationPerformanceMonitor {
           issue: `Low success rate: ${(stats.successRate * 100).toFixed(1)}%`,
           severity: stats.successRate < 0.8 ? 'high' : 'medium',
           recommendation: 'Investigate error causes and improve error handling',
-          stats
+          stats,
         })
       }
 
@@ -198,8 +215,9 @@ export class ReconciliationPerformanceMonitor {
           operationName: stats.operationName,
           issue: `High P99 latency: ${stats.p99Duration.toFixed(0)}ms vs avg ${stats.averageDuration.toFixed(0)}ms`,
           severity: 'medium',
-          recommendation: 'Investigate outlier cases and add timeout protection',
-          stats
+          recommendation:
+            'Investigate outlier cases and add timeout protection',
+          stats,
         })
       }
 
@@ -210,7 +228,7 @@ export class ReconciliationPerformanceMonitor {
           issue: `Low throughput: ${stats.callsPerSecond.toFixed(2)} calls/sec`,
           severity: 'low',
           recommendation: 'Consider batch processing or parallel execution',
-          stats
+          stats,
         })
       }
     }
@@ -237,30 +255,32 @@ export class ReconciliationPerformanceMonitor {
     try {
       const memoryUsage = process.memoryUsage()
       const cpuUsage = process.cpuUsage()
-      
+
       const resourceMetric: SystemResourceMetrics = {
         timestamp: Date.now(),
         memoryUsageMB: memoryUsage.heapUsed / 1024 / 1024,
         cpuUsagePercent: (cpuUsage.user + cpuUsage.system) / 1000000, // Convert to percentage
         activeConnections: 0, // Would need to be implemented based on actual connection tracking
         cacheHitRate: 0, // Would need to be provided by cache service
-        diskIOPS: 0 // Would need OS-level monitoring
+        diskIOPS: 0, // Would need OS-level monitoring
       }
 
       this.resourceMetrics.push(resourceMetric)
 
       // Maintain history limit
       if (this.resourceMetrics.length > this.maxResourceHistory) {
-        this.resourceMetrics = this.resourceMetrics.slice(-this.maxResourceHistory)
+        this.resourceMetrics = this.resourceMetrics.slice(
+          -this.maxResourceHistory
+        )
       }
 
       // Log resource warnings
-      if (resourceMetric.memoryUsageMB > 1024) { // 1GB
+      if (resourceMetric.memoryUsageMB > 1024) {
+        // 1GB
         logger.warn('High memory usage detected', {
-          memoryUsageMB: resourceMetric.memoryUsageMB
+          memoryUsageMB: resourceMetric.memoryUsageMB,
         })
       }
-
     } catch (error) {
       logger.error('Failed to record resource metrics', { error })
     }
@@ -285,14 +305,14 @@ export class ReconciliationPerformanceMonitor {
     dataPoints: number
   } {
     const metrics = this.getResourceMetrics(timeWindowMs)
-    
+
     if (metrics.length === 0) {
       return {
         averageMemoryMB: 0,
         peakMemoryMB: 0,
         averageCpuPercent: 0,
         peakCpuPercent: 0,
-        dataPoints: 0
+        dataPoints: 0,
       }
     }
 
@@ -300,11 +320,13 @@ export class ReconciliationPerformanceMonitor {
     const cpuValues = metrics.map(m => m.cpuUsagePercent)
 
     return {
-      averageMemoryMB: memoryValues.reduce((sum, val) => sum + val, 0) / memoryValues.length,
+      averageMemoryMB:
+        memoryValues.reduce((sum, val) => sum + val, 0) / memoryValues.length,
       peakMemoryMB: Math.max(...memoryValues),
-      averageCpuPercent: cpuValues.reduce((sum, val) => sum + val, 0) / cpuValues.length,
+      averageCpuPercent:
+        cpuValues.reduce((sum, val) => sum + val, 0) / cpuValues.length,
       peakCpuPercent: Math.max(...cpuValues),
-      dataPoints: metrics.length
+      dataPoints: metrics.length,
     }
   }
 
@@ -343,12 +365,16 @@ export class ReconciliationPerformanceMonitor {
 
     // Calculate summary statistics
     const totalOperations = recentMetrics.length
-    const uniqueOperations = new Set(recentMetrics.map(m => m.operationName)).size
+    const uniqueOperations = new Set(recentMetrics.map(m => m.operationName))
+      .size
     const successfulOperations = recentMetrics.filter(m => m.success).length
-    const overallSuccessRate = totalOperations > 0 ? successfulOperations / totalOperations : 0
-    const averageResponseTime = totalOperations > 0 
-      ? recentMetrics.reduce((sum, m) => sum + m.duration, 0) / totalOperations 
-      : 0
+    const overallSuccessRate =
+      totalOperations > 0 ? successfulOperations / totalOperations : 0
+    const averageResponseTime =
+      totalOperations > 0
+        ? recentMetrics.reduce((sum, m) => sum + m.duration, 0) /
+          totalOperations
+        : 0
 
     // Get top operations by call count
     const topOperations = allStats
@@ -357,21 +383,29 @@ export class ReconciliationPerformanceMonitor {
 
     // Generate recommendations
     const recommendations: string[] = []
-    
+
     if (overallSuccessRate < 0.95) {
-      recommendations.push('Overall success rate is below 95%. Review error handling and retry mechanisms.')
+      recommendations.push(
+        'Overall success rate is below 95%. Review error handling and retry mechanisms.'
+      )
     }
-    
+
     if (averageResponseTime > 5000) {
-      recommendations.push('Average response time is high. Consider implementing caching and query optimization.')
+      recommendations.push(
+        'Average response time is high. Consider implementing caching and query optimization.'
+      )
     }
-    
+
     if (resourceSummary.peakMemoryMB > 1024) {
-      recommendations.push('Peak memory usage is high. Consider implementing memory-efficient data structures and garbage collection tuning.')
+      recommendations.push(
+        'Peak memory usage is high. Consider implementing memory-efficient data structures and garbage collection tuning.'
+      )
     }
-    
+
     if (bottlenecks.filter(b => b.severity === 'high').length > 0) {
-      recommendations.push('High-severity performance bottlenecks detected. Prioritize optimization of slow operations.')
+      recommendations.push(
+        'High-severity performance bottlenecks detected. Prioritize optimization of slow operations.'
+      )
     }
 
     return {
@@ -379,12 +413,12 @@ export class ReconciliationPerformanceMonitor {
         totalOperations,
         uniqueOperations,
         overallSuccessRate,
-        averageResponseTime
+        averageResponseTime,
       },
       topOperations,
       bottlenecks,
       resourceSummary,
-      recommendations
+      recommendations,
     }
   }
 
@@ -405,7 +439,7 @@ export class ReconciliationPerformanceMonitor {
       clearInterval(this.monitoringInterval)
       this.monitoringInterval = null
     }
-    
+
     logger.info('Performance monitoring shutdown')
   }
 }

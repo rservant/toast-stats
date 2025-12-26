@@ -1,5 +1,8 @@
 import CacheIntegrationService from './cacheIntegrationService.js'
-import { saveMonthlyAssessment, getMonthlyAssessment } from '../storage/assessmentStore.js'
+import {
+  saveMonthlyAssessment,
+  getMonthlyAssessment,
+} from '../storage/assessmentStore.js'
 import { calculateAllGoals } from './assessmentCalculator.js'
 import { loadConfig } from './configService.js'
 import { CalculatedAssessment } from '../types/assessment.js'
@@ -28,19 +31,30 @@ export class AssessmentGenerationService {
     // Determine cache date
     let cacheDate = params.cache_date
     if (!cacheDate) {
-      const latest = await this.cacheService.getLatestCacheDate(String(district_number))
+      const latest = await this.cacheService.getLatestCacheDate(
+        String(district_number)
+      )
       if (!latest) throw new Error('No cache data available for district')
       cacheDate = latest
     }
 
     // Ensure assessment does not already exist
-    const existing = await getMonthlyAssessment(district_number, program_year, month)
+    const existing = await getMonthlyAssessment(
+      district_number,
+      program_year,
+      month
+    )
     if (existing) {
-      throw new Error('Assessment already exists for district/programYear/month - delete first to regenerate')
+      throw new Error(
+        'Assessment already exists for district/programYear/month - delete first to regenerate'
+      )
     }
 
     // Pull data from cache
-    const complete = await this.cacheService.getCompleteAssessmentDataByDate(String(district_number), cacheDate)
+    const complete = await this.cacheService.getCompleteAssessmentDataByDate(
+      String(district_number),
+      cacheDate
+    )
     if (!complete) {
       throw new Error('Unable to load cache data for requested date')
     }
@@ -48,7 +62,10 @@ export class AssessmentGenerationService {
     // Build assessment object - follow existing types while adding generation metadata
     const now = new Date().toISOString()
 
-    const assessment: CalculatedAssessment & { generated_at: string; generated_from_cache_date: string } = {
+    const assessment: CalculatedAssessment & {
+      generated_at: string
+      generated_from_cache_date: string
+    } = {
       district_number,
       program_year,
       month,
@@ -62,28 +79,46 @@ export class AssessmentGenerationService {
       data_sources: {
         membership_payments: {
           source: 'DistrictBackfillService',
-          cache_file: complete.cache_file ?? null
+          cache_file: complete.cache_file ?? null,
         },
         paid_clubs: {
           source: 'DistrictBackfillService',
-          cache_file: complete.cache_file ?? null
+          cache_file: complete.cache_file ?? null,
         },
         distinguished_clubs: {
           source: 'DistrictBackfillService',
-          cache_file: complete.cache_file ?? null
+          cache_file: complete.cache_file ?? null,
         },
         csp_submissions: {
           source: 'DistrictBackfillService (Club.aspx CSV)',
-          csv_row_count: complete.csv_row_count ?? 0
-        }
+          csv_row_count: complete.csv_row_count ?? 0,
+        },
       },
       // Initialize goal statuses - will be calculated below
-      goal_1_status: { goal_number: 1, status: 'Pending Data', actual: 0, target: 0, delta: 0 },
-      goal_2_status: { goal_number: 2, status: 'Pending Data', actual: 0, target: 0, delta: 0 },
-      goal_3_status: { goal_number: 3, status: 'Pending Data', actual: 0, target: 0, delta: 0 },
+      goal_1_status: {
+        goal_number: 1,
+        status: 'Pending Data',
+        actual: 0,
+        target: 0,
+        delta: 0,
+      },
+      goal_2_status: {
+        goal_number: 2,
+        status: 'Pending Data',
+        actual: 0,
+        target: 0,
+        delta: 0,
+      },
+      goal_3_status: {
+        goal_number: 3,
+        status: 'Pending Data',
+        actual: 0,
+        target: 0,
+        delta: 0,
+      },
       read_only: true,
       created_at: now,
-      updated_at: now
+      updated_at: now,
     }
 
     // Calculate goals using assessmentCalculator
@@ -97,7 +132,10 @@ export class AssessmentGenerationService {
       }
     } catch (err) {
       // If config loading fails, log but continue - goals will be empty
-      console.warn('Failed to calculate goals during assessment generation:', err)
+      console.warn(
+        'Failed to calculate goals during assessment generation:',
+        err
+      )
     }
 
     await saveMonthlyAssessment(assessment)

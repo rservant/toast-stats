@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../services/api';
+import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '../services/api'
 import type {
   DailyReportsResponse,
   DailyReportDetailResponse,
-} from '../types/districts';
+} from '../types/districts'
 
 /**
  * React Query hook to fetch daily reports for a date range
@@ -17,21 +17,21 @@ export const useDailyReports = (
     queryKey: ['dailyReports', districtId, startDate, endDate],
     queryFn: async () => {
       if (!districtId) {
-        throw new Error('District ID is required');
+        throw new Error('District ID is required')
       }
       const response = await apiClient.get<DailyReportsResponse>(
         `/districts/${districtId}/daily-reports`,
         {
           params: { startDate, endDate },
         }
-      );
-      return response.data;
+      )
+      return response.data
     },
     enabled: !!districtId && !!startDate && !!endDate,
     staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
     retry: 2,
-  });
-};
+  })
+}
 
 /**
  * React Query hook to fetch detailed daily report for a specific date
@@ -44,15 +44,15 @@ export const useDailyReportDetail = (
     queryKey: ['dailyReportDetail', districtId, date],
     queryFn: async () => {
       if (!districtId || !date) {
-        throw new Error('District ID and date are required');
+        throw new Error('District ID and date are required')
       }
       const response = await apiClient.get<DailyReportDetailResponse>(
         `/districts/${districtId}/daily-reports/${date}`
-      );
-      return response.data;
+      )
+      return response.data
     },
     enabled: !!districtId && !!date,
     staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
     retry: 2,
-  });
-};
+  })
+}

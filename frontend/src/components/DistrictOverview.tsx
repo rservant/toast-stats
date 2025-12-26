@@ -1,18 +1,21 @@
-import React from 'react';
-import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics';
-import { EnhancedExportButton } from './EnhancedExportButton';
-import { exportDistrictAnalytics } from '../utils/csvExport';
-import { LoadingSkeleton } from './LoadingSkeleton';
-import { ErrorDisplay, EmptyState } from './ErrorDisplay';
-import { Tooltip, InfoIcon } from './Tooltip';
-import { DataStatusIndicator } from './DataStatusIndicator';
-import { useReconciliationStatus, useCurrentReconciliationMonth } from '../hooks/useReconciliationStatus';
+import React from 'react'
+import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
+import { EnhancedExportButton } from './EnhancedExportButton'
+import { exportDistrictAnalytics } from '../utils/csvExport'
+import { LoadingSkeleton } from './LoadingSkeleton'
+import { ErrorDisplay, EmptyState } from './ErrorDisplay'
+import { Tooltip, InfoIcon } from './Tooltip'
+import { DataStatusIndicator } from './DataStatusIndicator'
+import {
+  useReconciliationStatus,
+  useCurrentReconciliationMonth,
+} from '../hooks/useReconciliationStatus'
 
 interface DistrictOverviewProps {
-  districtId: string;
-  districtName: string;
-  selectedDate?: string;
-  programYearStartDate?: string;
+  districtId: string
+  districtName: string
+  selectedDate?: string
+  programYearStartDate?: string
 }
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
@@ -22,43 +25,49 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   programYearStartDate,
 }) => {
   // Fetch analytics with program year boundaries
-  const { data: analytics, isLoading: isLoadingAnalytics, error } = useDistrictAnalytics(
-    districtId,
-    programYearStartDate,
-    selectedDate
-  );
+  const {
+    data: analytics,
+    isLoading: isLoadingAnalytics,
+    error,
+  } = useDistrictAnalytics(districtId, programYearStartDate, selectedDate)
 
   // Get current reconciliation month and status
-  const currentMonth = useCurrentReconciliationMonth();
-  const { data: reconciliationStatus } = useReconciliationStatus(districtId, currentMonth);
+  const currentMonth = useCurrentReconciliationMonth()
+  const { data: reconciliationStatus } = useReconciliationStatus(
+    districtId,
+    currentMonth
+  )
 
-  const isLoading = isLoadingAnalytics;
+  const isLoading = isLoadingAnalytics
 
   // Format date for display
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr)
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-    });
-  };
+    })
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{districtName} Overview</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {districtName} Overview
+          </h2>
           {analytics?.dateRange && (
             <p className="text-sm text-gray-600 mt-1">
-              Data range: {formatDate(analytics.dateRange.start)} - {formatDate(analytics.dateRange.end)}
+              Data range: {formatDate(analytics.dateRange.start)} -{' '}
+              {formatDate(analytics.dateRange.end)}
             </p>
           )}
-          
+
           {/* Reconciliation Status Indicator */}
           {reconciliationStatus?.dataStatus && (
             <div className="mt-2">
-              <DataStatusIndicator 
+              <DataStatusIndicator
                 dataStatus={reconciliationStatus.dataStatus}
                 showDetails={true}
               />
@@ -70,12 +79,14 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
         {analytics && (
           <div className="flex flex-col gap-2">
             <EnhancedExportButton
-              onExport={(metadata) => exportDistrictAnalytics(
-                districtId,
-                analytics.dateRange.start,
-                analytics.dateRange.end,
-                metadata
-              )}
+              onExport={metadata =>
+                exportDistrictAnalytics(
+                  districtId,
+                  analytics.dateRange.start,
+                  analytics.dateRange.end,
+                  metadata
+                )
+              }
               dataStatus={reconciliationStatus?.dataStatus}
               label="Export Analytics"
               disabled={!analytics}
@@ -114,9 +125,11 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             label: 'Initiate Backfill',
             onClick: () => {
               // Trigger backfill button - this will be handled by the parent component
-              const backfillButton = document.querySelector('[data-backfill-trigger]') as HTMLButtonElement;
+              const backfillButton = document.querySelector(
+                '[data-backfill-trigger]'
+              ) as HTMLButtonElement
               if (backfillButton) {
-                backfillButton.click();
+                backfillButton.click()
               }
             },
           }}
@@ -131,7 +144,9 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-blue-700">Total Clubs</p>
+                  <p className="text-sm font-medium text-blue-700">
+                    Total Clubs
+                  </p>
                   <Tooltip content="Total number of clubs in the district, categorized by health status">
                     <InfoIcon />
                   </Tooltip>
@@ -141,8 +156,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 </p>
               </div>
               <div className="bg-blue-200 rounded-full p-3">
-                <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                <svg
+                  className="w-6 h-6 text-blue-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
               </div>
             </div>
@@ -168,7 +193,9 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-green-700">Total Membership</p>
+                  <p className="text-sm font-medium text-green-700">
+                    Total Membership
+                  </p>
                   <Tooltip content="Sum of active members across all clubs in the district">
                     <InfoIcon />
                   </Tooltip>
@@ -178,18 +205,31 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 </p>
               </div>
               <div className="bg-green-200 rounded-full p-3">
-                <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                <svg
+                  className="w-6 h-6 text-green-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
                 </svg>
               </div>
             </div>
             <div className="mt-2">
-              <span className={`text-xs px-2 py-1 rounded ${
-                analytics.membershipChange >= 0
-                  ? 'text-green-700 bg-green-100'
-                  : 'text-red-700 bg-red-100'
-              }`}>
-                {analytics.membershipChange >= 0 ? '+' : ''}{analytics.membershipChange} members
+              <span
+                className={`text-xs px-2 py-1 rounded ${
+                  analytics.membershipChange >= 0
+                    ? 'text-green-700 bg-green-100'
+                    : 'text-red-700 bg-red-100'
+                }`}
+              >
+                {analytics.membershipChange >= 0 ? '+' : ''}
+                {analytics.membershipChange} members
               </span>
             </div>
           </div>
@@ -199,7 +239,9 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-purple-700">Distinguished Clubs</p>
+                  <p className="text-sm font-medium text-purple-700">
+                    Distinguished Clubs
+                  </p>
                   <Tooltip content="Clubs achieving DCP goals + membership requirements (valid from April 1 onwards): Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)">
                     <InfoIcon />
                   </Tooltip>
@@ -209,8 +251,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 </p>
               </div>
               <div className="bg-purple-200 rounded-full p-3">
-                <svg className="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                <svg
+                  className="w-6 h-6 text-purple-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
                 </svg>
               </div>
             </div>
@@ -243,7 +295,9 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-amber-700">Projected Year-End</p>
+                  <p className="text-sm font-medium text-amber-700">
+                    Projected Year-End
+                  </p>
                   <Tooltip content="Estimated number of distinguished clubs by end of program year based on current trends">
                     <InfoIcon />
                   </Tooltip>
@@ -253,8 +307,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 </p>
               </div>
               <div className="bg-amber-200 rounded-full p-3">
-                <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                <svg
+                  className="w-6 h-6 text-amber-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                  />
                 </svg>
               </div>
             </div>
@@ -267,5 +331,5 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}

@@ -6,7 +6,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
 import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
-import { ReconciliationBatchProcessor, type BatchJob } from '../ReconciliationBatchProcessor.js'
+import {
+  ReconciliationBatchProcessor,
+  type BatchJob,
+} from '../ReconciliationBatchProcessor.js'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
 import type { ReconciliationJob } from '../../types/reconciliation.js'
 import { createTestReconciliationJob } from '../../utils/test-helpers.js'
@@ -17,8 +20,8 @@ vi.mock('../../utils/logger.js', () => ({
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 describe('ReconciliationStorageOptimizer', () => {
@@ -29,7 +32,7 @@ describe('ReconciliationStorageOptimizer', () => {
     optimizer = new ReconciliationStorageOptimizer(testStorageDir, {
       enableInMemoryCache: true,
       cacheMaxSize: 100,
-      batchSize: 5
+      batchSize: 5,
     })
   })
 
@@ -49,13 +52,13 @@ describe('ReconciliationStorageOptimizer', () => {
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
-        triggeredBy: 'manual'
-      }
+        triggeredBy: 'manual',
+      },
     })
 
     // First save should write to storage and cache
     await optimizer.saveJob(job)
-    
+
     // First retrieval should hit cache
     const startTime = Date.now()
     const retrievedJob = await optimizer.getJob(job.id)
@@ -68,22 +71,24 @@ describe('ReconciliationStorageOptimizer', () => {
 
   it('should batch multiple save operations for better performance', async () => {
     const jobs: ReconciliationJob[] = []
-    
+
     // Create multiple jobs
     for (let i = 0; i < 10; i++) {
-      jobs.push(createTestReconciliationJob({
-        id: `batch-job-${i}`,
-        districtId: `D${i}`,
-        targetMonth: '2025-01',
-        status: 'active',
-        startDate: new Date(),
-        maxEndDate: new Date(Date.now() + 86400000),
-        metadata: {
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          triggeredBy: 'automatic'
-        }
-      }))
+      jobs.push(
+        createTestReconciliationJob({
+          id: `batch-job-${i}`,
+          districtId: `D${i}`,
+          targetMonth: '2025-01',
+          status: 'active',
+          startDate: new Date(),
+          maxEndDate: new Date(Date.now() + 86400000),
+          metadata: {
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            triggeredBy: 'automatic',
+          },
+        })
+      )
     }
 
     // Save all jobs (should be batched)
@@ -104,19 +109,21 @@ describe('ReconciliationStorageOptimizer', () => {
 
   it('should efficiently bulk load multiple jobs', async () => {
     const jobIds = ['bulk-1', 'bulk-2', 'bulk-3', 'bulk-4', 'bulk-5']
-    const jobs: ReconciliationJob[] = jobIds.map(id => createTestReconciliationJob({
-      id,
-      districtId: 'D1',
-      targetMonth: '2025-01',
-      status: 'active',
-      startDate: new Date(),
-      maxEndDate: new Date(Date.now() + 86400000),
-      metadata: {
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        triggeredBy: 'automatic'
-      }
-    }))
+    const jobs: ReconciliationJob[] = jobIds.map(id =>
+      createTestReconciliationJob({
+        id,
+        districtId: 'D1',
+        targetMonth: '2025-01',
+        status: 'active',
+        startDate: new Date(),
+        maxEndDate: new Date(Date.now() + 86400000),
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          triggeredBy: 'automatic',
+        },
+      })
+    )
 
     // Save jobs first
     await Promise.all(jobs.map(job => optimizer.saveJob(job)))
@@ -145,7 +152,7 @@ describe('ReconciliationCacheService', () => {
     cacheService = new ReconciliationCacheService({
       maxSize: 50,
       ttlMs: 60000, // 1 minute
-      enablePrefetch: true
+      enablePrefetch: true,
     })
   })
 
@@ -165,8 +172,8 @@ describe('ReconciliationCacheService', () => {
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
-        triggeredBy: 'manual'
-      }
+        triggeredBy: 'manual',
+      },
     })
 
     // Cache the job
@@ -178,20 +185,22 @@ describe('ReconciliationCacheService', () => {
       const startTime = Date.now()
       const cachedJob = cacheService.getJob(job.id)
       const retrievalTime = Date.now() - startTime
-      
+
       retrievalTimes.push(retrievalTime)
       expect(cachedJob).toBeDefined()
       expect(cachedJob!.id).toBe(job.id)
     }
 
     // All retrievals should be very fast
-    const averageTime = retrievalTimes.reduce((sum, time) => sum + time, 0) / retrievalTimes.length
+    const averageTime =
+      retrievalTimes.reduce((sum, time) => sum + time, 0) /
+      retrievalTimes.length
     expect(averageTime).toBeLessThan(1) // Sub-millisecond average
   })
 
   it('should maintain high cache hit rate under load', async () => {
     const jobs: ReconciliationJob[] = []
-    
+
     // Create and cache multiple jobs
     for (let i = 0; i < 30; i++) {
       const job: ReconciliationJob = createTestReconciliationJob({
@@ -204,10 +213,10 @@ describe('ReconciliationCacheService', () => {
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
-      
+
       jobs.push(job)
       cacheService.setJob(job.id, job)
     }
@@ -215,7 +224,7 @@ describe('ReconciliationCacheService', () => {
     // Simulate random access pattern
     let hits = 0
     const totalAccesses = 100
-    
+
     for (let i = 0; i < totalAccesses; i++) {
       const randomJobId = jobs[Math.floor(Math.random() * jobs.length)].id
       const cachedJob = cacheService.getJob(randomJobId)
@@ -232,7 +241,7 @@ describe('ReconciliationCacheService', () => {
     const cacheSize = 5
     const smallCache = new ReconciliationCacheService({
       maxSize: cacheSize,
-      ttlMs: 60000
+      ttlMs: 60000,
     })
 
     try {
@@ -248,12 +257,12 @@ describe('ReconciliationCacheService', () => {
           metadata: {
             createdAt: new Date(),
             updatedAt: new Date(),
-            triggeredBy: 'automatic'
-          }
+            triggeredBy: 'automatic',
+          },
         })
-        
+
         smallCache.setJob(job.id, job)
-        
+
         // Access some items after adding them to make them recently used
         if (i === 2 || i === 4) {
           smallCache.getJob(job.id)
@@ -262,12 +271,13 @@ describe('ReconciliationCacheService', () => {
 
       // Cache should not exceed max size due to eviction
       // Check job cache size specifically since we're only adding jobs
-      const jobCacheSize = (smallCache as unknown as { jobCache: { size: number } }).jobCache.size
+      const jobCacheSize = (
+        smallCache as unknown as { jobCache: { size: number } }
+      ).jobCache.size
       expect(jobCacheSize).toBeLessThanOrEqual(cacheSize)
-      
+
       // The most recently added item should still be in cache
       expect(smallCache.getJob(`eviction-test-${cacheSize}`)).toBeDefined()
-      
     } finally {
       smallCache.shutdown()
     }
@@ -286,7 +296,7 @@ describe('ReconciliationBatchProcessor', () => {
         maxConcurrentJobs: 3,
         batchSize: 5,
         retryAttempts: 2,
-        timeoutMs: 10000
+        timeoutMs: 10000,
       }
     )
   })
@@ -297,13 +307,13 @@ describe('ReconciliationBatchProcessor', () => {
 
   it('should process multiple districts in parallel', async () => {
     const batchJobs: BatchJob[] = []
-    
+
     // Create batch jobs for multiple districts
     for (let i = 0; i < 6; i++) {
       batchJobs.push({
         districtId: `D${i}`,
         targetMonth: '2025-01',
-        priority: Math.random() * 10
+        priority: Math.random() * 10,
       })
     }
 
@@ -313,7 +323,7 @@ describe('ReconciliationBatchProcessor', () => {
 
     expect(results).toHaveLength(batchJobs.length)
     expect(processingTime).toBeLessThan(30000) // Should complete within 30 seconds
-    
+
     // Check that jobs were processed
     const successfulJobs = results.filter(r => r.success)
     expect(successfulJobs.length).toBeGreaterThan(0)
@@ -321,13 +331,13 @@ describe('ReconciliationBatchProcessor', () => {
 
   it('should handle batch processing progress tracking', async () => {
     const batchJobs: BatchJob[] = []
-    
+
     // Create a smaller batch for progress tracking
     for (let i = 0; i < 3; i++) {
       batchJobs.push({
         districtId: `Progress-D${i}`,
         targetMonth: '2025-01',
-        priority: 5
+        priority: 5,
       })
     }
 
@@ -336,10 +346,12 @@ describe('ReconciliationBatchProcessor', () => {
 
     // Check progress during processing
     await new Promise(resolve => setTimeout(resolve, 100)) // Small delay
-    
+
     const progress = batchProcessor.getProgress()
     expect(progress.totalJobs).toBe(batchJobs.length)
-    expect(progress.completedJobs + progress.activeJobs + progress.queuedJobs).toBe(batchJobs.length)
+    expect(
+      progress.completedJobs + progress.activeJobs + progress.queuedJobs
+    ).toBe(batchJobs.length)
 
     // Wait for completion
     const results = await processingPromise
@@ -351,12 +363,12 @@ describe('ReconciliationBatchProcessor', () => {
       {
         districtId: 'Stats-D1',
         targetMonth: '2025-01',
-        priority: 5
-      }
+        priority: 5,
+      },
     ]
 
     await batchProcessor.processBatch(batchJobs)
-    
+
     const stats = batchProcessor.getStatistics()
     expect(stats.totalProcessed).toBe(1)
     expect(stats.successRate).toBeGreaterThanOrEqual(0)
@@ -378,7 +390,7 @@ describe('ReconciliationPerformanceMonitor', () => {
 
   it('should track operation performance metrics', async () => {
     const operationName = 'test-operation'
-    
+
     // Record some metrics
     monitor.recordMetric(operationName, 100, true)
     monitor.recordMetric(operationName, 150, true)
@@ -395,14 +407,14 @@ describe('ReconciliationPerformanceMonitor', () => {
 
   it('should time operations automatically', async () => {
     const operationName = 'timed-operation'
-    
+
     const result = await monitor.timeOperation(operationName, async () => {
       await new Promise(resolve => setTimeout(resolve, 50))
       return 'success'
     })
 
     expect(result).toBe('success')
-    
+
     const stats = monitor.getOperationStats(operationName)
     expect(stats).toBeDefined()
     expect(stats!.totalCalls).toBe(1)
@@ -414,15 +426,17 @@ describe('ReconciliationPerformanceMonitor', () => {
     // Record metrics for slow operation
     monitor.recordMetric('slow-operation', 15000, true) // 15 seconds
     monitor.recordMetric('slow-operation', 20000, true) // 20 seconds
-    
+
     // Record metrics for fast operation
     monitor.recordMetric('fast-operation', 100, true)
     monitor.recordMetric('fast-operation', 150, true)
 
     const bottlenecks = monitor.getBottlenecks()
     expect(bottlenecks.length).toBeGreaterThan(0)
-    
-    const slowBottleneck = bottlenecks.find(b => b.operationName === 'slow-operation')
+
+    const slowBottleneck = bottlenecks.find(
+      b => b.operationName === 'slow-operation'
+    )
     expect(slowBottleneck).toBeDefined()
     expect(['high', 'medium']).toContain(slowBottleneck!.severity) // Accept either high or medium severity
   })
@@ -435,7 +449,7 @@ describe('ReconciliationPerformanceMonitor', () => {
     monitor.recordMetric('operation-2', 600, false)
 
     const report = monitor.generatePerformanceReport()
-    
+
     expect(report.summary.totalOperations).toBe(4)
     expect(report.summary.uniqueOperations).toBe(2)
     expect(report.topOperations.length).toBeGreaterThan(0)

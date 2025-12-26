@@ -1,71 +1,111 @@
-import React, { useState, useMemo } from 'react';
-import { ClubTrend } from '../hooks/useDistrictAnalytics';
-import { ExportButton } from './ExportButton';
-import { exportClubPerformance } from '../utils/csvExport';
-import { LoadingSkeleton } from './LoadingSkeleton';
-import { EmptyState } from './ErrorDisplay';
-import { useDebounce } from '../hooks/useDebounce';
-import { usePagination } from '../hooks/usePagination';
-import { Pagination } from './Pagination';
+import React, { useState, useMemo } from 'react'
+import { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { ExportButton } from './ExportButton'
+import { exportClubPerformance } from '../utils/csvExport'
+import { LoadingSkeleton } from './LoadingSkeleton'
+import { EmptyState } from './ErrorDisplay'
+import { useDebounce } from '../hooks/useDebounce'
+import { usePagination } from '../hooks/usePagination'
+import { Pagination } from './Pagination'
 
 /**
  * Props for the ClubsTable component
  */
 interface ClubsTableProps {
   /** Array of club trends to display in the table */
-  clubs: ClubTrend[];
+  clubs: ClubTrend[]
   /** District ID for export functionality */
-  districtId: string;
+  districtId: string
   /** Whether the data is currently loading */
-  isLoading?: boolean;
+  isLoading?: boolean
   /** Optional callback when a club row is clicked */
-  onClubClick?: (club: ClubTrend) => void;
+  onClubClick?: (club: ClubTrend) => void
 }
 
 /**
  * Sortable field types for the clubs table
  */
-type SortField = 'name' | 'membership' | 'dcpGoals' | 'status' | 'division' | 'area';
+type SortField =
+  | 'name'
+  | 'membership'
+  | 'dcpGoals'
+  | 'status'
+  | 'division'
+  | 'area'
 
 /**
  * Sort direction types
  */
-type SortDirection = 'asc' | 'desc';
+type SortDirection = 'asc' | 'desc'
 
 /**
  * SortIcon Component - displays sort indicators for table headers
  */
 interface SortIconProps {
-  field: SortField;
-  currentSortField: SortField | null;
-  sortDirection: SortDirection;
+  field: SortField
+  currentSortField: SortField | null
+  sortDirection: SortDirection
 }
 
-const SortIcon: React.FC<SortIconProps> = ({ field, currentSortField, sortDirection }) => {
+const SortIcon: React.FC<SortIconProps> = ({
+  field,
+  currentSortField,
+  sortDirection,
+}) => {
   if (currentSortField !== field) {
     return (
-      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      <svg
+        className="w-4 h-4 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+        />
       </svg>
-    );
+    )
   }
   return sortDirection === 'asc' ? (
-    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    <svg
+      className="w-4 h-4 text-blue-600"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 15l7-7 7 7"
+      />
     </svg>
   ) : (
-    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    <svg
+      className="w-4 h-4 text-blue-600"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 9l-7 7-7-7"
+      />
     </svg>
-  );
-};
+  )
+}
 
 /**
  * ClubsTable Component
- * 
+ *
  * Displays a comprehensive, sortable, and filterable table of all clubs in a district.
  * The table provides rich functionality for analyzing club performance at a glance.
- * 
+ *
  * Features:
  * - Real-time search across club names, divisions, and areas (debounced for performance)
  * - Status filtering (all, healthy, at-risk, critical)
@@ -75,12 +115,12 @@ const SortIcon: React.FC<SortIconProps> = ({ field, currentSortField, sortDirect
  * - CSV export functionality
  * - Click-through to detailed club view
  * - Loading skeletons and empty states
- * 
+ *
  * Performance Optimizations:
  * - Debounced search (300ms) to reduce re-renders
  * - Memoized filtering and sorting
  * - Pagination to limit DOM nodes
- * 
+ *
  * @component
  * @example
  * ```tsx
@@ -98,129 +138,131 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   isLoading = false,
   onClubClick,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'healthy' | 'at-risk' | 'critical'>('all');
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortField, setSortField] = useState<SortField>('name')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'healthy' | 'at-risk' | 'critical'
+  >('all')
 
   // Debounce search term to avoid excessive filtering
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300)
 
   // Get status badge styling
   const getStatusBadge = (status: 'healthy' | 'at-risk' | 'critical') => {
     switch (status) {
       case 'critical':
-        return 'bg-red-100 text-red-800 border-red-300';
+        return 'bg-red-100 text-red-800 border-red-300'
       case 'at-risk':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       default:
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-green-100 text-green-800 border-green-300'
     }
-  };
+  }
 
   // Get row background color based on status
   const getRowColor = (status: 'healthy' | 'at-risk' | 'critical') => {
     switch (status) {
       case 'critical':
-        return 'bg-red-50 hover:bg-red-100';
+        return 'bg-red-50 hover:bg-red-100'
       case 'at-risk':
-        return 'bg-yellow-50 hover:bg-yellow-100';
+        return 'bg-yellow-50 hover:bg-yellow-100'
       default:
-        return 'bg-white hover:bg-gray-50';
+        return 'bg-white hover:bg-gray-50'
     }
-  };
+  }
 
   // Get latest membership count
   const getLatestMembership = (club: ClubTrend): number => {
-    if (club.membershipTrend.length === 0) return 0;
-    return club.membershipTrend[club.membershipTrend.length - 1].count;
-  };
+    if (club.membershipTrend.length === 0) return 0
+    return club.membershipTrend[club.membershipTrend.length - 1].count
+  }
 
   // Get latest DCP goals
   const getLatestDcpGoals = (club: ClubTrend): number => {
-    if (club.dcpGoalsTrend.length === 0) return 0;
-    return club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1].goalsAchieved;
-  };
+    if (club.dcpGoalsTrend.length === 0) return 0
+    return club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1].goalsAchieved
+  }
 
   // Filter and sort clubs (using debounced search term)
   const filteredAndSortedClubs = useMemo(() => {
-    let filtered = clubs;
+    let filtered = clubs
 
     // Apply search filter (using debounced value)
     if (debouncedSearchTerm) {
-      const term = debouncedSearchTerm.toLowerCase();
+      const term = debouncedSearchTerm.toLowerCase()
       filtered = filtered.filter(
-        (club) =>
+        club =>
           club.clubName.toLowerCase().includes(term) ||
           club.divisionName.toLowerCase().includes(term) ||
           club.areaName.toLowerCase().includes(term)
-      );
+      )
     }
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter((club) => club.currentStatus === statusFilter);
+      filtered = filtered.filter(club => club.currentStatus === statusFilter)
     }
 
     // Sort clubs
     const sorted = [...filtered].sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
+      let aValue: string | number
+      let bValue: string | number
 
       switch (sortField) {
         case 'name':
-          aValue = a.clubName.toLowerCase();
-          bValue = b.clubName.toLowerCase();
-          break;
+          aValue = a.clubName.toLowerCase()
+          bValue = b.clubName.toLowerCase()
+          break
         case 'membership':
-          aValue = getLatestMembership(a);
-          bValue = getLatestMembership(b);
-          break;
+          aValue = getLatestMembership(a)
+          bValue = getLatestMembership(b)
+          break
         case 'dcpGoals':
-          aValue = getLatestDcpGoals(a);
-          bValue = getLatestDcpGoals(b);
-          break;
+          aValue = getLatestDcpGoals(a)
+          bValue = getLatestDcpGoals(b)
+          break
         case 'status': {
-          const statusOrder = { critical: 0, 'at-risk': 1, healthy: 2 };
-          aValue = statusOrder[a.currentStatus];
-          bValue = statusOrder[b.currentStatus];
-          break;
+          const statusOrder = { critical: 0, 'at-risk': 1, healthy: 2 }
+          aValue = statusOrder[a.currentStatus]
+          bValue = statusOrder[b.currentStatus]
+          break
         }
         case 'division':
-          aValue = a.divisionName.toLowerCase();
-          bValue = b.divisionName.toLowerCase();
-          break;
+          aValue = a.divisionName.toLowerCase()
+          bValue = b.divisionName.toLowerCase()
+          break
         case 'area':
-          aValue = a.areaName.toLowerCase();
-          bValue = b.areaName.toLowerCase();
-          break;
+          aValue = a.areaName.toLowerCase()
+          bValue = b.areaName.toLowerCase()
+          break
         default:
-          return 0;
+          return 0
       }
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
 
-    return sorted;
-  }, [clubs, debouncedSearchTerm, statusFilter, sortField, sortDirection]);
+    return sorted
+  }, [clubs, debouncedSearchTerm, statusFilter, sortField, sortDirection])
 
   // Pagination for large club lists
   const pagination = usePagination({
     items: filteredAndSortedClubs,
     itemsPerPage: 25,
-  });
+  })
 
   // Handle sort
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortField(field);
-      setSortDirection('asc');
+      setSortField(field)
+      setSortDirection('asc')
     }
-  };
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md">
@@ -229,12 +271,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold text-gray-900">All Clubs</h3>
           <ExportButton
-            onExport={() => exportClubPerformance(filteredAndSortedClubs, districtId)}
+            onExport={() =>
+              exportClubPerformance(filteredAndSortedClubs, districtId)
+            }
             label="Export Clubs"
             disabled={filteredAndSortedClubs.length === 0}
           />
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -243,7 +287,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 type="text"
                 placeholder="Search clubs, divisions, or areas..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
               />
               <svg
@@ -252,7 +296,12 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
               </svg>
             </div>
           </div>
@@ -261,7 +310,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           <div className="sm:w-48">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'healthy' | 'at-risk' | 'critical')}
+              onChange={e =>
+                setStatusFilter(
+                  e.target.value as 'all' | 'healthy' | 'at-risk' | 'critical'
+                )
+              }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             >
               <option value="all">All Status</option>
@@ -277,46 +330,62 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           {filteredAndSortedClubs.length === clubs.length ? (
             <>Total: {clubs.length} clubs</>
           ) : (
-            <>Showing {filteredAndSortedClubs.length} of {clubs.length} clubs</>
+            <>
+              Showing {filteredAndSortedClubs.length} of {clubs.length} clubs
+            </>
           )}
         </div>
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <LoadingSkeleton variant="table" count={5} />
-      )}
+      {isLoading && <LoadingSkeleton variant="table" count={5} />}
 
       {/* No Results */}
-      {!isLoading && filteredAndSortedClubs.length === 0 && clubs.length === 0 && (
-        <EmptyState
-          title="No Clubs Found"
-          message="No club data is available for this district. This may be because no data has been cached yet."
-          icon="data"
-        />
-      )}
+      {!isLoading &&
+        filteredAndSortedClubs.length === 0 &&
+        clubs.length === 0 && (
+          <EmptyState
+            title="No Clubs Found"
+            message="No club data is available for this district. This may be because no data has been cached yet."
+            icon="data"
+          />
+        )}
 
       {/* No Search Results */}
-      {!isLoading && filteredAndSortedClubs.length === 0 && clubs.length > 0 && (
-        <div className="p-12 text-center">
-          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <p className="text-gray-600 font-medium">No clubs match your search</p>
-          <p className="text-gray-500 text-sm mt-1">
-            Try adjusting your search term or filters
-          </p>
-          <button
-            onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('all');
-            }}
-            className="mt-4 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            Clear Filters
-          </button>
-        </div>
-      )}
+      {!isLoading &&
+        filteredAndSortedClubs.length === 0 &&
+        clubs.length > 0 && (
+          <div className="p-12 text-center">
+            <svg
+              className="w-16 h-16 text-gray-400 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <p className="text-gray-600 font-medium">
+              No clubs match your search
+            </p>
+            <p className="text-gray-500 text-sm mt-1">
+              Try adjusting your search term or filters
+            </p>
+            <button
+              onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('all')
+              }}
+              className="mt-4 px-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
 
       {/* Table */}
       {!isLoading && filteredAndSortedClubs.length > 0 && (
@@ -330,7 +399,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Club Name
-                    <SortIcon field="name" currentSortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="name"
+                      currentSortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -339,7 +412,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Division
-                    <SortIcon field="division" currentSortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="division"
+                      currentSortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -348,7 +425,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Area
-                    <SortIcon field="area" currentSortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="area"
+                      currentSortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -357,7 +438,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Members
-                    <SortIcon field="membership" currentSortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="membership"
+                      currentSortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -366,7 +451,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     DCP Goals
-                    <SortIcon field="dcpGoals" currentSortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="dcpGoals"
+                      currentSortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -378,20 +467,26 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Status
-                    <SortIcon field="status" currentSortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="status"
+                      currentSortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {pagination.paginatedItems.map((club) => (
+              {pagination.paginatedItems.map(club => (
                 <tr
                   key={club.clubId}
                   onClick={() => onClubClick?.(club)}
                   className={`${getRowColor(club.currentStatus)} cursor-pointer transition-colors`}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{club.clubName}</div>
+                    <div className="font-medium text-gray-900">
+                      {club.clubName}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {club.divisionName}
@@ -415,7 +510,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}>
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
+                    >
                       {club.currentStatus.toUpperCase()}
                     </span>
                   </td>
@@ -440,5 +537,5 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         />
       )}
     </div>
-  );
-};
+  )
+}

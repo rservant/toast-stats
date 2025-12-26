@@ -7,7 +7,7 @@ This guide documents how to integrate the assessment module routes into the main
 ## Current Status
 
 - ✅ Assessment services implemented and tested (all 288 tests passing)
-- ✅ Assessment types and data models defined  
+- ✅ Assessment types and data models defined
 - ✅ Storage layer complete
 - ⏳ Routes file created with endpoint definitions
 - ⏳ Main index.ts needs import and middleware registration
@@ -21,10 +21,11 @@ This guide documents how to integrate the assessment module routes into the main
 The routes file exports a Router with the following endpoints:
 
 ```typescript
-export default router;
+export default router
 ```
 
 Endpoints provided:
+
 - `POST /api/assessment/monthly` - Create monthly assessment
 - `GET /api/assessment/monthly/:districtId/:programYear/:month` - Get assessment
 - `GET /api/assessment/goals` - Query goals with filters
@@ -41,7 +42,7 @@ Endpoints provided:
 Add this import at the top with other route imports:
 
 ```typescript
-import assessmentRoutes from './modules/assessment/routes/assessmentRoutes.js';
+import assessmentRoutes from './modules/assessment/routes/assessmentRoutes.js'
 ```
 
 ### Step 3: Register Routes Middleware
@@ -52,7 +53,7 @@ Add this line after the districts routes registration:
 
 ```typescript
 // Assessment routes
-app.use('/api/assessment', assessmentRoutes);
+app.use('/api/assessment', assessmentRoutes)
 ```
 
 ### Step 4: Verify No Import Errors
@@ -102,6 +103,7 @@ curl -X POST http://localhost:5001/api/assessment/monthly \
 ### Assessment CRUD Operations
 
 #### Create Monthly Assessment
+
 ```
 POST /api/assessment/monthly
 
@@ -134,6 +136,7 @@ Response (201 Created):
 ```
 
 #### Get Monthly Assessment
+
 ```
 GET /api/assessment/monthly/61/2024-2025/July
 
@@ -155,6 +158,7 @@ Response (404 Not Found):
 ### District Leader Goal Operations
 
 #### Query Goals
+
 ```
 GET /api/assessment/goals?districtNumber=61&programYear=2024-2025&assignedTo=DD&month=July
 
@@ -189,6 +193,7 @@ Response (200 OK):
 ```
 
 #### Create Goal
+
 ```
 POST /api/assessment/goals
 
@@ -221,6 +226,7 @@ Response (201 Created):
 ```
 
 #### Update Goal Status
+
 ```
 PUT /api/assessment/goals/{goalId}/status
 
@@ -240,6 +246,7 @@ Response (200 OK):
 ```
 
 #### Delete Goal
+
 ```
 DELETE /api/assessment/goals/{goalId}
 
@@ -261,6 +268,7 @@ Response (404 Not Found):
 ### Report Generation
 
 #### Generate Year-End Report
+
 ```
 GET /api/assessment/report/61/2024-2025
 
@@ -299,6 +307,7 @@ Response (404 Not Found):
 ### Statistics
 
 #### Get Goal Statistics
+
 ```
 GET /api/assessment/goals/statistics/61/2024-2025
 
@@ -330,6 +339,7 @@ All endpoints follow consistent error response format:
 ```
 
 Common error codes:
+
 - `INVALID_REQUEST` (400): Missing or invalid parameters
 - `NOT_FOUND` (404): Resource not found
 - `CONFIG_NOT_FOUND` (404): Configuration missing for district/year
@@ -361,6 +371,7 @@ Express App
 ```
 
 Request flow for assessment endpoint:
+
 1. Request arrives at `/api/assessment/...`
 2. CORS middleware processes
 3. JSON body parser processes
@@ -370,6 +381,7 @@ Request flow for assessment endpoint:
 ## Testing After Integration
 
 ### 1. Unit Tests (should still pass)
+
 ```bash
 npm test
 ```
@@ -377,6 +389,7 @@ npm test
 Expected: 288 tests passing
 
 ### 2. Build Verification
+
 ```bash
 npm run build
 ```
@@ -384,6 +397,7 @@ npm run build
 Expected: No TypeScript errors
 
 ### 3. Server Start
+
 ```bash
 npm run dev
 ```
@@ -461,6 +475,7 @@ Before deploying to production:
 ### Scaling
 
 For 1000+ districts with 500+ goals each:
+
 - Current file-based storage: May need to migrate to database
 - In-memory goal caching: Implement Redis for distributed caching
 - Report generation: Consider async queue for large batches
@@ -482,18 +497,22 @@ For 1000+ districts with 500+ goals each:
 ## Support & Troubleshooting
 
 ### Issue: Routes not found (404)
+
 **Cause**: Routes not registered in index.ts  
 **Fix**: Add `app.use('/api/assessment', assessmentRoutes)` before error handler
 
 ### Issue: TypeScript compilation error
+
 **Cause**: Import path or function signature mismatch  
 **Fix**: Verify import paths use `.js` extension, check function parameters match service definitions
 
 ### Issue: Database/config not found
+
 **Cause**: Configuration file not present  
 **Fix**: Run `npm run seed` to create sample data
 
 ### Issue: Slow response times
+
 **Cause**: File I/O bottleneck or large report  
 **Fix**: Migrate to database or implement caching layer
 

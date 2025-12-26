@@ -6,7 +6,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
-import type { ReconciliationJob, ReconciliationTimeline, ReconciliationStatus } from '../../types/reconciliation.js'
+import type {
+  ReconciliationJob,
+  ReconciliationTimeline,
+  ReconciliationStatus,
+} from '../../types/reconciliation.js'
 import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
 // Mock logger
@@ -15,8 +19,8 @@ vi.mock('../../utils/logger.js', () => ({
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 describe('ReconciliationCacheService Unit Tests', () => {
@@ -26,7 +30,7 @@ describe('ReconciliationCacheService Unit Tests', () => {
     cacheService = new ReconciliationCacheService({
       maxSize: 10,
       ttlMs: 60000, // 1 minute
-      enablePrefetch: false // Disable for unit tests
+      enablePrefetch: false, // Disable for unit tests
     })
   })
 
@@ -46,8 +50,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
       metadata: {
         createdAt: new Date('2025-01-01'),
         updatedAt: new Date('2025-01-01'),
-        triggeredBy: 'manual'
-      }
+        triggeredBy: 'manual',
+      },
     })
 
     // Cache miss initially
@@ -79,21 +83,21 @@ describe('ReconciliationCacheService Unit Tests', () => {
             membershipChange: {
               previous: 1000,
               current: 1010,
-              percentChange: 1.0
+              percentChange: 1.0,
             },
             timestamp: new Date('2025-01-02'),
-            sourceDataDate: '2025-01-02'
+            sourceDataDate: '2025-01-02',
           },
           isSignificant: false,
-          cacheUpdated: true
-        }
+          cacheUpdated: true,
+        },
       ],
       status: {
         phase: 'monitoring',
         daysActive: 1,
         daysStable: 0,
-        message: 'Monitoring for changes'
-      }
+        message: 'Monitoring for changes',
+      },
     }
 
     // Cache miss initially
@@ -116,7 +120,7 @@ describe('ReconciliationCacheService Unit Tests', () => {
       daysActive: 5,
       daysStable: 2,
       nextCheckDate: new Date('2025-01-06'),
-      message: 'Stabilizing - 2/3 stable days'
+      message: 'Stabilizing - 2/3 stable days',
     }
 
     const jobId = 'test-job-status'
@@ -148,8 +152,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
-        triggeredBy: 'manual'
-      }
+        triggeredBy: 'manual',
+      },
     })
 
     // Cache job, timeline, and status
@@ -159,12 +163,12 @@ describe('ReconciliationCacheService Unit Tests', () => {
       districtId: 'D1',
       targetMonth: '2025-01',
       entries: [],
-      status: { phase: 'monitoring', daysActive: 0, daysStable: 0 }
+      status: { phase: 'monitoring', daysActive: 0, daysStable: 0 },
     })
     cacheService.setStatus(jobId, {
       phase: 'monitoring',
       daysActive: 0,
-      daysStable: 0
+      daysStable: 0,
     })
 
     // Verify all are cached
@@ -200,8 +204,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
-        triggeredBy: 'manual'
-      }
+        triggeredBy: 'manual',
+      },
     })
 
     cacheService.setJob('stats-job', job)
@@ -300,7 +304,9 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
     const bottlenecks = monitor.getBottlenecks()
     expect(bottlenecks.length).toBeGreaterThan(0)
 
-    const slowBottleneck = bottlenecks.find(b => b.operationName === 'slow-operation')
+    const slowBottleneck = bottlenecks.find(
+      b => b.operationName === 'slow-operation'
+    )
     expect(slowBottleneck).toBeDefined()
     expect(['high', 'medium']).toContain(slowBottleneck!.severity)
     expect(slowBottleneck!.issue).toContain('High average duration')
@@ -326,7 +332,7 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
   it('should clear metrics correctly', () => {
     // Record some metrics
     monitor.recordMetric('test-op', 100, true)
-    
+
     let stats = monitor.getOperationStats('test-op')
     expect(stats).toBeDefined()
 

@@ -4,7 +4,10 @@
  */
 
 import { CacheService } from './CacheService.js'
-import { generateCacheKey, generateDistrictCacheKey } from '../utils/cacheKeys.js'
+import {
+  generateCacheKey,
+  generateDistrictCacheKey,
+} from '../utils/cacheKeys.js'
 
 console.log('🧪 Testing CacheService...\n')
 
@@ -72,7 +75,10 @@ console.log('')
 console.log('Test 9: Wait for TTL expiration (3 seconds)...')
 setTimeout(() => {
   const expired = cache.get('short-ttl')
-  console.log('✓ Value after TTL:', expired === undefined ? 'expired ✓' : 'still exists ✗')
+  console.log(
+    '✓ Value after TTL:',
+    expired === undefined ? 'expired ✓' : 'still exists ✗'
+  )
   console.log('')
 
   // Test 10: Clear all cache

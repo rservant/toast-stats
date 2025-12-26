@@ -8,7 +8,7 @@ import type {
   ReconciliationJob,
   ReconciliationTimeline,
   ReconciliationStatus,
-  ReconciliationConfig
+  ReconciliationConfig,
 } from '../types/reconciliation.js'
 
 export interface CacheEntry<T> {
@@ -41,14 +41,14 @@ export class ReconciliationCacheService {
   private timelineCache = new Map<string, CacheEntry<ReconciliationTimeline>>()
   private statusCache = new Map<string, CacheEntry<ReconciliationStatus>>()
   private configCache: CacheEntry<ReconciliationConfig> | null = null
-  
+
   private stats = {
     hits: 0,
     misses: 0,
     evictions: 0,
-    prefetches: 0
+    prefetches: 0,
   }
-  
+
   private cleanupTimer: ReturnType<typeof setTimeout> | null = null
   private config: CacheConfig
 
@@ -59,7 +59,7 @@ export class ReconciliationCacheService {
       enablePrefetch: true,
       prefetchThreshold: 10, // Prefetch after 10 accesses
       cleanupIntervalMs: 60000, // 1 minute
-      ...config
+      ...config,
     }
 
     this.startCleanupTimer()
@@ -70,7 +70,7 @@ export class ReconciliationCacheService {
    */
   getJob(jobId: string): ReconciliationJob | null {
     const entry = this.jobCache.get(jobId)
-    
+
     if (!entry) {
       this.stats.misses++
       return null
@@ -96,12 +96,12 @@ export class ReconciliationCacheService {
    */
   setJob(jobId: string, job: ReconciliationJob): void {
     this.ensureCapacity(this.jobCache)
-    
+
     const entry: CacheEntry<ReconciliationJob> = {
       data: { ...job }, // Deep copy to prevent mutations
       timestamp: Date.now(),
       accessCount: 1,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     }
 
     this.jobCache.set(jobId, entry)
@@ -113,7 +113,7 @@ export class ReconciliationCacheService {
    */
   getTimeline(jobId: string): ReconciliationTimeline | null {
     const entry = this.timelineCache.get(jobId)
-    
+
     if (!entry) {
       this.stats.misses++
       return null
@@ -130,7 +130,10 @@ export class ReconciliationCacheService {
     entry.lastAccessed = Date.now()
     this.stats.hits++
 
-    logger.debug('Timeline cache hit', { jobId, accessCount: entry.accessCount })
+    logger.debug('Timeline cache hit', {
+      jobId,
+      accessCount: entry.accessCount,
+    })
     return entry.data
   }
 
@@ -139,19 +142,22 @@ export class ReconciliationCacheService {
    */
   setTimeline(jobId: string, timeline: ReconciliationTimeline): void {
     this.ensureCapacity(this.timelineCache)
-    
+
     const entry: CacheEntry<ReconciliationTimeline> = {
-      data: { 
+      data: {
         ...timeline,
-        entries: timeline.entries.map(e => ({ ...e })) // Deep copy entries
+        entries: timeline.entries.map(e => ({ ...e })), // Deep copy entries
       },
       timestamp: Date.now(),
       accessCount: 1,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     }
 
     this.timelineCache.set(jobId, entry)
-    logger.debug('Timeline cached', { jobId, cacheSize: this.timelineCache.size })
+    logger.debug('Timeline cached', {
+      jobId,
+      cacheSize: this.timelineCache.size,
+    })
   }
 
   /**
@@ -159,7 +165,7 @@ export class ReconciliationCacheService {
    */
   getStatus(jobId: string): ReconciliationStatus | null {
     const entry = this.statusCache.get(jobId)
-    
+
     if (!entry) {
       this.stats.misses++
       return null
@@ -185,12 +191,12 @@ export class ReconciliationCacheService {
    */
   setStatus(jobId: string, status: ReconciliationStatus): void {
     this.ensureCapacity(this.statusCache)
-    
+
     const entry: CacheEntry<ReconciliationStatus> = {
       data: { ...status }, // Deep copy
       timestamp: Date.now(),
       accessCount: 1,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     }
 
     this.statusCache.set(jobId, entry)
@@ -217,7 +223,9 @@ export class ReconciliationCacheService {
     this.configCache.lastAccessed = Date.now()
     this.stats.hits++
 
-    logger.debug('Config cache hit', { accessCount: this.configCache.accessCount })
+    logger.debug('Config cache hit', {
+      accessCount: this.configCache.accessCount,
+    })
     return this.configCache.data
   }
 
@@ -229,7 +237,7 @@ export class ReconciliationCacheService {
       data: { ...config }, // Deep copy
       timestamp: Date.now(),
       accessCount: 1,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     }
 
     logger.debug('Config cached')
@@ -242,7 +250,7 @@ export class ReconciliationCacheService {
     this.jobCache.delete(jobId)
     this.timelineCache.delete(jobId)
     this.statusCache.delete(jobId)
-    
+
     logger.debug('Job cache invalidated', { jobId })
   }
 
@@ -266,7 +274,10 @@ export class ReconciliationCacheService {
   /**
    * Prefetch related data based on access patterns
    */
-  async prefetchRelated(jobId: string, prefetchCallback: (jobIds: string[]) => Promise<void>): Promise<void> {
+  async prefetchRelated(
+    jobId: string,
+    prefetchCallback: (jobIds: string[]) => Promise<void>
+  ): Promise<void> {
     if (!this.config.enablePrefetch) {
       return
     }
@@ -281,9 +292,11 @@ export class ReconciliationCacheService {
     const targetDistrict = jobEntry.data.districtId
 
     for (const [otherJobId, otherEntry] of this.jobCache.entries()) {
-      if (otherJobId !== jobId && 
-          otherEntry.data.districtId === targetDistrict &&
-          !this.timelineCache.has(otherJobId)) {
+      if (
+        otherJobId !== jobId &&
+        otherEntry.data.districtId === targetDistrict &&
+        !this.timelineCache.has(otherJobId)
+      ) {
         relatedJobIds.push(otherJobId)
       }
     }
@@ -292,10 +305,10 @@ export class ReconciliationCacheService {
       try {
         await prefetchCallback(relatedJobIds)
         this.stats.prefetches += relatedJobIds.length
-        
-        logger.debug('Prefetch completed', { 
+
+        logger.debug('Prefetch completed', {
           triggerJobId: jobId,
-          prefetchedCount: relatedJobIds.length
+          prefetchedCount: relatedJobIds.length,
         })
       } catch (error) {
         logger.warn('Prefetch failed', { jobId, error })
@@ -306,12 +319,14 @@ export class ReconciliationCacheService {
   /**
    * Get frequently accessed jobs for optimization
    */
-  getHotJobs(limit: number = 10): Array<{ jobId: string; accessCount: number; lastAccessed: number }> {
+  getHotJobs(
+    limit: number = 10
+  ): Array<{ jobId: string; accessCount: number; lastAccessed: number }> {
     const hotJobs = Array.from(this.jobCache.entries())
       .map(([jobId, entry]) => ({
         jobId,
         accessCount: entry.accessCount,
-        lastAccessed: entry.lastAccessed
+        lastAccessed: entry.lastAccessed,
       }))
       .sort((a, b) => b.accessCount - a.accessCount)
       .slice(0, limit)
@@ -338,7 +353,10 @@ export class ReconciliationCacheService {
       if (lruKey) {
         cache.delete(lruKey)
         this.stats.evictions++
-        logger.debug('Cache entry evicted (LRU)', { key: lruKey, cacheSize: cache.size })
+        logger.debug('Cache entry evicted (LRU)', {
+          key: lruKey,
+          cacheSize: cache.size,
+        })
       }
     }
   }
@@ -347,7 +365,7 @@ export class ReconciliationCacheService {
    * Check if cache entry is expired
    */
   private isExpired<T>(entry: CacheEntry<T>): boolean {
-    return (Date.now() - entry.timestamp) > this.config.ttlMs
+    return Date.now() - entry.timestamp > this.config.ttlMs
   }
 
   /**
@@ -408,13 +426,14 @@ export class ReconciliationCacheService {
     const hitRate = totalRequests > 0 ? this.stats.hits / totalRequests : 0
 
     return {
-      size: this.jobCache.size + this.timelineCache.size + this.statusCache.size,
+      size:
+        this.jobCache.size + this.timelineCache.size + this.statusCache.size,
       maxSize: this.config.maxSize * 3, // Three caches
       hitRate,
       totalHits: this.stats.hits,
       totalMisses: this.stats.misses,
       evictions: this.stats.evictions,
-      prefetches: this.stats.prefetches
+      prefetches: this.stats.prefetches,
     }
   }
 
@@ -426,13 +445,13 @@ export class ReconciliationCacheService {
     this.timelineCache.clear()
     this.statusCache.clear()
     this.configCache = null
-    
+
     // Reset stats
     this.stats = {
       hits: 0,
       misses: 0,
       evictions: 0,
-      prefetches: 0
+      prefetches: 0,
     }
 
     logger.info('All caches cleared')
@@ -446,7 +465,7 @@ export class ReconciliationCacheService {
       clearInterval(this.cleanupTimer)
       this.cleanupTimer = null
     }
-    
+
     this.clear()
     logger.info('Cache service shutdown')
   }

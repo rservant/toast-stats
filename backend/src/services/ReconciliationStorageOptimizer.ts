@@ -37,13 +37,13 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     config: Partial<StorageOptimizationConfig> = {}
   ) {
     super(storageDir)
-    
+
     this.config = {
       enableInMemoryCache: true,
       cacheMaxSize: 1000,
       batchSize: 10,
       indexCacheTimeout: 30000, // 30 seconds
-      ...config
+      ...config,
     }
   }
 
@@ -59,9 +59,13 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
 
     // Fallback to parent implementation
     const job = await super.getJob(jobId)
-    
+
     // Cache the result if enabled and cache has space
-    if (job && this.config.enableInMemoryCache && this.jobCache.size < this.config.cacheMaxSize) {
+    if (
+      job &&
+      this.config.enableInMemoryCache &&
+      this.jobCache.size < this.config.cacheMaxSize
+    ) {
       this.jobCache.set(jobId, job)
       logger.debug('Job cached', { jobId, cacheSize: this.jobCache.size })
     }
@@ -81,11 +85,18 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
 
     // Fallback to parent implementation
     const timeline = await super.getTimeline(jobId)
-    
+
     // Cache the result if enabled and cache has space
-    if (timeline && this.config.enableInMemoryCache && this.timelineCache.size < this.config.cacheMaxSize) {
+    if (
+      timeline &&
+      this.config.enableInMemoryCache &&
+      this.timelineCache.size < this.config.cacheMaxSize
+    ) {
       this.timelineCache.set(jobId, timeline)
-      logger.debug('Timeline cached', { jobId, cacheSize: this.timelineCache.size })
+      logger.debug('Timeline cached', {
+        jobId,
+        cacheSize: this.timelineCache.size,
+      })
     }
 
     return timeline
@@ -104,7 +115,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     this.pendingOperations.set(`job-${job.id}`, {
       type: 'save',
       data: job,
-      key: job.id
+      key: job.id,
     })
 
     // Schedule batch processing
@@ -124,7 +135,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     this.pendingOperations.set(`timeline-${timeline.jobId}`, {
       type: 'save',
       data: timeline,
-      key: timeline.jobId
+      key: timeline.jobId,
     })
 
     // Schedule batch processing
@@ -179,16 +190,20 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     try {
       // Ensure storage is initialized before processing operations
       await this.init()
-      
+
       // Group operations by type for efficient processing
-      const jobOperations = operations.filter(([mapKey, _op]) => mapKey.startsWith('job-'))
-      const timelineOperations = operations.filter(([mapKey, _op]) => mapKey.startsWith('timeline-'))
+      const jobOperations = operations.filter(([mapKey, _op]) =>
+        mapKey.startsWith('job-')
+      )
+      const timelineOperations = operations.filter(([mapKey, _op]) =>
+        mapKey.startsWith('timeline-')
+      )
 
       // Process jobs in parallel
       if (jobOperations.length > 0) {
         await Promise.all(
-          jobOperations.map(([_mapKey, op]) => 
-            op.type === 'save' 
+          jobOperations.map(([_mapKey, op]) =>
+            op.type === 'save'
               ? super.saveJob(op.data as ReconciliationJob)
               : super.deleteJob(op.key)
           )
@@ -198,10 +213,11 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       // Process timelines in parallel
       if (timelineOperations.length > 0) {
         await Promise.all(
-          timelineOperations.map(([_mapKey, op]) => 
-            op.type === 'save' 
-              ? super.saveTimeline(op.data as ReconciliationTimeline)
-              : Promise.resolve() // No delete timeline method in parent
+          timelineOperations.map(
+            ([_mapKey, op]) =>
+              op.type === 'save'
+                ? super.saveTimeline(op.data as ReconciliationTimeline)
+                : Promise.resolve() // No delete timeline method in parent
           )
         )
       }
@@ -212,13 +228,15 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
         this.indexCacheTimestamp = 0
       }
 
-      logger.debug('Batch operations completed', { 
+      logger.debug('Batch operations completed', {
         jobs: jobOperations.length,
-        timelines: timelineOperations.length
+        timelines: timelineOperations.length,
       })
-
     } catch (error) {
-      logger.error('Batch processing failed', { error, operationCount: operations.length })
+      logger.error('Batch processing failed', {
+        error,
+        operationCount: operations.length,
+      })
       throw error
     }
   }
@@ -228,9 +246,12 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
    */
   protected async loadIndex(): Promise<ReconciliationIndex> {
     const now = Date.now()
-    
+
     // Check if cached index is still valid
-    if (this.indexCache && (now - this.indexCacheTimestamp) < this.config.indexCacheTimeout) {
+    if (
+      this.indexCache &&
+      now - this.indexCacheTimestamp < this.config.indexCacheTimeout
+    ) {
       return this.indexCache
     }
 
@@ -238,10 +259,10 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     const index = await super.loadIndex()
     this.indexCache = index
     this.indexCacheTimestamp = now
-    
-    logger.debug('Index refreshed', { 
+
+    logger.debug('Index refreshed', {
       totalJobs: Object.keys(index.jobs).length,
-      cacheTimeout: this.config.indexCacheTimeout
+      cacheTimeout: this.config.indexCacheTimeout,
     })
 
     return index
@@ -270,13 +291,16 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
 
     // Load uncached jobs in parallel
     if (uncachedIds.length > 0) {
-      const loadPromises = uncachedIds.map(async (jobId) => {
+      const loadPromises = uncachedIds.map(async jobId => {
         const job = await super.getJob(jobId)
         if (job) {
           results.set(jobId, job)
-          
+
           // Cache if enabled and space available
-          if (this.config.enableInMemoryCache && this.jobCache.size < this.config.cacheMaxSize) {
+          if (
+            this.config.enableInMemoryCache &&
+            this.jobCache.size < this.config.cacheMaxSize
+          ) {
             this.jobCache.set(jobId, job)
           }
         }
@@ -285,11 +309,11 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       await Promise.all(loadPromises)
     }
 
-    logger.debug('Bulk job load completed', { 
+    logger.debug('Bulk job load completed', {
       requested: jobIds.length,
       found: results.size,
       cached: jobIds.length - uncachedIds.length,
-      loaded: uncachedIds.length
+      loaded: uncachedIds.length,
     })
 
     return results
@@ -298,7 +322,9 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   /**
    * Bulk load multiple timelines efficiently
    */
-  async getTimelinesBulk(jobIds: string[]): Promise<Map<string, ReconciliationTimeline>> {
+  async getTimelinesBulk(
+    jobIds: string[]
+  ): Promise<Map<string, ReconciliationTimeline>> {
     const results = new Map<string, ReconciliationTimeline>()
     const uncachedIds: string[] = []
 
@@ -318,13 +344,16 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
 
     // Load uncached timelines in parallel
     if (uncachedIds.length > 0) {
-      const loadPromises = uncachedIds.map(async (jobId) => {
+      const loadPromises = uncachedIds.map(async jobId => {
         const timeline = await super.getTimeline(jobId)
         if (timeline) {
           results.set(jobId, timeline)
-          
+
           // Cache if enabled and space available
-          if (this.config.enableInMemoryCache && this.timelineCache.size < this.config.cacheMaxSize) {
+          if (
+            this.config.enableInMemoryCache &&
+            this.timelineCache.size < this.config.cacheMaxSize
+          ) {
             this.timelineCache.set(jobId, timeline)
           }
         }
@@ -333,17 +362,15 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       await Promise.all(loadPromises)
     }
 
-    logger.debug('Bulk timeline load completed', { 
+    logger.debug('Bulk timeline load completed', {
       requested: jobIds.length,
       found: results.size,
       cached: jobIds.length - uncachedIds.length,
-      loaded: uncachedIds.length
+      loaded: uncachedIds.length,
     })
 
     return results
   }
-
-
 
   /**
    * Clear all caches
@@ -353,7 +380,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
     this.timelineCache.clear()
     this.indexCache = null
     this.indexCacheTimestamp = 0
-    
+
     logger.info('All caches cleared')
   }
 
@@ -363,11 +390,11 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   async getAllJobs(): Promise<ReconciliationJob[]> {
     // First flush any pending operations to ensure all jobs are persisted
     await this.flush()
-    
+
     // Force index cache invalidation to ensure fresh data
     this.indexCache = null
     this.indexCacheTimestamp = 0
-    
+
     // Then get all jobs from parent (which will use fresh index after flush)
     return super.getAllJobs()
   }
@@ -385,7 +412,10 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       jobCacheSize: this.jobCache.size,
       timelineCacheSize: this.timelineCache.size,
       pendingOperations: this.pendingOperations.size,
-      indexCacheAge: this.indexCacheTimestamp > 0 ? Date.now() - this.indexCacheTimestamp : -1
+      indexCacheAge:
+        this.indexCacheTimestamp > 0
+          ? Date.now() - this.indexCacheTimestamp
+          : -1,
     }
   }
 
@@ -397,7 +427,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
       clearTimeout(this.batchTimer)
       this.batchTimer = null
     }
-    
+
     await this.flush()
     this.clearCache()
   }

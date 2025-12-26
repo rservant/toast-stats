@@ -39,7 +39,11 @@ export interface StepResult<T = unknown> {
   timestamp: Date
 }
 
-export type ReconciliationJobStatus = 'active' | 'completed' | 'failed' | 'cancelled'
+export type ReconciliationJobStatus =
+  | 'active'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
 
 export interface ReconciliationJob {
   id: string
@@ -177,7 +181,10 @@ export interface ReconciliationConfigResponse {
 
 // Database Schema Types (for file-based storage)
 
-export interface ReconciliationJobRecord extends Omit<ReconciliationJob, 'startDate' | 'endDate' | 'maxEndDate' | 'finalizedDate' | 'metadata'> {
+export interface ReconciliationJobRecord extends Omit<
+  ReconciliationJob,
+  'startDate' | 'endDate' | 'maxEndDate' | 'finalizedDate' | 'metadata'
+> {
   startDate: string // ISO string
   endDate?: string // ISO string
   maxEndDate: string // ISO string
@@ -189,7 +196,10 @@ export interface ReconciliationJobRecord extends Omit<ReconciliationJob, 'startD
   }
 }
 
-export interface ReconciliationEntryRecord extends Omit<ReconciliationEntry, 'date' | 'changes'> {
+export interface ReconciliationEntryRecord extends Omit<
+  ReconciliationEntry,
+  'date' | 'changes'
+> {
   date: string // ISO string
   changes: DataChangesRecord
 }
@@ -198,7 +208,10 @@ export interface DataChangesRecord extends Omit<DataChanges, 'timestamp'> {
   timestamp: string // ISO string
 }
 
-export interface ReconciliationTimelineRecord extends Omit<ReconciliationTimeline, 'entries' | 'estimatedCompletion'> {
+export interface ReconciliationTimelineRecord extends Omit<
+  ReconciliationTimeline,
+  'entries' | 'estimatedCompletion'
+> {
   entries: ReconciliationEntryRecord[]
   estimatedCompletion?: string // ISO string
 }

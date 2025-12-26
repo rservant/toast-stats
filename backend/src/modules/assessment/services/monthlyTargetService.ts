@@ -4,14 +4,18 @@
  * Formula: monthly_target = year_end_target / 12 (rounded to nearest integer)
  */
 
-import { DistrictConfig, MonthlyTarget, RecognitionLevelTargets } from '../types/assessment.js';
+import {
+  DistrictConfig,
+  MonthlyTarget,
+  RecognitionLevelTargets,
+} from '../types/assessment.js'
 
 /**
  * Round to nearest integer (Excel-style banker's rounding)
  * Uses Math.round which matches Excel's ROUND function for typical cases
  */
 function roundToNearest(value: number): number {
-  return Math.round(value);
+  return Math.round(value)
 }
 
 /**
@@ -25,23 +29,26 @@ export function deriveMonthlyTargets(
   // Derive membership, club, and distinguished club targets
   const membershipGrowthTarget = roundToNearest(
     config.year_end_targets.membership_growth / 12
-  );
+  )
   const clubGrowthTarget = roundToNearest(
     config.year_end_targets.club_growth / 12
-  );
+  )
   const distinguishedClubsTarget = roundToNearest(
     config.year_end_targets.distinguished_clubs / 12
-  );
+  )
 
   // Derive recognition level targets
-  const recognitionLevelTargets: RecognitionLevelTargets[] = config.recognition_levels.map(
-    (level) => ({
+  const recognitionLevelTargets: RecognitionLevelTargets[] =
+    config.recognition_levels.map(level => ({
       level: level.level,
-      membershipPaymentsTarget: roundToNearest(level.membershipPaymentsTarget / 12),
+      membershipPaymentsTarget: roundToNearest(
+        level.membershipPaymentsTarget / 12
+      ),
       paidClubsTarget: roundToNearest(level.paidClubsTarget / 12),
-      distinguishedClubsTarget: roundToNearest(level.distinguishedClubsTarget / 12),
-    })
-  );
+      distinguishedClubsTarget: roundToNearest(
+        level.distinguishedClubsTarget / 12
+      ),
+    }))
 
   return {
     district_number: config.district_number,
@@ -51,13 +58,15 @@ export function deriveMonthlyTargets(
     club_growth_target: clubGrowthTarget,
     distinguished_clubs_target: distinguishedClubsTarget,
     recognition_level_targets: recognitionLevelTargets,
-  };
+  }
 }
 
 /**
  * Derive all 12 monthly targets for a program year
  */
-export function deriveAllMonthlyTargets(config: DistrictConfig): MonthlyTarget[] {
+export function deriveAllMonthlyTargets(
+  config: DistrictConfig
+): MonthlyTarget[] {
   const months = [
     'July',
     'August',
@@ -71,9 +80,9 @@ export function deriveAllMonthlyTargets(config: DistrictConfig): MonthlyTarget[]
     'April',
     'May',
     'June',
-  ];
+  ]
 
-  return months.map((month) => deriveMonthlyTargets(config, month));
+  return months.map(month => deriveMonthlyTargets(config, month))
 }
 
 /**
@@ -84,7 +93,7 @@ export function getMonthlyTarget(
   config: DistrictConfig,
   monthIdentifier: string | number
 ): MonthlyTarget {
-  let month: string;
+  let month: string
 
   if (typeof monthIdentifier === 'number') {
     // Month number (1-12)
@@ -101,19 +110,21 @@ export function getMonthlyTarget(
       'April',
       'May',
       'June',
-    ];
+    ]
 
     if (monthIdentifier < 1 || monthIdentifier > 12) {
-      throw new Error(`Invalid month number: ${monthIdentifier}. Must be 1-12.`);
+      throw new Error(`Invalid month number: ${monthIdentifier}. Must be 1-12.`)
     }
 
-    month = months[monthIdentifier - 1];
+    month = months[monthIdentifier - 1]
   } else {
     // Normalize month string to Title Case
-    month = monthIdentifier.charAt(0).toUpperCase() + monthIdentifier.slice(1).toLowerCase();
+    month =
+      monthIdentifier.charAt(0).toUpperCase() +
+      monthIdentifier.slice(1).toLowerCase()
   }
 
-  return deriveMonthlyTargets(config, month);
+  return deriveMonthlyTargets(config, month)
 }
 
 /**
@@ -126,13 +137,13 @@ export function calculateCumulativeTarget(
   monthNumber: number
 ): number {
   if (monthNumber < 1 || monthNumber > 12) {
-    throw new Error(`Invalid month number: ${monthNumber}. Must be 1-12.`);
+    throw new Error(`Invalid month number: ${monthNumber}. Must be 1-12.`)
   }
 
-  const monthlyTarget = roundToNearest(yearEndTarget / 12);
-  const cumulativeTarget = monthlyTarget * monthNumber;
+  const monthlyTarget = roundToNearest(yearEndTarget / 12)
+  const cumulativeTarget = monthlyTarget * monthNumber
 
-  return cumulativeTarget;
+  return cumulativeTarget
 }
 
 /**
@@ -152,21 +163,23 @@ export function getProgramYearMonths(): string[] {
     'April',
     'May',
     'June',
-  ];
+  ]
 }
 
 /**
  * Get month number (1-12) from month name
  */
 export function getMonthNumber(monthName: string): number {
-  const months = getProgramYearMonths();
-  const index = months.findIndex((m) => m.toLowerCase() === monthName.toLowerCase());
+  const months = getProgramYearMonths()
+  const index = months.findIndex(
+    m => m.toLowerCase() === monthName.toLowerCase()
+  )
 
   if (index === -1) {
-    throw new Error(`Invalid month name: ${monthName}`);
+    throw new Error(`Invalid month name: ${monthName}`)
   }
 
-  return index + 1;
+  return index + 1
 }
 
 /**
@@ -174,41 +187,51 @@ export function getMonthNumber(monthName: string): number {
  */
 export function getMonthName(monthNumber: number): string {
   if (monthNumber < 1 || monthNumber > 12) {
-    throw new Error(`Invalid month number: ${monthNumber}. Must be 1-12.`);
+    throw new Error(`Invalid month number: ${monthNumber}. Must be 1-12.`)
   }
 
-  return getProgramYearMonths()[monthNumber - 1];
+  return getProgramYearMonths()[monthNumber - 1]
 }
 
 /**
  * Validate monthly target against config
  */
-export function validateMonthlyTargets(target: MonthlyTarget, config: DistrictConfig): string[] {
-  const errors: string[] = [];
+export function validateMonthlyTargets(
+  target: MonthlyTarget,
+  config: DistrictConfig
+): string[] {
+  const errors: string[] = []
 
   if (target.district_number !== config.district_number) {
-    errors.push(`District number mismatch: target has ${target.district_number}, config has ${config.district_number}`);
+    errors.push(
+      `District number mismatch: target has ${target.district_number}, config has ${config.district_number}`
+    )
   }
 
   if (target.program_year !== config.program_year) {
-    errors.push(`Program year mismatch: target has ${target.program_year}, config has ${config.program_year}`);
+    errors.push(
+      `Program year mismatch: target has ${target.program_year}, config has ${config.program_year}`
+    )
   }
 
   if (target.membership_growth_target <= 0) {
-    errors.push('Membership growth target must be positive');
+    errors.push('Membership growth target must be positive')
   }
 
   if (target.club_growth_target <= 0) {
-    errors.push('Club growth target must be positive');
+    errors.push('Club growth target must be positive')
   }
 
   if (target.distinguished_clubs_target <= 0) {
-    errors.push('Distinguished clubs target must be positive');
+    errors.push('Distinguished clubs target must be positive')
   }
 
-  if (!Array.isArray(target.recognition_level_targets) || target.recognition_level_targets.length === 0) {
-    errors.push('Recognition level targets must be a non-empty array');
+  if (
+    !Array.isArray(target.recognition_level_targets) ||
+    target.recognition_level_targets.length === 0
+  ) {
+    errors.push('Recognition level targets must be a non-empty array')
   }
 
-  return errors;
+  return errors
 }

@@ -1,6 +1,6 @@
 /**
  * Reconciliation Error Handler
- * 
+ *
  * Centralized error handling service for reconciliation operations.
  * Integrates retry logic, circuit breakers, and alerting for comprehensive
  * error management during month-end data reconciliation.
@@ -8,8 +8,17 @@
 
 import { logger } from '../utils/logger.js'
 import { RetryManager, RetryOptions } from '../utils/RetryManager.js'
-import { CircuitBreaker, CircuitBreakerManager, CircuitState, CircuitBreakerStats } from '../utils/CircuitBreaker.js'
-import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
+import {
+  CircuitBreaker,
+  CircuitBreakerManager,
+  CircuitState,
+  CircuitBreakerStats,
+} from '../utils/CircuitBreaker.js'
+import {
+  AlertManager,
+  AlertSeverity,
+  AlertCategory,
+} from '../utils/AlertManager.js'
 import { DistrictBackfillService } from './DistrictBackfillService.js'
 import type { ReconciliationDataFetchResult } from './DistrictBackfillService.js'
 
@@ -38,7 +47,8 @@ export class ReconciliationErrorHandler {
   private dashboardCircuitBreaker: CircuitBreaker
   private cacheCircuitBreaker: CircuitBreaker
   private config: ErrorHandlingConfig
-  private failureTracker: Map<string, { count: number; lastFailure: Date }> = new Map()
+  private failureTracker: Map<string, { count: number; lastFailure: Date }> =
+    new Map()
 
   private constructor(config: Partial<ErrorHandlingConfig> = {}) {
     this.config = {
@@ -48,37 +58,43 @@ export class ReconciliationErrorHandler {
       alertingEnabled: true,
       maxConsecutiveFailures: 5,
       failureTimeoutMs: 300000, // 5 minutes
-      ...config
+      ...config,
     }
 
     this.alertManager = AlertManager.getInstance()
     this.circuitManager = CircuitBreakerManager.getInstance()
-    
+
     // Initialize circuit breakers
     this.dashboardCircuitBreaker = this.circuitManager.getCircuitBreaker(
       'reconciliation-dashboard',
       {
         failureThreshold: 5,
         recoveryTimeout: 60000,
-        monitoringPeriod: 300000
+        monitoringPeriod: 300000,
       }
     )
-    
+
     this.cacheCircuitBreaker = this.circuitManager.getCircuitBreaker(
       'reconciliation-cache',
       {
         failureThreshold: 3,
         recoveryTimeout: 30000,
-        monitoringPeriod: 120000
+        monitoringPeriod: 120000,
       }
     )
 
-    logger.info('ReconciliationErrorHandler initialized', { config: this.config })
+    logger.info('ReconciliationErrorHandler initialized', {
+      config: this.config,
+    })
   }
 
-  static getInstance(config?: Partial<ErrorHandlingConfig>): ReconciliationErrorHandler {
+  static getInstance(
+    config?: Partial<ErrorHandlingConfig>
+  ): ReconciliationErrorHandler {
     if (!ReconciliationErrorHandler.instance) {
-      ReconciliationErrorHandler.instance = new ReconciliationErrorHandler(config)
+      ReconciliationErrorHandler.instance = new ReconciliationErrorHandler(
+        config
+      )
     }
     return ReconciliationErrorHandler.instance
   }
@@ -93,7 +109,7 @@ export class ReconciliationErrorHandler {
     context: ReconciliationErrorContext
   ): Promise<ReconciliationDataFetchResult> {
     const operationKey = `dashboard-${districtId}-${targetDate}`
-    
+
     try {
       if (!this.config.circuitBreakerEnabled) {
         // Direct execution without circuit breaker
@@ -121,20 +137,20 @@ export class ReconciliationErrorHandler {
 
       // Track success
       this.trackOperationSuccess(operationKey)
-      
-      return result
 
+      return result
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
       // Track failure
       await this.trackOperationFailure(operationKey, errorMessage, context)
-      
+
       // Return error result
       return {
         success: false,
         isDataAvailable: false,
-        error: errorMessage
+        error: errorMessage,
       }
     }
   }
@@ -147,7 +163,7 @@ export class ReconciliationErrorHandler {
     context: ReconciliationErrorContext
   ): Promise<{ success: boolean; result?: T; error?: string }> {
     const operationKey = `cache-${context.operation}-${context.districtId}`
-    
+
     try {
       if (!this.config.circuitBreakerEnabled) {
         // Direct execution without circuit breaker
@@ -181,15 +197,15 @@ export class ReconciliationErrorHandler {
 
       // Track success
       this.trackOperationSuccess(operationKey)
-      
-      return { success: true, result }
 
+      return { success: true, result }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
       // Track failure
       await this.trackOperationFailure(operationKey, errorMessage, context)
-      
+
       return { success: false, error: errorMessage }
     }
   }
@@ -205,13 +221,13 @@ export class ReconciliationErrorHandler {
     context: Partial<ReconciliationErrorContext> = {}
   ): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    
+
     logger.error('Reconciliation job failure', {
       jobId,
       districtId,
       targetMonth,
       error: errorMessage,
-      context
+      context,
     })
 
     if (this.config.alertingEnabled) {
@@ -230,7 +246,7 @@ export class ReconciliationErrorHandler {
       districtId,
       targetMonth,
       operation: 'reconciliation-job',
-      ...context
+      ...context,
     })
   }
 
@@ -249,7 +265,7 @@ export class ReconciliationErrorHandler {
       districtId,
       targetMonth,
       daysActive,
-      maxDays
+      maxDays,
     })
 
     if (this.config.alertingEnabled) {
@@ -274,7 +290,7 @@ export class ReconciliationErrorHandler {
       circuitName,
       newState,
       failureCount: stats.failureCount,
-      nextRetryTime: stats.nextRetryTime
+      nextRetryTime: stats.nextRetryTime,
     })
 
     if (this.config.alertingEnabled && newState === CircuitState.OPEN) {
@@ -295,19 +311,22 @@ export class ReconciliationErrorHandler {
     failureTracking: Record<string, { count: number; lastFailure: string }>
     config: ErrorHandlingConfig
   } {
-    const failureTracking: Record<string, { count: number; lastFailure: string }> = {}
-    
+    const failureTracking: Record<
+      string,
+      { count: number; lastFailure: string }
+    > = {}
+
     for (const [key, value] of this.failureTracker.entries()) {
       failureTracking[key] = {
         count: value.count,
-        lastFailure: value.lastFailure.toISOString()
+        lastFailure: value.lastFailure.toISOString(),
       }
     }
 
     return {
       circuitBreakers: this.circuitManager.getAllStats(),
       failureTracking,
-      config: this.config
+      config: this.config,
     }
   }
 
@@ -316,13 +335,13 @@ export class ReconciliationErrorHandler {
    */
   async resetErrorState(): Promise<void> {
     logger.info('Resetting error handling state')
-    
+
     // Reset circuit breakers
     this.circuitManager.resetAll()
-    
+
     // Clear failure tracking
     this.failureTracker.clear()
-    
+
     // Send notification
     if (this.config.alertingEnabled) {
       await this.alertManager.sendAlert(
@@ -340,10 +359,10 @@ export class ReconciliationErrorHandler {
    */
   updateConfig(newConfig: Partial<ErrorHandlingConfig>): void {
     this.config = { ...this.config, ...newConfig }
-    
-    logger.info('Error handling configuration updated', { 
+
+    logger.info('Error handling configuration updated', {
       newConfig,
-      fullConfig: this.config 
+      fullConfig: this.config,
     })
   }
 
@@ -386,7 +405,7 @@ export class ReconciliationErrorHandler {
   ): Promise<void> {
     const now = new Date()
     const existing = this.failureTracker.get(operationKey)
-    
+
     if (existing) {
       existing.count++
       existing.lastFailure = now
@@ -395,14 +414,14 @@ export class ReconciliationErrorHandler {
     }
 
     const failureInfo = this.failureTracker.get(operationKey)!
-    
+
     // Check if we've exceeded consecutive failure threshold
     if (failureInfo.count >= this.config.maxConsecutiveFailures) {
       logger.error('Consecutive failure threshold exceeded', {
         operationKey,
         failureCount: failureInfo.count,
         threshold: this.config.maxConsecutiveFailures,
-        context
+        context,
       })
 
       if (this.config.alertingEnabled) {
@@ -411,16 +430,15 @@ export class ReconciliationErrorHandler {
           AlertCategory.SYSTEM,
           'Consecutive Failure Threshold Exceeded',
           `Operation ${operationKey} has failed ${failureInfo.count} consecutive times`,
-          { 
-            operationKey, 
-            failureCount: failureInfo.count, 
+          {
+            operationKey,
+            failureCount: failureInfo.count,
             threshold: this.config.maxConsecutiveFailures,
             lastError: errorMessage,
-            context 
+            context,
           }
         )
       }
     }
   }
-
 }

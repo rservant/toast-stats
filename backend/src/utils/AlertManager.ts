@@ -1,6 +1,6 @@
 /**
  * Alert Manager for Administrator Notifications
- * 
+ *
  * Provides centralized alerting functionality for reconciliation errors,
  * circuit breaker events, and other critical system issues.
  */
@@ -11,7 +11,7 @@ export enum AlertSeverity {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
-  CRITICAL = 'CRITICAL'
+  CRITICAL = 'CRITICAL',
 }
 
 export enum AlertCategory {
@@ -19,7 +19,7 @@ export enum AlertCategory {
   CIRCUIT_BREAKER = 'CIRCUIT_BREAKER',
   DATA_QUALITY = 'DATA_QUALITY',
   SYSTEM = 'SYSTEM',
-  NETWORK = 'NETWORK'
+  NETWORK = 'NETWORK',
 }
 
 export interface Alert {
@@ -64,7 +64,7 @@ export class AlertManager {
 
   /**
    * Send an alert
-   * 
+   *
    * @param severity - Alert severity level
    * @param category - Alert category
    * @param title - Short alert title
@@ -80,7 +80,7 @@ export class AlertManager {
     context: Record<string, unknown> = {}
   ): Promise<string | null> {
     const alertId = this.generateAlertId(category, title)
-    
+
     // Check if this alert is throttled
     if (this.isThrottled(alertId, category)) {
       logger.debug('Alert throttled', { alertId, category, title })
@@ -95,7 +95,7 @@ export class AlertManager {
       title,
       message,
       context,
-      resolved: false
+      resolved: false,
     }
 
     this.alerts.set(alertId, alert)
@@ -108,7 +108,7 @@ export class AlertManager {
       category,
       title,
       message,
-      context
+      context,
     })
 
     // Send the alert through configured channels
@@ -144,14 +144,20 @@ export class AlertManager {
     failureCount: number,
     nextRetryTime?: Date
   ): Promise<string | null> {
-    const severity = state === 'OPEN' ? AlertSeverity.HIGH : AlertSeverity.MEDIUM
-    
+    const severity =
+      state === 'OPEN' ? AlertSeverity.HIGH : AlertSeverity.MEDIUM
+
     return this.sendAlert(
       severity,
       AlertCategory.CIRCUIT_BREAKER,
       `Circuit Breaker ${state}`,
       `Circuit breaker '${circuitName}' is now ${state} after ${failureCount} failures`,
-      { circuitName, state, failureCount, nextRetryTime: nextRetryTime?.toISOString() }
+      {
+        circuitName,
+        state,
+        failureCount,
+        nextRetryTime: nextRetryTime?.toISOString(),
+      }
     )
   }
 
@@ -163,8 +169,9 @@ export class AlertManager {
     lastError: string,
     affectedOperations: string[]
   ): Promise<string | null> {
-    const severity = duration > 300000 ? AlertSeverity.CRITICAL : AlertSeverity.HIGH // 5 minutes
-    
+    const severity =
+      duration > 300000 ? AlertSeverity.CRITICAL : AlertSeverity.HIGH // 5 minutes
+
     return this.sendAlert(
       severity,
       AlertCategory.NETWORK,
@@ -215,14 +222,14 @@ export class AlertManager {
    */
   async resolveAlert(alertId: string, resolvedBy?: string): Promise<boolean> {
     const alert = this.alerts.get(alertId)
-    
+
     if (!alert || alert.resolved) {
       return false
     }
 
     alert.resolved = true
     alert.resolvedAt = new Date()
-    
+
     if (resolvedBy) {
       alert.acknowledgedBy = resolvedBy
       alert.acknowledgedAt = new Date()
@@ -232,7 +239,7 @@ export class AlertManager {
       alertId,
       resolvedBy,
       title: alert.title,
-      category: alert.category
+      category: alert.category,
     })
 
     return true
@@ -268,7 +275,7 @@ export class AlertManager {
       [AlertSeverity.LOW]: 0,
       [AlertSeverity.MEDIUM]: 0,
       [AlertSeverity.HIGH]: 0,
-      [AlertSeverity.CRITICAL]: 0
+      [AlertSeverity.CRITICAL]: 0,
     }
 
     const byCategory: Record<AlertCategory, number> = {
@@ -276,7 +283,7 @@ export class AlertManager {
       [AlertCategory.CIRCUIT_BREAKER]: 0,
       [AlertCategory.DATA_QUALITY]: 0,
       [AlertCategory.SYSTEM]: 0,
-      [AlertCategory.NETWORK]: 0
+      [AlertCategory.NETWORK]: 0,
     }
 
     for (const alert of active) {
@@ -289,7 +296,7 @@ export class AlertManager {
       active: active.length,
       resolved: resolved.length,
       bySeverity,
-      byCategory
+      byCategory,
     }
   }
 
@@ -301,7 +308,11 @@ export class AlertManager {
     let cleanedCount = 0
 
     for (const [alertId, alert] of this.alerts.entries()) {
-      if (alert.resolved && alert.resolvedAt && alert.resolvedAt < sevenDaysAgo) {
+      if (
+        alert.resolved &&
+        alert.resolvedAt &&
+        alert.resolvedAt < sevenDaysAgo
+      ) {
         this.alerts.delete(alertId)
         cleanedCount++
       }
@@ -325,7 +336,7 @@ export class AlertManager {
         severity: AlertSeverity.HIGH,
         enabled: true,
         throttleMinutes: 30,
-        description: 'Reconciliation job failures'
+        description: 'Reconciliation job failures',
       },
       {
         id: 'circuit-breaker-open',
@@ -333,7 +344,7 @@ export class AlertManager {
         severity: AlertSeverity.HIGH,
         enabled: true,
         throttleMinutes: 15,
-        description: 'Circuit breaker opened'
+        description: 'Circuit breaker opened',
       },
       {
         id: 'dashboard-unavailable',
@@ -341,7 +352,7 @@ export class AlertManager {
         severity: AlertSeverity.CRITICAL,
         enabled: true,
         throttleMinutes: 10,
-        description: 'Dashboard unavailable for extended period'
+        description: 'Dashboard unavailable for extended period',
       },
       {
         id: 'data-quality-issue',
@@ -349,7 +360,7 @@ export class AlertManager {
         severity: AlertSeverity.MEDIUM,
         enabled: true,
         throttleMinutes: 60,
-        description: 'Data quality issues detected'
+        description: 'Data quality issues detected',
       },
       {
         id: 'reconciliation-timeout',
@@ -357,8 +368,8 @@ export class AlertManager {
         severity: AlertSeverity.MEDIUM,
         enabled: true,
         throttleMinutes: 120,
-        description: 'Reconciliation taking too long'
-      }
+        description: 'Reconciliation taking too long',
+      },
     ]
 
     for (const rule of defaultRules) {
@@ -395,14 +406,18 @@ export class AlertManager {
    * Get alert rule for category
    */
   private getAlertRule(category: AlertCategory): AlertRule | undefined {
-    return Array.from(this.alertRules.values()).find(rule => rule.category === category)
+    return Array.from(this.alertRules.values()).find(
+      rule => rule.category === category
+    )
   }
 
   /**
    * Generate alert ID
    */
   private generateAlertId(category: AlertCategory, title: string): string {
-    const hash = Buffer.from(`${category}-${title}`).toString('base64').slice(0, 8)
+    const hash = Buffer.from(`${category}-${title}`)
+      .toString('base64')
+      .slice(0, 8)
     return `alert-${hash}-${Date.now()}`
   }
 
@@ -415,7 +430,7 @@ export class AlertManager {
     // - Slack/Teams webhooks
     // - PagerDuty/OpsGenie
     // - SMS services
-    
+
     // For now, we'll use structured logging that can be picked up by monitoring systems
     logger.error('ADMINISTRATOR ALERT', {
       alertId: alert.id,
@@ -426,7 +441,12 @@ export class AlertManager {
       context: alert.context,
       timestamp: alert.timestamp.toISOString(),
       // Add tags for monitoring systems to pick up
-      tags: ['alert', 'administrator', alert.severity.toLowerCase(), alert.category.toLowerCase()]
+      tags: [
+        'alert',
+        'administrator',
+        alert.severity.toLowerCase(),
+        alert.category.toLowerCase(),
+      ],
     })
 
     // TODO: Implement actual delivery mechanisms based on deployment environment

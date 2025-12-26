@@ -12,7 +12,7 @@ export default defineConfig({
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
       // Skip Assessment module tests
       '**/modules/assessment/**',
-      '**/assessment/**'
+      '**/assessment/**',
     ],
     coverage: {
       provider: 'v8',
@@ -22,8 +22,8 @@ export default defineConfig({
         '**/dist/**',
         // Skip Assessment module from coverage
         '**/modules/assessment/**',
-        '**/assessment/**'
-      ]
+        '**/assessment/**',
+      ],
     },
   },
 })

@@ -86,7 +86,7 @@ export function invalidateCacheMiddleware(
         const allKeys = cacheService.keys()
 
         // Find keys matching the pattern
-        const keysToInvalidate = allKeys.filter((key) => {
+        const keysToInvalidate = allKeys.filter(key => {
           // Simple wildcard matching
           const regexPattern = pattern
             .replace(/\*/g, '.*')

@@ -29,7 +29,9 @@ describe('Login Flow Integration', () => {
   it('should render login form with all required fields', () => {
     renderLoginPage()
 
-    expect(screen.getByRole('heading', { name: /toastmasters district visualizer/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /toastmasters district visualizer/i })
+    ).toBeInTheDocument()
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()

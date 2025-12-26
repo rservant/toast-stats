@@ -31,7 +31,7 @@ describe('Reconciliation Status API Integration Tests', () => {
     // Initialize storage manager with test directory
     storageManager = new ReconciliationStorageManager(testCacheDir)
     await storageManager.init()
-    
+
     // Initialize progress tracker
     new ProgressTracker(storageManager)
   })
@@ -48,7 +48,7 @@ describe('Reconciliation Status API Integration Tests', () => {
   describe('GET /api/reconciliation/status/:districtId/:targetMonth', () => {
     it('should return current data status when no reconciliation exists', async () => {
       const app = createTestApp()
-      
+
       const response = await request(app)
         .get('/api/reconciliation/status/D123/2025-01')
         .expect(200)
@@ -65,13 +65,17 @@ describe('Reconciliation Status API Integration Tests', () => {
       })
 
       // Verify dates are valid ISO strings
-      expect(new Date(response.body.dataStatus.dataCollectionDate)).toBeInstanceOf(Date)
-      expect(new Date(response.body.dataStatus.lastUpdated)).toBeInstanceOf(Date)
+      expect(
+        new Date(response.body.dataStatus.dataCollectionDate)
+      ).toBeInstanceOf(Date)
+      expect(new Date(response.body.dataStatus.lastUpdated)).toBeInstanceOf(
+        Date
+      )
     })
 
     it('should return 400 for invalid district ID', async () => {
       const app = createTestApp()
-      
+
       const response = await request(app)
         .get('/api/reconciliation/status/invalid-district!/2025-01')
         .expect(400)
@@ -86,7 +90,7 @@ describe('Reconciliation Status API Integration Tests', () => {
 
     it('should return 400 for invalid target month format', async () => {
       const app = createTestApp()
-      
+
       const response = await request(app)
         .get('/api/reconciliation/status/D123/invalid-month')
         .expect(400)
@@ -101,7 +105,7 @@ describe('Reconciliation Status API Integration Tests', () => {
 
     it('should return 400 for invalid month values', async () => {
       const app = createTestApp()
-      
+
       // Test invalid month (13)
       await request(app)
         .get('/api/reconciliation/status/D123/2025-13')

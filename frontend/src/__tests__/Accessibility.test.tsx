@@ -38,14 +38,22 @@ describe('Accessibility Tests', () => {
 
   it('StatCard should have no accessibility violations', async () => {
     const { container } = render(
-      <StatCard name="Total Members" value={1250} change={50} changePercent={4.2} trend="positive" />
+      <StatCard
+        name="Total Members"
+        value={1250}
+        change={50}
+        changePercent={4.2}
+        trend="positive"
+      />
     )
     const results = await axe(container)
     expect(results).toHaveNoViolations()
   })
 
   it('StatCard with loading state should have no accessibility violations', async () => {
-    const { container } = render(<StatCard name="Total Members" value={1250} isLoading={true} />)
+    const { container } = render(
+      <StatCard name="Total Members" value={1250} isLoading={true} />
+    )
     const results = await axe(container)
     expect(results).toHaveNoViolations()
   })

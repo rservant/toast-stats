@@ -3,41 +3,47 @@
  * Handles CRUD operations for monthly assessments, goals, and configuration
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { MonthlyAssessment, DistrictLeaderGoal, DistrictConfig } from '../types/assessment.js';
+import * as fs from 'fs/promises'
+import * as path from 'path'
+import {
+  MonthlyAssessment,
+  DistrictLeaderGoal,
+  DistrictConfig,
+} from '../types/assessment.js'
 
 interface ErrnoException extends Error {
-  code?: string;
-  errno?: number;
-  path?: string;
-  syscall?: string;
+  code?: string
+  errno?: number
+  path?: string
+  syscall?: string
 }
 
 interface AssessmentWithDataSources extends MonthlyAssessment {
-  data_sources?: Record<string, { cache_file?: string }>;
+  data_sources?: Record<string, { cache_file?: string }>
 }
 
-const DATA_DIR = path.resolve(__dirname, 'data');
+const DATA_DIR = path.resolve(__dirname, 'data')
 
 /**
  * Sanitize a value so it is safe to use in a filename.
  * Allows only alphanumerics, underscore, and dash; replaces everything else with "_".
  */
 function sanitizeForFilename(input: string): string {
-  return input.replace(/[^A-Za-z0-9_-]/g, '_');
+  return input.replace(/[^A-Za-z0-9_-]/g, '_')
 }
 
 /**
  * Resolve a filename within the DATA_DIR and ensure it does not escape the directory.
  */
 function resolveDataPath(fileName: string): string {
-  const fullPath = path.resolve(DATA_DIR, fileName);
-  const dataDirWithSep = DATA_DIR.endsWith(path.sep) ? DATA_DIR : DATA_DIR + path.sep;
+  const fullPath = path.resolve(DATA_DIR, fileName)
+  const dataDirWithSep = DATA_DIR.endsWith(path.sep)
+    ? DATA_DIR
+    : DATA_DIR + path.sep
   if (!(fullPath === DATA_DIR || fullPath.startsWith(dataDirWithSep))) {
-    throw new Error('Resolved path escapes data directory');
+    throw new Error('Resolved path escapes data directory')
   }
-  return fullPath;
+  return fullPath
 }
 
 /**
@@ -45,63 +51,75 @@ function resolveDataPath(fileName: string): string {
  */
 async function ensureDataDir(): Promise<void> {
   try {
-    await fs.access(DATA_DIR);
+    await fs.access(DATA_DIR)
   } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
+    await fs.mkdir(DATA_DIR, { recursive: true })
   }
 }
 
 /**
  * Get file path for monthly assessment data
  */
-function getAssessmentPath(districtNumber: number, programYear: string, month: string): string {
-  const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
-  const sanitizedYear = sanitizeForFilename(programYear);
-  const sanitizedMonth = sanitizeForFilename(month);
-  const fileName = `assessment_${sanitizedDistrict}_${sanitizedYear}_${sanitizedMonth}.json`;
-  return resolveDataPath(fileName);
+function getAssessmentPath(
+  districtNumber: number,
+  programYear: string,
+  month: string
+): string {
+  const sanitizedDistrict = sanitizeForFilename(String(districtNumber))
+  const sanitizedYear = sanitizeForFilename(programYear)
+  const sanitizedMonth = sanitizeForFilename(month)
+  const fileName = `assessment_${sanitizedDistrict}_${sanitizedYear}_${sanitizedMonth}.json`
+  return resolveDataPath(fileName)
 }
 
 /**
  * Get file path for goals
  */
 function getGoalsPath(districtNumber: number, programYear: string): string {
-  const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
-  const sanitizedYear = sanitizeForFilename(programYear);
-  const fileName = `goals_${sanitizedDistrict}_${sanitizedYear}.json`;
-  return resolveDataPath(fileName);
+  const sanitizedDistrict = sanitizeForFilename(String(districtNumber))
+  const sanitizedYear = sanitizeForFilename(programYear)
+  const fileName = `goals_${sanitizedDistrict}_${sanitizedYear}.json`
+  return resolveDataPath(fileName)
 }
 
 /**
  * Get file path for configuration
  */
 function getConfigPath(districtNumber: number, programYear: string): string {
-  const sanitizedDistrict = sanitizeForFilename(String(districtNumber));
-  const sanitizedYear = sanitizeForFilename(programYear);
-  const fileName = `config_${sanitizedDistrict}_${sanitizedYear}.json`;
-  return resolveDataPath(fileName);
+  const sanitizedDistrict = sanitizeForFilename(String(districtNumber))
+  const sanitizedYear = sanitizeForFilename(programYear)
+  const fileName = `config_${sanitizedDistrict}_${sanitizedYear}.json`
+  return resolveDataPath(fileName)
 }
 
 /**
  * Save monthly assessment data
  */
-export async function saveMonthlyAssessment(data: MonthlyAssessment): Promise<void> {
-  await ensureDataDir();
-  const filePath = getAssessmentPath(data.district_number, data.program_year, data.month);
+export async function saveMonthlyAssessment(
+  data: MonthlyAssessment
+): Promise<void> {
+  await ensureDataDir()
+  const filePath = getAssessmentPath(
+    data.district_number,
+    data.program_year,
+    data.month
+  )
   // Enforce immutability for auto-generated assessments: do not overwrite existing file
   try {
-    await fs.access(filePath);
+    await fs.access(filePath)
     // If file exists, throw - caller should delete first to regenerate
-    throw new Error('Assessment already exists and is immutable. Delete before regenerating.');
+    throw new Error(
+      'Assessment already exists and is immutable. Delete before regenerating.'
+    )
   } catch (err) {
     // If ENOENT, file does not exist and we can proceed
     if ((err as ErrnoException).code !== 'ENOENT') {
       // rethrow other access errors
-      throw err;
+      throw err
     }
   }
 
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
 }
 
 /**
@@ -113,14 +131,14 @@ export async function getMonthlyAssessment(
   month: string
 ): Promise<MonthlyAssessment | null> {
   try {
-    const filePath = getAssessmentPath(districtNumber, programYear, month);
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data) as MonthlyAssessment;
+    const filePath = getAssessmentPath(districtNumber, programYear, month)
+    const data = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(data) as MonthlyAssessment
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
-      return null;
+      return null
     }
-    throw err;
+    throw err
   }
 }
 
@@ -133,14 +151,14 @@ export async function deleteMonthlyAssessment(
   month: string
 ): Promise<void> {
   try {
-    const filePath = getAssessmentPath(districtNumber, programYear, month);
-    await fs.unlink(filePath);
+    const filePath = getAssessmentPath(districtNumber, programYear, month)
+    await fs.unlink(filePath)
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
       // File doesn't exist, return silently (idempotent)
-      return;
+      return
     }
-    throw err;
+    throw err
   }
 }
 
@@ -152,24 +170,24 @@ export async function listMonthlyAssessments(
   programYear: string
 ): Promise<MonthlyAssessment[]> {
   try {
-    await ensureDataDir();
-    const files = await fs.readdir(DATA_DIR);
-    const prefix = `assessment_${districtNumber}_${programYear}_`;
-    
-    const assessments: MonthlyAssessment[] = [];
+    await ensureDataDir()
+    const files = await fs.readdir(DATA_DIR)
+    const prefix = `assessment_${districtNumber}_${programYear}_`
+
+    const assessments: MonthlyAssessment[] = []
     for (const file of files) {
       if (file.startsWith(prefix) && file.endsWith('.json')) {
-        const data = await fs.readFile(path.join(DATA_DIR, file), 'utf-8');
-        assessments.push(JSON.parse(data) as MonthlyAssessment);
+        const data = await fs.readFile(path.join(DATA_DIR, file), 'utf-8')
+        assessments.push(JSON.parse(data) as MonthlyAssessment)
       }
     }
-    
-    return assessments.sort((a, b) => a.month.localeCompare(b.month));
+
+    return assessments.sort((a, b) => a.month.localeCompare(b.month))
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
-      return [];
+      return []
     }
-    throw err;
+    throw err
   }
 }
 
@@ -180,13 +198,22 @@ export async function getAuditTrail(
   districtNumber: number,
   programYear: string,
   month: string
-): Promise<{ created_at: string | null; generated_from_cache_date?: string | null; cache_files_used?: string[] } > {
-  const assessment = await getMonthlyAssessment(districtNumber, programYear, month)
+): Promise<{
+  created_at: string | null
+  generated_from_cache_date?: string | null
+  cache_files_used?: string[]
+}> {
+  const assessment = await getMonthlyAssessment(
+    districtNumber,
+    programYear,
+    month
+  )
   if (!assessment) return { created_at: null }
 
   const created_at = assessment.created_at ?? null
   const assessmentWithSources = assessment as AssessmentWithDataSources
-  const generated_from_cache_date = assessmentWithSources.generated_from_cache_date ?? null
+  const generated_from_cache_date =
+    assessmentWithSources.generated_from_cache_date ?? null
   const cache_files_used: string[] = []
 
   if (assessmentWithSources.data_sources) {
@@ -203,28 +230,28 @@ export async function getAuditTrail(
  * Save district leader goal
  */
 export async function saveGoal(goal: DistrictLeaderGoal): Promise<void> {
-  await ensureDataDir();
-  const filePath = getGoalsPath(goal.district_number, goal.program_year);
-  
-  let goals: DistrictLeaderGoal[] = [];
+  await ensureDataDir()
+  const filePath = getGoalsPath(goal.district_number, goal.program_year)
+
+  let goals: DistrictLeaderGoal[] = []
   try {
-    const data = await fs.readFile(filePath, 'utf-8');
-    goals = JSON.parse(data) as DistrictLeaderGoal[];
+    const data = await fs.readFile(filePath, 'utf-8')
+    goals = JSON.parse(data) as DistrictLeaderGoal[]
   } catch (err) {
     if ((err as ErrnoException).code !== 'ENOENT') {
-      throw err;
+      throw err
     }
   }
-  
+
   // Update or add goal
-  const index = goals.findIndex(g => g.id === goal.id);
+  const index = goals.findIndex(g => g.id === goal.id)
   if (index >= 0) {
-    goals[index] = goal;
+    goals[index] = goal
   } else {
-    goals.push(goal);
+    goals.push(goal)
   }
-  
-  await fs.writeFile(filePath, JSON.stringify(goals, null, 2), 'utf-8');
+
+  await fs.writeFile(filePath, JSON.stringify(goals, null, 2), 'utf-8')
 }
 
 /**
@@ -232,26 +259,26 @@ export async function saveGoal(goal: DistrictLeaderGoal): Promise<void> {
  */
 export async function getGoal(id: string): Promise<DistrictLeaderGoal | null> {
   try {
-    await ensureDataDir();
-    const files = await fs.readdir(DATA_DIR);
-    
+    await ensureDataDir()
+    const files = await fs.readdir(DATA_DIR)
+
     for (const file of files) {
       if (file.startsWith('goals_') && file.endsWith('.json')) {
-        const data = await fs.readFile(resolveDataPath(file), 'utf-8');
-        const goals = JSON.parse(data) as DistrictLeaderGoal[];
-        const goal = goals.find(g => g.id === id);
+        const data = await fs.readFile(resolveDataPath(file), 'utf-8')
+        const goals = JSON.parse(data) as DistrictLeaderGoal[]
+        const goal = goals.find(g => g.id === id)
         if (goal) {
-          return goal;
+          return goal
         }
       }
     }
-    
-    return null;
+
+    return null
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
-      return null;
+      return null
     }
-    throw err;
+    throw err
   }
 }
 
@@ -263,40 +290,44 @@ export async function listGoals(
   programYear: string
 ): Promise<DistrictLeaderGoal[]> {
   try {
-    const filePath = getGoalsPath(districtNumber, programYear);
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data) as DistrictLeaderGoal[];
+    const filePath = getGoalsPath(districtNumber, programYear)
+    const data = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(data) as DistrictLeaderGoal[]
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
-      return [];
+      return []
     }
-    throw err;
+    throw err
   }
 }
 
 /**
  * Delete goal by ID
  */
-export async function deleteGoal(districtNumber: number, programYear: string, goalId: string): Promise<boolean> {
+export async function deleteGoal(
+  districtNumber: number,
+  programYear: string,
+  goalId: string
+): Promise<boolean> {
   try {
-    const filePath = getGoalsPath(districtNumber, programYear);
-    const data = await fs.readFile(filePath, 'utf-8');
-    let goals = JSON.parse(data) as DistrictLeaderGoal[];
-    
-    const initialLength = goals.length;
-    goals = goals.filter(g => g.id !== goalId);
-    
+    const filePath = getGoalsPath(districtNumber, programYear)
+    const data = await fs.readFile(filePath, 'utf-8')
+    let goals = JSON.parse(data) as DistrictLeaderGoal[]
+
+    const initialLength = goals.length
+    goals = goals.filter(g => g.id !== goalId)
+
     if (goals.length < initialLength) {
-      await fs.writeFile(filePath, JSON.stringify(goals, null, 2), 'utf-8');
-      return true;
+      await fs.writeFile(filePath, JSON.stringify(goals, null, 2), 'utf-8')
+      return true
     }
-    
-    return false;
+
+    return false
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
-      return false;
+      return false
     }
-    throw err;
+    throw err
   }
 }
 
@@ -304,23 +335,26 @@ export async function deleteGoal(districtNumber: number, programYear: string, go
  * Save configuration
  */
 export async function saveConfig(config: DistrictConfig): Promise<void> {
-  await ensureDataDir();
-  const filePath = getConfigPath(config.district_number, config.program_year);
-  await fs.writeFile(filePath, JSON.stringify(config, null, 2), 'utf-8');
+  await ensureDataDir()
+  const filePath = getConfigPath(config.district_number, config.program_year)
+  await fs.writeFile(filePath, JSON.stringify(config, null, 2), 'utf-8')
 }
 
 /**
  * Retrieve configuration
  */
-export async function getConfig(districtNumber: number, programYear: string): Promise<DistrictConfig | null> {
+export async function getConfig(
+  districtNumber: number,
+  programYear: string
+): Promise<DistrictConfig | null> {
   try {
-    const filePath = getConfigPath(districtNumber, programYear);
-    const data = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(data) as DistrictConfig;
+    const filePath = getConfigPath(districtNumber, programYear)
+    const data = await fs.readFile(filePath, 'utf-8')
+    return JSON.parse(data) as DistrictConfig
   } catch (err) {
     if ((err as ErrnoException).code === 'ENOENT') {
-      return null;
+      return null
     }
-    throw err;
+    throw err
   }
 }

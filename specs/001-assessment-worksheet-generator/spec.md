@@ -5,7 +5,7 @@
 **Status**: Draft  
 **Input**: Build a reporting module that reproduces the logic and outputs of "District 61 – 2025 Updated Assessment Worksheet.xlsx" to generate monthly district assessment reports with automated calculation of Goals 1–3, matching the existing workbook structure.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 – District Director Reviews Monthly Assessment (Priority: P1)
 
@@ -78,7 +78,7 @@ An administrator defines or updates the recognition level thresholds, year-end t
 - How are historical corrections handled if the district leader notices an error in a previously submitted month?
 - Should the system calculate CSP submission efficiency (submitted vs. target) separately from goal tracking?
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -95,14 +95,14 @@ An administrator defines or updates the recognition level thresholds, year-end t
 - **FR-011**: System MUST support multiple districts by accepting district_number as an input parameter and storing/retrieving data keyed by district.
 - **FR-012**: System MUST be extensible to accept new input sources (e.g., CSV, API endpoints from dashboards.toastmasters.org) without requiring core logic changes.
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **DistrictConfig**: Defines recognition thresholds, year-end targets, monthly derivation rules, and CSP submission targets for a program year. Keyed by (district_number, program_year).
 - **MonthlyAssessment**: Contains performance data for a single month, including membership_payments_ytd, paid_clubs_ytd, distinguished_clubs_ytd, club_success_plans_submitted_ytd, calculated goal statuses, and any notes. Keyed by (district_number, program_year, month).
 - **DistrictLeaderGoal**: Represents a single action item (text, assigned leader role, deadline, date_completed, notes). Linked to a MonthlyAssessment or free-standing for multi-month tracking.
 - **ReportOutput**: Generated report artifact (HTML, PDF, or JSON) representing a single month's assessment, year-end summary, or goal list. Contains rendered data and metadata (generated_at, report_version).
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

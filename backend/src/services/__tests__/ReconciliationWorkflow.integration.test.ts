@@ -1,6 +1,6 @@
 /**
  * Integration tests for end-to-end reconciliation workflow
- * 
+ *
  * Tests the complete reconciliation cycle from initiation to finalization,
  * interaction with DistrictBackfillService, and concurrent job processing.
  */
@@ -17,7 +17,10 @@ import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
 import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
 
 import type { DistrictStatistics } from '../../types/districts.js'
-import type { ReconciliationJob, ReconciliationConfig } from '../../types/reconciliation.js'
+import type {
+  ReconciliationJob,
+  ReconciliationConfig,
+} from '../../types/reconciliation.js'
 
 describe('End-to-End Reconciliation Workflow Integration', () => {
   let orchestrator: ReconciliationOrchestrator
@@ -42,7 +45,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       total: 1500,
       change: 25,
       changePercent: 1.7,
-      byClub: []
+      byClub: [],
     },
     clubs: {
       total: 75,
@@ -50,14 +53,14 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       suspended: 3,
       ineligible: 2,
       low: 5,
-      distinguished: 25
+      distinguished: 25,
     },
     education: {
       totalAwards: 150,
       byType: [],
       topClubs: [],
-      byMonth: []
-    }
+      byMonth: [],
+    },
   }
 
   const mockUpdatedDistrictData: DistrictStatistics = {
@@ -66,12 +69,12 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       ...mockDistrictData.membership,
       total: 1525, // Slight increase
       change: 50,
-      changePercent: 3.4
+      changePercent: 3.4,
     },
     clubs: {
       ...mockDistrictData.clubs,
-      distinguished: 27 // Increase in distinguished clubs
-    }
+      distinguished: 27, // Increase in distinguished clubs
+    },
   }
 
   beforeEach(async () => {
@@ -93,7 +96,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
     changeDetectionEngine = new ChangeDetectionEngine()
     configService = new ReconciliationConfigService()
     cacheService = new ReconciliationCacheService()
-    
+
     orchestrator = new ReconciliationOrchestrator(
       changeDetectionEngine,
       storageManager,
@@ -102,15 +105,19 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
     )
 
     backfillService = new DistrictBackfillService(cacheManager, scraper)
-    scheduler = new ReconciliationScheduler(orchestrator, storageManager, configService)
+    scheduler = new ReconciliationScheduler(
+      orchestrator,
+      storageManager,
+      configService
+    )
 
     // Setup initial cached data
     await cacheManager.cacheDistrictData(
       testDistrictId,
       testMonthEndDate,
       [], // district performance
-      [], // division performance  
-      []  // club performance
+      [], // division performance
+      [] // club performance
     )
   })
 
@@ -163,7 +170,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         const status = await orchestrator.processReconciliationCycle(
           job.id,
           mockDistrictData, // Current data (same as cached)
-          mockDistrictData  // Cached data
+          mockDistrictData // Cached data
         )
 
         if (i < 2) {
@@ -181,7 +188,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       // Verify timeline has entries
       const updatedTimeline = await storageManager.getTimeline(job.id)
       expect(updatedTimeline!.entries).toHaveLength(3)
-      expect(updatedTimeline!.entries.every(entry => !entry.isSignificant)).toBe(true)
+      expect(
+        updatedTimeline!.entries.every(entry => !entry.isSignificant)
+      ).toBe(true)
 
       // Step 3: System is already in finalizing phase after meeting stability period
       // No need for additional processing - the job is ready for finalization
@@ -205,7 +214,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       const configWithExtension: Partial<ReconciliationConfig> = {
         autoExtensionEnabled: true,
         maxExtensionDays: 5,
-        stabilityPeriodDays: 3
+        stabilityPeriodDays: 3,
       }
 
       const job = await orchestrator.startReconciliation(
@@ -221,7 +230,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       const status = await orchestrator.processReconciliationCycle(
         job.id,
         mockUpdatedDistrictData, // Significant changes
-        mockDistrictData         // Original cached data
+        mockDistrictData // Original cached data
       )
 
       // After significant changes, the system should reset stability counter
@@ -233,7 +242,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       const extendedJob = await storageManager.getJob(job.id)
       // Extension may or may not occur depending on timing and configuration
       // The important thing is that the job processed the significant changes
-      expect(extendedJob!.maxEndDate.getTime()).toBeGreaterThanOrEqual(originalMaxEndDate.getTime())
+      expect(extendedJob!.maxEndDate.getTime()).toBeGreaterThanOrEqual(
+        originalMaxEndDate.getTime()
+      )
 
       // Verify timeline entry shows significant change
       const timeline = await storageManager.getTimeline(job.id)
@@ -259,8 +270,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       }
 
       // Attempt to finalize early should fail
-      await expect(orchestrator.finalizeReconciliation(job.id))
-        .rejects.toThrow('Stability period not met')
+      await expect(orchestrator.finalizeReconciliation(job.id)).rejects.toThrow(
+        'Stability period not met'
+      )
 
       // Verify job is still active
       const activeJob = await storageManager.getJob(job.id)
@@ -282,7 +294,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         success: true,
         data: mockDistrictData,
         sourceDataDate: testMonthEndDate,
-        isDataAvailable: true
+        isDataAvailable: true,
       })
 
       // Test reconciliation data fetching
@@ -311,7 +323,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       vi.spyOn(backfillService, 'fetchReconciliationData').mockResolvedValue({
         success: true,
         isDataAvailable: false,
-        error: 'No data available for the specified date'
+        error: 'No data available for the specified date',
       })
 
       const fetchResult = await backfillService.fetchReconciliationData(
@@ -330,7 +342,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       vi.spyOn(backfillService, 'fetchReconciliationData').mockResolvedValue({
         success: false,
         isDataAvailable: false,
-        error: 'Dashboard API unavailable'
+        error: 'Dashboard API unavailable',
       })
 
       const fetchResult = await backfillService.fetchReconciliationData(
@@ -375,9 +387,11 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       const statuses = await Promise.all(processingPromises)
       expect(statuses).toHaveLength(3)
       // Some jobs might be in stabilizing or finalizing phase after first cycle
-      expect(statuses.every(status => 
-        ['monitoring', 'stabilizing', 'finalizing'].includes(status.phase)
-      )).toBe(true)
+      expect(
+        statuses.every(status =>
+          ['monitoring', 'stabilizing', 'finalizing'].includes(status.phase)
+        )
+      ).toBe(true)
 
       // Verify all jobs are properly tracked
       await storageManager.flush() // Force immediate write
@@ -411,8 +425,8 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       // Verify only one job exists
       await storageManager.flush() // Force immediate write
       const jobs = await storageManager.getJobsByDistrict(testDistrictId)
-      const activeJobs = jobs.filter(job => 
-        job.targetMonth === testTargetMonth && job.status === 'active'
+      const activeJobs = jobs.filter(
+        job => job.targetMonth === testTargetMonth && job.status === 'active'
       )
       expect(activeJobs).toHaveLength(1)
     })
@@ -427,16 +441,30 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
       // Process same job concurrently (simulating multiple scheduler instances)
       const concurrentProcessing = [
-        orchestrator.processReconciliationCycle(job.id, mockDistrictData, mockDistrictData),
-        orchestrator.processReconciliationCycle(job.id, mockDistrictData, mockDistrictData),
-        orchestrator.processReconciliationCycle(job.id, mockDistrictData, mockDistrictData)
+        orchestrator.processReconciliationCycle(
+          job.id,
+          mockDistrictData,
+          mockDistrictData
+        ),
+        orchestrator.processReconciliationCycle(
+          job.id,
+          mockDistrictData,
+          mockDistrictData
+        ),
+        orchestrator.processReconciliationCycle(
+          job.id,
+          mockDistrictData,
+          mockDistrictData
+        ),
       ]
 
       // All should complete without errors
       const results = await Promise.allSettled(concurrentProcessing)
-      
+
       // At least one should succeed (others might fail due to race conditions, which is acceptable)
-      const successfulResults = results.filter(result => result.status === 'fulfilled')
+      const successfulResults = results.filter(
+        result => result.status === 'fulfilled'
+      )
       expect(successfulResults.length).toBeGreaterThan(0)
 
       // Verify job state is consistent
@@ -449,7 +477,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
     it('should handle scheduler-initiated concurrent reconciliations', async () => {
       const districts = ['D42', 'D43', 'D44']
-      
+
       // Schedule reconciliations for multiple districts
       const schedulingPromises = districts.map(districtId =>
         scheduler.scheduleMonthEndReconciliation(districtId, testTargetMonth)
@@ -457,7 +485,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
       const scheduledReconciliations = await Promise.all(schedulingPromises)
       expect(scheduledReconciliations).toHaveLength(3)
-      expect(scheduledReconciliations.every(sr => sr.status === 'pending')).toBe(true)
+      expect(
+        scheduledReconciliations.every(sr => sr.status === 'pending')
+      ).toBe(true)
 
       // Start scheduler to process scheduled reconciliations
       scheduler.start(1) // Check every minute for testing
@@ -487,7 +517,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       )
 
       // Mock storage failure - but the orchestrator has retry logic that might succeed
-      vi.spyOn(storageManager, 'saveJob').mockRejectedValueOnce(new Error('Storage unavailable'))
+      vi.spyOn(storageManager, 'saveJob').mockRejectedValueOnce(
+        new Error('Storage unavailable')
+      )
 
       // Processing might succeed due to retry logic, or fail - both are acceptable
       try {
@@ -518,16 +550,20 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       )
 
       // Mock change detection failure
-      vi.spyOn(changeDetectionEngine, 'detectChanges').mockImplementation(() => {
-        throw new Error('Change detection failed')
-      })
+      vi.spyOn(changeDetectionEngine, 'detectChanges').mockImplementation(
+        () => {
+          throw new Error('Change detection failed')
+        }
+      )
 
       // Processing should fail
-      await expect(orchestrator.processReconciliationCycle(
-        job.id,
-        mockDistrictData,
-        mockDistrictData
-      )).rejects.toThrow() // Just check that it throws, the specific error might vary
+      await expect(
+        orchestrator.processReconciliationCycle(
+          job.id,
+          mockDistrictData,
+          mockDistrictData
+        )
+      ).rejects.toThrow() // Just check that it throws, the specific error might vary
     })
 
     it('should handle job cancellation during active reconciliation', async () => {
@@ -567,7 +603,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         stabilityPeriodDays: 2,
         checkFrequencyHours: 6,
         autoExtensionEnabled: false,
-        maxExtensionDays: 0
+        maxExtensionDays: 0,
       }
 
       const job = await orchestrator.startReconciliation(
@@ -614,7 +650,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       // Verify extension
       const extendedJob = await storageManager.getJob(job.id)
       const expectedExtension = 3 * 24 * 60 * 60 * 1000 // 3 days in milliseconds
-      expect(extendedJob!.maxEndDate.getTime()).toBe(originalMaxEndDate.getTime() + expectedExtension)
+      expect(extendedJob!.maxEndDate.getTime()).toBe(
+        originalMaxEndDate.getTime() + expectedExtension
+      )
 
       // Verify extension info
       const extensionInfo = await orchestrator.getExtensionInfo(job.id)
@@ -635,8 +673,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       await orchestrator.extendReconciliation(job.id, 3)
 
       // Attempt to extend beyond limit should fail
-      await expect(orchestrator.extendReconciliation(job.id, 1))
-        .rejects.toThrow('maximum extension limit')
+      await expect(
+        orchestrator.extendReconciliation(job.id, 1)
+      ).rejects.toThrow('maximum extension limit')
 
       // Verify extension info shows no remaining extension
       const extensionInfo = await orchestrator.getExtensionInfo(job.id)

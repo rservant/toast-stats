@@ -11,7 +11,10 @@ import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMo
 import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
 import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
 import { CacheUpdateManager } from '../CacheUpdateManager.js'
-import type { ReconciliationJob, DistrictStatistics } from '../../types/reconciliation.js'
+import type {
+  ReconciliationJob,
+  DistrictStatistics,
+} from '../../types/reconciliation.js'
 import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
 // Mock logger
@@ -20,8 +23,8 @@ vi.mock('../../utils/logger.js', () => ({
     info: vi.fn(),
     debug: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }))
 
 // Mock external dependencies
@@ -34,20 +37,20 @@ vi.mock('../ChangeDetectionEngine.js', () => {
         membershipChange: {
           previous: 1000,
           current: 1010,
-          percentChange: 1.0
+          percentChange: 1.0,
         },
         timestamp: new Date(),
-        sourceDataDate: '2025-01-15'
+        sourceDataDate: '2025-01-15',
       }
     }
-    
+
     isSignificantChange() {
       return false
     }
   }
-  
+
   return {
-    ChangeDetectionEngine: MockChangeDetectionEngine
+    ChangeDetectionEngine: MockChangeDetectionEngine,
   }
 })
 
@@ -56,36 +59,36 @@ vi.mock('../ReconciliationStorageOptimizer.js', () => ({
     saveJob: vi.fn().mockResolvedValue(undefined),
     getJob: vi.fn().mockResolvedValue(null),
     getAllJobs: vi.fn().mockResolvedValue([]),
-    deleteJob: vi.fn().mockResolvedValue(true)
-  }))
+    deleteJob: vi.fn().mockResolvedValue(true),
+  })),
 }))
 
 vi.mock('../CacheUpdateManager.js', () => ({
   CacheUpdateManager: vi.fn().mockImplementation(() => ({
     updateCache: vi.fn().mockResolvedValue(undefined),
-    invalidateCache: vi.fn().mockResolvedValue(undefined)
-  }))
+    invalidateCache: vi.fn().mockResolvedValue(undefined),
+  })),
 }))
 
 vi.mock('../../utils/AlertManager.js', () => ({
   AlertManager: {
     getInstance: vi.fn().mockReturnValue({
       sendAlert: vi.fn().mockResolvedValue('alert-id'),
-      sendReconciliationFailureAlert: vi.fn().mockResolvedValue('alert-id')
-    })
+      sendReconciliationFailureAlert: vi.fn().mockResolvedValue('alert-id'),
+    }),
   },
   AlertSeverity: {
     LOW: 'low',
     MEDIUM: 'medium',
     HIGH: 'high',
-    CRITICAL: 'critical'
+    CRITICAL: 'critical',
   },
   AlertCategory: {
     SYSTEM: 'system',
     RECONCILIATION: 'reconciliation',
     PERFORMANCE: 'performance',
-    DATA: 'data'
-  }
+    DATA: 'data',
+  },
 }))
 
 vi.mock('../ReconciliationMetricsService.js', () => ({
@@ -94,9 +97,9 @@ vi.mock('../ReconciliationMetricsService.js', () => ({
       recordJobStart: vi.fn(),
       recordJobCompletion: vi.fn(),
       recordJobFailure: vi.fn(),
-      recordJobExtension: vi.fn()
-    })
-  }
+      recordJobExtension: vi.fn(),
+    }),
+  },
 }))
 
 describe('Reconciliation Performance Integration', () => {
@@ -124,18 +127,20 @@ describe('Reconciliation Performance Integration', () => {
         membershipChange: {
           previous: 1000,
           current: 1010,
-          percentChange: 1.0
+          percentChange: 1.0,
         },
         timestamp: new Date(),
-        sourceDataDate: '2025-01-15'
+        sourceDataDate: '2025-01-15',
       }),
       getChangeHistory: vi.fn().mockReturnValue([]),
       clearHistory: vi.fn(),
       isSignificantChange: vi.fn().mockReturnValue(false),
-      calculateChangeMetrics: vi.fn().mockReturnValue({ totalChanges: 1, significantChanges: 0 }),
+      calculateChangeMetrics: vi
+        .fn()
+        .mockReturnValue({ totalChanges: 1, significantChanges: 0 }),
       detectMembershipChanges: vi.fn(),
       detectClubCountChanges: vi.fn(),
-      detectDistinguishedChanges: vi.fn()
+      detectDistinguishedChanges: vi.fn(),
     }
 
     const mockConfigService = {
@@ -146,21 +151,21 @@ describe('Reconciliation Performance Integration', () => {
         significantChangeThresholds: {
           membershipPercent: 1.0,
           clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
+          distinguishedPercent: 2.0,
         },
         autoExtensionEnabled: true,
-        maxExtensionDays: 5
+        maxExtensionDays: 5,
       }),
-      updateConfig: vi.fn().mockResolvedValue(undefined)
+      updateConfig: vi.fn().mockResolvedValue(undefined),
     }
 
     performanceMonitor = new ReconciliationPerformanceMonitor()
     cacheService = new ReconciliationCacheService({
       maxSize: 100,
       ttlMs: 60000,
-      enablePrefetch: true
+      enablePrefetch: true,
     })
-    
+
     // Pre-populate cache with a timeline to avoid storage loading
     const mockTimeline = {
       jobId: 'test-job-id',
@@ -171,13 +176,13 @@ describe('Reconciliation Performance Integration', () => {
         phase: 'monitoring' as const,
         daysActive: 0,
         daysStable: 0,
-        message: 'Monitoring for changes'
-      }
+        message: 'Monitoring for changes',
+      },
     }
-    
+
     // Create a mock storage optimizer that tracks saved jobs
     const savedJobs = new Map()
-    
+
     storageOptimizer = {
       jobCache: new Map(),
       timelineCache: new Map(),
@@ -187,15 +192,20 @@ describe('Reconciliation Performance Integration', () => {
       jobsDir: './test/jobs',
       timelinesDir: './test/timelines',
       configFile: './test/config.json',
-      saveJob: vi.fn().mockImplementation(async (job) => {
+      saveJob: vi.fn().mockImplementation(async job => {
         savedJobs.set(job.id, job)
         // Also pre-populate cache when job is saved
         cacheService.setJob(job.id, job)
-        const timeline = { ...mockTimeline, jobId: job.id, districtId: job.districtId, targetMonth: job.targetMonth }
+        const timeline = {
+          ...mockTimeline,
+          jobId: job.id,
+          districtId: job.districtId,
+          targetMonth: job.targetMonth,
+        }
         cacheService.setTimeline(job.id, timeline)
         return undefined
       }),
-      getJob: vi.fn().mockImplementation(async (jobId) => {
+      getJob: vi.fn().mockImplementation(async jobId => {
         return savedJobs.get(jobId) || null
       }),
       getAllJobs: vi.fn().mockResolvedValue([]),
@@ -212,7 +222,9 @@ describe('Reconciliation Performance Integration', () => {
       updateConfig: vi.fn().mockResolvedValue(undefined),
       resetToDefaults: vi.fn().mockResolvedValue(undefined),
       initializeStorage: vi.fn().mockResolvedValue(undefined),
-      getStorageStats: vi.fn().mockResolvedValue({ totalJobs: 0, totalTimelines: 0 }),
+      getStorageStats: vi
+        .fn()
+        .mockResolvedValue({ totalJobs: 0, totalTimelines: 0 }),
       exportData: vi.fn().mockResolvedValue(''),
       importData: vi.fn().mockResolvedValue(undefined),
       backupStorage: vi.fn().mockResolvedValue(''),
@@ -228,9 +240,11 @@ describe('Reconciliation Performance Integration', () => {
       restoreArchivedData: vi.fn().mockResolvedValue(undefined),
       deleteArchivedData: vi.fn().mockResolvedValue(undefined),
       optimizeStorage: vi.fn().mockResolvedValue(undefined),
-      getOptimizationStats: vi.fn().mockResolvedValue({ compressionRatio: 1.0, spaceSaved: 0 }),
+      getOptimizationStats: vi
+        .fn()
+        .mockResolvedValue({ compressionRatio: 1.0, spaceSaved: 0 }),
       scheduleOptimization: vi.fn().mockResolvedValue(undefined),
-      cancelOptimization: vi.fn().mockResolvedValue(undefined)
+      cancelOptimization: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReconciliationStorageOptimizer
 
     // Create performance monitor
@@ -238,21 +252,25 @@ describe('Reconciliation Performance Integration', () => {
 
     cacheService = new ReconciliationCacheService({
       maxSize: 100,
-      ttlMs: 300000 // 5 minutes
+      ttlMs: 300000, // 5 minutes
     })
 
     const mockCacheUpdateManager = {
       cacheManager: {} as unknown,
       backupSuffix: '_backup',
-      updateCacheImmediately: vi.fn().mockResolvedValue({ success: true, updated: true }),
+      updateCacheImmediately: vi
+        .fn()
+        .mockResolvedValue({ success: true, updated: true }),
       checkCacheConsistency: vi.fn().mockResolvedValue(true),
       rollbackCache: vi.fn().mockResolvedValue(undefined),
       optimizeCache: vi.fn().mockResolvedValue(undefined),
-      getCacheStats: vi.fn().mockReturnValue({ hitRate: 0.8, totalRequests: 100 }),
+      getCacheStats: vi
+        .fn()
+        .mockReturnValue({ hitRate: 0.8, totalRequests: 100 }),
       clearCache: vi.fn().mockResolvedValue(undefined),
       warmupCache: vi.fn().mockResolvedValue(undefined),
       scheduleOptimization: vi.fn().mockResolvedValue(undefined),
-      cancelOptimization: vi.fn().mockResolvedValue(undefined)
+      cancelOptimization: vi.fn().mockResolvedValue(undefined),
     } as unknown as CacheUpdateManager
 
     orchestrator = new ReconciliationOrchestrator(
@@ -282,7 +300,7 @@ describe('Reconciliation Performance Integration', () => {
         total: 950,
         change: 50,
         changePercent: 5.6,
-        byClub: []
+        byClub: [],
       },
       clubs: {
         total: 100,
@@ -290,12 +308,12 @@ describe('Reconciliation Performance Integration', () => {
         suspended: 3,
         ineligible: 1,
         low: 1,
-        distinguished: 35
+        distinguished: 35,
       },
       education: {
         totalAwards: 150,
         byType: [],
-        topClubs: []
+        topClubs: [],
       },
       districtPerformance: [
         {
@@ -304,11 +322,11 @@ describe('Reconciliation Performance Integration', () => {
           totalClubs: 100,
           paidClubs: 95,
           totalPayments: 950,
-          distinguishedClubs: 35
-        }
+          distinguishedClubs: 35,
+        },
       ],
       divisionPerformance: [],
-      clubPerformance: []
+      clubPerformance: [],
     }
 
     const cachedData: DistrictStatistics = {
@@ -318,7 +336,7 @@ describe('Reconciliation Performance Integration', () => {
         total: 940,
         change: 40,
         changePercent: 4.4,
-        byClub: []
+        byClub: [],
       },
       clubs: {
         total: 100,
@@ -326,12 +344,12 @@ describe('Reconciliation Performance Integration', () => {
         suspended: 4,
         ineligible: 1,
         low: 1,
-        distinguished: 34
+        distinguished: 34,
       },
       education: {
         totalAwards: 145,
         byType: [],
-        topClubs: []
+        topClubs: [],
       },
       districtPerformance: [
         {
@@ -340,11 +358,11 @@ describe('Reconciliation Performance Integration', () => {
           totalClubs: 100,
           paidClubs: 94,
           totalPayments: 940,
-          distinguishedClubs: 34
-        }
+          distinguishedClubs: 34,
+        },
       ],
       divisionPerformance: [],
-      clubPerformance: []
+      clubPerformance: [],
     }
 
     // Measure performance of reconciliation operations
@@ -353,7 +371,13 @@ describe('Reconciliation Performance Integration', () => {
     // Start reconciliation
     const job = await performanceMonitor.timeOperation(
       'startReconciliation',
-      () => orchestrator.startReconciliation(districtId, targetMonth, undefined, 'automatic')
+      () =>
+        orchestrator.startReconciliation(
+          districtId,
+          targetMonth,
+          undefined,
+          'automatic'
+        )
     )
 
     expect(job).toBeDefined()
@@ -363,7 +387,8 @@ describe('Reconciliation Performance Integration', () => {
     // Process reconciliation cycle
     const status = await performanceMonitor.timeOperation(
       'processReconciliationCycle',
-      () => orchestrator.processReconciliationCycle(job.id, currentData, cachedData)
+      () =>
+        orchestrator.processReconciliationCycle(job.id, currentData, cachedData)
     )
 
     expect(status).toBeDefined()
@@ -372,8 +397,12 @@ describe('Reconciliation Performance Integration', () => {
     const totalTime = Date.now() - startTime
 
     // Verify performance metrics were recorded
-    const startStats = performanceMonitor.getOperationStats('startReconciliation')
-    const processStats = performanceMonitor.getOperationStats('processReconciliationCycle')
+    const startStats = performanceMonitor.getOperationStats(
+      'startReconciliation'
+    )
+    const processStats = performanceMonitor.getOperationStats(
+      'processReconciliationCycle'
+    )
 
     expect(startStats).toBeDefined()
     expect(startStats!.totalCalls).toBe(1)
@@ -404,8 +433,8 @@ describe('Reconciliation Performance Integration', () => {
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),
-        triggeredBy: 'manual'
-      }
+        triggeredBy: 'manual',
+      },
     })
 
     // Cache the job
@@ -424,7 +453,8 @@ describe('Reconciliation Performance Integration', () => {
     }
 
     // Cache hits should be very fast (sub-millisecond average)
-    const averageHitTime = cacheHitTimes.reduce((sum, time) => sum + time, 0) / cacheHitTimes.length
+    const averageHitTime =
+      cacheHitTimes.reduce((sum, time) => sum + time, 0) / cacheHitTimes.length
     expect(averageHitTime).toBeLessThan(5) // Should be very fast
 
     // Verify cache statistics
@@ -436,7 +466,7 @@ describe('Reconciliation Performance Integration', () => {
   it('should demonstrate batch processing efficiency', async () => {
     // This test verifies that the batch processing infrastructure is working
     // without actually running a full batch (which would be slow in tests)
-    
+
     const storageStats = storageOptimizer.getCacheStats()
     expect(storageStats).toBeDefined()
     expect(storageStats.jobCacheSize).toBeGreaterThanOrEqual(0)
@@ -456,8 +486,8 @@ describe('Reconciliation Performance Integration', () => {
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
       jobs.push(job)
     }
@@ -473,9 +503,15 @@ describe('Reconciliation Performance Integration', () => {
 
   it('should provide comprehensive performance monitoring', async () => {
     // Record some sample metrics
-    performanceMonitor.recordMetric('test-operation-1', 100, true, { type: 'fast' })
-    performanceMonitor.recordMetric('test-operation-1', 150, true, { type: 'medium' })
-    performanceMonitor.recordMetric('test-operation-2', 2000, true, { type: 'slow' })
+    performanceMonitor.recordMetric('test-operation-1', 100, true, {
+      type: 'fast',
+    })
+    performanceMonitor.recordMetric('test-operation-1', 150, true, {
+      type: 'medium',
+    })
+    performanceMonitor.recordMetric('test-operation-2', 2000, true, {
+      type: 'slow',
+    })
 
     // Generate performance report
     const report = performanceMonitor.generatePerformanceReport(60000) // 1 minute window
@@ -489,9 +525,11 @@ describe('Reconciliation Performance Integration', () => {
     // Check that bottlenecks are identified
     const bottlenecks = performanceMonitor.getBottlenecks(60000)
     expect(bottlenecks).toBeDefined()
-    
+
     // The slow operation should be identified as a bottleneck
-    const slowBottleneck = bottlenecks.find(b => b.operationName === 'test-operation-2')
+    const slowBottleneck = bottlenecks.find(
+      b => b.operationName === 'test-operation-2'
+    )
     if (slowBottleneck) {
       expect(['high', 'medium']).toContain(slowBottleneck.severity)
     }

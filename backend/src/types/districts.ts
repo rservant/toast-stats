@@ -79,20 +79,20 @@ export type ScrapedRecord = Record<string, string | number | null>
 export interface ClubPerformanceRecord {
   'Club Number': string
   'Club Name': string
-  'Division': string
-  'Area': string
+  Division: string
+  Area: string
   'Active Members': string
   'Goals Met': string
   'Club Status'?: string
   'Club Distinguished Status'?: string
   'Mem. Base'?: string
-  'Status'?: string
-  'Membership'?: string
+  Status?: string
+  Membership?: string
   [key: string]: string | undefined // Allow additional dynamic fields
 }
 
 export interface DivisionPerformanceRecord {
-  'Division': string
+  Division: string
   'Total Clubs': string
   'Total Members': string
   'Goals Met': string
@@ -100,7 +100,7 @@ export interface DivisionPerformanceRecord {
 }
 
 export interface DistrictPerformanceRecord {
-  'District': string
+  District: string
   'Total Clubs': string
   'Total Members': string
   'Goals Met': string
@@ -110,8 +110,8 @@ export interface DistrictPerformanceRecord {
 
 // Raw CSV data from getAllDistricts API call
 export interface AllDistrictsCSVRecord {
-  'DISTRICT': string
-  'REGION': string
+  DISTRICT: string
+  REGION: string
   'Paid Clubs': string
   'Paid Club Base': string
   '% Club Growth': string
@@ -217,7 +217,7 @@ export interface DailyReportsResponse {
   }>
 }
 
-export type DailyReportDetailResponse = DailyReport;
+export type DailyReportDetailResponse = DailyReport
 
 // Historical Cache Types
 
@@ -327,9 +327,9 @@ export interface DistrictRankingsResponse {
 export interface DistrictCacheEntry {
   districtId: string
   date: string
-  districtPerformance: ScrapedRecord[]  // From District.aspx
-  divisionPerformance: ScrapedRecord[]  // From Division.aspx
-  clubPerformance: ScrapedRecord[]      // From Club.aspx
+  districtPerformance: ScrapedRecord[] // From District.aspx
+  divisionPerformance: ScrapedRecord[] // From Division.aspx
+  clubPerformance: ScrapedRecord[] // From Club.aspx
   fetchedAt: string
 }
 

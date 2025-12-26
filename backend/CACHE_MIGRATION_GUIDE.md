@@ -8,10 +8,10 @@ The application uses a cache versioning system to track changes in data format a
 
 ### Version History
 
-| Version | Date | Changes | Migration Required |
-|---------|------|---------|-------------------|
-| v1 | Initial | Simple rank-sum scoring system | N/A |
-| v2 | Nov 2025 | Borda count scoring with percentage-based ranking | Yes - Clear all rankings cache |
+| Version | Date     | Changes                                           | Migration Required             |
+| ------- | -------- | ------------------------------------------------- | ------------------------------ |
+| v1      | Initial  | Simple rank-sum scoring system                    | N/A                            |
+| v2      | Nov 2025 | Borda count scoring with percentage-based ranking | Yes - Clear all rankings cache |
 
 ### Current Version
 
@@ -100,7 +100,7 @@ interface CacheMetadata {
   districtCount: number
   source: string
   programYear: string
-  cacheVersion: number  // Version tracking field
+  cacheVersion: number // Version tracking field
 }
 ```
 
@@ -146,12 +146,14 @@ Cache version mismatch: date=2025-11-30, cacheVersion=1, currentVersion=2
 If rankings still show old values after clearing:
 
 1. Verify all cache files were removed:
+
    ```bash
    ls -la cache/
    # Should only show districts/ subdirectory
    ```
 
 2. Check for cached data in memory:
+
    ```bash
    # Restart the application
    docker-compose restart backend

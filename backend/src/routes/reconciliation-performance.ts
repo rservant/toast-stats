@@ -27,22 +27,25 @@ router.get('/stats', async (req, res) => {
 
     if (operationName) {
       // Get stats for specific operation
-      const stats = performanceMonitor.getOperationStats(operationName, timeWindowMs)
+      const stats = performanceMonitor.getOperationStats(
+        operationName,
+        timeWindowMs
+      )
       if (!stats) {
         return res.status(404).json({
           error: 'No performance data found for the specified operation',
-          operationName
+          operationName,
         })
       }
-      
+
       res.json({ stats })
     } else {
       // Get stats for all operations
       const allStats = performanceMonitor.getAllOperationStats(timeWindowMs)
-      res.json({ 
+      res.json({
         stats: allStats,
         timeWindowMs,
-        totalOperations: allStats.length
+        totalOperations: allStats.length,
       })
     }
   } catch (error) {
@@ -59,18 +62,21 @@ router.get('/bottlenecks', async (req, res) => {
   try {
     const timeWindowMs = parseInt(req.query.timeWindow as string) || 300000 // 5 minutes default
     const bottlenecks = performanceMonitor.getBottlenecks(timeWindowMs)
-    
+
     res.json({
       bottlenecks,
       timeWindowMs,
       totalBottlenecks: bottlenecks.length,
       highSeverityCount: bottlenecks.filter(b => b.severity === 'high').length,
-      mediumSeverityCount: bottlenecks.filter(b => b.severity === 'medium').length,
-      lowSeverityCount: bottlenecks.filter(b => b.severity === 'low').length
+      mediumSeverityCount: bottlenecks.filter(b => b.severity === 'medium')
+        .length,
+      lowSeverityCount: bottlenecks.filter(b => b.severity === 'low').length,
     })
   } catch (error) {
     logger.error('Failed to get performance bottlenecks', { error })
-    res.status(500).json({ error: 'Failed to retrieve performance bottlenecks' })
+    res
+      .status(500)
+      .json({ error: 'Failed to retrieve performance bottlenecks' })
   }
 })
 
@@ -82,11 +88,11 @@ router.get('/report', async (req, res) => {
   try {
     const timeWindowMs = parseInt(req.query.timeWindow as string) || 300000 // 5 minutes default
     const report = performanceMonitor.generatePerformanceReport(timeWindowMs)
-    
+
     res.json({
       report,
       generatedAt: new Date().toISOString(),
-      timeWindowMs
+      timeWindowMs,
     })
   } catch (error) {
     logger.error('Failed to generate performance report', { error })
@@ -102,11 +108,11 @@ router.get('/cache', async (_req, res) => {
   try {
     const cacheStats = cacheService.getStats()
     const storageStats = storageOptimizer.getCacheStats()
-    
+
     res.json({
       cache: cacheStats,
       storage: storageStats,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     logger.error('Failed to get cache stats', { error })
@@ -122,26 +128,26 @@ router.post('/cache/clear', async (req, res) => {
   try {
     const clearStorage = req.body.clearStorage === true
     const clearCache = req.body.clearCache !== false // Default to true
-    
+
     let clearedItems = 0
-    
+
     if (clearCache) {
       cacheService.clear()
       clearedItems++
     }
-    
+
     if (clearStorage) {
       storageOptimizer.clearCache()
       clearedItems++
     }
-    
+
     logger.info('Caches cleared via API', { clearCache, clearStorage })
-    
+
     res.json({
       success: true,
       message: 'Caches cleared successfully',
       clearedItems,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     logger.error('Failed to clear caches', { error })
@@ -158,12 +164,12 @@ router.get('/resources', async (req, res) => {
     const timeWindowMs = parseInt(req.query.timeWindow as string) || 300000 // 5 minutes default
     const resourceMetrics = performanceMonitor.getResourceMetrics(timeWindowMs)
     const resourceSummary = performanceMonitor.getResourceSummary(timeWindowMs)
-    
+
     res.json({
       metrics: resourceMetrics,
       summary: resourceSummary,
       timeWindowMs,
-      dataPoints: resourceMetrics.length
+      dataPoints: resourceMetrics.length,
     })
   } catch (error) {
     logger.error('Failed to get resource metrics', { error })
@@ -178,43 +184,44 @@ router.get('/resources', async (req, res) => {
 router.post('/batch/process', async (req, res) => {
   try {
     const { jobs, config } = req.body
-    
+
     if (!Array.isArray(jobs) || jobs.length === 0) {
       return res.status(400).json({
-        error: 'Invalid request: jobs array is required and must not be empty'
+        error: 'Invalid request: jobs array is required and must not be empty',
       })
     }
-    
+
     // Validate job structure
     for (const job of jobs) {
       if (!job.districtId || !job.targetMonth) {
         return res.status(400).json({
-          error: 'Invalid job structure: districtId and targetMonth are required'
+          error:
+            'Invalid job structure: districtId and targetMonth are required',
         })
       }
     }
-    
+
     const batchProcessor = new ReconciliationBatchProcessor(
       undefined, // Use default orchestrator
       cacheService,
       storageOptimizer,
       config
     )
-    
+
     // Start batch processing asynchronously
     const processingPromise = batchProcessor.processBatch(jobs)
-    
+
     // Return immediate response with batch ID
     const batchId = `batch-${Date.now()}`
-    
+
     res.json({
       success: true,
       batchId,
       message: 'Batch processing started',
       jobCount: jobs.length,
-      startedAt: new Date().toISOString()
+      startedAt: new Date().toISOString(),
     })
-    
+
     // Handle batch completion in background
     processingPromise
       .then(results => {
@@ -222,7 +229,7 @@ router.post('/batch/process', async (req, res) => {
           batchId,
           totalJobs: results.length,
           successful: results.filter(r => r.success).length,
-          failed: results.filter(r => !r.success).length
+          failed: results.filter(r => !r.success).length,
         })
       })
       .catch(error => {
@@ -231,7 +238,6 @@ router.post('/batch/process', async (req, res) => {
       .finally(() => {
         batchProcessor.cleanup()
       })
-    
   } catch (error) {
     logger.error('Failed to start batch processing', { error })
     res.status(500).json({ error: 'Failed to start batch processing' })
@@ -245,11 +251,11 @@ router.post('/batch/process', async (req, res) => {
 router.get('/optimization/recommendations', async (req, res) => {
   try {
     const timeWindowMs = parseInt(req.query.timeWindow as string) || 300000 // 5 minutes default
-    
+
     const bottlenecks = performanceMonitor.getBottlenecks(timeWindowMs)
     const cacheStats = cacheService.getStats()
     const resourceSummary = performanceMonitor.getResourceSummary(timeWindowMs)
-    
+
     const recommendations: Array<{
       category: string
       priority: 'high' | 'medium' | 'low'
@@ -257,7 +263,7 @@ router.get('/optimization/recommendations', async (req, res) => {
       impact: string
       implementation: string
     }> = []
-    
+
     // Cache optimization recommendations
     if (cacheStats.hitRate < 0.8) {
       recommendations.push({
@@ -265,10 +271,11 @@ router.get('/optimization/recommendations', async (req, res) => {
         priority: 'high',
         recommendation: 'Improve cache hit rate',
         impact: 'Reduce database load and improve response times',
-        implementation: 'Increase cache TTL, implement cache warming, or review cache key strategies'
+        implementation:
+          'Increase cache TTL, implement cache warming, or review cache key strategies',
       })
     }
-    
+
     // Memory optimization recommendations
     if (resourceSummary.peakMemoryMB > 1024) {
       recommendations.push({
@@ -276,25 +283,28 @@ router.get('/optimization/recommendations', async (req, res) => {
         priority: 'medium',
         recommendation: 'Optimize memory usage',
         impact: 'Prevent out-of-memory errors and improve stability',
-        implementation: 'Implement data streaming, reduce object retention, or increase heap size'
+        implementation:
+          'Implement data streaming, reduce object retention, or increase heap size',
       })
     }
-    
+
     // Performance bottleneck recommendations
-    const highSeverityBottlenecks = bottlenecks.filter(b => b.severity === 'high')
+    const highSeverityBottlenecks = bottlenecks.filter(
+      b => b.severity === 'high'
+    )
     if (highSeverityBottlenecks.length > 0) {
       recommendations.push({
         category: 'Performance',
         priority: 'high',
         recommendation: `Address ${highSeverityBottlenecks.length} high-severity bottlenecks`,
         impact: 'Significantly improve system responsiveness',
-        implementation: 'Focus on optimizing the slowest operations first'
+        implementation: 'Focus on optimizing the slowest operations first',
       })
     }
-    
+
     // Batch processing recommendations
-    const slowOperations = bottlenecks.filter(b => 
-      b.stats.averageDuration > 5000 && b.stats.callsPerSecond < 1
+    const slowOperations = bottlenecks.filter(
+      b => b.stats.averageDuration > 5000 && b.stats.callsPerSecond < 1
     )
     if (slowOperations.length > 0) {
       recommendations.push({
@@ -302,10 +312,11 @@ router.get('/optimization/recommendations', async (req, res) => {
         priority: 'medium',
         recommendation: 'Implement batch processing for slow operations',
         impact: 'Improve throughput and resource utilization',
-        implementation: 'Group similar operations and process them in parallel batches'
+        implementation:
+          'Group similar operations and process them in parallel batches',
       })
     }
-    
+
     res.json({
       recommendations: recommendations.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 }
@@ -313,14 +324,16 @@ router.get('/optimization/recommendations', async (req, res) => {
       }),
       totalRecommendations: recommendations.length,
       highPriority: recommendations.filter(r => r.priority === 'high').length,
-      mediumPriority: recommendations.filter(r => r.priority === 'medium').length,
+      mediumPriority: recommendations.filter(r => r.priority === 'medium')
+        .length,
       lowPriority: recommendations.filter(r => r.priority === 'low').length,
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
     })
-    
   } catch (error) {
     logger.error('Failed to generate optimization recommendations', { error })
-    res.status(500).json({ error: 'Failed to generate optimization recommendations' })
+    res
+      .status(500)
+      .json({ error: 'Failed to generate optimization recommendations' })
   }
 })
 

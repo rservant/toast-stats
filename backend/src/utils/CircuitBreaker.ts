@@ -1,6 +1,6 @@
 /**
  * Circuit Breaker Pattern Implementation
- * 
+ *
  * Provides circuit breaker functionality for external API calls to prevent
  * cascading failures and provide fast failure when external services are down.
  */
@@ -15,9 +15,9 @@ export interface CircuitBreakerOptions {
 }
 
 export enum CircuitState {
-  CLOSED = 'CLOSED',     // Normal operation
-  OPEN = 'OPEN',         // Failing fast
-  HALF_OPEN = 'HALF_OPEN' // Testing recovery
+  CLOSED = 'CLOSED', // Normal operation
+  OPEN = 'OPEN', // Failing fast
+  HALF_OPEN = 'HALF_OPEN', // Testing recovery
 }
 
 export interface CircuitBreakerStats {
@@ -33,7 +33,10 @@ export interface CircuitBreakerStats {
 }
 
 export class CircuitBreakerError extends Error {
-  constructor(message: string, public readonly circuitState: CircuitState) {
+  constructor(
+    message: string,
+    public readonly circuitState: CircuitState
+  ) {
     super(message)
     this.name = 'CircuitBreakerError'
   }
@@ -54,7 +57,7 @@ export class CircuitBreaker {
     failureThreshold: 5,
     recoveryTimeout: 60000, // 1 minute
     monitoringPeriod: 300000, // 5 minutes
-    expectedErrors: () => true // All errors count as failures by default
+    expectedErrors: () => true, // All errors count as failures by default
   }
 
   constructor(
@@ -62,16 +65,16 @@ export class CircuitBreaker {
     private readonly options: Partial<CircuitBreakerOptions> = {}
   ) {
     this.options = { ...CircuitBreaker.DEFAULT_OPTIONS, ...options }
-    
+
     logger.debug('Circuit breaker created', {
       name: this.name,
-      options: this.options
+      options: this.options,
     })
   }
 
   /**
    * Execute an operation through the circuit breaker
-   * 
+   *
    * @param operation - The async operation to execute
    * @param context - Context information for logging
    * @returns The result of the operation
@@ -89,20 +92,20 @@ export class CircuitBreaker {
         this.state = CircuitState.HALF_OPEN
         logger.info('Circuit breaker transitioning to HALF_OPEN', {
           name: this.name,
-          context
+          context,
         })
       } else {
         const error = new CircuitBreakerError(
           `Circuit breaker is OPEN for ${this.name}. Next retry at ${this.nextRetryTime?.toISOString()}`,
           CircuitState.OPEN
         )
-        
+
         logger.warn('Circuit breaker rejecting request', {
           name: this.name,
           context,
-          nextRetryTime: this.nextRetryTime?.toISOString()
+          nextRetryTime: this.nextRetryTime?.toISOString(),
         })
-        
+
         throw error
       }
     }
@@ -112,7 +115,10 @@ export class CircuitBreaker {
       this.onSuccess(context)
       return result
     } catch (error) {
-      this.onFailure(error instanceof Error ? error : new Error(String(error)), context)
+      this.onFailure(
+        error instanceof Error ? error : new Error(String(error)),
+        context
+      )
       throw error
     }
   }
@@ -130,7 +136,7 @@ export class CircuitBreaker {
       nextRetryTime: this.nextRetryTime,
       totalRequests: this.totalRequests,
       totalFailures: this.totalFailures,
-      totalSuccesses: this.totalSuccesses
+      totalSuccesses: this.totalSuccesses,
     }
   }
 
@@ -139,7 +145,7 @@ export class CircuitBreaker {
    */
   reset(): void {
     logger.info('Circuit breaker manually reset', { name: this.name })
-    
+
     this.state = CircuitState.CLOSED
     this.failureCount = 0
     this.successCount = 0
@@ -171,9 +177,9 @@ export class CircuitBreaker {
       // Reset to CLOSED after successful test
       logger.info('Circuit breaker reset to CLOSED after successful test', {
         name: this.name,
-        context
+        context,
       })
-      
+
       this.state = CircuitState.CLOSED
       this.failureCount = 0
       this.successCount = 0
@@ -194,7 +200,7 @@ export class CircuitBreaker {
       logger.debug('Error not counted as circuit breaker failure', {
         name: this.name,
         error: error.message,
-        context
+        context,
       })
       return
     }
@@ -208,7 +214,7 @@ export class CircuitBreaker {
       failureCount: this.failureCount,
       threshold: this.options.failureThreshold,
       error: error.message,
-      context
+      context,
     })
 
     // Check if we should open the circuit
@@ -227,12 +233,12 @@ export class CircuitBreaker {
   private openCircuit(): void {
     this.state = CircuitState.OPEN
     this.nextRetryTime = new Date(Date.now() + this.options.recoveryTimeout!)
-    
+
     logger.error('Circuit breaker opened', {
       name: this.name,
       failureCount: this.failureCount,
       threshold: this.options.failureThreshold,
-      nextRetryTime: this.nextRetryTime.toISOString()
+      nextRetryTime: this.nextRetryTime.toISOString(),
     })
   }
 
@@ -246,10 +252,14 @@ export class CircuitBreaker {
       monitoringPeriod: 300000, // 5 minutes
       expectedErrors: (error: Error) => {
         const message = error.message.toLowerCase()
-        
+
         // Don't count client errors as circuit breaker failures
-        if (message.includes('400') || message.includes('401') || 
-            message.includes('403') || message.includes('404')) {
+        if (
+          message.includes('400') ||
+          message.includes('401') ||
+          message.includes('403') ||
+          message.includes('404')
+        ) {
           return false
         }
 
@@ -267,7 +277,7 @@ export class CircuitBreaker {
           message.includes('dashboard returned') ||
           message.includes('scraping failed')
         )
-      }
+      },
     })
   }
 
@@ -281,7 +291,7 @@ export class CircuitBreaker {
       monitoringPeriod: 180000, // 3 minutes
       expectedErrors: (error: Error) => {
         const message = error.message.toLowerCase()
-        
+
         // Count file system errors as failures
         return (
           message.includes('enoent') ||
@@ -294,7 +304,7 @@ export class CircuitBreaker {
           message.includes('read') ||
           message.includes('parse')
         )
-      }
+      },
     })
   }
 }
@@ -319,7 +329,7 @@ export class CircuitBreakerManager {
    * Get or create a circuit breaker
    */
   getCircuitBreaker(
-    name: string, 
+    name: string,
     options?: Partial<CircuitBreakerOptions>
   ): CircuitBreaker {
     if (!this.circuitBreakers.has(name)) {
@@ -333,11 +343,11 @@ export class CircuitBreakerManager {
    */
   getAllStats(): Record<string, CircuitBreakerStats> {
     const stats: Record<string, CircuitBreakerStats> = {}
-    
+
     for (const [name, breaker] of this.circuitBreakers) {
       stats[name] = breaker.getStats()
     }
-    
+
     return stats
   }
 
@@ -346,7 +356,7 @@ export class CircuitBreakerManager {
    */
   resetAll(): void {
     logger.info('Resetting all circuit breakers')
-    
+
     for (const breaker of this.circuitBreakers.values()) {
       breaker.reset()
     }

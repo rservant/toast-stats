@@ -26,7 +26,10 @@ import type { DistrictCacheEntry, ScrapedRecord } from '../types/districts.js'
 
 export class AnalyticsEngine {
   private cacheManager: DistrictCacheManager
-  private cachedDatesCache: Map<string, { dates: string[]; timestamp: number }> = new Map()
+  private cachedDatesCache: Map<
+    string,
+    { dates: string[]; timestamp: number }
+  > = new Map()
   private readonly CACHE_TTL = 5000 // 5 seconds
 
   constructor(cacheManager: DistrictCacheManager) {
@@ -36,7 +39,10 @@ export class AnalyticsEngine {
   /**
    * Safely parse a value that could be string or number to integer
    */
-  private parseIntSafe(value: string | number | null | undefined, defaultValue = 0): number {
+  private parseIntSafe(
+    value: string | number | null | undefined,
+    defaultValue = 0
+  ): number {
     if (typeof value === 'number') return Math.floor(value)
     if (typeof value === 'string') return parseInt(value, 10) || defaultValue
     return defaultValue
@@ -56,16 +62,16 @@ export class AnalyticsEngine {
   private async getCachedDatesWithCache(districtId: string): Promise<string[]> {
     const now = Date.now()
     const cached = this.cachedDatesCache.get(districtId)
-    
+
     // Return cached value if still valid
-    if (cached && (now - cached.timestamp) < this.CACHE_TTL) {
+    if (cached && now - cached.timestamp < this.CACHE_TTL) {
       return cached.dates
     }
-    
+
     // Fetch from filesystem and cache
     const dates = await this.cacheManager.getCachedDatesForDistrict(districtId)
     this.cachedDatesCache.set(districtId, { dates, timestamp: now })
-    
+
     return dates
   }
 
@@ -79,7 +85,7 @@ export class AnalyticsEngine {
   ): Promise<DistrictCacheEntry[]> {
     try {
       const cachedDates = await this.getCachedDatesWithCache(districtId)
-      
+
       if (cachedDates.length === 0) {
         logger.warn('No cached data found for district', { districtId })
         return []
@@ -101,7 +107,9 @@ export class AnalyticsEngine {
       const dataEntries = await Promise.all(dataPromises)
 
       // Filter out null entries
-      const validEntries = dataEntries.filter((entry): entry is DistrictCacheEntry => entry !== null)
+      const validEntries = dataEntries.filter(
+        (entry): entry is DistrictCacheEntry => entry !== null
+      )
 
       logger.info('Loaded district data for analytics', {
         districtId,
@@ -128,7 +136,11 @@ export class AnalyticsEngine {
     endDate?: string
   ): Promise<DistrictAnalytics> {
     try {
-      const dataEntries = await this.loadDistrictData(districtId, startDate, endDate)
+      const dataEntries = await this.loadDistrictData(
+        districtId,
+        startDate,
+        endDate
+      )
 
       if (dataEntries.length === 0) {
         throw new Error('No cached data available for analytics')
@@ -143,14 +155,19 @@ export class AnalyticsEngine {
 
       // Calculate membership metrics
       const membershipTrend = this.calculateMembershipTrend(dataEntries)
-      const totalMembership = membershipTrend[membershipTrend.length - 1]?.count || 0
+      const totalMembership =
+        membershipTrend[membershipTrend.length - 1]?.count || 0
       const membershipChange = this.calculateMembershipChange(membershipTrend)
 
       // Analyze clubs
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
       const atRiskClubs = clubTrends.filter(c => c.currentStatus === 'at-risk')
-      const criticalClubs = clubTrends.filter(c => c.currentStatus === 'critical').length
-      const healthyClubs = clubTrends.filter(c => c.currentStatus === 'healthy').length
+      const criticalClubs = clubTrends.filter(
+        c => c.currentStatus === 'critical'
+      ).length
+      const healthyClubs = clubTrends.filter(
+        c => c.currentStatus === 'healthy'
+      ).length
 
       // Calculate distinguished clubs
       const distinguishedClubs = this.calculateDistinguishedClubs(latestEntry)
@@ -163,45 +180,77 @@ export class AnalyticsEngine {
       const topGrowthClubs = this.calculateTopGrowthClubs(clubTrends)
 
       // Calculate distinguished projection (simple linear projection)
-      const distinguishedProjection = this.projectDistinguishedClubs(dataEntries)
+      const distinguishedProjection =
+        this.projectDistinguishedClubs(dataEntries)
 
       // Generate comprehensive distinguished club analytics including DCP goal analysis
-      const distinguishedClubAnalytics = await this.generateDistinguishedClubAnalytics(
-        districtId,
-        startDate,
-        endDate
-      )
+      const distinguishedClubAnalytics =
+        await this.generateDistinguishedClubAnalytics(
+          districtId,
+          startDate,
+          endDate
+        )
 
       // Calculate year-over-year comparison if previous year data available
-      const yearOverYearData = await this.calculateMembershipYearOverYear(districtId, dataEntries)
-      let yearOverYear: { membershipChange: number; distinguishedChange: number; clubHealthChange: number } | undefined
-      
+      const yearOverYearData = await this.calculateMembershipYearOverYear(
+        districtId,
+        dataEntries
+      )
+      let yearOverYear:
+        | {
+            membershipChange: number
+            distinguishedChange: number
+            clubHealthChange: number
+          }
+        | undefined
+
       if (yearOverYearData) {
         const latestEntry = dataEntries[dataEntries.length - 1]
         const currentDate = latestEntry.date
         const currentYear = parseInt(currentDate.substring(0, 4))
         const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
-        
+
         try {
-          const previousEntry = await this.cacheManager.getDistrictData(districtId, previousYearDate)
-          
+          const previousEntry = await this.cacheManager.getDistrictData(
+            districtId,
+            previousYearDate
+          )
+
           if (previousEntry) {
             // Calculate distinguished clubs change
-            const currentDistinguished = this.calculateDistinguishedClubs(latestEntry)
-            const previousDistinguished = this.calculateDistinguishedClubs(previousEntry)
-            const distinguishedChange = previousDistinguished.total > 0
-              ? Math.round(((currentDistinguished.total - previousDistinguished.total) / previousDistinguished.total) * 1000) / 10
-              : 0
-            
+            const currentDistinguished =
+              this.calculateDistinguishedClubs(latestEntry)
+            const previousDistinguished =
+              this.calculateDistinguishedClubs(previousEntry)
+            const distinguishedChange =
+              previousDistinguished.total > 0
+                ? Math.round(
+                    ((currentDistinguished.total -
+                      previousDistinguished.total) /
+                      previousDistinguished.total) *
+                      1000
+                  ) / 10
+                : 0
+
             // Calculate club health change (percentage of healthy clubs)
-            const currentHealthyPercent = (healthyClubs / clubTrends.length) * 100
-            const previousClubTrends = await this.analyzeClubTrends(districtId, [previousEntry])
-            const previousHealthyClubs = previousClubTrends.filter(c => c.currentStatus === 'healthy').length
-            const previousHealthyPercent = previousClubTrends.length > 0
-              ? (previousHealthyClubs / previousClubTrends.length) * 100
-              : 0
-            const clubHealthChange = Math.round((currentHealthyPercent - previousHealthyPercent) * 10) / 10
-            
+            const currentHealthyPercent =
+              (healthyClubs / clubTrends.length) * 100
+            const previousClubTrends = await this.analyzeClubTrends(
+              districtId,
+              [previousEntry]
+            )
+            const previousHealthyClubs = previousClubTrends.filter(
+              c => c.currentStatus === 'healthy'
+            ).length
+            const previousHealthyPercent =
+              previousClubTrends.length > 0
+                ? (previousHealthyClubs / previousClubTrends.length) * 100
+                : 0
+            const clubHealthChange =
+              Math.round(
+                (currentHealthyPercent - previousHealthyPercent) * 10
+              ) / 10
+
             yearOverYear = {
               membershipChange: yearOverYearData.percentageChange,
               distinguishedChange,
@@ -209,7 +258,10 @@ export class AnalyticsEngine {
             }
           }
         } catch (error) {
-          logger.warn('Failed to calculate full year-over-year comparison', { districtId, error })
+          logger.warn('Failed to calculate full year-over-year comparison', {
+            districtId,
+            error,
+          })
           yearOverYear = {
             membershipChange: yearOverYearData.percentageChange,
             distinguishedChange: 0,
@@ -246,7 +298,10 @@ export class AnalyticsEngine {
 
       return analytics
     } catch (error) {
-      logger.error('Failed to generate district analytics', { districtId, error })
+      logger.error('Failed to generate district analytics', {
+        districtId,
+        error,
+      })
       throw error
     }
   }
@@ -254,19 +309,25 @@ export class AnalyticsEngine {
   /**
    * Get club-specific trends
    */
-  async getClubTrends(districtId: string, clubId: string): Promise<ClubTrend | null> {
+  async getClubTrends(
+    districtId: string,
+    clubId: string
+  ): Promise<ClubTrend | null> {
     try {
       const dataEntries = await this.loadDistrictData(districtId)
-      
+
       if (dataEntries.length === 0) {
-        logger.warn('No cached data available for club trends', { districtId, clubId })
+        logger.warn('No cached data available for club trends', {
+          districtId,
+          clubId,
+        })
         return null
       }
-      
+
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
-      
+
       const clubTrend = clubTrends.find(c => c.clubId === clubId)
-      
+
       if (!clubTrend) {
         logger.warn('Club not found in analytics', { districtId, clubId })
         return null
@@ -285,14 +346,16 @@ export class AnalyticsEngine {
   async identifyAtRiskClubs(districtId: string): Promise<ClubTrend[]> {
     try {
       const dataEntries = await this.loadDistrictData(districtId)
-      
+
       if (dataEntries.length === 0) {
-        logger.warn('No cached data available for at-risk club analysis', { districtId })
+        logger.warn('No cached data available for at-risk club analysis', {
+          districtId,
+        })
         return []
       }
-      
+
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
-      
+
       return clubTrends.filter(c => c.currentStatus !== 'healthy')
     } catch (error) {
       logger.error('Failed to identify at-risk clubs', { districtId, error })
@@ -303,10 +366,13 @@ export class AnalyticsEngine {
   /**
    * Compare divisions
    */
-  async compareDivisions(districtId: string, date: string): Promise<DivisionAnalytics[]> {
+  async compareDivisions(
+    districtId: string,
+    date: string
+  ): Promise<DivisionAnalytics[]> {
     try {
       const entry = await this.cacheManager.getDistrictData(districtId, date)
-      
+
       if (!entry) {
         throw new Error(`No data found for district ${districtId} on ${date}`)
       }
@@ -322,13 +388,22 @@ export class AnalyticsEngine {
    * Calculate year-over-year metrics
    * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
    */
-  async calculateYearOverYear(districtId: string, currentDate: string): Promise<YearOverYearComparison | null> {
+  async calculateYearOverYear(
+    districtId: string,
+    currentDate: string
+  ): Promise<YearOverYearComparison | null> {
     try {
       // Find same date in previous program year (Requirement 9.1)
       const previousYearDate = this.findPreviousProgramYearDate(currentDate)
 
-      const currentEntry = await this.cacheManager.getDistrictData(districtId, currentDate)
-      const previousEntry = await this.cacheManager.getDistrictData(districtId, previousYearDate)
+      const currentEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        currentDate
+      )
+      const previousEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        previousYearDate
+      )
 
       // Handle missing data gracefully (Requirement 9.3)
       if (!currentEntry) {
@@ -354,10 +429,16 @@ export class AnalyticsEngine {
       }
 
       // Calculate percentage changes for all key metrics (Requirement 9.2)
-      const metrics = this.calculateYearOverYearMetrics(currentEntry, previousEntry)
+      const metrics = this.calculateYearOverYearMetrics(
+        currentEntry,
+        previousEntry
+      )
 
       // Support multi-year trends when 3+ years available (Requirement 9.5)
-      const multiYearTrends = await this.calculateMultiYearTrends(districtId, currentDate)
+      const multiYearTrends = await this.calculateMultiYearTrends(
+        districtId,
+        currentDate
+      )
 
       return {
         currentDate,
@@ -367,7 +448,11 @@ export class AnalyticsEngine {
         multiYearTrends,
       }
     } catch (error) {
-      logger.error('Failed to calculate year-over-year metrics', { districtId, currentDate, error })
+      logger.error('Failed to calculate year-over-year metrics', {
+        districtId,
+        currentDate,
+        error,
+      })
       throw error
     }
   }
@@ -381,7 +466,7 @@ export class AnalyticsEngine {
     // To find the same point in the previous program year, subtract 1 year
     const currentYear = parseInt(currentDate.substring(0, 4))
     const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
-    
+
     return previousYearDate
   }
 
@@ -393,7 +478,12 @@ export class AnalyticsEngine {
     currentEntry: DistrictCacheEntry,
     previousEntry: DistrictCacheEntry
   ): {
-    membership: { current: number; previous: number; change: number; percentageChange: number }
+    membership: {
+      current: number
+      previous: number
+      change: number
+      percentageChange: number
+    }
     distinguishedClubs: {
       current: number
       previous: number
@@ -407,15 +497,45 @@ export class AnalyticsEngine {
       }
     }
     clubHealth: {
-      healthyClubs: { current: number; previous: number; change: number; percentageChange: number }
-      atRiskClubs: { current: number; previous: number; change: number; percentageChange: number }
-      criticalClubs: { current: number; previous: number; change: number; percentageChange: number }
+      healthyClubs: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
+      atRiskClubs: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
+      criticalClubs: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
     }
     dcpGoals: {
-      totalGoals: { current: number; previous: number; change: number; percentageChange: number }
-      averagePerClub: { current: number; previous: number; change: number; percentageChange: number }
+      totalGoals: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
+      averagePerClub: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
     }
-    clubCount: { current: number; previous: number; change: number; percentageChange: number }
+    clubCount: {
+      current: number
+      previous: number
+      change: number
+      percentageChange: number
+    }
   } {
     // Membership metrics
     const currentMembership = this.getTotalMembership(currentEntry)
@@ -428,8 +548,10 @@ export class AnalyticsEngine {
 
     // Distinguished clubs metrics
     const currentDistinguished = this.calculateDistinguishedClubs(currentEntry)
-    const previousDistinguished = this.calculateDistinguishedClubs(previousEntry)
-    const distinguishedChange = currentDistinguished.total - previousDistinguished.total
+    const previousDistinguished =
+      this.calculateDistinguishedClubs(previousEntry)
+    const distinguishedChange =
+      currentDistinguished.total - previousDistinguished.total
     const distinguishedPercentageChange = this.calculatePercentageChange(
       previousDistinguished.total,
       currentDistinguished.total
@@ -448,8 +570,10 @@ export class AnalyticsEngine {
     const previousTotalDcp = this.getTotalDcpGoals(previousEntry)
     const currentClubCount = currentEntry.clubPerformance.length
     const previousClubCount = previousEntry.clubPerformance.length
-    const currentAvgDcp = currentClubCount > 0 ? currentTotalDcp / currentClubCount : 0
-    const previousAvgDcp = previousClubCount > 0 ? previousTotalDcp / previousClubCount : 0
+    const currentAvgDcp =
+      currentClubCount > 0 ? currentTotalDcp / currentClubCount : 0
+    const previousAvgDcp =
+      previousClubCount > 0 ? previousTotalDcp / previousClubCount : 0
 
     return {
       membership: {
@@ -467,12 +591,15 @@ export class AnalyticsEngine {
           smedley: {
             current: currentDistinguished.smedley,
             previous: previousDistinguished.smedley,
-            change: currentDistinguished.smedley - previousDistinguished.smedley,
+            change:
+              currentDistinguished.smedley - previousDistinguished.smedley,
           },
           presidents: {
             current: currentDistinguished.presidents,
             previous: previousDistinguished.presidents,
-            change: currentDistinguished.presidents - previousDistinguished.presidents,
+            change:
+              currentDistinguished.presidents -
+              previousDistinguished.presidents,
           },
           select: {
             current: currentDistinguished.select,
@@ -482,7 +609,9 @@ export class AnalyticsEngine {
           distinguished: {
             current: currentDistinguished.distinguished,
             previous: previousDistinguished.distinguished,
-            change: currentDistinguished.distinguished - previousDistinguished.distinguished,
+            change:
+              currentDistinguished.distinguished -
+              previousDistinguished.distinguished,
           },
         },
       },
@@ -491,19 +620,28 @@ export class AnalyticsEngine {
           current: currentHealthy,
           previous: previousHealthy,
           change: currentHealthy - previousHealthy,
-          percentageChange: this.calculatePercentageChange(previousHealthy, currentHealthy),
+          percentageChange: this.calculatePercentageChange(
+            previousHealthy,
+            currentHealthy
+          ),
         },
         atRiskClubs: {
           current: currentAtRisk,
           previous: previousAtRisk,
           change: currentAtRisk - previousAtRisk,
-          percentageChange: this.calculatePercentageChange(previousAtRisk, currentAtRisk),
+          percentageChange: this.calculatePercentageChange(
+            previousAtRisk,
+            currentAtRisk
+          ),
         },
         criticalClubs: {
           current: currentCritical,
           previous: previousCritical,
           change: currentCritical - previousCritical,
-          percentageChange: this.calculatePercentageChange(previousCritical, currentCritical),
+          percentageChange: this.calculatePercentageChange(
+            previousCritical,
+            currentCritical
+          ),
         },
       },
       dcpGoals: {
@@ -511,20 +649,29 @@ export class AnalyticsEngine {
           current: currentTotalDcp,
           previous: previousTotalDcp,
           change: currentTotalDcp - previousTotalDcp,
-          percentageChange: this.calculatePercentageChange(previousTotalDcp, currentTotalDcp),
+          percentageChange: this.calculatePercentageChange(
+            previousTotalDcp,
+            currentTotalDcp
+          ),
         },
         averagePerClub: {
           current: Math.round(currentAvgDcp * 10) / 10,
           previous: Math.round(previousAvgDcp * 10) / 10,
           change: Math.round((currentAvgDcp - previousAvgDcp) * 10) / 10,
-          percentageChange: this.calculatePercentageChange(previousAvgDcp, currentAvgDcp),
+          percentageChange: this.calculatePercentageChange(
+            previousAvgDcp,
+            currentAvgDcp
+          ),
         },
       },
       clubCount: {
         current: currentClubCount,
         previous: previousClubCount,
         change: currentClubCount - previousClubCount,
-        percentageChange: this.calculatePercentageChange(previousClubCount, currentClubCount),
+        percentageChange: this.calculatePercentageChange(
+          previousClubCount,
+          currentClubCount
+        ),
       },
     }
   }
@@ -533,11 +680,16 @@ export class AnalyticsEngine {
    * Calculate percentage change between two values
    * Returns "N/A" as 0 if previous value is 0
    */
-  private calculatePercentageChange(previousValue: number, currentValue: number): number {
+  private calculatePercentageChange(
+    previousValue: number,
+    currentValue: number
+  ): number {
     if (previousValue === 0) {
       return currentValue > 0 ? 100 : 0
     }
-    return Math.round(((currentValue - previousValue) / previousValue) * 1000) / 10
+    return (
+      Math.round(((currentValue - previousValue) / previousValue) * 1000) / 10
+    )
   }
 
   /**
@@ -578,7 +730,10 @@ export class AnalyticsEngine {
       for (let i = 0; i < 3; i++) {
         const year = currentYear - i
         const yearDate = `${year}${currentDate.substring(4)}`
-        const entry = await this.cacheManager.getDistrictData(districtId, yearDate)
+        const entry = await this.cacheManager.getDistrictData(
+          districtId,
+          yearDate
+        )
 
         if (entry) {
           yearData.push({
@@ -603,9 +758,15 @@ export class AnalyticsEngine {
       yearData.sort((a, b) => a.year - b.year)
 
       // Calculate trends
-      const membershipTrend = this.determineTrend(yearData.map(d => d.membership))
-      const distinguishedTrend = this.determineTrend(yearData.map(d => d.distinguishedClubs))
-      const dcpGoalsTrend = this.determineTrend(yearData.map(d => d.totalDcpGoals))
+      const membershipTrend = this.determineTrend(
+        yearData.map(d => d.membership)
+      )
+      const distinguishedTrend = this.determineTrend(
+        yearData.map(d => d.distinguishedClubs)
+      )
+      const dcpGoalsTrend = this.determineTrend(
+        yearData.map(d => d.totalDcpGoals)
+      )
 
       return {
         available: true,
@@ -617,7 +778,11 @@ export class AnalyticsEngine {
         },
       }
     } catch (error) {
-      logger.warn('Failed to calculate multi-year trends', { districtId, currentDate, error })
+      logger.warn('Failed to calculate multi-year trends', {
+        districtId,
+        currentDate,
+        error,
+      })
       return {
         available: false,
       }
@@ -627,7 +792,9 @@ export class AnalyticsEngine {
   /**
    * Determine trend direction from a series of values
    */
-  private determineTrend(values: number[]): 'increasing' | 'decreasing' | 'stable' {
+  private determineTrend(
+    values: number[]
+  ): 'increasing' | 'decreasing' | 'stable' {
     if (values.length < 2) return 'stable'
 
     // Calculate simple linear regression slope
@@ -658,9 +825,13 @@ export class AnalyticsEngine {
    */
   private countAtRiskClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
-      const membership = this.parseIntSafe(club['Active Members'] || club['Active Membership'] || club['Membership'])
+      const membership = this.parseIntSafe(
+        club['Active Members'] ||
+          club['Active Membership'] ||
+          club['Membership']
+      )
       const dcpGoals = this.parseIntSafe(club['Goals Met'] || club['DCP Goals'])
-      
+
       // At-risk: membership >= 12 but has issues
       return membership >= 12 && dcpGoals === 0
     }).length
@@ -696,7 +867,11 @@ export class AnalyticsEngine {
     endDate?: string
   ): Promise<MembershipAnalytics> {
     try {
-      const dataEntries = await this.loadDistrictData(districtId, startDate, endDate)
+      const dataEntries = await this.loadDistrictData(
+        districtId,
+        startDate,
+        endDate
+      )
 
       if (dataEntries.length === 0) {
         throw new Error('No cached data available for membership analytics')
@@ -704,7 +879,8 @@ export class AnalyticsEngine {
 
       // Calculate membership trend over time (Requirement 6.1)
       const membershipTrend = this.calculateMembershipTrend(dataEntries)
-      const totalMembership = membershipTrend[membershipTrend.length - 1]?.count || 0
+      const totalMembership =
+        membershipTrend[membershipTrend.length - 1]?.count || 0
       const membershipChange = this.calculateMembershipChange(membershipTrend)
 
       // Calculate program year change (Requirement 6.3)
@@ -746,7 +922,10 @@ export class AnalyticsEngine {
 
       return analytics
     } catch (error) {
-      logger.error('Failed to generate membership analytics', { districtId, error })
+      logger.error('Failed to generate membership analytics', {
+        districtId,
+        error,
+      })
       throw error
     }
   }
@@ -761,10 +940,16 @@ export class AnalyticsEngine {
     endDate?: string
   ): Promise<DistinguishedClubAnalytics> {
     try {
-      const dataEntries = await this.loadDistrictData(districtId, startDate, endDate)
+      const dataEntries = await this.loadDistrictData(
+        districtId,
+        startDate,
+        endDate
+      )
 
       if (dataEntries.length === 0) {
-        throw new Error('No cached data available for distinguished club analytics')
+        throw new Error(
+          'No cached data available for distinguished club analytics'
+        )
       }
 
       const latestEntry = dataEntries[dataEntries.length - 1]
@@ -773,16 +958,18 @@ export class AnalyticsEngine {
       const distinguishedClubs = this.calculateDistinguishedClubs(latestEntry)
 
       // Calculate projection for final distinguished club count (Requirement 7.2)
-      const distinguishedProjection = this.calculateDistinguishedProjection(dataEntries)
+      const distinguishedProjection =
+        this.calculateDistinguishedProjection(dataEntries)
 
       // Track dates when clubs achieve distinguished levels (Requirement 7.3)
       const achievements = this.trackDistinguishedAchievements(dataEntries)
 
       // Compare to previous years if data available (Requirement 7.4)
-      const yearOverYearComparison = await this.calculateDistinguishedYearOverYear(
-        districtId,
-        latestEntry.date
-      )
+      const yearOverYearComparison =
+        await this.calculateDistinguishedYearOverYear(
+          districtId,
+          latestEntry.date
+        )
 
       // Identify most/least commonly achieved DCP goals (Requirement 7.5)
       const dcpGoalAnalysis = this.analyzeDCPGoals(latestEntry)
@@ -806,7 +993,10 @@ export class AnalyticsEngine {
 
       return analytics
     } catch (error) {
-      logger.error('Failed to generate distinguished club analytics', { districtId, error })
+      logger.error('Failed to generate distinguished club analytics', {
+        districtId,
+        error,
+      })
       throw error
     }
   }
@@ -863,17 +1053,21 @@ export class AnalyticsEngine {
 
     // Initialize club trends from latest data
     for (const club of latestEntry.clubPerformance) {
-      const clubId = this.ensureString(club['Club Number'] || club['Club ID'] || club['ClubID'])
+      const clubId = this.ensureString(
+        club['Club Number'] || club['Club ID'] || club['ClubID']
+      )
       if (!clubId) continue
       const clubName = this.ensureString(club['Club Name'] || club['ClubName'])
-      
+
       if (!clubId) continue
 
       clubMap.set(clubId, {
         clubId,
         clubName,
         divisionId: this.ensureString(club['Division']),
-        divisionName: this.ensureString(this.ensureString(club['Division Name'])),
+        divisionName: this.ensureString(
+          this.ensureString(club['Division Name'])
+        ),
         areaId: this.ensureString(club['Area']),
         areaName: this.ensureString(this.ensureString(club['Area Name'])),
         membershipTrend: [],
@@ -886,7 +1080,9 @@ export class AnalyticsEngine {
     // Build trends for each club
     for (const entry of dataEntries) {
       for (const club of entry.clubPerformance) {
-        const clubId = this.ensureString(club['Club Number'] || club['Club ID'] || club['ClubID'])
+        const clubId = this.ensureString(
+          club['Club Number'] || club['Club ID'] || club['ClubID']
+        )
         if (!clubId || !clubMap.has(clubId)) continue
 
         const clubTrend = clubMap.get(clubId)!
@@ -923,7 +1119,8 @@ export class AnalyticsEngine {
 
     // Get current membership
     const currentMembership =
-      clubTrend.membershipTrend[clubTrend.membershipTrend.length - 1]?.count || 0
+      clubTrend.membershipTrend[clubTrend.membershipTrend.length - 1]?.count ||
+      0
 
     // Check for critical membership
     if (currentMembership < 12) {
@@ -949,7 +1146,8 @@ export class AnalyticsEngine {
 
     // Check for zero DCP goals
     const currentDcpGoals =
-      clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
+      clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
+        ?.goalsAchieved || 0
 
     if (currentDcpGoals === 0) {
       riskFactors.push('Zero DCP goals achieved')
@@ -967,7 +1165,8 @@ export class AnalyticsEngine {
    */
   private identifyDistinguishedLevel(clubTrend: ClubTrend): void {
     const currentDcpGoals =
-      clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
+      clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
+        ?.goalsAchieved || 0
 
     if (currentDcpGoals >= 9) {
       clubTrend.distinguishedLevel = 'President'
@@ -980,19 +1179,19 @@ export class AnalyticsEngine {
 
   /**
    * Calculate distinguished clubs from latest data
-   * 
+   *
    * Official DCP Levels (2025-2026):
    * - Smedley Distinguished: 10 goals + 25 members
    * - President's Distinguished: 9 goals + 20 members
    * - Select Distinguished: 7 goals + (20 members OR net growth of 5)
    * - Distinguished: 5 goals + (20 members OR net growth of 3)
-   * 
+   *
    * IMPORTANT: Membership counts reflect members who have paid their April renewal dues.
    * - Clubs can be officially declared distinguished on or after April 1st once April renewals are processed
    * - The "Active Members" field represents the membership count at the snapshot date
    * - For dates April 1 - June 30: membership counts are valid for official distinguished status
    * - For dates before April 1: membership counts are preliminary/in-progress tracking only
-   * 
+   *
    * Note: Net growth requirements are simplified in this implementation and only check
    * absolute membership count. Full implementation would require comparing to base membership.
    */
@@ -1011,7 +1210,7 @@ export class AnalyticsEngine {
     for (const club of entry.clubPerformance) {
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       const membership = this.parseIntSafe(club['Active Members'])
-      
+
       // Smedley Distinguished: 10 goals + 25 members
       if (dcpGoals >= 10 && membership >= 25) {
         smedley++
@@ -1042,15 +1241,18 @@ export class AnalyticsEngine {
   /**
    * Analyze divisions
    */
-  private analyzeDivisions(dataEntries: DistrictCacheEntry[]): DivisionAnalytics[] {
+  private analyzeDivisions(
+    dataEntries: DistrictCacheEntry[]
+  ): DivisionAnalytics[] {
     const latestEntry = dataEntries[dataEntries.length - 1]
     const divisionMap = new Map<string, DivisionAnalytics>()
 
     // Aggregate data by division
     for (const club of latestEntry.clubPerformance) {
       const divisionId = this.ensureString(club['Division'])
-      const divisionName = this.ensureString(club['Division Name']) || divisionId
-      
+      const divisionName =
+        this.ensureString(club['Division Name']) || divisionId
+
       if (!divisionId) continue
 
       if (!divisionMap.has(divisionId)) {
@@ -1067,16 +1269,17 @@ export class AnalyticsEngine {
 
       const division = divisionMap.get(divisionId)!
       division.totalClubs++
-      
+
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       division.totalDcpGoals += isNaN(dcpGoals) ? 0 : dcpGoals
     }
 
     // Calculate average club health (simplified: based on DCP goals)
     for (const division of divisionMap.values()) {
-      division.averageClubHealth = division.totalClubs > 0
-        ? division.totalDcpGoals / division.totalClubs
-        : 0
+      division.averageClubHealth =
+        division.totalClubs > 0
+          ? division.totalDcpGoals / division.totalClubs
+          : 0
     }
 
     // Rank divisions by total DCP goals
@@ -1107,7 +1310,10 @@ export class AnalyticsEngine {
     const previousEntry = dataEntries[dataEntries.length - 2]
 
     for (const division of divisions) {
-      const previousDcpGoals = this.getDivisionDcpGoals(previousEntry, division.divisionId)
+      const previousDcpGoals = this.getDivisionDcpGoals(
+        previousEntry,
+        division.divisionId
+      )
       const currentDcpGoals = division.totalDcpGoals
 
       if (currentDcpGoals > previousDcpGoals * 1.1) {
@@ -1123,7 +1329,10 @@ export class AnalyticsEngine {
   /**
    * Get division DCP goals from an entry
    */
-  private getDivisionDcpGoals(entry: DistrictCacheEntry, divisionId: string): number {
+  private getDivisionDcpGoals(
+    entry: DistrictCacheEntry,
+    divisionId: string
+  ): number {
     return entry.clubPerformance
       .filter(club => club['Division'] === divisionId)
       .reduce((sum, club) => {
@@ -1142,7 +1351,7 @@ export class AnalyticsEngine {
       const areaId = this.ensureString(club['Area'])
       const areaName = this.ensureString(club['Area Name']) || areaId
       const divisionId = this.ensureString(club['Division'])
-      
+
       if (!areaId) continue
 
       if (!areaMap.has(areaId)) {
@@ -1159,7 +1368,7 @@ export class AnalyticsEngine {
 
       const area = areaMap.get(areaId)!
       area.totalClubs++
-      
+
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       area.totalDcpGoals += isNaN(dcpGoals) ? 0 : dcpGoals
     }
@@ -1167,7 +1376,8 @@ export class AnalyticsEngine {
     // Calculate normalized scores
     const areas = Array.from(areaMap.values())
     for (const area of areas) {
-      area.averageClubHealth = area.totalClubs > 0 ? area.totalDcpGoals / area.totalClubs : 0
+      area.averageClubHealth =
+        area.totalClubs > 0 ? area.totalDcpGoals / area.totalClubs : 0
       area.normalizedScore = area.averageClubHealth
     }
 
@@ -1213,8 +1423,8 @@ export class AnalyticsEngine {
     }
 
     // Simple linear projection based on trend
-    const distinguishedCounts = dataEntries.map(entry =>
-      this.calculateDistinguishedClubs(entry).total
+    const distinguishedCounts = dataEntries.map(
+      entry => this.calculateDistinguishedClubs(entry).total
     )
 
     const current = distinguishedCounts[distinguishedCounts.length - 1]
@@ -1234,7 +1444,7 @@ export class AnalyticsEngine {
     return entry.clubPerformance.filter(club => {
       const membership = this.parseIntSafe(club['Active Members'])
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
-      
+
       return membership >= 12 && dcpGoals > 0
     }).length
   }
@@ -1266,8 +1476,10 @@ export class AnalyticsEngine {
     }
 
     // Find the closest data point to program year start
-    const programYearStartData = membershipTrend.find(point => point.date >= programYearStart)
-    
+    const programYearStartData = membershipTrend.find(
+      point => point.date >= programYearStart
+    )
+
     if (!programYearStartData) {
       // If no data from program year start, use earliest available
       return this.calculateMembershipChange(membershipTrend)
@@ -1321,7 +1533,7 @@ export class AnalyticsEngine {
     for (let i = 1; i < membershipTrend.length; i++) {
       const currentPoint = membershipTrend[i]
       const previousPoint = membershipTrend[i - 1]
-      
+
       const month = parseInt(currentPoint.date.substring(5, 7))
       const change = currentPoint.count - previousPoint.count
 
@@ -1333,21 +1545,32 @@ export class AnalyticsEngine {
 
     // Calculate average change per month
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ]
 
     const patterns: SeasonalPattern[] = []
 
     for (let month = 1; month <= 12; month++) {
       const changes = monthlyChanges.get(month) || []
-      
+
       if (changes.length === 0) {
         continue
       }
 
-      const averageChange = changes.reduce((sum, val) => sum + val, 0) / changes.length
-      
+      const averageChange =
+        changes.reduce((sum, val) => sum + val, 0) / changes.length
+
       let trend: 'growth' | 'decline' | 'stable'
       if (averageChange > 2) {
         trend = 'growth'
@@ -1377,25 +1600,31 @@ export class AnalyticsEngine {
   private async calculateMembershipYearOverYear(
     districtId: string,
     dataEntries: DistrictCacheEntry[]
-  ): Promise<{
-    currentMembership: number
-    previousMembership: number
-    percentageChange: number
-    membershipChange: number
-  } | undefined> {
+  ): Promise<
+    | {
+        currentMembership: number
+        previousMembership: number
+        percentageChange: number
+        membershipChange: number
+      }
+    | undefined
+  > {
     if (dataEntries.length === 0) {
       return undefined
     }
 
     const latestEntry = dataEntries[dataEntries.length - 1]
     const currentDate = latestEntry.date
-    
+
     // Calculate previous year date (subtract 1 year)
     const currentYear = parseInt(currentDate.substring(0, 4))
     const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
     try {
-      const previousEntry = await this.cacheManager.getDistrictData(districtId, previousYearDate)
+      const previousEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        previousYearDate
+      )
 
       if (!previousEntry) {
         logger.info('No previous year data available for comparison', {
@@ -1409,9 +1638,10 @@ export class AnalyticsEngine {
       const currentMembership = this.getTotalMembership(latestEntry)
       const previousMembership = this.getTotalMembership(previousEntry)
       const membershipChange = currentMembership - previousMembership
-      const percentageChange = previousMembership > 0
-        ? Math.round((membershipChange / previousMembership) * 1000) / 10 // Round to 1 decimal
-        : 0
+      const percentageChange =
+        previousMembership > 0
+          ? Math.round((membershipChange / previousMembership) * 1000) / 10 // Round to 1 decimal
+          : 0
 
       return {
         currentMembership,
@@ -1433,9 +1663,7 @@ export class AnalyticsEngine {
    * Calculate distinguished club projection based on trends
    * Requirement 7.2
    */
-  private calculateDistinguishedProjection(
-    dataEntries: DistrictCacheEntry[]
-  ): {
+  private calculateDistinguishedProjection(dataEntries: DistrictCacheEntry[]): {
     smedley: number
     presidents: number
     select: number
@@ -1512,8 +1740,12 @@ export class AnalyticsEngine {
     // Process entries chronologically
     for (const entry of dataEntries) {
       for (const club of entry.clubPerformance) {
-        const clubId = this.ensureString(club['Club Number'] || club['Club ID'] || club['ClubID'])
-        const clubName = this.ensureString(club['Club Name'] || club['ClubName'])
+        const clubId = this.ensureString(
+          club['Club Number'] || club['Club ID'] || club['ClubID']
+        )
+        const clubName = this.ensureString(
+          club['Club Name'] || club['ClubName']
+        )
         const dcpGoals = this.parseIntSafe(club['Goals Met'])
         const membership = this.parseIntSafe(club['Active Members'])
 
@@ -1539,7 +1771,11 @@ export class AnalyticsEngine {
           achievements.push({
             clubId,
             clubName,
-            level: currentLevel as 'Smedley' | 'President' | 'Select' | 'Distinguished',
+            level: currentLevel as
+              | 'Smedley'
+              | 'President'
+              | 'Select'
+              | 'Distinguished',
             achievedDate: entry.date,
             goalsAchieved: dcpGoals,
           })
@@ -1553,7 +1789,11 @@ export class AnalyticsEngine {
           achievements.push({
             clubId,
             clubName,
-            level: currentLevel as 'Smedley' | 'President' | 'Select' | 'Distinguished',
+            level: currentLevel as
+              | 'Smedley'
+              | 'President'
+              | 'Select'
+              | 'Distinguished',
             achievedDate: entry.date,
             goalsAchieved: dcpGoals,
           })
@@ -1578,7 +1818,10 @@ export class AnalyticsEngine {
    */
   private isHigherLevel(level1: string, level2: string): boolean {
     const levels = { Distinguished: 1, Select: 2, President: 3, Smedley: 4 }
-    return (levels[level1 as keyof typeof levels] || 0) > (levels[level2 as keyof typeof levels] || 0)
+    return (
+      (levels[level1 as keyof typeof levels] || 0) >
+      (levels[level2 as keyof typeof levels] || 0)
+    )
   }
 
   /**
@@ -1588,38 +1831,50 @@ export class AnalyticsEngine {
   private async calculateDistinguishedYearOverYear(
     districtId: string,
     currentDate: string
-  ): Promise<{
-    currentTotal: number
-    previousTotal: number
-    change: number
-    percentageChange: number
-    currentByLevel: {
-      smedley: number
-      presidents: number
-      select: number
-      distinguished: number
-    }
-    previousByLevel: {
-      smedley: number
-      presidents: number
-      select: number
-      distinguished: number
-    }
-  } | undefined> {
+  ): Promise<
+    | {
+        currentTotal: number
+        previousTotal: number
+        change: number
+        percentageChange: number
+        currentByLevel: {
+          smedley: number
+          presidents: number
+          select: number
+          distinguished: number
+        }
+        previousByLevel: {
+          smedley: number
+          presidents: number
+          select: number
+          distinguished: number
+        }
+      }
+    | undefined
+  > {
     try {
       // Calculate previous year date (subtract 1 year)
       const currentYear = parseInt(currentDate.substring(0, 4))
       const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
-      const currentEntry = await this.cacheManager.getDistrictData(districtId, currentDate)
-      const previousEntry = await this.cacheManager.getDistrictData(districtId, previousYearDate)
+      const currentEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        currentDate
+      )
+      const previousEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        previousYearDate
+      )
 
       if (!currentEntry || !previousEntry) {
-        logger.info('Insufficient data for year-over-year distinguished comparison', {
-          districtId,
-          currentDate,
-          previousYearDate,
-        })
+        logger.info(
+          'Insufficient data for year-over-year distinguished comparison',
+          {
+            districtId,
+            currentDate,
+            previousYearDate,
+          }
+        )
         return undefined
       }
 
@@ -1627,9 +1882,10 @@ export class AnalyticsEngine {
       const previousCounts = this.calculateDistinguishedClubs(previousEntry)
 
       const change = currentCounts.total - previousCounts.total
-      const percentageChange = previousCounts.total > 0
-        ? Math.round((change / previousCounts.total) * 1000) / 10 // Round to 1 decimal
-        : 0
+      const percentageChange =
+        previousCounts.total > 0
+          ? Math.round((change / previousCounts.total) * 1000) / 10 // Round to 1 decimal
+          : 0
 
       return {
         currentTotal: currentCounts.total,
@@ -1650,11 +1906,14 @@ export class AnalyticsEngine {
         },
       }
     } catch (error) {
-      logger.warn('Failed to calculate year-over-year distinguished comparison', {
-        districtId,
-        currentDate,
-        error,
-      })
+      logger.warn(
+        'Failed to calculate year-over-year distinguished comparison',
+        {
+          districtId,
+          currentDate,
+          error,
+        }
+      )
       return undefined
     }
   }
@@ -1692,10 +1951,13 @@ export class AnalyticsEngine {
     }
 
     // Fallback to 2025+ format if no match
-    logger.debug('No matching Level 4 field found, using 2025+ format as fallback', {
-      clubId: club['Club Number'] || club['Club ID'] || 'unknown',
-      availableFields: Object.keys(club),
-    })
+    logger.debug(
+      'No matching Level 4 field found, using 2025+ format as fallback',
+      {
+        clubId: club['Club Number'] || club['Club ID'] || 'unknown',
+        availableFields: Object.keys(club),
+      }
+    )
     return {
       baseField: 'Level 4s, Path Completions, or DTM Awards',
       additionalField: 'Add. Level 4s, Path Completions, or DTM award',
@@ -1736,10 +1998,10 @@ export class AnalyticsEngine {
       const { baseField, additionalField } = this.getLevel4FieldName(club)
       const level4s = this.parseIntSafe(club[baseField])
       const addLevel4s = this.parseIntSafe(club[additionalField])
-      
+
       // Goal 5: Need 1 Level 4 award
       if (level4s >= 1) goalCounts[4]++
-      
+
       // Goal 6: Need 1 base + 1 additional = 2 total
       if (level4s >= 1 && addLevel4s >= 1) goalCounts[5]++
 
@@ -1768,9 +2030,10 @@ export class AnalyticsEngine {
     const goalAnalysis: DCPGoalAnalysis[] = goalCounts.map((count, index) => ({
       goalNumber: index + 1,
       achievementCount: count,
-      achievementPercentage: totalClubs > 0
-        ? Math.round((count / totalClubs) * 1000) / 10 // Round to 1 decimal
-        : 0,
+      achievementPercentage:
+        totalClubs > 0
+          ? Math.round((count / totalClubs) * 1000) / 10 // Round to 1 decimal
+          : 0,
     }))
 
     // Sort by achievement count
@@ -1798,23 +2061,32 @@ export class AnalyticsEngine {
     endDate?: string
   ): Promise<LeadershipInsights> {
     try {
-      const dataEntries = await this.loadDistrictData(districtId, startDate, endDate)
+      const dataEntries = await this.loadDistrictData(
+        districtId,
+        startDate,
+        endDate
+      )
 
       if (dataEntries.length === 0) {
         throw new Error('No cached data available for leadership analytics')
       }
 
       // Calculate leadership effectiveness scores (Requirement 8.1)
-      const leadershipScores = this.calculateLeadershipEffectiveness(dataEntries)
+      const leadershipScores =
+        this.calculateLeadershipEffectiveness(dataEntries)
 
       // Identify best practice divisions (Requirement 8.2)
-      const bestPracticeDivisions = this.identifyBestPracticeDivisions(leadershipScores, dataEntries)
+      const bestPracticeDivisions = this.identifyBestPracticeDivisions(
+        leadershipScores,
+        dataEntries
+      )
 
       // Track performance changes with leadership changes (Requirement 8.3)
       const leadershipChanges = this.trackLeadershipChanges(dataEntries)
 
       // Identify area director activity correlations (Requirement 8.4)
-      const areaDirectorCorrelations = this.analyzeAreaDirectorCorrelations(dataEntries)
+      const areaDirectorCorrelations =
+        this.analyzeAreaDirectorCorrelations(dataEntries)
 
       // Generate summary report (Requirement 8.5)
       const summary = this.generateLeadershipSummary(
@@ -1840,7 +2112,10 @@ export class AnalyticsEngine {
 
       return insights
     } catch (error) {
-      logger.error('Failed to generate leadership insights', { districtId, error })
+      logger.error('Failed to generate leadership insights', {
+        districtId,
+        error,
+      })
       throw error
     }
   }
@@ -1854,18 +2129,22 @@ export class AnalyticsEngine {
     dataEntries: DistrictCacheEntry[]
   ): LeadershipEffectivenessScore[] {
     const latestEntry = dataEntries[dataEntries.length - 1]
-    const divisionMap = new Map<string, {
-      divisionId: string
-      divisionName: string
-      clubs: ScrapedRecord[]
-      historicalData: Array<{ date: string; clubs: ScrapedRecord[] }>
-    }>()
+    const divisionMap = new Map<
+      string,
+      {
+        divisionId: string
+        divisionName: string
+        clubs: ScrapedRecord[]
+        historicalData: Array<{ date: string; clubs: ScrapedRecord[] }>
+      }
+    >()
 
     // Build division data structure
     for (const entry of dataEntries) {
       for (const club of entry.clubPerformance) {
         const divisionId = this.ensureString(club['Division'])
-        const divisionName = this.ensureString(club['Division Name']) || divisionId
+        const divisionName =
+          this.ensureString(club['Division Name']) || divisionId
 
         if (!divisionId) continue
 
@@ -1879,7 +2158,7 @@ export class AnalyticsEngine {
         }
 
         const division = divisionMap.get(divisionId)!
-        
+
         // Add to historical data
         let dateEntry = division.historicalData.find(h => h.date === entry.date)
         if (!dateEntry) {
@@ -1903,7 +2182,9 @@ export class AnalyticsEngine {
       const healthScore = this.calculateDivisionHealthScore(division.clubs)
 
       // Calculate growth score (0-100)
-      const growthScore = this.calculateDivisionGrowthScore(division.historicalData)
+      const growthScore = this.calculateDivisionGrowthScore(
+        division.historicalData
+      )
 
       // Calculate DCP score (0-100)
       const dcpScore = this.calculateDivisionDCPScore(division.clubs)
@@ -1962,7 +2243,8 @@ export class AnalyticsEngine {
 
     const averageMembership = totalMembership / clubs.length
     const healthyClubPercentage = (healthyClubs / clubs.length) * 100
-    const strongMembershipPercentage = (clubsWithMinimumMembers / clubs.length) * 100
+    const strongMembershipPercentage =
+      (clubsWithMinimumMembers / clubs.length) * 100
 
     // Weighted health score
     // 50% based on healthy club percentage
@@ -1995,10 +2277,12 @@ export class AnalyticsEngine {
 
     // Calculate growth rate
     const firstMembership = membershipByDate[0].membership
-    const lastMembership = membershipByDate[membershipByDate.length - 1].membership
-    const growthRate = firstMembership > 0
-      ? ((lastMembership - firstMembership) / firstMembership) * 100
-      : 0
+    const lastMembership =
+      membershipByDate[membershipByDate.length - 1].membership
+    const growthRate =
+      firstMembership > 0
+        ? ((lastMembership - firstMembership) / firstMembership) * 100
+        : 0
 
     // Convert growth rate to 0-100 score
     // +10% growth = 100, 0% growth = 50, -10% growth = 0
@@ -2047,11 +2331,14 @@ export class AnalyticsEngine {
 
     for (let i = 0; i < leadershipScores.length; i++) {
       const score = leadershipScores[i]
-      
+
       // Check if division meets best practice criteria
       const meetsScoreThreshold = score.overallScore >= threshold
       const isTopPercentile = i < topPercentile
-      const isConsistent = this.isDivisionConsistent(score.divisionId, dataEntries)
+      const isConsistent = this.isDivisionConsistent(
+        score.divisionId,
+        dataEntries
+      )
 
       if (meetsScoreThreshold && isTopPercentile && isConsistent) {
         score.isBestPractice = true
@@ -2071,7 +2358,10 @@ export class AnalyticsEngine {
   /**
    * Check if a division has consistent performance over time
    */
-  private isDivisionConsistent(divisionId: string, dataEntries: DistrictCacheEntry[]): boolean {
+  private isDivisionConsistent(
+    divisionId: string,
+    dataEntries: DistrictCacheEntry[]
+  ): boolean {
     if (dataEntries.length < 3) return true // Not enough data to determine consistency
 
     // Calculate DCP goals for each time period
@@ -2081,7 +2371,7 @@ export class AnalyticsEngine {
       const divisionClubs = entry.clubPerformance.filter(
         club => club['Division'] === divisionId
       )
-      
+
       const totalDcpGoals = divisionClubs.reduce((sum, club) => {
         const dcpGoals = this.parseIntSafe(club['Goals Met'])
         return sum + dcpGoals
@@ -2094,7 +2384,7 @@ export class AnalyticsEngine {
     for (let i = 1; i < dcpGoalsByDate.length; i++) {
       const previous = dcpGoalsByDate[i - 1]
       const current = dcpGoalsByDate[i]
-      
+
       // If current is less than 70% of previous, it's not consistent
       if (previous > 0 && current < previous * 0.7) {
         return false
@@ -2107,23 +2397,31 @@ export class AnalyticsEngine {
   /**
    * Track performance changes when leadership changes
    * Requirement 8.3
-   * 
+   *
    * Note: This is a simplified implementation as we don't have explicit
    * leadership change data. We detect significant performance shifts.
    */
-  private trackLeadershipChanges(dataEntries: DistrictCacheEntry[]): LeadershipChange[] {
+  private trackLeadershipChanges(
+    dataEntries: DistrictCacheEntry[]
+  ): LeadershipChange[] {
     if (dataEntries.length < 3) return []
 
     const changes: LeadershipChange[] = []
-    const divisionPerformance = new Map<string, Array<{ date: string; score: number }>>()
+    const divisionPerformance = new Map<
+      string,
+      Array<{ date: string; score: number }>
+    >()
 
     // Build performance history for each division
     for (const entry of dataEntries) {
-      const divisionScores = new Map<string, { totalDcp: number; totalClubs: number }>()
+      const divisionScores = new Map<
+        string,
+        { totalDcp: number; totalClubs: number }
+      >()
 
       for (const club of entry.clubPerformance) {
         const divisionId = this.ensureString(club['Division'])
-        
+
         if (!divisionId) continue
 
         if (!divisionScores.has(divisionId)) {
@@ -2143,7 +2441,8 @@ export class AnalyticsEngine {
 
       // Calculate average performance score for each division
       for (const [divisionId, score] of divisionScores.entries()) {
-        const avgScore = score.totalClubs > 0 ? score.totalDcp / score.totalClubs : 0
+        const avgScore =
+          score.totalClubs > 0 ? score.totalDcp / score.totalClubs : 0
         divisionPerformance.get(divisionId)!.push({
           date: entry.date,
           score: avgScore,
@@ -2164,8 +2463,11 @@ export class AnalyticsEngine {
         // Significant change threshold: 20% or more
         if (Math.abs(delta) >= beforeAvg * 0.2 && beforeAvg > 0) {
           // Find division name from latest entry
-          const divisionName = this.ensureString(dataEntries[dataEntries.length - 1].clubPerformance
-            .find(club => club['Division'] === divisionId)?.['Division Name'] || divisionId)
+          const divisionName = this.ensureString(
+            dataEntries[dataEntries.length - 1].clubPerformance.find(
+              club => club['Division'] === divisionId
+            )?.['Division Name'] || divisionId
+          )
 
           changes.push({
             divisionId,
@@ -2189,7 +2491,7 @@ export class AnalyticsEngine {
   /**
    * Identify correlations between area director activity and club performance
    * Requirement 8.4
-   * 
+   *
    * Note: This is a simplified implementation as we don't have explicit
    * area director activity data. We infer activity from club performance patterns.
    */
@@ -2197,13 +2499,16 @@ export class AnalyticsEngine {
     dataEntries: DistrictCacheEntry[]
   ): AreaDirectorCorrelation[] {
     const latestEntry = dataEntries[dataEntries.length - 1]
-    const areaMap = new Map<string, {
-      areaId: string
-      areaName: string
-      divisionId: string
-      clubs: ScrapedRecord[]
-      performanceScore: number
-    }>()
+    const areaMap = new Map<
+      string,
+      {
+        areaId: string
+        areaName: string
+        divisionId: string
+        clubs: ScrapedRecord[]
+        performanceScore: number
+      }
+    >()
 
     // Aggregate club data by area
     for (const club of latestEntry.clubPerformance) {
@@ -2247,15 +2552,18 @@ export class AnalyticsEngine {
         }
       }
 
-      const avgDcpGoals = area.clubs.length > 0 ? totalDcpGoals / area.clubs.length : 0
-      const avgMembership = area.clubs.length > 0 ? totalMembership / area.clubs.length : 0
-      const healthyPercentage = area.clubs.length > 0 ? healthyClubs / area.clubs.length : 0
+      const avgDcpGoals =
+        area.clubs.length > 0 ? totalDcpGoals / area.clubs.length : 0
+      const avgMembership =
+        area.clubs.length > 0 ? totalMembership / area.clubs.length : 0
+      const healthyPercentage =
+        area.clubs.length > 0 ? healthyClubs / area.clubs.length : 0
 
       // Calculate overall performance score (0-100)
       const performanceScore = Math.round(
         (avgDcpGoals / 10) * 40 + // DCP goals (40%)
-        Math.min((avgMembership / 30) * 100, 100) * 0.3 + // Membership (30%)
-        healthyPercentage * 100 * 0.3 // Health (30%)
+          Math.min((avgMembership / 30) * 100, 100) * 0.3 + // Membership (30%)
+          healthyPercentage * 100 * 0.3 // Health (30%)
       )
 
       // Infer activity level based on performance
@@ -2304,28 +2612,37 @@ export class AnalyticsEngine {
     bestPracticeDivisions: LeadershipEffectivenessScore[],
     dataEntries: DistrictCacheEntry[]
   ): {
-    topPerformingDivisions: Array<{ divisionId: string; divisionName: string; score: number }>
-    topPerformingAreas: Array<{ areaId: string; areaName: string; score: number }>
+    topPerformingDivisions: Array<{
+      divisionId: string
+      divisionName: string
+      score: number
+    }>
+    topPerformingAreas: Array<{
+      areaId: string
+      areaName: string
+      score: number
+    }>
     averageLeadershipScore: number
     totalBestPracticeDivisions: number
   } {
     // Get top 5 performing divisions
-    const topPerformingDivisions = leadershipScores
-      .slice(0, 5)
-      .map(score => ({
-        divisionId: score.divisionId,
-        divisionName: score.divisionName,
-        score: score.overallScore,
-      }))
+    const topPerformingDivisions = leadershipScores.slice(0, 5).map(score => ({
+      divisionId: score.divisionId,
+      divisionName: score.divisionName,
+      score: score.overallScore,
+    }))
 
     // Calculate top performing areas
     const latestEntry = dataEntries[dataEntries.length - 1]
-    const areaScores = new Map<string, {
-      areaId: string
-      areaName: string
-      totalDcp: number
-      totalClubs: number
-    }>()
+    const areaScores = new Map<
+      string,
+      {
+        areaId: string
+        areaName: string
+        totalDcp: number
+        totalClubs: number
+      }
+    >()
 
     for (const club of latestEntry.clubPerformance) {
       const areaId = this.ensureString(club['Area'])
@@ -2352,18 +2669,24 @@ export class AnalyticsEngine {
       .map(area => ({
         areaId: area.areaId,
         areaName: area.areaName,
-        score: area.totalClubs > 0 ? Math.round((area.totalDcp / area.totalClubs) * 10) : 0,
+        score:
+          area.totalClubs > 0
+            ? Math.round((area.totalDcp / area.totalClubs) * 10)
+            : 0,
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5)
 
     // Calculate average leadership score
-    const averageLeadershipScore = leadershipScores.length > 0
-      ? Math.round(
-          leadershipScores.reduce((sum, score) => sum + score.overallScore, 0) /
-            leadershipScores.length
-        )
-      : 0
+    const averageLeadershipScore =
+      leadershipScores.length > 0
+        ? Math.round(
+            leadershipScores.reduce(
+              (sum, score) => sum + score.overallScore,
+              0
+            ) / leadershipScores.length
+          )
+        : 0
 
     return {
       topPerformingDivisions,

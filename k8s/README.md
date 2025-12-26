@@ -31,6 +31,7 @@ kubectl create secret generic toastmasters-secrets \
 3. **Update ConfigMap:**
 
 Edit `configmap.yaml` and update:
+
 - `dashboard-url`: Toastmasters dashboard URL
 - `cors-origin`: Your frontend domain
 
@@ -79,27 +80,27 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   tls:
-  - hosts:
-    - yourdomain.com
-    secretName: toastmasters-tls
+    - hosts:
+        - yourdomain.com
+      secretName: toastmasters-tls
   rules:
-  - host: yourdomain.com
-    http:
-      paths:
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: toastmasters-backend
-            port:
-              number: 5001
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: toastmasters-frontend
-            port:
-              number: 80
+    - host: yourdomain.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: toastmasters-backend
+                port:
+                  number: 5001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: toastmasters-frontend
+                port:
+                  number: 80
 ```
 
 ## Scaling

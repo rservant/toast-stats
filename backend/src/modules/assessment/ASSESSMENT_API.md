@@ -568,13 +568,13 @@ Load or update district configuration (recognition thresholds, year-end targets)
 
 ## Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `INVALID_REQUEST` | 400 | Input validation failed |
-| `INVALID_CONFIG` | 400 | Configuration validation failed |
-| `NOT_FOUND` | 404 | Resource not found |
-| `CONFLICT` | 409 | Resource already exists |
-| `INTERNAL_ERROR` | 500 | Unexpected server error |
+| Code              | HTTP Status | Description                     |
+| ----------------- | ----------- | ------------------------------- |
+| `INVALID_REQUEST` | 400         | Input validation failed         |
+| `INVALID_CONFIG`  | 400         | Configuration validation failed |
+| `NOT_FOUND`       | 404         | Resource not found              |
+| `CONFLICT`        | 409         | Resource already exists         |
+| `INTERNAL_ERROR`  | 500         | Unexpected server error         |
 
 ---
 

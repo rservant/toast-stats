@@ -13,8 +13,8 @@ vi.mock('../../services/api', () => ({
 }))
 
 interface MockApiClient {
-  get: ReturnType<typeof vi.fn>;
-  delete: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>
+  delete: ReturnType<typeof vi.fn>
 }
 
 // renderWithProviders is provided by test-utils to include ProgramYearProvider and common wrappers
@@ -27,13 +27,13 @@ describe('LandingPage - Percentage Formatting', () => {
   describe('formatPercentage function', () => {
     it('should return "+" prefix and green color for positive percentages', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           dates: [],
         },
       })
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           rankings: [
@@ -72,13 +72,13 @@ describe('LandingPage - Percentage Formatting', () => {
 
     it('should return "-" prefix and red color for negative percentages', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           dates: [],
         },
       })
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           rankings: [
@@ -117,13 +117,13 @@ describe('LandingPage - Percentage Formatting', () => {
 
     it('should return "0.0%" with gray color for zero percentages', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           dates: [],
         },
       })
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           rankings: [
@@ -162,13 +162,13 @@ describe('LandingPage - Percentage Formatting', () => {
 
     it('should format percentages to 1 decimal place precision', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           dates: [],
         },
       })
-      
+
       apiClient.get.mockResolvedValueOnce({
         data: {
           rankings: [
@@ -215,13 +215,13 @@ describe('LandingPage - Table Cell Rendering', () => {
 
   it('should display rank number correctly', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         dates: [],
       },
     })
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         rankings: [
@@ -263,13 +263,13 @@ describe('LandingPage - Table Cell Rendering', () => {
 
   it('should display percentage with correct color', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         dates: [],
       },
     })
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         rankings: [
@@ -311,13 +311,13 @@ describe('LandingPage - Table Cell Rendering', () => {
 
   it('should display bullet separator between rank and percentage', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         dates: [],
       },
     })
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         rankings: [
@@ -353,20 +353,20 @@ describe('LandingPage - Table Cell Rendering', () => {
     const bullets = screen.getAllByText('•')
     // Should have 2 bullets (one for paid clubs, one for total payments)
     expect(bullets.length).toBeGreaterThanOrEqual(2)
-    bullets.forEach((bullet) => {
+    bullets.forEach(bullet => {
       expect(bullet).toHaveClass('text-gray-400')
     })
   })
 
   it('should display both rank and percentage values visible and properly aligned', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         dates: [],
       },
     })
-    
+
     apiClient.get.mockResolvedValueOnce({
       data: {
         rankings: [
@@ -399,22 +399,22 @@ describe('LandingPage - Table Cell Rendering', () => {
 
     // Wait for data to load and verify all elements are present
     await screen.findByText('District 1')
-    
+
     // Check paid clubs column
     expect(screen.getByText('100')).toBeInTheDocument()
     expect(screen.getByText('Rank #5')).toBeInTheDocument()
     expect(screen.getByText('+12.5%')).toBeInTheDocument()
-    
+
     // Check total payments column
     expect(screen.getByText('5,000')).toBeInTheDocument()
     expect(screen.getByText('Rank #3')).toBeInTheDocument()
     expect(screen.getByText('+11.1%')).toBeInTheDocument()
-    
+
     // Verify the rank and percentage are in the same container (text-xs class)
     const rankElements = screen.getAllByText(/Rank #\d+/)
     // Check that rank elements exist and are styled correctly
     expect(rankElements.length).toBeGreaterThan(0)
-    rankElements.forEach((rankElement) => {
+    rankElements.forEach(rankElement => {
       expect(rankElement).toHaveClass('text-blue-600')
     })
   })

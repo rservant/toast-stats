@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'
 import {
   BarChart,
   Bar,
@@ -8,12 +8,12 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-} from 'recharts';
-import type { Club } from '../types/districts';
+} from 'recharts'
+import type { Club } from '../types/districts'
 
 export interface ClubStatusChartProps {
-  clubs: Club[];
-  isLoading?: boolean;
+  clubs: Club[]
+  isLoading?: boolean
 }
 
 const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
@@ -24,11 +24,11 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
   const statusData = React.useMemo(() => {
     const distribution = clubs.reduce(
       (acc, club) => {
-        acc[club.status] = (acc[club.status] || 0) + 1;
-        return acc;
+        acc[club.status] = (acc[club.status] || 0) + 1
+        return acc
       },
       {} as Record<string, number>
-    );
+    )
 
     return [
       {
@@ -51,23 +51,23 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
         count: distribution.ineligible || 0,
         color: '#6b7280', // gray
       },
-    ].filter((item) => item.count > 0); // Only show statuses that exist
-  }, [clubs]);
+    ].filter(item => item.count > 0) // Only show statuses that exist
+  }, [clubs])
 
   // Calculate distinguished distribution
   const distinguishedData = React.useMemo(() => {
     const distribution = clubs.reduce(
       (acc, club) => {
         if (club.distinguished) {
-          const level = club.distinguishedLevel || 'distinguished';
-          acc[level] = (acc[level] || 0) + 1;
+          const level = club.distinguishedLevel || 'distinguished'
+          acc[level] = (acc[level] || 0) + 1
         } else {
-          acc.regular = (acc.regular || 0) + 1;
+          acc.regular = (acc.regular || 0) + 1
         }
-        return acc;
+        return acc
       },
       {} as Record<string, number>
-    );
+    )
 
     return [
       {
@@ -90,8 +90,8 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
         count: distribution.president || 0,
         color: '#8b5cf6',
       },
-    ].filter((item) => item.count > 0);
-  }, [clubs]);
+    ].filter(item => item.count > 0)
+  }, [clubs])
 
   if (isLoading) {
     return (
@@ -101,7 +101,7 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
           <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -183,44 +183,44 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
-              {statusData.find((s) => s.name === 'Active')?.count || 0}
+              {statusData.find(s => s.name === 'Active')?.count || 0}
             </div>
             <div className="text-sm text-gray-600">Active</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-amber-600">
-              {statusData.find((s) => s.name === 'Low')?.count || 0}
+              {statusData.find(s => s.name === 'Low')?.count || 0}
             </div>
             <div className="text-sm text-gray-600">Low</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600">
-              {statusData.find((s) => s.name === 'Suspended')?.count || 0}
+              {statusData.find(s => s.name === 'Suspended')?.count || 0}
             </div>
             <div className="text-sm text-gray-600">Suspended</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-600">
-              {statusData.find((s) => s.name === 'Ineligible')?.count || 0}
+              {statusData.find(s => s.name === 'Ineligible')?.count || 0}
             </div>
             <div className="text-sm text-gray-600">Ineligible</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {clubs.filter((c) => c.distinguished).length}
+              {clubs.filter(c => c.distinguished).length}
             </div>
             <div className="text-sm text-gray-600">Distinguished</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
-              {clubs.filter((c) => c.distinguishedLevel === 'president').length}
+              {clubs.filter(c => c.distinguishedLevel === 'president').length}
             </div>
             <div className="text-sm text-gray-600">President's</div>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ClubStatusChart;
+export default ClubStatusChart

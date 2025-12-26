@@ -7,10 +7,10 @@ import { chromium } from 'playwright'
 // DOM type declarations for browser context
 declare global {
   interface Element {
-    textContent: string | null;
-    id: string;
-    tagName: string;
-    className: string;
+    textContent: string | null
+    id: string
+    tagName: string
+    className: string
   }
 }
 
@@ -20,9 +20,9 @@ async function inspectClubPage() {
 
   try {
     console.log('Loading club page...')
-    await page.goto('https://dashboards.toastmasters.org/Club.aspx?id=61', { 
+    await page.goto('https://dashboards.toastmasters.org/Club.aspx?id=61', {
       waitUntil: 'networkidle',
-      timeout: 60000 
+      timeout: 60000,
     })
 
     console.log('Page loaded.\n')
@@ -34,7 +34,12 @@ async function inspectClubPage() {
           const text = el.textContent?.toLowerCase() || ''
           const id = el.id?.toLowerCase() || ''
           const className = el.className?.toLowerCase() || ''
-          return text.includes('export') || text.includes('csv') || id.includes('export') || className.includes('export')
+          return (
+            text.includes('export') ||
+            text.includes('csv') ||
+            id.includes('export') ||
+            className.includes('export')
+          )
         })
         .map(el => ({
           tag: el.tagName,
@@ -46,13 +51,14 @@ async function inspectClubPage() {
 
     console.log('Elements with "export" or "csv":')
     exportElements.forEach(el => {
-      console.log(`- [${el.tag}] "${el.text}" (id: ${el.id}, class: ${el.class})`)
+      console.log(
+        `- [${el.tag}] "${el.text}" (id: ${el.id}, class: ${el.class})`
+      )
     })
 
     // Take screenshot
     await page.screenshot({ path: 'club-page-screenshot.png', fullPage: true })
     console.log('\nScreenshot saved to club-page-screenshot.png')
-
   } catch (error) {
     console.error('Error:', error)
   } finally {

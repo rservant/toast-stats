@@ -39,17 +39,23 @@ describe('Assessment API Integration Tests', () => {
   })
 
   it('POST /api/assessment/generate creates a new assessment (201)', async () => {
-    const res = await request(app)
-      .post('/api/assessment/generate')
-      .send({ district_number: districtNumber, program_year: programYear, month })
+    const res = await request(app).post('/api/assessment/generate').send({
+      district_number: districtNumber,
+      program_year: programYear,
+      month,
+    })
 
     // Debug output when unexpected status occurs
-    if (res.status !== 201) console.error('generate-res', res.status, JSON.stringify(res.body))
+    if (res.status !== 201)
+      console.error('generate-res', res.status, JSON.stringify(res.body))
 
     expect(res.status).toBe(201)
 
     expect(res.body).toHaveProperty('success', true)
-    expect(res.body.data.assessment).toHaveProperty('district_number', districtNumber)
+    expect(res.body.data.assessment).toHaveProperty(
+      'district_number',
+      districtNumber
+    )
     expect(res.body.data.assessment).toHaveProperty('program_year', programYear)
     expect(res.body.data.assessment).toHaveProperty('month', month)
   })
@@ -57,7 +63,11 @@ describe('Assessment API Integration Tests', () => {
   it('POST /api/assessment/generate should fail for duplicate generation', async () => {
     const res = await request(app)
       .post('/api/assessment/generate')
-      .send({ district_number: districtNumber, program_year: programYear, month })
+      .send({
+        district_number: districtNumber,
+        program_year: programYear,
+        month,
+      })
       .expect(400)
 
     expect(res.body).toHaveProperty('error')
@@ -65,10 +75,12 @@ describe('Assessment API Integration Tests', () => {
   })
 
   it('GET monthly assessment returns audit_trail and immutable flag', async () => {
-    const res = await request(app)
-      .get(`/api/assessment/monthly/${districtNumber}/${programYear}/${month}`)
+    const res = await request(app).get(
+      `/api/assessment/monthly/${districtNumber}/${programYear}/${month}`
+    )
 
-    if (res.status !== 200) console.error('monthly-get', res.status, JSON.stringify(res.body))
+    if (res.status !== 200)
+      console.error('monthly-get', res.status, JSON.stringify(res.body))
 
     expect(res.status).toBe(200)
 

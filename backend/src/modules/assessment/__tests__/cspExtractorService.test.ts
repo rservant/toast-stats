@@ -7,7 +7,7 @@ describe('CspExtractorService', () => {
     const rows = [
       { 'Club Name': 'A', 'CSP Achieved': 'Yes' },
       { 'Club Name': 'B', 'CSP Achieved': 'No' },
-      { 'Club Name': 'C', 'CSP Achieved': 'TRUE' }
+      { 'Club Name': 'C', 'CSP Achieved': 'TRUE' },
     ]
 
     const res = svc.extractCspCount(rows)
@@ -21,7 +21,7 @@ describe('CspExtractorService', () => {
     const rows = [
       { name: 'A', CSP: 'X' },
       { name: 'B', CSP: '' },
-      { name: 'C', CSP: '1' }
+      { name: 'C', CSP: '1' },
     ]
 
     const res = svc.extractCspCount(rows)
@@ -32,7 +32,7 @@ describe('CspExtractorService', () => {
 
   it('returns zero and null field when no CSP field found', () => {
     const svc = new CspExtractorService()
-    const rows = [ { name: 'A' }, { name: 'B' } ]
+    const rows = [{ name: 'A' }, { name: 'B' }]
 
     const res = svc.extractCspCount(rows)
     expect(res.csp_count).toBe(0)

@@ -1,6 +1,6 @@
 /**
  * Unit Tests for ReconciliationReplayEngine
- * 
+ *
  * Tests replay functionality for debugging reconciliation scenarios,
  * step-by-step execution, and comparison with original timelines.
  */
@@ -8,13 +8,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.js'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
-import type { 
-  ReplaySession, 
-  ReplayOptions
+import type {
+  ReplaySession,
+  ReplayOptions,
 } from '../ReconciliationReplayEngine.js'
-import type { 
+import type {
   ReconciliationJob,
-  ReconciliationTimeline
+  ReconciliationTimeline,
 } from '../../types/reconciliation.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 
@@ -24,8 +24,8 @@ vi.mock('../logger.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    debug: vi.fn()
-  }
+    debug: vi.fn(),
+  },
 }))
 
 // Mock interface for ChangeDetectionEngine
@@ -58,7 +58,7 @@ describe('ReconciliationReplayEngine', () => {
     maxEndDate: new Date('2024-01-16T00:00:00Z'),
     progress: {
       phase: 'completed',
-      completionPercentage: 100
+      completionPercentage: 100,
     },
     triggeredBy: 'automatic',
     config: {
@@ -68,16 +68,16 @@ describe('ReconciliationReplayEngine', () => {
       significantChangeThresholds: {
         membershipPercent: 1,
         clubCountAbsolute: 1,
-        distinguishedPercent: 2
+        distinguishedPercent: 2,
       },
       autoExtensionEnabled: true,
-      maxExtensionDays: 5
+      maxExtensionDays: 5,
     },
     metadata: {
       createdAt: new Date('2024-01-01T00:00:00Z'),
       updatedAt: new Date('2024-01-10T00:00:00Z'),
-      triggeredBy: 'automatic'
-    }
+      triggeredBy: 'automatic',
+    },
   }
 
   const mockTimeline: ReconciliationTimeline = {
@@ -94,51 +94,103 @@ describe('ReconciliationReplayEngine', () => {
           membershipChange: {
             previous: 100,
             current: 105,
-            percentChange: 5
+            percentChange: 5,
           },
           timestamp: new Date('2024-01-02T00:00:00Z'),
-          sourceDataDate: '2024-01-02'
+          sourceDataDate: '2024-01-02',
         },
         isSignificant: true,
-        cacheUpdated: true
-      }
+        cacheUpdated: true,
+      },
     ],
     status: {
       phase: 'completed',
       daysActive: 9,
       daysStable: 3,
-      message: 'Reconciliation completed'
-    }
+      message: 'Reconciliation completed',
+    },
   }
 
   const mockDataSequence: DistrictStatistics[] = [
     {
       districtId: 'D123',
       asOfDate: '2024-01-01',
-      clubs: { total: 50, active: 48, chartered: 48, suspended: 2, ineligible: 0, low: 0, distinguished: 20 },
-      membership: { total: 1000, change: 0, changePercent: 0, byClub: [], new: 50, renewed: 900, dual: 50 },
+      clubs: {
+        total: 50,
+        active: 48,
+        chartered: 48,
+        suspended: 2,
+        ineligible: 0,
+        low: 0,
+        distinguished: 20,
+      },
+      membership: {
+        total: 1000,
+        change: 0,
+        changePercent: 0,
+        byClub: [],
+        new: 50,
+        renewed: 900,
+        dual: 50,
+      },
       education: { totalAwards: 0, byType: [], topClubs: [] },
       goals: { clubsGoal: 55, membershipGoal: 1100, distinguishedGoal: 25 },
-      performance: { clubsNet: 0, membershipNet: 0, distinguishedPercent: 40 }
+      performance: { clubsNet: 0, membershipNet: 0, distinguishedPercent: 40 },
     },
     {
       districtId: 'D123',
       asOfDate: '2024-01-02',
-      clubs: { total: 50, active: 48, chartered: 48, suspended: 2, ineligible: 0, low: 0, distinguished: 20 },
-      membership: { total: 1005, change: 5, changePercent: 0.5, byClub: [], new: 55, renewed: 900, dual: 50 },
+      clubs: {
+        total: 50,
+        active: 48,
+        chartered: 48,
+        suspended: 2,
+        ineligible: 0,
+        low: 0,
+        distinguished: 20,
+      },
+      membership: {
+        total: 1005,
+        change: 5,
+        changePercent: 0.5,
+        byClub: [],
+        new: 55,
+        renewed: 900,
+        dual: 50,
+      },
       education: { totalAwards: 0, byType: [], topClubs: [] },
       goals: { clubsGoal: 55, membershipGoal: 1100, distinguishedGoal: 25 },
-      performance: { clubsNet: 0, membershipNet: 5, distinguishedPercent: 40 }
+      performance: { clubsNet: 0, membershipNet: 5, distinguishedPercent: 40 },
     },
     {
       districtId: 'D123',
       asOfDate: '2024-01-03',
-      clubs: { total: 51, active: 49, chartered: 49, suspended: 2, ineligible: 0, low: 0, distinguished: 21 },
-      membership: { total: 1010, change: 10, changePercent: 1.0, byClub: [], new: 60, renewed: 900, dual: 50 },
+      clubs: {
+        total: 51,
+        active: 49,
+        chartered: 49,
+        suspended: 2,
+        ineligible: 0,
+        low: 0,
+        distinguished: 21,
+      },
+      membership: {
+        total: 1010,
+        change: 10,
+        changePercent: 1.0,
+        byClub: [],
+        new: 60,
+        renewed: 900,
+        dual: 50,
+      },
       education: { totalAwards: 0, byType: [], topClubs: [] },
       goals: { clubsGoal: 55, membershipGoal: 1100, distinguishedGoal: 25 },
-      performance: { clubsNet: 1, membershipNet: 10, distinguishedPercent: 41.2 }
-    }
+      performance: {
+        clubsNet: 1,
+        membershipNet: 10,
+        distinguishedPercent: 41.2,
+      },
+    },
   ]
 
   beforeEach(() => {
@@ -150,12 +202,16 @@ describe('ReconciliationReplayEngine', () => {
       calculateChangeMetrics: vi.fn(),
       detectMembershipChanges: vi.fn(),
       detectClubCountChanges: vi.fn(),
-      detectDistinguishedChanges: vi.fn()
+      detectDistinguishedChanges: vi.fn(),
     }
 
-    vi.mocked(ChangeDetectionEngine).mockImplementation(() => mockChangeDetectionEngine as unknown as ChangeDetectionEngine)
-    
-    replayEngine = new ReconciliationReplayEngine(mockChangeDetectionEngine as unknown as ChangeDetectionEngine)
+    vi.mocked(ChangeDetectionEngine).mockImplementation(
+      () => mockChangeDetectionEngine as unknown as ChangeDetectionEngine
+    )
+
+    replayEngine = new ReconciliationReplayEngine(
+      mockChangeDetectionEngine as unknown as ChangeDetectionEngine
+    )
   })
 
   describe('createReplaySession', () => {
@@ -236,10 +292,10 @@ describe('ReconciliationReplayEngine', () => {
         membershipChange: {
           previous: 1000,
           current: 1005,
-          percentChange: 0.5
+          percentChange: 0.5,
         },
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
 
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
@@ -251,7 +307,7 @@ describe('ReconciliationReplayEngine', () => {
         includeDebugInfo: true,
         validateAtEachStep: true,
         pauseOnSignificantChanges: false,
-        pauseOnErrors: false
+        pauseOnErrors: false,
       }
 
       const session = await replayEngine.executeReplay(sessionId, options)
@@ -259,7 +315,9 @@ describe('ReconciliationReplayEngine', () => {
       expect(session.currentStep).toBe(mockDataSequence.length - 1)
       expect(session.replayState.stepResults.length).toBeGreaterThan(0)
       expect(session.replayState.processedEntries.length).toBeGreaterThan(0)
-      expect(session.replayState.debugInfo.performanceMetrics.totalProcessingTime).toBeGreaterThan(0)
+      expect(
+        session.replayState.debugInfo.performanceMetrics.totalProcessingTime
+      ).toBeGreaterThan(0)
     })
 
     it('should pause on step-by-step mode', async () => {
@@ -268,7 +326,7 @@ describe('ReconciliationReplayEngine', () => {
         includeDebugInfo: true,
         validateAtEachStep: false,
         pauseOnSignificantChanges: false,
-        pauseOnErrors: false
+        pauseOnErrors: false,
       }
 
       const session = await replayEngine.executeReplay(sessionId, options)
@@ -285,13 +343,15 @@ describe('ReconciliationReplayEngine', () => {
         includeDebugInfo: true,
         validateAtEachStep: false,
         pauseOnSignificantChanges: true,
-        pauseOnErrors: false
+        pauseOnErrors: false,
       }
 
       const session = await replayEngine.executeReplay(sessionId, options)
 
       expect(session.currentStep).toBeLessThan(mockDataSequence.length - 1)
-      expect(session.replayState.debugInfo.significantChanges).toBeGreaterThan(0)
+      expect(session.replayState.debugInfo.significantChanges).toBeGreaterThan(
+        0
+      )
     })
 
     it('should respect maxSteps limit', async () => {
@@ -301,7 +361,7 @@ describe('ReconciliationReplayEngine', () => {
         validateAtEachStep: false,
         pauseOnSignificantChanges: false,
         pauseOnErrors: false,
-        maxSteps: 1
+        maxSteps: 1,
       }
 
       const session = await replayEngine.executeReplay(sessionId, options)
@@ -320,10 +380,12 @@ describe('ReconciliationReplayEngine', () => {
         includeDebugInfo: true,
         validateAtEachStep: false,
         pauseOnSignificantChanges: false,
-        pauseOnErrors: false
+        pauseOnErrors: false,
       }
 
-      await expect(replayEngine.executeReplay(sessionId, options)).rejects.toThrow('Change detection failed')
+      await expect(
+        replayEngine.executeReplay(sessionId, options)
+      ).rejects.toThrow('Change detection failed')
     })
 
     it('should throw error for non-existent session', async () => {
@@ -332,10 +394,12 @@ describe('ReconciliationReplayEngine', () => {
         includeDebugInfo: true,
         validateAtEachStep: false,
         pauseOnSignificantChanges: false,
-        pauseOnErrors: false
+        pauseOnErrors: false,
       }
 
-      await expect(replayEngine.executeReplay('non-existent', options)).rejects.toThrow('Replay session not found: non-existent')
+      await expect(
+        replayEngine.executeReplay('non-existent', options)
+      ).rejects.toThrow('Replay session not found: non-existent')
     })
   })
 
@@ -357,10 +421,10 @@ describe('ReconciliationReplayEngine', () => {
         membershipChange: {
           previous: 1000,
           current: 1005,
-          percentChange: 0.5
+          percentChange: 0.5,
         },
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
 
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
@@ -372,7 +436,7 @@ describe('ReconciliationReplayEngine', () => {
         includeDebugInfo: true,
         validateAtEachStep: false,
         pauseOnSignificantChanges: false,
-        pauseOnErrors: false
+        pauseOnErrors: false,
       }
 
       const stepResult = await replayEngine.executeStep(session, options)
@@ -389,11 +453,23 @@ describe('ReconciliationReplayEngine', () => {
     it('should execute subsequent step with change detection', async () => {
       // First execute step 0
       session.currentStep = 0
-      await replayEngine.executeStep(session, { stepByStep: true, includeDebugInfo: true, validateAtEachStep: false, pauseOnSignificantChanges: false, pauseOnErrors: false })
+      await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
+      })
 
       // Then execute step 1
       session.currentStep = 1
-      const stepResult = await replayEngine.executeStep(session, { stepByStep: true, includeDebugInfo: true, validateAtEachStep: false, pauseOnSignificantChanges: false, pauseOnErrors: false })
+      const stepResult = await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
+      })
 
       expect(stepResult.stepNumber).toBe(1)
       expect(stepResult.action).toBe('status_calculation') // Final action in step
@@ -411,7 +487,13 @@ describe('ReconciliationReplayEngine', () => {
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
       session.currentStep = 1
-      const stepResult = await replayEngine.executeStep(session, { stepByStep: true, includeDebugInfo: true, validateAtEachStep: false, pauseOnSignificantChanges: false, pauseOnErrors: false })
+      const stepResult = await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
+      })
 
       expect(stepResult.isSignificant).toBe(true)
       expect(session.replayState.debugInfo.significantChanges).toBe(1)
@@ -424,7 +506,13 @@ describe('ReconciliationReplayEngine', () => {
       })
 
       session.currentStep = 1
-      const stepResult = await replayEngine.executeStep(session, { stepByStep: true, includeDebugInfo: true, validateAtEachStep: false, pauseOnSignificantChanges: false, pauseOnErrors: false })
+      const stepResult = await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
+      })
 
       expect(stepResult.errors).toHaveLength(1)
       expect(stepResult.errors[0]).toContain('Detection error')
@@ -432,12 +520,12 @@ describe('ReconciliationReplayEngine', () => {
 
     it('should validate replay state when enabled', async () => {
       session.currentStep = 1
-      const stepResult = await replayEngine.executeStep(session, { 
-        stepByStep: true, 
-        includeDebugInfo: true, 
-        validateAtEachStep: true, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      const stepResult = await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: true,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       // Validation should run without errors for normal case
@@ -447,8 +535,20 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('session management', () => {
     it('should get all replay sessions', () => {
-      const session1 = replayEngine.createReplaySession('Session 1', 'Description 1', mockJob, mockTimeline, mockDataSequence)
-      const session2 = replayEngine.createReplaySession('Session 2', 'Description 2', mockJob, mockTimeline, mockDataSequence)
+      const session1 = replayEngine.createReplaySession(
+        'Session 1',
+        'Description 1',
+        mockJob,
+        mockTimeline,
+        mockDataSequence
+      )
+      const session2 = replayEngine.createReplaySession(
+        'Session 2',
+        'Description 2',
+        mockJob,
+        mockTimeline,
+        mockDataSequence
+      )
 
       const allSessions = replayEngine.getAllReplaySessions()
 
@@ -458,7 +558,13 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should delete replay session', () => {
-      const session = replayEngine.createReplaySession('Test Session', 'Description', mockJob, mockTimeline, mockDataSequence)
+      const session = replayEngine.createReplaySession(
+        'Test Session',
+        'Description',
+        mockJob,
+        mockTimeline,
+        mockDataSequence
+      )
 
       const deleted = replayEngine.deleteReplaySession(session.id)
       expect(deleted).toBe(true)
@@ -493,16 +599,16 @@ describe('ReconciliationReplayEngine', () => {
         hasChanges: false,
         changedFields: [],
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
 
-      await replayEngine.executeReplay(session.id, { 
-        stepByStep: false, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      await replayEngine.executeReplay(session.id, {
+        stepByStep: false,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       const exported = replayEngine.exportReplaySession(session.id)
@@ -529,7 +635,9 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should throw error for non-existent session', () => {
-      expect(() => replayEngine.exportReplaySession('non-existent')).toThrow('Replay session not found: non-existent')
+      expect(() => replayEngine.exportReplaySession('non-existent')).toThrow(
+        'Replay session not found: non-existent'
+      )
     })
   })
 
@@ -550,19 +658,19 @@ describe('ReconciliationReplayEngine', () => {
         membershipChange: {
           previous: 1000,
           current: 1005,
-          percentChange: 0.5
+          percentChange: 0.5,
         },
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
-      await replayEngine.executeReplay(session.id, { 
-        stepByStep: false, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      await replayEngine.executeReplay(session.id, {
+        stepByStep: false,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       const comparison = replayEngine.compareWithOriginal(session.id)
@@ -591,9 +699,9 @@ describe('ReconciliationReplayEngine', () => {
         entries: [
           {
             ...mockTimeline.entries[0],
-            isSignificant: false // Different from what replay will generate
-          }
-        ]
+            isSignificant: false, // Different from what replay will generate
+          },
+        ],
       }
 
       const session = replayEngine.createReplaySession(
@@ -609,27 +717,31 @@ describe('ReconciliationReplayEngine', () => {
         changedFields: ['membership'],
         membershipChange: { previous: 1000, current: 1005, percentChange: 0.5 },
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true) // Different from original
 
-      await replayEngine.executeReplay(session.id, { 
-        stepByStep: false, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      await replayEngine.executeReplay(session.id, {
+        stepByStep: false,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       const comparison = replayEngine.compareWithOriginal(session.id)
 
       expect(comparison.differences.length).toBeGreaterThan(0)
-      const significanceDiff = comparison.differences.find((d: { field: string }) => d.field === 'significance_mismatch')
+      const significanceDiff = comparison.differences.find(
+        (d: { field: string }) => d.field === 'significance_mismatch'
+      )
       expect(significanceDiff).toBeDefined()
     })
 
     it('should throw error for non-existent session', () => {
-      expect(() => replayEngine.compareWithOriginal('non-existent')).toThrow('Replay session not found: non-existent')
+      expect(() => replayEngine.compareWithOriginal('non-existent')).toThrow(
+        'Replay session not found: non-existent'
+      )
     })
   })
 
@@ -649,23 +761,25 @@ describe('ReconciliationReplayEngine', () => {
         changedFields: ['membership'],
         membershipChange: { previous: 1000, current: 1020, percentChange: 2 },
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
       // Set current step to near end of max reconciliation days
       session.currentStep = 13 // Near the 15-day limit
 
-      const stepResult = await replayEngine.executeStep(session, { 
-        stepByStep: true, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      const stepResult = await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       expect(session.replayState.debugInfo.extensionCount).toBeGreaterThan(0)
-      expect(stepResult.notes.some(note => note.includes('Extension'))).toBe(true)
+      expect(stepResult.notes.some(note => note.includes('Extension'))).toBe(
+        true
+      )
     })
 
     it('should not trigger extensions when autoExtensionEnabled is false', async () => {
@@ -673,8 +787,8 @@ describe('ReconciliationReplayEngine', () => {
         ...mockJob,
         config: {
           ...mockJob.config,
-          autoExtensionEnabled: false
-        }
+          autoExtensionEnabled: false,
+        },
       }
 
       const session = replayEngine.createReplaySession(
@@ -690,18 +804,18 @@ describe('ReconciliationReplayEngine', () => {
         changedFields: ['membership'],
         membershipChange: { previous: 1000, current: 1020, percentChange: 2 },
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
       session.currentStep = 13
 
-      await replayEngine.executeStep(session, { 
-        stepByStep: true, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       expect(session.replayState.debugInfo.extensionCount).toBe(0)
@@ -722,17 +836,17 @@ describe('ReconciliationReplayEngine', () => {
         hasChanges: true,
         changedFields: ['membership'],
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
       session.currentStep = 1
-      const stepResult = await replayEngine.executeStep(session, { 
-        stepByStep: true, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      const stepResult = await replayEngine.executeStep(session, {
+        stepByStep: true,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       expect(stepResult.newStatus.phase).toBe('monitoring')
@@ -755,17 +869,17 @@ describe('ReconciliationReplayEngine', () => {
           hasChanges: false,
           changedFields: [],
           timestamp: new Date(),
-          sourceDataDate: `2024-01-0${i + 2}`
+          sourceDataDate: `2024-01-0${i + 2}`,
         })
         mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
 
         session.currentStep = i + 1
-        await replayEngine.executeStep(session, { 
-          stepByStep: true, 
-          includeDebugInfo: true, 
-          validateAtEachStep: false, 
-          pauseOnSignificantChanges: false, 
-          pauseOnErrors: false 
+        await replayEngine.executeStep(session, {
+          stepByStep: true,
+          includeDebugInfo: true,
+          validateAtEachStep: false,
+          pauseOnSignificantChanges: false,
+          pauseOnErrors: false,
         })
       }
 
@@ -789,16 +903,16 @@ describe('ReconciliationReplayEngine', () => {
         hasChanges: false,
         changedFields: [],
         timestamp: new Date(),
-        sourceDataDate: '2024-01-02'
+        sourceDataDate: '2024-01-02',
       })
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
 
-      await replayEngine.executeReplay(session.id, { 
-        stepByStep: false, 
-        includeDebugInfo: true, 
-        validateAtEachStep: false, 
-        pauseOnSignificantChanges: false, 
-        pauseOnErrors: false 
+      await replayEngine.executeReplay(session.id, {
+        stepByStep: false,
+        includeDebugInfo: true,
+        validateAtEachStep: false,
+        pauseOnSignificantChanges: false,
+        pauseOnErrors: false,
       })
 
       const metrics = session.replayState.debugInfo.performanceMetrics

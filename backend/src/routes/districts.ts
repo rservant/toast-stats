@@ -8,7 +8,12 @@ import { CacheManager } from '../services/CacheManager.js'
 import { DistrictBackfillService } from '../services/DistrictBackfillService.js'
 import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
-import { DistrictAnalytics, ClubTrend, DivisionAnalytics, AreaAnalytics } from '../types/analytics.js'
+import {
+  DistrictAnalytics,
+  ClubTrend,
+  DivisionAnalytics,
+  AreaAnalytics,
+} from '../types/analytics.js'
 import { AnalyticsEngine } from '../services/AnalyticsEngine.js'
 import {
   transformDistrictsResponse,
@@ -45,22 +50,31 @@ const backfillService = new BackfillService(cacheManager, toastmastersAPI)
 // Initialize district-level services
 const districtCacheManager = new DistrictCacheManager()
 const scraper = new ToastmastersScraper()
-const districtBackfillService = new DistrictBackfillService(districtCacheManager, scraper)
+const districtBackfillService = new DistrictBackfillService(
+  districtCacheManager,
+  scraper
+)
 const analyticsEngine = new AnalyticsEngine(districtCacheManager)
 
 // Cleanup old jobs every hour
-setInterval(() => {
-  backfillService.cleanupOldJobs().catch(error => {
-    console.error('Failed to cleanup old backfill jobs:', error)
-  })
-}, 60 * 60 * 1000)
+setInterval(
+  () => {
+    backfillService.cleanupOldJobs().catch(error => {
+      console.error('Failed to cleanup old backfill jobs:', error)
+    })
+  },
+  60 * 60 * 1000
+)
 
 // Cleanup old district backfill jobs every hour
-setInterval(() => {
-  districtBackfillService.cleanupOldJobs().catch(error => {
-    console.error('Failed to cleanup old district backfill jobs:', error)
-  })
-}, 60 * 60 * 1000)
+setInterval(
+  () => {
+    districtBackfillService.cleanupOldJobs().catch(error => {
+      console.error('Failed to cleanup old district backfill jobs:', error)
+    })
+  },
+  60 * 60 * 1000
+)
 
 /**
  * Validate district ID format
@@ -86,12 +100,14 @@ router.get(
       const apiResponse = await toastmastersAPI.getDistricts()
 
       // Transform response to internal format
-      const districts = transformDistrictsResponse(apiResponse) as DistrictsResponse
+      const districts = transformDistrictsResponse(
+        apiResponse
+      ) as DistrictsResponse
 
       res.json(districts)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       res.status(500).json({
         error: {
           code: errorResponse.code || 'FETCH_ERROR',
@@ -116,14 +132,14 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const date = req.query.date as string | undefined
-      
+
       // Fetch district rankings (with optional date)
       const rankings = await toastmastersAPI.getAllDistrictsRankings(date)
 
       res.json(rankings)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       res.status(500).json({
         error: {
           code: errorResponse.code || 'FETCH_ERROR',
@@ -182,7 +198,7 @@ router.get('/cache/statistics', async (_req: Request, res: Response) => {
 router.get('/cache/metadata/:date', async (req: Request, res: Response) => {
   try {
     const { date } = req.params
-    
+
     // Validate date format
     if (!validateDateFormat(date)) {
       res.status(400).json({
@@ -193,9 +209,9 @@ router.get('/cache/metadata/:date', async (req: Request, res: Response) => {
       })
       return
     }
-    
+
     const metadata = await toastmastersAPI.getCacheMetadata(date)
-    
+
     if (!metadata) {
       res.status(404).json({
         error: {
@@ -205,7 +221,7 @@ router.get('/cache/metadata/:date', async (req: Request, res: Response) => {
       })
       return
     }
-    
+
     res.json(metadata)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
@@ -255,9 +271,11 @@ router.get('/cache/version', async (_req: Request, res: Response) => {
       })
     }
 
-    const currentVersion = (cacheManagerInstance.constructor as typeof CacheManager).getCacheVersion()
+    const currentVersion = (
+      cacheManagerInstance.constructor as typeof CacheManager
+    ).getCacheVersion()
     const statistics = await cacheManagerInstance.getCacheStatistics()
-    
+
     res.json({
       currentVersion,
       statistics,
@@ -336,7 +354,7 @@ router.get(
   '/:districtId/statistics',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'statistics'),
   }),
   async (req: Request, res: Response) => {
@@ -355,15 +373,18 @@ router.get(
       }
 
       // Fetch statistics from Toastmasters API
-      const apiResponse = await toastmastersAPI.getDistrictStatistics(districtId)
+      const apiResponse =
+        await toastmastersAPI.getDistrictStatistics(districtId)
 
       // Transform response to internal format
-      const statistics = transformDistrictStatisticsResponse(apiResponse) as DistrictStatistics
+      const statistics = transformDistrictStatisticsResponse(
+        apiResponse
+      ) as DistrictStatistics
 
       res.json(statistics)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check if it's a 404 error (district not found)
       if (errorResponse.code.includes('404')) {
         res.status(404).json({
@@ -394,7 +415,7 @@ router.get(
   '/:districtId/membership-history',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'membership-history', {
         months: req.query.months,
       }),
@@ -434,12 +455,14 @@ router.get(
       )
 
       // Transform response to internal format
-      const history = transformMembershipHistoryResponse(apiResponse) as MembershipHistoryResponse
+      const history = transformMembershipHistoryResponse(
+        apiResponse
+      ) as MembershipHistoryResponse
 
       res.json(history)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check if it's a 404 error (district not found)
       if (errorResponse.code.includes('404')) {
         res.status(404).json({
@@ -470,7 +493,7 @@ router.get(
   '/:districtId/clubs',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'clubs'),
   }),
   async (req: Request, res: Response) => {
@@ -497,7 +520,7 @@ router.get(
       res.json(clubs)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check if it's a 404 error (district not found)
       if (errorResponse.code.includes('404')) {
         res.status(404).json({
@@ -528,7 +551,7 @@ router.get(
   '/:districtId/educational-awards',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'educational-awards', {
         months: req.query.months,
       }),
@@ -573,7 +596,7 @@ router.get(
       res.json(awards)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check if it's a 404 error (district not found)
       if (errorResponse.code.includes('404')) {
         res.status(404).json({
@@ -604,7 +627,7 @@ function validateDateFormat(date: string): boolean {
   if (!dateRegex.test(date)) {
     return false
   }
-  
+
   const parsedDate = new Date(date)
   return !isNaN(parsedDate.getTime())
 }
@@ -617,7 +640,7 @@ router.get(
   '/:districtId/daily-reports',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'daily-reports', {
         startDate: req.query.startDate,
         endDate: req.query.endDate,
@@ -673,7 +696,7 @@ router.get(
       // Validate date range
       const start = new Date(startDate)
       const end = new Date(endDate)
-      
+
       if (start > end) {
         res.status(400).json({
           error: {
@@ -685,7 +708,9 @@ router.get(
       }
 
       // Limit date range to prevent excessive data requests (e.g., max 90 days)
-      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      const daysDiff = Math.ceil(
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      )
       if (daysDiff > 90) {
         res.status(400).json({
           error: {
@@ -704,12 +729,14 @@ router.get(
       )
 
       // Transform response to internal format
-      const reports = transformDailyReportsResponse(apiResponse) as DailyReportsResponse
+      const reports = transformDailyReportsResponse(
+        apiResponse
+      ) as DailyReportsResponse
 
       res.json(reports)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check if it's a 404 error (district not found)
       if (errorResponse.code.includes('404')) {
         res.status(404).json({
@@ -740,8 +767,11 @@ router.get(
   '/:districtId/daily-reports/:date',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: (req) =>
-      generateDistrictCacheKey(req.params.districtId, `daily-reports/${req.params.date}`),
+    keyGenerator: req =>
+      generateDistrictCacheKey(
+        req.params.districtId,
+        `daily-reports/${req.params.date}`
+      ),
   }),
   async (req: Request, res: Response) => {
     try {
@@ -773,7 +803,7 @@ router.get(
       const requestedDate = new Date(date)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      
+
       if (requestedDate > today) {
         res.status(400).json({
           error: {
@@ -791,12 +821,14 @@ router.get(
       )
 
       // Transform response to internal format
-      const report = transformDailyReportDetailResponse(apiResponse) as DailyReportDetailResponse
+      const report = transformDailyReportDetailResponse(
+        apiResponse
+      ) as DailyReportDetailResponse
 
       res.json(report)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check if it's a 404 error (district or report not found)
       if (errorResponse.code.includes('404')) {
         res.status(404).json({
@@ -824,45 +856,42 @@ router.get(
  * Fetch historical rank data for a district
  * Query params: startDate (optional), endDate (optional)
  */
-router.get(
-  '/:districtId/rank-history',
-  async (req: Request, res: Response) => {
-    try {
-      const { districtId } = req.params
-      const { startDate, endDate } = req.query
+router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
+  try {
+    const { districtId } = req.params
+    const { startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
-
-      // Fetch rank history from Toastmasters API
-      const rankHistory = await toastmastersAPI.getDistrictRankHistory(
-        districtId,
-        startDate as string | undefined,
-        endDate as string | undefined
-      )
-
-      res.json(rankHistory)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-      
-      res.status(500).json({
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
         error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch district rank history',
-          details: errorResponse.details,
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
         },
       })
+      return
     }
+
+    // Fetch rank history from Toastmasters API
+    const rankHistory = await toastmastersAPI.getDistrictRankHistory(
+      districtId,
+      startDate as string | undefined,
+      endDate as string | undefined
+    )
+
+    res.json(rankHistory)
+  } catch (error) {
+    const errorResponse = transformErrorResponse(error)
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'FETCH_ERROR',
+        message: 'Failed to fetch district rank history',
+        details: errorResponse.details,
+      },
+    })
   }
-)
+})
 
 /**
  * POST /api/districts/backfill
@@ -897,7 +926,7 @@ router.post('/backfill', async (req: Request, res: Response) => {
     if (request.startDate && request.endDate) {
       const start = new Date(request.startDate)
       const end = new Date(request.endDate)
-      
+
       if (start > end) {
         res.status(400).json({
           error: {
@@ -915,11 +944,14 @@ router.post('/backfill', async (req: Request, res: Response) => {
     res.json(status)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'BACKFILL_ERROR',
-        message: error instanceof Error ? error.message : 'Failed to initiate backfill',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to initiate backfill',
         details: errorResponse.details,
       },
     })
@@ -949,7 +981,7 @@ router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
     res.json(status)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'BACKFILL_ERROR',
@@ -986,7 +1018,7 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'BACKFILL_ERROR',
@@ -1044,7 +1076,7 @@ router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
     res.json(data)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'FETCH_ERROR',
@@ -1075,12 +1107,14 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
     }
 
     // Get cached dates
-    const dates = await districtCacheManager.getCachedDatesForDistrict(districtId)
+    const dates =
+      await districtCacheManager.getCachedDatesForDistrict(districtId)
 
     // Get date range if dates exist
-    const dateRange = dates.length > 0 
-      ? await districtCacheManager.getDistrictDataRange(districtId)
-      : null
+    const dateRange =
+      dates.length > 0
+        ? await districtCacheManager.getDistrictDataRange(districtId)
+        : null
 
     res.json({
       districtId,
@@ -1090,7 +1124,7 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'FETCH_ERROR',
@@ -1146,7 +1180,7 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
     if (startDate && endDate) {
       const start = new Date(startDate)
       const end = new Date(endDate)
-      
+
       if (start > end) {
         res.status(400).json({
           error: {
@@ -1158,7 +1192,9 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
       }
 
       // Limit date range to prevent excessive requests (e.g., max 365 days)
-      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      const daysDiff = Math.ceil(
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      )
       if (daysDiff > 365) {
         res.status(400).json({
           error: {
@@ -1182,10 +1218,11 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
     res.json(status)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     // Check for specific error messages
-    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate backfill'
-    
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to initiate backfill'
+
     if (errorMessage.includes('already cached')) {
       res.status(400).json({
         error: {
@@ -1220,222 +1257,248 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
  * GET /api/districts/:districtId/backfill/:backfillId
  * Check backfill status for a specific district
  */
-router.get('/:districtId/backfill/:backfillId', async (req: Request, res: Response) => {
-  try {
-    const { districtId, backfillId } = req.params
+router.get(
+  '/:districtId/backfill/:backfillId',
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId, backfillId } = req.params
 
-    // Validate district ID
-    if (!validateDistrictId(districtId)) {
-      res.status(400).json({
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      const status = districtBackfillService.getBackfillStatus(backfillId)
+
+      if (!status) {
+        res.status(404).json({
+          error: {
+            code: 'BACKFILL_NOT_FOUND',
+            message: 'Backfill job not found',
+          },
+        })
+        return
+      }
+
+      // Verify the backfill belongs to the requested district
+      if (status.districtId !== districtId) {
+        res.status(404).json({
+          error: {
+            code: 'BACKFILL_NOT_FOUND',
+            message: 'Backfill job not found for this district',
+          },
+        })
+        return
+      }
+
+      res.json(status)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+
+      res.status(500).json({
         error: {
-          code: 'INVALID_DISTRICT_ID',
-          message: 'Invalid district ID format',
+          code: errorResponse.code || 'BACKFILL_ERROR',
+          message: 'Failed to get backfill status',
+          details: errorResponse.details,
         },
       })
-      return
     }
-
-    const status = districtBackfillService.getBackfillStatus(backfillId)
-
-    if (!status) {
-      res.status(404).json({
-        error: {
-          code: 'BACKFILL_NOT_FOUND',
-          message: 'Backfill job not found',
-        },
-      })
-      return
-    }
-
-    // Verify the backfill belongs to the requested district
-    if (status.districtId !== districtId) {
-      res.status(404).json({
-        error: {
-          code: 'BACKFILL_NOT_FOUND',
-          message: 'Backfill job not found for this district',
-        },
-      })
-      return
-    }
-
-    res.json(status)
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
-    
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'BACKFILL_ERROR',
-        message: 'Failed to get backfill status',
-        details: errorResponse.details,
-      },
-    })
   }
-})
+)
 
 /**
  * DELETE /api/districts/:districtId/backfill/:backfillId
  * Cancel a backfill job for a specific district
  */
-router.delete('/:districtId/backfill/:backfillId', async (req: Request, res: Response) => {
-  try {
-    const { districtId, backfillId } = req.params
+router.delete(
+  '/:districtId/backfill/:backfillId',
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId, backfillId } = req.params
 
-    // Validate district ID
-    if (!validateDistrictId(districtId)) {
-      res.status(400).json({
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Get status first to verify it belongs to this district
+      const status = districtBackfillService.getBackfillStatus(backfillId)
+
+      if (!status) {
+        res.status(404).json({
+          error: {
+            code: 'BACKFILL_NOT_FOUND',
+            message: 'Backfill job not found',
+          },
+        })
+        return
+      }
+
+      // Verify the backfill belongs to the requested district
+      if (status.districtId !== districtId) {
+        res.status(404).json({
+          error: {
+            code: 'BACKFILL_NOT_FOUND',
+            message: 'Backfill job not found for this district',
+          },
+        })
+        return
+      }
+
+      const cancelled = await districtBackfillService.cancelBackfill(backfillId)
+
+      if (!cancelled) {
+        res.status(400).json({
+          error: {
+            code: 'CANNOT_CANCEL',
+            message:
+              'Backfill job cannot be cancelled (already completed or failed)',
+          },
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        message: 'Backfill cancelled successfully',
+      })
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+
+      res.status(500).json({
         error: {
-          code: 'INVALID_DISTRICT_ID',
-          message: 'Invalid district ID format',
+          code: errorResponse.code || 'BACKFILL_ERROR',
+          message: 'Failed to cancel backfill',
+          details: errorResponse.details,
         },
       })
-      return
     }
-
-    // Get status first to verify it belongs to this district
-    const status = districtBackfillService.getBackfillStatus(backfillId)
-
-    if (!status) {
-      res.status(404).json({
-        error: {
-          code: 'BACKFILL_NOT_FOUND',
-          message: 'Backfill job not found',
-        },
-      })
-      return
-    }
-
-    // Verify the backfill belongs to the requested district
-    if (status.districtId !== districtId) {
-      res.status(404).json({
-        error: {
-          code: 'BACKFILL_NOT_FOUND',
-          message: 'Backfill job not found for this district',
-        },
-      })
-      return
-    }
-
-    const cancelled = await districtBackfillService.cancelBackfill(backfillId)
-
-    if (!cancelled) {
-      res.status(400).json({
-        error: {
-          code: 'CANNOT_CANCEL',
-          message: 'Backfill job cannot be cancelled (already completed or failed)',
-        },
-      })
-      return
-    }
-
-    res.json({
-      success: true,
-      message: 'Backfill cancelled successfully',
-    })
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
-    
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'BACKFILL_ERROR',
-        message: 'Failed to cancel backfill',
-        details: errorResponse.details,
-      },
-    })
   }
-})
+)
 
 /**
  * GET /api/districts/:districtId/membership-analytics
  * Generate comprehensive membership analytics for a district
  * Query params: startDate (optional), endDate (optional)
  */
-router.get('/:districtId/membership-analytics', async (req: Request, res: Response) => {
-  try {
-    const { districtId } = req.params
-    const { startDate, endDate } = req.query
+router.get(
+  '/:districtId/membership-analytics',
+  async (req: Request, res: Response) => {
+    try {
+      const { districtId } = req.params
+      const { startDate, endDate } = req.query
 
-    // Validate district ID
-    if (!validateDistrictId(districtId)) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DISTRICT_ID',
-          message: 'Invalid district ID format',
-        },
-      })
-      return
-    }
-
-    // Validate date formats if provided
-    if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DATE_FORMAT',
-          message: 'startDate must be in YYYY-MM-DD format',
-        },
-      })
-      return
-    }
-
-    if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DATE_FORMAT',
-          message: 'endDate must be in YYYY-MM-DD format',
-        },
-      })
-      return
-    }
-
-    // Validate date range
-    if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      
-      if (start > end) {
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
         res.status(400).json({
           error: {
-            code: 'INVALID_DATE_RANGE',
-            message: 'startDate must be before or equal to endDate',
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
           },
         })
         return
       }
-    }
 
-    // Generate membership analytics
-    const analytics = await analyticsEngine.generateMembershipAnalytics(
-      districtId,
-      startDate as string | undefined,
-      endDate as string | undefined
-    )
+      // Validate date formats if provided
+      if (
+        startDate &&
+        typeof startDate === 'string' &&
+        !validateDateFormat(startDate)
+      ) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'startDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
 
-    res.json(analytics)
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
-    
-    // Check for specific error messages
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate membership analytics'
-    
-    if (errorMessage.includes('No cached data available')) {
-      res.status(404).json({
+      if (
+        endDate &&
+        typeof endDate === 'string' &&
+        !validateDateFormat(endDate)
+      ) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'endDate must be in YYYY-MM-DD format',
+          },
+        })
+        return
+      }
+
+      // Validate date range
+      if (
+        startDate &&
+        endDate &&
+        typeof startDate === 'string' &&
+        typeof endDate === 'string'
+      ) {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+
+        if (start > end) {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_DATE_RANGE',
+              message: 'startDate must be before or equal to endDate',
+            },
+          })
+          return
+        }
+      }
+
+      // Generate membership analytics
+      const analytics = await analyticsEngine.generateMembershipAnalytics(
+        districtId,
+        startDate as string | undefined,
+        endDate as string | undefined
+      )
+
+      res.json(analytics)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+
+      // Check for specific error messages
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate membership analytics'
+
+      if (errorMessage.includes('No cached data available')) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: errorMessage,
+            details: 'Consider initiating a backfill to fetch historical data',
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
         error: {
-          code: 'NO_DATA_AVAILABLE',
+          code: errorResponse.code || 'ANALYTICS_ERROR',
           message: errorMessage,
-          details: 'Consider initiating a backfill to fetch historical data',
+          details: errorResponse.details,
         },
       })
-      return
     }
-
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'ANALYTICS_ERROR',
-        message: errorMessage,
-        details: errorResponse.details,
-      },
-    })
   }
-})
+)
 
 /**
  * GET /api/districts/:districtId/analytics
@@ -1447,7 +1510,7 @@ router.get(
   '/:districtId/analytics',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache for analytics
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'analytics', {
         startDate: req.query.startDate,
         endDate: req.query.endDate,
@@ -1470,7 +1533,11 @@ router.get(
       }
 
       // Validate date formats if provided
-      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+      if (
+        startDate &&
+        typeof startDate === 'string' &&
+        !validateDateFormat(startDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -1480,7 +1547,11 @@ router.get(
         return
       }
 
-      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+      if (
+        endDate &&
+        typeof endDate === 'string' &&
+        !validateDateFormat(endDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -1491,10 +1562,15 @@ router.get(
       }
 
       // Validate date range
-      if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+      if (
+        startDate &&
+        endDate &&
+        typeof startDate === 'string' &&
+        typeof endDate === 'string'
+      ) {
         const start = new Date(startDate)
         const end = new Date(endDate)
-        
+
         if (start > end) {
           res.status(400).json({
             error: {
@@ -1519,10 +1595,13 @@ router.get(
       res.json(analytics)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check for specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate district analytics'
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate district analytics'
+
       if (errorMessage.includes('No cached data available')) {
         res.status(404).json({
           error: {
@@ -1554,8 +1633,11 @@ router.get(
   '/:districtId/clubs/:clubId/trends',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: (req) =>
-      generateDistrictCacheKey(req.params.districtId, `clubs/${req.params.clubId}/trends`),
+    keyGenerator: req =>
+      generateDistrictCacheKey(
+        req.params.districtId,
+        `clubs/${req.params.clubId}/trends`
+      ),
   }),
   async (req: Request, res: Response) => {
     try {
@@ -1603,10 +1685,11 @@ router.get(
       res.json(clubTrend)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check for specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to get club trends'
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to get club trends'
+
       if (errorMessage.includes('No cached data available')) {
         res.status(404).json({
           error: {
@@ -1638,7 +1721,7 @@ router.get(
   '/:districtId/at-risk-clubs',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'at-risk-clubs'),
   }),
   async (req: Request, res: Response) => {
@@ -1665,16 +1748,21 @@ router.get(
       res.json({
         districtId,
         totalAtRiskClubs: atRiskClubs.length,
-        criticalClubs: atRiskClubs.filter(c => c.currentStatus === 'critical').length,
-        atRiskClubs: atRiskClubs.filter(c => c.currentStatus === 'at-risk').length,
+        criticalClubs: atRiskClubs.filter(c => c.currentStatus === 'critical')
+          .length,
+        atRiskClubs: atRiskClubs.filter(c => c.currentStatus === 'at-risk')
+          .length,
         clubs: atRiskClubs,
       })
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check for specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to identify at-risk clubs'
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to identify at-risk clubs'
+
       if (errorMessage.includes('No cached data available')) {
         res.status(404).json({
           error: {
@@ -1707,7 +1795,7 @@ router.get(
   '/:districtId/leadership-insights',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: (req) =>
+    keyGenerator: req =>
       generateDistrictCacheKey(req.params.districtId, 'leadership-insights', {
         startDate: req.query.startDate,
         endDate: req.query.endDate,
@@ -1730,7 +1818,11 @@ router.get(
       }
 
       // Validate date formats if provided
-      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+      if (
+        startDate &&
+        typeof startDate === 'string' &&
+        !validateDateFormat(startDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -1740,7 +1832,11 @@ router.get(
         return
       }
 
-      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+      if (
+        endDate &&
+        typeof endDate === 'string' &&
+        !validateDateFormat(endDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -1751,10 +1847,15 @@ router.get(
       }
 
       // Validate date range
-      if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+      if (
+        startDate &&
+        endDate &&
+        typeof startDate === 'string' &&
+        typeof endDate === 'string'
+      ) {
         const start = new Date(startDate)
         const end = new Date(endDate)
-        
+
         if (start > end) {
           res.status(400).json({
             error: {
@@ -1779,10 +1880,13 @@ router.get(
       res.json(insights)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check for specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate leadership insights'
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate leadership insights'
+
       if (errorMessage.includes('No cached data available')) {
         res.status(404).json({
           error: {
@@ -1815,11 +1919,15 @@ router.get(
   '/:districtId/distinguished-club-analytics',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: (req) =>
-      generateDistrictCacheKey(req.params.districtId, 'distinguished-club-analytics', {
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
-      }),
+    keyGenerator: req =>
+      generateDistrictCacheKey(
+        req.params.districtId,
+        'distinguished-club-analytics',
+        {
+          startDate: req.query.startDate,
+          endDate: req.query.endDate,
+        }
+      ),
   }),
   async (req: Request, res: Response) => {
     try {
@@ -1838,7 +1946,11 @@ router.get(
       }
 
       // Validate date formats if provided
-      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+      if (
+        startDate &&
+        typeof startDate === 'string' &&
+        !validateDateFormat(startDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -1848,7 +1960,11 @@ router.get(
         return
       }
 
-      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+      if (
+        endDate &&
+        typeof endDate === 'string' &&
+        !validateDateFormat(endDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -1859,10 +1975,15 @@ router.get(
       }
 
       // Validate date range
-      if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+      if (
+        startDate &&
+        endDate &&
+        typeof startDate === 'string' &&
+        typeof endDate === 'string'
+      ) {
         const start = new Date(startDate)
         const end = new Date(endDate)
-        
+
         if (start > end) {
           res.status(400).json({
             error: {
@@ -1875,11 +1996,12 @@ router.get(
       }
 
       // Generate distinguished club analytics
-      const analytics = await analyticsEngine.generateDistinguishedClubAnalytics(
-        districtId,
-        startDate as string | undefined,
-        endDate as string | undefined
-      )
+      const analytics =
+        await analyticsEngine.generateDistinguishedClubAnalytics(
+          districtId,
+          startDate as string | undefined,
+          endDate as string | undefined
+        )
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
@@ -1887,10 +2009,13 @@ router.get(
       res.json(analytics)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check for specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate distinguished club analytics'
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate distinguished club analytics'
+
       if (errorMessage.includes('No cached data available')) {
         res.status(404).json({
           error: {
@@ -1922,8 +2047,11 @@ router.get(
   '/:districtId/year-over-year/:date',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: (req) =>
-      generateDistrictCacheKey(req.params.districtId, `year-over-year/${req.params.date}`),
+    keyGenerator: req =>
+      generateDistrictCacheKey(
+        req.params.districtId,
+        `year-over-year/${req.params.date}`
+      ),
   }),
   async (req: Request, res: Response) => {
     try {
@@ -1952,7 +2080,10 @@ router.get(
       }
 
       // Calculate year-over-year comparison
-      const comparison = await analyticsEngine.calculateYearOverYear(districtId, date)
+      const comparison = await analyticsEngine.calculateYearOverYear(
+        districtId,
+        date
+      )
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
@@ -1960,10 +2091,13 @@ router.get(
       res.json(comparison)
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
-      
+
       // Check for specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Failed to calculate year-over-year comparison'
-      
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to calculate year-over-year comparison'
+
       res.status(500).json({
         error: {
           code: errorResponse.code || 'ANALYTICS_ERROR',
@@ -2009,7 +2143,11 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     }
 
     // Validate date formats if provided
-    if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+    if (
+      startDate &&
+      typeof startDate === 'string' &&
+      !validateDateFormat(startDate)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -2019,7 +2157,11 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
       return
     }
 
-    if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+    if (
+      endDate &&
+      typeof endDate === 'string' &&
+      !validateDateFormat(endDate)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -2030,10 +2172,15 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     }
 
     // Validate date range
-    if (startDate && endDate && typeof startDate === 'string' && typeof endDate === 'string') {
+    if (
+      startDate &&
+      endDate &&
+      typeof startDate === 'string' &&
+      typeof endDate === 'string'
+    ) {
       const start = new Date(startDate)
       const end = new Date(endDate)
-      
+
       if (start > end) {
         res.status(400).json({
           error: {
@@ -2056,9 +2203,10 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     const csvContent = generateDistrictAnalyticsCSV(analytics, districtId)
 
     // Generate filename with date range
-    const dateRangeStr = startDate && endDate 
-      ? `_${startDate}_to_${endDate}`
-      : `_${analytics.dateRange.start}_to_${analytics.dateRange.end}`
+    const dateRangeStr =
+      startDate && endDate
+        ? `_${startDate}_to_${endDate}`
+        : `_${analytics.dateRange.start}_to_${analytics.dateRange.end}`
     const filename = `district_${districtId}_analytics${dateRangeStr}.csv`
 
     // Set headers for CSV download
@@ -2070,10 +2218,11 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     res.send(csvContent)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     // Check for specific error messages
-    const errorMessage = error instanceof Error ? error.message : 'Failed to export district data'
-    
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to export district data'
+
     if (errorMessage.includes('No cached data available')) {
       res.status(404).json({
         error: {
@@ -2098,9 +2247,12 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
 /**
  * Helper function to generate CSV content from district analytics
  */
-function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: string): string {
+function generateDistrictAnalyticsCSV(
+  analytics: DistrictAnalytics,
+  districtId: string
+): string {
   const lines: string[] = []
-  
+
   // Helper to escape CSV values
   const escapeCSV = (value: unknown): string => {
     const str = String(value ?? '')
@@ -2113,7 +2265,9 @@ function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: 
   // Header section
   lines.push(`District Analytics Export`)
   lines.push(`District ID,${escapeCSV(districtId)}`)
-  lines.push(`Date Range,${escapeCSV(analytics.dateRange.start)} to ${escapeCSV(analytics.dateRange.end)}`)
+  lines.push(
+    `Date Range,${escapeCSV(analytics.dateRange.start)} to ${escapeCSV(analytics.dateRange.end)}`
+  )
   lines.push(`Export Date,${new Date().toISOString()}`)
   lines.push('')
 
@@ -2125,38 +2279,56 @@ function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: 
   lines.push(`Healthy Clubs,${analytics.healthyClubs}`)
   lines.push(`At-Risk Clubs,${analytics.atRiskClubs.length}`)
   lines.push(`Critical Clubs,${analytics.criticalClubs}`)
-  lines.push(`Distinguished Clubs (Total),${analytics.distinguishedClubs.total}`)
-  lines.push(`Distinguished Clubs (President's),${analytics.distinguishedClubs.presidents}`)
-  lines.push(`Distinguished Clubs (Select),${analytics.distinguishedClubs.select}`)
-  lines.push(`Distinguished Clubs (Distinguished),${analytics.distinguishedClubs.distinguished}`)
+  lines.push(
+    `Distinguished Clubs (Total),${analytics.distinguishedClubs.total}`
+  )
+  lines.push(
+    `Distinguished Clubs (President's),${analytics.distinguishedClubs.presidents}`
+  )
+  lines.push(
+    `Distinguished Clubs (Select),${analytics.distinguishedClubs.select}`
+  )
+  lines.push(
+    `Distinguished Clubs (Distinguished),${analytics.distinguishedClubs.distinguished}`
+  )
   lines.push(`Distinguished Projection,${analytics.distinguishedProjection}`)
   lines.push('')
 
   // Membership trend
   lines.push('Membership Trend')
   lines.push('Date,Member Count')
-  analytics.membershipTrend.forEach((point: { date: string; count: number }) => {
-    lines.push(`${escapeCSV(point.date)},${point.count}`)
-  })
+  analytics.membershipTrend.forEach(
+    (point: { date: string; count: number }) => {
+      lines.push(`${escapeCSV(point.date)},${point.count}`)
+    }
+  )
   lines.push('')
 
   // Top growth clubs
   if (analytics.topGrowthClubs && analytics.topGrowthClubs.length > 0) {
     lines.push('Top Growth Clubs')
     lines.push('Club ID,Club Name,Growth')
-    analytics.topGrowthClubs.forEach((club: { clubId: string; clubName: string; growth: number }) => {
-      lines.push(`${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${club.growth}`)
-    })
+    analytics.topGrowthClubs.forEach(
+      (club: { clubId: string; clubName: string; growth: number }) => {
+        lines.push(
+          `${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${club.growth}`
+        )
+      }
+    )
     lines.push('')
   }
 
   // At-risk clubs
   if (analytics.atRiskClubs && analytics.atRiskClubs.length > 0) {
     lines.push('At-Risk Clubs')
-    lines.push('Club ID,Club Name,Status,Current Membership,Current DCP Goals,Risk Factors')
+    lines.push(
+      'Club ID,Club Name,Status,Current Membership,Current DCP Goals,Risk Factors'
+    )
     analytics.atRiskClubs.forEach((club: ClubTrend) => {
-      const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
-      const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
+      const currentMembership =
+        club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
+      const currentDcpGoals =
+        club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
       const riskFactors = club.riskFactors.join('; ')
       lines.push(
         `${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${escapeCSV(club.currentStatus)},${currentMembership},${currentDcpGoals},${escapeCSV(riskFactors)}`
@@ -2168,10 +2340,14 @@ function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: 
   // All clubs performance
   if (analytics.allClubs && analytics.allClubs.length > 0) {
     lines.push('All Clubs Performance')
-    lines.push('Club ID,Club Name,Division,Area,Current Membership,Current DCP Goals,Status,Distinguished Level')
+    lines.push(
+      'Club ID,Club Name,Division,Area,Current Membership,Current DCP Goals,Status,Distinguished Level'
+    )
     analytics.allClubs.forEach((club: ClubTrend) => {
-      const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
-      const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
+      const currentMembership =
+        club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
+      const currentDcpGoals =
+        club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
       lines.push(
         `${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${escapeCSV(club.divisionName)},${escapeCSV(club.areaName)},${currentMembership},${currentDcpGoals},${escapeCSV(club.currentStatus)},${escapeCSV(club.distinguishedLevel || 'None')}`
       )
@@ -2182,7 +2358,9 @@ function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: 
   // Division rankings
   if (analytics.divisionRankings && analytics.divisionRankings.length > 0) {
     lines.push('Division Rankings')
-    lines.push('Rank,Division ID,Division Name,Total Clubs,Total DCP Goals,Average Club Health,Trend')
+    lines.push(
+      'Rank,Division ID,Division Name,Total Clubs,Total DCP Goals,Average Club Health,Trend'
+    )
     analytics.divisionRankings.forEach((division: DivisionAnalytics) => {
       lines.push(
         `${division.rank},${escapeCSV(division.divisionId)},${escapeCSV(division.divisionName)},${division.totalClubs},${division.totalDcpGoals},${division.averageClubHealth.toFixed(2)},${escapeCSV(division.trend)}`
@@ -2194,7 +2372,9 @@ function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: 
   // Top performing areas
   if (analytics.topPerformingAreas && analytics.topPerformingAreas.length > 0) {
     lines.push('Top Performing Areas')
-    lines.push('Area ID,Area Name,Division ID,Total Clubs,Total DCP Goals,Average Club Health,Normalized Score')
+    lines.push(
+      'Area ID,Area Name,Division ID,Total Clubs,Total DCP Goals,Average Club Health,Normalized Score'
+    )
     analytics.topPerformingAreas.forEach((area: AreaAnalytics) => {
       lines.push(
         `${escapeCSV(area.areaId)},${escapeCSV(area.areaName)},${escapeCSV(area.divisionId)},${area.totalClubs},${area.totalDcpGoals},${area.averageClubHealth.toFixed(2)},${area.normalizedScore.toFixed(2)}`

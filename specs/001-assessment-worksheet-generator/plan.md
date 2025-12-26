@@ -30,7 +30,7 @@ Build a modular assessment report generator that reproduces the logic and output
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 **Toast Stats Constitution Compliance**:
 
@@ -192,7 +192,7 @@ This structure allows:
    - `assessmentReportGenerator.ts`: Render report output (JSON structure)
 
 2. Implement routes (Supertest integration tested)
-   - Mount on Express app (e.g., /api/assessment/*)
+   - Mount on Express app (e.g., /api/assessment/\*)
    - Request validation (zod or custom)
    - Error handling (structured error responses)
 

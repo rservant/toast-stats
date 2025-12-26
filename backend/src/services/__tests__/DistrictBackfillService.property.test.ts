@@ -1,6 +1,6 @@
 /**
  * Property-Based Tests for DistrictBackfillService
- * 
+ *
  * **Feature: month-end-data-reconciliation, Property 6: Latest Data Selection**
  * **Validates: Requirements 4.4, 4.5**
  */
@@ -24,9 +24,18 @@ interface MockToastmastersScraper {
   getAllDistrictsList: () => Promise<Array<{ id: string; name: string }>>
   getAllDistricts: () => Promise<ScrapedRecord[]>
   getAllDistrictsForDate: (dateString: string) => Promise<ScrapedRecord[]>
-  getDistrictPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
-  getDivisionPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
-  getClubPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
+  getDistrictPerformance: (
+    districtId: string,
+    dateString?: string
+  ) => Promise<ScrapedRecord[]>
+  getDivisionPerformance: (
+    districtId: string,
+    dateString?: string
+  ) => Promise<ScrapedRecord[]>
+  getClubPerformance: (
+    districtId: string,
+    dateString?: string
+  ) => Promise<ScrapedRecord[]>
   scrapePage: (url: string, selector: string) => Promise<string>
 }
 
@@ -63,7 +72,11 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
     fc.integer({ min: 1, max: 150 }).map(n => n.toString())
 
   const generateDate = (): fc.Arbitrary<string> =>
-    fc.date({ min: new Date('2024-01-01T00:00:00.000Z'), max: new Date('2024-12-31T23:59:59.999Z') })
+    fc
+      .date({
+        min: new Date('2024-01-01T00:00:00.000Z'),
+        max: new Date('2024-12-31T23:59:59.999Z'),
+      })
       .map(date => {
         if (isNaN(date.getTime())) {
           return '2024-06-15' // fallback date
@@ -72,69 +85,83 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
       })
 
   const generateDistrictStatistics = (
-    districtId: string, 
+    districtId: string,
     asOfDate: string
   ): fc.Arbitrary<DistrictStatistics> =>
-    fc.record({
-      membershipTotal: fc.integer({ min: 100, max: 5000 }),
-      clubsTotal: fc.integer({ min: 10, max: 100 }),
-      distinguishedCount: fc.integer({ min: 0, max: 50 }),
-      totalAwards: fc.integer({ min: 0, max: 500 })
-    }).map(data => ({
-      districtId,
-      asOfDate,
-      membership: {
-        total: data.membershipTotal,
-        change: 0,
-        changePercent: 0,
-        byClub: []
-      },
-      clubs: {
-        total: data.clubsTotal,
-        active: Math.floor(data.clubsTotal * 0.9),
-        suspended: Math.floor(data.clubsTotal * 0.05),
-        ineligible: Math.floor(data.clubsTotal * 0.03),
-        low: Math.floor(data.clubsTotal * 0.02),
-        distinguished: data.distinguishedCount
-      },
-      education: {
-        totalAwards: data.totalAwards,
-        byType: [],
-        topClubs: []
-      }
-    }))
+    fc
+      .record({
+        membershipTotal: fc.integer({ min: 100, max: 5000 }),
+        clubsTotal: fc.integer({ min: 10, max: 100 }),
+        distinguishedCount: fc.integer({ min: 0, max: 50 }),
+        totalAwards: fc.integer({ min: 0, max: 500 }),
+      })
+      .map(data => ({
+        districtId,
+        asOfDate,
+        membership: {
+          total: data.membershipTotal,
+          change: 0,
+          changePercent: 0,
+          byClub: [],
+        },
+        clubs: {
+          total: data.clubsTotal,
+          active: Math.floor(data.clubsTotal * 0.9),
+          suspended: Math.floor(data.clubsTotal * 0.05),
+          ineligible: Math.floor(data.clubsTotal * 0.03),
+          low: Math.floor(data.clubsTotal * 0.02),
+          distinguished: data.distinguishedCount,
+        },
+        education: {
+          totalAwards: data.totalAwards,
+          byType: [],
+          topClubs: [],
+        },
+      }))
 
   const generateRawDashboardData = (stats: DistrictStatistics) => {
     // Generate mock raw data that would come from the dashboard
-    const clubPerformance = Array.from({ length: stats.clubs.total }, (_, i) => ({
-      'Club Number': `${stats.districtId}${i.toString().padStart(2, '0')}`,
-      'Club Name': `Test Club ${i + 1}`,
-      'Active Members': Math.floor(stats.membership.total / stats.clubs.total).toString(),
-      'Status': i < stats.clubs.active ? 'Active' : 'Suspended',
-      'Distinguished Status': i < stats.clubs.distinguished ? 'Distinguished' : '',
-      'Awards': Math.floor(stats.education.totalAwards / stats.clubs.total).toString()
-    }))
+    const clubPerformance = Array.from(
+      { length: stats.clubs.total },
+      (_, i) => ({
+        'Club Number': `${stats.districtId}${i.toString().padStart(2, '0')}`,
+        'Club Name': `Test Club ${i + 1}`,
+        'Active Members': Math.floor(
+          stats.membership.total / stats.clubs.total
+        ).toString(),
+        Status: i < stats.clubs.active ? 'Active' : 'Suspended',
+        'Distinguished Status':
+          i < stats.clubs.distinguished ? 'Distinguished' : '',
+        Awards: Math.floor(
+          stats.education.totalAwards / stats.clubs.total
+        ).toString(),
+      })
+    )
 
-    const districtPerformance = [{
-      'District': stats.districtId,
-      'Total Members': stats.membership.total.toString(),
-      'Total Clubs': stats.clubs.total.toString(),
-      'asOfDate': stats.asOfDate // Include source date in data
-    }]
+    const districtPerformance = [
+      {
+        District: stats.districtId,
+        'Total Members': stats.membership.total.toString(),
+        'Total Clubs': stats.clubs.total.toString(),
+        asOfDate: stats.asOfDate, // Include source date in data
+      },
+    ]
 
-    const divisionPerformance = [{
-      'District': stats.districtId,
-      'Division': '1',
-      'Members': stats.membership.total.toString()
-    }]
+    const divisionPerformance = [
+      {
+        District: stats.districtId,
+        Division: '1',
+        Members: stats.membership.total.toString(),
+      },
+    ]
 
     return { districtPerformance, divisionPerformance, clubPerformance }
   }
 
   /**
    * Property 6: Latest Data Selection
-   * 
-   * For any month with multiple data points during reconciliation, the system should 
+   *
+   * For any month with multiple data points during reconciliation, the system should
    * always use the data with the latest "as of" date from the dashboard.
    */
   it('should always select data with the latest source date when multiple data points exist', async () => {
@@ -142,7 +169,10 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
       fc.asyncProperty(
         generateDistrictId(),
         generateDate(),
-        fc.array(fc.integer({ min: 0, max: 10 }), { minLength: 2, maxLength: 5 }),
+        fc.array(fc.integer({ min: 0, max: 10 }), {
+          minLength: 2,
+          maxLength: 5,
+        }),
         async (districtId, targetDate, daysOffsets) => {
           // Generate multiple data points with different source dates
           const dataPoints = await Promise.all(
@@ -160,14 +190,16 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
                 sourceDate: sourceDateStr,
                 stats,
                 rawData: generateRawDashboardData(stats),
-                index
+                index,
               }
             })
           )
 
           // Sort by source date to find the latest
-          const sortedByDate = [...dataPoints].sort((a, b) => 
-            new Date(b.sourceDate).getTime() - new Date(a.sourceDate).getTime()
+          const sortedByDate = [...dataPoints].sort(
+            (a, b) =>
+              new Date(b.sourceDate).getTime() -
+              new Date(a.sourceDate).getTime()
           )
           const expectedLatest = sortedByDate[0]
 
@@ -195,19 +227,25 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
             getClubPerformance: vi.fn().mockImplementation(async () => {
               const dataPoint = dataPoints[(callCount - 1) % dataPoints.length]
               return dataPoint.rawData.clubPerformance
-            })
+            }),
           }
 
-          const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper as unknown as ToastmastersScraper)
+          const testBackfillService = new DistrictBackfillService(
+            cacheManager,
+            mockScraper as unknown as ToastmastersScraper
+          )
 
           // Simulate multiple reconciliation data fetches
           const results = []
           for (let i = 0; i < dataPoints.length; i++) {
-            const result = await testBackfillService.fetchReconciliationData(districtId, targetDate)
+            const result = await testBackfillService.fetchReconciliationData(
+              districtId,
+              targetDate
+            )
             if (result.success && result.data) {
               results.push({
                 sourceDate: result.sourceDataDate,
-                data: result.data
+                data: result.data,
               })
             }
           }
@@ -216,14 +254,15 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           if (results.length > 1) {
             // Find the result with the latest source date
             const latestResult = results.reduce((latest, current) => {
-              return new Date(current.sourceDate!) > new Date(latest.sourceDate!) 
-                ? current 
+              return new Date(current.sourceDate!) >
+                new Date(latest.sourceDate!)
+                ? current
                 : latest
             })
 
             // Verify that the latest source date matches our expectation
             expect(latestResult.sourceDate).toBe(expectedLatest.sourceDate)
-            
+
             // Verify that when given multiple options, the system would choose the latest
             const allSourceDates = results.map(r => r.sourceDate!).sort()
             const actualLatest = allSourceDates[allSourceDates.length - 1]
@@ -231,11 +270,21 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           }
 
           // Property: For any set of data points, the latest source date should be selected
-          const uniqueSourceDates = [...new Set(dataPoints.map(dp => dp.sourceDate))].sort()
+          const uniqueSourceDates = [
+            ...new Set(dataPoints.map(dp => dp.sourceDate)),
+          ].sort()
           if (uniqueSourceDates.length > 1) {
             // Test the source date extraction logic directly
             const testData = expectedLatest.rawData
-            const extractedDate = (testBackfillService as unknown as { extractSourceDataDate: (a: unknown, b: unknown, c: unknown) => string }).extractSourceDataDate(
+            const extractedDate = (
+              testBackfillService as unknown as {
+                extractSourceDataDate: (
+                  a: unknown,
+                  b: unknown,
+                  c: unknown
+                ) => string
+              }
+            ).extractSourceDataDate(
               testData.districtPerformance,
               testData.divisionPerformance,
               testData.clubPerformance
@@ -243,7 +292,7 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
 
             // The extracted date should be the latest available or the fallback
             expect(extractedDate).toBeDefined()
-            
+
             // If source date was found in data, it should match the expected latest
             if (extractedDate !== targetDate) {
               expect(new Date(extractedDate).getTime()).toBeGreaterThanOrEqual(
@@ -259,7 +308,7 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
 
   /**
    * Property: Source data date extraction should be consistent
-   * 
+   *
    * For any valid dashboard data, the source date extraction should return
    * a valid date that is not earlier than the target date.
    */
@@ -273,11 +322,22 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           const sourceDate = new Date(targetDate + 'T00:00:00.000Z')
           sourceDate.setDate(sourceDate.getDate() + daysOffset)
           const sourceDateStr = sourceDate.toISOString().split('T')[0]
-          const stats = await fc.sample(generateDistrictStatistics(districtId, sourceDateStr), 1)[0]
+          const stats = await fc.sample(
+            generateDistrictStatistics(districtId, sourceDateStr),
+            1
+          )[0]
           const rawData = generateRawDashboardData(stats)
 
           // Test the source date extraction
-          const extractedDate = (backfillService as unknown as { extractSourceDataDate: (a: unknown, b: unknown, c: unknown) => string }).extractSourceDataDate(
+          const extractedDate = (
+            backfillService as unknown as {
+              extractSourceDataDate: (
+                a: unknown,
+                b: unknown,
+                c: unknown
+              ) => string
+            }
+          ).extractSourceDataDate(
             rawData.districtPerformance,
             rawData.divisionPerformance,
             rawData.clubPerformance
@@ -305,7 +365,7 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
 
   /**
    * Property: Reconciliation data fetching should handle missing data gracefully
-   * 
+   *
    * For any district and date combination, the fetch operation should either
    * succeed with valid data or fail gracefully with appropriate error information.
    */
@@ -331,24 +391,30 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
               if (!shouldHaveData) {
                 throw new Error('Date not available on dashboard')
               }
-              return [{ 'District': districtId, 'Total Members': '1000' }]
+              return [{ District: districtId, 'Total Members': '1000' }]
             }),
             getDivisionPerformance: vi.fn().mockImplementation(async () => {
               if (!shouldHaveData) {
                 return []
               }
-              return [{ 'District': districtId, 'Division': '1' }]
+              return [{ District: districtId, Division: '1' }]
             }),
             getClubPerformance: vi.fn().mockImplementation(async () => {
               if (!shouldHaveData) {
                 return []
               }
               return [{ 'Club Number': '123', 'Club Name': 'Test Club' }]
-            })
+            }),
           }
 
-          const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper as unknown as ToastmastersScraper)
-          const result = await testBackfillService.fetchReconciliationData(districtId, targetDate)
+          const testBackfillService = new DistrictBackfillService(
+            cacheManager,
+            mockScraper as unknown as ToastmastersScraper
+          )
+          const result = await testBackfillService.fetchReconciliationData(
+            districtId,
+            targetDate
+          )
 
           // Property 1: Result should always have a success field
           expect(result).toHaveProperty('success')

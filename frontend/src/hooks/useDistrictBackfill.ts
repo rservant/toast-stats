@@ -59,7 +59,7 @@ export function useDistrictBackfillStatus(
       return response.data
     },
     enabled: enabled && !!backfillId,
-    refetchInterval: (query) => {
+    refetchInterval: query => {
       const data = query.state.data
       // Stop polling if backfill is complete or errored
       if (data?.status === 'complete' || data?.status === 'error') {
@@ -85,9 +85,13 @@ export function useCancelDistrictBackfill(districtId: string) {
     },
     onSuccess: (_data, backfillId) => {
       // Invalidate the status query to stop polling
-      queryClient.invalidateQueries({ queryKey: ['districtBackfillStatus', districtId, backfillId] })
+      queryClient.invalidateQueries({
+        queryKey: ['districtBackfillStatus', districtId, backfillId],
+      })
       // Invalidate cached dates to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['district-cached-dates', districtId] })
+      queryClient.invalidateQueries({
+        queryKey: ['district-cached-dates', districtId],
+      })
     },
   })
 }

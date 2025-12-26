@@ -28,7 +28,10 @@ interface BackfillResponse {
 export function useInitiateBackfill() {
   return useMutation({
     mutationFn: async (request: BackfillRequest) => {
-      const response = await apiClient.post<BackfillResponse>('/districts/backfill', request)
+      const response = await apiClient.post<BackfillResponse>(
+        '/districts/backfill',
+        request
+      )
       return response.data
     },
   })
@@ -38,18 +41,23 @@ export function useInitiateBackfill() {
  * Hook to poll backfill status
  * Automatically polls every 2 seconds while backfill is processing
  */
-export function useBackfillStatus(backfillId: string | null, enabled: boolean = true) {
+export function useBackfillStatus(
+  backfillId: string | null,
+  enabled: boolean = true
+) {
   return useQuery({
     queryKey: ['backfillStatus', backfillId],
     queryFn: async () => {
       if (!backfillId) {
         throw new Error('No backfill ID provided')
       }
-      const response = await apiClient.get<BackfillResponse>(`/districts/backfill/${backfillId}`)
+      const response = await apiClient.get<BackfillResponse>(
+        `/districts/backfill/${backfillId}`
+      )
       return response.data
     },
     enabled: enabled && !!backfillId,
-    refetchInterval: (query) => {
+    refetchInterval: query => {
       const data = query.state.data
       // Stop polling if backfill is complete or errored
       if (data?.status === 'complete' || data?.status === 'error') {
@@ -75,7 +83,9 @@ export function useCancelBackfill() {
     },
     onSuccess: (_data, backfillId) => {
       // Invalidate the status query to stop polling
-      queryClient.invalidateQueries({ queryKey: ['backfillStatus', backfillId] })
+      queryClient.invalidateQueries({
+        queryKey: ['backfillStatus', backfillId],
+      })
       // Invalidate cached dates to refresh the list
       queryClient.invalidateQueries({ queryKey: ['cached-dates'] })
     },

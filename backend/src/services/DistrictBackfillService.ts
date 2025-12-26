@@ -1,18 +1,18 @@
 /**
  * District Backfill Service
- * 
+ *
  * Manages background processing of historical district-level data backfill requests.
  * This service orchestrates fetching all three report types (district, division, club)
  * for each date in a specified range, handling errors gracefully and providing
  * real-time progress updates.
- * 
+ *
  * Key features:
  * - Background processing: Backfills continue even if user navigates away
  * - Progress tracking: Real-time updates on completed, skipped, failed, and unavailable dates
  * - Error resilience: Continues processing remaining dates even if some fail
  * - Smart caching: Automatically skips dates that are already cached
  * - Atomic operations: All three report types are cached together via DistrictCacheManager
- * 
+ *
  * @example
  * ```typescript
  * const service = new DistrictBackfillService(cacheManager, scraper);
@@ -21,7 +21,7 @@
  *   startDate: '2024-07-01',
  *   endDate: '2025-01-15'
  * });
- * 
+ *
  * // Check status
  * const status = service.getBackfillStatus(backfillId);
  * console.log(`Progress: ${status.progress.completed}/${status.progress.total}`);
@@ -31,8 +31,15 @@
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
 import { RetryManager } from '../utils/RetryManager.js'
-import { CircuitBreaker, CircuitBreakerManager } from '../utils/CircuitBreaker.js'
-import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
+import {
+  CircuitBreaker,
+  CircuitBreakerManager,
+} from '../utils/CircuitBreaker.js'
+import {
+  AlertManager,
+  AlertSeverity,
+  AlertCategory,
+} from '../utils/AlertManager.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
@@ -85,13 +92,18 @@ export class DistrictBackfillService {
   private dashboardCircuitBreaker: CircuitBreaker
   private cacheCircuitBreaker: CircuitBreaker
   private alertManager: AlertManager
-  private reconciliationHooks: Array<(districtId: string, date: string, data: DistrictStatistics) => void> = []
+  private reconciliationHooks: Array<
+    (districtId: string, date: string, data: DistrictStatistics) => void
+  > = []
 
-  constructor(cacheManager: DistrictCacheManager, scraper: ToastmastersScraper) {
+  constructor(
+    cacheManager: DistrictCacheManager,
+    scraper: ToastmastersScraper
+  ) {
     this.cacheManager = cacheManager
     this.scraper = scraper
     this.alertManager = AlertManager.getInstance()
-    
+
     // Initialize circuit breakers
     const circuitManager = CircuitBreakerManager.getInstance()
     this.dashboardCircuitBreaker = circuitManager.getCircuitBreaker(
@@ -99,7 +111,7 @@ export class DistrictBackfillService {
       {
         failureThreshold: 5,
         recoveryTimeout: 60000,
-        monitoringPeriod: 10000
+        monitoringPeriod: 10000,
       }
     )
     this.cacheCircuitBreaker = circuitManager.getCircuitBreaker(
@@ -107,27 +119,27 @@ export class DistrictBackfillService {
       {
         failureThreshold: 3,
         recoveryTimeout: 30000,
-        monitoringPeriod: 5000
+        monitoringPeriod: 5000,
       }
     )
   }
 
   /**
    * Initiate a district backfill job
-   * 
+   *
    * Creates and starts a new backfill job for the specified district and date range.
    * The job runs in the background and can be monitored via getBackfillStatus().
-   * 
+   *
    * The service automatically:
    * - Validates the date range
    * - Identifies which dates are already cached (skips them)
    * - Generates a list of missing dates to fetch
    * - Starts background processing
-   * 
+   *
    * @param request - Backfill request containing districtId and optional date range
    * @returns The unique backfill job ID for tracking progress
    * @throws {Error} If date range is invalid or all dates are already cached
-   * 
+   *
    * @example
    * ```typescript
    * const backfillId = await service.initiateDistrictBackfill({
@@ -137,7 +149,9 @@ export class DistrictBackfillService {
    * });
    * ```
    */
-  async initiateDistrictBackfill(request: DistrictBackfillRequest): Promise<string> {
+  async initiateDistrictBackfill(
+    request: DistrictBackfillRequest
+  ): Promise<string> {
     const { districtId, startDate, endDate } = request
     const backfillId = uuidv4()
 
@@ -171,12 +185,15 @@ export class DistrictBackfillService {
     }
 
     // Check which dates are already cached for this district
-    const cachedDates = await this.cacheManager.getCachedDatesForDistrict(districtId)
+    const cachedDates =
+      await this.cacheManager.getCachedDatesForDistrict(districtId)
     const cachedSet = new Set(cachedDates)
-    const missingDates = allDates.filter((d) => !cachedSet.has(d))
+    const missingDates = allDates.filter(d => !cachedSet.has(d))
 
     if (missingDates.length === 0) {
-      throw new Error('All dates in the range are already cached for this district')
+      throw new Error(
+        'All dates in the range are already cached for this district'
+      )
     }
 
     // Reverse the dates to start with most recent and go backwards
@@ -201,8 +218,12 @@ export class DistrictBackfillService {
     this.jobs.set(backfillId, job)
 
     // Start background processing
-    this.processBackfill(backfillId, missingDates).catch((error) => {
-      logger.error('District backfill processing failed', { backfillId, districtId, error })
+    this.processBackfill(backfillId, missingDates).catch(error => {
+      logger.error('District backfill processing failed', {
+        backfillId,
+        districtId,
+        error,
+      })
       const failedJob = this.jobs.get(backfillId)
       if (failedJob) {
         failedJob.status = 'error'
@@ -223,12 +244,12 @@ export class DistrictBackfillService {
 
   /**
    * Get backfill job status
-   * 
+   *
    * Retrieves the current status and progress of a backfill job.
-   * 
+   *
    * @param backfillId - The unique backfill job ID
    * @returns The job status and progress, or null if job not found
-   * 
+   *
    * @example
    * ```typescript
    * const status = service.getBackfillStatus(backfillId);
@@ -270,7 +291,10 @@ export class DistrictBackfillService {
       job.error = 'Backfill cancelled by user'
       job.completedAt = Date.now()
 
-      logger.info('District backfill cancelled', { backfillId, districtId: job.districtId })
+      logger.info('District backfill cancelled', {
+        backfillId,
+        districtId: job.districtId,
+      })
       return true
     }
 
@@ -290,31 +314,37 @@ export class DistrictBackfillService {
       }
     }
 
-    jobsToDelete.forEach((id) => this.jobs.delete(id))
+    jobsToDelete.forEach(id => this.jobs.delete(id))
 
     if (jobsToDelete.length > 0) {
-      logger.info('Cleaned up old district backfill jobs', { count: jobsToDelete.length })
+      logger.info('Cleaned up old district backfill jobs', {
+        count: jobsToDelete.length,
+      })
     }
   }
 
   /**
    * Fetch current district data for reconciliation monitoring
-   * 
+   *
    * This method is specifically designed for reconciliation processes to fetch
    * the latest available data from the dashboard and extract the source data date.
    * Uses comprehensive error handling with retry logic and circuit breaker.
-   * 
+   *
    * @param districtId - The district ID to fetch data for
    * @param targetDate - The target date to fetch data for (usually month-end date)
    * @returns ReconciliationDataFetchResult with data and source date information
    */
   async fetchReconciliationData(
-    districtId: string, 
+    districtId: string,
     targetDate: string
   ): Promise<ReconciliationDataFetchResult> {
     logger.info('Fetching reconciliation data', { districtId, targetDate })
 
-    const context = { districtId, targetDate, operation: 'fetchReconciliationData' }
+    const context = {
+      districtId,
+      targetDate,
+      operation: 'fetchReconciliationData',
+    }
 
     try {
       // Execute with circuit breaker and retry logic
@@ -322,11 +352,12 @@ export class DistrictBackfillService {
         return await RetryManager.executeWithRetry(
           async () => {
             // Fetch all three report types for the specific date
-            const [districtPerformance, divisionPerformance, clubPerformance] = await Promise.all([
-              this.scraper.getDistrictPerformance(districtId, targetDate),
-              this.scraper.getDivisionPerformance(districtId, targetDate),
-              this.scraper.getClubPerformance(districtId, targetDate)
-            ])
+            const [districtPerformance, divisionPerformance, clubPerformance] =
+              await Promise.all([
+                this.scraper.getDistrictPerformance(districtId, targetDate),
+                this.scraper.getDivisionPerformance(districtId, targetDate),
+                this.scraper.getClubPerformance(districtId, targetDate),
+              ])
 
             return { districtPerformance, divisionPerformance, clubPerformance }
           },
@@ -338,13 +369,16 @@ export class DistrictBackfillService {
       if (!result.success) {
         // Check if it's a "date not available" error vs actual failure
         const errorMessage = result.error?.message || 'Unknown error'
-        
+
         if (this.isDateUnavailableError(errorMessage)) {
-          logger.info('No data available for reconciliation date', { districtId, targetDate })
+          logger.info('No data available for reconciliation date', {
+            districtId,
+            targetDate,
+          })
           return {
             success: true,
             isDataAvailable: false,
-            error: 'No data available for the specified date'
+            error: 'No data available for the specified date',
           }
         }
 
@@ -362,17 +396,18 @@ export class DistrictBackfillService {
           targetDate,
           attempts: result.attempts,
           totalDuration: result.totalDuration,
-          error: errorMessage
+          error: errorMessage,
         })
 
         return {
           success: false,
           isDataAvailable: false,
-          error: errorMessage
+          error: errorMessage,
         }
       }
 
-      const { districtPerformance, divisionPerformance, clubPerformance } = result.result!
+      const { districtPerformance, divisionPerformance, clubPerformance } =
+        result.result!
 
       // Check if we got valid data
       if (
@@ -380,11 +415,14 @@ export class DistrictBackfillService {
         divisionPerformance.length === 0 &&
         clubPerformance.length === 0
       ) {
-        logger.info('No data available for reconciliation date', { districtId, targetDate })
+        logger.info('No data available for reconciliation date', {
+          districtId,
+          targetDate,
+        })
         return {
           success: true,
           isDataAvailable: false,
-          error: 'No data available for the specified date'
+          error: 'No data available for the specified date',
         }
       }
 
@@ -406,7 +444,11 @@ export class DistrictBackfillService {
       )
 
       // Validate data quality
-      const qualityIssues = this.validateDataQuality(districtStats, districtId, targetDate)
+      const qualityIssues = this.validateDataQuality(
+        districtStats,
+        districtId,
+        targetDate
+      )
       if (qualityIssues.length > 0) {
         await this.alertManager.sendDataQualityAlert(
           districtId,
@@ -425,23 +467,23 @@ export class DistrictBackfillService {
         clubRecords: clubPerformance.length,
         totalMembers: districtStats.membership.total,
         attempts: result.attempts,
-        duration: result.totalDuration
+        duration: result.totalDuration,
       })
 
       return {
         success: true,
         data: districtStats,
         sourceDataDate,
-        isDataAvailable: true
+        isDataAvailable: true,
       }
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
       logger.error('Critical error in reconciliation data fetch', {
         districtId,
         targetDate,
-        error: errorMessage
+        error: errorMessage,
       })
 
       // Send alert for critical errors
@@ -456,25 +498,32 @@ export class DistrictBackfillService {
       return {
         success: false,
         isDataAvailable: false,
-        error: errorMessage
+        error: errorMessage,
       }
     }
   }
 
   /**
    * Get cached district data for reconciliation comparison
-   * 
+   *
    * @param districtId - The district ID
    * @param targetDate - The target date (usually month-end date)
    * @returns DistrictStatistics from cache or null if not found
    */
   async getCachedReconciliationData(
-    districtId: string, 
+    districtId: string,
     targetDate: string
   ): Promise<DistrictStatistics | null> {
-    logger.debug('Getting cached reconciliation data', { districtId, targetDate })
+    logger.debug('Getting cached reconciliation data', {
+      districtId,
+      targetDate,
+    })
 
-    const context = { districtId, targetDate, operation: 'getCachedReconciliationData' }
+    const context = {
+      districtId,
+      targetDate,
+      operation: 'getCachedReconciliationData',
+    }
 
     try {
       // Execute with circuit breaker and retry logic for cache operations
@@ -482,17 +531,24 @@ export class DistrictBackfillService {
         return await RetryManager.executeWithRetry(
           async () => {
             // Check if we have cached data for this date
-            const cachedDates = await this.cacheManager.getCachedDatesForDistrict(districtId)
-            
+            const cachedDates =
+              await this.cacheManager.getCachedDatesForDistrict(districtId)
+
             if (!cachedDates.includes(targetDate)) {
               return null
             }
 
             // Get the cached data
-            const cachedData = await this.cacheManager.getDistrictData(districtId, targetDate)
-            
+            const cachedData = await this.cacheManager.getDistrictData(
+              districtId,
+              targetDate
+            )
+
             if (!cachedData) {
-              logger.warn('Cached date exists but data not found', { districtId, targetDate })
+              logger.warn('Cached date exists but data not found', {
+                districtId,
+                targetDate,
+              })
               return null
             }
 
@@ -508,14 +564,17 @@ export class DistrictBackfillService {
           districtId,
           targetDate,
           attempts: result.attempts,
-          error: result.error?.message
+          error: result.error?.message,
         })
         return null
       }
 
       const cachedData = result.result
       if (!cachedData) {
-        logger.debug('No cached data found for reconciliation date', { districtId, targetDate })
+        logger.debug('No cached data found for reconciliation date', {
+          districtId,
+          targetDate,
+        })
         return null
       }
 
@@ -531,16 +590,15 @@ export class DistrictBackfillService {
       logger.debug('Cached reconciliation data retrieved', {
         districtId,
         targetDate,
-        totalMembers: districtStats.membership.total
+        totalMembers: districtStats.membership.total,
       })
 
       return districtStats
-
     } catch (error) {
       logger.error('Critical error getting cached reconciliation data', {
         districtId,
         targetDate,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       })
       return null
     }
@@ -548,17 +606,23 @@ export class DistrictBackfillService {
 
   /**
    * Register a reconciliation monitoring hook
-   * 
+   *
    * This allows the reconciliation system to be notified when new data
    * is fetched during regular backfill operations.
-   * 
+   *
    * @param callback - Function to call when data is fetched
    */
-  onDataFetched(callback: (districtId: string, date: string, data: DistrictStatistics) => void): void {
+  onDataFetched(
+    callback: (
+      districtId: string,
+      date: string,
+      data: DistrictStatistics
+    ) => void
+  ): void {
     // Store the callback for use in processBackfill
     this.reconciliationHooks = this.reconciliationHooks || []
     this.reconciliationHooks.push(callback)
-    
+
     logger.debug('Reconciliation monitoring hook registered')
   }
 
@@ -588,7 +652,9 @@ export class DistrictBackfillService {
 
     // Check for suspiciously low membership
     if (districtStats.clubs.total > 0 && districtStats.membership.total < 100) {
-      issues.push(`Suspiciously low membership: ${districtStats.membership.total} total members`)
+      issues.push(
+        `Suspiciously low membership: ${districtStats.membership.total} total members`
+      )
     }
 
     // Check for zero clubs but positive membership
@@ -610,7 +676,12 @@ export class DistrictBackfillService {
       issues.push('More distinguished clubs than total clubs')
     }
 
-    if (districtStats.clubs.active + districtStats.clubs.suspended + districtStats.clubs.ineligible > districtStats.clubs.total) {
+    if (
+      districtStats.clubs.active +
+        districtStats.clubs.suspended +
+        districtStats.clubs.ineligible >
+      districtStats.clubs.total
+    ) {
       issues.push('Sum of club statuses exceeds total clubs')
     }
 
@@ -627,18 +698,19 @@ export class DistrictBackfillService {
 
     // If we're before July (month 6), use previous year's July 1
     // Otherwise use current year's July 1
-    const programYearStartYear = currentMonth < 6 ? currentYear - 1 : currentYear
+    const programYearStartYear =
+      currentMonth < 6 ? currentYear - 1 : currentYear
     return new Date(programYearStartYear, 6, 1) // Month 6 = July
   }
 
   /**
    * Extract source data date from dashboard data
-   * 
+   *
    * This method attempts to extract the "as of" date from the dashboard data.
    * The dashboard often shows data with a note like "Data as of November 15, 2024"
-   * 
+   *
    * @param districtPerformance - District performance data
-   * @param divisionPerformance - Division performance data  
+   * @param divisionPerformance - Division performance data
    * @param clubPerformance - Club performance data
    * @param fallbackDate - Fallback date if no source date can be extracted
    * @returns The extracted source data date or fallback date
@@ -651,16 +723,17 @@ export class DistrictBackfillService {
   ): string {
     // Look for date indicators in the data
     // The dashboard sometimes includes metadata about when the data was last updated
-    
+
     // Check district performance data first (most likely to have metadata)
-    const sourceDate = this.findSourceDateInData(districtPerformance) ||
-                      this.findSourceDateInData(divisionPerformance) ||
-                      this.findSourceDateInData(clubPerformance)
+    const sourceDate =
+      this.findSourceDateInData(districtPerformance) ||
+      this.findSourceDateInData(divisionPerformance) ||
+      this.findSourceDateInData(clubPerformance)
 
     if (sourceDate) {
-      logger.debug('Source data date extracted from dashboard', { 
-        sourceDate, 
-        fallbackDate 
+      logger.debug('Source data date extracted from dashboard', {
+        sourceDate,
+        fallbackDate,
       })
       return sourceDate
     }
@@ -672,7 +745,7 @@ export class DistrictBackfillService {
 
   /**
    * Search for source date indicators in data records
-   * 
+   *
    * @param data - Array of data records to search
    * @returns Extracted date string or null if not found
    */
@@ -685,8 +758,14 @@ export class DistrictBackfillService {
     for (const record of data) {
       if (typeof record === 'object' && record !== null) {
         // Check for common date field names
-        const dateFields = ['asOfDate', 'dataDate', 'reportDate', 'lastUpdated', 'timestamp']
-        
+        const dateFields = [
+          'asOfDate',
+          'dataDate',
+          'reportDate',
+          'lastUpdated',
+          'timestamp',
+        ]
+
         for (const field of dateFields) {
           if (record[field] && typeof record[field] === 'string') {
             // Validate that it looks like a date
@@ -701,7 +780,9 @@ export class DistrictBackfillService {
         for (const [, value] of Object.entries(record)) {
           if (typeof value === 'string') {
             // Look for patterns like "as of November 15, 2024" or "Data as of 2024-11-15"
-            const asOfMatch = value.match(/as of\s+(\w+\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2})/i)
+            const asOfMatch = value.match(
+              /as of\s+(\w+\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2})/i
+            )
             if (asOfMatch) {
               const dateStr = asOfMatch[1]
               // Try to parse and convert to YYYY-MM-DD format
@@ -730,7 +811,7 @@ export class DistrictBackfillService {
 
   /**
    * Convert raw dashboard data to DistrictStatistics format
-   * 
+   *
    * @param districtId - The district ID
    * @param asOfDate - The source data date
    * @param districtPerformance - District performance data
@@ -747,43 +828,52 @@ export class DistrictBackfillService {
   ): DistrictStatistics {
     // Calculate membership statistics from club data
     const totalMembers = clubPerformance.reduce((sum, club) => {
-      const members = parseInt((club['Active Members'] || club['Membership'] || '0').toString())
+      const members = parseInt(
+        (club['Active Members'] || club['Membership'] || '0').toString()
+      )
       return sum + (isNaN(members) ? 0 : members)
     }, 0)
 
     // Calculate club statistics
     const totalClubs = clubPerformance.length
-    const activeClubs = clubPerformance.filter(club => 
-      club['Status'] === 'Active' || !club['Status'] || club['Status'] === ''
-    ).length
-    
-    const suspendedClubs = clubPerformance.filter(club => 
-      club['Status'] === 'Suspended'
+    const activeClubs = clubPerformance.filter(
+      club =>
+        club['Status'] === 'Active' || !club['Status'] || club['Status'] === ''
     ).length
 
-    const ineligibleClubs = clubPerformance.filter(club => 
-      club['Status'] === 'Ineligible'
+    const suspendedClubs = clubPerformance.filter(
+      club => club['Status'] === 'Suspended'
+    ).length
+
+    const ineligibleClubs = clubPerformance.filter(
+      club => club['Status'] === 'Ineligible'
     ).length
 
     const lowClubs = clubPerformance.filter(club => {
-      const members = parseInt((club['Active Members'] || club['Membership'] || '0').toString())
+      const members = parseInt(
+        (club['Active Members'] || club['Membership'] || '0').toString()
+      )
       return !isNaN(members) && members < 20 // Typically low membership threshold
     }).length
 
     // Calculate distinguished clubs
     const distinguishedClubs = clubPerformance.filter(club => {
       // Look for distinguished status indicators
-      return club['Distinguished Status'] === 'Distinguished' ||
-             club['Distinguished Status'] === 'Select Distinguished' ||
-             club['Distinguished Status'] === "President's Distinguished" ||
-             club['DCP Status'] === 'Distinguished' ||
-             club['DCP Status'] === 'Select Distinguished' ||
-             club['DCP Status'] === "President's Distinguished"
+      return (
+        club['Distinguished Status'] === 'Distinguished' ||
+        club['Distinguished Status'] === 'Select Distinguished' ||
+        club['Distinguished Status'] === "President's Distinguished" ||
+        club['DCP Status'] === 'Distinguished' ||
+        club['DCP Status'] === 'Select Distinguished' ||
+        club['DCP Status'] === "President's Distinguished"
+      )
     }).length
 
     // Calculate education statistics (simplified)
     const totalAwards = clubPerformance.reduce((sum, club) => {
-      const awards = parseInt((club['Awards'] || club['Total Awards'] || '0').toString())
+      const awards = parseInt(
+        (club['Awards'] || club['Total Awards'] || '0').toString()
+      )
       return sum + (isNaN(awards) ? 0 : awards)
     }, 0)
 
@@ -797,8 +887,11 @@ export class DistrictBackfillService {
         byClub: clubPerformance.map(club => ({
           clubId: (club['Club Number'] || club['Club ID'] || '').toString(),
           clubName: (club['Club Name'] || '').toString(),
-          memberCount: parseInt((club['Active Members'] || club['Membership'] || '0').toString()) || 0
-        }))
+          memberCount:
+            parseInt(
+              (club['Active Members'] || club['Membership'] || '0').toString()
+            ) || 0,
+        })),
       },
       clubs: {
         total: totalClubs,
@@ -806,14 +899,14 @@ export class DistrictBackfillService {
         suspended: suspendedClubs,
         ineligible: ineligibleClubs,
         low: lowClubs,
-        distinguished: distinguishedClubs
+        distinguished: distinguishedClubs,
       },
       education: {
         totalAwards,
         byType: [], // Would need more detailed parsing
         topClubs: [], // Would need more detailed parsing
-        byMonth: [] // Would need historical data
-      }
+        byMonth: [], // Would need historical data
+      },
     }
   }
 
@@ -821,7 +914,10 @@ export class DistrictBackfillService {
    * Process backfill in background
    * This is the core logic that fetches all three report types for each date
    */
-  private async processBackfill(backfillId: string, dates: string[]): Promise<void> {
+  private async processBackfill(
+    backfillId: string,
+    dates: string[]
+  ): Promise<void> {
     const job = this.jobs.get(backfillId)
     if (!job) {
       throw new Error('Job not found')
@@ -838,7 +934,10 @@ export class DistrictBackfillService {
 
         // Check if job was cancelled
         if (job.status === 'error') {
-          logger.info('Job cancelled, stopping processing', { backfillId, districtId })
+          logger.info('Job cancelled, stopping processing', {
+            backfillId,
+            districtId,
+          })
           return
         }
 
@@ -847,14 +946,19 @@ export class DistrictBackfillService {
         job.progress.completed = i
 
         try {
-          logger.info('Fetching district data for date', { backfillId, districtId, date })
+          logger.info('Fetching district data for date', {
+            backfillId,
+            districtId,
+            date,
+          })
 
           // Fetch all three report types for the specific date
-          const [districtPerformance, divisionPerformance, clubPerformance] = await Promise.all([
-            this.scraper.getDistrictPerformance(districtId, date),
-            this.scraper.getDivisionPerformance(districtId, date),
-            this.scraper.getClubPerformance(districtId, date),
-          ])
+          const [districtPerformance, divisionPerformance, clubPerformance] =
+            await Promise.all([
+              this.scraper.getDistrictPerformance(districtId, date),
+              this.scraper.getDivisionPerformance(districtId, date),
+              this.scraper.getClubPerformance(districtId, date),
+            ])
 
           // Check if we got valid data
           if (
@@ -864,21 +968,26 @@ export class DistrictBackfillService {
           ) {
             // Validate data quality - check if membership data looks reasonable
             const totalMembers = clubPerformance.reduce((sum, club) => {
-              const members = parseInt(String(club['Active Members'] || club['Membership'] || '0'))
+              const members = parseInt(
+                String(club['Active Members'] || club['Membership'] || '0')
+              )
               return sum + (isNaN(members) ? 0 : members)
             }, 0)
-            
+
             // If we have clubs but suspiciously low membership (< 100 total), skip this date
             // This indicates a data reconciliation period where the dashboard shows incomplete data
             if (clubPerformance.length > 0 && totalMembers < 100) {
               job.progress.unavailable++
-              logger.warn('Skipping date with suspiciously low membership data (likely reconciliation period)', {
-                backfillId,
-                districtId,
-                date,
-                clubCount: clubPerformance.length,
-                totalMembers,
-              })
+              logger.warn(
+                'Skipping date with suspiciously low membership data (likely reconciliation period)',
+                {
+                  backfillId,
+                  districtId,
+                  date,
+                  clubCount: clubPerformance.length,
+                  totalMembers,
+                }
+              )
             } else {
               // Cache all three reports together (atomic operation)
               await this.cacheManager.cacheDistrictData(
@@ -890,7 +999,10 @@ export class DistrictBackfillService {
               )
 
               // Trigger reconciliation hooks if any are registered
-              if (this.reconciliationHooks && this.reconciliationHooks.length > 0) {
+              if (
+                this.reconciliationHooks &&
+                this.reconciliationHooks.length > 0
+              ) {
                 try {
                   const districtStats = this.convertToDistrictStatistics(
                     districtId,
@@ -908,46 +1020,62 @@ export class DistrictBackfillService {
                         backfillId,
                         districtId,
                         date,
-                        error: hookError instanceof Error ? hookError.message : String(hookError)
+                        error:
+                          hookError instanceof Error
+                            ? hookError.message
+                            : String(hookError),
                       })
                     }
                   }
                 } catch (conversionError) {
-                  logger.warn('Failed to convert data for reconciliation hooks', {
-                    backfillId,
-                    districtId,
-                    date,
-                    error: conversionError instanceof Error ? conversionError.message : String(conversionError)
-                  })
+                  logger.warn(
+                    'Failed to convert data for reconciliation hooks',
+                    {
+                      backfillId,
+                      districtId,
+                      date,
+                      error:
+                        conversionError instanceof Error
+                          ? conversionError.message
+                          : String(conversionError),
+                    }
+                  )
                 }
               }
 
               successCount++
-              logger.info('Successfully fetched and cached district data for date', {
-                backfillId,
-                districtId,
-                date,
-                districtRecords: districtPerformance.length,
-                divisionRecords: divisionPerformance.length,
-                clubRecords: clubPerformance.length,
-                totalMembers,
-              })
+              logger.info(
+                'Successfully fetched and cached district data for date',
+                {
+                  backfillId,
+                  districtId,
+                  date,
+                  districtRecords: districtPerformance.length,
+                  divisionRecords: divisionPerformance.length,
+                  clubRecords: clubPerformance.length,
+                  totalMembers,
+                }
+              )
             }
           } else {
             // No data available (blackout period or reconciliation)
             job.progress.unavailable++
-            logger.info('No data available for date (expected blackout/reconciliation period)', {
-              backfillId,
-              districtId,
-              date,
-            })
+            logger.info(
+              'No data available for date (expected blackout/reconciliation period)',
+              {
+                backfillId,
+                districtId,
+                date,
+              }
+            )
           }
 
           // Add a delay to avoid overwhelming the server
-          await new Promise((resolve) => setTimeout(resolve, 2000))
+          await new Promise(resolve => setTimeout(resolve, 2000))
         } catch (error) {
           // Check if it's a "date not available" error vs actual failure
-          const errorMessage = error instanceof Error ? error.message : String(error)
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
 
           if (
             errorMessage.includes('not available') ||
@@ -958,11 +1086,14 @@ export class DistrictBackfillService {
           ) {
             // Expected - date doesn't exist on dashboard (blackout/reconciliation period)
             job.progress.unavailable++
-            logger.info('Date not available on dashboard (blackout/reconciliation period)', {
-              backfillId,
-              districtId,
-              date,
-            })
+            logger.info(
+              'Date not available on dashboard (blackout/reconciliation period)',
+              {
+                backfillId,
+                districtId,
+                date,
+              }
+            )
           } else {
             // Actual error
             job.progress.failed++
@@ -993,7 +1124,11 @@ export class DistrictBackfillService {
         totalProcessed: dates.length,
       })
     } catch (error) {
-      logger.error('Error processing district backfill', { backfillId, districtId, error })
+      logger.error('Error processing district backfill', {
+        backfillId,
+        districtId,
+        error,
+      })
       job.status = 'error'
       job.error = error instanceof Error ? error.message : 'Unknown error'
       job.completedAt = Date.now()

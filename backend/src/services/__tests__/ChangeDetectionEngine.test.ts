@@ -14,14 +14,16 @@ describe('ChangeDetectionEngine', () => {
     engine = new ChangeDetectionEngine()
   })
 
-  const createMockDistrictStatistics = (overrides: Partial<DistrictStatistics> = {}): DistrictStatistics => ({
+  const createMockDistrictStatistics = (
+    overrides: Partial<DistrictStatistics> = {}
+  ): DistrictStatistics => ({
     districtId: 'D1',
     asOfDate: '2024-01-31',
     membership: {
       total: 1000,
       change: 50,
       changePercent: 5.0,
-      byClub: []
+      byClub: [],
     },
     clubs: {
       total: 50,
@@ -29,20 +31,20 @@ describe('ChangeDetectionEngine', () => {
       suspended: 3,
       ineligible: 1,
       low: 1,
-      distinguished: 20
+      distinguished: 20,
     },
     education: {
       totalAwards: 100,
       byType: [],
-      topClubs: []
+      topClubs: [],
     },
-    ...overrides
+    ...overrides,
   })
 
   const defaultThresholds: ChangeThresholds = {
     membershipPercent: 1.0,
     clubCountAbsolute: 1,
-    distinguishedPercent: 2.0
+    distinguishedPercent: 2.0,
   }
 
   describe('detectChanges', () => {
@@ -66,8 +68,8 @@ describe('ChangeDetectionEngine', () => {
           total: 1050,
           change: 100,
           changePercent: 10.0,
-          byClub: []
-        }
+          byClub: [],
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -77,7 +79,7 @@ describe('ChangeDetectionEngine', () => {
       expect(changes.membershipChange).toEqual({
         previous: 1000,
         current: 1050,
-        percentChange: 5.0
+        percentChange: 5.0,
       })
     })
 
@@ -90,8 +92,8 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 22
-        }
+          distinguished: 22,
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -101,7 +103,7 @@ describe('ChangeDetectionEngine', () => {
       expect(changes.clubCountChange).toEqual({
         previous: 50,
         current: 52,
-        absoluteChange: 2
+        absoluteChange: 2,
       })
     })
 
@@ -114,8 +116,8 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 25
-        }
+          distinguished: 25,
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -135,7 +137,7 @@ describe('ChangeDetectionEngine', () => {
           total: 1100,
           change: 150,
           changePercent: 15.0,
-          byClub: []
+          byClub: [],
         },
         clubs: {
           total: 55,
@@ -143,8 +145,8 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 30
-        }
+          distinguished: 30,
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -158,10 +160,10 @@ describe('ChangeDetectionEngine', () => {
 
     it('should handle zero membership base correctly', () => {
       const cachedData = createMockDistrictStatistics({
-        membership: { total: 0, change: 0, changePercent: 0, byClub: [] }
+        membership: { total: 0, change: 0, changePercent: 0, byClub: [] },
       })
       const currentData = createMockDistrictStatistics({
-        membership: { total: 100, change: 100, changePercent: 0, byClub: [] }
+        membership: { total: 100, change: 100, changePercent: 0, byClub: [] },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -170,7 +172,7 @@ describe('ChangeDetectionEngine', () => {
       expect(changes.membershipChange).toEqual({
         previous: 0,
         current: 100,
-        percentChange: 0
+        percentChange: 0,
       })
     })
   })
@@ -183,7 +185,10 @@ describe('ChangeDetectionEngine', () => {
         createMockDistrictStatistics()
       )
 
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(isSignificant).toBe(false)
     })
@@ -195,12 +200,15 @@ describe('ChangeDetectionEngine', () => {
           total: 1020, // 2% increase
           change: 70,
           changePercent: 7.0,
-          byClub: []
-        }
+          byClub: [],
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(isSignificant).toBe(true)
     })
@@ -214,12 +222,15 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 22
-        }
+          distinguished: 22,
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(isSignificant).toBe(true)
     })
@@ -233,12 +244,15 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 25 // 25% increase
-        }
+          distinguished: 25, // 25% increase
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(isSignificant).toBe(true)
     })
@@ -250,12 +264,15 @@ describe('ChangeDetectionEngine', () => {
           total: 1005, // 0.5% increase (below 1% threshold)
           change: 55,
           changePercent: 5.5,
-          byClub: []
-        }
+          byClub: [],
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(isSignificant).toBe(false)
     })
@@ -263,8 +280,8 @@ describe('ChangeDetectionEngine', () => {
     it('should use custom thresholds correctly', () => {
       const customThresholds: ChangeThresholds = {
         membershipPercent: 5.0, // Higher threshold
-        clubCountAbsolute: 3,   // Higher threshold
-        distinguishedPercent: 10.0 // Higher threshold
+        clubCountAbsolute: 3, // Higher threshold
+        distinguishedPercent: 10.0, // Higher threshold
       }
 
       const cachedData = createMockDistrictStatistics()
@@ -273,12 +290,15 @@ describe('ChangeDetectionEngine', () => {
           total: 1020, // 2% increase (below 5% threshold)
           change: 70,
           changePercent: 7.0,
-          byClub: []
-        }
+          byClub: [],
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, customThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        customThresholds
+      )
 
       expect(isSignificant).toBe(false)
     })
@@ -309,8 +329,8 @@ describe('ChangeDetectionEngine', () => {
           total: 1050, // 5% increase
           change: 100,
           changePercent: 10.0,
-          byClub: []
-        }
+          byClub: [],
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -331,8 +351,8 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 25
-        }
+          distinguished: 25,
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -350,7 +370,7 @@ describe('ChangeDetectionEngine', () => {
           total: 1100, // 10% increase
           change: 150,
           changePercent: 15.0,
-          byClub: []
+          byClub: [],
         },
         clubs: {
           total: 60, // +10 clubs (20% increase)
@@ -358,8 +378,8 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 35 // +15 clubs (75% increase)
-        }
+          distinguished: 35, // +15 clubs (75% increase)
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -370,17 +390,31 @@ describe('ChangeDetectionEngine', () => {
       expect(metrics.membershipImpact).toBe(10.0)
       expect(metrics.clubCountImpact).toBe(20.0)
       expect(metrics.distinguishedImpact).toBe(75.0)
-      
+
       // Weighted average: 10*0.4 + 20*0.3 + 75*0.3 = 4 + 6 + 22.5 = 32.5
       expect(metrics.overallSignificance).toBeCloseTo(32.5, 1)
     })
 
     it('should handle zero base values correctly', () => {
       const cachedData = createMockDistrictStatistics({
-        clubs: { total: 0, active: 0, suspended: 0, ineligible: 0, low: 0, distinguished: 0 }
+        clubs: {
+          total: 0,
+          active: 0,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: 0,
+        },
       })
       const currentData = createMockDistrictStatistics({
-        clubs: { total: 5, active: 5, suspended: 0, ineligible: 0, low: 0, distinguished: 2 }
+        clubs: {
+          total: 5,
+          active: 5,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: 2,
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
@@ -399,7 +433,7 @@ describe('ChangeDetectionEngine', () => {
           total: 900, // 10% decrease
           change: -50,
           changePercent: -5.0,
-          byClub: []
+          byClub: [],
         },
         clubs: {
           total: 45, // -5 clubs
@@ -407,12 +441,15 @@ describe('ChangeDetectionEngine', () => {
           suspended: 3,
           ineligible: 1,
           low: 1,
-          distinguished: 15 // -5 clubs
-        }
+          distinguished: 15, // -5 clubs
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(changes.hasChanges).toBe(true)
       expect(changes.membershipChange!.percentChange).toBe(-10.0)
@@ -427,12 +464,15 @@ describe('ChangeDetectionEngine', () => {
           total: 1001, // 0.1% increase
           change: 51,
           changePercent: 5.1,
-          byClub: []
-        }
+          byClub: [],
+        },
       })
 
       const changes = engine.detectChanges('D1', cachedData, currentData)
-      const isSignificant = engine.isSignificantChange(changes, defaultThresholds)
+      const isSignificant = engine.isSignificantChange(
+        changes,
+        defaultThresholds
+      )
 
       expect(changes.hasChanges).toBe(true)
       expect(changes.membershipChange!.percentChange).toBe(0.1)

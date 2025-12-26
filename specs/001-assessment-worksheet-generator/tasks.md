@@ -17,7 +17,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 1: Setup & Project Structure
 
-*Initialize the project, create directory structure, and set up tooling.*
+_Initialize the project, create directory structure, and set up tooling._
 
 ### Phase 1 Tasks
 
@@ -40,7 +40,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 2: Data Model & Configuration
 
-*Design and implement the data persistence layer and configuration system.*
+_Design and implement the data persistence layer and configuration system._
 
 ### Phase 2 Tasks
 
@@ -63,7 +63,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 3: Core Calculation Engine
 
-*Implement Goal 1–3 calculation logic, the heart of the assessment system.*
+_Implement Goal 1–3 calculation logic, the heart of the assessment system._
 
 ### Phase 3 Tasks
 
@@ -87,7 +87,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 4: Report Generation
 
-*Implement report output formatting and rendering.*
+_Implement report output formatting and rendering._
 
 ### Phase 4 Tasks
 
@@ -109,7 +109,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 5: District Leader Goals Management
 
-*Implement CRUD, querying, and status tracking for leader goals.*
+_Implement CRUD, querying, and status tracking for leader goals._
 
 ### Phase 5 Tasks
 
@@ -132,7 +132,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 6: API Routes & Integration
 
-*Expose assessment functionality via Express REST API.*
+_Expose assessment functionality via Express REST API._
 
 ### Phase 6 Tasks
 
@@ -160,7 +160,7 @@ Breaking down the District Assessment Worksheet Report Generator into actionable
 
 ## Phase 7: Documentation & Finalization
 
-*Complete documentation and prepare for production deployment.*
+_Complete documentation and prepare for production deployment._
 
 ### Phase 7 Tasks
 
@@ -248,15 +248,15 @@ Phase 7 (Documentation & Finalization)
 
 ### Per-Phase Checkpoints
 
-| Phase | Key Metric | Target | Validation |
-|-------|-----------|--------|-----------|
-| 1 | Setup | All files created | `ls -la backend/src/modules/assessment/` |
-| 2 | Config | Hot-reload works | `npm test -- configService` |
-| 3 | Calculator | Excel accuracy | `npm test -- assessmentCalculator && manual Excel check` |
-| 4 | Reports | <2s generation | `npm test -- assessmentReportGenerator` |
-| 5 | Goals | Zero data loss | `npm test -- districtLeaderGoalService` |
-| 6 | API | All routes respond | `npm test -- integration` |
-| 7 | Final | >80% coverage, production-ready | `npm run test:coverage && npm run lint` |
+| Phase | Key Metric | Target                          | Validation                                               |
+| ----- | ---------- | ------------------------------- | -------------------------------------------------------- |
+| 1     | Setup      | All files created               | `ls -la backend/src/modules/assessment/`                 |
+| 2     | Config     | Hot-reload works                | `npm test -- configService`                              |
+| 3     | Calculator | Excel accuracy                  | `npm test -- assessmentCalculator && manual Excel check` |
+| 4     | Reports    | <2s generation                  | `npm test -- assessmentReportGenerator`                  |
+| 5     | Goals      | Zero data loss                  | `npm test -- districtLeaderGoalService`                  |
+| 6     | API        | All routes respond              | `npm test -- integration`                                |
+| 7     | Final      | >80% coverage, production-ready | `npm run test:coverage && npm run lint`                  |
 
 ### Overall Success Criteria
 
@@ -267,21 +267,21 @@ Phase 7 (Documentation & Finalization)
 ✅ Report generation: <2 seconds per report  
 ✅ Config hot-reload: <5 seconds to apply  
 ✅ Goal storage: 100% reliability, no data loss  
-✅ API fully functional, documented, and tested  
+✅ API fully functional, documented, and tested
 
 ---
 
 ## Test Coverage Targets
 
-| Component | Unit Tests | Integration Tests | Coverage Target |
-|-----------|-----------|------------------|-----------------|
-| configService | 4–5 | 2 | >85% |
-| monthlyTargetService | 6–8 | 1 | >85% |
-| assessmentCalculator | 12–15 | 1 | >90% (critical path) |
-| assessmentReportGenerator | 6–8 | 1 | >80% |
-| districtLeaderGoalService | 10–12 | 2 | >85% |
-| assessmentRoutes | — | 8–10 | >80% |
-| **Total** | **40–50** | **8–10** | **>80%** |
+| Component                 | Unit Tests | Integration Tests | Coverage Target      |
+| ------------------------- | ---------- | ----------------- | -------------------- |
+| configService             | 4–5        | 2                 | >85%                 |
+| monthlyTargetService      | 6–8        | 1                 | >85%                 |
+| assessmentCalculator      | 12–15      | 1                 | >90% (critical path) |
+| assessmentReportGenerator | 6–8        | 1                 | >80%                 |
+| districtLeaderGoalService | 10–12      | 2                 | >85%                 |
+| assessmentRoutes          | —          | 8–10              | >80%                 |
+| **Total**                 | **40–50**  | **8–10**          | **>80%**             |
 
 ---
 
@@ -351,7 +351,7 @@ backend/package.json                            [T002]
 - [ ] TypeScript strict mode enabled
 - [ ] ESLint passes (no warnings)
 - [ ] Prettier formatting applied
-- [ ] >80% code coverage (business logic)
+- [ ] > 80% code coverage (business logic)
 - [ ] All tests passing before merge
 - [ ] No console.log statements in production code
 
@@ -396,4 +396,3 @@ backend/package.json                            [T002]
 3. Set up README (T006)
 
 **Then proceed to Phase 2** to establish data layer and configuration system.
-

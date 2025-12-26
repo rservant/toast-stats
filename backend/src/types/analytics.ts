@@ -4,7 +4,11 @@
 
 export type ClubHealthStatus = 'healthy' | 'at-risk' | 'critical'
 export type TrendDirection = 'improving' | 'stable' | 'declining'
-export type DistinguishedLevel = 'Smedley' | 'President' | 'Select' | 'Distinguished'
+export type DistinguishedLevel =
+  | 'Smedley'
+  | 'President'
+  | 'Select'
+  | 'Distinguished'
 
 export interface ClubTrend {
   clubId: string
@@ -53,7 +57,11 @@ export interface MembershipAnalytics {
   programYearChange: number
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
-  topDecliningClubs: Array<{ clubId: string; clubName: string; decline: number }>
+  topDecliningClubs: Array<{
+    clubId: string
+    clubName: string
+    decline: number
+  }>
   seasonalPatterns: SeasonalPattern[]
   yearOverYearComparison?: {
     currentMembership: number
@@ -86,7 +94,7 @@ export interface DistinguishedClubAnalytics {
     distinguished: number
     total: number
   }
-  
+
   // Projection for final count (Requirement 7.2)
   distinguishedProjection: {
     smedley: number
@@ -95,10 +103,10 @@ export interface DistinguishedClubAnalytics {
     distinguished: number
     total: number
   }
-  
+
   // Clubs that achieved distinguished levels with dates (Requirement 7.3)
   achievements: DistinguishedClubAchievement[]
-  
+
   // Year-over-year comparison (Requirement 7.4)
   yearOverYearComparison?: {
     currentTotal: number
@@ -118,7 +126,7 @@ export interface DistinguishedClubAnalytics {
       distinguished: number
     }
   }
-  
+
   // DCP goal analysis (Requirement 7.5)
   dcpGoalAnalysis: {
     mostCommonlyAchieved: DCPGoalAnalysis[]
@@ -159,20 +167,28 @@ export interface AreaDirectorCorrelation {
 export interface LeadershipInsights {
   // Leadership effectiveness scores (Requirement 8.1)
   leadershipScores: LeadershipEffectivenessScore[]
-  
+
   // Best practice divisions (Requirement 8.2)
   bestPracticeDivisions: LeadershipEffectivenessScore[]
-  
+
   // Performance changes with leadership changes (Requirement 8.3)
   leadershipChanges: LeadershipChange[]
-  
+
   // Area director activity correlations (Requirement 8.4)
   areaDirectorCorrelations: AreaDirectorCorrelation[]
-  
+
   // Summary report (Requirement 8.5)
   summary: {
-    topPerformingDivisions: Array<{ divisionId: string; divisionName: string; score: number }>
-    topPerformingAreas: Array<{ areaId: string; areaName: string; score: number }>
+    topPerformingDivisions: Array<{
+      divisionId: string
+      divisionName: string
+      score: number
+    }>
+    topPerformingAreas: Array<{
+      areaId: string
+      areaName: string
+      score: number
+    }>
     averageLeadershipScore: number
     totalBestPracticeDivisions: number
   }
@@ -203,15 +219,45 @@ export interface YearOverYearComparison {
       }
     }
     clubHealth: {
-      healthyClubs: { current: number; previous: number; change: number; percentageChange: number }
-      atRiskClubs: { current: number; previous: number; change: number; percentageChange: number }
-      criticalClubs: { current: number; previous: number; change: number; percentageChange: number }
+      healthyClubs: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
+      atRiskClubs: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
+      criticalClubs: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
     }
     dcpGoals: {
-      totalGoals: { current: number; previous: number; change: number; percentageChange: number }
-      averagePerClub: { current: number; previous: number; change: number; percentageChange: number }
+      totalGoals: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
+      averagePerClub: {
+        current: number
+        previous: number
+        change: number
+        percentageChange: number
+      }
     }
-    clubCount: { current: number; previous: number; change: number; percentageChange: number }
+    clubCount: {
+      current: number
+      previous: number
+      change: number
+      percentageChange: number
+    }
   }
   multiYearTrends?: {
     available: boolean
@@ -234,19 +280,19 @@ export interface YearOverYearComparison {
 export interface DistrictAnalytics {
   districtId: string
   dateRange: { start: string; end: string }
-  
+
   // Membership insights
   totalMembership: number
   membershipChange: number
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
-  
+
   // Club health
   allClubs: ClubTrend[]
   atRiskClubs: ClubTrend[]
   healthyClubs: number
   criticalClubs: number
-  
+
   // Distinguished status
   distinguishedClubs: {
     smedley: number
@@ -256,14 +302,14 @@ export interface DistrictAnalytics {
     total: number
   }
   distinguishedProjection: number
-  
+
   // Distinguished club analytics with DCP goal analysis
   distinguishedClubAnalytics: DistinguishedClubAnalytics
-  
+
   // Division/Area performance
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: AreaAnalytics[]
-  
+
   // Year-over-year comparison (if data available)
   yearOverYear?: {
     membershipChange: number

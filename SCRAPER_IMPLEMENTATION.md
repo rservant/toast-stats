@@ -9,6 +9,7 @@ Implemented a Playwright-based web scraper to fetch real data from the Toastmast
 ### 1. Core Scraper Service (`ToastmastersScraper.ts`)
 
 Low-level Playwright automation that:
+
 - Launches and manages Chromium browser instances
 - Navigates to dashboard pages
 - Clicks "Export CSV" buttons and captures downloads
@@ -16,6 +17,7 @@ Low-level Playwright automation that:
 - Handles errors and timeouts
 
 **Key Methods:**
+
 - `getAllDistricts()` - Scrapes all districts summary
 - `getDistrictPerformance(districtId)` - Scrapes district-level data
 - `getDivisionPerformance(districtId)` - Scrapes division/area data
@@ -24,12 +26,14 @@ Low-level Playwright automation that:
 ### 2. API Service (`RealToastmastersAPIService.ts`)
 
 High-level service that:
+
 - Uses the scraper to fetch CSV data
 - Transforms raw CSV into our application's data format
 - Calculates derived metrics (growth %, distinguished clubs, etc.)
 - Matches the same interface as `MockToastmastersAPIService`
 
 **Implemented Endpoints:**
+
 - `getDistricts()` - List of all districts
 - `getDistrictStatistics(districtId)` - District stats with membership, clubs, education
 - `getMembershipHistory(districtId, months)` - Historical membership data
@@ -40,6 +44,7 @@ High-level service that:
 ### 3. Configuration
 
 **Environment Variables:**
+
 ```bash
 # Toastmasters Dashboard URL
 TOASTMASTERS_DASHBOARD_URL=https://dashboards.toastmasters.org
@@ -103,6 +108,7 @@ Return to User
 ### Caching
 
 All scraped data is cached for 15 minutes to:
+
 - Reduce load on Toastmasters servers
 - Improve response times
 - Minimize browser launches
@@ -117,6 +123,7 @@ npx tsx src/services/__test-scraper.ts
 ```
 
 This will:
+
 1. Fetch all districts
 2. Get statistics for the first district
 3. Get clubs for that district
@@ -185,12 +192,14 @@ The scraper attempts to handle various column name variations, but if Toastmaste
 ## Future Enhancements
 
 ### Short Term
+
 - [ ] Implement educational awards scraping
 - [ ] Add division/area data to API responses
 - [ ] Improve error handling and retry logic
 - [ ] Add more comprehensive tests
 
 ### Long Term
+
 - [ ] Historical data support (year-specific URLs)
 - [ ] Daily reports integration
 - [ ] Parallel scraping for multiple districts
@@ -210,8 +219,9 @@ npx playwright install chromium
 ### Timeout Errors
 
 Increase timeout in `ToastmastersScraper.ts`:
+
 ```typescript
-timeout: 60000  // 60 seconds
+timeout: 60000 // 60 seconds
 ```
 
 ### CSV Parsing Errors
@@ -227,6 +237,7 @@ Check logs for actual CSV content and update column mapping in `RealToastmasters
 ## Files Created/Modified
 
 ### New Files
+
 - `backend/src/services/ToastmastersScraper.ts` - Core scraper
 - `backend/src/services/RealToastmastersAPIService.ts` - API service
 - `backend/src/services/SCRAPER_README.md` - Documentation
@@ -234,6 +245,7 @@ Check logs for actual CSV content and update column mapping in `RealToastmasters
 - `SCRAPER_IMPLEMENTATION.md` - This file
 
 ### Modified Files
+
 - `backend/src/routes/districts.ts` - Use real service instead of mock
 - `backend/.env` - Added `USE_MOCK_DATA` configuration
 - `backend/.env.example` - Added `USE_MOCK_DATA` configuration

@@ -70,7 +70,7 @@ router.get('/data', cacheMiddleware({ ttl: 300 }), async (req, res) => {
 router.get(
   '/districts/:id',
   cacheMiddleware({
-    keyGenerator: (req) => `district:${req.params.id}`,
+    keyGenerator: req => `district:${req.params.id}`,
   }),
   async (req, res) => {
     const data = await fetchDistrictData(req.params.id)
@@ -98,14 +98,20 @@ X-Bypass-Cache: true
 Use the utility functions to generate consistent cache keys:
 
 ```typescript
-import { generateCacheKey, generateDistrictCacheKey } from '../utils/cacheKeys.js'
+import {
+  generateCacheKey,
+  generateDistrictCacheKey,
+} from '../utils/cacheKeys.js'
 
 // Basic cache key
 const key1 = generateCacheKey('/api/districts')
 // Result: "cache:/api/districts"
 
 // Cache key with parameters
-const key2 = generateCacheKey('/api/districts', { region: 'west', active: true })
+const key2 = generateCacheKey('/api/districts', {
+  region: 'west',
+  active: true,
+})
 // Result: "cache:/api/districts:abc123..." (with MD5 hash of params)
 
 // District-specific cache key
@@ -137,7 +143,7 @@ router.put(
 // Dynamic pattern based on request
 router.put(
   '/districts/:id/clubs/:clubId',
-  invalidateCacheMiddleware((req) => `cache:/districts/${req.params.id}/*`),
+  invalidateCacheMiddleware(req => `cache:/districts/${req.params.id}/*`),
   async (req, res) => {
     await updateClub(req.params.id, req.params.clubId, req.body)
     res.json({ success: true })

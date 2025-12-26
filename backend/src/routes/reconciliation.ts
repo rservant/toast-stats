@@ -19,7 +19,7 @@ const storageOptimizer = new ReconciliationStorageOptimizer()
 const cacheService = new ReconciliationCacheService()
 const changeDetectionEngine = new ChangeDetectionEngine()
 const orchestrator = new ReconciliationOrchestrator(
-  changeDetectionEngine, 
+  changeDetectionEngine,
   storageOptimizer,
   cacheService
 )
@@ -57,11 +57,11 @@ function validateTargetMonth(targetMonth: string): boolean {
   if (!monthRegex.test(targetMonth)) {
     return false
   }
-  
+
   const [year, month] = targetMonth.split('-')
   const yearNum = parseInt(year, 10)
   const monthNum = parseInt(month, 10)
-  
+
   return yearNum >= 2020 && yearNum <= 2030 && monthNum >= 1 && monthNum <= 12
 }
 
@@ -75,7 +75,11 @@ router.get('/jobs', async (_req: Request, res: Response) => {
     const { districtId, status, limit } = _req.query
 
     // Validate district ID if provided
-    if (districtId && typeof districtId === 'string' && !validateDistrictId(districtId)) {
+    if (
+      districtId &&
+      typeof districtId === 'string' &&
+      !validateDistrictId(districtId)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -87,7 +91,11 @@ router.get('/jobs', async (_req: Request, res: Response) => {
 
     // Validate status if provided
     const validStatuses = ['active', 'completed', 'failed', 'cancelled']
-    if (status && typeof status === 'string' && !validStatuses.includes(status)) {
+    if (
+      status &&
+      typeof status === 'string' &&
+      !validStatuses.includes(status)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_STATUS',
@@ -152,7 +160,7 @@ router.get('/jobs', async (_req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'FETCH_ERROR',
@@ -187,7 +195,8 @@ router.post('/start', async (_req: Request, res: Response) => {
       res.status(400).json({
         error: {
           code: 'MISSING_TARGET_MONTH',
-          message: 'Target month is required and must be a string in YYYY-MM format',
+          message:
+            'Target month is required and must be a string in YYYY-MM format',
         },
       })
       return
@@ -232,7 +241,9 @@ router.post('/start', async (_req: Request, res: Response) => {
       status: 'active',
     })
 
-    const existingJob = existingJobs.find(job => job.targetMonth === targetMonth)
+    const existingJob = existingJobs.find(
+      job => job.targetMonth === targetMonth
+    )
     if (existingJob) {
       res.status(409).json({
         error: {
@@ -248,7 +259,11 @@ router.post('/start', async (_req: Request, res: Response) => {
     }
 
     // Start the reconciliation
-    const job = await orchestrator.startReconciliation(districtId, targetMonth, config)
+    const job = await orchestrator.startReconciliation(
+      districtId,
+      targetMonth,
+      config
+    )
 
     // Transform job for API response
     const transformedJob = {
@@ -282,10 +297,11 @@ router.post('/start', async (_req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     // Check for specific error types
-    const errorMessage = error instanceof Error ? error.message : 'Failed to start reconciliation'
-    
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to start reconciliation'
+
     if (errorMessage.includes('already exists')) {
       res.status(409).json({
         error: {
@@ -337,7 +353,7 @@ router.delete('/jobs/:jobId', async (_req: Request, res: Response) => {
 
     // Get the job to check if it exists and can be cancelled
     const job = await storageManager.getJob(jobId)
-    
+
     if (!job) {
       res.status(404).json({
         error: {
@@ -369,7 +385,7 @@ router.delete('/jobs/:jobId', async (_req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'CANCEL_ERROR',
@@ -401,7 +417,7 @@ router.get('/jobs/:jobId/status', async (_req: Request, res: Response) => {
 
     // Get the job
     const job = await storageManager.getJob(jobId)
-    
+
     if (!job) {
       res.status(404).json({
         error: {
@@ -419,7 +435,8 @@ router.get('/jobs/:jobId/status', async (_req: Request, res: Response) => {
     const timeline = await progressTracker.getReconciliationTimeline(jobId)
 
     // Check finalization readiness
-    const finalizationStatus = await progressTracker.isReadyForFinalization(jobId)
+    const finalizationStatus =
+      await progressTracker.isReadyForFinalization(jobId)
 
     // Transform job for API response
     const jobStatus = {
@@ -459,12 +476,17 @@ router.get('/jobs/:jobId/status', async (_req: Request, res: Response) => {
         stabilityTrend: progressStats.stabilityTrend,
       },
       stabilityPeriod: {
-        consecutiveStableDays: progressStats.stabilityPeriod.consecutiveStableDays,
-        stabilityStartDate: progressStats.stabilityPeriod.stabilityStartDate?.toISOString(),
-        lastSignificantChangeDate: progressStats.stabilityPeriod.lastSignificantChangeDate?.toISOString(),
+        consecutiveStableDays:
+          progressStats.stabilityPeriod.consecutiveStableDays,
+        stabilityStartDate:
+          progressStats.stabilityPeriod.stabilityStartDate?.toISOString(),
+        lastSignificantChangeDate:
+          progressStats.stabilityPeriod.lastSignificantChangeDate?.toISOString(),
         isInStabilityPeriod: progressStats.stabilityPeriod.isInStabilityPeriod,
-        stabilityPeriodProgress: progressStats.stabilityPeriod.stabilityPeriodProgress,
-        requiredStabilityDays: progressStats.stabilityPeriod.requiredStabilityDays,
+        stabilityPeriodProgress:
+          progressStats.stabilityPeriod.stabilityPeriodProgress,
+        requiredStabilityDays:
+          progressStats.stabilityPeriod.requiredStabilityDays,
       },
       finalization: {
         isReady: finalizationStatus.isReady,
@@ -480,7 +502,7 @@ router.get('/jobs/:jobId/status', async (_req: Request, res: Response) => {
     res.json(jobStatus)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'STATUS_ERROR',
@@ -512,7 +534,7 @@ router.get('/jobs/:jobId/timeline', async (_req: Request, res: Response) => {
 
     // Check if job exists
     const job = await storageManager.getJob(jobId)
-    
+
     if (!job) {
       res.status(404).json({
         error: {
@@ -546,21 +568,27 @@ router.get('/jobs/:jobId/timeline', async (_req: Request, res: Response) => {
         changes: {
           hasChanges: entry.changes.hasChanges,
           sourceDataDate: entry.changes.sourceDataDate,
-          membershipChange: entry.changes.membershipChange ? {
-            previous: entry.changes.membershipChange.previous,
-            current: entry.changes.membershipChange.current,
-            percentChange: entry.changes.membershipChange.percentChange,
-          } : undefined,
-          clubCountChange: entry.changes.clubCountChange ? {
-            previous: entry.changes.clubCountChange.previous,
-            current: entry.changes.clubCountChange.current,
-            absoluteChange: entry.changes.clubCountChange.absoluteChange,
-          } : undefined,
-          distinguishedChange: entry.changes.distinguishedChange ? {
-            previous: entry.changes.distinguishedChange.previous,
-            current: entry.changes.distinguishedChange.current,
-            percentChange: entry.changes.distinguishedChange.percentChange,
-          } : undefined,
+          membershipChange: entry.changes.membershipChange
+            ? {
+                previous: entry.changes.membershipChange.previous,
+                current: entry.changes.membershipChange.current,
+                percentChange: entry.changes.membershipChange.percentChange,
+              }
+            : undefined,
+          clubCountChange: entry.changes.clubCountChange
+            ? {
+                previous: entry.changes.clubCountChange.previous,
+                current: entry.changes.clubCountChange.current,
+                absoluteChange: entry.changes.clubCountChange.absoluteChange,
+              }
+            : undefined,
+          distinguishedChange: entry.changes.distinguishedChange
+            ? {
+                previous: entry.changes.distinguishedChange.previous,
+                current: entry.changes.distinguishedChange.current,
+                percentChange: entry.changes.distinguishedChange.percentChange,
+              }
+            : undefined,
         },
         isSignificant: entry.isSignificant,
         cacheUpdated: entry.cacheUpdated,
@@ -571,7 +599,7 @@ router.get('/jobs/:jobId/timeline', async (_req: Request, res: Response) => {
     res.json(timelineResponse)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'TIMELINE_ERROR',
@@ -603,7 +631,7 @@ router.get('/jobs/:jobId/estimate', async (_req: Request, res: Response) => {
 
     // Check if job exists
     const job = await storageManager.getJob(jobId)
-    
+
     if (!job) {
       res.status(404).json({
         error: {
@@ -619,19 +647,31 @@ router.get('/jobs/:jobId/estimate', async (_req: Request, res: Response) => {
 
     // Get additional context for the estimate
     const progressStats = await progressTracker.getProgressStatistics(jobId)
-    const finalizationStatus = await progressTracker.isReadyForFinalization(jobId)
+    const finalizationStatus =
+      await progressTracker.isReadyForFinalization(jobId)
 
     const now = new Date()
-    const timeUntilMaxEnd = job.maxEndDate ? job.maxEndDate.getTime() - now.getTime() : 0
-    const daysUntilMaxEnd = Math.max(0, Math.ceil(timeUntilMaxEnd / (24 * 60 * 60 * 1000)))
+    const timeUntilMaxEnd = job.maxEndDate
+      ? job.maxEndDate.getTime() - now.getTime()
+      : 0
+    const daysUntilMaxEnd = Math.max(
+      0,
+      Math.ceil(timeUntilMaxEnd / (24 * 60 * 60 * 1000))
+    )
 
     // Calculate time until estimated completion
     let timeUntilEstimatedCompletion: number | null = null
     let daysUntilEstimatedCompletion: number | null = null
-    
+
     if (estimatedCompletion) {
-      timeUntilEstimatedCompletion = Math.max(0, estimatedCompletion.getTime() - now.getTime())
-      daysUntilEstimatedCompletion = Math.max(0, Math.ceil(timeUntilEstimatedCompletion / (24 * 60 * 60 * 1000)))
+      timeUntilEstimatedCompletion = Math.max(
+        0,
+        estimatedCompletion.getTime() - now.getTime()
+      )
+      daysUntilEstimatedCompletion = Math.max(
+        0,
+        Math.ceil(timeUntilEstimatedCompletion / (24 * 60 * 60 * 1000))
+      )
     }
 
     const estimateResponse = {
@@ -651,9 +691,12 @@ router.get('/jobs/:jobId/estimate', async (_req: Request, res: Response) => {
         reason: finalizationStatus.reason,
       },
       stabilityProgress: {
-        consecutiveStableDays: progressStats.stabilityPeriod.consecutiveStableDays,
-        requiredStabilityDays: progressStats.stabilityPeriod.requiredStabilityDays,
-        stabilityPeriodProgress: progressStats.stabilityPeriod.stabilityPeriodProgress,
+        consecutiveStableDays:
+          progressStats.stabilityPeriod.consecutiveStableDays,
+        requiredStabilityDays:
+          progressStats.stabilityPeriod.requiredStabilityDays,
+        stabilityPeriodProgress:
+          progressStats.stabilityPeriod.stabilityPeriodProgress,
         isInStabilityPeriod: progressStats.stabilityPeriod.isInStabilityPeriod,
       },
       activityMetrics: {
@@ -674,7 +717,7 @@ router.get('/jobs/:jobId/estimate', async (_req: Request, res: Response) => {
     res.json(estimateResponse)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'ESTIMATE_ERROR',
@@ -702,7 +745,8 @@ router.get('/config', async (_req: Request, res: Response) => {
       significantChangeThresholds: {
         membershipPercent: config.significantChangeThresholds.membershipPercent,
         clubCountAbsolute: config.significantChangeThresholds.clubCountAbsolute,
-        distinguishedPercent: config.significantChangeThresholds.distinguishedPercent,
+        distinguishedPercent:
+          config.significantChangeThresholds.distinguishedPercent,
       },
       autoExtensionEnabled: config.autoExtensionEnabled,
       maxExtensionDays: config.maxExtensionDays,
@@ -714,7 +758,7 @@ router.get('/config', async (_req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'CONFIG_ERROR',
@@ -735,7 +779,14 @@ router.put('/config', async (_req: Request, res: Response) => {
     const configUpdate = _req.body
 
     // Validate that body is an object
-    if (typeof configUpdate === 'string' || typeof configUpdate === 'boolean' || configUpdate === null || configUpdate === undefined || typeof configUpdate !== 'object' || Array.isArray(configUpdate)) {
+    if (
+      typeof configUpdate === 'string' ||
+      typeof configUpdate === 'boolean' ||
+      configUpdate === null ||
+      configUpdate === undefined ||
+      typeof configUpdate !== 'object' ||
+      Array.isArray(configUpdate)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_CONFIG_BODY',
@@ -746,8 +797,9 @@ router.put('/config', async (_req: Request, res: Response) => {
     }
 
     // Validate configuration using the orchestrator
-    const validationResult = await orchestrator.validateConfiguration(configUpdate)
-    
+    const validationResult =
+      await orchestrator.validateConfiguration(configUpdate)
+
     if (!validationResult.isValid) {
       res.status(400).json({
         error: {
@@ -768,9 +820,12 @@ router.put('/config', async (_req: Request, res: Response) => {
       stabilityPeriodDays: updatedConfig.stabilityPeriodDays,
       checkFrequencyHours: updatedConfig.checkFrequencyHours,
       significantChangeThresholds: {
-        membershipPercent: updatedConfig.significantChangeThresholds.membershipPercent,
-        clubCountAbsolute: updatedConfig.significantChangeThresholds.clubCountAbsolute,
-        distinguishedPercent: updatedConfig.significantChangeThresholds.distinguishedPercent,
+        membershipPercent:
+          updatedConfig.significantChangeThresholds.membershipPercent,
+        clubCountAbsolute:
+          updatedConfig.significantChangeThresholds.clubCountAbsolute,
+        distinguishedPercent:
+          updatedConfig.significantChangeThresholds.distinguishedPercent,
       },
       autoExtensionEnabled: updatedConfig.autoExtensionEnabled,
       maxExtensionDays: updatedConfig.maxExtensionDays,
@@ -783,10 +838,11 @@ router.put('/config', async (_req: Request, res: Response) => {
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     // Check for specific error types
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update configuration'
-    
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to update configuration'
+
     if (errorMessage.includes('validation')) {
       res.status(400).json({
         error: {
@@ -817,7 +873,13 @@ router.post('/config/validate', async (_req: Request, res: Response) => {
     const configToValidate = _req.body
 
     // Validate that body is an object
-    if (typeof configToValidate === 'string' || typeof configToValidate === 'boolean' || configToValidate === null || typeof configToValidate !== 'object' || Array.isArray(configToValidate)) {
+    if (
+      typeof configToValidate === 'string' ||
+      typeof configToValidate === 'boolean' ||
+      configToValidate === null ||
+      typeof configToValidate !== 'object' ||
+      Array.isArray(configToValidate)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_CONFIG_BODY',
@@ -828,18 +890,21 @@ router.post('/config/validate', async (_req: Request, res: Response) => {
     }
 
     // Validate configuration using the orchestrator
-    const validationResult = await orchestrator.validateConfiguration(configToValidate)
+    const validationResult =
+      await orchestrator.validateConfiguration(configToValidate)
 
     // Return validation result
     res.json({
       isValid: validationResult.isValid,
       errors: validationResult.errors || [],
       warnings: validationResult.warnings || [],
-      validatedConfig: validationResult.isValid ? validationResult.validatedConfig : null,
+      validatedConfig: validationResult.isValid
+        ? validationResult.validatedConfig
+        : null,
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'VALIDATION_ERROR',
@@ -854,104 +919,115 @@ router.post('/config/validate', async (_req: Request, res: Response) => {
  * GET /api/reconciliation/status/:districtId/:targetMonth
  * Get reconciliation status for a specific district and month
  */
-router.get('/status/:districtId/:targetMonth', async (_req: Request, res: Response) => {
-  try {
-    const { districtId, targetMonth } = _req.params
+router.get(
+  '/status/:districtId/:targetMonth',
+  async (_req: Request, res: Response) => {
+    try {
+      const { districtId, targetMonth } = _req.params
 
-    // Validate district ID
-    if (!validateDistrictId(districtId)) {
-      res.status(400).json({
+      // Validate district ID
+      if (!validateDistrictId(districtId)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID',
+            message: 'Invalid district ID format',
+          },
+        })
+        return
+      }
+
+      // Validate target month
+      if (!validateTargetMonth(targetMonth)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_TARGET_MONTH',
+            message: 'Target month must be in YYYY-MM format',
+          },
+        })
+        return
+      }
+
+      // Find active reconciliation job for this district and month
+      const jobs = await storageManager.getJobs({
+        districtId,
+        status: 'active',
+      })
+
+      const activeJob = jobs.find(job => job.targetMonth === targetMonth)
+
+      // Check for completed reconciliation
+      const completedJobs = await storageManager.getJobs({
+        districtId,
+        status: 'completed',
+      })
+
+      const completedJob = completedJobs.find(
+        job => job.targetMonth === targetMonth
+      )
+
+      // Determine data status
+      let dataStatus
+
+      if (completedJob) {
+        // Data is final
+        dataStatus = {
+          isPreliminary: false,
+          isFinal: true,
+          dataCollectionDate:
+            completedJob.currentDataDate || new Date().toISOString(),
+          lastUpdated:
+            completedJob.finalizedDate?.toISOString() ||
+            completedJob.metadata.updatedAt.toISOString(),
+        }
+      } else if (activeJob) {
+        // Data is preliminary - reconciliation in progress
+        const timeline = await progressTracker.getReconciliationTimeline(
+          activeJob.id
+        )
+
+        dataStatus = {
+          isPreliminary: true,
+          isFinal: false,
+          dataCollectionDate:
+            activeJob.currentDataDate || new Date().toISOString(),
+          reconciliationStatus: {
+            phase: timeline.status.phase,
+            daysActive: timeline.status.daysActive,
+            daysStable: timeline.status.daysStable,
+            lastChangeDate: timeline.status.lastChangeDate,
+            nextCheckDate: timeline.status.nextCheckDate,
+            message: timeline.status.message,
+          },
+          lastUpdated: activeJob.metadata.updatedAt.toISOString(),
+        }
+      } else {
+        // No reconciliation found - data is current but not reconciled
+        dataStatus = {
+          isPreliminary: false,
+          isFinal: false,
+          dataCollectionDate: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
+        }
+      }
+
+      res.json({
+        districtId,
+        targetMonth,
+        dataStatus,
+      })
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+
+      res.status(500).json({
         error: {
-          code: 'INVALID_DISTRICT_ID',
-          message: 'Invalid district ID format',
+          code: errorResponse.code || 'STATUS_ERROR',
+          message: 'Failed to get reconciliation status',
+          details: errorResponse.details,
         },
       })
-      return
     }
-
-    // Validate target month
-    if (!validateTargetMonth(targetMonth)) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_TARGET_MONTH',
-          message: 'Target month must be in YYYY-MM format',
-        },
-      })
-      return
-    }
-
-    // Find active reconciliation job for this district and month
-    const jobs = await storageManager.getJobs({
-      districtId,
-      status: 'active',
-    })
-
-    const activeJob = jobs.find(job => job.targetMonth === targetMonth)
-
-    // Check for completed reconciliation
-    const completedJobs = await storageManager.getJobs({
-      districtId,
-      status: 'completed',
-    })
-
-    const completedJob = completedJobs.find(job => job.targetMonth === targetMonth)
-
-    // Determine data status
-    let dataStatus
-    
-    if (completedJob) {
-      // Data is final
-      dataStatus = {
-        isPreliminary: false,
-        isFinal: true,
-        dataCollectionDate: completedJob.currentDataDate || new Date().toISOString(),
-        lastUpdated: completedJob.finalizedDate?.toISOString() || completedJob.metadata.updatedAt.toISOString(),
-      }
-    } else if (activeJob) {
-      // Data is preliminary - reconciliation in progress
-      const timeline = await progressTracker.getReconciliationTimeline(activeJob.id)
-      
-      dataStatus = {
-        isPreliminary: true,
-        isFinal: false,
-        dataCollectionDate: activeJob.currentDataDate || new Date().toISOString(),
-        reconciliationStatus: {
-          phase: timeline.status.phase,
-          daysActive: timeline.status.daysActive,
-          daysStable: timeline.status.daysStable,
-          lastChangeDate: timeline.status.lastChangeDate,
-          nextCheckDate: timeline.status.nextCheckDate,
-          message: timeline.status.message,
-        },
-        lastUpdated: activeJob.metadata.updatedAt.toISOString(),
-      }
-    } else {
-      // No reconciliation found - data is current but not reconciled
-      dataStatus = {
-        isPreliminary: false,
-        isFinal: false,
-        dataCollectionDate: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-      }
-    }
-
-    res.json({
-      districtId,
-      targetMonth,
-      dataStatus,
-    })
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
-    
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'STATUS_ERROR',
-        message: 'Failed to get reconciliation status',
-        details: errorResponse.details,
-      },
-    })
   }
-})
+)
 
 export default router
 // Import metrics service
@@ -969,7 +1045,11 @@ router.get('/metrics', async (_req: Request, res: Response) => {
     const { districtId } = _req.query
 
     // Validate district ID if provided
-    if (districtId && typeof districtId === 'string' && !validateDistrictId(districtId)) {
+    if (
+      districtId &&
+      typeof districtId === 'string' &&
+      !validateDistrictId(districtId)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -980,7 +1060,7 @@ router.get('/metrics', async (_req: Request, res: Response) => {
     }
 
     // Get metrics (district-specific or global)
-    const metrics = districtId 
+    const metrics = districtId
       ? metricsService.getDistrictMetrics(districtId as string)
       : metricsService.getMetrics()
 
@@ -988,7 +1068,8 @@ router.get('/metrics', async (_req: Request, res: Response) => {
     const performancePatterns = metricsService.getPerformancePatterns()
 
     // Get job duration metrics for analysis
-    const jobDurations = metricsService.getJobDurationMetrics()
+    const jobDurations = metricsService
+      .getJobDurationMetrics()
       .filter(job => !districtId || job.districtId === districtId)
       .map(job => ({
         jobId: job.jobId,
@@ -1000,7 +1081,7 @@ router.get('/metrics', async (_req: Request, res: Response) => {
         status: job.status,
         wasExtended: job.wasExtended,
         extensionCount: job.extensionCount,
-        finalStabilityDays: job.finalStabilityDays
+        finalStabilityDays: job.finalStabilityDays,
       }))
 
     // Calculate additional monitoring metrics
@@ -1008,12 +1089,12 @@ router.get('/metrics', async (_req: Request, res: Response) => {
     const last24Hours = now.getTime() - 24 * 60 * 60 * 1000
     const last7Days = now.getTime() - 7 * 24 * 60 * 60 * 1000
 
-    const recentJobs = jobDurations.filter(job => 
-      new Date(job.startDate).getTime() > last7Days
+    const recentJobs = jobDurations.filter(
+      job => new Date(job.startDate).getTime() > last7Days
     )
 
-    const todayJobs = jobDurations.filter(job => 
-      new Date(job.startDate).getTime() > last24Hours
+    const todayJobs = jobDurations.filter(
+      job => new Date(job.startDate).getTime() > last24Hours
     )
 
     const monitoringMetrics = {
@@ -1024,37 +1105,43 @@ router.get('/metrics', async (_req: Request, res: Response) => {
         activeJobs: metrics.activeJobs,
         averageDuration: metrics.averageDuration,
         extensionRate: metrics.extensionRate,
-        timeoutRate: metrics.timeoutRate
+        timeoutRate: metrics.timeoutRate,
       },
       performance: {
-        averageDurationHours: Math.round(metrics.averageDuration / (60 * 60 * 1000) * 100) / 100,
-        medianDurationHours: Math.round(metrics.medianDuration / (60 * 60 * 1000) * 100) / 100,
-        longestDurationHours: Math.round(metrics.longestDuration / (60 * 60 * 1000) * 100) / 100,
-        shortestDurationHours: Math.round(metrics.shortestDuration / (60 * 60 * 1000) * 100) / 100,
-        averageStabilityPeriod: metrics.averageStabilityPeriod
+        averageDurationHours:
+          Math.round((metrics.averageDuration / (60 * 60 * 1000)) * 100) / 100,
+        medianDurationHours:
+          Math.round((metrics.medianDuration / (60 * 60 * 1000)) * 100) / 100,
+        longestDurationHours:
+          Math.round((metrics.longestDuration / (60 * 60 * 1000)) * 100) / 100,
+        shortestDurationHours:
+          Math.round((metrics.shortestDuration / (60 * 60 * 1000)) * 100) / 100,
+        averageStabilityPeriod: metrics.averageStabilityPeriod,
       },
       recent: {
         last7Days: {
           totalJobs: recentJobs.length,
-          successfulJobs: recentJobs.filter(job => job.status === 'completed').length,
+          successfulJobs: recentJobs.filter(job => job.status === 'completed')
+            .length,
           failedJobs: recentJobs.filter(job => job.status === 'failed').length,
-          extendedJobs: recentJobs.filter(job => job.wasExtended).length
+          extendedJobs: recentJobs.filter(job => job.wasExtended).length,
         },
         last24Hours: {
           totalJobs: todayJobs.length,
-          successfulJobs: todayJobs.filter(job => job.status === 'completed').length,
+          successfulJobs: todayJobs.filter(job => job.status === 'completed')
+            .length,
           failedJobs: todayJobs.filter(job => job.status === 'failed').length,
-          activeJobs: todayJobs.filter(job => job.status === 'active').length
-        }
+          activeJobs: todayJobs.filter(job => job.status === 'active').length,
+        },
       },
       patterns: performancePatterns.map(pattern => ({
         pattern: pattern.pattern,
         description: pattern.description,
         severity: pattern.severity,
         affectedJobCount: pattern.affectedJobs.length,
-        recommendation: pattern.recommendation
+        recommendation: pattern.recommendation,
       })),
-      health: metricsService.getHealthStatus()
+      health: metricsService.getHealthStatus(),
     }
 
     res.json({
@@ -1062,11 +1149,11 @@ router.get('/metrics', async (_req: Request, res: Response) => {
       timestamp: now.toISOString(),
       districtId: districtId || null,
       metrics: monitoringMetrics,
-      jobDurations: jobDurations.slice(0, 50) // Limit to recent 50 jobs for performance
+      jobDurations: jobDurations.slice(0, 50), // Limit to recent 50 jobs for performance
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'METRICS_ERROR',
@@ -1085,8 +1172,18 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
     const { category, severity } = _req.query
 
     // Validate category if provided
-    const validCategories = ['RECONCILIATION', 'CIRCUIT_BREAKER', 'DATA_QUALITY', 'SYSTEM', 'NETWORK']
-    if (category && typeof category === 'string' && !validCategories.includes(category)) {
+    const validCategories = [
+      'RECONCILIATION',
+      'CIRCUIT_BREAKER',
+      'DATA_QUALITY',
+      'SYSTEM',
+      'NETWORK',
+    ]
+    if (
+      category &&
+      typeof category === 'string' &&
+      !validCategories.includes(category)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_CATEGORY',
@@ -1098,7 +1195,11 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
 
     // Validate severity if provided
     const validSeverities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-    if (severity && typeof severity === 'string' && !validSeverities.includes(severity)) {
+    if (
+      severity &&
+      typeof severity === 'string' &&
+      !validSeverities.includes(severity)
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_SEVERITY',
@@ -1110,11 +1211,13 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
 
     // Get alerts from AlertManager
     const alertManager = AlertManager.getInstance()
-    const activeAlerts = alertManager.getActiveAlerts(category as AlertCategory | undefined)
+    const activeAlerts = alertManager.getActiveAlerts(
+      category as AlertCategory | undefined
+    )
     const alertStats = alertManager.getAlertStats()
 
     // Filter by severity if provided
-    const filteredAlerts = severity 
+    const filteredAlerts = severity
       ? activeAlerts.filter(alert => alert.severity === severity)
       : activeAlerts
 
@@ -1130,7 +1233,7 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
       resolved: alert.resolved,
       resolvedAt: alert.resolvedAt?.toISOString(),
       acknowledgedBy: alert.acknowledgedBy,
-      acknowledgedAt: alert.acknowledgedAt?.toISOString()
+      acknowledgedAt: alert.acknowledgedAt?.toISOString(),
     }))
 
     res.json({
@@ -1138,7 +1241,7 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       filters: {
         category: category || null,
-        severity: severity || null
+        severity: severity || null,
       },
       alerts: transformedAlerts,
       statistics: {
@@ -1146,12 +1249,12 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
         active: alertStats.active,
         resolved: alertStats.resolved,
         bySeverity: alertStats.bySeverity,
-        byCategory: alertStats.byCategory
-      }
+        byCategory: alertStats.byCategory,
+      },
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'ALERTS_ERROR',
@@ -1166,66 +1269,69 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
  * POST /api/reconciliation/monitoring/alerts/:alertId/resolve
  * Resolve a specific alert
  */
-router.post('/monitoring/alerts/:alertId/resolve', async (_req: Request, res: Response) => {
-  try {
-    const { alertId } = _req.params
-    const { resolvedBy } = _req.body
+router.post(
+  '/monitoring/alerts/:alertId/resolve',
+  async (_req: Request, res: Response) => {
+    try {
+      const { alertId } = _req.params
+      const { resolvedBy } = _req.body
 
-    // Validate alert ID
-    if (!alertId || typeof alertId !== 'string' || alertId.trim() === '') {
-      res.status(400).json({
+      // Validate alert ID
+      if (!alertId || typeof alertId !== 'string' || alertId.trim() === '') {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_ALERT_ID',
+            message: 'Alert ID is required and must be a non-empty string',
+          },
+        })
+        return
+      }
+
+      // Validate resolvedBy if provided
+      if (resolvedBy && typeof resolvedBy !== 'string') {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_RESOLVED_BY',
+            message: 'resolvedBy must be a string',
+          },
+        })
+        return
+      }
+
+      // Resolve the alert
+      const alertManager = AlertManager.getInstance()
+      const resolved = await alertManager.resolveAlert(alertId, resolvedBy)
+
+      if (!resolved) {
+        res.status(404).json({
+          error: {
+            code: 'ALERT_NOT_FOUND',
+            message: 'Alert not found or already resolved',
+          },
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        message: 'Alert resolved successfully',
+        alertId,
+        resolvedBy: resolvedBy || null,
+        resolvedAt: new Date().toISOString(),
+      })
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+
+      res.status(500).json({
         error: {
-          code: 'INVALID_ALERT_ID',
-          message: 'Alert ID is required and must be a non-empty string',
+          code: errorResponse.code || 'RESOLVE_ERROR',
+          message: 'Failed to resolve alert',
+          details: errorResponse.details,
         },
       })
-      return
     }
-
-    // Validate resolvedBy if provided
-    if (resolvedBy && typeof resolvedBy !== 'string') {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_RESOLVED_BY',
-          message: 'resolvedBy must be a string',
-        },
-      })
-      return
-    }
-
-    // Resolve the alert
-    const alertManager = AlertManager.getInstance()
-    const resolved = await alertManager.resolveAlert(alertId, resolvedBy)
-
-    if (!resolved) {
-      res.status(404).json({
-        error: {
-          code: 'ALERT_NOT_FOUND',
-          message: 'Alert not found or already resolved',
-        },
-      })
-      return
-    }
-
-    res.json({
-      success: true,
-      message: 'Alert resolved successfully',
-      alertId,
-      resolvedBy: resolvedBy || null,
-      resolvedAt: new Date().toISOString()
-    })
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
-    
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'RESOLVE_ERROR',
-        message: 'Failed to resolve alert',
-        details: errorResponse.details,
-      },
-    })
   }
-})
+)
 /**
  * GET /api/reconciliation/monitoring/health
  * Get health status of reconciliation monitoring system
@@ -1240,17 +1346,20 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
     // Check active jobs status
     const activeJobs = await storageManager.getJobs({ status: 'active' })
     const longRunningJobs = activeJobs.filter(job => {
-      const daysSinceStart = (Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
+      const daysSinceStart =
+        (Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
       return daysSinceStart > job.config.maxReconciliationDays
     })
 
     // Check for critical alerts
-    const criticalAlerts = alertManager.getActiveAlerts().filter(alert => 
-      alert.severity === 'CRITICAL' || alert.severity === 'HIGH'
-    )
+    const criticalAlerts = alertManager
+      .getActiveAlerts()
+      .filter(
+        alert => alert.severity === 'CRITICAL' || alert.severity === 'HIGH'
+      )
 
     // Determine overall health
-    const isHealthy = 
+    const isHealthy =
       metricsHealth.isHealthy &&
       criticalAlerts.length === 0 &&
       longRunningJobs.length === 0
@@ -1274,29 +1383,29 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
       overall: {
         isHealthy,
         status: isHealthy ? 'healthy' : 'degraded',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       components: {
         metricsService: {
           isHealthy: metricsHealth.isHealthy,
           lastCleanup: metricsHealth.lastCleanup,
           totalJobs: metricsHealth.totalJobs,
-          activeJobs: metricsHealth.activeJobs
+          activeJobs: metricsHealth.activeJobs,
         },
         alerting: {
           isHealthy: alertStats.active < 10, // Consider unhealthy if too many active alerts
           activeAlerts: alertStats.active,
           criticalAlerts: criticalAlerts.length,
-          totalAlerts: alertStats.total
+          totalAlerts: alertStats.total,
         },
         reconciliationJobs: {
           isHealthy: longRunningJobs.length === 0,
           activeJobs: activeJobs.length,
           longRunningJobs: longRunningJobs.length,
-          maxAllowedDuration: 15 // days
-        }
+          maxAllowedDuration: 15, // days
+        },
       },
-      issues: []
+      issues: [],
     }
 
     // Add specific issues if any
@@ -1309,9 +1418,9 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
           alerts: criticalAlerts.map(alert => ({
             id: alert.id,
             title: alert.title,
-            category: alert.category
-          }))
-        }
+            category: alert.category,
+          })),
+        },
       })
     }
 
@@ -1325,9 +1434,11 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
             id: job.id,
             districtId: job.districtId,
             targetMonth: job.targetMonth,
-            daysSinceStart: Math.round((Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
-          }))
-        }
+            daysSinceStart: Math.round(
+              (Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
+            ),
+          })),
+        },
       })
     }
 
@@ -1336,19 +1447,19 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
         type: 'high_alert_volume',
         message: `${alertStats.active} active alerts may indicate system issues`,
         severity: 'low',
-        details: { activeAlerts: alertStats.active }
+        details: { activeAlerts: alertStats.active },
       })
     }
 
     res.json(healthStatus)
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       overall: {
         isHealthy: false,
         status: 'error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       error: {
         code: errorResponse.code || 'HEALTH_CHECK_ERROR',
@@ -1367,7 +1478,7 @@ router.post('/monitoring/cleanup', async (_req: Request, res: Response) => {
   try {
     // Clean up old metrics
     const cleanedMetrics = await metricsService.cleanupOldMetrics()
-    
+
     // Clean up old alerts
     const alertManager = AlertManager.getInstance()
     const cleanedAlerts = await alertManager.cleanupOldAlerts()
@@ -1378,12 +1489,12 @@ router.post('/monitoring/cleanup', async (_req: Request, res: Response) => {
       results: {
         cleanedMetrics,
         cleanedAlerts,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
-    
+
     res.status(500).json({
       error: {
         code: errorResponse.code || 'CLEANUP_ERROR',

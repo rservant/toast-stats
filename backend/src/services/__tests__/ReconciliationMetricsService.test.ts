@@ -1,6 +1,6 @@
 /**
  * Tests for ReconciliationMetricsService
- * 
+ *
  * Tests metrics collection, performance pattern detection, and alerting
  * for reconciliation job monitoring and analysis.
  */
@@ -16,26 +16,28 @@ vi.mock('../../utils/AlertManager.js', () => ({
   AlertManager: {
     getInstance: vi.fn(() => ({
       sendAlert: vi.fn(),
-      sendReconciliationFailureAlert: vi.fn()
-    }))
+      sendReconciliationFailureAlert: vi.fn(),
+    })),
   },
   AlertSeverity: {
     LOW: 'LOW',
     MEDIUM: 'MEDIUM',
     HIGH: 'HIGH',
-    CRITICAL: 'CRITICAL'
+    CRITICAL: 'CRITICAL',
   },
   AlertCategory: {
     RECONCILIATION: 'RECONCILIATION',
     CIRCUIT_BREAKER: 'CIRCUIT_BREAKER',
     DATA_QUALITY: 'DATA_QUALITY',
     SYSTEM: 'SYSTEM',
-    NETWORK: 'NETWORK'
-  }
+    NETWORK: 'NETWORK',
+  },
 }))
 
 // Helper function to create a complete ReconciliationJob
-function createTestJob(overrides: Partial<ReconciliationJob> = {}): ReconciliationJob {
+function createTestJob(
+  overrides: Partial<ReconciliationJob> = {}
+): ReconciliationJob {
   return {
     id: 'job-1',
     districtId: 'D1',
@@ -46,7 +48,7 @@ function createTestJob(overrides: Partial<ReconciliationJob> = {}): Reconciliati
     triggeredBy: 'automatic',
     progress: {
       phase: 'monitoring',
-      completionPercentage: 0
+      completionPercentage: 0,
     },
     config: {
       maxReconciliationDays: 15,
@@ -55,17 +57,17 @@ function createTestJob(overrides: Partial<ReconciliationJob> = {}): Reconciliati
       significantChangeThresholds: {
         membershipPercent: 1,
         clubCountAbsolute: 1,
-        distinguishedPercent: 2
+        distinguishedPercent: 2,
       },
       autoExtensionEnabled: true,
-      maxExtensionDays: 5
+      maxExtensionDays: 5,
     },
     metadata: {
       createdAt: new Date('2024-01-01T00:00:00Z'),
       updatedAt: new Date('2024-01-01T00:00:00Z'),
-      triggeredBy: 'automatic'
+      triggeredBy: 'automatic',
     },
-    ...overrides
+    ...overrides,
   }
 }
 
@@ -75,8 +77,8 @@ vi.mock('../../utils/logger.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    debug: vi.fn()
-  }
+    debug: vi.fn(),
+  },
 }))
 
 // Mock interface for AlertManager
@@ -111,8 +113,10 @@ describe('ReconciliationMetricsService', () => {
 
   beforeEach(() => {
     // Reset singleton instance
-    ;(ReconciliationMetricsService as unknown as { instance: undefined }).instance = undefined
-    
+    ;(
+      ReconciliationMetricsService as unknown as { instance: undefined }
+    ).instance = undefined
+
     mockAlertManager = {
       alerts: new Map(),
       alertRules: new Map(),
@@ -135,11 +139,13 @@ describe('ReconciliationMetricsService', () => {
       sendCapacityAlert: vi.fn(),
       sendNetworkAlert: vi.fn(),
       sendDatabaseAlert: vi.fn(),
-      sendFileSystemAlert: vi.fn()
+      sendFileSystemAlert: vi.fn(),
     }
-    
-    vi.mocked(AlertManager.getInstance).mockReturnValue(mockAlertManager as unknown as AlertManager)
-    
+
+    vi.mocked(AlertManager.getInstance).mockReturnValue(
+      mockAlertManager as unknown as AlertManager
+    )
+
     metricsService = ReconciliationMetricsService.getInstance()
   })
 
@@ -151,7 +157,7 @@ describe('ReconciliationMetricsService', () => {
     it('should return singleton instance', () => {
       const instance1 = ReconciliationMetricsService.getInstance()
       const instance2 = ReconciliationMetricsService.getInstance()
-      
+
       expect(instance1).toBe(instance2)
     })
   })
@@ -171,7 +177,7 @@ describe('ReconciliationMetricsService', () => {
         status: 'active',
         wasExtended: false,
         extensionCount: 0,
-        finalStabilityDays: 0
+        finalStabilityDays: 0,
       })
     })
   })
@@ -188,9 +194,9 @@ describe('ReconciliationMetricsService', () => {
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
         progress: {
           phase: 'completed',
-          completionPercentage: 100
+          completionPercentage: 100,
         },
-        triggeredBy: 'automatic'
+        triggeredBy: 'automatic',
       })
 
       metricsService.recordJobStart(job)
@@ -216,7 +222,7 @@ describe('ReconciliationMetricsService', () => {
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
         progress: {
           phase: 'monitoring',
-          completionPercentage: 50
+          completionPercentage: 50,
         },
         triggeredBy: 'manual',
         config: {
@@ -226,16 +232,16 @@ describe('ReconciliationMetricsService', () => {
           significantChangeThresholds: {
             membershipPercent: 1,
             clubCountAbsolute: 1,
-            distinguishedPercent: 2
+            distinguishedPercent: 2,
           },
           autoExtensionEnabled: true,
-          maxExtensionDays: 5
+          maxExtensionDays: 5,
         },
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       }
 
       metricsService.recordJobStart(job)
@@ -256,7 +262,7 @@ describe('ReconciliationMetricsService', () => {
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
         progress: {
           phase: 'monitoring',
-          completionPercentage: 50
+          completionPercentage: 50,
         },
         triggeredBy: 'manual',
         config: {
@@ -266,16 +272,16 @@ describe('ReconciliationMetricsService', () => {
           significantChangeThresholds: {
             membershipPercent: 1,
             clubCountAbsolute: 1,
-            distinguishedPercent: 2
+            distinguishedPercent: 2,
           },
           autoExtensionEnabled: true,
-          maxExtensionDays: 5
+          maxExtensionDays: 5,
         },
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       }
 
       metricsService.recordJobStart(job)
@@ -297,7 +303,7 @@ describe('ReconciliationMetricsService', () => {
         maxEndDate: new Date('2024-01-16T00:00:00Z'),
         progress: {
           phase: 'monitoring',
-          completionPercentage: 50
+          completionPercentage: 50,
         },
         triggeredBy: 'manual',
         config: {
@@ -307,16 +313,16 @@ describe('ReconciliationMetricsService', () => {
           significantChangeThresholds: {
             membershipPercent: 1,
             clubCountAbsolute: 1,
-            distinguishedPercent: 2
+            distinguishedPercent: 2,
           },
           autoExtensionEnabled: true,
-          maxExtensionDays: 5
+          maxExtensionDays: 5,
         },
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       }
 
       metricsService.recordJobStart(job)
@@ -327,12 +333,9 @@ describe('ReconciliationMetricsService', () => {
       expect(metrics.failedJobs).toBe(1)
       expect(metrics.failureRate).toBe(100)
 
-      expect(mockAlertManager.sendReconciliationFailureAlert).toHaveBeenCalledWith(
-        'D1',
-        '2024-01',
-        'Dashboard unavailable',
-        'job-1'
-      )
+      expect(
+        mockAlertManager.sendReconciliationFailureAlert
+      ).toHaveBeenCalledWith('D1', '2024-01', 'Dashboard unavailable', 'job-1')
     })
   })
 
@@ -349,8 +352,8 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-05T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       const job2: ReconciliationJob = createTestReconciliationJob({
@@ -364,13 +367,13 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-01T00:00:00Z'),
-          triggeredBy: 'manual'
-        }
+          triggeredBy: 'manual',
+        },
       })
 
       metricsService.recordJobStart(job1)
       metricsService.recordJobCompletion(job1, 3)
-      
+
       metricsService.recordJobStart(job2)
       metricsService.recordJobFailure(job2, 'Test error')
 
@@ -404,8 +407,8 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-05T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       const job2: ReconciliationJob = createTestReconciliationJob({
@@ -420,13 +423,13 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: new Date('2024-01-01T00:00:00Z'),
           updatedAt: new Date('2024-01-03T00:00:00Z'),
-          triggeredBy: 'manual'
-        }
+          triggeredBy: 'manual',
+        },
       })
 
       metricsService.recordJobStart(job1)
       metricsService.recordJobCompletion(job1, 3)
-      
+
       metricsService.recordJobStart(job2)
       metricsService.recordJobCompletion(job2, 2)
 
@@ -447,16 +450,18 @@ describe('ReconciliationMetricsService', () => {
           id: `job-${i}`,
           districtId: 'D1',
           targetMonth: `2024-0${i}`,
-          status: 'failed'
+          status: 'failed',
         })
-        
+
         metricsService.recordJobStart(job)
         await metricsService.recordJobFailure(job, `Error ${i}`)
       }
 
       const patterns = metricsService.getPerformancePatterns()
-      const frequentFailuresPattern = patterns.find(p => p.pattern === 'frequent_failures')
-      
+      const frequentFailuresPattern = patterns.find(
+        p => p.pattern === 'frequent_failures'
+      )
+
       expect(frequentFailuresPattern).toBeDefined()
       expect(frequentFailuresPattern?.severity).toBe('high')
       expect(frequentFailuresPattern?.affectedJobs).toHaveLength(3)
@@ -476,9 +481,9 @@ describe('ReconciliationMetricsService', () => {
           id: `job-${i}`,
           districtId: 'D1',
           targetMonth: `2024-0${i}`,
-          status: 'completed'
+          status: 'completed',
         })
-        
+
         metricsService.recordJobStart(job)
         metricsService.recordJobExtension(`job-${i}`, 2)
         metricsService.recordJobExtension(`job-${i}`, 1) // Multiple extensions
@@ -487,7 +492,7 @@ describe('ReconciliationMetricsService', () => {
 
       const patterns = metricsService.getPerformancePatterns()
       const extendedPattern = patterns.find(p => p.pattern === 'extended')
-      
+
       expect(extendedPattern).toBeDefined()
       expect(extendedPattern?.severity).toBe('medium')
       expect(extendedPattern?.affectedJobs).toHaveLength(2)
@@ -507,17 +512,17 @@ describe('ReconciliationMetricsService', () => {
           metadata: {
             createdAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000),
             updatedAt: new Date(),
-            triggeredBy: 'automatic'
-          }
+            triggeredBy: 'automatic',
+          },
         })
-        
+
         metricsService.recordJobStart(job)
         await metricsService.recordJobFailure(job, 'Timeout')
       }
 
       const patterns = metricsService.getPerformancePatterns()
       const timeoutPattern = patterns.find(p => p.pattern === 'timeout')
-      
+
       expect(timeoutPattern).toBeDefined()
       expect(timeoutPattern?.severity).toBe('high')
       expect(timeoutPattern?.affectedJobs).toHaveLength(2)
@@ -540,8 +545,8 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: oldDate,
           updatedAt: oldDate,
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       const recentJob: ReconciliationJob = createTestReconciliationJob({
@@ -555,20 +560,20 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: recentDate,
           updatedAt: recentDate,
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       metricsService.recordJobStart(oldJob)
       metricsService.recordJobCompletion(oldJob, 3)
-      
+
       metricsService.recordJobStart(recentJob)
       metricsService.recordJobCompletion(recentJob, 3)
 
       expect(metricsService.getJobDurationMetrics()).toHaveLength(2)
 
       const cleanedCount = await metricsService.cleanupOldMetrics()
-      
+
       expect(cleanedCount).toBe(1)
       expect(metricsService.getJobDurationMetrics()).toHaveLength(1)
       expect(metricsService.getJobDurationMetrics()[0].jobId).toBe('recent-job')
@@ -587,14 +592,14 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: oldDate,
           updatedAt: oldDate,
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       metricsService.recordJobStart(activeJob)
 
       const cleanedCount = await metricsService.cleanupOldMetrics()
-      
+
       expect(cleanedCount).toBe(0)
       expect(metricsService.getJobDurationMetrics()).toHaveLength(1)
     })
@@ -612,14 +617,14 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       metricsService.recordJobStart(job)
 
       const health = metricsService.getHealthStatus()
-      
+
       expect(health.isHealthy).toBe(true)
       expect(health.totalJobs).toBe(1)
       expect(health.activeJobs).toBe(1)
@@ -641,8 +646,8 @@ describe('ReconciliationMetricsService', () => {
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       metricsService.recordJobStart(job)
@@ -661,7 +666,7 @@ describe('ReconciliationMetricsService', () => {
   describe('edge cases', () => {
     it('should handle missing job metrics gracefully', () => {
       metricsService.recordJobExtension('non-existent-job', 3)
-      
+
       // Should not throw and should log warning
       expect(metricsService.getJobDurationMetrics()).toHaveLength(0)
     })
@@ -671,7 +676,7 @@ describe('ReconciliationMetricsService', () => {
         { duration: 1000, id: 'job-1' },
         { duration: 2000, id: 'job-2' },
         { duration: 3000, id: 'job-3' },
-        { duration: 4000, id: 'job-4' }
+        { duration: 4000, id: 'job-4' },
       ]
 
       jobs.forEach(({ duration, id }) => {
@@ -686,8 +691,8 @@ describe('ReconciliationMetricsService', () => {
           metadata: {
             createdAt: new Date(),
             updatedAt: new Date(),
-            triggeredBy: 'automatic'
-          }
+            triggeredBy: 'automatic',
+          },
         })
 
         metricsService.recordJobStart(job)

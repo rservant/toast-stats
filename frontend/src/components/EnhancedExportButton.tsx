@@ -1,22 +1,22 @@
-import React from 'react';
-import { ExportButton } from './ExportButton';
-import { DataStatus } from '../types/reconciliation';
+import React from 'react'
+import { ExportButton } from './ExportButton'
+import { DataStatus } from '../types/reconciliation'
 
 interface EnhancedExportButtonProps {
-  onExport: (metadata?: ExportMetadata) => void | Promise<void>;
-  dataStatus?: DataStatus;
-  label?: string;
-  disabled?: boolean;
-  className?: string;
+  onExport: (metadata?: ExportMetadata) => void | Promise<void>
+  dataStatus?: DataStatus
+  label?: string
+  disabled?: boolean
+  className?: string
 }
 
 export interface ExportMetadata {
-  reconciliationStatus: string;
-  dataCollectionDate: string;
-  exportTimestamp: string;
-  isPreliminary: boolean;
-  isFinal: boolean;
-  reconciliationPhase?: string;
+  reconciliationStatus: string
+  dataCollectionDate: string
+  exportTimestamp: string
+  isPreliminary: boolean
+  isFinal: boolean
+  reconciliationPhase?: string
 }
 
 /**
@@ -31,25 +31,25 @@ export const EnhancedExportButton: React.FC<EnhancedExportButtonProps> = ({
 }) => {
   const handleExport = async () => {
     if (!dataStatus) {
-      await onExport();
-      return;
+      await onExport()
+      return
     }
 
     const metadata: ExportMetadata = {
-      reconciliationStatus: dataStatus.isFinal 
-        ? 'Final' 
-        : dataStatus.isPreliminary 
-        ? 'Preliminary' 
-        : 'Current',
+      reconciliationStatus: dataStatus.isFinal
+        ? 'Final'
+        : dataStatus.isPreliminary
+          ? 'Preliminary'
+          : 'Current',
       dataCollectionDate: dataStatus.dataCollectionDate,
       exportTimestamp: new Date().toISOString(),
       isPreliminary: dataStatus.isPreliminary,
       isFinal: dataStatus.isFinal,
       reconciliationPhase: dataStatus.reconciliationStatus?.phase,
-    };
+    }
 
-    await onExport(metadata);
-  };
+    await onExport(metadata)
+  }
 
   return (
     <ExportButton
@@ -58,5 +58,5 @@ export const EnhancedExportButton: React.FC<EnhancedExportButtonProps> = ({
       disabled={disabled}
       className={className}
     />
-  );
-};
+  )
+}

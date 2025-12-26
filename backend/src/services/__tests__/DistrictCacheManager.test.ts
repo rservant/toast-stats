@@ -61,7 +61,13 @@ describe('DistrictCacheManager', () => {
       const date = '2024-11-22'
       const districtPerformance = [{ metric: 'test' }]
 
-      await cacheManager.cacheDistrictData(districtId, date, districtPerformance, [], [])
+      await cacheManager.cacheDistrictData(
+        districtId,
+        date,
+        districtPerformance,
+        [],
+        []
+      )
 
       // Verify no temp files left behind
       const dates = await cacheManager.getCachedDatesForDistrict(districtId)
@@ -193,7 +199,8 @@ describe('DistrictCacheManager', () => {
 
       await cacheManager.clearDistrictCache(districtId)
 
-      const cachedDates = await cacheManager.getCachedDatesForDistrict(districtId)
+      const cachedDates =
+        await cacheManager.getCachedDatesForDistrict(districtId)
       expect(cachedDates).toEqual([])
     })
 
@@ -213,7 +220,8 @@ describe('DistrictCacheManager', () => {
 
       await cacheManager.clearDistrictCacheForDate(districtId, '2024-11-21')
 
-      const cachedDates = await cacheManager.getCachedDatesForDistrict(districtId)
+      const cachedDates =
+        await cacheManager.getCachedDatesForDistrict(districtId)
       expect(cachedDates).toEqual(['2024-11-20', '2024-11-22'])
     })
 
@@ -234,7 +242,13 @@ describe('DistrictCacheManager', () => {
       const districtIds = ['42', '10', '99', '5']
 
       for (const districtId of districtIds) {
-        await cacheManager.cacheDistrictData(districtId, '2024-11-22', [], [], [])
+        await cacheManager.cacheDistrictData(
+          districtId,
+          '2024-11-22',
+          [],
+          [],
+          []
+        )
       }
 
       const districts = await cacheManager.getCachedDistricts()

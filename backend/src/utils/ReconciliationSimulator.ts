@@ -1,21 +1,19 @@
 /**
  * Reconciliation Scenario Simulation Tools
- * 
+ *
  * Provides tools for simulating various reconciliation scenarios for testing
  * and debugging purposes. Generates realistic data patterns and scenarios.
  */
 
 import { logger } from './logger.js'
-import type { 
+import type {
   ReconciliationConfig,
   DataChanges,
   ReconciliationTimeline,
   ReconciliationEntry,
-  DistinguishedCounts
+  DistinguishedCounts,
 } from '../types/reconciliation.js'
 import type { DistrictStatistics } from '../types/districts.js'
-
-
 
 export interface SimulationScenario {
   name: string
@@ -29,7 +27,12 @@ export interface SimulationScenario {
 }
 
 export interface DataPattern {
-  type: 'stable' | 'gradual_change' | 'sudden_change' | 'volatile' | 'late_finalization'
+  type:
+    | 'stable'
+    | 'gradual_change'
+    | 'sudden_change'
+    | 'volatile'
+    | 'late_finalization'
   changeFrequency: number // days between changes
   changeIntensity: 'low' | 'medium' | 'high'
   stabilityPeriod: number // days of stability at end
@@ -73,18 +76,21 @@ export class ReconciliationSimulator {
       throw new Error(`Scenario not found: ${scenarioName}`)
     }
 
-    logger.info('Starting reconciliation simulation', { 
+    logger.info('Starting reconciliation simulation', {
       scenario: scenarioName,
       districtId: scenario.districtId,
-      targetMonth: scenario.targetMonth
+      targetMonth: scenario.targetMonth,
     })
 
     // Generate base district data
     const baseData = this.generateBaseDistrictData(scenario.districtId)
-    
+
     // Generate data timeline based on pattern
-    const dataTimeline = this.generateDataTimeline(baseData, scenario.dataPattern)
-    
+    const dataTimeline = this.generateDataTimeline(
+      baseData,
+      scenario.dataPattern
+    )
+
     // Simulate reconciliation process
     const result = await this.runSimulation(scenario, dataTimeline)
 
@@ -92,7 +98,7 @@ export class ReconciliationSimulator {
       scenario: scenarioName,
       actualOutcome: result.actualOutcome,
       actualDuration: result.actualDuration,
-      totalChanges: result.metrics.totalChanges
+      totalChanges: result.metrics.totalChanges,
     })
 
     return result
@@ -116,17 +122,19 @@ export class ReconciliationSimulator {
   /**
    * Generate multiple scenarios for comprehensive testing
    */
-  async runBatchSimulation(scenarioNames: string[]): Promise<SimulationResult[]> {
+  async runBatchSimulation(
+    scenarioNames: string[]
+  ): Promise<SimulationResult[]> {
     const results: SimulationResult[] = []
-    
+
     for (const scenarioName of scenarioNames) {
       try {
         const result = await this.simulateScenario(scenarioName)
         results.push(result)
       } catch (error) {
-        logger.error('Scenario simulation failed', { 
-          scenario: scenarioName, 
-          error: error instanceof Error ? error.message : String(error)
+        logger.error('Scenario simulation failed', {
+          scenario: scenarioName,
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }
@@ -150,10 +158,10 @@ export class ReconciliationSimulator {
         changeFrequency: 1,
         changeIntensity: 'low',
         stabilityPeriod: 4,
-        significantChanges: 0
+        significantChanges: 0,
       },
       expectedOutcome: 'completed',
-      expectedDuration: 5
+      expectedDuration: 5,
     })
 
     // Scenario 2: Gradual changes with eventual stability
@@ -168,10 +176,10 @@ export class ReconciliationSimulator {
         changeFrequency: 2,
         changeIntensity: 'medium',
         stabilityPeriod: 3,
-        significantChanges: 3
+        significantChanges: 3,
       },
       expectedOutcome: 'extended',
-      expectedDuration: 8
+      expectedDuration: 8,
     })
 
     // Scenario 3: Sudden significant change requiring extension
@@ -186,10 +194,10 @@ export class ReconciliationSimulator {
         changeFrequency: 10,
         changeIntensity: 'high',
         stabilityPeriod: 3,
-        significantChanges: 1
+        significantChanges: 1,
       },
       expectedOutcome: 'extended',
-      expectedDuration: 12
+      expectedDuration: 12,
     })
 
     // Scenario 4: Volatile data pattern
@@ -204,10 +212,10 @@ export class ReconciliationSimulator {
         changeFrequency: 1,
         changeIntensity: 'high',
         stabilityPeriod: 2,
-        significantChanges: 8
+        significantChanges: 8,
       },
       expectedOutcome: 'extended',
-      expectedDuration: 15
+      expectedDuration: 15,
     })
 
     // Scenario 5: Late finalization (timeout scenario)
@@ -216,16 +224,20 @@ export class ReconciliationSimulator {
       description: 'Data never fully stabilizes, hits timeout',
       districtId: 'SIM-D005',
       targetMonth: '2024-01',
-      config: { ...this.getDefaultConfig(), maxReconciliationDays: 10, stabilityPeriodDays: 5 },
+      config: {
+        ...this.getDefaultConfig(),
+        maxReconciliationDays: 10,
+        stabilityPeriodDays: 5,
+      },
       dataPattern: {
         type: 'late_finalization',
         changeFrequency: 2,
         changeIntensity: 'medium',
         stabilityPeriod: 0, // Never stabilizes
-        significantChanges: 4
+        significantChanges: 4,
       },
       expectedOutcome: 'timeout',
-      expectedDuration: 10
+      expectedDuration: 10,
     })
 
     // Scenario 6: Maximum extension scenario
@@ -234,20 +246,25 @@ export class ReconciliationSimulator {
       description: 'Scenario that triggers maximum extensions',
       districtId: 'SIM-D006',
       targetMonth: '2024-01',
-      config: { ...this.getDefaultConfig(), maxReconciliationDays: 5, autoExtensionEnabled: true, maxExtensionDays: 3 },
+      config: {
+        ...this.getDefaultConfig(),
+        maxReconciliationDays: 5,
+        autoExtensionEnabled: true,
+        maxExtensionDays: 3,
+      },
       dataPattern: {
         type: 'volatile',
         changeFrequency: 1,
         changeIntensity: 'high',
         stabilityPeriod: 1,
-        significantChanges: 8
+        significantChanges: 8,
       },
       expectedOutcome: 'extended',
-      expectedDuration: 8
+      expectedDuration: 8,
     })
 
-    logger.debug('Default simulation scenarios initialized', { 
-      count: this.scenarios.size 
+    logger.debug('Default simulation scenarios initialized', {
+      count: this.scenarios.size,
     })
   }
 
@@ -270,32 +287,32 @@ export class ReconciliationSimulator {
         suspended: Math.floor(Math.random() * 3),
         ineligible: Math.floor(Math.random() * 2),
         low: Math.floor(Math.random() * 2),
-        distinguished: baseDistinguished
+        distinguished: baseDistinguished,
       },
       membership: {
         total: baseMembership,
         change: Math.floor(Math.random() * 20) - 10,
-        changePercent: (Math.random() * 4) - 2,
+        changePercent: Math.random() * 4 - 2,
         byClub: [],
         new: Math.floor(baseMembership * 0.1),
         renewed: Math.floor(baseMembership * 0.8),
-        dual: Math.floor(baseMembership * 0.05)
+        dual: Math.floor(baseMembership * 0.05),
       },
       education: {
         totalAwards: Math.floor(Math.random() * 50),
         byType: [],
-        topClubs: []
+        topClubs: [],
       },
       goals: {
         clubsGoal: baseClubCount + Math.floor(Math.random() * 5),
         membershipGoal: baseMembership + Math.floor(Math.random() * 50),
-        distinguishedGoal: Math.floor(baseClubCount * 0.4)
+        distinguishedGoal: Math.floor(baseClubCount * 0.4),
       },
       performance: {
         clubsNet: Math.floor(Math.random() * 3) - 1,
         membershipNet: Math.floor(Math.random() * 20) - 10,
-        distinguishedPercent: (baseDistinguished / baseClubCount) * 100
-      }
+        distinguishedPercent: (baseDistinguished / baseClubCount) * 100,
+      },
     }
   }
 
@@ -303,36 +320,36 @@ export class ReconciliationSimulator {
    * Generate data timeline based on pattern
    */
   private generateDataTimeline(
-    baseData: DistrictStatistics, 
+    baseData: DistrictStatistics,
     pattern: DataPattern
   ): DistrictStatistics[] {
     const timeline: DistrictStatistics[] = []
     let currentData = { ...baseData }
-    
+
     // Add the initial data point (day 0)
     timeline.push({ ...currentData })
-    
+
     // Generate 20 days of data (covers max reconciliation period)
     for (let day = 1; day <= 20; day++) {
       const shouldChange = this.shouldDataChange(day, pattern)
-      
+
       if (shouldChange) {
         currentData = this.applyDataChange(currentData, pattern, day)
-        logger.debug('Applied data change', { 
-          day, 
-          pattern: pattern.type, 
+        logger.debug('Applied data change', {
+          day,
+          pattern: pattern.type,
           membership: currentData.membership.total,
-          clubs: currentData.clubs.total 
+          clubs: currentData.clubs.total,
         })
       }
 
       // Update as-of date
       const asOfDate = new Date(baseData.asOfDate)
       asOfDate.setDate(asOfDate.getDate() + day)
-      
+
       timeline.push({
         ...currentData,
-        asOfDate: asOfDate.toISOString().split('T')[0]
+        asOfDate: asOfDate.toISOString().split('T')[0],
       })
     }
 
@@ -346,19 +363,19 @@ export class ReconciliationSimulator {
     switch (pattern.type) {
       case 'stable':
         return false // Stable scenarios should have no changes after initial baseline
-      
+
       case 'gradual_change':
         return day > 0 && day % pattern.changeFrequency === 0 && day <= 10
-      
+
       case 'sudden_change':
         return day === 8 // Sudden change in middle
-      
+
       case 'volatile':
         return day > 0 && day % pattern.changeFrequency === 0
-      
+
       case 'late_finalization':
         return day > 0 && day % pattern.changeFrequency === 0 && day <= 15
-      
+
       default:
         return false
     }
@@ -368,8 +385,8 @@ export class ReconciliationSimulator {
    * Apply data changes based on pattern and intensity
    */
   private applyDataChange(
-    data: DistrictStatistics, 
-    pattern: DataPattern, 
+    data: DistrictStatistics,
+    pattern: DataPattern,
     _day: number
   ): DistrictStatistics {
     // Create a deep copy to avoid mutating the original
@@ -379,66 +396,123 @@ export class ReconciliationSimulator {
       membership: { ...data.membership },
       education: { ...data.education },
       goals: data.goals ? { ...data.goals } : undefined,
-      performance: data.performance ? { ...data.performance } : undefined
+      performance: data.performance ? { ...data.performance } : undefined,
     }
-    
+
     // Calculate change magnitude based on intensity
     const intensityMultiplier = {
       low: 0.5,
       medium: 1.0,
-      high: 2.0
+      high: 2.0,
     }[pattern.changeIntensity]
 
     // For scenarios that expect significant changes, ensure we create them
     const needsSignificantChange = pattern.significantChanges > 0
-    
+
     // Apply membership changes - ensure they're significant enough for scenarios that need them
-    if (needsSignificantChange || pattern.type === 'sudden_change' || pattern.type === 'volatile') {
+    if (
+      needsSignificantChange ||
+      pattern.type === 'sudden_change' ||
+      pattern.type === 'volatile'
+    ) {
       // Calculate minimum change needed to exceed threshold (0.5% default)
       const minPercentChange = 0.6 // Slightly above threshold
-      const minMembershipChange = Math.ceil(data.membership.total * minPercentChange / 100)
-      const membershipChange = Math.max(minMembershipChange, Math.floor((Math.random() * 10 + 5) * intensityMultiplier))
+      const minMembershipChange = Math.ceil(
+        (data.membership.total * minPercentChange) / 100
+      )
+      const membershipChange = Math.max(
+        minMembershipChange,
+        Math.floor((Math.random() * 10 + 5) * intensityMultiplier)
+      )
       const direction = Math.random() > 0.5 ? 1 : -1
-      newData.membership.total = Math.max(10, data.membership.total + (membershipChange * direction))
+      newData.membership.total = Math.max(
+        10,
+        data.membership.total + membershipChange * direction
+      )
     } else {
       // Normal small changes
-      const membershipChangeBase = Math.floor((Math.random() * 10 - 5) * intensityMultiplier)
-      const membershipChange = membershipChangeBase === 0 ? Math.max(1, Math.floor(intensityMultiplier)) * (Math.random() > 0.5 ? 1 : -1) : membershipChangeBase
-      newData.membership.total = Math.max(10, data.membership.total + membershipChange)
+      const membershipChangeBase = Math.floor(
+        (Math.random() * 10 - 5) * intensityMultiplier
+      )
+      const membershipChange =
+        membershipChangeBase === 0
+          ? Math.max(1, Math.floor(intensityMultiplier)) *
+            (Math.random() > 0.5 ? 1 : -1)
+          : membershipChangeBase
+      newData.membership.total = Math.max(
+        10,
+        data.membership.total + membershipChange
+      )
     }
 
     // Apply club count changes - ensure significant changes when needed
-    if (needsSignificantChange || pattern.type === 'sudden_change' || pattern.type === 'volatile' || Math.random() < 0.4) {
-      const clubChange = needsSignificantChange ? 
-        Math.max(1, Math.floor((Math.random() * 2 + 1) * intensityMultiplier)) * (Math.random() > 0.5 ? 1 : -1) :
-        Math.floor((Math.random() * 3 - 1) * intensityMultiplier) || (Math.random() > 0.5 ? 1 : -1)
+    if (
+      needsSignificantChange ||
+      pattern.type === 'sudden_change' ||
+      pattern.type === 'volatile' ||
+      Math.random() < 0.4
+    ) {
+      const clubChange = needsSignificantChange
+        ? Math.max(
+            1,
+            Math.floor((Math.random() * 2 + 1) * intensityMultiplier)
+          ) * (Math.random() > 0.5 ? 1 : -1)
+        : Math.floor((Math.random() * 3 - 1) * intensityMultiplier) ||
+          (Math.random() > 0.5 ? 1 : -1)
       newData.clubs.total = Math.max(5, data.clubs.total + clubChange)
     }
 
     // Apply distinguished changes - ensure they create significant percentage changes when needed
-    if (needsSignificantChange || pattern.type === 'sudden_change' || pattern.type === 'volatile' || Math.random() < 0.5) {
+    if (
+      needsSignificantChange ||
+      pattern.type === 'sudden_change' ||
+      pattern.type === 'volatile' ||
+      Math.random() < 0.5
+    ) {
       if (needsSignificantChange) {
         // Calculate change needed to exceed 1% threshold
-        const minDistinguishedChange = Math.max(1, Math.ceil(data.clubs.distinguished * 0.02)) // 2% change
-        const distinguishedChange = minDistinguishedChange * (Math.random() > 0.5 ? 1 : -1)
-        newData.clubs.distinguished = Math.max(0, 
-          Math.min(newData.clubs.total, data.clubs.distinguished + distinguishedChange)
+        const minDistinguishedChange = Math.max(
+          1,
+          Math.ceil(data.clubs.distinguished * 0.02)
+        ) // 2% change
+        const distinguishedChange =
+          minDistinguishedChange * (Math.random() > 0.5 ? 1 : -1)
+        newData.clubs.distinguished = Math.max(
+          0,
+          Math.min(
+            newData.clubs.total,
+            data.clubs.distinguished + distinguishedChange
+          )
         )
       } else {
-        const distinguishedChangeBase = Math.floor((Math.random() * 4 - 2) * intensityMultiplier)
-        const distinguishedChange = distinguishedChangeBase === 0 ? (Math.random() > 0.5 ? 1 : -1) : distinguishedChangeBase
-        newData.clubs.distinguished = Math.max(0, 
-          Math.min(newData.clubs.total, data.clubs.distinguished + distinguishedChange)
+        const distinguishedChangeBase = Math.floor(
+          (Math.random() * 4 - 2) * intensityMultiplier
+        )
+        const distinguishedChange =
+          distinguishedChangeBase === 0
+            ? Math.random() > 0.5
+              ? 1
+              : -1
+            : distinguishedChangeBase
+        newData.clubs.distinguished = Math.max(
+          0,
+          Math.min(
+            newData.clubs.total,
+            data.clubs.distinguished + distinguishedChange
+          )
         )
       }
     }
 
     // Update performance metrics
     if (newData.performance) {
-      newData.performance.membershipNet = newData.membership.total - data.membership.total
+      newData.performance.membershipNet =
+        newData.membership.total - data.membership.total
       newData.performance.clubsNet = newData.clubs.total - data.clubs.total
-      newData.performance.distinguishedPercent = 
-        newData.clubs.total > 0 ? (newData.clubs.distinguished / newData.clubs.total) * 100 : 0
+      newData.performance.distinguishedPercent =
+        newData.clubs.total > 0
+          ? (newData.clubs.distinguished / newData.clubs.total) * 100
+          : 0
     }
 
     return newData
@@ -448,7 +522,7 @@ export class ReconciliationSimulator {
    * Run the actual simulation
    */
   private async runSimulation(
-    scenario: SimulationScenario, 
+    scenario: SimulationScenario,
     dataTimeline: DistrictStatistics[]
   ): Promise<SimulationResult> {
     const timeline: ReconciliationTimeline = {
@@ -460,25 +534,34 @@ export class ReconciliationSimulator {
         phase: 'monitoring',
         daysActive: 0,
         daysStable: 0,
-        message: 'Simulation started'
-      }
+        message: 'Simulation started',
+      },
     }
 
     const changeEvents: DataChanges[] = []
     let extensionCount = 0
     let currentDay = 0
     let stableDays = 0
-    const maxDaysWithExtensions = scenario.config.maxReconciliationDays + (scenario.config.maxExtensionDays || 0)
+    const maxDaysWithExtensions =
+      scenario.config.maxReconciliationDays +
+      (scenario.config.maxExtensionDays || 0)
 
     // Simulate daily reconciliation cycles - start from day 1 (day 0 is baseline)
-    for (let day = 1; day < dataTimeline.length && currentDay < maxDaysWithExtensions + 5; day++) {
+    for (
+      let day = 1;
+      day < dataTimeline.length && currentDay < maxDaysWithExtensions + 5;
+      day++
+    ) {
       currentDay = day
       const currentData = dataTimeline[day]
       const previousData = dataTimeline[day - 1]
 
       // Detect changes
       const changes = this.simulateChangeDetection(previousData, currentData)
-      const isSignificant = this.isSignificantChange(changes, scenario.config.significantChangeThresholds)
+      const isSignificant = this.isSignificantChange(
+        changes,
+        scenario.config.significantChangeThresholds
+      )
 
       if (isSignificant) {
         stableDays = 0
@@ -493,7 +576,7 @@ export class ReconciliationSimulator {
         changes,
         isSignificant,
         cacheUpdated: changes.hasChanges,
-        notes: isSignificant ? 'Significant change detected' : undefined
+        notes: isSignificant ? 'Significant change detected' : undefined,
       }
 
       timeline.entries.push(entry)
@@ -502,47 +585,61 @@ export class ReconciliationSimulator {
       }
 
       // Check for extension conditions
-      if (isSignificant && day > scenario.config.maxReconciliationDays - 3 && scenario.config.autoExtensionEnabled) {
+      if (
+        isSignificant &&
+        day > scenario.config.maxReconciliationDays - 3 &&
+        scenario.config.autoExtensionEnabled
+      ) {
         extensionCount++
-        logger.debug('Simulation extension triggered', { day, scenario: scenario.name })
+        logger.debug('Simulation extension triggered', {
+          day,
+          scenario: scenario.name,
+        })
       }
 
       // Check timeout conditions FIRST - especially for late_finalization
-      const maxDaysWithExtensions = scenario.config.maxReconciliationDays + (extensionCount * (scenario.config.maxExtensionDays || 3))
-      
+      const maxDaysWithExtensions =
+        scenario.config.maxReconciliationDays +
+        extensionCount * (scenario.config.maxExtensionDays || 3)
+
       if (day >= maxDaysWithExtensions) {
         // For late_finalization, force timeout regardless of stability and extensions
-        if (scenario.dataPattern.type === 'late_finalization' || scenario.dataPattern.stabilityPeriod === 0) {
+        if (
+          scenario.dataPattern.type === 'late_finalization' ||
+          scenario.dataPattern.stabilityPeriod === 0
+        ) {
           timeline.status = {
             phase: 'failed',
             daysActive: day,
             daysStable: stableDays,
-            message: 'Simulation timeout - maximum period exceeded'
+            message: 'Simulation timeout - maximum period exceeded',
           }
           break
         }
         // For other scenarios, check if extensions are available
         else if (scenario.config.autoExtensionEnabled && extensionCount < 2) {
           // Allow extension, continue
-        }
-        else {
+        } else {
           timeline.status = {
             phase: 'failed',
             daysActive: day,
             daysStable: stableDays,
-            message: 'Simulation timeout - maximum period exceeded'
+            message: 'Simulation timeout - maximum period exceeded',
           }
           break
         }
       }
-      
+
       // Special handling for late_finalization - timeout at exact maxReconciliationDays
-      if (scenario.dataPattern.type === 'late_finalization' && day >= scenario.config.maxReconciliationDays) {
+      if (
+        scenario.dataPattern.type === 'late_finalization' &&
+        day >= scenario.config.maxReconciliationDays
+      ) {
         timeline.status = {
           phase: 'failed',
           daysActive: day,
           daysStable: stableDays,
-          message: 'Simulation timeout - maximum period exceeded'
+          message: 'Simulation timeout - maximum period exceeded',
         }
         break
       }
@@ -550,17 +647,21 @@ export class ReconciliationSimulator {
       // Check completion conditions (only if not a timeout scenario)
       // For scenarios with expected changes, ensure we run long enough to encounter them
       const hasExpectedChanges = scenario.dataPattern.significantChanges > 0
-      const minDaysForChanges = hasExpectedChanges ? Math.max(10, scenario.config.stabilityPeriodDays + 2) : scenario.config.stabilityPeriodDays
-      
-      if (scenario.dataPattern.type !== 'late_finalization' && 
-          scenario.dataPattern.stabilityPeriod > 0 && 
-          stableDays >= scenario.config.stabilityPeriodDays &&
-          (!hasExpectedChanges || day >= minDaysForChanges)) {
+      const minDaysForChanges = hasExpectedChanges
+        ? Math.max(10, scenario.config.stabilityPeriodDays + 2)
+        : scenario.config.stabilityPeriodDays
+
+      if (
+        scenario.dataPattern.type !== 'late_finalization' &&
+        scenario.dataPattern.stabilityPeriod > 0 &&
+        stableDays >= scenario.config.stabilityPeriodDays &&
+        (!hasExpectedChanges || day >= minDaysForChanges)
+      ) {
         timeline.status = {
           phase: 'completed',
           daysActive: day,
           daysStable: stableDays,
-          message: 'Simulation completed - stability achieved'
+          message: 'Simulation completed - stability achieved',
         }
         break
       }
@@ -572,7 +673,7 @@ export class ReconciliationSimulator {
         phase: 'failed',
         daysActive: currentDay,
         daysStable: stableDays,
-        message: 'Simulation timeout - maximum iterations exceeded'
+        message: 'Simulation timeout - maximum iterations exceeded',
       }
     }
 
@@ -593,12 +694,15 @@ export class ReconciliationSimulator {
       changeEvents,
       metrics: {
         totalChanges: changeEvents.length,
-        significantChanges: changeEvents.filter(c => 
-          this.isSignificantChange(c, scenario.config.significantChangeThresholds)
+        significantChanges: changeEvents.filter(c =>
+          this.isSignificantChange(
+            c,
+            scenario.config.significantChangeThresholds
+          )
         ).length,
         extensionCount,
-        finalStabilityDays: stableDays
-      }
+        finalStabilityDays: stableDays,
+      },
     }
   }
 
@@ -606,7 +710,7 @@ export class ReconciliationSimulator {
    * Simulate change detection between two data points
    */
   private simulateChangeDetection(
-    previousData: DistrictStatistics, 
+    previousData: DistrictStatistics,
     currentData: DistrictStatistics
   ): DataChanges {
     const changedFields: string[] = []
@@ -614,19 +718,22 @@ export class ReconciliationSimulator {
       hasChanges: false,
       changedFields,
       timestamp: new Date(),
-      sourceDataDate: currentData.asOfDate
+      sourceDataDate: currentData.asOfDate,
     }
 
     // Check membership changes
     if (previousData.membership.total !== currentData.membership.total) {
-      const percentChange = previousData.membership.total > 0 
-        ? ((currentData.membership.total - previousData.membership.total) / previousData.membership.total) * 100 
-        : 0
+      const percentChange =
+        previousData.membership.total > 0
+          ? ((currentData.membership.total - previousData.membership.total) /
+              previousData.membership.total) *
+            100
+          : 0
 
       changes.membershipChange = {
         previous: previousData.membership.total,
         current: currentData.membership.total,
-        percentChange: parseFloat(percentChange.toFixed(2))
+        percentChange: parseFloat(percentChange.toFixed(2)),
       }
       changedFields.push('membership')
     }
@@ -636,21 +743,25 @@ export class ReconciliationSimulator {
       changes.clubCountChange = {
         previous: previousData.clubs.total,
         current: currentData.clubs.total,
-        absoluteChange: currentData.clubs.total - previousData.clubs.total
+        absoluteChange: currentData.clubs.total - previousData.clubs.total,
       }
       changedFields.push('clubCount')
     }
 
     // Check distinguished changes
     if (previousData.clubs.distinguished !== currentData.clubs.distinguished) {
-      const percentChange = previousData.clubs.distinguished > 0 
-        ? ((currentData.clubs.distinguished - previousData.clubs.distinguished) / previousData.clubs.distinguished) * 100 
-        : 0
+      const percentChange =
+        previousData.clubs.distinguished > 0
+          ? ((currentData.clubs.distinguished -
+              previousData.clubs.distinguished) /
+              previousData.clubs.distinguished) *
+            100
+          : 0
 
       changes.distinguishedChange = {
         previous: this.extractDistinguishedCounts(previousData),
         current: this.extractDistinguishedCounts(currentData),
-        percentChange: parseFloat(percentChange.toFixed(2))
+        percentChange: parseFloat(percentChange.toFixed(2)),
       }
       changedFields.push('distinguished')
     }
@@ -662,18 +773,33 @@ export class ReconciliationSimulator {
   /**
    * Check if changes are significant based on thresholds
    */
-  private isSignificantChange(changes: DataChanges, thresholds: SignificanceThresholds): boolean {
+  private isSignificantChange(
+    changes: DataChanges,
+    thresholds: SignificanceThresholds
+  ): boolean {
     if (!changes.hasChanges) return false
 
-    if (changes.membershipChange && Math.abs(changes.membershipChange.percentChange) >= thresholds.membershipPercent) {
+    if (
+      changes.membershipChange &&
+      Math.abs(changes.membershipChange.percentChange) >=
+        thresholds.membershipPercent
+    ) {
       return true
     }
 
-    if (changes.clubCountChange && Math.abs(changes.clubCountChange.absoluteChange) >= thresholds.clubCountAbsolute) {
+    if (
+      changes.clubCountChange &&
+      Math.abs(changes.clubCountChange.absoluteChange) >=
+        thresholds.clubCountAbsolute
+    ) {
       return true
     }
 
-    if (changes.distinguishedChange && Math.abs(changes.distinguishedChange.percentChange) >= thresholds.distinguishedPercent) {
+    if (
+      changes.distinguishedChange &&
+      Math.abs(changes.distinguishedChange.percentChange) >=
+        thresholds.distinguishedPercent
+    ) {
       return true
     }
 
@@ -683,13 +809,15 @@ export class ReconciliationSimulator {
   /**
    * Extract distinguished counts (simplified for simulation)
    */
-  private extractDistinguishedCounts(data: DistrictStatistics): DistinguishedCounts {
+  private extractDistinguishedCounts(
+    data: DistrictStatistics
+  ): DistinguishedCounts {
     const total = data.clubs.distinguished
     return {
       select: Math.floor(total * 0.15),
       distinguished: Math.floor(total * 0.8),
       president: Math.floor(total * 0.05),
-      total
+      total,
     }
   }
 
@@ -704,10 +832,10 @@ export class ReconciliationSimulator {
       significantChangeThresholds: {
         membershipPercent: 0.5, // Lower threshold to catch more changes
         clubCountAbsolute: 1,
-        distinguishedPercent: 1 // Lower threshold to catch more changes
+        distinguishedPercent: 1, // Lower threshold to catch more changes
       },
       autoExtensionEnabled: true,
-      maxExtensionDays: 5
+      maxExtensionDays: 5,
     }
   }
 

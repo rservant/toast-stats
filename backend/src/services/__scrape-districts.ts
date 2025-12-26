@@ -10,9 +10,9 @@ async function scrapeDistricts() {
 
   try {
     console.log('Loading page...')
-    await page.goto('https://dashboards.toastmasters.org/', { 
+    await page.goto('https://dashboards.toastmasters.org/', {
       waitUntil: 'networkidle',
-      timeout: 60000 
+      timeout: 60000,
     })
 
     console.log('Page loaded. Looking for district data...\n')
@@ -26,7 +26,7 @@ async function scrapeDistricts() {
       const table = tables[i]
       const rows = await table.$$('tr')
       console.log(`Table ${i + 1}: ${rows.length} rows`)
-      
+
       if (rows.length > 0) {
         // Get first few rows to see structure
         for (let j = 0; j < Math.min(3, rows.length); j++) {
@@ -34,7 +34,10 @@ async function scrapeDistricts() {
           const cellTexts = await Promise.all(
             cells.map(cell => cell.textContent())
           )
-          console.log(`  Row ${j + 1}:`, cellTexts.map(t => t?.trim()).join(' | '))
+          console.log(
+            `  Row ${j + 1}:`,
+            cellTexts.map(t => t?.trim()).join(' | ')
+          )
         }
         console.log()
       }
@@ -59,9 +62,10 @@ async function scrapeDistricts() {
     const pageContent = await page.content()
     const districtMatches = pageContent.match(/District\s+(\d+)/gi)
     if (districtMatches) {
-      console.log(`\nFound district mentions: ${districtMatches.slice(0, 20).join(', ')}`)
+      console.log(
+        `\nFound district mentions: ${districtMatches.slice(0, 20).join(', ')}`
+      )
     }
-
   } catch (error) {
     console.error('Error:', error)
   } finally {

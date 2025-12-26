@@ -19,19 +19,24 @@ describe('Reconciliation API - New Status Endpoints', () => {
 
   beforeEach(async () => {
     // Setup test app with shared storage manager
-    storageManager = new ReconciliationStorageOptimizer('./cache/test-reconciliation-api')
+    storageManager = new ReconciliationStorageOptimizer(
+      './cache/test-reconciliation-api'
+    )
     await storageManager.init()
 
     const changeDetectionEngine = new ChangeDetectionEngine()
-    orchestrator = new ReconciliationOrchestrator(changeDetectionEngine, storageManager)
+    orchestrator = new ReconciliationOrchestrator(
+      changeDetectionEngine,
+      storageManager
+    )
 
     // Create app and inject the same storage manager instance
     app = express()
     app.use(express.json())
-    
+
     // Create a custom router that uses our test storage manager
     const testRouter = express.Router()
-    
+
     // We need to create endpoints that use our test storage manager
     testRouter.get('/jobs/:jobId/status', async (_req, res) => {
       try {
@@ -48,7 +53,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         const job = await storageManager.getJob(jobId)
-        
+
         if (!job) {
           res.status(404).json({
             error: {
@@ -69,22 +74,22 @@ describe('Reconciliation API - New Status Endpoints', () => {
             phase: 'monitoring',
             daysActive: 0,
             daysStable: 0,
-            message: 'Test job status'
+            message: 'Test job status',
           },
           progressStatistics: {
             totalEntries: 0,
             significantChanges: 0,
             minorChanges: 0,
-            noChangeEntries: 0
+            noChangeEntries: 0,
           },
           stabilityPeriod: {
             consecutiveStableDays: 0,
-            requiredStabilityDays: 3
+            requiredStabilityDays: 3,
           },
           finalization: {
             isReady: false,
-            reason: 'Test job not ready'
-          }
+            reason: 'Test job not ready',
+          },
         }
 
         res.json(jobStatus)
@@ -113,7 +118,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         const job = await storageManager.getJob(jobId)
-        
+
         if (!job) {
           res.status(404).json({
             error: {
@@ -132,9 +137,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
             phase: 'monitoring',
             daysActive: 0,
             daysStable: 0,
-            message: 'Test timeline'
+            message: 'Test timeline',
           },
-          entries: []
+          entries: [],
         }
 
         res.json(timelineResponse)
@@ -163,7 +168,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         const job = await storageManager.getJob(jobId)
-        
+
         if (!job) {
           res.status(404).json({
             error: {
@@ -185,26 +190,26 @@ describe('Reconciliation API - New Status Endpoints', () => {
           daysUntilMaxEnd: 10,
           finalization: {
             isReady: false,
-            reason: 'Test estimate'
+            reason: 'Test estimate',
           },
           stabilityProgress: {
             consecutiveStableDays: 0,
             requiredStabilityDays: 3,
             stabilityPeriodProgress: 0,
-            isInStabilityPeriod: false
+            isInStabilityPeriod: false,
           },
           activityMetrics: {
             totalEntries: 0,
             significantChanges: 0,
             changeFrequency: 0,
-            stabilityTrend: 'unknown'
+            stabilityTrend: 'unknown',
           },
           estimationFactors: {
             hasRecentActivity: false,
             isStabilizing: false,
             nearMaxEndDate: false,
-            stabilityTrend: 'unknown'
-          }
+            stabilityTrend: 'unknown',
+          },
         }
 
         res.json(estimateResponse)
@@ -222,15 +227,18 @@ describe('Reconciliation API - New Status Endpoints', () => {
     testRouter.get('/config', async (_req, res) => {
       try {
         const config = await orchestrator.getDefaultConfiguration()
-        
+
         const configResponse = {
           maxReconciliationDays: config.maxReconciliationDays,
           stabilityPeriodDays: config.stabilityPeriodDays,
           checkFrequencyHours: config.checkFrequencyHours,
           significantChangeThresholds: {
-            membershipPercent: config.significantChangeThresholds.membershipPercent,
-            clubCountAbsolute: config.significantChangeThresholds.clubCountAbsolute,
-            distinguishedPercent: config.significantChangeThresholds.distinguishedPercent,
+            membershipPercent:
+              config.significantChangeThresholds.membershipPercent,
+            clubCountAbsolute:
+              config.significantChangeThresholds.clubCountAbsolute,
+            distinguishedPercent:
+              config.significantChangeThresholds.distinguishedPercent,
           },
           autoExtensionEnabled: config.autoExtensionEnabled,
           maxExtensionDays: config.maxExtensionDays,
@@ -255,7 +263,14 @@ describe('Reconciliation API - New Status Endpoints', () => {
         const configUpdate = _req.body
 
         // Check for invalid body types (arrays, null, strings, booleans, undefined, etc.)
-        if (typeof configUpdate === 'string' || typeof configUpdate === 'boolean' || configUpdate === null || configUpdate === undefined || typeof configUpdate !== 'object' || Array.isArray(configUpdate)) {
+        if (
+          typeof configUpdate === 'string' ||
+          typeof configUpdate === 'boolean' ||
+          configUpdate === null ||
+          configUpdate === undefined ||
+          typeof configUpdate !== 'object' ||
+          Array.isArray(configUpdate)
+        ) {
           res.status(400).json({
             error: {
               code: 'INVALID_CONFIG_BODY',
@@ -265,8 +280,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
           return
         }
 
-        const validationResult = await orchestrator.validateConfiguration(configUpdate)
-        
+        const validationResult =
+          await orchestrator.validateConfiguration(configUpdate)
+
         if (!validationResult.isValid) {
           res.status(400).json({
             error: {
@@ -278,16 +294,20 @@ describe('Reconciliation API - New Status Endpoints', () => {
           return
         }
 
-        const updatedConfig = await orchestrator.updateConfiguration(configUpdate)
+        const updatedConfig =
+          await orchestrator.updateConfiguration(configUpdate)
 
         const configResponse = {
           maxReconciliationDays: updatedConfig.maxReconciliationDays,
           stabilityPeriodDays: updatedConfig.stabilityPeriodDays,
           checkFrequencyHours: updatedConfig.checkFrequencyHours,
           significantChangeThresholds: {
-            membershipPercent: updatedConfig.significantChangeThresholds.membershipPercent,
-            clubCountAbsolute: updatedConfig.significantChangeThresholds.clubCountAbsolute,
-            distinguishedPercent: updatedConfig.significantChangeThresholds.distinguishedPercent,
+            membershipPercent:
+              updatedConfig.significantChangeThresholds.membershipPercent,
+            clubCountAbsolute:
+              updatedConfig.significantChangeThresholds.clubCountAbsolute,
+            distinguishedPercent:
+              updatedConfig.significantChangeThresholds.distinguishedPercent,
           },
           autoExtensionEnabled: updatedConfig.autoExtensionEnabled,
           maxExtensionDays: updatedConfig.maxExtensionDays,
@@ -299,8 +319,11 @@ describe('Reconciliation API - New Status Endpoints', () => {
           config: configResponse,
         })
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to update configuration'
-        
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'Failed to update configuration'
+
         if (errorMessage.includes('validation')) {
           res.status(400).json({
             error: {
@@ -325,7 +348,13 @@ describe('Reconciliation API - New Status Endpoints', () => {
         const configToValidate = _req.body
 
         // Check for invalid body types (arrays, null, strings, booleans, etc.)
-        if (typeof configToValidate === 'string' || typeof configToValidate === 'boolean' || configToValidate === null || typeof configToValidate !== 'object' || Array.isArray(configToValidate)) {
+        if (
+          typeof configToValidate === 'string' ||
+          typeof configToValidate === 'boolean' ||
+          configToValidate === null ||
+          typeof configToValidate !== 'object' ||
+          Array.isArray(configToValidate)
+        ) {
           res.status(400).json({
             error: {
               code: 'INVALID_CONFIG_BODY',
@@ -335,13 +364,16 @@ describe('Reconciliation API - New Status Endpoints', () => {
           return
         }
 
-        const validationResult = await orchestrator.validateConfiguration(configToValidate)
+        const validationResult =
+          await orchestrator.validateConfiguration(configToValidate)
 
         res.json({
           isValid: validationResult.isValid,
           errors: validationResult.errors || [],
           warnings: validationResult.warnings || [],
-          validatedConfig: validationResult.isValid ? validationResult.validatedConfig : null,
+          validatedConfig: validationResult.isValid
+            ? validationResult.validatedConfig
+            : null,
         })
       } catch {
         res.status(500).json({
@@ -356,7 +388,12 @@ describe('Reconciliation API - New Status Endpoints', () => {
     app.use('/api/reconciliation', testRouter)
 
     // Create a test job
-    testJob = await orchestrator.startReconciliation('D42', '2024-11', undefined, 'manual')
+    testJob = await orchestrator.startReconciliation(
+      'D42',
+      '2024-11',
+      undefined,
+      'manual'
+    )
   })
 
   afterEach(async () => {
@@ -379,21 +416,27 @@ describe('Reconciliation API - New Status Endpoints', () => {
       expect(response.body).toHaveProperty('districtId', 'D42')
       expect(response.body).toHaveProperty('targetMonth', '2024-11')
       expect(response.body).toHaveProperty('status', 'active')
-      
+
       // Validate nested objects
       expect(response.body).toHaveProperty('currentStatus')
       expect(response.body.currentStatus).toHaveProperty('phase')
       expect(response.body.currentStatus).toHaveProperty('daysActive')
       expect(response.body.currentStatus).toHaveProperty('daysStable')
-      
+
       expect(response.body).toHaveProperty('progressStatistics')
       expect(response.body.progressStatistics).toHaveProperty('totalEntries')
-      expect(response.body.progressStatistics).toHaveProperty('significantChanges')
-      
+      expect(response.body.progressStatistics).toHaveProperty(
+        'significantChanges'
+      )
+
       expect(response.body).toHaveProperty('stabilityPeriod')
-      expect(response.body.stabilityPeriod).toHaveProperty('consecutiveStableDays')
-      expect(response.body.stabilityPeriod).toHaveProperty('requiredStabilityDays')
-      
+      expect(response.body.stabilityPeriod).toHaveProperty(
+        'consecutiveStableDays'
+      )
+      expect(response.body.stabilityPeriod).toHaveProperty(
+        'requiredStabilityDays'
+      )
+
       expect(response.body).toHaveProperty('finalization')
       expect(response.body.finalization).toHaveProperty('isReady')
       expect(response.body.finalization).toHaveProperty('reason')
@@ -428,15 +471,15 @@ describe('Reconciliation API - New Status Endpoints', () => {
       expect(response.body).toHaveProperty('jobId', testJob.id)
       expect(response.body).toHaveProperty('districtId', 'D42')
       expect(response.body).toHaveProperty('targetMonth', '2024-11')
-      
+
       expect(response.body).toHaveProperty('status')
       expect(response.body.status).toHaveProperty('phase')
       expect(response.body.status).toHaveProperty('daysActive')
       expect(response.body.status).toHaveProperty('daysStable')
-      
+
       expect(response.body).toHaveProperty('entries')
       expect(Array.isArray(response.body.entries)).toBe(true)
-      
+
       // For a new job, entries might be empty
       if (response.body.entries.length > 0) {
         const entry = response.body.entries[0]
@@ -470,26 +513,32 @@ describe('Reconciliation API - New Status Endpoints', () => {
       expect(response.body).toHaveProperty('targetMonth', '2024-11')
       expect(response.body).toHaveProperty('jobStatus', 'active')
       expect(response.body).toHaveProperty('currentTime')
-      
+
       // Estimate might be null for new jobs
       expect(response.body).toHaveProperty('estimatedCompletion')
       expect(response.body).toHaveProperty('maxEndDate')
       expect(response.body).toHaveProperty('daysUntilMaxEnd')
-      
+
       expect(response.body).toHaveProperty('finalization')
       expect(response.body.finalization).toHaveProperty('isReady')
       expect(response.body.finalization).toHaveProperty('reason')
-      
+
       expect(response.body).toHaveProperty('stabilityProgress')
-      expect(response.body.stabilityProgress).toHaveProperty('consecutiveStableDays')
-      expect(response.body.stabilityProgress).toHaveProperty('requiredStabilityDays')
-      
+      expect(response.body.stabilityProgress).toHaveProperty(
+        'consecutiveStableDays'
+      )
+      expect(response.body.stabilityProgress).toHaveProperty(
+        'requiredStabilityDays'
+      )
+
       expect(response.body).toHaveProperty('activityMetrics')
       expect(response.body.activityMetrics).toHaveProperty('totalEntries')
       expect(response.body.activityMetrics).toHaveProperty('significantChanges')
-      
+
       expect(response.body).toHaveProperty('estimationFactors')
-      expect(response.body.estimationFactors).toHaveProperty('hasRecentActivity')
+      expect(response.body.estimationFactors).toHaveProperty(
+        'hasRecentActivity'
+      )
       expect(response.body.estimationFactors).toHaveProperty('isStabilizing')
     })
 
@@ -512,19 +561,25 @@ describe('Reconciliation API - New Status Endpoints', () => {
 
         expect(response.body).toHaveProperty('success', true)
         expect(response.body).toHaveProperty('config')
-        
+
         const config = response.body.config
         expect(config).toHaveProperty('maxReconciliationDays')
         expect(config).toHaveProperty('stabilityPeriodDays')
         expect(config).toHaveProperty('checkFrequencyHours')
         expect(config).toHaveProperty('autoExtensionEnabled')
         expect(config).toHaveProperty('maxExtensionDays')
-        
+
         expect(config).toHaveProperty('significantChangeThresholds')
-        expect(config.significantChangeThresholds).toHaveProperty('membershipPercent')
-        expect(config.significantChangeThresholds).toHaveProperty('clubCountAbsolute')
-        expect(config.significantChangeThresholds).toHaveProperty('distinguishedPercent')
-        
+        expect(config.significantChangeThresholds).toHaveProperty(
+          'membershipPercent'
+        )
+        expect(config.significantChangeThresholds).toHaveProperty(
+          'clubCountAbsolute'
+        )
+        expect(config.significantChangeThresholds).toHaveProperty(
+          'distinguishedPercent'
+        )
+
         // Validate default values
         expect(typeof config.maxReconciliationDays).toBe('number')
         expect(typeof config.stabilityPeriodDays).toBe('number')
@@ -539,7 +594,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         const configUpdate = {
           maxReconciliationDays: 20,
           stabilityPeriodDays: 5,
-          checkFrequencyHours: 12
+          checkFrequencyHours: 12,
         }
 
         const response = await request(app)
@@ -548,9 +603,12 @@ describe('Reconciliation API - New Status Endpoints', () => {
           .expect(200)
 
         expect(response.body).toHaveProperty('success', true)
-        expect(response.body).toHaveProperty('message', 'Configuration updated successfully')
+        expect(response.body).toHaveProperty(
+          'message',
+          'Configuration updated successfully'
+        )
         expect(response.body).toHaveProperty('config')
-        
+
         const config = response.body.config
         expect(config.maxReconciliationDays).toBe(20)
         expect(config.stabilityPeriodDays).toBe(5)
@@ -561,8 +619,8 @@ describe('Reconciliation API - New Status Endpoints', () => {
         const configUpdate = {
           significantChangeThresholds: {
             membershipPercent: 2.5,
-            clubCountAbsolute: 2
-          }
+            clubCountAbsolute: 2,
+          },
         }
 
         const response = await request(app)
@@ -579,7 +637,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
       it('should reject invalid configuration values', async () => {
         const invalidConfig = {
           maxReconciliationDays: -5, // Invalid: negative value
-          stabilityPeriodDays: 'invalid' // Invalid: not a number
+          stabilityPeriodDays: 'invalid', // Invalid: not a number
         }
 
         const response = await request(app)
@@ -588,7 +646,10 @@ describe('Reconciliation API - New Status Endpoints', () => {
           .expect(400)
 
         expect(response.body).toHaveProperty('error')
-        expect(response.body.error).toHaveProperty('code', 'INVALID_CONFIGURATION')
+        expect(response.body.error).toHaveProperty(
+          'code',
+          'INVALID_CONFIGURATION'
+        )
         expect(response.body.error).toHaveProperty('details')
         expect(Array.isArray(response.body.error.details)).toBe(true)
       })
@@ -601,7 +662,10 @@ describe('Reconciliation API - New Status Endpoints', () => {
           .expect(400)
 
         expect(response.body).toHaveProperty('error')
-        expect(response.body.error).toHaveProperty('code', 'INVALID_CONFIG_BODY')
+        expect(response.body.error).toHaveProperty(
+          'code',
+          'INVALID_CONFIG_BODY'
+        )
       })
 
       it('should handle empty object request body', async () => {
@@ -623,7 +687,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           stabilityPeriodDays: 3,
           checkFrequencyHours: 24,
           autoExtensionEnabled: true,
-          maxExtensionDays: 5
+          maxExtensionDays: 5,
         }
 
         const response = await request(app)
@@ -646,8 +710,8 @@ describe('Reconciliation API - New Status Endpoints', () => {
           stabilityPeriodDays: 100, // Invalid: greater than max reconciliation days
           checkFrequencyHours: 0, // Invalid: zero
           significantChangeThresholds: {
-            membershipPercent: -5 // Invalid: negative
-          }
+            membershipPercent: -5, // Invalid: negative
+          },
         }
 
         const response = await request(app)
@@ -665,7 +729,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
       it('should provide warnings for questionable values', async () => {
         const questionableConfig = {
           maxReconciliationDays: 35, // High value - should warn
-          checkFrequencyHours: 2 // Very low - should warn
+          checkFrequencyHours: 2, // Very low - should warn
         }
 
         const response = await request(app)
@@ -681,7 +745,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
 
       it('should validate partial configuration updates', async () => {
         const partialConfig = {
-          stabilityPeriodDays: 4
+          stabilityPeriodDays: 4,
         }
 
         const response = await request(app)
@@ -692,7 +756,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
         expect(response.body).toHaveProperty('isValid', true)
         expect(response.body).toHaveProperty('validatedConfig')
         // Should merge with existing config
-        expect(response.body.validatedConfig).toHaveProperty('maxReconciliationDays')
+        expect(response.body.validatedConfig).toHaveProperty(
+          'maxReconciliationDays'
+        )
         expect(response.body.validatedConfig.stabilityPeriodDays).toBe(4)
       })
 
@@ -704,7 +770,10 @@ describe('Reconciliation API - New Status Endpoints', () => {
           .expect(400)
 
         expect(response.body).toHaveProperty('error')
-        expect(response.body.error).toHaveProperty('code', 'INVALID_CONFIG_BODY')
+        expect(response.body.error).toHaveProperty(
+          'code',
+          'INVALID_CONFIG_BODY'
+        )
       })
 
       it('should handle nested threshold validation', async () => {
@@ -712,8 +781,8 @@ describe('Reconciliation API - New Status Endpoints', () => {
           significantChangeThresholds: {
             membershipPercent: 1.5,
             clubCountAbsolute: 1,
-            distinguishedPercent: 2.0
-          }
+            distinguishedPercent: 2.0,
+          },
         }
 
         const response = await request(app)
@@ -722,9 +791,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
           .expect(200)
 
         expect(response.body).toHaveProperty('isValid', true)
-        expect(response.body.validatedConfig.significantChangeThresholds).toEqual(
-          configWithThresholds.significantChangeThresholds
-        )
+        expect(
+          response.body.validatedConfig.significantChangeThresholds
+        ).toEqual(configWithThresholds.significantChangeThresholds)
       })
     })
   })
@@ -732,7 +801,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
   describe('Error handling', () => {
     it('should handle invalid job IDs consistently across all endpoints', async () => {
       const endpoints = ['status', 'timeline', 'estimate']
-      
+
       for (const endpoint of endpoints) {
         const response = await request(app)
           .get(`/api/reconciliation/jobs/ /` + endpoint)
@@ -747,7 +816,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
     it('should return proper error structure for server errors', async () => {
       // Test with a malformed job ID that might cause internal errors
       const response = await request(app)
-        .get('/api/reconciliation/jobs/malformed-job-id-that-might-cause-errors/status')
+        .get(
+          '/api/reconciliation/jobs/malformed-job-id-that-might-cause-errors/status'
+        )
         .expect(404) // Should be 404 for non-existent job
 
       expect(response.body).toHaveProperty('error')

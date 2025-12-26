@@ -1,6 +1,6 @@
 /**
  * Retry Manager with Exponential Backoff
- * 
+ *
  * Provides configurable retry logic with exponential backoff for dashboard requests
  * and other external API calls during reconciliation processes.
  */
@@ -43,12 +43,12 @@ export class RetryManager {
         message.includes('503') ||
         message.includes('504')
       )
-    }
+    },
   }
 
   /**
    * Execute a function with retry logic and exponential backoff
-   * 
+   *
    * @param operation - The async operation to retry
    * @param options - Retry configuration options
    * @param context - Context information for logging
@@ -64,10 +64,10 @@ export class RetryManager {
     let lastError: Error | undefined
     let attempts = 0
 
-    logger.debug('Starting retry operation', { 
-      context, 
+    logger.debug('Starting retry operation', {
+      context,
       maxAttempts: config.maxAttempts,
-      baseDelayMs: config.baseDelayMs 
+      baseDelayMs: config.baseDelayMs,
     })
 
     for (attempts = 1; attempts <= config.maxAttempts; attempts++) {
@@ -80,7 +80,7 @@ export class RetryManager {
             context,
             attempts,
             totalDuration,
-            success: true
+            success: true,
           })
         }
 
@@ -88,9 +88,8 @@ export class RetryManager {
           success: true,
           result,
           attempts,
-          totalDuration
+          totalDuration,
         }
-
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
         const totalDuration = Date.now() - startTime
@@ -106,7 +105,7 @@ export class RetryManager {
           error: lastError.message,
           isRetryable,
           isLastAttempt,
-          totalDuration
+          totalDuration,
         })
 
         // If not retryable or last attempt, fail immediately
@@ -123,7 +122,7 @@ export class RetryManager {
         logger.debug('Waiting before retry', {
           context,
           attempt: attempts,
-          delayMs: delay
+          delayMs: delay,
         })
 
         await new Promise(resolve => setTimeout(resolve, delay))
@@ -137,20 +136,20 @@ export class RetryManager {
       context,
       attempts,
       totalDuration,
-      finalError: lastError?.message
+      finalError: lastError?.message,
     })
 
     return {
       success: false,
       error: lastError,
       attempts,
-      totalDuration
+      totalDuration,
     }
   }
 
   /**
    * Create a retryable version of an async function
-   * 
+   *
    * @param operation - The async operation to make retryable
    * @param options - Retry configuration options
    * @returns A function that executes with retry logic
@@ -185,10 +184,14 @@ export class RetryManager {
       backoffMultiplier: 2,
       retryableErrors: (error: Error) => {
         const message = error.message.toLowerCase()
-        
+
         // Don't retry on client errors (4xx) except for rate limiting
-        if (message.includes('400') || message.includes('401') || 
-            message.includes('403') || message.includes('404')) {
+        if (
+          message.includes('400') ||
+          message.includes('401') ||
+          message.includes('403') ||
+          message.includes('404')
+        ) {
           return false
         }
 
@@ -211,7 +214,7 @@ export class RetryManager {
           message.includes('dashboard returned') ||
           message.includes('scraping failed')
         )
-      }
+      },
     }
   }
 
@@ -226,7 +229,7 @@ export class RetryManager {
       backoffMultiplier: 2,
       retryableErrors: (error: Error) => {
         const message = error.message.toLowerCase()
-        
+
         // Retry on file system errors and temporary issues
         return (
           message.includes('enoent') ||
@@ -238,7 +241,7 @@ export class RetryManager {
           message.includes('temporary') ||
           message.includes('lock')
         )
-      }
+      },
     }
   }
 }

@@ -7,7 +7,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
 import { ReconciliationStorageManager } from '../services/ReconciliationStorageManager.js'
-import type { ReconciliationMigration, ReconciliationSchemaVersion } from '../types/reconciliation.js'
+import type {
+  ReconciliationMigration,
+  ReconciliationSchemaVersion,
+} from '../types/reconciliation.js'
 
 export class ReconciliationMigrationRunner {
   private storageManager: ReconciliationStorageManager
@@ -33,8 +36,8 @@ export class ReconciliationMigrationRunner {
         down: async () => {
           logger.info('Rolling back migration 1: Clear all data')
           await this.storageManager.clearAll()
-        }
-      }
+        },
+      },
       // Future migrations will be added here
     ]
   }
@@ -44,7 +47,10 @@ export class ReconciliationMigrationRunner {
    */
   private async getCurrentVersion(): Promise<number> {
     try {
-      const schemaPath = path.join(this.storageManager['storageDir'], 'schema.json')
+      const schemaPath = path.join(
+        this.storageManager['storageDir'],
+        'schema.json'
+      )
       const content = await fs.readFile(schemaPath, 'utf-8')
       const schema = JSON.parse(content) as ReconciliationSchemaVersion
       return schema.version
@@ -56,14 +62,20 @@ export class ReconciliationMigrationRunner {
   /**
    * Update schema version
    */
-  private async updateSchemaVersion(version: number, description: string): Promise<void> {
-    const schemaPath = path.join(this.storageManager['storageDir'], 'schema.json')
+  private async updateSchemaVersion(
+    version: number,
+    description: string
+  ): Promise<void> {
+    const schemaPath = path.join(
+      this.storageManager['storageDir'],
+      'schema.json'
+    )
     const schema: ReconciliationSchemaVersion = {
       version,
       appliedAt: new Date().toISOString(),
-      description
+      description,
     }
-    
+
     await fs.mkdir(path.dirname(schemaPath), { recursive: true })
     await fs.writeFile(schemaPath, JSON.stringify(schema, null, 2), 'utf-8')
   }
@@ -71,23 +83,30 @@ export class ReconciliationMigrationRunner {
   /**
    * Record migration execution
    */
-  private async recordMigration(migration: ReconciliationMigration, direction: 'up' | 'down'): Promise<void> {
+  private async recordMigration(
+    migration: ReconciliationMigration,
+    direction: 'up' | 'down'
+  ): Promise<void> {
     try {
       await fs.mkdir(this.migrationsDir, { recursive: true })
-      
+
       const record = {
         version: migration.version,
         description: migration.description,
         direction,
-        executedAt: new Date().toISOString()
+        executedAt: new Date().toISOString(),
       }
-      
+
       const filename = `${migration.version}_${direction}_${Date.now()}.json`
       const filePath = path.join(this.migrationsDir, filename)
-      
+
       await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
     } catch (error) {
-      logger.warn('Failed to record migration', { migration: migration.version, direction, error })
+      logger.warn('Failed to record migration', {
+        migration: migration.version,
+        direction,
+        error,
+      })
       // Don't throw - migration recording is not critical
     }
   }
@@ -99,33 +118,43 @@ export class ReconciliationMigrationRunner {
     try {
       const currentVersion = await this.getCurrentVersion()
       const migrations = this.getMigrations()
-      const pendingMigrations = migrations.filter(m => m.version > currentVersion)
+      const pendingMigrations = migrations.filter(
+        m => m.version > currentVersion
+      )
 
       if (pendingMigrations.length === 0) {
         logger.info('No pending migrations', { currentVersion })
         return
       }
 
-      logger.info('Running migrations', { 
-        currentVersion, 
+      logger.info('Running migrations', {
+        currentVersion,
         targetVersion: Math.max(...migrations.map(m => m.version)),
-        pendingCount: pendingMigrations.length 
+        pendingCount: pendingMigrations.length,
       })
 
       for (const migration of pendingMigrations) {
-        logger.info('Applying migration', { 
-          version: migration.version, 
-          description: migration.description 
+        logger.info('Applying migration', {
+          version: migration.version,
+          description: migration.description,
         })
 
         try {
           await migration.up()
-          await this.updateSchemaVersion(migration.version, migration.description)
+          await this.updateSchemaVersion(
+            migration.version,
+            migration.description
+          )
           await this.recordMigration(migration, 'up')
-          
-          logger.info('Migration applied successfully', { version: migration.version })
+
+          logger.info('Migration applied successfully', {
+            version: migration.version,
+          })
         } catch (error) {
-          logger.error('Migration failed', { version: migration.version, error })
+          logger.error('Migration failed', {
+            version: migration.version,
+            error,
+          })
           throw new Error(`Migration ${migration.version} failed: ${error}`)
         }
       }
@@ -143,7 +172,7 @@ export class ReconciliationMigrationRunner {
   async rollback(targetVersion: number): Promise<void> {
     try {
       const currentVersion = await this.getCurrentVersion()
-      
+
       if (targetVersion >= currentVersion) {
         logger.info('No rollback needed', { currentVersion, targetVersion })
         return
@@ -154,32 +183,41 @@ export class ReconciliationMigrationRunner {
         .filter(m => m.version > targetVersion && m.version <= currentVersion)
         .sort((a, b) => b.version - a.version) // Rollback in reverse order
 
-      logger.info('Rolling back migrations', { 
-        currentVersion, 
+      logger.info('Rolling back migrations', {
+        currentVersion,
         targetVersion,
-        rollbackCount: rollbackMigrations.length 
+        rollbackCount: rollbackMigrations.length,
       })
 
       for (const migration of rollbackMigrations) {
-        logger.info('Rolling back migration', { 
-          version: migration.version, 
-          description: migration.description 
+        logger.info('Rolling back migration', {
+          version: migration.version,
+          description: migration.description,
         })
 
         try {
           await migration.down()
           await this.recordMigration(migration, 'down')
-          
-          logger.info('Migration rolled back successfully', { version: migration.version })
+
+          logger.info('Migration rolled back successfully', {
+            version: migration.version,
+          })
         } catch (error) {
-          logger.error('Migration rollback failed', { version: migration.version, error })
-          throw new Error(`Migration ${migration.version} rollback failed: ${error}`)
+          logger.error('Migration rollback failed', {
+            version: migration.version,
+            error,
+          })
+          throw new Error(
+            `Migration ${migration.version} rollback failed: ${error}`
+          )
         }
       }
 
       // Update schema version to target
       const targetMigration = migrations.find(m => m.version === targetVersion)
-      const description = targetMigration ? targetMigration.description : 'Rolled back'
+      const description = targetMigration
+        ? targetMigration.description
+        : 'Rolled back'
       await this.updateSchemaVersion(targetVersion, description)
 
       logger.info('Rollback completed successfully', { targetVersion })
@@ -213,7 +251,10 @@ export class ReconciliationMigrationRunner {
         if (migrationFiles.length > 0) {
           const sortedFiles = migrationFiles.sort().reverse()
           const lastFile = sortedFiles[0]
-          const content = await fs.readFile(path.join(this.migrationsDir, lastFile), 'utf-8')
+          const content = await fs.readFile(
+            path.join(this.migrationsDir, lastFile),
+            'utf-8'
+          )
           const record = JSON.parse(content)
           lastMigration = record.executedAt
         }
@@ -225,7 +266,7 @@ export class ReconciliationMigrationRunner {
         currentVersion,
         availableVersions,
         pendingMigrations,
-        lastMigration
+        lastMigration,
       }
     } catch (error) {
       logger.error('Failed to get migration status', error)
@@ -251,7 +292,10 @@ export class ReconciliationMigrationRunner {
       // Check if configuration is valid
       try {
         const config = await this.storageManager.getConfig()
-        if (!config.maxReconciliationDays || config.maxReconciliationDays <= 0) {
+        if (
+          !config.maxReconciliationDays ||
+          config.maxReconciliationDays <= 0
+        ) {
           errors.push('Invalid maxReconciliationDays in configuration')
         }
         if (!config.stabilityPeriodDays || config.stabilityPeriodDays <= 0) {
@@ -278,7 +322,11 @@ export class ReconciliationMigrationRunner {
       }
 
       const valid = errors.length === 0
-      logger.info('Data integrity validation completed', { valid, errors: errors.length, warnings: warnings.length })
+      logger.info('Data integrity validation completed', {
+        valid,
+        errors: errors.length,
+        warnings: warnings.length,
+      })
 
       return { valid, errors, warnings }
     } catch (error) {
@@ -291,7 +339,10 @@ export class ReconciliationMigrationRunner {
 /**
  * CLI interface for running migrations
  */
-export async function runMigrations(command: string = 'migrate', targetVersion?: number): Promise<void> {
+export async function runMigrations(
+  command: string = 'migrate',
+  targetVersion?: number
+): Promise<void> {
   const runner = new ReconciliationMigrationRunner()
 
   try {
@@ -299,29 +350,32 @@ export async function runMigrations(command: string = 'migrate', targetVersion?:
       case 'migrate':
         await runner.migrate()
         break
-      
+
       case 'rollback':
         if (targetVersion === undefined) {
           throw new Error('Target version required for rollback')
         }
         await runner.rollback(targetVersion)
         break
-      
+
       case 'status': {
         const status = await runner.getStatus()
         console.log('Migration Status:', JSON.stringify(status, null, 2))
         break
       }
-      
+
       case 'validate': {
         const validation = await runner.validateIntegrity()
-        console.log('Integrity Validation:', JSON.stringify(validation, null, 2))
+        console.log(
+          'Integrity Validation:',
+          JSON.stringify(validation, null, 2)
+        )
         if (!validation.valid) {
           process.exit(1)
         }
         break
       }
-      
+
       default:
         throw new Error(`Unknown command: ${command}`)
     }
@@ -334,14 +388,16 @@ export async function runMigrations(command: string = 'migrate', targetVersion?:
 // CLI entry point
 if (import.meta.url === `file://${process.argv[1]}`) {
   const command = process.argv[2] || 'migrate'
-  const targetVersion = process.argv[3] ? parseInt(process.argv[3], 10) : undefined
-  
+  const targetVersion = process.argv[3]
+    ? parseInt(process.argv[3], 10)
+    : undefined
+
   runMigrations(command, targetVersion)
     .then(() => {
       logger.info('Migration command completed successfully')
       process.exit(0)
     })
-    .catch((error) => {
+    .catch(error => {
       logger.error('Migration command failed', error)
       process.exit(1)
     })

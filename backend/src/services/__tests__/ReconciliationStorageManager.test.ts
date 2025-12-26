@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager.js'
-import type { ReconciliationJob, ReconciliationConfig } from '../../types/reconciliation.js'
+import type {
+  ReconciliationJob,
+  ReconciliationConfig,
+} from '../../types/reconciliation.js'
 import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 import fs from 'fs/promises'
 import path from 'path'
@@ -26,7 +29,7 @@ describe('ReconciliationStorageManager', () => {
   describe('initialization', () => {
     it('should create storage directories and default configuration', async () => {
       const config = await storageManager.getConfig()
-      
+
       expect(config).toEqual({
         maxReconciliationDays: 15,
         stabilityPeriodDays: 3,
@@ -34,17 +37,17 @@ describe('ReconciliationStorageManager', () => {
         significantChangeThresholds: {
           membershipPercent: 1,
           clubCountAbsolute: 1,
-          distinguishedPercent: 2
+          distinguishedPercent: 2,
         },
         autoExtensionEnabled: true,
-        maxExtensionDays: 5
+        maxExtensionDays: 5,
       })
     })
 
     it('should create required directories', async () => {
       const jobsDir = path.join(testStorageDir, 'jobs')
       const timelinesDir = path.join(testStorageDir, 'timelines')
-      
+
       await expect(fs.access(jobsDir)).resolves.not.toThrow()
       await expect(fs.access(timelinesDir)).resolves.not.toThrow()
     })
@@ -62,8 +65,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       await storageManager.saveJob(job)
@@ -72,7 +75,7 @@ describe('ReconciliationStorageManager', () => {
       expect(retrievedJob).toEqual({
         ...job,
         endDate: undefined,
-        finalizedDate: undefined
+        finalizedDate: undefined,
       })
     })
 
@@ -93,8 +96,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       const job2: ReconciliationJob = createTestReconciliationJob({
@@ -109,8 +112,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'manual'
-        }
+          triggeredBy: 'manual',
+        },
       })
 
       await storageManager.saveJob(job1)
@@ -137,8 +140,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       const completedJob: ReconciliationJob = createTestReconciliationJob({
@@ -153,8 +156,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'manual'
-        }
+          triggeredBy: 'manual',
+        },
       })
 
       await storageManager.saveJob(activeJob)
@@ -181,8 +184,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       await storageManager.saveJob(job)
@@ -203,10 +206,10 @@ describe('ReconciliationStorageManager', () => {
         significantChangeThresholds: {
           membershipPercent: 2,
           clubCountAbsolute: 2,
-          distinguishedPercent: 3
+          distinguishedPercent: 3,
         },
         autoExtensionEnabled: false,
-        maxExtensionDays: 3
+        maxExtensionDays: 3,
       }
 
       await storageManager.saveConfig(newConfig)
@@ -229,8 +232,8 @@ describe('ReconciliationStorageManager', () => {
         metadata: {
           createdAt: new Date('2024-12-01T00:00:00Z'),
           updatedAt: new Date('2024-12-01T00:00:00Z'),
-          triggeredBy: 'automatic'
-        }
+          triggeredBy: 'automatic',
+        },
       })
 
       await storageManager.saveJob(job)

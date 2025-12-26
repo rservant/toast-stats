@@ -34,9 +34,9 @@ Extends the existing `CacheManager` to handle three types of district data:
 interface DistrictCacheEntry {
   districtId: string
   date: string
-  districtPerformance: any[]  // From District.aspx
-  divisionPerformance: any[]  // From Division.aspx
-  clubPerformance: any[]      // From Club.aspx
+  districtPerformance: any[] // From District.aspx
+  divisionPerformance: any[] // From Division.aspx
+  clubPerformance: any[] // From Club.aspx
   fetchedAt: string
 }
 
@@ -47,24 +47,19 @@ class DistrictCacheManager {
     date: string,
     data: DistrictCacheEntry
   ): Promise<void>
-  
+
   // Get cached district data for a date
   async getDistrictData(
     districtId: string,
     date: string
   ): Promise<DistrictCacheEntry | null>
-  
+
   // Get all cached dates for a district
-  async getCachedDatesForDistrict(
-    districtId: string
-  ): Promise<string[]>
-  
+  async getCachedDatesForDistrict(districtId: string): Promise<string[]>
+
   // Check if district data exists for a date
-  async hasDistrictData(
-    districtId: string,
-    date: string
-  ): Promise<boolean>
-  
+  async hasDistrictData(districtId: string, date: string): Promise<boolean>
+
   // Get date range of cached data
   async getDistrictDataRange(
     districtId: string
@@ -73,6 +68,7 @@ class DistrictCacheManager {
 ```
 
 **Storage Strategy:**
+
 - Use file-based storage: `cache/districts/{districtId}/{YYYY-MM-DD}.json`
 - Each file contains all three report types for that date
 - Enables efficient date-based queries and cleanup
@@ -108,21 +104,20 @@ class DistrictBackfillService {
     startDate?: string,
     endDate?: string
   ): Promise<{ backfillId: string }>
-  
+
   // Get backfill status
-  async getBackfillStatus(
-    backfillId: string
-  ): Promise<DistrictBackfillJob>
-  
+  async getBackfillStatus(backfillId: string): Promise<DistrictBackfillJob>
+
   // Cancel backfill
   async cancelBackfill(backfillId: string): Promise<void>
-  
+
   // Process backfill (internal)
   private async processBackfill(job: DistrictBackfillJob): Promise<void>
 }
 ```
 
 **Backfill Process:**
+
 1. Generate list of dates to fetch (skip already cached)
 2. For each date:
    - Fetch district performance
@@ -161,18 +156,18 @@ interface DivisionAnalytics {
 interface DistrictAnalytics {
   districtId: string
   dateRange: { start: string; end: string }
-  
+
   // Membership insights
   totalMembership: number
   membershipChange: number
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
-  
+
   // Club health
   atRiskClubs: ClubTrend[]
   healthyClubs: number
   criticalClubs: number
-  
+
   // Distinguished status
   distinguishedClubs: {
     presidents: number
@@ -181,11 +176,11 @@ interface DistrictAnalytics {
     total: number
   }
   distinguishedProjection: number
-  
+
   // Division/Area performance
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: Array<{ areaId: string; areaName: string; score: number }>
-  
+
   // Year-over-year comparison (if data available)
   yearOverYear?: {
     membershipChange: number
@@ -201,24 +196,19 @@ class AnalyticsEngine {
     startDate?: string,
     endDate?: string
   ): Promise<DistrictAnalytics>
-  
+
   // Get club-specific trends
-  async getClubTrends(
-    districtId: string,
-    clubId: string
-  ): Promise<ClubTrend>
-  
+  async getClubTrends(districtId: string, clubId: string): Promise<ClubTrend>
+
   // Identify at-risk clubs
-  async identifyAtRiskClubs(
-    districtId: string
-  ): Promise<ClubTrend[]>
-  
+  async identifyAtRiskClubs(districtId: string): Promise<ClubTrend[]>
+
   // Compare divisions
   async compareDivisions(
     districtId: string,
     date: string
   ): Promise<DivisionAnalytics[]>
-  
+
   // Calculate year-over-year metrics
   async calculateYearOverYear(
     districtId: string,
@@ -304,29 +294,29 @@ Response: File download
   <DistrictHeader districtId={id} />
   <DateSelector />
   <DistrictBackfillButton districtId={id} />
-  
+
   <Tabs>
     <Tab label="Overview">
       <DistrictOverview analytics={analytics} />
       <AtRiskClubsPanel clubs={atRiskClubs} />
       <DistinguishedProgressChart data={analytics} />
     </Tab>
-    
+
     <Tab label="Clubs">
       <ClubsTable clubs={clubs} />
       <ClubDetailModal club={selectedClub} />
     </Tab>
-    
+
     <Tab label="Divisions & Areas">
       <DivisionRankings divisions={analytics.divisionRankings} />
       <AreaPerformanceChart areas={topAreas} />
     </Tab>
-    
+
     <Tab label="Trends">
       <MembershipTrendChart data={analytics.membershipTrend} />
       <YearOverYearComparison data={analytics.yearOverYear} />
     </Tab>
-    
+
     <Tab label="Analytics">
       <LeadershipInsights divisions={analytics.divisionRankings} />
       <SeasonalPatterns data={analytics.membershipTrend} />
@@ -380,17 +370,17 @@ interface ClubPerformanceRecord {
   divisionName: string
   areaId: string
   areaName: string
-  
+
   // Membership
   activeMembership: number
   baseMembers: number
-  
+
   // DCP Goals (0-10)
   goalsAchieved: number
-  
+
   // Distinguished status
   distinguishedStatus?: 'President' | 'Select' | 'Distinguished'
-  
+
   // Additional metrics from CSV
   [key: string]: any
 }
@@ -405,11 +395,11 @@ interface DivisionPerformanceRecord {
   totalClubs: number
   totalMembers: number
   totalDcpGoals: number
-  
+
   // Calculated metrics
   averageMembership: number
   averageDcpGoals: number
-  
+
   // Additional metrics from CSV
   [key: string]: any
 }
@@ -554,30 +544,35 @@ interface DivisionPerformanceRecord {
 ## Migration Strategy
 
 ### Phase 1: Backend Infrastructure
+
 - Implement DistrictCacheManager
 - Implement DistrictBackfillService
 - Add API endpoints
 - Test with sample district
 
 ### Phase 2: Analytics Engine
+
 - Implement basic analytics calculations
 - Add at-risk club detection
 - Add trend analysis
 - Test with historical data
 
 ### Phase 3: Frontend Visualization
+
 - Enhance DistrictDetailPage
 - Add basic charts
 - Add backfill UI
 - Test user workflows
 
 ### Phase 4: Advanced Insights
+
 - Add year-over-year comparisons
 - Add leadership insights
 - Add export functionality
 - Polish UI/UX
 
 ### Phase 5: Optimization & Polish
+
 - Performance tuning
 - Add more visualizations
 - Implement user feedback

@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 type ClubData = {
-  [key: string]: string | number | undefined;
+  [key: string]: string | number | undefined
 }
 
 type ExtractResult = {
@@ -27,7 +27,17 @@ export class CspExtractorService {
   }
 
   constructor(mappingPath?: string) {
-    const p = mappingPath ?? path.join(process.cwd(), 'backend', 'src', 'modules', 'assessment', 'config', 'cspMapping.json')
+    const p =
+      mappingPath ??
+      path.join(
+        process.cwd(),
+        'backend',
+        'src',
+        'modules',
+        'assessment',
+        'config',
+        'cspMapping.json'
+      )
     try {
       // Synchronously read config at startup (it's small)
       // We do this so that unit tests can override mappingPath if needed
@@ -39,10 +49,24 @@ export class CspExtractorService {
       // Default fallback mapping
       this.mapping = {
         csv_columns_to_check: [
-          'CSP Achieved', 'CSP', 'Competent Toastmaster Speaker Program', 'Speaker Program Achieved', 'competent_speaker_program', 'csp_achieved', 'achievement_status'
+          'CSP Achieved',
+          'CSP',
+          'Competent Toastmaster Speaker Program',
+          'Speaker Program Achieved',
+          'competent_speaker_program',
+          'csp_achieved',
+          'achievement_status',
         ],
         valid_true_values: ['Yes', 'TRUE', 'true', 'X', '1', 'achieved'],
-        valid_false_values: ['No', 'FALSE', 'false', ' ', '0', 'not_achieved', '']
+        valid_false_values: [
+          'No',
+          'FALSE',
+          'false',
+          ' ',
+          '0',
+          'not_achieved',
+          '',
+        ],
       }
     }
   }
@@ -62,7 +86,11 @@ export class CspExtractorService {
     // Fallback: any header containing 'csp' or 'competent' or 'speaker' + 'program'
     for (let i = 0; i < normalized.length; i++) {
       const h = normalized[i]
-      if (h.includes('csp') || (h.includes('competent') && h.includes('speaker')) || h.includes('speaker program')) {
+      if (
+        h.includes('csp') ||
+        (h.includes('competent') && h.includes('speaker')) ||
+        h.includes('speaker program')
+      ) {
         return headers[i]
       }
     }
@@ -78,7 +106,9 @@ export class CspExtractorService {
     const s = String(v).trim()
     if (s.length === 0) return false
     const normal = s.toLowerCase()
-    return this.mapping.valid_true_values.map(x => x.toLowerCase()).includes(normal)
+    return this.mapping.valid_true_values
+      .map(x => x.toLowerCase())
+      .includes(normal)
   }
 
   /**
@@ -88,14 +118,24 @@ export class CspExtractorService {
     const total_clubs = clubRecords.length
 
     if (total_clubs === 0) {
-      return { csp_count: 0, clubs_with_csp: [], total_clubs: 0, csp_field_name: null }
+      return {
+        csp_count: 0,
+        clubs_with_csp: [],
+        total_clubs: 0,
+        csp_field_name: null,
+      }
     }
 
     const headers = Object.keys(clubRecords[0])
     const cspField = this.findCspColumn(headers)
 
     if (!cspField) {
-      return { csp_count: 0, clubs_with_csp: [], total_clubs, csp_field_name: null }
+      return {
+        csp_count: 0,
+        clubs_with_csp: [],
+        total_clubs,
+        csp_field_name: null,
+      }
     }
 
     const clubs_with_csp: ClubData[] = []

@@ -1,42 +1,76 @@
-import React, { useState, useMemo } from 'react';
-import { DivisionAnalytics } from '../hooks/useDistrictAnalytics';
-import { LoadingSkeleton } from './LoadingSkeleton';
-import { EmptyState } from './ErrorDisplay';
+import React, { useState, useMemo } from 'react'
+import { DivisionAnalytics } from '../hooks/useDistrictAnalytics'
+import { LoadingSkeleton } from './LoadingSkeleton'
+import { EmptyState } from './ErrorDisplay'
 
 interface DivisionRankingsProps {
-  divisions: DivisionAnalytics[];
-  isLoading?: boolean;
+  divisions: DivisionAnalytics[]
+  isLoading?: boolean
 }
 
-type SortField = 'rank' | 'name' | 'clubs' | 'dcpGoals' | 'health' | 'trend';
-type SortDirection = 'asc' | 'desc';
+type SortField = 'rank' | 'name' | 'clubs' | 'dcpGoals' | 'health' | 'trend'
+type SortDirection = 'asc' | 'desc'
 
 // Sort icon component moved outside render
-const SortIcon: React.FC<{ field: SortField; sortField: SortField; sortDirection: SortDirection }> = ({ field, sortField, sortDirection }) => {
+const SortIcon: React.FC<{
+  field: SortField
+  sortField: SortField
+  sortDirection: SortDirection
+}> = ({ field, sortField, sortDirection }) => {
   if (sortField !== field) {
     return (
-      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      <svg
+        className="w-4 h-4 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+        />
       </svg>
-    );
+    )
   }
   return sortDirection === 'asc' ? (
-    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    <svg
+      className="w-4 h-4 text-blue-600"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 15l7-7 7 7"
+      />
     </svg>
   ) : (
-    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    <svg
+      className="w-4 h-4 text-blue-600"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 9l-7 7-7-7"
+      />
     </svg>
-  );
-};
+  )
+}
 
 export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
   divisions,
   isLoading = false,
 }) => {
-  const [sortField, setSortField] = useState<SortField>('rank');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>('rank')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   // Get trend icon and color
   const getTrendIcon = (trend: 'improving' | 'stable' | 'declining') => {
@@ -44,106 +78,139 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
       case 'improving':
         return (
           <div className="flex items-center gap-1 text-green-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
             </svg>
             <span className="text-xs font-medium">Improving</span>
           </div>
-        );
+        )
       case 'declining':
         return (
           <div className="flex items-center gap-1 text-red-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+              />
             </svg>
             <span className="text-xs font-medium">Declining</span>
           </div>
-        );
+        )
       default:
         return (
           <div className="flex items-center gap-1 text-gray-600">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 12h14"
+              />
             </svg>
             <span className="text-xs font-medium">Stable</span>
           </div>
-        );
+        )
     }
-  };
+  }
 
   // Get rank badge styling
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
-      return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      return 'bg-yellow-100 text-yellow-800 border-yellow-300'
     } else if (rank === 2) {
-      return 'bg-gray-100 text-gray-800 border-gray-300';
+      return 'bg-gray-100 text-gray-800 border-gray-300'
     } else if (rank === 3) {
-      return 'bg-orange-100 text-orange-800 border-orange-300';
+      return 'bg-orange-100 text-orange-800 border-orange-300'
     }
-    return 'bg-blue-50 text-blue-700 border-blue-200';
-  };
+    return 'bg-blue-50 text-blue-700 border-blue-200'
+  }
 
   // Check if division is "Best Practice" (top 20% with high scores)
   const isBestPractice = (division: DivisionAnalytics): boolean => {
-    const topPercentile = Math.ceil(divisions.length * 0.2);
-    const avgHealthThreshold = 5; // Average of 5+ DCP goals per club
-    return division.rank <= topPercentile && division.averageClubHealth >= avgHealthThreshold;
-  };
+    const topPercentile = Math.ceil(divisions.length * 0.2)
+    const avgHealthThreshold = 5 // Average of 5+ DCP goals per club
+    return (
+      division.rank <= topPercentile &&
+      division.averageClubHealth >= avgHealthThreshold
+    )
+  }
 
   // Sort divisions
   const sortedDivisions = useMemo(() => {
     const sorted = [...divisions].sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
+      let aValue: string | number
+      let bValue: string | number
 
       switch (sortField) {
         case 'rank':
-          aValue = a.rank;
-          bValue = b.rank;
-          break;
+          aValue = a.rank
+          bValue = b.rank
+          break
         case 'name':
-          aValue = a.divisionName.toLowerCase();
-          bValue = b.divisionName.toLowerCase();
-          break;
+          aValue = a.divisionName.toLowerCase()
+          bValue = b.divisionName.toLowerCase()
+          break
         case 'clubs':
-          aValue = a.totalClubs;
-          bValue = b.totalClubs;
-          break;
+          aValue = a.totalClubs
+          bValue = b.totalClubs
+          break
         case 'dcpGoals':
-          aValue = a.totalDcpGoals;
-          bValue = b.totalDcpGoals;
-          break;
+          aValue = a.totalDcpGoals
+          bValue = b.totalDcpGoals
+          break
         case 'health':
-          aValue = a.averageClubHealth;
-          bValue = b.averageClubHealth;
-          break;
+          aValue = a.averageClubHealth
+          bValue = b.averageClubHealth
+          break
         case 'trend': {
-          const trendOrder = { improving: 2, stable: 1, declining: 0 };
-          aValue = trendOrder[a.trend];
-          bValue = trendOrder[b.trend];
-          break;
+          const trendOrder = { improving: 2, stable: 1, declining: 0 }
+          aValue = trendOrder[a.trend]
+          bValue = trendOrder[b.trend]
+          break
         }
         default:
-          return 0;
+          return 0
       }
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
 
-    return sorted;
-  }, [divisions, sortField, sortDirection]);
+    return sorted
+  }, [divisions, sortField, sortDirection])
 
   // Handle sort
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
-      setSortField(field);
-      setSortDirection(field === 'rank' ? 'asc' : 'desc'); // Default to ascending for rank, descending for others
+      setSortField(field)
+      setSortDirection(field === 'rank' ? 'asc' : 'desc') // Default to ascending for rank, descending for others
     }
-  };
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md">
@@ -151,26 +218,32 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Division Rankings</h3>
+            <h3 className="text-xl font-bold text-gray-900">
+              Division Rankings
+            </h3>
             <p className="text-sm text-gray-600 mt-1">
               Performance comparison across all divisions
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                className="w-4 h-4 text-yellow-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
-              <span className="text-xs font-medium text-yellow-700">Best Practice</span>
+              <span className="text-xs font-medium text-yellow-700">
+                Best Practice
+              </span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <LoadingSkeleton variant="table" count={5} />
-      )}
+      {isLoading && <LoadingSkeleton variant="table" count={5} />}
 
       {/* No Data */}
       {!isLoading && divisions.length === 0 && (
@@ -193,7 +266,11 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Rank
-                    <SortIcon field="rank" sortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="rank"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -202,7 +279,11 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Division
-                    <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="name"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -211,7 +292,11 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Total Clubs
-                    <SortIcon field="clubs" sortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="clubs"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -220,7 +305,11 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Total DCP Goals
-                    <SortIcon field="dcpGoals" sortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="dcpGoals"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -229,7 +318,11 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Health Score
-                    <SortIcon field="health" sortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="health"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th
@@ -238,7 +331,11 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Trend
-                    <SortIcon field="trend" sortField={sortField} sortDirection={sortDirection} />
+                    <SortIcon
+                      field="trend"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -247,13 +344,15 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sortedDivisions.map((division) => {
-                const bestPractice = isBestPractice(division);
+              {sortedDivisions.map(division => {
+                const bestPractice = isBestPractice(division)
                 return (
                   <tr
                     key={division.divisionId}
                     className={`${
-                      bestPractice ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-white hover:bg-gray-50'
+                      bestPractice
+                        ? 'bg-yellow-50 hover:bg-yellow-100'
+                        : 'bg-white hover:bg-gray-50'
                     } transition-colors`}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -267,9 +366,15 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{division.divisionName}</span>
+                        <span className="font-medium text-gray-900">
+                          {division.divisionName}
+                        </span>
                         {bestPractice && (
-                          <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                          <svg
+                            className="w-5 h-5 text-yellow-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
                         )}
@@ -303,16 +408,20 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                                 division.averageClubHealth >= 7
                                   ? 'bg-green-500'
                                   : division.averageClubHealth >= 5
-                                  ? 'bg-yellow-500'
-                                  : 'bg-red-500'
+                                    ? 'bg-yellow-500'
+                                    : 'bg-red-500'
                               }`}
-                              style={{ width: `${(division.averageClubHealth / 10) * 100}%` }}
+                              style={{
+                                width: `${(division.averageClubHealth / 10) * 100}%`,
+                              }}
                             ></div>
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{getTrendIcon(division.trend)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getTrendIcon(division.trend)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {bestPractice ? (
                         <span className="px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
@@ -323,7 +432,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                       )}
                     </td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
@@ -346,5 +455,5 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}

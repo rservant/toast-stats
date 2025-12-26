@@ -7,9 +7,11 @@ This directory contains React Query hooks for fetching and managing district-lev
 ### District Data Hooks
 
 #### `useDistrictData(districtId, date, enabled?)`
+
 Fetches cached district data for a specific date, including district, division, and club performance reports.
 
 **Parameters:**
+
 - `districtId`: The district ID (e.g., "46")
 - `date`: Date in YYYY-MM-DD format
 - `enabled`: Optional boolean to enable/disable the query (default: true)
@@ -19,14 +21,17 @@ Fetches cached district data for a specific date, including district, division, 
 **Cache Strategy:** 10 minutes stale time (historical data doesn't change)
 
 **Example:**
+
 ```typescript
-const { data, isLoading, error } = useDistrictData('46', '2025-11-22');
+const { data, isLoading, error } = useDistrictData('46', '2025-11-22')
 ```
 
 #### `useDistrictCachedDates(districtId, enabled?)`
+
 Fetches all available cached dates for a district.
 
 **Parameters:**
+
 - `districtId`: The district ID
 - `enabled`: Optional boolean to enable/disable the query (default: true)
 
@@ -35,8 +40,9 @@ Fetches all available cached dates for a district.
 **Cache Strategy:** 5 minutes stale time
 
 **Example:**
+
 ```typescript
-const { data: cachedDates } = useDistrictCachedDates('46');
+const { data: cachedDates } = useDistrictCachedDates('46')
 // cachedDates.dates: ['2025-11-01', '2025-11-02', ...]
 // cachedDates.dateRange: { startDate: '2025-11-01', endDate: '2025-11-22' }
 ```
@@ -44,9 +50,11 @@ const { data: cachedDates } = useDistrictCachedDates('46');
 ### Analytics Hooks
 
 #### `useDistrictAnalytics(districtId, startDate?, endDate?)`
+
 Fetches comprehensive district analytics including membership trends, club health, distinguished status, and division rankings.
 
 **Parameters:**
+
 - `districtId`: The district ID
 - `startDate`: Optional start date for analysis range
 - `endDate`: Optional end date for analysis range
@@ -56,14 +64,21 @@ Fetches comprehensive district analytics including membership trends, club healt
 **Cache Strategy:** 5 minutes stale time
 
 **Example:**
+
 ```typescript
-const { data: analytics } = useDistrictAnalytics('46', '2025-07-01', '2025-11-22');
+const { data: analytics } = useDistrictAnalytics(
+  '46',
+  '2025-07-01',
+  '2025-11-22'
+)
 ```
 
 #### `useClubTrends(districtId, clubId, enabled?)`
+
 Fetches trend data for a specific club including membership history, DCP goal progress, and risk assessment.
 
 **Parameters:**
+
 - `districtId`: The district ID
 - `clubId`: The club ID
 - `enabled`: Optional boolean to enable/disable the query (default: true)
@@ -73,14 +88,17 @@ Fetches trend data for a specific club including membership history, DCP goal pr
 **Cache Strategy:** 5 minutes stale time
 
 **Example:**
+
 ```typescript
-const { data: clubTrend } = useClubTrends('46', '123456');
+const { data: clubTrend } = useClubTrends('46', '123456')
 ```
 
 #### `useAtRiskClubs(districtId, enabled?)`
+
 Fetches list of at-risk and critical clubs for a district.
 
 **Parameters:**
+
 - `districtId`: The district ID
 - `enabled`: Optional boolean to enable/disable the query (default: true)
 
@@ -89,8 +107,9 @@ Fetches list of at-risk and critical clubs for a district.
 **Cache Strategy:** 5 minutes stale time
 
 **Example:**
+
 ```typescript
-const { data: atRiskData } = useAtRiskClubs('46');
+const { data: atRiskData } = useAtRiskClubs('46')
 // atRiskData.clubs: Array of at-risk clubs
 // atRiskData.criticalClubs: Count of critical clubs
 ```
@@ -98,23 +117,28 @@ const { data: atRiskData } = useAtRiskClubs('46');
 ### Backfill Hooks
 
 #### `useInitiateDistrictBackfill(districtId)`
+
 Mutation hook to initiate a backfill operation for a district.
 
 **Parameters:**
+
 - `districtId`: The district ID
 
 **Returns:** Mutation object with `mutate` function
 
 **Example:**
+
 ```typescript
-const { mutate: startBackfill } = useInitiateDistrictBackfill('46');
-startBackfill({ startDate: '2025-07-01', endDate: '2025-11-22' });
+const { mutate: startBackfill } = useInitiateDistrictBackfill('46')
+startBackfill({ startDate: '2025-07-01', endDate: '2025-11-22' })
 ```
 
 #### `useDistrictBackfillStatus(districtId, backfillId, enabled?)`
+
 Polls the status of a district backfill operation. Automatically polls every 2 seconds while processing.
 
 **Parameters:**
+
 - `districtId`: The district ID
 - `backfillId`: The backfill job ID
 - `enabled`: Optional boolean to enable/disable polling (default: true)
@@ -124,23 +148,27 @@ Polls the status of a district backfill operation. Automatically polls every 2 s
 **Auto-polling:** Stops when status is 'complete' or 'error'
 
 **Example:**
+
 ```typescript
-const { data: status } = useDistrictBackfillStatus('46', backfillId, true);
+const { data: status } = useDistrictBackfillStatus('46', backfillId, true)
 // status.progress: { total, completed, current, skipped, failed }
 ```
 
 #### `useCancelDistrictBackfill(districtId)`
+
 Mutation hook to cancel a running backfill operation.
 
 **Parameters:**
+
 - `districtId`: The district ID
 
 **Returns:** Mutation object with `mutate` function
 
 **Example:**
+
 ```typescript
-const { mutate: cancelBackfill } = useCancelDistrictBackfill('46');
-cancelBackfill(backfillId);
+const { mutate: cancelBackfill } = useCancelDistrictBackfill('46')
+cancelBackfill(backfillId)
 ```
 
 ## Caching Strategy
@@ -176,11 +204,11 @@ All hooks return standard React Query error objects. Common error scenarios:
 Handle errors using the `error` property:
 
 ```typescript
-const { data, error, isLoading } = useDistrictData('46', '2025-11-22');
+const { data, error, isLoading } = useDistrictData('46', '2025-11-22')
 
 if (error) {
   // Handle error - show message to user
-  console.error('Failed to fetch district data:', error.message);
+  console.error('Failed to fetch district data:', error.message)
 }
 ```
 

@@ -5,12 +5,15 @@
 
 import { logger } from '../utils/logger.js'
 import { ReconciliationOrchestrator } from './ReconciliationOrchestrator.js'
-import { ReconciliationCacheService, CacheStats } from './ReconciliationCacheService.js'
+import {
+  ReconciliationCacheService,
+  CacheStats,
+} from './ReconciliationCacheService.js'
 import { ReconciliationStorageOptimizer } from './ReconciliationStorageOptimizer.js'
 import type {
   ReconciliationConfig,
   ReconciliationStatus,
-  DistrictStatistics
+  DistrictStatistics,
 } from '../types/reconciliation.js'
 
 export interface BatchProcessingConfig {
@@ -58,7 +61,7 @@ export class ReconciliationBatchProcessor {
   private cacheService: ReconciliationCacheService
   private storageOptimizer: ReconciliationStorageOptimizer
   private config: BatchProcessingConfig
-  
+
   private activeJobs = new Map<string, Promise<BatchResult>>()
   private jobQueue: BatchJob[] = []
   private results: BatchResult[] = []
@@ -73,8 +76,9 @@ export class ReconciliationBatchProcessor {
   ) {
     this.orchestrator = orchestrator || new ReconciliationOrchestrator()
     this.cacheService = cacheService || new ReconciliationCacheService()
-    this.storageOptimizer = storageOptimizer || new ReconciliationStorageOptimizer()
-    
+    this.storageOptimizer =
+      storageOptimizer || new ReconciliationStorageOptimizer()
+
     this.config = {
       maxConcurrentJobs: 5,
       batchSize: 20,
@@ -83,7 +87,7 @@ export class ReconciliationBatchProcessor {
       timeoutMs: 300000, // 5 minutes per job
       enableResourceThrottling: true,
       memoryThresholdMB: 1024, // 1GB
-      ...config
+      ...config,
     }
   }
 
@@ -103,7 +107,7 @@ export class ReconciliationBatchProcessor {
     logger.info('Starting batch reconciliation processing', {
       totalJobs: jobs.length,
       maxConcurrent: this.config.maxConcurrentJobs,
-      batchSize: this.config.batchSize
+      batchSize: this.config.batchSize,
     })
 
     try {
@@ -111,7 +115,7 @@ export class ReconciliationBatchProcessor {
       while (this.jobQueue.length > 0 || this.activeJobs.size > 0) {
         // Start new jobs up to concurrency limit
         await this.startPendingJobs()
-        
+
         // Wait for at least one job to complete
         if (this.activeJobs.size > 0) {
           await this.waitForJobCompletion()
@@ -135,11 +139,10 @@ export class ReconciliationBatchProcessor {
         successful: successCount,
         failed: failureCount,
         totalTimeMs: totalTime,
-        averageTimeMs: totalTime / this.results.length
+        averageTimeMs: totalTime / this.results.length,
       })
 
       return this.results
-
     } catch (error) {
       logger.error('Batch processing failed', { error })
       throw error
@@ -152,22 +155,28 @@ export class ReconciliationBatchProcessor {
    * Start pending jobs up to concurrency limit
    */
   private async startPendingJobs(): Promise<void> {
-    while (this.jobQueue.length > 0 && this.activeJobs.size < this.config.maxConcurrentJobs) {
+    while (
+      this.jobQueue.length > 0 &&
+      this.activeJobs.size < this.config.maxConcurrentJobs
+    ) {
       const job = this.jobQueue.shift()!
       const jobKey = `${job.districtId}-${job.targetMonth}`
-      
+
       // Check if job is already cached
       const cachedJob = this.cacheService.getJob(jobKey)
       if (cachedJob && cachedJob.status === 'completed') {
-        logger.debug('Skipping completed job from cache', { districtId: job.districtId, targetMonth: job.targetMonth })
-        
+        logger.debug('Skipping completed job from cache', {
+          districtId: job.districtId,
+          targetMonth: job.targetMonth,
+        })
+
         this.results.push({
           districtId: job.districtId,
           targetMonth: job.targetMonth,
           success: true,
           jobId: cachedJob.id,
           processingTimeMs: 0,
-          retryCount: 0
+          retryCount: 0,
         })
         continue
       }
@@ -175,12 +184,12 @@ export class ReconciliationBatchProcessor {
       // Start the job
       const jobPromise = this.processJob(job)
       this.activeJobs.set(jobKey, jobPromise)
-      
-      logger.debug('Started reconciliation job', { 
-        districtId: job.districtId, 
+
+      logger.debug('Started reconciliation job', {
+        districtId: job.districtId,
         targetMonth: job.targetMonth,
         activeJobs: this.activeJobs.size,
-        queuedJobs: this.jobQueue.length
+        queuedJobs: this.jobQueue.length,
       })
     }
   }
@@ -196,11 +205,14 @@ export class ReconciliationBatchProcessor {
     // Wait for the first job to complete
     const jobPromises = Array.from(this.activeJobs.values())
     const result = await Promise.race(jobPromises)
-    
+
     // Find and remove the completed job
     for (const [key, promise] of this.activeJobs.entries()) {
       try {
-        const promiseResult = await Promise.race([promise, Promise.resolve(null)])
+        const promiseResult = await Promise.race([
+          promise,
+          Promise.resolve(null),
+        ])
         if (promiseResult === result) {
           this.activeJobs.delete(key)
           this.results.push(result)
@@ -223,10 +235,12 @@ export class ReconciliationBatchProcessor {
     while (retryCount <= this.config.retryAttempts) {
       try {
         const result = await this.executeJobWithTimeout(job)
-        
+
         // Cache successful result
         if (result.success && result.jobId) {
-          const reconciliationJob = await this.storageOptimizer.getJob(result.jobId)
+          const reconciliationJob = await this.storageOptimizer.getJob(
+            result.jobId
+          )
           if (reconciliationJob) {
             this.cacheService.setJob(result.jobId, reconciliationJob)
           }
@@ -235,19 +249,18 @@ export class ReconciliationBatchProcessor {
         return {
           ...result,
           processingTimeMs: Date.now() - startTime,
-          retryCount
+          retryCount,
         }
-
       } catch (error) {
         lastError = error as Error
         retryCount++
-        
+
         logger.warn('Job execution failed, retrying', {
           districtId: job.districtId,
           targetMonth: job.targetMonth,
           attempt: retryCount,
           maxAttempts: this.config.retryAttempts,
-          error: lastError.message
+          error: lastError.message,
         })
 
         if (retryCount <= this.config.retryAttempts) {
@@ -263,7 +276,7 @@ export class ReconciliationBatchProcessor {
       success: false,
       error: lastError,
       processingTimeMs: Date.now() - startTime,
-      retryCount
+      retryCount,
     }
   }
 
@@ -294,7 +307,7 @@ export class ReconciliationBatchProcessor {
   private async executeJob(job: BatchJob): Promise<BatchResult> {
     logger.debug('Executing reconciliation job', {
       districtId: job.districtId,
-      targetMonth: job.targetMonth
+      targetMonth: job.targetMonth,
     })
 
     try {
@@ -321,7 +334,7 @@ export class ReconciliationBatchProcessor {
           jobId: reconciliationJob.id,
           status,
           processingTimeMs: 0,
-          retryCount: 0
+          retryCount: 0,
         }
       }
 
@@ -331,14 +344,13 @@ export class ReconciliationBatchProcessor {
         success: true,
         jobId: reconciliationJob.id,
         processingTimeMs: 0,
-        retryCount: 0
+        retryCount: 0,
       }
-
     } catch (error) {
       logger.error('Job execution failed', {
         districtId: job.districtId,
         targetMonth: job.targetMonth,
-        error
+        error,
       })
 
       throw error
@@ -361,7 +373,7 @@ export class ReconciliationBatchProcessor {
         logger.warn('High memory usage detected, throttling batch processing', {
           memoryUsageMB,
           threshold: this.config.memoryThresholdMB,
-          activeJobs: this.activeJobs.size
+          activeJobs: this.activeJobs.size,
         })
 
         // Force garbage collection if available
@@ -385,23 +397,30 @@ export class ReconciliationBatchProcessor {
    * Get current batch processing progress
    */
   getProgress(): BatchProgress {
-    const totalJobs = this.results.length + this.activeJobs.size + this.jobQueue.length
+    const totalJobs =
+      this.results.length + this.activeJobs.size + this.jobQueue.length
     const completedJobs = this.results.length
     const failedJobs = this.results.filter(r => !r.success).length
     const activeJobs = this.activeJobs.size
     const queuedJobs = this.jobQueue.length
 
     // Calculate average processing time
-    const successfulResults = this.results.filter(r => r.success && r.processingTimeMs > 0)
-    const averageProcessingTimeMs = successfulResults.length > 0
-      ? successfulResults.reduce((sum, r) => sum + r.processingTimeMs, 0) / successfulResults.length
-      : 0
+    const successfulResults = this.results.filter(
+      r => r.success && r.processingTimeMs > 0
+    )
+    const averageProcessingTimeMs =
+      successfulResults.length > 0
+        ? successfulResults.reduce((sum, r) => sum + r.processingTimeMs, 0) /
+          successfulResults.length
+        : 0
 
     // Estimate completion time
     const remainingJobs = activeJobs + queuedJobs
-    const estimatedCompletionMs = remainingJobs > 0 && averageProcessingTimeMs > 0
-      ? (remainingJobs / this.config.maxConcurrentJobs) * averageProcessingTimeMs
-      : 0
+    const estimatedCompletionMs =
+      remainingJobs > 0 && averageProcessingTimeMs > 0
+        ? (remainingJobs / this.config.maxConcurrentJobs) *
+          averageProcessingTimeMs
+        : 0
 
     return {
       totalJobs,
@@ -410,7 +429,7 @@ export class ReconciliationBatchProcessor {
       activeJobs,
       queuedJobs,
       estimatedCompletionMs,
-      averageProcessingTimeMs
+      averageProcessingTimeMs,
     }
   }
 
@@ -420,7 +439,7 @@ export class ReconciliationBatchProcessor {
   async cancelBatch(): Promise<void> {
     logger.info('Cancelling batch processing', {
       activeJobs: this.activeJobs.size,
-      queuedJobs: this.jobQueue.length
+      queuedJobs: this.jobQueue.length,
     })
 
     // Clear the queue
@@ -448,20 +467,23 @@ export class ReconciliationBatchProcessor {
     const totalProcessed = this.results.length
     const successful = this.results.filter(r => r.success).length
     const successRate = totalProcessed > 0 ? successful / totalProcessed : 0
-    
+
     const processingTimes = this.results.map(r => r.processingTimeMs)
-    const averageProcessingTime = processingTimes.length > 0
-      ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length
-      : 0
-    
-    const totalProcessingTime = this.startTime > 0 ? Date.now() - this.startTime : 0
+    const averageProcessingTime =
+      processingTimes.length > 0
+        ? processingTimes.reduce((sum, time) => sum + time, 0) /
+          processingTimes.length
+        : 0
+
+    const totalProcessingTime =
+      this.startTime > 0 ? Date.now() - this.startTime : 0
 
     return {
       totalProcessed,
       successRate,
       averageProcessingTime,
       totalProcessingTime,
-      cacheStats: this.cacheService.getStats()
+      cacheStats: this.cacheService.getStats(),
     }
   }
 

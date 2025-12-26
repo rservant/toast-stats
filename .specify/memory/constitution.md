@@ -1,4 +1,5 @@
 # Toast Stats Constitution
+
 <!-- Dynamic Web Application Specification & Development Framework -->
 
 ## Core Principles

@@ -18,10 +18,13 @@ export function generateCacheKey(
     // Sort keys to ensure consistent ordering
     const sortedParams = Object.keys(params)
       .sort()
-      .reduce((acc, key) => {
-        acc[key] = params[key]
-        return acc
-      }, {} as Record<string, unknown>)
+      .reduce(
+        (acc, key) => {
+          acc[key] = params[key]
+          return acc
+        },
+        {} as Record<string, unknown>
+      )
 
     // Create hash of parameters
     const paramsString = JSON.stringify(sortedParams)

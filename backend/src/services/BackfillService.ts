@@ -6,7 +6,11 @@
 
 import { v4 as uuidv4 } from 'uuid'
 import { logger } from '../utils/logger.js'
-import type { BackfillRequest, BackfillJob, BackfillResponse } from '../types/districts.js'
+import type {
+  BackfillRequest,
+  BackfillJob,
+  BackfillResponse,
+} from '../types/districts.js'
 import { CacheManager } from './CacheManager.js'
 import type { DistrictRankingsResponse } from '../types/districts.js'
 
@@ -65,7 +69,7 @@ export class BackfillService {
     // Check which dates are already cached
     const cachedDates = await this.cacheManager.getCachedDates('districts')
     const cachedSet = new Set(cachedDates)
-    const missingDates = allDates.filter((d) => !cachedSet.has(d))
+    const missingDates = allDates.filter(d => !cachedSet.has(d))
 
     if (missingDates.length === 0) {
       throw new Error('All dates in the range are already cached')
@@ -92,7 +96,7 @@ export class BackfillService {
     this.jobs.set(backfillId, job)
 
     // Start background processing
-    this.processBackfill(backfillId, missingDates).catch((error) => {
+    this.processBackfill(backfillId, missingDates).catch(error => {
       logger.error('Backfill processing failed', { backfillId, error })
       const failedJob = this.jobs.get(backfillId)
       if (failedJob) {
@@ -163,17 +167,22 @@ export class BackfillService {
       }
     }
 
-    jobsToDelete.forEach((id) => this.jobs.delete(id))
+    jobsToDelete.forEach(id => this.jobs.delete(id))
 
     if (jobsToDelete.length > 0) {
-      logger.info('Cleaned up old backfill jobs', { count: jobsToDelete.length })
+      logger.info('Cleaned up old backfill jobs', {
+        count: jobsToDelete.length,
+      })
     }
   }
 
   /**
    * Process backfill in background
    */
-  private async processBackfill(backfillId: string, dates: string[]): Promise<void> {
+  private async processBackfill(
+    backfillId: string,
+    dates: string[]
+  ): Promise<void> {
     const job = this.jobs.get(backfillId)
     if (!job) {
       throw new Error('Job not found')
@@ -200,37 +209,54 @@ export class BackfillService {
           // Fetch data for this date
           logger.info('Fetching data for date', { backfillId, date })
           const result = await this.apiService.getAllDistrictsRankings(date)
-          
+
           // Check if we got valid data
           if (result && result.rankings && result.rankings.length > 0) {
             successCount++
-            logger.info('Successfully fetched data for date', { backfillId, date, districtCount: result.rankings.length })
+            logger.info('Successfully fetched data for date', {
+              backfillId,
+              date,
+              districtCount: result.rankings.length,
+            })
           } else {
             // Data unavailable (blackout period or reconciliation)
             job.progress.unavailable++
-            logger.info('No data available for date (expected blackout/reconciliation period)', { backfillId, date })
+            logger.info(
+              'No data available for date (expected blackout/reconciliation period)',
+              { backfillId, date }
+            )
           }
 
           // Add a delay to avoid overwhelming the server
-          await new Promise((resolve) => setTimeout(resolve, 2000))
+          await new Promise(resolve => setTimeout(resolve, 2000))
         } catch (error) {
           // Check if it's a "date not available" error vs actual failure
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          
-          if (errorMessage.includes('not available') || 
-              errorMessage.includes('dashboard returned') ||
-              errorMessage.includes('Date selection failed') || 
-              errorMessage.includes('not found') ||
-              errorMessage.includes('404')) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
+
+          if (
+            errorMessage.includes('not available') ||
+            errorMessage.includes('dashboard returned') ||
+            errorMessage.includes('Date selection failed') ||
+            errorMessage.includes('not found') ||
+            errorMessage.includes('404')
+          ) {
             // Expected - date doesn't exist on dashboard (blackout/reconciliation period)
             job.progress.unavailable++
-            logger.info('Date not available on dashboard (blackout/reconciliation period)', { backfillId, date })
+            logger.info(
+              'Date not available on dashboard (blackout/reconciliation period)',
+              { backfillId, date }
+            )
           } else {
             // Actual error
             job.progress.failed++
-            logger.error('Failed to fetch data for date', { backfillId, date, error: errorMessage })
+            logger.error('Failed to fetch data for date', {
+              backfillId,
+              date,
+              error: errorMessage,
+            })
           }
-          
+
           // Continue with next date
         }
       }

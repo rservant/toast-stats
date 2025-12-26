@@ -121,15 +121,15 @@ npm run test:coverage
 
 ### Endpoints
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | `/api/assessment/monthly` | Submit monthly assessment data |
-| GET | `/api/assessment/monthly/:month` | Retrieve monthly report |
-| GET | `/api/assessment/year-end` | Get year-end summary |
-| POST | `/api/assessment/goals` | Create leader goal |
-| GET | `/api/assessment/goals` | Query goals (with filters) |
-| PUT | `/api/assessment/goals/:id` | Update goal status |
-| POST | `/api/assessment/config` | Load/update configuration |
+| Method | Endpoint                         | Purpose                        |
+| ------ | -------------------------------- | ------------------------------ |
+| POST   | `/api/assessment/monthly`        | Submit monthly assessment data |
+| GET    | `/api/assessment/monthly/:month` | Retrieve monthly report        |
+| GET    | `/api/assessment/year-end`       | Get year-end summary           |
+| POST   | `/api/assessment/goals`          | Create leader goal             |
+| GET    | `/api/assessment/goals`          | Query goals (with filters)     |
+| PUT    | `/api/assessment/goals/:id`      | Update goal status             |
+| POST   | `/api/assessment/config`         | Load/update configuration      |
 
 ### Request/Response Schemas
 

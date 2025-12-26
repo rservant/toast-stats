@@ -1,41 +1,41 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
-import { ReconciliationManagement } from '../ReconciliationManagement';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi } from 'vitest'
+import { ReconciliationManagement } from '../ReconciliationManagement'
 
 // Mock fetch globally
-const mockFetch = vi.fn();
-(globalThis as unknown as { fetch: typeof vi.fn }).fetch = mockFetch;
+const mockFetch = vi.fn()
+;(globalThis as unknown as { fetch: typeof vi.fn }).fetch = mockFetch
 
 // Mock window.open
-const mockWindowOpen = vi.fn();
+const mockWindowOpen = vi.fn()
 Object.defineProperty(window, 'open', {
   value: mockWindowOpen,
   writable: true,
-});
+})
 
 // Mock window.confirm
-const mockConfirm = vi.fn();
+const mockConfirm = vi.fn()
 Object.defineProperty(window, 'confirm', {
   value: mockConfirm,
   writable: true,
-});
+})
 
 describe('ReconciliationManagement', () => {
   beforeEach(() => {
     // Clear all mocks completely
-    mockFetch.mockClear();
-    mockFetch.mockReset();
-    mockWindowOpen.mockClear();
-    mockConfirm.mockClear();
-  });
+    mockFetch.mockClear()
+    mockFetch.mockReset()
+    mockWindowOpen.mockClear()
+    mockConfirm.mockClear()
+  })
 
   afterEach(() => {
     // Clean up after each test
-    mockFetch.mockClear();
-    mockFetch.mockReset();
-    mockWindowOpen.mockClear();
-    mockConfirm.mockClear();
-  });
+    mockFetch.mockClear()
+    mockFetch.mockReset()
+    mockWindowOpen.mockClear()
+    mockConfirm.mockClear()
+  })
 
   const mockActiveJobs = [
     {
@@ -46,7 +46,7 @@ describe('ReconciliationManagement', () => {
       startDate: new Date('2024-11-01'),
       currentDataDate: '2024-10-31',
     },
-  ];
+  ]
 
   const mockJobsForStatusTest = [
     {
@@ -65,7 +65,7 @@ describe('ReconciliationManagement', () => {
       startDate: new Date('2024-10-01'),
       currentDataDate: '2024-09-30',
     },
-  ];
+  ]
 
   const mockJobsWithAllStatuses = [
     {
@@ -100,7 +100,7 @@ describe('ReconciliationManagement', () => {
       startDate: new Date('2024-08-01'),
       currentDataDate: '2024-07-31',
     },
-  ];
+  ]
 
   const mockConfig = {
     maxReconciliationDays: 15,
@@ -113,7 +113,7 @@ describe('ReconciliationManagement', () => {
     },
     autoExtensionEnabled: true,
     maxExtensionDays: 5,
-  };
+  }
 
   // Helper function to setup successful mocks
   const setupSuccessfulMocks = (jobs: unknown[] = [], config = mockConfig) => {
@@ -125,16 +125,20 @@ describe('ReconciliationManagement', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ config }),
-      });
-  };
+      })
+  }
 
   describe('Access Control', () => {
     it('should show access denied message when user is not admin', () => {
-      render(<ReconciliationManagement isAdmin={false} />);
-      
-      expect(screen.getByText('Admin access required to manage reconciliations')).toBeInTheDocument();
-      expect(screen.queryByText('Reconciliation Management')).not.toBeInTheDocument();
-    });
+      render(<ReconciliationManagement isAdmin={false} />)
+
+      expect(
+        screen.getByText('Admin access required to manage reconciliations')
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('Reconciliation Management')
+      ).not.toBeInTheDocument()
+    })
 
     it('should show management interface when user is admin', async () => {
       mockFetch
@@ -145,53 +149,59 @@ describe('ReconciliationManagement', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ config: mockConfig }),
-        });
+        })
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
+      render(<ReconciliationManagement isAdmin={true} />)
+
       await waitFor(() => {
-        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
-      });
-    });
-  });
+        expect(
+          screen.getByText('Reconciliation Management')
+        ).toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Data Loading', () => {
     it('should load active jobs and configuration on mount', async () => {
-      setupSuccessfulMocks(mockJobsForStatusTest);
+      setupSuccessfulMocks(mockJobsForStatusTest)
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/reconciliation/jobs?status=active');
-        expect(mockFetch).toHaveBeenCalledWith('/api/reconciliation/config');
-      });
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/reconciliation/jobs?status=active'
+        )
+        expect(mockFetch).toHaveBeenCalledWith('/api/reconciliation/config')
+      })
 
-      expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument();
-      expect(screen.getByText('District D2 - 2024-09')).toBeInTheDocument();
-    });
+      expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument()
+      expect(screen.getByText('District D2 - 2024-09')).toBeInTheDocument()
+    })
 
     it('should show loading state while fetching data', () => {
       mockFetch
         .mockImplementationOnce(() => new Promise(() => {})) // Never resolves
-        .mockImplementationOnce(() => new Promise(() => {}));
+        .mockImplementationOnce(() => new Promise(() => {}))
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
-      expect(screen.getByText('Loading jobs...')).toBeInTheDocument();
-    });
+      render(<ReconciliationManagement isAdmin={true} />)
+
+      expect(screen.getByText('Loading jobs...')).toBeInTheDocument()
+    })
 
     it('should handle API errors gracefully', async () => {
       mockFetch
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockRejectedValueOnce(new Error('Network error'));
+        .mockRejectedValueOnce(new Error('Network error'))
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/Error:/)).toBeInTheDocument();
-        expect(screen.getByText(/Failed to load data: Network error/)).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByText(/Error:/)).toBeInTheDocument()
+        expect(
+          screen.getByText(/Failed to load data: Network error/)
+        ).toBeInTheDocument()
+      })
+    })
 
     it('should handle failed HTTP responses', async () => {
       mockFetch
@@ -202,55 +212,60 @@ describe('ReconciliationManagement', () => {
         .mockResolvedValueOnce({
           ok: false,
           json: () => Promise.resolve({}),
-        });
+        })
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/Error:/)).toBeInTheDocument();
-      });
-    });
-  });
+        expect(screen.getByText(/Error:/)).toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Job Management', () => {
     it('should display active jobs correctly', async () => {
-      setupSuccessfulMocks(mockJobsForStatusTest);
+      setupSuccessfulMocks(mockJobsForStatusTest)
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument();
-        expect(screen.getByText('District D2 - 2024-09')).toBeInTheDocument();
-        expect(screen.getAllByText('active')).toHaveLength(1);
-      });
-    });
+        expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument()
+        expect(screen.getByText('District D2 - 2024-09')).toBeInTheDocument()
+        expect(screen.getAllByText('active')).toHaveLength(1)
+      })
+    })
 
     it('should show empty state when no active jobs', async () => {
-      setupSuccessfulMocks([]); // Empty jobs array
+      setupSuccessfulMocks([]) // Empty jobs array
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('No active reconciliation jobs')).toBeInTheDocument();
-      });
-    });
+        expect(
+          screen.getByText('No active reconciliation jobs')
+        ).toBeInTheDocument()
+      })
+    })
 
     it('should open job details in new window', async () => {
-      setupSuccessfulMocks(mockActiveJobs);
+      setupSuccessfulMocks(mockActiveJobs)
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const viewDetailsButtons = screen.getAllByText('View Details');
-        fireEvent.click(viewDetailsButtons[0]);
-      });
+        const viewDetailsButtons = screen.getAllByText('View Details')
+        fireEvent.click(viewDetailsButtons[0])
+      })
 
-      expect(mockWindowOpen).toHaveBeenCalledWith('/reconciliation/job-1', '_blank');
-    });
+      expect(mockWindowOpen).toHaveBeenCalledWith(
+        '/reconciliation/job-1',
+        '_blank'
+      )
+    })
 
     it('should cancel job with confirmation', async () => {
-      mockConfirm.mockReturnValue(true);
-      
+      mockConfirm.mockReturnValue(true)
+
       // Initial load
       mockFetch
         .mockResolvedValueOnce({
@@ -274,95 +289,105 @@ describe('ReconciliationManagement', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ config: mockConfig }),
-        });
+        })
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const cancelButtons = screen.getAllByText('Cancel');
-        fireEvent.click(cancelButtons[0]);
-      });
+        const cancelButtons = screen.getAllByText('Cancel')
+        fireEvent.click(cancelButtons[0])
+      })
 
-      expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to cancel this reconciliation job?');
-      
+      expect(mockConfirm).toHaveBeenCalledWith(
+        'Are you sure you want to cancel this reconciliation job?'
+      )
+
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/reconciliation/jobs/job-1', {
-          method: 'DELETE',
-        });
-      });
-    });
+        expect(mockFetch).toHaveBeenCalledWith(
+          '/api/reconciliation/jobs/job-1',
+          {
+            method: 'DELETE',
+          }
+        )
+      })
+    })
 
     it('should not cancel job if user declines confirmation', async () => {
-      mockConfirm.mockReturnValue(false);
-      setupSuccessfulMocks(mockActiveJobs);
+      mockConfirm.mockReturnValue(false)
+      setupSuccessfulMocks(mockActiveJobs)
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const cancelButtons = screen.getAllByText('Cancel');
-        fireEvent.click(cancelButtons[0]);
-      });
+        const cancelButtons = screen.getAllByText('Cancel')
+        fireEvent.click(cancelButtons[0])
+      })
 
-      expect(mockConfirm).toHaveBeenCalled();
-      expect(mockFetch).not.toHaveBeenCalledWith(expect.stringContaining('/jobs/'), expect.objectContaining({ method: 'DELETE' }));
-    });
-  });
+      expect(mockConfirm).toHaveBeenCalled()
+      expect(mockFetch).not.toHaveBeenCalledWith(
+        expect.stringContaining('/jobs/'),
+        expect.objectContaining({ method: 'DELETE' })
+      )
+    })
+  })
 
   describe('Start Reconciliation Form', () => {
     it('should open start reconciliation form', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const startButton = screen.getByText('Start Reconciliation');
-        fireEvent.click(startButton);
-      });
+        const startButton = screen.getByText('Start Reconciliation')
+        fireEvent.click(startButton)
+      })
 
-      expect(screen.getByText('Start New Reconciliation')).toBeInTheDocument();
-      expect(screen.getByLabelText('District ID')).toBeInTheDocument();
-      expect(screen.getByLabelText('Target Month')).toBeInTheDocument();
-    });
+      expect(screen.getByText('Start New Reconciliation')).toBeInTheDocument()
+      expect(screen.getByLabelText('District ID')).toBeInTheDocument()
+      expect(screen.getByLabelText('Target Month')).toBeInTheDocument()
+    })
 
     it('should close start reconciliation form', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const startButton = screen.getByText('Start Reconciliation');
-        fireEvent.click(startButton);
-      });
+        const startButton = screen.getByText('Start Reconciliation')
+        fireEvent.click(startButton)
+      })
 
-      const closeButton = screen.getByRole('button', { name: /close/i });
-      fireEvent.click(closeButton);
+      const closeButton = screen.getByRole('button', { name: /close/i })
+      fireEvent.click(closeButton)
 
-      expect(screen.queryByText('Start New Reconciliation')).not.toBeInTheDocument();
-    });
+      expect(
+        screen.queryByText('Start New Reconciliation')
+      ).not.toBeInTheDocument()
+    })
 
     it('should validate required fields', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const startButton = screen.getByText('Start Reconciliation');
-        fireEvent.click(startButton);
-      });
+        const startButton = screen.getByText('Start Reconciliation')
+        fireEvent.click(startButton)
+      })
 
-      const submitButton = screen.getByRole('button', { name: /Submit/i });
-      expect(submitButton).toBeDisabled();
+      const submitButton = screen.getByRole('button', { name: /Submit/i })
+      expect(submitButton).toBeDisabled()
 
       // Fill in district ID only
-      const districtInput = screen.getByLabelText('District ID');
-      fireEvent.change(districtInput, { target: { value: 'D1' } });
-      expect(submitButton).toBeDisabled();
+      const districtInput = screen.getByLabelText('District ID')
+      fireEvent.change(districtInput, { target: { value: 'D1' } })
+      expect(submitButton).toBeDisabled()
 
       // Fill in target month
-      const monthInput = screen.getByLabelText('Target Month');
-      fireEvent.change(monthInput, { target: { value: '2024-10' } });
-      expect(submitButton).not.toBeDisabled();
-    });
+      const monthInput = screen.getByLabelText('Target Month')
+      fireEvent.change(monthInput, { target: { value: '2024-10' } })
+      expect(submitButton).not.toBeDisabled()
+    })
 
     it('should submit start reconciliation form successfully', async () => {
       // Initial load
@@ -388,24 +413,24 @@ describe('ReconciliationManagement', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ config: mockConfig }),
-        });
+        })
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const startButton = screen.getByText('Start Reconciliation');
-        fireEvent.click(startButton);
-      });
+        const startButton = screen.getByText('Start Reconciliation')
+        fireEvent.click(startButton)
+      })
 
       // Fill form
-      const districtInput = screen.getByLabelText('District ID');
-      const monthInput = screen.getByLabelText('Target Month');
-      fireEvent.change(districtInput, { target: { value: 'D1' } });
-      fireEvent.change(monthInput, { target: { value: '2024-10' } });
+      const districtInput = screen.getByLabelText('District ID')
+      const monthInput = screen.getByLabelText('Target Month')
+      fireEvent.change(districtInput, { target: { value: 'D1' } })
+      fireEvent.change(monthInput, { target: { value: '2024-10' } })
 
       // Submit
-      const submitButton = screen.getByRole('button', { name: /Submit/i });
-      fireEvent.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /Submit/i })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith('/api/reconciliation/start', {
@@ -415,128 +440,145 @@ describe('ReconciliationManagement', () => {
             districtId: 'D1',
             targetMonth: '2024-10',
           }),
-        });
-      });
-    });
+        })
+      })
+    })
 
     it('should handle start reconciliation errors', async () => {
       // Initial load
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        const startButton = screen.getByText('Start Reconciliation');
-        fireEvent.click(startButton);
-      });
+        const startButton = screen.getByText('Start Reconciliation')
+        fireEvent.click(startButton)
+      })
 
       // Error response for form submission
       mockFetch.mockResolvedValueOnce({
         ok: false,
         statusText: 'Bad Request',
-        json: () => Promise.resolve({
-          error: { message: 'District already has active reconciliation' }
-        }),
-      });
+        json: () =>
+          Promise.resolve({
+            error: { message: 'District already has active reconciliation' },
+          }),
+      })
 
       // Fill and submit form
-      const districtInput = screen.getByLabelText('District ID');
-      const monthInput = screen.getByLabelText('Target Month');
-      fireEvent.change(districtInput, { target: { value: 'D1' } });
-      fireEvent.change(monthInput, { target: { value: '2024-10' } });
+      const districtInput = screen.getByLabelText('District ID')
+      const monthInput = screen.getByLabelText('Target Month')
+      fireEvent.change(districtInput, { target: { value: 'D1' } })
+      fireEvent.change(monthInput, { target: { value: '2024-10' } })
 
-      const submitButton = screen.getByRole('button', { name: /Submit/i });
-      fireEvent.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /Submit/i })
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('District already has active reconciliation')).toBeInTheDocument();
-      });
-    });
-  });
+        expect(
+          screen.getByText('District already has active reconciliation')
+        ).toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Configuration Management', () => {
     it('should open configuration form', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Configure')).toBeInTheDocument();
-      });
-
-      const configButton = screen.getByText('Configure');
-      fireEvent.click(configButton);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Reconciliation Configuration')).toBeInTheDocument();
-        expect(screen.getByLabelText('Max Reconciliation Days')).toBeInTheDocument();
-      });
-    });
+        expect(screen.getByText('Configure')).toBeInTheDocument()
+      })
+
+      const configButton = screen.getByText('Configure')
+      fireEvent.click(configButton)
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Reconciliation Configuration')
+        ).toBeInTheDocument()
+        expect(
+          screen.getByLabelText('Max Reconciliation Days')
+        ).toBeInTheDocument()
+      })
+    })
 
     it('should close configuration form', async () => {
-      setupSuccessfulMocks();
+      setupSuccessfulMocks()
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
+      render(<ReconciliationManagement isAdmin={true} />)
+
       // Wait for component to load completely
       await waitFor(() => {
-        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
-        expect(screen.getByText('Configure')).toBeInTheDocument();
-      });
+        expect(
+          screen.getByText('Reconciliation Management')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Configure')).toBeInTheDocument()
+      })
 
-      const configButton = screen.getByText('Configure');
-      fireEvent.click(configButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Reconciliation Configuration')).toBeInTheDocument();
-      });
-
-      const closeButton = screen.getAllByRole('button').find(btn => 
-        btn.querySelector('svg') && btn.closest('.fixed')
-      );
-      fireEvent.click(closeButton!);
+      const configButton = screen.getByText('Configure')
+      fireEvent.click(configButton)
 
       await waitFor(() => {
-        expect(screen.queryByText('Reconciliation Configuration')).not.toBeInTheDocument();
-      });
-    });
+        expect(
+          screen.getByText('Reconciliation Configuration')
+        ).toBeInTheDocument()
+      })
+
+      const closeButton = screen
+        .getAllByRole('button')
+        .find(btn => btn.querySelector('svg') && btn.closest('.fixed'))
+      fireEvent.click(closeButton!)
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('Reconciliation Configuration')
+        ).not.toBeInTheDocument()
+      })
+    })
 
     it('should update configuration values', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Configure')).toBeInTheDocument();
-      });
-
-      const configButton = screen.getByText('Configure');
-      fireEvent.click(configButton);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Max Reconciliation Days')).toBeInTheDocument();
-      });
+        expect(screen.getByText('Configure')).toBeInTheDocument()
+      })
+
+      const configButton = screen.getByText('Configure')
+      fireEvent.click(configButton)
+
+      await waitFor(() => {
+        expect(
+          screen.getByLabelText('Max Reconciliation Days')
+        ).toBeInTheDocument()
+      })
 
       // Update max reconciliation days
-      const maxDaysInput = screen.getByLabelText('Max Reconciliation Days');
-      fireEvent.change(maxDaysInput, { target: { value: '20' } });
-      expect(maxDaysInput).toHaveValue(20);
+      const maxDaysInput = screen.getByLabelText('Max Reconciliation Days')
+      fireEvent.change(maxDaysInput, { target: { value: '20' } })
+      expect(maxDaysInput).toHaveValue(20)
 
       // Update stability period
-      const stabilityInput = screen.getByLabelText('Stability Period Days');
-      fireEvent.change(stabilityInput, { target: { value: '5' } });
-      expect(stabilityInput).toHaveValue(5);
+      const stabilityInput = screen.getByLabelText('Stability Period Days')
+      fireEvent.change(stabilityInput, { target: { value: '5' } })
+      expect(stabilityInput).toHaveValue(5)
 
       // Update membership threshold
-      const membershipInput = screen.getByLabelText('Membership (%)');
-      fireEvent.change(membershipInput, { target: { value: '2.5' } });
-      expect(membershipInput).toHaveValue(2.5);
+      const membershipInput = screen.getByLabelText('Membership (%)')
+      fireEvent.change(membershipInput, { target: { value: '2.5' } })
+      expect(membershipInput).toHaveValue(2.5)
 
       // Toggle auto extension
-      const autoExtensionCheckbox = screen.getByLabelText(/Enable automatic extension/);
-      fireEvent.click(autoExtensionCheckbox);
-      expect(autoExtensionCheckbox).not.toBeChecked();
-    });
+      const autoExtensionCheckbox = screen.getByLabelText(
+        /Enable automatic extension/
+      )
+      fireEvent.click(autoExtensionCheckbox)
+      expect(autoExtensionCheckbox).not.toBeChecked()
+    })
 
     it('should submit configuration updates successfully', async () => {
       // Initial load
@@ -562,146 +604,167 @@ describe('ReconciliationManagement', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ config: mockConfig }),
-        });
+        })
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Configure')).toBeInTheDocument();
-      });
-
-      const configButton = screen.getByText('Configure');
-      fireEvent.click(configButton);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Max Reconciliation Days')).toBeInTheDocument();
-      });
+        expect(screen.getByText('Configure')).toBeInTheDocument()
+      })
+
+      const configButton = screen.getByText('Configure')
+      fireEvent.click(configButton)
+
+      await waitFor(() => {
+        expect(
+          screen.getByLabelText('Max Reconciliation Days')
+        ).toBeInTheDocument()
+      })
 
       // Update a value
-      const maxDaysInput = screen.getByLabelText('Max Reconciliation Days');
-      fireEvent.change(maxDaysInput, { target: { value: '20' } });
+      const maxDaysInput = screen.getByLabelText('Max Reconciliation Days')
+      fireEvent.change(maxDaysInput, { target: { value: '20' } })
 
       // Submit
-      const updateButton = screen.getByRole('button', { name: /Update Configuration/i });
-      fireEvent.click(updateButton);
+      const updateButton = screen.getByRole('button', {
+        name: /Update Configuration/i,
+      })
+      fireEvent.click(updateButton)
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith('/api/reconciliation/config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: expect.stringContaining('"maxReconciliationDays":20'),
-        });
-      });
-    });
+        })
+      })
+    })
 
     it('should handle configuration update errors', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
+      render(<ReconciliationManagement isAdmin={true} />)
+
       // Wait for component to load completely
       await waitFor(() => {
-        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
-        expect(screen.getByText('Configure')).toBeInTheDocument();
-      });
+        expect(
+          screen.getByText('Reconciliation Management')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Configure')).toBeInTheDocument()
+      })
 
-      const configButton = screen.getByText('Configure');
-      fireEvent.click(configButton);
+      const configButton = screen.getByText('Configure')
+      fireEvent.click(configButton)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Update Configuration/i })).toBeInTheDocument();
-      });
+        expect(
+          screen.getByRole('button', { name: /Update Configuration/i })
+        ).toBeInTheDocument()
+      })
 
       // Error response for config update
       mockFetch.mockResolvedValueOnce({
         ok: false,
         statusText: 'Bad Request',
-        json: () => Promise.resolve({
-          error: { message: 'Invalid configuration values' }
-        }),
-      });
+        json: () =>
+          Promise.resolve({
+            error: { message: 'Invalid configuration values' },
+          }),
+      })
 
-      const updateButton = screen.getByRole('button', { name: /Update Configuration/i });
-      fireEvent.click(updateButton);
+      const updateButton = screen.getByRole('button', {
+        name: /Update Configuration/i,
+      })
+      fireEvent.click(updateButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Invalid configuration values')).toBeInTheDocument();
-      });
-    });
+        expect(
+          screen.getByText('Invalid configuration values')
+        ).toBeInTheDocument()
+      })
+    })
 
     it('should cancel configuration changes', async () => {
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
-      
+      render(<ReconciliationManagement isAdmin={true} />)
+
       // Wait for component to load completely
       await waitFor(() => {
-        expect(screen.getByText('Reconciliation Management')).toBeInTheDocument();
-        expect(screen.getByText('Configure')).toBeInTheDocument();
-      });
+        expect(
+          screen.getByText('Reconciliation Management')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Configure')).toBeInTheDocument()
+      })
 
-      const configButton = screen.getByText('Configure');
-      fireEvent.click(configButton);
+      const configButton = screen.getByText('Configure')
+      fireEvent.click(configButton)
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Max Reconciliation Days')).toBeInTheDocument();
-      });
+        expect(
+          screen.getByLabelText('Max Reconciliation Days')
+        ).toBeInTheDocument()
+      })
 
       // Make changes
-      const maxDaysInput = screen.getByLabelText('Max Reconciliation Days');
-      fireEvent.change(maxDaysInput, { target: { value: '20' } });
+      const maxDaysInput = screen.getByLabelText('Max Reconciliation Days')
+      fireEvent.change(maxDaysInput, { target: { value: '20' } })
 
       // Cancel
-      const cancelButton = screen.getAllByText('Cancel').find(btn => 
-        btn.closest('.fixed') // Find cancel button in modal
-      );
-      fireEvent.click(cancelButton!);
+      const cancelButton = screen.getAllByText('Cancel').find(
+        btn => btn.closest('.fixed') // Find cancel button in modal
+      )
+      fireEvent.click(cancelButton!)
 
       await waitFor(() => {
-        expect(screen.queryByText('Reconciliation Configuration')).not.toBeInTheDocument();
-      });
-    });
-  });
+        expect(
+          screen.queryByText('Reconciliation Configuration')
+        ).not.toBeInTheDocument()
+      })
+    })
+  })
 
   describe('Refresh Functionality', () => {
     it('should refresh data when refresh button is clicked', async () => {
       // Initial load with empty jobs
-      setupSuccessfulMocks([]);
+      setupSuccessfulMocks([])
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('No active reconciliation jobs')).toBeInTheDocument();
-        expect(screen.getByText('Refresh')).toBeInTheDocument();
-      });
+        expect(
+          screen.getByText('No active reconciliation jobs')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Refresh')).toBeInTheDocument()
+      })
 
       // Set up mocks for refresh - need to clear previous mocks first
-      mockFetch.mockClear();
-      setupSuccessfulMocks([mockActiveJobs[0]]);
+      mockFetch.mockClear()
+      setupSuccessfulMocks([mockActiveJobs[0]])
 
-      const refreshButton = screen.getByText('Refresh');
-      fireEvent.click(refreshButton);
+      const refreshButton = screen.getByText('Refresh')
+      fireEvent.click(refreshButton)
 
       await waitFor(() => {
-        expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument();
-      });
+        expect(screen.getByText('District D1 - 2024-10')).toBeInTheDocument()
+      })
 
-      expect(mockFetch).toHaveBeenCalledTimes(2); // Refresh calls
-    });
-  });
+      expect(mockFetch).toHaveBeenCalledTimes(2) // Refresh calls
+    })
+  })
 
   describe('Status Colors', () => {
     it('should display correct status colors for different job statuses', async () => {
-      setupSuccessfulMocks(mockJobsWithAllStatuses);
+      setupSuccessfulMocks(mockJobsWithAllStatuses)
 
-      render(<ReconciliationManagement isAdmin={true} />);
+      render(<ReconciliationManagement isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getAllByText('active')).toHaveLength(1);
-        expect(screen.getByText('completed')).toBeInTheDocument();
-        expect(screen.getByText('failed')).toBeInTheDocument();
-        expect(screen.getByText('cancelled')).toBeInTheDocument();
-      });
-    });
-  });
-});
+        expect(screen.getAllByText('active')).toHaveLength(1)
+        expect(screen.getByText('completed')).toBeInTheDocument()
+        expect(screen.getByText('failed')).toBeInTheDocument()
+        expect(screen.getByText('cancelled')).toBeInTheDocument()
+      })
+    })
+  })
+})

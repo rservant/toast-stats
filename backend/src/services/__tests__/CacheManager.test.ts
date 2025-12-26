@@ -54,7 +54,7 @@ describe('CacheManager - Historical Data Aggregation', () => {
       await cacheManager.setCache(testDate, testData, 'districts')
 
       const metadata = await cacheManager.getMetadata(testDate)
-      
+
       expect(metadata).toBeDefined()
       expect(metadata?.date).toBe(testDate)
       expect(metadata?.districtCount).toBe(2)
@@ -81,7 +81,7 @@ describe('CacheManager - Historical Data Aggregation', () => {
       await cacheManager.setCache(testDate, testData, 'districts')
 
       const metadata = await cacheManager.getMetadata(testDate)
-      
+
       expect(metadata?.dataCompleteness).toBe('complete')
       expect(metadata?.districtCount).toBe(100)
     })
@@ -91,7 +91,7 @@ describe('CacheManager - Historical Data Aggregation', () => {
     it('should build historical index when caching data', async () => {
       const testDate1 = '2024-11-20'
       const testDate2 = '2024-11-21'
-      
+
       const testData1 = {
         rankings: [
           {
@@ -131,9 +131,9 @@ describe('CacheManager - Historical Data Aggregation', () => {
 
       // Load index and verify
       await cacheManager.loadHistoricalIndex()
-      
+
       const history = await cacheManager.getDistrictRankHistory('1')
-      
+
       expect(history).toHaveLength(2)
       expect(history[0].date).toBe(testDate1)
       expect(history[0].aggregateScore).toBe(10)
@@ -143,7 +143,7 @@ describe('CacheManager - Historical Data Aggregation', () => {
 
     it('should filter history by date range', async () => {
       const dates = ['2024-11-20', '2024-11-21', '2024-11-22', '2024-11-23']
-      
+
       for (const date of dates) {
         const testData = {
           rankings: [
@@ -165,9 +165,13 @@ describe('CacheManager - Historical Data Aggregation', () => {
       }
 
       await cacheManager.loadHistoricalIndex()
-      
-      const history = await cacheManager.getDistrictRankHistory('1', '2024-11-21', '2024-11-22')
-      
+
+      const history = await cacheManager.getDistrictRankHistory(
+        '1',
+        '2024-11-21',
+        '2024-11-22'
+      )
+
       expect(history).toHaveLength(2)
       expect(history[0].date).toBe('2024-11-21')
       expect(history[1].date).toBe('2024-11-22')
@@ -177,7 +181,7 @@ describe('CacheManager - Historical Data Aggregation', () => {
   describe('Cache Statistics', () => {
     it('should calculate cache statistics correctly', async () => {
       const dates = ['2024-11-20', '2024-11-21', '2024-11-22']
-      
+
       for (const date of dates) {
         const rankings = Array.from({ length: 100 }, (_, i) => ({
           districtId: String(i + 1),
@@ -190,13 +194,13 @@ describe('CacheManager - Historical Data Aggregation', () => {
           totalPayments: 5000 + i * 100,
           distinguishedClubs: 30 + i,
         }))
-        
+
         const testData = { rankings, date }
         await cacheManager.setCache(date, testData, 'districts')
       }
 
       const stats = await cacheManager.getCacheStatistics()
-      
+
       expect(stats.totalDates).toBe(3)
       expect(stats.dateRange.earliest).toBe('2024-11-20')
       expect(stats.dateRange.latest).toBe('2024-11-22')

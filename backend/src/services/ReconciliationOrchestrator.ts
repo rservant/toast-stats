@@ -1,26 +1,33 @@
 /**
  * Reconciliation Orchestrator for Month-End Data Reconciliation
- * 
+ *
  * Coordinates the entire reconciliation process for a district/month.
  * Manages job lifecycle, cycle processing, and finalization logic.
  */
 
 import { logger } from '../utils/logger.js'
 import { RetryManager } from '../utils/RetryManager.js'
-import { CircuitBreaker, CircuitBreakerManager } from '../utils/CircuitBreaker.js'
-import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
+import {
+  CircuitBreaker,
+  CircuitBreakerManager,
+} from '../utils/CircuitBreaker.js'
+import {
+  AlertManager,
+  AlertSeverity,
+  AlertCategory,
+} from '../utils/AlertManager.js'
 import { ChangeDetectionEngine } from './ChangeDetectionEngine.js'
 import { ReconciliationStorageOptimizer } from './ReconciliationStorageOptimizer.js'
 import { ReconciliationCacheService } from './ReconciliationCacheService.js'
 import { ReconciliationConfigService } from './ReconciliationConfigService.js'
 import { CacheUpdateManager } from './CacheUpdateManager.js'
 import { ReconciliationMetricsService } from './ReconciliationMetricsService.js'
-import type { 
+import type {
   ReconciliationJob,
   ReconciliationStatus,
   ReconciliationTimeline,
   ReconciliationEntry,
-  ReconciliationConfig
+  ReconciliationConfig,
 } from '../types/reconciliation.js'
 import type { DistrictStatistics } from '../types/districts.js'
 
@@ -41,14 +48,15 @@ export class ReconciliationOrchestrator {
     configService?: ReconciliationConfigService,
     cacheUpdateManager?: CacheUpdateManager
   ) {
-    this.changeDetectionEngine = changeDetectionEngine || new ChangeDetectionEngine()
+    this.changeDetectionEngine =
+      changeDetectionEngine || new ChangeDetectionEngine()
     this.storageManager = storageManager || new ReconciliationStorageOptimizer()
     this.cacheService = cacheService || new ReconciliationCacheService()
     this.configService = configService || new ReconciliationConfigService()
     this.cacheUpdateManager = cacheUpdateManager || new CacheUpdateManager()
     this.alertManager = AlertManager.getInstance()
     this.metricsService = ReconciliationMetricsService.getInstance()
-    
+
     // Initialize circuit breaker for storage operations
     const circuitManager = CircuitBreakerManager.getInstance()
     this.storageCircuitBreaker = circuitManager.getCircuitBreaker(
@@ -56,14 +64,14 @@ export class ReconciliationOrchestrator {
       {
         failureThreshold: 3,
         recoveryTimeout: 30000,
-        monitoringPeriod: 120000
+        monitoringPeriod: 120000,
       }
     )
   }
 
   /**
    * Start a new reconciliation job for a district/month
-   * 
+   *
    * @param districtId - The district ID to reconcile
    * @param targetMonth - The target month in YYYY-MM format
    * @param configOverride - Optional configuration overrides for this job
@@ -71,46 +79,58 @@ export class ReconciliationOrchestrator {
    * @returns The created reconciliation job
    */
   async startReconciliation(
-    districtId: string, 
+    districtId: string,
     targetMonth: string,
     configOverride?: Partial<ReconciliationConfig>,
     triggeredBy: 'automatic' | 'manual' = 'manual'
   ): Promise<ReconciliationJob> {
-    logger.info('Starting reconciliation', { districtId, targetMonth, triggeredBy, configOverride })
+    logger.info('Starting reconciliation', {
+      districtId,
+      targetMonth,
+      triggeredBy,
+      configOverride,
+    })
 
     try {
       // Get base configuration and merge with overrides
       const baseConfig = await this.configService.getConfig()
-      const config = configOverride ? { ...baseConfig, ...configOverride } : baseConfig
+      const config = configOverride
+        ? { ...baseConfig, ...configOverride }
+        : baseConfig
 
       // Validate the final configuration if overrides were provided
       if (configOverride) {
-        const validationResult = await this.validateConfiguration(configOverride)
+        const validationResult =
+          await this.validateConfiguration(configOverride)
         if (!validationResult.isValid) {
-          throw new Error(`Invalid configuration: ${validationResult.errors?.join(', ')}`)
+          throw new Error(
+            `Invalid configuration: ${validationResult.errors?.join(', ')}`
+          )
         }
       }
 
       // Check if there's already an active reconciliation for this district/month
       await this.storageManager.flush() // Ensure any pending writes are completed
-      const existingJobs = await this.storageManager.getJobsByDistrict(districtId)
-      const activeJob = existingJobs.find(job => 
-        job.targetMonth === targetMonth && 
-        (job.status === 'active')
+      const existingJobs =
+        await this.storageManager.getJobsByDistrict(districtId)
+      const activeJob = existingJobs.find(
+        job => job.targetMonth === targetMonth && job.status === 'active'
       )
 
       if (activeJob) {
-        logger.warn('Reconciliation already active', { 
-          districtId, 
-          targetMonth, 
-          existingJobId: activeJob.id 
+        logger.warn('Reconciliation already active', {
+          districtId,
+          targetMonth,
+          existingJobId: activeJob.id,
         })
         return activeJob
       }
 
       // Create new reconciliation job
       const now = new Date()
-      const maxEndDate = new Date(now.getTime() + (config.maxReconciliationDays * 24 * 60 * 60 * 1000))
+      const maxEndDate = new Date(
+        now.getTime() + config.maxReconciliationDays * 24 * 60 * 60 * 1000
+      )
 
       const job: ReconciliationJob = {
         id: this.generateJobId(districtId, targetMonth),
@@ -123,13 +143,13 @@ export class ReconciliationOrchestrator {
         triggeredBy,
         progress: {
           phase: 'monitoring',
-          completionPercentage: 0
+          completionPercentage: 0,
         },
         metadata: {
           createdAt: now,
           updatedAt: now,
-          triggeredBy
-        }
+          triggeredBy,
+        },
       }
 
       // Save the job
@@ -148,25 +168,34 @@ export class ReconciliationOrchestrator {
           phase: 'monitoring',
           daysActive: 0,
           daysStable: 0,
-          nextCheckDate: new Date(now.getTime() + (config.checkFrequencyHours * 60 * 60 * 1000)),
-          message: 'Reconciliation started - monitoring for changes'
-        }
+          nextCheckDate: new Date(
+            now.getTime() + config.checkFrequencyHours * 60 * 60 * 1000
+          ),
+          message: 'Reconciliation started - monitoring for changes',
+        },
       }
 
       await this.storageManager.saveTimeline(timeline)
 
-      logger.info('Reconciliation job created', { jobId: job.id, districtId, targetMonth })
+      logger.info('Reconciliation job created', {
+        jobId: job.id,
+        districtId,
+        targetMonth,
+      })
       return job
-
     } catch (error) {
-      logger.error('Failed to start reconciliation', { districtId, targetMonth, error })
+      logger.error('Failed to start reconciliation', {
+        districtId,
+        targetMonth,
+        error,
+      })
       throw error
     }
   }
 
   /**
    * Process a reconciliation cycle for a job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @param currentData - Current district data from dashboard
    * @param cachedData - Previously cached district data
@@ -191,9 +220,10 @@ export class ReconciliationOrchestrator {
         const result = await this.storageCircuitBreaker.execute(async () => {
           return await RetryManager.executeWithRetry(
             async () => {
-              const loadedJob = job || await this.storageManager.getJob(jobId)
-              const loadedTimeline = timeline || await this.storageManager.getTimeline(jobId)
-              
+              const loadedJob = job || (await this.storageManager.getJob(jobId))
+              const loadedTimeline =
+                timeline || (await this.storageManager.getTimeline(jobId))
+
               if (!loadedJob) {
                 throw new Error(`Reconciliation job not found: ${jobId}`)
               }
@@ -209,8 +239,9 @@ export class ReconciliationOrchestrator {
         }, context)
 
         if (!result.success) {
-          const errorMessage = result.error?.message || 'Failed to load reconciliation data'
-          
+          const errorMessage =
+            result.error?.message || 'Failed to load reconciliation data'
+
           await this.alertManager.sendReconciliationFailureAlert(
             'unknown',
             'unknown',
@@ -230,9 +261,9 @@ export class ReconciliationOrchestrator {
       }
 
       if (job.status !== 'active') {
-        logger.warn('Attempting to process inactive reconciliation job', { 
-          jobId, 
-          status: job.status 
+        logger.warn('Attempting to process inactive reconciliation job', {
+          jobId,
+          status: job.status,
         })
         return this.getJobStatus(job)
       }
@@ -246,9 +277,10 @@ export class ReconciliationOrchestrator {
           currentData
         )
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
+        const errorMessage =
+          error instanceof Error ? error.message : String(error)
         logger.error('Change detection failed', { jobId, error: errorMessage })
-        
+
         await this.alertManager.sendAlert(
           AlertSeverity.MEDIUM,
           AlertCategory.RECONCILIATION,
@@ -272,20 +304,21 @@ export class ReconciliationOrchestrator {
         try {
           // Extract the month-end date from the target month
           const monthEndDate = this.getMonthEndDate(job.targetMonth)
-          
-          cacheUpdateResult = await this.cacheUpdateManager.updateCacheImmediately(
-            job.districtId,
-            monthEndDate,
-            currentData,
-            changes
-          )
+
+          cacheUpdateResult =
+            await this.cacheUpdateManager.updateCacheImmediately(
+              job.districtId,
+              monthEndDate,
+              currentData,
+              changes
+            )
 
           if (!cacheUpdateResult.success) {
             logger.error('Cache update failed during reconciliation cycle', {
               jobId,
               districtId: job.districtId,
               date: monthEndDate,
-              error: cacheUpdateResult.error
+              error: cacheUpdateResult.error,
             })
 
             // Send alert for cache update failures
@@ -294,13 +327,24 @@ export class ReconciliationOrchestrator {
               AlertCategory.SYSTEM,
               'Cache Update Failed',
               `Cache update failed during reconciliation for district ${job.districtId}: ${cacheUpdateResult.error}`,
-              { jobId, districtId: job.districtId, date: monthEndDate, error: cacheUpdateResult.error }
+              {
+                jobId,
+                districtId: job.districtId,
+                date: monthEndDate,
+                error: cacheUpdateResult.error,
+              }
             )
           }
         } catch (cacheError) {
-          const errorMessage = cacheError instanceof Error ? cacheError.message : String(cacheError)
-          logger.error('Critical cache update error', { jobId, error: errorMessage })
-          
+          const errorMessage =
+            cacheError instanceof Error
+              ? cacheError.message
+              : String(cacheError)
+          logger.error('Critical cache update error', {
+            jobId,
+            error: errorMessage,
+          })
+
           await this.alertManager.sendAlert(
             AlertSeverity.HIGH,
             AlertCategory.SYSTEM,
@@ -317,8 +361,9 @@ export class ReconciliationOrchestrator {
         sourceDataDate: changes.sourceDataDate,
         changes,
         isSignificant,
-        cacheUpdated: cacheUpdateResult?.success && cacheUpdateResult?.updated || false,
-        notes: isSignificant ? 'Significant changes detected' : undefined
+        cacheUpdated:
+          (cacheUpdateResult?.success && cacheUpdateResult?.updated) || false,
+        notes: isSignificant ? 'Significant changes detected' : undefined,
       }
 
       // Add entry to timeline
@@ -347,14 +392,17 @@ export class ReconciliationOrchestrator {
             logger.info('Automatic extension triggered', {
               jobId,
               extensionDays: extensionInfo.extensionDays,
-              reason: extensionInfo.reason
+              reason: extensionInfo.reason,
             })
           } catch (extensionError) {
-            const errorMessage = extensionError instanceof Error ? extensionError.message : String(extensionError)
+            const errorMessage =
+              extensionError instanceof Error
+                ? extensionError.message
+                : String(extensionError)
             logger.warn('Automatic extension failed', {
               jobId,
               extensionDays: extensionInfo.extensionDays,
-              error: errorMessage
+              error: errorMessage,
             })
 
             // Send alert for extension failures
@@ -363,7 +411,11 @@ export class ReconciliationOrchestrator {
               AlertCategory.RECONCILIATION,
               'Auto-Extension Failed',
               `Automatic reconciliation extension failed for job ${jobId}: ${errorMessage}`,
-              { jobId, extensionDays: extensionInfo.extensionDays, error: errorMessage }
+              {
+                jobId,
+                extensionDays: extensionInfo.extensionDays,
+                error: errorMessage,
+              }
             )
 
             // Continue processing even if extension fails
@@ -382,7 +434,7 @@ export class ReconciliationOrchestrator {
             async () => {
               await this.storageManager.saveJob(job)
               await this.storageManager.saveTimeline(timeline)
-              
+
               // Update cache with latest data
               this.cacheService.setJob(jobId, job)
               this.cacheService.setTimeline(jobId, timeline)
@@ -393,9 +445,13 @@ export class ReconciliationOrchestrator {
           )
         }, context)
       } catch (saveError) {
-        const errorMessage = saveError instanceof Error ? saveError.message : String(saveError)
-        logger.error('Failed to save reconciliation updates', { jobId, error: errorMessage })
-        
+        const errorMessage =
+          saveError instanceof Error ? saveError.message : String(saveError)
+        logger.error('Failed to save reconciliation updates', {
+          jobId,
+          error: errorMessage,
+        })
+
         await this.alertManager.sendAlert(
           AlertSeverity.HIGH,
           AlertCategory.SYSTEM,
@@ -407,19 +463,22 @@ export class ReconciliationOrchestrator {
         throw saveError
       }
 
-      logger.debug('Reconciliation cycle processed', { 
-        jobId, 
+      logger.debug('Reconciliation cycle processed', {
+        jobId,
         hasChanges: changes.hasChanges,
         isSignificant,
-        phase: status.phase
+        phase: status.phase,
       })
 
       return status
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      logger.error('Failed to process reconciliation cycle', { jobId, error: errorMessage })
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      logger.error('Failed to process reconciliation cycle', {
+        jobId,
+        error: errorMessage,
+      })
+
       // Get job for failure metrics recording
       try {
         const job = await this.storageManager.getJob(jobId)
@@ -429,7 +488,7 @@ export class ReconciliationOrchestrator {
       } catch (metricsError) {
         logger.warn('Failed to record failure metrics', { jobId, metricsError })
       }
-      
+
       // Send alert for critical reconciliation processing failures
       await this.alertManager.sendAlert(
         AlertSeverity.HIGH,
@@ -445,7 +504,7 @@ export class ReconciliationOrchestrator {
 
   /**
    * Finalize a reconciliation job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @returns void
    */
@@ -459,9 +518,9 @@ export class ReconciliationOrchestrator {
       }
 
       if (job.status !== 'active') {
-        logger.warn('Attempting to finalize non-active reconciliation job', { 
-          jobId, 
-          status: job.status 
+        logger.warn('Attempting to finalize non-active reconciliation job', {
+          jobId,
+          status: job.status,
         })
         return
       }
@@ -474,11 +533,16 @@ export class ReconciliationOrchestrator {
       // Check if stability period has been met
       const stabilityMet = this.hasStabilityPeriodBeenMet(job, timeline)
       if (!stabilityMet) {
-        logger.warn('Attempting to finalize reconciliation before stability period met', { 
-          jobId,
-          stabilityPeriodDays: job.config.stabilityPeriodDays
-        })
-        throw new Error('Stability period not met - cannot finalize reconciliation')
+        logger.warn(
+          'Attempting to finalize reconciliation before stability period met',
+          {
+            jobId,
+            stabilityPeriodDays: job.config.stabilityPeriodDays,
+          }
+        )
+        throw new Error(
+          'Stability period not met - cannot finalize reconciliation'
+        )
       }
 
       // Update job status
@@ -492,7 +556,7 @@ export class ReconciliationOrchestrator {
         phase: 'completed',
         daysActive: this.calculateDaysActive(job),
         daysStable: this.calculateDaysStable(timeline),
-        message: 'Reconciliation completed - data finalized'
+        message: 'Reconciliation completed - data finalized',
       }
 
       // Save updates
@@ -502,14 +566,13 @@ export class ReconciliationOrchestrator {
       // Record job completion metrics
       this.metricsService.recordJobCompletion(job, timeline.status.daysStable)
 
-      logger.info('Reconciliation finalized', { 
-        jobId, 
+      logger.info('Reconciliation finalized', {
+        jobId,
         districtId: job.districtId,
         targetMonth: job.targetMonth,
         daysActive: timeline.status.daysActive,
-        daysStable: timeline.status.daysStable
+        daysStable: timeline.status.daysStable,
       })
-
     } catch (error) {
       logger.error('Failed to finalize reconciliation', { jobId, error })
       throw error
@@ -518,12 +581,15 @@ export class ReconciliationOrchestrator {
 
   /**
    * Extend a reconciliation job by additional days
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @param additionalDays - Number of additional days to extend
    * @returns void
    */
-  async extendReconciliation(jobId: string, additionalDays: number): Promise<void> {
+  async extendReconciliation(
+    jobId: string,
+    additionalDays: number
+  ): Promise<void> {
     logger.info('Extending reconciliation', { jobId, additionalDays })
 
     try {
@@ -533,9 +599,9 @@ export class ReconciliationOrchestrator {
       }
 
       if (job.status !== 'active') {
-        logger.warn('Attempting to extend non-active reconciliation job', { 
-          jobId, 
-          status: job.status 
+        logger.warn('Attempting to extend non-active reconciliation job', {
+          jobId,
+          status: job.status,
         })
         return
       }
@@ -546,35 +612,53 @@ export class ReconciliationOrchestrator {
       }
 
       if (additionalDays === 0) {
-        logger.debug('Extension with 0 days requested, no changes made', { jobId })
+        logger.debug('Extension with 0 days requested, no changes made', {
+          jobId,
+        })
         return
       }
 
       // Calculate current total extension
-      const originalMaxEndDate = new Date(job.startDate.getTime() + (job.config.maxReconciliationDays * 24 * 60 * 60 * 1000))
-      const currentExtensionMs = job.maxEndDate.getTime() - originalMaxEndDate.getTime()
-      const currentExtensionDays = Math.max(0, Math.floor(currentExtensionMs / (24 * 60 * 60 * 1000)))
+      const originalMaxEndDate = new Date(
+        job.startDate.getTime() +
+          job.config.maxReconciliationDays * 24 * 60 * 60 * 1000
+      )
+      const currentExtensionMs =
+        job.maxEndDate.getTime() - originalMaxEndDate.getTime()
+      const currentExtensionDays = Math.max(
+        0,
+        Math.floor(currentExtensionMs / (24 * 60 * 60 * 1000))
+      )
 
       // Check if the additional extension would exceed the maximum allowed
       const totalExtensionDays = currentExtensionDays + additionalDays
       if (totalExtensionDays > job.config.maxExtensionDays) {
-        const remainingExtensionDays = job.config.maxExtensionDays - currentExtensionDays
+        const remainingExtensionDays =
+          job.config.maxExtensionDays - currentExtensionDays
         if (remainingExtensionDays <= 0) {
-          logger.warn('Cannot extend reconciliation - maximum extension limit already reached', {
-            jobId,
-            currentExtensionDays,
-            maxExtensionDays: job.config.maxExtensionDays,
-            requestedAdditionalDays: additionalDays
-          })
-          throw new Error(`Cannot extend reconciliation - maximum extension limit of ${job.config.maxExtensionDays} days already reached`)
+          logger.warn(
+            'Cannot extend reconciliation - maximum extension limit already reached',
+            {
+              jobId,
+              currentExtensionDays,
+              maxExtensionDays: job.config.maxExtensionDays,
+              requestedAdditionalDays: additionalDays,
+            }
+          )
+          throw new Error(
+            `Cannot extend reconciliation - maximum extension limit of ${job.config.maxExtensionDays} days already reached`
+          )
         }
 
-        logger.warn('Requested extension exceeds maximum limit, extending by maximum allowed', {
-          jobId,
-          requestedDays: additionalDays,
-          remainingDays: remainingExtensionDays,
-          maxExtensionDays: job.config.maxExtensionDays
-        })
+        logger.warn(
+          'Requested extension exceeds maximum limit, extending by maximum allowed',
+          {
+            jobId,
+            requestedDays: additionalDays,
+            remainingDays: remainingExtensionDays,
+            maxExtensionDays: job.config.maxExtensionDays,
+          }
+        )
         additionalDays = remainingExtensionDays
       }
 
@@ -588,13 +672,12 @@ export class ReconciliationOrchestrator {
       // Record job extension metrics
       this.metricsService.recordJobExtension(jobId, additionalDays)
 
-      logger.info('Reconciliation extended', { 
-        jobId, 
+      logger.info('Reconciliation extended', {
+        jobId,
         additionalDays,
         newMaxEndDate: job.maxEndDate,
-        totalExtensionDays: currentExtensionDays + additionalDays
+        totalExtensionDays: currentExtensionDays + additionalDays,
       })
-
     } catch (error) {
       logger.error('Failed to extend reconciliation', { jobId, error })
       throw error
@@ -603,7 +686,7 @@ export class ReconciliationOrchestrator {
 
   /**
    * Cancel a reconciliation job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @returns void
    */
@@ -617,9 +700,9 @@ export class ReconciliationOrchestrator {
       }
 
       if (job.status !== 'active') {
-        logger.warn('Attempting to cancel non-active reconciliation job', { 
-          jobId, 
-          status: job.status 
+        logger.warn('Attempting to cancel non-active reconciliation job', {
+          jobId,
+          status: job.status,
         })
         return
       }
@@ -636,7 +719,7 @@ export class ReconciliationOrchestrator {
           phase: 'failed',
           daysActive: this.calculateDaysActive(job),
           daysStable: this.calculateDaysStable(timeline),
-          message: 'Reconciliation cancelled by user'
+          message: 'Reconciliation cancelled by user',
         }
         await this.storageManager.saveTimeline(timeline)
       }
@@ -648,7 +731,6 @@ export class ReconciliationOrchestrator {
       this.metricsService.recordJobCompletion(job, stabilityDays)
 
       logger.info('Reconciliation cancelled', { jobId })
-
     } catch (error) {
       logger.error('Failed to cancel reconciliation', { jobId, error })
       throw error
@@ -657,13 +739,15 @@ export class ReconciliationOrchestrator {
 
   /**
    * Get the current status of a reconciliation job
-   * 
+   *
    * @param job - The reconciliation job
    * @returns Current reconciliation status
    */
   private getJobStatus(job: ReconciliationJob): ReconciliationStatus {
     const now = new Date()
-    const daysActive = Math.floor((now.getTime() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
+    const daysActive = Math.floor(
+      (now.getTime() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
+    )
 
     switch (job.status) {
       case 'completed':
@@ -671,42 +755,44 @@ export class ReconciliationOrchestrator {
           phase: 'completed',
           daysActive,
           daysStable: 0, // Will be calculated from timeline
-          message: 'Reconciliation completed'
+          message: 'Reconciliation completed',
         }
       case 'failed':
         return {
           phase: 'failed',
           daysActive,
           daysStable: 0,
-          message: 'Reconciliation failed'
+          message: 'Reconciliation failed',
         }
       case 'cancelled':
         return {
           phase: 'failed',
           daysActive,
           daysStable: 0,
-          message: 'Reconciliation cancelled'
+          message: 'Reconciliation cancelled',
         }
       default:
         return {
           phase: 'monitoring',
           daysActive,
           daysStable: 0,
-          nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-          message: 'Monitoring for changes'
+          nextCheckDate: new Date(
+            now.getTime() + job.config.checkFrequencyHours * 60 * 60 * 1000
+          ),
+          message: 'Monitoring for changes',
         }
     }
   }
 
   /**
    * Calculate the current reconciliation status based on job and timeline
-   * 
+   *
    * @param job - The reconciliation job
    * @param timeline - The reconciliation timeline
    * @returns Current reconciliation status
    */
   private calculateReconciliationStatus(
-    job: ReconciliationJob, 
+    job: ReconciliationJob,
     timeline: ReconciliationTimeline
   ): ReconciliationStatus {
     const now = new Date()
@@ -719,7 +805,8 @@ export class ReconciliationOrchestrator {
         phase: 'finalizing',
         daysActive,
         daysStable,
-        message: 'Maximum reconciliation period reached - finalizing with current data'
+        message:
+          'Maximum reconciliation period reached - finalizing with current data',
       }
     }
 
@@ -729,7 +816,7 @@ export class ReconciliationOrchestrator {
         phase: 'finalizing',
         daysActive,
         daysStable,
-        message: `Stability period met (${daysStable} days) - ready for finalization`
+        message: `Stability period met (${daysStable} days) - ready for finalization`,
       }
     }
 
@@ -739,8 +826,10 @@ export class ReconciliationOrchestrator {
         phase: 'stabilizing',
         daysActive,
         daysStable,
-        nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-        message: `Stabilizing - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+        nextCheckDate: new Date(
+          now.getTime() + job.config.checkFrequencyHours * 60 * 60 * 1000
+        ),
+        message: `Stabilizing - ${daysStable}/${job.config.stabilityPeriodDays} stable days`,
       }
     }
 
@@ -749,29 +838,31 @@ export class ReconciliationOrchestrator {
       phase: 'monitoring',
       daysActive,
       daysStable,
-      nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-      message: 'Monitoring for changes'
+      nextCheckDate: new Date(
+        now.getTime() + job.config.checkFrequencyHours * 60 * 60 * 1000
+      ),
+      message: 'Monitoring for changes',
     }
   }
 
   /**
    * Check if the stability period has been met or if max reconciliation period exceeded
-   * 
+   *
    * @param job - The reconciliation job
    * @param timeline - The reconciliation timeline
    * @returns true if stability period has been met or max period exceeded
    */
   private hasStabilityPeriodBeenMet(
-    job: ReconciliationJob, 
+    job: ReconciliationJob,
     timeline: ReconciliationTimeline
   ): boolean {
     const now = new Date()
-    
+
     // If max reconciliation period has been exceeded, allow finalization
     if (now > job.maxEndDate) {
       return true
     }
-    
+
     // Otherwise, check if stability period has been met
     const daysStable = this.calculateDaysStable(timeline)
     return daysStable >= job.config.stabilityPeriodDays
@@ -779,19 +870,21 @@ export class ReconciliationOrchestrator {
 
   /**
    * Calculate the number of days the reconciliation has been active
-   * 
+   *
    * @param job - The reconciliation job
    * @returns Number of days active
    */
   private calculateDaysActive(job: ReconciliationJob): number {
     const now = new Date()
     const endDate = job.endDate || now
-    return Math.floor((endDate.getTime() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
+    return Math.floor(
+      (endDate.getTime() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
+    )
   }
 
   /**
    * Calculate the number of consecutive stable days (no significant changes)
-   * 
+   *
    * @param timeline - The reconciliation timeline
    * @returns Number of consecutive stable days
    */
@@ -801,7 +894,9 @@ export class ReconciliationOrchestrator {
     }
 
     // Sort entries by date (most recent first)
-    const sortedEntries = [...timeline.entries].sort((a, b) => b.date.getTime() - a.date.getTime())
+    const sortedEntries = [...timeline.entries].sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
+    )
 
     let stableDays = 0
     for (const entry of sortedEntries) {
@@ -818,17 +913,21 @@ export class ReconciliationOrchestrator {
 
   /**
    * Determine if reconciliation should be extended due to recent significant changes
-   * 
+   *
    * @param job - The reconciliation job
    * @param timeline - The reconciliation timeline
    * @returns Extension information including whether to extend and by how many days
    */
   private shouldExtendReconciliation(
-    job: ReconciliationJob, 
+    job: ReconciliationJob,
     timeline: ReconciliationTimeline
   ): { shouldExtend: boolean; extensionDays: number; reason?: string } {
     if (!job.config.autoExtensionEnabled) {
-      return { shouldExtend: false, extensionDays: 0, reason: 'Auto-extension disabled' }
+      return {
+        shouldExtend: false,
+        extensionDays: 0,
+        reason: 'Auto-extension disabled',
+      }
     }
 
     const now = new Date()
@@ -837,42 +936,63 @@ export class ReconciliationOrchestrator {
 
     // Only extend if we're close to the max end date (within 2 days)
     if (daysUntilMaxEnd > 2) {
-      return { shouldExtend: false, extensionDays: 0, reason: 'Not close to max end date' }
+      return {
+        shouldExtend: false,
+        extensionDays: 0,
+        reason: 'Not close to max end date',
+      }
     }
 
     // Check if there have been recent significant changes
     const recentEntries = timeline.entries.filter(entry => {
-      const daysSinceEntry = (now.getTime() - entry.date.getTime()) / (24 * 60 * 60 * 1000)
+      const daysSinceEntry =
+        (now.getTime() - entry.date.getTime()) / (24 * 60 * 60 * 1000)
       return daysSinceEntry <= 2 // Within last 2 days
     })
 
-    const hasRecentSignificantChanges = recentEntries.some(entry => entry.isSignificant)
-    
+    const hasRecentSignificantChanges = recentEntries.some(
+      entry => entry.isSignificant
+    )
+
     if (!hasRecentSignificantChanges) {
-      return { shouldExtend: false, extensionDays: 0, reason: 'No recent significant changes' }
+      return {
+        shouldExtend: false,
+        extensionDays: 0,
+        reason: 'No recent significant changes',
+      }
     }
 
     // Calculate current total extension to check limits
-    const originalMaxEndDate = new Date(job.startDate.getTime() + (job.config.maxReconciliationDays * 24 * 60 * 60 * 1000))
-    const currentExtensionMs = job.maxEndDate.getTime() - originalMaxEndDate.getTime()
-    const currentExtensionDays = Math.max(0, Math.floor(currentExtensionMs / (24 * 60 * 60 * 1000)))
+    const originalMaxEndDate = new Date(
+      job.startDate.getTime() +
+        job.config.maxReconciliationDays * 24 * 60 * 60 * 1000
+    )
+    const currentExtensionMs =
+      job.maxEndDate.getTime() - originalMaxEndDate.getTime()
+    const currentExtensionDays = Math.max(
+      0,
+      Math.floor(currentExtensionMs / (24 * 60 * 60 * 1000))
+    )
 
     // Check if we can still extend
     if (currentExtensionDays >= job.config.maxExtensionDays) {
-      return { 
-        shouldExtend: false, 
-        extensionDays: 0, 
-        reason: `Maximum extension limit of ${job.config.maxExtensionDays} days already reached` 
+      return {
+        shouldExtend: false,
+        extensionDays: 0,
+        reason: `Maximum extension limit of ${job.config.maxExtensionDays} days already reached`,
       }
     }
 
     // Calculate how many days to extend
     // Use a conservative approach: extend by the minimum needed or remaining allowance
-    const remainingExtensionDays = job.config.maxExtensionDays - currentExtensionDays
+    const remainingExtensionDays =
+      job.config.maxExtensionDays - currentExtensionDays
     const defaultExtensionDays = Math.min(3, remainingExtensionDays) // Default to 3 days or remaining allowance
-    
+
     // Count the number of recent significant changes to determine extension length
-    const significantChangesCount = recentEntries.filter(entry => entry.isSignificant).length
+    const significantChangesCount = recentEntries.filter(
+      entry => entry.isSignificant
+    ).length
     let extensionDays = Math.min(
       Math.max(defaultExtensionDays, significantChangesCount), // At least default, more if many changes
       remainingExtensionDays // But not more than remaining allowance
@@ -881,16 +1001,16 @@ export class ReconciliationOrchestrator {
     // Ensure we extend by at least 1 day if we're extending at all
     extensionDays = Math.max(1, extensionDays)
 
-    return { 
-      shouldExtend: true, 
-      extensionDays, 
-      reason: `Recent significant changes detected (${significantChangesCount} changes in last 2 days)` 
+    return {
+      shouldExtend: true,
+      extensionDays,
+      reason: `Recent significant changes detected (${significantChangesCount} changes in last 2 days)`,
     }
   }
 
   /**
    * Generate a unique job ID for a district/month combination
-   * 
+   *
    * @param districtId - The district ID
    * @param targetMonth - The target month in YYYY-MM format
    * @returns Unique job ID
@@ -902,7 +1022,7 @@ export class ReconciliationOrchestrator {
 
   /**
    * Get the default reconciliation configuration
-   * 
+   *
    * @returns The default configuration
    */
   async getDefaultConfiguration(): Promise<ReconciliationConfig> {
@@ -911,16 +1031,20 @@ export class ReconciliationOrchestrator {
 
   /**
    * Update the reconciliation configuration
-   * 
+   *
    * @param configUpdate - Partial configuration update
    * @returns The updated configuration
    */
-  async updateConfiguration(configUpdate: Partial<ReconciliationConfig>): Promise<ReconciliationConfig> {
+  async updateConfiguration(
+    configUpdate: Partial<ReconciliationConfig>
+  ): Promise<ReconciliationConfig> {
     // Validate the configuration first
     const validationResult = await this.validateConfiguration(configUpdate)
-    
+
     if (!validationResult.isValid) {
-      throw new Error(`Configuration validation failed: ${validationResult.errors?.join(', ')}`)
+      throw new Error(
+        `Configuration validation failed: ${validationResult.errors?.join(', ')}`
+      )
     }
 
     // Update the configuration
@@ -929,7 +1053,7 @@ export class ReconciliationOrchestrator {
 
   /**
    * Validate a reconciliation configuration
-   * 
+   *
    * @param config - Configuration to validate
    * @returns Validation result with errors and warnings
    */
@@ -948,39 +1072,63 @@ export class ReconciliationOrchestrator {
 
     // Validate maxReconciliationDays
     if (config.maxReconciliationDays !== undefined) {
-      if (!Number.isInteger(config.maxReconciliationDays) || config.maxReconciliationDays < 1) {
+      if (
+        !Number.isInteger(config.maxReconciliationDays) ||
+        config.maxReconciliationDays < 1
+      ) {
         errors.push('maxReconciliationDays must be a positive integer')
       } else if (config.maxReconciliationDays > 30) {
-        warnings.push('maxReconciliationDays is very high (>30 days), consider reducing for better performance')
+        warnings.push(
+          'maxReconciliationDays is very high (>30 days), consider reducing for better performance'
+        )
       }
     }
 
     // Validate stabilityPeriodDays
     if (config.stabilityPeriodDays !== undefined) {
-      if (!Number.isInteger(config.stabilityPeriodDays) || config.stabilityPeriodDays < 1) {
+      if (
+        !Number.isInteger(config.stabilityPeriodDays) ||
+        config.stabilityPeriodDays < 1
+      ) {
         errors.push('stabilityPeriodDays must be a positive integer')
-      } else if (config.stabilityPeriodDays > mergedConfig.maxReconciliationDays) {
-        errors.push('stabilityPeriodDays cannot be greater than maxReconciliationDays')
+      } else if (
+        config.stabilityPeriodDays > mergedConfig.maxReconciliationDays
+      ) {
+        errors.push(
+          'stabilityPeriodDays cannot be greater than maxReconciliationDays'
+        )
       }
     }
 
     // Validate checkFrequencyHours
     if (config.checkFrequencyHours !== undefined) {
-      if (!Number.isInteger(config.checkFrequencyHours) || config.checkFrequencyHours < 1) {
+      if (
+        !Number.isInteger(config.checkFrequencyHours) ||
+        config.checkFrequencyHours < 1
+      ) {
         errors.push('checkFrequencyHours must be a positive integer')
       } else if (config.checkFrequencyHours < 6) {
-        warnings.push('checkFrequencyHours is very low (<6 hours), this may cause excessive API calls')
+        warnings.push(
+          'checkFrequencyHours is very low (<6 hours), this may cause excessive API calls'
+        )
       } else if (config.checkFrequencyHours > 48) {
-        warnings.push('checkFrequencyHours is very high (>48 hours), changes may be detected late')
+        warnings.push(
+          'checkFrequencyHours is very high (>48 hours), changes may be detected late'
+        )
       }
     }
 
     // Validate maxExtensionDays
     if (config.maxExtensionDays !== undefined) {
-      if (!Number.isInteger(config.maxExtensionDays) || config.maxExtensionDays < 0) {
+      if (
+        !Number.isInteger(config.maxExtensionDays) ||
+        config.maxExtensionDays < 0
+      ) {
         errors.push('maxExtensionDays must be a non-negative integer')
       } else if (config.maxExtensionDays > 15) {
-        warnings.push('maxExtensionDays is very high (>15 days), consider reducing to avoid indefinite reconciliation')
+        warnings.push(
+          'maxExtensionDays is very high (>15 days), consider reducing to avoid indefinite reconciliation'
+        )
       }
     }
 
@@ -989,24 +1137,43 @@ export class ReconciliationOrchestrator {
       const thresholds = config.significantChangeThresholds
 
       if (thresholds.membershipPercent !== undefined) {
-        if (typeof thresholds.membershipPercent !== 'number' || thresholds.membershipPercent < 0) {
-          errors.push('significantChangeThresholds.membershipPercent must be a non-negative number')
+        if (
+          typeof thresholds.membershipPercent !== 'number' ||
+          thresholds.membershipPercent < 0
+        ) {
+          errors.push(
+            'significantChangeThresholds.membershipPercent must be a non-negative number'
+          )
         } else if (thresholds.membershipPercent > 10) {
-          warnings.push('membershipPercent threshold is very high (>10%), significant changes may be missed')
+          warnings.push(
+            'membershipPercent threshold is very high (>10%), significant changes may be missed'
+          )
         }
       }
 
       if (thresholds.clubCountAbsolute !== undefined) {
-        if (!Number.isInteger(thresholds.clubCountAbsolute) || thresholds.clubCountAbsolute < 0) {
-          errors.push('significantChangeThresholds.clubCountAbsolute must be a non-negative integer')
+        if (
+          !Number.isInteger(thresholds.clubCountAbsolute) ||
+          thresholds.clubCountAbsolute < 0
+        ) {
+          errors.push(
+            'significantChangeThresholds.clubCountAbsolute must be a non-negative integer'
+          )
         }
       }
 
       if (thresholds.distinguishedPercent !== undefined) {
-        if (typeof thresholds.distinguishedPercent !== 'number' || thresholds.distinguishedPercent < 0) {
-          errors.push('significantChangeThresholds.distinguishedPercent must be a non-negative number')
+        if (
+          typeof thresholds.distinguishedPercent !== 'number' ||
+          thresholds.distinguishedPercent < 0
+        ) {
+          errors.push(
+            'significantChangeThresholds.distinguishedPercent must be a non-negative number'
+          )
         } else if (thresholds.distinguishedPercent > 20) {
-          warnings.push('distinguishedPercent threshold is very high (>20%), significant changes may be missed')
+          warnings.push(
+            'distinguishedPercent threshold is very high (>20%), significant changes may be missed'
+          )
         }
       }
     }
@@ -1020,11 +1187,18 @@ export class ReconciliationOrchestrator {
 
     // Cross-validation checks
     if (mergedConfig.stabilityPeriodDays > mergedConfig.maxReconciliationDays) {
-      errors.push('stabilityPeriodDays cannot be greater than maxReconciliationDays')
+      errors.push(
+        'stabilityPeriodDays cannot be greater than maxReconciliationDays'
+      )
     }
 
-    if (mergedConfig.maxExtensionDays > 0 && !mergedConfig.autoExtensionEnabled) {
-      warnings.push('maxExtensionDays is set but autoExtensionEnabled is false - extensions will not be automatic')
+    if (
+      mergedConfig.maxExtensionDays > 0 &&
+      !mergedConfig.autoExtensionEnabled
+    ) {
+      warnings.push(
+        'maxExtensionDays is set but autoExtensionEnabled is false - extensions will not be automatic'
+      )
     }
 
     const isValid = errors.length === 0
@@ -1033,13 +1207,13 @@ export class ReconciliationOrchestrator {
       isValid,
       errors: errors.length > 0 ? errors : undefined,
       warnings: warnings.length > 0 ? warnings : undefined,
-      validatedConfig: isValid ? mergedConfig : undefined
+      validatedConfig: isValid ? mergedConfig : undefined,
     }
   }
 
   /**
    * Get extension information for a reconciliation job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @returns Extension information including current extension and remaining allowance
    */
@@ -1056,11 +1230,21 @@ export class ReconciliationOrchestrator {
     }
 
     // Calculate current extension
-    const originalMaxEndDate = new Date(job.startDate.getTime() + (job.config.maxReconciliationDays * 24 * 60 * 60 * 1000))
-    const currentExtensionMs = job.maxEndDate.getTime() - originalMaxEndDate.getTime()
-    const currentExtensionDays = Math.max(0, Math.floor(currentExtensionMs / (24 * 60 * 60 * 1000)))
+    const originalMaxEndDate = new Date(
+      job.startDate.getTime() +
+        job.config.maxReconciliationDays * 24 * 60 * 60 * 1000
+    )
+    const currentExtensionMs =
+      job.maxEndDate.getTime() - originalMaxEndDate.getTime()
+    const currentExtensionDays = Math.max(
+      0,
+      Math.floor(currentExtensionMs / (24 * 60 * 60 * 1000))
+    )
 
-    const remainingExtensionDays = Math.max(0, job.config.maxExtensionDays - currentExtensionDays)
+    const remainingExtensionDays = Math.max(
+      0,
+      job.config.maxExtensionDays - currentExtensionDays
+    )
     const canExtend = job.status === 'active' && remainingExtensionDays > 0
 
     return {
@@ -1068,13 +1252,13 @@ export class ReconciliationOrchestrator {
       maxExtensionDays: job.config.maxExtensionDays,
       remainingExtensionDays,
       canExtend,
-      autoExtensionEnabled: job.config.autoExtensionEnabled
+      autoExtensionEnabled: job.config.autoExtensionEnabled,
     }
   }
 
   /**
    * Get the last day of the month for a given target month
-   * 
+   *
    * @param targetMonth - The target month in YYYY-MM format
    * @returns Date string in YYYY-MM-DD format for the last day of the month
    */

@@ -8,88 +8,92 @@
  * easy to render via frontend or export to various formats (HTML, PDF, etc.).
  */
 
-import { DistrictConfig, MonthlyAssessment, GoalStatus } from '../types/assessment';
-import { calculateAllGoals } from './assessmentCalculator';
-import { getMonthNumber } from './monthlyTargetService';
+import {
+  DistrictConfig,
+  MonthlyAssessment,
+  GoalStatus,
+} from '../types/assessment'
+import { calculateAllGoals } from './assessmentCalculator'
+import { getMonthNumber } from './monthlyTargetService'
 
 /**
  * Report output structure for a single month
  */
 export interface MonthlyReport {
-  district_number: number;
-  program_year: string;
-  month: string;
-  month_number: number;
-  report_generated_at: string;
+  district_number: number
+  program_year: string
+  month: string
+  month_number: number
+  report_generated_at: string
 
   // Input metrics
   metrics: {
-    membership_payments_ytd: number;
-    paid_clubs_ytd: number;
-    distinguished_clubs_ytd: number | null;
-    csp_submissions_ytd: number;
-  };
+    membership_payments_ytd: number
+    paid_clubs_ytd: number
+    distinguished_clubs_ytd: number | null
+    csp_submissions_ytd: number
+  }
 
   // Goal statuses
-  goal_1: GoalStatus;
-  goal_2: GoalStatus;
-  goal_3: GoalStatus;
+  goal_1: GoalStatus
+  goal_2: GoalStatus
+  goal_3: GoalStatus
 
   // Recognition level breakdown (actual vs. target)
   recognition_levels: {
     [level: string]: {
-      target: number;
-      actual: number;
-      status: string; // "On Track" or "Off Track"
-    };
-  };
+      target: number
+      actual: number
+      status: string // "On Track" or "Off Track"
+    }
+  }
 
   // Summary indicators
-  overall_status: 'On Track' | 'Off Track' | 'Pending Data';
-  on_track_goals: number; // 0-3
-  pending_data_goals: number; // 0-3
+  overall_status: 'On Track' | 'Off Track' | 'Pending Data'
+  on_track_goals: number // 0-3
+  pending_data_goals: number // 0-3
 }
 
 /**
  * Year-end summary report structure
  */
 export interface YearEndSummary {
-  district_number: number;
-  program_year: string;
-  report_generated_at: string;
+  district_number: number
+  program_year: string
+  report_generated_at: string
 
   // Annual performance
   annual_totals: {
-    membership_payments_ytd: number;
-    paid_clubs_ytd: number;
-    distinguished_clubs_ytd: number;
-    csp_submissions_ytd: number;
-  };
+    membership_payments_ytd: number
+    paid_clubs_ytd: number
+    distinguished_clubs_ytd: number
+    csp_submissions_ytd: number
+  }
 
   // Annual targets
   annual_targets: {
-    membership_growth: number;
-    club_growth: number;
-    distinguished_clubs: number;
-    csp_submissions: number;
-  };
+    membership_growth: number
+    club_growth: number
+    distinguished_clubs: number
+    csp_submissions: number
+  }
 
   // Final goal status (June achievement vs. year-end targets)
-  goal_1_final: GoalStatus;
-  goal_2_final: GoalStatus;
-  goal_3_final: GoalStatus;
+  goal_1_final: GoalStatus
+  goal_2_final: GoalStatus
+  goal_3_final: GoalStatus
 
   // Month-by-month progression
-  monthly_reports: MonthlyReport[];
+  monthly_reports: MonthlyReport[]
 
   // Summary statistics
   summary: {
-    total_goals: number; // 3
-    goals_on_track: number;
-    goals_off_track: number;
-    goals_pending: number;
-    overall_achievement_percentage: number; // 0-100
-  };
+    total_goals: number // 3
+    goals_on_track: number
+    goals_off_track: number
+    goals_pending: number
+    overall_achievement_percentage: number // 0-100
+  }
 }
 
 /**
@@ -113,43 +117,51 @@ export interface YearEndSummary {
  */
 export function renderMonthlyReport(
   assessment: MonthlyAssessment,
-  config: DistrictConfig,
+  config: DistrictConfig
 ): MonthlyReport {
   // Calculate all goal statuses
-  const goalStatuses = calculateAllGoals(assessment, config);
+  const goalStatuses = calculateAllGoals(assessment, config)
 
   // Count on-track and pending goals
-  const goalArray = [goalStatuses.goal_1_status, goalStatuses.goal_2_status, goalStatuses.goal_3_status];
-  const onTrackGoals = goalArray.filter((g) => g.status === 'On Track').length;
-  const pendingDataGoals = goalArray.filter((g) => g.status === 'Pending Data').length;
+  const goalArray = [
+    goalStatuses.goal_1_status,
+    goalStatuses.goal_2_status,
+    goalStatuses.goal_3_status,
+  ]
+  const onTrackGoals = goalArray.filter(g => g.status === 'On Track').length
+  const pendingDataGoals = goalArray.filter(
+    g => g.status === 'Pending Data'
+  ).length
 
   // Determine overall status
-  let overallStatus: 'On Track' | 'Off Track' | 'Pending Data' = 'On Track';
+  let overallStatus: 'On Track' | 'Off Track' | 'Pending Data' = 'On Track'
   if (pendingDataGoals > 0) {
-    overallStatus = 'Pending Data';
+    overallStatus = 'Pending Data'
   } else if (onTrackGoals < 3) {
-    overallStatus = 'Off Track';
+    overallStatus = 'Off Track'
   }
 
   // Build recognition level breakdown
   const recognitionLevels: {
     [level: string]: {
-      target: number;
-      actual: number;
-      status: string;
-    };
-  } = {};
+      target: number
+      actual: number
+      status: string
+    }
+  } = {}
 
   for (const level of config.recognition_levels) {
-    const monthNumber = getMonthNumber(assessment.month);
+    const monthNumber = getMonthNumber(assessment.month)
     // Formula: (year_end_target / 12) * month_number, then round
-    const cumulativeTarget = Math.round((level.membershipPaymentsTarget / 12) * monthNumber);
+    const cumulativeTarget = Math.round(
+      (level.membershipPaymentsTarget / 12) * monthNumber
+    )
 
     recognitionLevels[level.level] = {
       target: cumulativeTarget,
       actual: 0, // Placeholder - detailed tracking TBD
       status: 'Pending Data',
-    };
+    }
   }
 
   return {
@@ -175,7 +187,7 @@ export function renderMonthlyReport(
     overall_status: overallStatus,
     on_track_goals: onTrackGoals,
     pending_data_goals: pendingDataGoals,
-  };
+  }
 }
 
 /**
@@ -200,23 +212,24 @@ export function renderMonthlyReport(
  */
 export function renderYearEndSummary(
   monthlyReports: MonthlyReport[],
-  config: DistrictConfig,
+  config: DistrictConfig
 ): YearEndSummary {
   if (monthlyReports.length === 0) {
-    throw new Error('Year-end summary requires at least 1 monthly report');
+    throw new Error('Year-end summary requires at least 1 monthly report')
   }
 
   // Use first report for district and program_year (all should match)
-  const firstReport = monthlyReports[0];
+  const firstReport = monthlyReports[0]
 
   // Aggregate annual totals from final month's YTD values
-  const finalMonthReport = monthlyReports[monthlyReports.length - 1];
+  const finalMonthReport = monthlyReports[monthlyReports.length - 1]
   const annualTotals = {
     membership_payments_ytd: finalMonthReport.metrics.membership_payments_ytd,
     paid_clubs_ytd: finalMonthReport.metrics.paid_clubs_ytd,
-    distinguished_clubs_ytd: finalMonthReport.metrics.distinguished_clubs_ytd ?? 0,
+    distinguished_clubs_ytd:
+      finalMonthReport.metrics.distinguished_clubs_ytd ?? 0,
     csp_submissions_ytd: finalMonthReport.metrics.csp_submissions_ytd,
-  };
+  }
 
   // Get annual targets from config
   const annualTargets = {
@@ -224,43 +237,45 @@ export function renderYearEndSummary(
     club_growth: config.year_end_targets.club_growth,
     distinguished_clubs: config.year_end_targets.distinguished_clubs,
     csp_submissions: config.csp_submission_target,
-  };
+  }
 
   // Final goal statuses (from final month's report)
   const finalGoalStatuses = {
     goal_1_final: finalMonthReport.goal_1,
     goal_2_final: finalMonthReport.goal_2,
     goal_3_final: finalMonthReport.goal_3,
-  };
+  }
 
   // Calculate summary statistics
   const goalsOnTrack = [
     finalMonthReport.goal_1.status === 'On Track' ? 1 : 0,
     finalMonthReport.goal_2.status === 'On Track' ? 1 : 0,
     finalMonthReport.goal_3.status === 'On Track' ? 1 : 0,
-  ].reduce((a, b) => a + b, 0);
+  ].reduce((a, b) => a + b, 0)
 
-  const goalsPending = finalMonthReport.pending_data_goals;
-  const goalsOffTrack = 3 - goalsOnTrack - goalsPending;
+  const goalsPending = finalMonthReport.pending_data_goals
+  const goalsOffTrack = 3 - goalsOnTrack - goalsPending
 
   // Calculate overall achievement percentage
   // Formula: (actual_total / target_total) * 100, capped at 100%
   const membershipAchievement = Math.min(
-    (annualTotals.membership_payments_ytd / annualTargets.membership_growth) * 100,
-    100,
-  );
+    (annualTotals.membership_payments_ytd / annualTargets.membership_growth) *
+      100,
+    100
+  )
   const clubAchievement = Math.min(
     (annualTotals.paid_clubs_ytd / annualTargets.club_growth) * 100,
-    100,
-  );
+    100
+  )
   const distinguishedAchievement = Math.min(
-    (annualTotals.distinguished_clubs_ytd / annualTargets.distinguished_clubs) * 100,
-    100,
-  );
+    (annualTotals.distinguished_clubs_ytd / annualTargets.distinguished_clubs) *
+      100,
+    100
+  )
 
   const overallAchievementPercentage = Math.round(
-    (membershipAchievement + clubAchievement + distinguishedAchievement) / 3,
-  );
+    (membershipAchievement + clubAchievement + distinguishedAchievement) / 3
+  )
 
   return {
     district_number: firstReport.district_number,
@@ -283,7 +298,7 @@ export function renderYearEndSummary(
       goals_pending: goalsPending,
       overall_achievement_percentage: overallAchievementPercentage,
     },
-  };
+  }
 }
 
 /**
@@ -295,21 +310,26 @@ export function renderYearEndSummary(
  * @param report - Monthly report with metrics and targets
  * @returns Achievement percentage (0-100)
  */
-export function calculateMonthlyAchievementPercentage(report: MonthlyReport): number {
+export function calculateMonthlyAchievementPercentage(
+  report: MonthlyReport
+): number {
   const membershipAchievement = Math.min(
     (report.metrics.membership_payments_ytd / report.goal_1.target) * 100,
-    100,
-  );
+    100
+  )
   const clubAchievement = Math.min(
     (report.metrics.paid_clubs_ytd / report.goal_2.target) * 100,
-    100,
-  );
-  const distinguishedAchievement = Math.min(
-    (report.metrics.distinguished_clubs_ytd ?? 0) / report.goal_3.target,
-    1,
-  ) * 100;
+    100
+  )
+  const distinguishedAchievement =
+    Math.min(
+      (report.metrics.distinguished_clubs_ytd ?? 0) / report.goal_3.target,
+      1
+    ) * 100
 
-  return Math.round((membershipAchievement + clubAchievement + distinguishedAchievement) / 3);
+  return Math.round(
+    (membershipAchievement + clubAchievement + distinguishedAchievement) / 3
+  )
 }
 
 /**
@@ -319,14 +339,14 @@ export function calculateMonthlyAchievementPercentage(report: MonthlyReport): nu
  * @returns Formatted string (e.g., "Nov 26, 2025 at 2:30 PM")
  */
 export function formatReportTimestamp(isoString: string): string {
-  const date = new Date(isoString);
+  const date = new Date(isoString)
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  });
+  })
 }
 
 /**
@@ -336,24 +356,27 @@ export function formatReportTimestamp(isoString: string): string {
  * @returns { valid: boolean; errors: string[] }
  */
 export function validateReportStructure(
-  report: MonthlyReport | YearEndSummary,
+  report: MonthlyReport | YearEndSummary
 ): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
+  const errors: string[] = []
 
   // Check required top-level fields
-  if (!('district_number' in report)) errors.push('Missing district_number');
-  if (!('program_year' in report)) errors.push('Missing program_year');
-  if (!('report_generated_at' in report)) errors.push('Missing report_generated_at');
+  if (!('district_number' in report)) errors.push('Missing district_number')
+  if (!('program_year' in report)) errors.push('Missing program_year')
+  if (!('report_generated_at' in report))
+    errors.push('Missing report_generated_at')
 
   // Check goal statuses (present in monthly reports)
   if ('goal_1' in report) {
-    if (!report.goal_1.status) errors.push('goal_1: Missing status field');
-    if (typeof report.goal_1.actual !== 'number') errors.push('goal_1: Invalid actual value');
-    if (typeof report.goal_1.target !== 'number') errors.push('goal_1: Invalid target value');
+    if (!report.goal_1.status) errors.push('goal_1: Missing status field')
+    if (typeof report.goal_1.actual !== 'number')
+      errors.push('goal_1: Invalid actual value')
+    if (typeof report.goal_1.target !== 'number')
+      errors.push('goal_1: Invalid target value')
   }
 
   return {
     valid: errors.length === 0,
     errors,
-  };
+  }
 }

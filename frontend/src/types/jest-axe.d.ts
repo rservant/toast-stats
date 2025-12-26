@@ -12,7 +12,7 @@ declare global {
       toHaveNoViolations(): T
     }
   }
-  
+
   namespace Vitest {
     interface Assertion<T = unknown> {
       toHaveNoViolations(): T

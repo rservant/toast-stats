@@ -1,23 +1,23 @@
-import React from 'react';
-import { ReconciliationManagement } from '../components/ReconciliationManagement';
+import React from 'react'
+import { ReconciliationManagement } from '../components/ReconciliationManagement'
 
 /**
  * ReconciliationManagementPage Component
- * 
+ *
  * Page wrapper for the reconciliation management interface.
  * Provides admin access to reconciliation job management and configuration.
- * 
+ *
  * Requirements: 6.4, 6.5
  * - Admin interface for viewing active reconciliations
  * - Manual reconciliation initiation controls
  * - Reconciliation configuration management UI
- * 
+ *
  * @component
  */
 const ReconciliationManagementPage: React.FC = () => {
   // In a real application, this would check user permissions
   // For now, we'll assume admin access is available
-  const isAdmin = true;
+  const isAdmin = true
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -34,7 +34,7 @@ const ReconciliationManagementPage: React.FC = () => {
         <ReconciliationManagement isAdmin={isAdmin} />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ReconciliationManagementPage;
+export default ReconciliationManagementPage

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 
 interface ExportButtonProps {
-  onExport: () => void | Promise<void>;
-  label?: string;
-  disabled?: boolean;
-  className?: string;
+  onExport: () => void | Promise<void>
+  label?: string
+  disabled?: boolean
+  className?: string
 }
 
 /**
@@ -26,7 +26,7 @@ const DownloadIcon = () => (
       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
     />
   </svg>
-);
+)
 
 /**
  * Reusable export button component with loading state
@@ -37,20 +37,20 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   disabled = false,
   className = '',
 }) => {
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleExport = async () => {
-    if (disabled || isExporting) return;
+    if (disabled || isExporting) return
 
-    setIsExporting(true);
+    setIsExporting(true)
     try {
-      await onExport();
+      await onExport()
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error('Export failed:', error)
     } finally {
-      setIsExporting(false);
+      setIsExporting(false)
     }
-  };
+  }
 
   return (
     <button
@@ -65,7 +65,11 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         ${className}
       `}
-      aria-label={isExporting ? 'Exporting data to CSV file' : `${label} - Download data as CSV file`}
+      aria-label={
+        isExporting
+          ? 'Exporting data to CSV file'
+          : `${label} - Download data as CSV file`
+      }
       aria-busy={isExporting}
     >
       {isExporting ? (
@@ -100,5 +104,5 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         </>
       )}
     </button>
-  );
-};
+  )
+}

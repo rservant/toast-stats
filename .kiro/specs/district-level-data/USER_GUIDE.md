@@ -35,6 +35,7 @@ When you first access a district's detail page, you may see a message indicating
 ### What is a District Backfill?
 
 A district backfill is the process of fetching historical performance data for your district. The system retrieves three types of reports for each date:
+
 - District-level performance metrics
 - Division-level performance metrics
 - Club-level performance metrics
@@ -92,16 +93,19 @@ Once started, a progress modal will display:
 Clubs are categorized into three health statuses:
 
 #### 🟢 Healthy
+
 - Membership ≥ 12 members
 - At least 1 DCP goal achieved
 - No declining membership trends
 
 #### 🟡 At-Risk
+
 - Membership ≥ 12 members BUT:
   - Zero DCP goals achieved, OR
   - Declining membership for 3+ consecutive months
 
 #### 🔴 Critical
+
 - Membership < 12 members
 - At risk of losing charter
 - Requires immediate attention
@@ -117,6 +121,7 @@ Clubs are recognized based on DCP goals achieved:
 ### Leadership Effectiveness Score
 
 Divisions are scored on a 0-100 scale based on:
+
 - **40% Club Health**: Average health of clubs in the division
 - **30% Membership Growth**: Trend in total membership
 - **30% DCP Achievement**: Average DCP goals per club
@@ -133,11 +138,13 @@ Scores ≥ 75 with consistent performance qualify as "Best Practice" divisions.
 ### Seasonal Patterns
 
 The system analyzes month-over-month membership changes to identify:
+
 - **Growth Months**: Months with consistent membership increases
 - **Decline Months**: Months with consistent membership decreases
 - **Stable Months**: Months with minimal change
 
 Common patterns:
+
 - Growth typically occurs in September-October (new program year)
 - Decline may occur in June-July (program year end)
 
@@ -152,6 +159,7 @@ The district detail page is organized into five tabs:
 **Purpose**: Quick snapshot of district health
 
 **Key Components**:
+
 - **District Overview Card**
   - Total clubs, membership, and distinguished club count
   - Date range of available cached data
@@ -168,6 +176,7 @@ The district detail page is organized into five tabs:
   - Projection to year-end based on current trends
 
 **How to Use**:
+
 1. Use the date selector to view district status on any cached date
 2. Review at-risk clubs and click for details
 3. Monitor distinguished club progress toward goals
@@ -177,6 +186,7 @@ The district detail page is organized into five tabs:
 **Purpose**: Detailed view of all clubs with sorting and filtering
 
 **Key Components**:
+
 - **Search Bar**: Search by club name, division, or area
 - **Status Filter**: Filter by health status (all, healthy, at-risk, critical)
 - **Sortable Table**: Click column headers to sort
@@ -189,6 +199,7 @@ The district detail page is organized into five tabs:
   - Health Status
 
 **How to Use**:
+
 1. Use search to find specific clubs quickly
 2. Filter by status to focus on clubs needing attention
 3. Sort by membership or DCP goals to identify top/bottom performers
@@ -196,6 +207,7 @@ The district detail page is organized into five tabs:
 5. Export filtered results to CSV for further analysis
 
 **Color Coding**:
+
 - 🟢 Green rows: Healthy clubs
 - 🟡 Yellow rows: At-risk clubs
 - 🔴 Red rows: Critical clubs
@@ -205,6 +217,7 @@ The district detail page is organized into five tabs:
 **Purpose**: Compare performance across organizational units
 
 **Key Components**:
+
 - **Division Rankings**
   - Ranked list of all divisions
   - Shows total clubs, DCP goals, and health score
@@ -217,6 +230,7 @@ The district detail page is organized into five tabs:
   - Hover for detailed metrics
 
 **How to Use**:
+
 1. Identify top-performing divisions to learn best practices
 2. Compare your division's rank to others
 3. Look for divisions with "improving" trends
@@ -227,6 +241,7 @@ The district detail page is organized into five tabs:
 **Purpose**: Analyze performance over time
 
 **Key Components**:
+
 - **Membership Trend Chart**
   - Line chart of total district membership
   - Program year milestones overlaid
@@ -241,6 +256,7 @@ The district detail page is organized into five tabs:
   - Supports multi-year view if 3+ years of data available
 
 **How to Use**:
+
 1. Identify seasonal membership patterns
 2. Compare current year performance to previous years
 3. Spot trends early to take corrective action
@@ -251,6 +267,7 @@ The district detail page is organized into five tabs:
 **Purpose**: Deep insights into leadership and performance
 
 **Key Components**:
+
 - **Leadership Insights**
   - Leadership effectiveness scores by division
   - Top-performing divisions and areas
@@ -267,6 +284,7 @@ The district detail page is organized into five tabs:
   - Displayed as bar chart or heatmap
 
 **How to Use**:
+
 1. Recognize high-performing leaders
 2. Identify which DCP goals need more focus
 3. Learn from top-growth clubs
@@ -281,18 +299,21 @@ The district detail page is organized into five tabs:
 When a club appears in the At-Risk panel, review the risk factors:
 
 **"Membership below 12 (critical)"**
+
 - Immediate action required
 - Club is at risk of losing charter
 - Reach out to club officers immediately
 - Consider mentorship or merger options
 
 **"Declining membership for 3+ months"**
+
 - Trend analysis shows consistent decline
 - Investigate root causes (meeting quality, leadership, location)
 - Implement retention strategies
 - Monitor closely
 
 **"Zero DCP goals achieved"**
+
 - Club may be inactive or struggling
 - Review club meeting frequency
 - Assess officer engagement
@@ -301,17 +322,20 @@ When a club appears in the At-Risk panel, review the risk factors:
 ### Leadership Effectiveness
 
 **High Scores (75-100)**
+
 - Division/area is performing well
 - Leadership is effective
 - Consider as "Best Practice" example
 - Share strategies with other divisions
 
 **Medium Scores (50-74)**
+
 - Room for improvement
 - Identify specific weak areas (health, growth, or DCP)
 - Provide targeted support
 
 **Low Scores (0-49)**
+
 - Requires attention
 - May indicate leadership challenges
 - Consider additional training or mentorship
@@ -322,11 +346,13 @@ When a club appears in the At-Risk panel, review the risk factors:
 Use seasonal insights to plan:
 
 **Growth Months**
+
 - Schedule recruitment campaigns
 - Plan open houses and demo meetings
 - Maximize new member onboarding
 
 **Decline Months**
+
 - Focus on retention
 - Engage existing members
 - Plan special events to maintain interest
@@ -338,12 +364,14 @@ Use seasonal insights to plan:
 ### Export Options
 
 **CSV Export**
+
 - Available on Clubs tab and Analytics views
 - Click "Export" button in top-right corner
 - Includes all filtered/sorted data
 - Filename includes district ID and date range
 
 **What's Included**:
+
 - Club name, division, area
 - Current membership count
 - DCP goals achieved
@@ -354,12 +382,14 @@ Use seasonal insights to plan:
 ### Using Exported Data
 
 **Excel/Google Sheets**:
+
 - Open CSV file in spreadsheet software
 - Create pivot tables for custom analysis
 - Generate charts and visualizations
 - Share with district leadership
 
 **Presentations**:
+
 - Copy data into PowerPoint/Google Slides
 - Highlight key metrics and trends
 - Use for district council meetings
@@ -372,6 +402,7 @@ Use seasonal insights to plan:
 ### "No cached data available"
 
 **Solution**: Initiate a district backfill
+
 1. Click "Backfill District Data" button
 2. Select date range
 3. Start backfill and wait for completion
@@ -379,6 +410,7 @@ Use seasonal insights to plan:
 ### Backfill shows many "Unavailable" dates
 
 **Explanation**: This is normal and expected
+
 - Toastmasters dashboard has blackout periods
 - Reconciliation periods when data isn't available
 - Typically occurs at month-end and during transitions
@@ -387,11 +419,13 @@ Use seasonal insights to plan:
 ### Backfill failed for some dates
 
 **Possible Causes**:
+
 - Network connectivity issues
 - Toastmasters dashboard temporarily unavailable
 - Rate limiting
 
 **Solution**:
+
 - Wait a few minutes and restart the backfill
 - The system will skip already-cached dates
 - Only failed dates will be retried
@@ -399,10 +433,12 @@ Use seasonal insights to plan:
 ### Charts not displaying
 
 **Possible Causes**:
+
 - Insufficient data (need at least 2 dates for trends)
 - Browser compatibility issues
 
 **Solution**:
+
 - Ensure you have cached data for multiple dates
 - Try refreshing the page
 - Use a modern browser (Chrome, Firefox, Safari, Edge)
@@ -410,10 +446,12 @@ Use seasonal insights to plan:
 ### Year-over-year comparison shows "N/A"
 
 **Explanation**: Previous year data not available
+
 - You need cached data from the same date last year
 - Initiate a backfill including dates from previous year
 
 **Solution**:
+
 - Backfill data starting from last program year (July 1 of previous year)
 - Wait for backfill to complete
 - Year-over-year comparisons will then be available
@@ -421,6 +459,7 @@ Use seasonal insights to plan:
 ### Performance is slow with large districts
 
 **Optimization Tips**:
+
 - Use filters to reduce displayed data
 - Pagination automatically limits table rows
 - Export data for offline analysis if needed
@@ -462,6 +501,7 @@ Use seasonal insights to plan:
 ## Support
 
 For technical issues or questions:
+
 - Check this user guide first
 - Review the troubleshooting section
 - Contact your system administrator
@@ -495,5 +535,5 @@ For technical issues or questions:
 
 ---
 
-*Last Updated: November 2025*
-*Version: 1.0*
+_Last Updated: November 2025_
+_Version: 1.0_

@@ -12,6 +12,7 @@
 This document defines **how testing is done** in this organization.
 
 Its goal is to:
+
 - Reduce production risk
 - Enable safe, frequent change
 - Provide fast, reliable feedback
@@ -49,12 +50,12 @@ All testing practices MUST follow these principles:
 
 All systems MUST follow this distribution:
 
-| Layer | Purpose | Expectations |
-|------|--------|--------------|
-| Unit Tests | Business logic | Fast, isolated, deterministic |
-| Integration Tests | Contracts between components | Real dependencies |
-| End-to-End Tests | Critical user journeys | Few, stable, production-like |
-| Exploratory Testing | Discover unknown risks | Manual, time-boxed |
+| Layer               | Purpose                      | Expectations                  |
+| ------------------- | ---------------------------- | ----------------------------- |
+| Unit Tests          | Business logic               | Fast, isolated, deterministic |
+| Integration Tests   | Contracts between components | Real dependencies             |
+| End-to-End Tests    | Critical user journeys       | Few, stable, production-like  |
+| Exploratory Testing | Discover unknown risks       | Manual, time-boxed            |
 
 **Anti-pattern:**  
 Using large numbers of UI or E2E tests to compensate for weak unit or integration coverage.
@@ -64,6 +65,7 @@ Using large numbers of UI or E2E tests to compensate for weak unit or integratio
 ## 4. Unit Testing Standards
 
 ### Requirements
+
 - Unit tests MUST:
   - Run in milliseconds
   - Be deterministic
@@ -72,6 +74,7 @@ Using large numbers of UI or E2E tests to compensate for weak unit or integratio
 - Test failures MUST clearly explain what broke and why
 
 ### Coverage
+
 - New or modified code MUST achieve:
   - **≥ 80% line coverage**
 - Critical business logic SHOULD achieve:
@@ -87,6 +90,7 @@ Low-value tests written solely to increase coverage are discouraged.
 Integration tests validate **real contracts**.
 
 ### Requirements
+
 - Integration tests MUST:
   - Use real databases, message brokers, or APIs (containerized or sandboxed)
   - Isolate their data
@@ -94,6 +98,7 @@ Integration tests validate **real contracts**.
 - Mocks SHOULD be used sparingly and only at system boundaries
 
 ### Prohibited
+
 - Shared mutable environments
 - Reusing production databases
 - Hidden dependencies between tests
@@ -105,6 +110,7 @@ Integration tests validate **real contracts**.
 E2E tests are expensive and fragile.
 
 ### Rules
+
 - E2E tests MUST:
   - Cover only **critical user journeys**
   - Run against production-like environments
@@ -119,6 +125,7 @@ Authentication, revenue, data integrity, and regulatory flows.
 ## 7. Test Data Management
 
 ### Principles
+
 - Test data MUST be:
   - Minimal
   - Explicit
@@ -126,6 +133,7 @@ Authentication, revenue, data integrity, and regulatory flows.
 - Random data MAY be used **only** when seeded and reproducible
 
 ### Prohibited
+
 - Using production data in tests
 - Tests that depend on execution order
 - Shared test data across unrelated tests
@@ -135,7 +143,9 @@ Authentication, revenue, data integrity, and regulatory flows.
 ## 8. CI and Pull Request Expectations
 
 ### Required in CI
+
 All pipelines MUST run:
+
 1. Static analysis
 2. Unit tests
 3. Integration tests
@@ -143,7 +153,9 @@ All pipelines MUST run:
 5. Coverage reporting
 
 ### Pull Requests
+
 Every pull request MUST answer:
+
 - What behaviours are newly tested?
 - What risks remain untested, and why?
 - Do tests fail for the right reason?
@@ -159,10 +171,11 @@ Failing or flaky tests MUST be addressed before merge.
 - Leads own enforcement and prioritization
 
 Tests that are:
+
 - Flaky
 - Slow
 - Unreliable
-- Hard to understand  
+- Hard to understand
 
 MUST be fixed or removed.
 
@@ -171,6 +184,7 @@ MUST be fixed or removed.
 ## 10. Explicit Anti-Patterns (Forbidden)
 
 The following are not allowed:
+
 - Tests that assert private methods or internal state
 - Snapshot tests without semantic assertions
 - Mocking everything
@@ -202,7 +216,7 @@ Testing strategy MUST evolve.
 
 The guiding question is always:
 
-> *“If this fails in production, what test should have caught it?”*
+> _“If this fails in production, what test should have caught it?”_
 
 ---
 

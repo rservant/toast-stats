@@ -1,34 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react'
 
 /**
  * Props for the Tooltip component
  */
 interface TooltipProps {
   /** The content to display in the tooltip */
-  content: string | React.ReactNode;
+  content: string | React.ReactNode
   /** The element that triggers the tooltip */
-  children: React.ReactNode;
+  children: React.ReactNode
   /** Position of the tooltip relative to the trigger element */
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: 'top' | 'bottom' | 'left' | 'right'
   /** Optional CSS classes for the tooltip container */
-  className?: string;
+  className?: string
   /** Delay before showing tooltip in milliseconds */
-  delay?: number;
+  delay?: number
 }
 
 /**
  * Tooltip Component
- * 
+ *
  * Displays helpful information when users hover over or focus on an element.
  * Fully accessible with keyboard navigation and screen reader support.
- * 
+ *
  * Features:
  * - Keyboard accessible (shows on focus)
  * - Screen reader friendly with aria-describedby
  * - Configurable position
  * - Optional delay before showing
  * - Responsive positioning
- * 
+ *
  * @component
  * @example
  * ```tsx
@@ -44,63 +44,65 @@ export const Tooltip: React.FC<TooltipProps> = ({
   className = '',
   delay = 200,
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [tooltipId] = useState(() => `tooltip-${Math.random().toString(36).substr(2, 9)}`);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isVisible, setIsVisible] = useState(false)
+  const [tooltipId] = useState(
+    () => `tooltip-${Math.random().toString(36).substr(2, 9)}`
+  )
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showTooltip = () => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      clearTimeout(timeoutRef.current)
     }
     timeoutRef.current = setTimeout(() => {
-      setIsVisible(true);
-    }, delay);
-  };
+      setIsVisible(true)
+    }, delay)
+  }
 
   const hideTooltip = () => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      clearTimeout(timeoutRef.current)
     }
-    setIsVisible(false);
-  };
+    setIsVisible(false)
+  }
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+        clearTimeout(timeoutRef.current)
       }
-    };
-  }, []);
+    }
+  }, [])
 
   const getPositionClasses = () => {
     switch (position) {
       case 'top':
-        return 'bottom-full left-1/2 -translate-x-1/2 mb-2';
+        return 'bottom-full left-1/2 -translate-x-1/2 mb-2'
       case 'bottom':
-        return 'top-full left-1/2 -translate-x-1/2 mt-2';
+        return 'top-full left-1/2 -translate-x-1/2 mt-2'
       case 'left':
-        return 'right-full top-1/2 -translate-y-1/2 mr-2';
+        return 'right-full top-1/2 -translate-y-1/2 mr-2'
       case 'right':
-        return 'left-full top-1/2 -translate-y-1/2 ml-2';
+        return 'left-full top-1/2 -translate-y-1/2 ml-2'
       default:
-        return 'bottom-full left-1/2 -translate-x-1/2 mb-2';
+        return 'bottom-full left-1/2 -translate-x-1/2 mb-2'
     }
-  };
+  }
 
   const getArrowClasses = () => {
     switch (position) {
       case 'top':
-        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent';
+        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
       case 'bottom':
-        return 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 border-l-transparent border-r-transparent border-t-transparent';
+        return 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 border-l-transparent border-r-transparent border-t-transparent'
       case 'left':
-        return 'left-full top-1/2 -translate-y-1/2 border-l-gray-900 border-t-transparent border-b-transparent border-r-transparent';
+        return 'left-full top-1/2 -translate-y-1/2 border-l-gray-900 border-t-transparent border-b-transparent border-r-transparent'
       case 'right':
-        return 'right-full top-1/2 -translate-y-1/2 border-r-gray-900 border-t-transparent border-b-transparent border-l-transparent';
+        return 'right-full top-1/2 -translate-y-1/2 border-r-gray-900 border-t-transparent border-b-transparent border-l-transparent'
       default:
-        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent';
+        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
     }
-  };
+  }
 
   return (
     <div className="relative inline-block">
@@ -129,15 +131,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
 /**
  * InfoIcon Component
- * 
+ *
  * A small info icon that can be used with tooltips to indicate
  * additional information is available.
- * 
+ *
  * @component
  * @example
  * ```tsx
@@ -146,7 +148,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
  * </Tooltip>
  * ```
  */
-export const InfoIcon: React.FC<{ className?: string }> = ({ className = '' }) => {
+export const InfoIcon: React.FC<{ className?: string }> = ({
+  className = '',
+}) => {
   return (
     <svg
       className={`w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors cursor-help ${className}`}
@@ -160,5 +164,5 @@ export const InfoIcon: React.FC<{ className?: string }> = ({ className = '' }) =
         clipRule="evenodd"
       />
     </svg>
-  );
-};
+  )
+}

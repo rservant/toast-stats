@@ -70,30 +70,34 @@ The district rankings calculation has been updated to use a Borda count scoring 
 #### Automated Cache Clearing (Recommended)
 
 - [ ] Use the automated cache clearing script:
+
   ```bash
   # If using Docker:
   docker exec -it <backend-container> npm run clear-rankings-cache
-  
+
   # If running directly:
   cd backend && npm run clear-rankings-cache
   ```
+
 - [ ] Verify script output shows successful cache clearing
 - [ ] Check that cache version compatibility was verified
 
 #### Manual Cache Clearing (Alternative)
 
 - [ ] Clear all cached district rankings manually:
+
   ```bash
   # If using Docker:
   docker exec -it <backend-container> rm -rf /app/cache/districts_*.json
   docker exec -it <backend-container> rm -rf /app/cache/metadata_*.json
   docker exec -it <backend-container> rm -rf /app/cache/historical_index.json
-  
+
   # If running directly:
   rm -rf backend/cache/districts_*.json
   rm -rf backend/cache/metadata_*.json
   rm -rf backend/cache/historical_index.json
   ```
+
 - [ ] Verify cache was cleared (directory should be empty or only contain district-level data)
 
 #### Post-Cache Clearing Verification
@@ -216,10 +220,10 @@ Add any deployment-specific notes here:
 
 ---
 
-**Deployment Date:** _______________
+**Deployment Date:** **\*\***\_\_\_**\*\***
 
-**Deployed By:** _______________
+**Deployed By:** **\*\***\_\_\_**\*\***
 
-**Version/Commit:** _______________
+**Version/Commit:** **\*\***\_\_\_**\*\***
 
-**Issues Encountered:** _______________
+**Issues Encountered:** **\*\***\_\_\_**\*\***

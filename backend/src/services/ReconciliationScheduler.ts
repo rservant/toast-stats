@@ -1,6 +1,6 @@
 /**
  * Reconciliation Scheduler for Month-End Data Reconciliation
- * 
+ *
  * Automatically initiates reconciliation monitoring when months transition.
  * Manages job queue for concurrent reconciliations and provides job status tracking.
  */
@@ -24,7 +24,8 @@ export interface ScheduledReconciliation {
 export class ReconciliationScheduler {
   private orchestrator: ReconciliationOrchestrator
   private storageManager: ReconciliationStorageManager
-  private scheduledReconciliations: Map<string, ScheduledReconciliation> = new Map()
+  private scheduledReconciliations: Map<string, ScheduledReconciliation> =
+    new Map()
   private isRunning: boolean = false
   private checkInterval?: ReturnType<typeof setTimeout>
 
@@ -39,7 +40,7 @@ export class ReconciliationScheduler {
 
   /**
    * Start the scheduler to monitor for month transitions and process scheduled reconciliations
-   * 
+   *
    * @param checkIntervalMinutes - How often to check for new months and process scheduled reconciliations (default: 60 minutes)
    */
   start(checkIntervalMinutes: number = 60): void {
@@ -53,15 +54,20 @@ export class ReconciliationScheduler {
 
     // Run initial check
     this.processScheduledReconciliations().catch(error => {
-      logger.error('Initial scheduled reconciliation processing failed', { error })
+      logger.error('Initial scheduled reconciliation processing failed', {
+        error,
+      })
     })
 
     // Set up periodic checks
-    this.checkInterval = setInterval(() => {
-      this.processScheduledReconciliations().catch(error => {
-        logger.error('Scheduled reconciliation processing failed', { error })
-      })
-    }, checkIntervalMinutes * 60 * 1000)
+    this.checkInterval = setInterval(
+      () => {
+        this.processScheduledReconciliations().catch(error => {
+          logger.error('Scheduled reconciliation processing failed', { error })
+        })
+      },
+      checkIntervalMinutes * 60 * 1000
+    )
   }
 
   /**
@@ -84,49 +90,56 @@ export class ReconciliationScheduler {
 
   /**
    * Schedule a reconciliation for a specific district and month
-   * 
+   *
    * @param districtId - The district ID to reconcile
    * @param targetMonth - The target month in YYYY-MM format
    * @param scheduledFor - When to initiate the reconciliation (default: now)
    * @returns The scheduled reconciliation entry
    */
   async scheduleMonthEndReconciliation(
-    districtId: string, 
+    districtId: string,
     targetMonth: string,
     scheduledFor: Date = new Date()
   ): Promise<ScheduledReconciliation> {
-    logger.info('Scheduling month-end reconciliation', { districtId, targetMonth, scheduledFor })
+    logger.info('Scheduling month-end reconciliation', {
+      districtId,
+      targetMonth,
+      scheduledFor,
+    })
 
     // Validate target month format
     if (!/^\d{4}-\d{2}$/.test(targetMonth)) {
-      throw new Error(`Invalid target month format: ${targetMonth}. Expected YYYY-MM format.`)
+      throw new Error(
+        `Invalid target month format: ${targetMonth}. Expected YYYY-MM format.`
+      )
     }
 
     // Check if there's already an active reconciliation for this district/month
     const existingJobs = await this.storageManager.getJobsByDistrict(districtId)
-    const activeJob = existingJobs.find(job => 
-      job.targetMonth === targetMonth && 
-      job.status === 'active'
+    const activeJob = existingJobs.find(
+      job => job.targetMonth === targetMonth && job.status === 'active'
     )
 
     if (activeJob) {
-      logger.warn('Reconciliation already active for district/month', { 
-        districtId, 
-        targetMonth, 
-        existingJobId: activeJob.id 
+      logger.warn('Reconciliation already active for district/month', {
+        districtId,
+        targetMonth,
+        existingJobId: activeJob.id,
       })
-      throw new Error(`Active reconciliation already exists for district ${districtId} month ${targetMonth}`)
+      throw new Error(
+        `Active reconciliation already exists for district ${districtId} month ${targetMonth}`
+      )
     }
 
     const scheduleKey = `${districtId}-${targetMonth}`
-    
+
     // Check if already scheduled
     const existingSchedule = this.scheduledReconciliations.get(scheduleKey)
     if (existingSchedule && existingSchedule.status === 'pending') {
-      logger.warn('Reconciliation already scheduled for district/month', { 
-        districtId, 
+      logger.warn('Reconciliation already scheduled for district/month', {
+        districtId,
         targetMonth,
-        existingSchedule
+        existingSchedule,
       })
       return existingSchedule
     }
@@ -136,18 +149,22 @@ export class ReconciliationScheduler {
       targetMonth,
       scheduledFor,
       status: 'pending',
-      attempts: 0
+      attempts: 0,
     }
 
     this.scheduledReconciliations.set(scheduleKey, scheduled)
 
-    logger.info('Month-end reconciliation scheduled', { districtId, targetMonth, scheduledFor })
+    logger.info('Month-end reconciliation scheduled', {
+      districtId,
+      targetMonth,
+      scheduledFor,
+    })
     return scheduled
   }
 
   /**
    * Check for pending reconciliations and return their status
-   * 
+   *
    * @returns Array of all reconciliation jobs (active, completed, failed, cancelled)
    */
   async checkPendingReconciliations(): Promise<ReconciliationJob[]> {
@@ -156,17 +173,16 @@ export class ReconciliationScheduler {
     try {
       // Get all jobs from storage
       const allJobs = await this.storageManager.getAllJobs()
-      
-      logger.debug('Found reconciliation jobs', { 
+
+      logger.debug('Found reconciliation jobs', {
         total: allJobs.length,
         active: allJobs.filter(job => job.status === 'active').length,
         completed: allJobs.filter(job => job.status === 'completed').length,
         failed: allJobs.filter(job => job.status === 'failed').length,
-        cancelled: allJobs.filter(job => job.status === 'cancelled').length
+        cancelled: allJobs.filter(job => job.status === 'cancelled').length,
       })
 
       return allJobs
-
     } catch (error) {
       logger.error('Failed to check pending reconciliations', { error })
       throw error
@@ -175,7 +191,7 @@ export class ReconciliationScheduler {
 
   /**
    * Cancel a reconciliation job
-   * 
+   *
    * @param jobId - The reconciliation job ID to cancel
    * @returns void
    */
@@ -196,7 +212,6 @@ export class ReconciliationScheduler {
       }
 
       logger.info('Reconciliation cancelled successfully', { jobId })
-
     } catch (error) {
       logger.error('Failed to cancel reconciliation', { jobId, error })
       throw error
@@ -205,7 +220,7 @@ export class ReconciliationScheduler {
 
   /**
    * Get all scheduled reconciliations (pending, not yet initiated)
-   * 
+   *
    * @returns Array of scheduled reconciliations
    */
   getScheduledReconciliations(): ScheduledReconciliation[] {
@@ -214,7 +229,7 @@ export class ReconciliationScheduler {
 
   /**
    * Automatically detect month transitions and schedule reconciliations for all districts
-   * 
+   *
    * @param districts - Array of district IDs to monitor (if not provided, will use a default set)
    * @returns Number of reconciliations scheduled
    */
@@ -222,7 +237,7 @@ export class ReconciliationScheduler {
     logger.info('Auto-scheduling reconciliations for month transition')
 
     const now = new Date()
-    
+
     // Calculate previous month
     const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const previousMonth = `${prevMonthDate.getFullYear()}-${(prevMonthDate.getMonth() + 1).toString().padStart(2, '0')}`
@@ -236,25 +251,26 @@ export class ReconciliationScheduler {
       try {
         // Check if we're in a new month (first few days)
         const dayOfMonth = now.getDate()
-        if (dayOfMonth <= 5) { // Only auto-schedule in first 5 days of new month
+        if (dayOfMonth <= 5) {
+          // Only auto-schedule in first 5 days of new month
           // Schedule reconciliation for the previous month
           await this.scheduleMonthEndReconciliation(districtId, previousMonth)
           scheduledCount++
         }
       } catch (error) {
         // Log error but continue with other districts
-        logger.warn('Failed to auto-schedule reconciliation for district', { 
-          districtId, 
-          previousMonth, 
-          error: error instanceof Error ? error.message : String(error)
+        logger.warn('Failed to auto-schedule reconciliation for district', {
+          districtId,
+          previousMonth,
+          error: error instanceof Error ? error.message : String(error),
         })
       }
     }
 
-    logger.info('Auto-scheduling completed', { 
+    logger.info('Auto-scheduling completed', {
       targetDistricts: targetDistricts.length,
       scheduledCount,
-      previousMonth
+      previousMonth,
     })
 
     return scheduledCount
@@ -262,7 +278,7 @@ export class ReconciliationScheduler {
 
   /**
    * Process all scheduled reconciliations that are due
-   * 
+   *
    * @returns Number of reconciliations initiated
    */
   private async processScheduledReconciliations(): Promise<number> {
@@ -275,7 +291,9 @@ export class ReconciliationScheduler {
     try {
       const autoScheduledCount = await this.autoScheduleForMonthTransition()
       if (autoScheduledCount > 0) {
-        logger.info('Auto-scheduled reconciliations for month transition', { count: autoScheduledCount })
+        logger.info('Auto-scheduled reconciliations for month transition', {
+          count: autoScheduledCount,
+        })
       }
     } catch (error) {
       logger.error('Failed to auto-schedule for month transition', { error })
@@ -290,9 +308,9 @@ export class ReconciliationScheduler {
       // Check if it's time to initiate this reconciliation
       if (now >= scheduled.scheduledFor) {
         try {
-          logger.info('Initiating scheduled reconciliation', { 
+          logger.info('Initiating scheduled reconciliation', {
             districtId: scheduled.districtId,
-            targetMonth: scheduled.targetMonth
+            targetMonth: scheduled.targetMonth,
           })
 
           // Initiate the reconciliation
@@ -310,38 +328,41 @@ export class ReconciliationScheduler {
 
           initiatedCount++
 
-          logger.info('Scheduled reconciliation initiated successfully', { 
+          logger.info('Scheduled reconciliation initiated successfully', {
             districtId: scheduled.districtId,
             targetMonth: scheduled.targetMonth,
-            jobId: job.id
+            jobId: job.id,
           })
-
         } catch (error) {
           // Mark as failed and increment attempts
           scheduled.status = 'failed'
           scheduled.attempts++
           scheduled.lastAttempt = now
-          scheduled.error = error instanceof Error ? error.message : String(error)
+          scheduled.error =
+            error instanceof Error ? error.message : String(error)
 
-          logger.error('Failed to initiate scheduled reconciliation', { 
+          logger.error('Failed to initiate scheduled reconciliation', {
             districtId: scheduled.districtId,
             targetMonth: scheduled.targetMonth,
             attempts: scheduled.attempts,
-            error: scheduled.error
+            error: scheduled.error,
           })
 
           // If we've tried too many times, remove from schedule
           if (scheduled.attempts >= 3) {
-            logger.warn('Removing failed scheduled reconciliation after max attempts', { 
-              districtId: scheduled.districtId,
-              targetMonth: scheduled.targetMonth,
-              attempts: scheduled.attempts
-            })
+            logger.warn(
+              'Removing failed scheduled reconciliation after max attempts',
+              {
+                districtId: scheduled.districtId,
+                targetMonth: scheduled.targetMonth,
+                attempts: scheduled.attempts,
+              }
+            )
             this.scheduledReconciliations.delete(key)
           } else {
             // Reset to pending for retry, but schedule for later
             scheduled.status = 'pending'
-            scheduled.scheduledFor = new Date(now.getTime() + (60 * 60 * 1000)) // Retry in 1 hour
+            scheduled.scheduledFor = new Date(now.getTime() + 60 * 60 * 1000) // Retry in 1 hour
           }
         }
       }
@@ -351,7 +372,9 @@ export class ReconciliationScheduler {
     await this.cleanupScheduledReconciliations()
 
     if (initiatedCount > 0) {
-      logger.info('Scheduled reconciliation processing completed', { initiatedCount })
+      logger.info('Scheduled reconciliation processing completed', {
+        initiatedCount,
+      })
     }
 
     return initiatedCount
@@ -362,14 +385,17 @@ export class ReconciliationScheduler {
    */
   private async cleanupScheduledReconciliations(): Promise<void> {
     const now = new Date()
-    const oneDayAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000))
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
     const keysToDelete: string[] = []
 
     // Clean up old scheduled reconciliations
     for (const [key, scheduled] of this.scheduledReconciliations.entries()) {
       // Remove initiated or failed reconciliations older than 1 day
-      if ((scheduled.status === 'initiated' || scheduled.status === 'failed') && 
-          scheduled.lastAttempt && scheduled.lastAttempt < oneDayAgo) {
+      if (
+        (scheduled.status === 'initiated' || scheduled.status === 'failed') &&
+        scheduled.lastAttempt &&
+        scheduled.lastAttempt < oneDayAgo
+      ) {
         keysToDelete.push(key)
       }
     }
@@ -377,7 +403,9 @@ export class ReconciliationScheduler {
     keysToDelete.forEach(key => this.scheduledReconciliations.delete(key))
 
     if (keysToDelete.length > 0) {
-      logger.info('Cleaned up old scheduled reconciliations', { count: keysToDelete.length })
+      logger.info('Cleaned up old scheduled reconciliations', {
+        count: keysToDelete.length,
+      })
     }
 
     // Also clean up old completed reconciliation jobs via storage manager
@@ -391,32 +419,149 @@ export class ReconciliationScheduler {
   /**
    * Get default districts to monitor (this would typically come from configuration)
    * For now, returns a basic set of districts
-   * 
+   *
    * @returns Array of district IDs
    */
   private getDefaultDistricts(): string[] {
     // This would typically be loaded from configuration
     // For now, return a basic set of districts
     return [
-      '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
-      '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
-      '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
-      '31', '32', '33', '34', '35', '36', '37', '38', '39', '40',
-      '41', '42', '43', '44', '45', '46', '47', '48', '49', '50',
-      '51', '52', '53', '54', '55', '56', '57', '58', '59', '60',
-      '61', '62', '63', '64', '65', '66', '67', '68', '69', '70',
-      '71', '72', '73', '74', '75', '76', '77', '78', '79', '80',
-      '81', '82', '83', '84', '85', '86', '87', '88', '89', '90',
-      '91', '92', '93', '94', '95', '96', '97', '98', '99', '100',
-      '101', '102', '103', '104', '105', '106', '107', '108', '109', '110',
-      '111', '112', '113', '114', '115', '116', '117', '118', '119', '120',
-      '121', '122', '123', '124', '125', '126', '127', '128', '129', '130'
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      '11',
+      '12',
+      '13',
+      '14',
+      '15',
+      '16',
+      '17',
+      '18',
+      '19',
+      '20',
+      '21',
+      '22',
+      '23',
+      '24',
+      '25',
+      '26',
+      '27',
+      '28',
+      '29',
+      '30',
+      '31',
+      '32',
+      '33',
+      '34',
+      '35',
+      '36',
+      '37',
+      '38',
+      '39',
+      '40',
+      '41',
+      '42',
+      '43',
+      '44',
+      '45',
+      '46',
+      '47',
+      '48',
+      '49',
+      '50',
+      '51',
+      '52',
+      '53',
+      '54',
+      '55',
+      '56',
+      '57',
+      '58',
+      '59',
+      '60',
+      '61',
+      '62',
+      '63',
+      '64',
+      '65',
+      '66',
+      '67',
+      '68',
+      '69',
+      '70',
+      '71',
+      '72',
+      '73',
+      '74',
+      '75',
+      '76',
+      '77',
+      '78',
+      '79',
+      '80',
+      '81',
+      '82',
+      '83',
+      '84',
+      '85',
+      '86',
+      '87',
+      '88',
+      '89',
+      '90',
+      '91',
+      '92',
+      '93',
+      '94',
+      '95',
+      '96',
+      '97',
+      '98',
+      '99',
+      '100',
+      '101',
+      '102',
+      '103',
+      '104',
+      '105',
+      '106',
+      '107',
+      '108',
+      '109',
+      '110',
+      '111',
+      '112',
+      '113',
+      '114',
+      '115',
+      '116',
+      '117',
+      '118',
+      '119',
+      '120',
+      '121',
+      '122',
+      '123',
+      '124',
+      '125',
+      '126',
+      '127',
+      '128',
+      '129',
+      '130',
     ]
   }
 
   /**
    * Get scheduler status and statistics
-   * 
+   *
    * @returns Scheduler status information
    */
   getSchedulerStatus(): {
@@ -427,12 +572,12 @@ export class ReconciliationScheduler {
     lastProcessedAt?: Date
   } {
     const scheduled = Array.from(this.scheduledReconciliations.values())
-    
+
     return {
       isRunning: this.isRunning,
       scheduledCount: scheduled.length,
       pendingCount: scheduled.filter(s => s.status === 'pending').length,
-      failedCount: scheduled.filter(s => s.status === 'failed').length
+      failedCount: scheduled.filter(s => s.status === 'failed').length,
     }
   }
 }

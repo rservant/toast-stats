@@ -24,7 +24,7 @@ export class ReconciliationStorageManager {
   private indexFile: string
   private schemaFile: string
   protected indexCache: ReconciliationIndex | null = null
-  
+
   /**
    * Current schema version for reconciliation data
    * Increment when making breaking changes to data structure
@@ -59,9 +59,9 @@ export class ReconciliationStorageManager {
       // Initialize default configuration if it doesn't exist
       await this.initializeDefaultConfig()
 
-      logger.info('Reconciliation storage initialized', { 
+      logger.info('Reconciliation storage initialized', {
         storageDir: this.storageDir,
-        schemaVersion: ReconciliationStorageManager.SCHEMA_VERSION
+        schemaVersion: ReconciliationStorageManager.SCHEMA_VERSION,
       })
     } catch (error) {
       logger.error('Failed to initialize reconciliation storage', error)
@@ -78,11 +78,11 @@ export class ReconciliationStorageManager {
       // Schema file exists, check version
       const schemaContent = await fs.readFile(this.schemaFile, 'utf-8')
       const schema = JSON.parse(schemaContent) as ReconciliationSchemaVersion
-      
+
       if (schema.version !== ReconciliationStorageManager.SCHEMA_VERSION) {
         logger.warn('Schema version mismatch', {
           currentVersion: schema.version,
-          expectedVersion: ReconciliationStorageManager.SCHEMA_VERSION
+          expectedVersion: ReconciliationStorageManager.SCHEMA_VERSION,
         })
         // TODO: Implement migration logic when needed
       }
@@ -91,10 +91,14 @@ export class ReconciliationStorageManager {
       const schema: ReconciliationSchemaVersion = {
         version: ReconciliationStorageManager.SCHEMA_VERSION,
         appliedAt: new Date().toISOString(),
-        description: 'Initial reconciliation schema'
+        description: 'Initial reconciliation schema',
       }
-      
-      await fs.writeFile(this.schemaFile, JSON.stringify(schema, null, 2), 'utf-8')
+
+      await fs.writeFile(
+        this.schemaFile,
+        JSON.stringify(schema, null, 2),
+        'utf-8'
+      )
       logger.info('Schema initialized', { version: schema.version })
     }
   }
@@ -109,7 +113,7 @@ export class ReconciliationStorageManager {
       districts: {},
       months: {},
       byStatus: {},
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     }
   }
 
@@ -126,10 +130,14 @@ export class ReconciliationStorageManager {
         districts: {},
         months: {},
         byStatus: {},
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       }
-      
-      await fs.writeFile(this.indexFile, JSON.stringify(emptyIndex, null, 2), 'utf-8')
+
+      await fs.writeFile(
+        this.indexFile,
+        JSON.stringify(emptyIndex, null, 2),
+        'utf-8'
+      )
       logger.info('Reconciliation index initialized')
     }
   }
@@ -148,13 +156,17 @@ export class ReconciliationStorageManager {
         significantChangeThresholds: {
           membershipPercent: 1.0,
           clubCountAbsolute: 1,
-          distinguishedPercent: 2.0
+          distinguishedPercent: 2.0,
         },
         autoExtensionEnabled: true,
-        maxExtensionDays: 5
+        maxExtensionDays: 5,
       }
-      
-      await fs.writeFile(this.configFile, JSON.stringify(defaultConfig, null, 2), 'utf-8')
+
+      await fs.writeFile(
+        this.configFile,
+        JSON.stringify(defaultConfig, null, 2),
+        'utf-8'
+      )
       logger.info('Default reconciliation configuration created')
     }
   }
@@ -169,7 +181,7 @@ export class ReconciliationStorageManager {
 
     try {
       const indexContent = await fs.readFile(this.indexFile, 'utf-8')
-      
+
       // Handle empty or whitespace-only files
       if (!indexContent.trim()) {
         logger.warn('Index file is empty, creating new index')
@@ -178,12 +190,12 @@ export class ReconciliationStorageManager {
         this.indexCache = newIndex
         return this.indexCache
       }
-      
+
       let index = JSON.parse(indexContent) as unknown
-      
+
       // Migrate old index format to new format
       index = this.migrateIndex(index)
-      
+
       this.indexCache = index as ReconciliationIndex
       return this.indexCache
     } catch (error) {
@@ -202,7 +214,7 @@ export class ReconciliationStorageManager {
         this.indexCache = newIndex
         return this.indexCache
       }
-      
+
       logger.error('Failed to load reconciliation index', error)
       throw error
     }
@@ -214,44 +226,44 @@ export class ReconciliationStorageManager {
   private migrateIndex(index: unknown): ReconciliationIndex {
     // Cast to a mutable object for migration
     const mutableIndex = index as Record<string, unknown>
-    
+
     // Ensure all required properties exist
     if (!mutableIndex.version) {
       mutableIndex.version = '1.0.0'
     }
-    
+
     if (!mutableIndex.jobs) {
       mutableIndex.jobs = {}
     }
-    
+
     // Migrate byDistrict to districts
     if (mutableIndex.byDistrict && !mutableIndex.districts) {
       mutableIndex.districts = mutableIndex.byDistrict
       delete mutableIndex.byDistrict
     }
-    
+
     if (!mutableIndex.districts) {
       mutableIndex.districts = {}
     }
-    
+
     // Migrate byMonth to months
     if (mutableIndex.byMonth && !mutableIndex.months) {
       mutableIndex.months = mutableIndex.byMonth
       delete mutableIndex.byMonth
     }
-    
+
     if (!mutableIndex.months) {
       mutableIndex.months = {}
     }
-    
+
     if (!mutableIndex.byStatus) {
       mutableIndex.byStatus = {}
     }
-    
+
     if (!mutableIndex.lastUpdated) {
       mutableIndex.lastUpdated = new Date().toISOString()
     }
-    
+
     return mutableIndex as unknown as ReconciliationIndex
   }
 
@@ -261,7 +273,11 @@ export class ReconciliationStorageManager {
   private async saveIndex(index: ReconciliationIndex): Promise<void> {
     try {
       index.lastUpdated = new Date().toISOString()
-      await fs.writeFile(this.indexFile, JSON.stringify(index, null, 2), 'utf-8')
+      await fs.writeFile(
+        this.indexFile,
+        JSON.stringify(index, null, 2),
+        'utf-8'
+      )
       this.indexCache = index
     } catch (error) {
       logger.error('Failed to save reconciliation index', error)
@@ -282,8 +298,8 @@ export class ReconciliationStorageManager {
       metadata: {
         createdAt: job.metadata.createdAt.toISOString(),
         updatedAt: job.metadata.updatedAt.toISOString(),
-        triggeredBy: job.metadata.triggeredBy
-      }
+        triggeredBy: job.metadata.triggeredBy,
+      },
     }
   }
 
@@ -296,18 +312,20 @@ export class ReconciliationStorageManager {
       startDate: new Date(record.startDate),
       endDate: record.endDate ? new Date(record.endDate) : undefined,
       maxEndDate: new Date(record.maxEndDate),
-      finalizedDate: record.finalizedDate ? new Date(record.finalizedDate) : undefined,
+      finalizedDate: record.finalizedDate
+        ? new Date(record.finalizedDate)
+        : undefined,
       progress: {
         ...record.progress,
-        estimatedCompletion: record.progress.estimatedCompletion 
-          ? new Date(record.progress.estimatedCompletion) 
-          : undefined
+        estimatedCompletion: record.progress.estimatedCompletion
+          ? new Date(record.progress.estimatedCompletion)
+          : undefined,
       },
       metadata: {
         createdAt: new Date(record.metadata.createdAt),
         updatedAt: new Date(record.metadata.updatedAt),
-        triggeredBy: record.metadata.triggeredBy
-      }
+        triggeredBy: record.metadata.triggeredBy,
+      },
     }
   }
 
@@ -354,14 +372,14 @@ export class ReconciliationStorageManager {
   async saveJob(job: ReconciliationJob): Promise<void> {
     try {
       await this.init() // Ensure directories exist
-      
+
       const record = this.jobToRecord(job)
       const filePath = this.getJobFilePath(job.id)
       await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
 
       // Update index
       const index = await this.loadIndex()
-      
+
       index.jobs[job.id] = {
         id: job.id,
         districtId: job.districtId,
@@ -370,7 +388,7 @@ export class ReconciliationStorageManager {
         startDate: job.startDate.toISOString(),
         endDate: job.endDate?.toISOString(),
         progress: job.progress,
-        triggeredBy: job.triggeredBy
+        triggeredBy: job.triggeredBy,
       }
 
       // Update district index
@@ -405,16 +423,22 @@ export class ReconciliationStorageManager {
         if (status !== job.status) {
           const jobIndex = (jobIds as string[]).indexOf(job.id)
           if (jobIndex > -1) {
-            (jobIds as string[]).splice(jobIndex, 1)
+            ;(jobIds as string[]).splice(jobIndex, 1)
           }
         }
       }
 
       await this.saveIndex(index)
-      
-      logger.info('Reconciliation job saved', { jobId: job.id, status: job.status })
+
+      logger.info('Reconciliation job saved', {
+        jobId: job.id,
+        status: job.status,
+      })
     } catch (error) {
-      logger.error('Failed to save reconciliation job', { jobId: job.id, error })
+      logger.error('Failed to save reconciliation job', {
+        jobId: job.id,
+        error,
+      })
       throw error
     }
   }
@@ -441,15 +465,18 @@ export class ReconciliationStorageManager {
     try {
       const index = await this.loadIndex()
       const jobs: ReconciliationJob[] = []
-      
+
       for (const jobId of Object.keys(index.jobs)) {
         const job = await this.getJob(jobId)
         if (job) {
           jobs.push(job)
         }
       }
-      
-      return jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
+
+      return jobs.sort(
+        (a, b) =>
+          b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime()
+      )
     } catch (error) {
       logger.error('Failed to get all reconciliation jobs', error)
       return []
@@ -464,15 +491,18 @@ export class ReconciliationStorageManager {
       const index = await this.loadIndex()
       const jobIds = index.districts[districtId] || []
       const jobs: ReconciliationJob[] = []
-      
+
       for (const jobId of jobIds) {
         const job = await this.getJob(jobId)
         if (job) {
           jobs.push(job)
         }
       }
-      
-      return jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
+
+      return jobs.sort(
+        (a, b) =>
+          b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime()
+      )
     } catch (error) {
       logger.error('Failed to get jobs by district', { districtId, error })
       return []
@@ -482,20 +512,26 @@ export class ReconciliationStorageManager {
   /**
    * Get jobs by status
    */
-  async getJobsByStatus(status: ReconciliationJob['status']): Promise<ReconciliationJob[]> {
+  async getJobsByStatus(
+    status: ReconciliationJob['status']
+  ): Promise<ReconciliationJob[]> {
     try {
       const index = await this.loadIndex()
-      const jobIds = (index.byStatus && index.byStatus[status]) ? index.byStatus[status] : []
+      const jobIds =
+        index.byStatus && index.byStatus[status] ? index.byStatus[status] : []
       const jobs: ReconciliationJob[] = []
-      
+
       for (const jobId of jobIds) {
         const job = await this.getJob(jobId)
         if (job) {
           jobs.push(job)
         }
       }
-      
-      return jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
+
+      return jobs.sort(
+        (a, b) =>
+          b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime()
+      )
     } catch (error) {
       logger.error('Failed to get jobs by status', { status, error })
       return []
@@ -518,14 +554,20 @@ export class ReconciliationStorageManager {
       if (options?.districtId && options?.status) {
         // Both filters - need to intersect
         const districtJobs = index.districts[options.districtId] || []
-        const statusJobs = (index.byStatus && index.byStatus[options.status]) ? index.byStatus[options.status] : []
+        const statusJobs =
+          index.byStatus && index.byStatus[options.status]
+            ? index.byStatus[options.status]
+            : []
         jobIds = districtJobs.filter(id => statusJobs.includes(id))
       } else if (options?.districtId) {
         // District filter only
         jobIds = index.districts[options.districtId] || []
       } else if (options?.status) {
         // Status filter only
-        jobIds = (index.byStatus && index.byStatus[options.status]) ? index.byStatus[options.status] : []
+        jobIds =
+          index.byStatus && index.byStatus[options.status]
+            ? index.byStatus[options.status]
+            : []
       } else {
         // No filters - get all jobs
         jobIds = Object.keys(index.jobs)
@@ -541,7 +583,10 @@ export class ReconciliationStorageManager {
       }
 
       // Sort by creation date (newest first)
-      jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
+      jobs.sort(
+        (a, b) =>
+          b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime()
+      )
 
       // Apply limit
       if (options?.limit && options.limit > 0) {
@@ -579,9 +624,9 @@ export class ReconciliationStorageManager {
 
       // Update index
       const index = await this.loadIndex()
-      
+
       delete index.jobs[jobId]
-      
+
       // Remove from district index
       if (index.districts[job.districtId]) {
         const districtIndex = index.districts[job.districtId].indexOf(jobId)
@@ -607,7 +652,7 @@ export class ReconciliationStorageManager {
       }
 
       await this.saveIndex(index)
-      
+
       logger.info('Reconciliation job deleted', { jobId })
       return true
     } catch (error) {
@@ -622,7 +667,7 @@ export class ReconciliationStorageManager {
   async saveTimeline(timeline: ReconciliationTimeline): Promise<void> {
     try {
       await this.init() // Ensure directories exist
-      
+
       // Convert timeline to storage record
       const record: ReconciliationTimelineRecord = {
         ...timeline,
@@ -631,18 +676,21 @@ export class ReconciliationStorageManager {
           date: entry.date.toISOString(),
           changes: {
             ...entry.changes,
-            timestamp: entry.changes.timestamp.toISOString()
-          }
+            timestamp: entry.changes.timestamp.toISOString(),
+          },
         })),
-        estimatedCompletion: timeline.estimatedCompletion?.toISOString()
+        estimatedCompletion: timeline.estimatedCompletion?.toISOString(),
       }
-      
+
       const filePath = this.getTimelineFilePath(timeline.jobId)
       await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
-      
+
       logger.info('Reconciliation timeline saved', { jobId: timeline.jobId })
     } catch (error) {
-      logger.error('Failed to save reconciliation timeline', { jobId: timeline.jobId, error })
+      logger.error('Failed to save reconciliation timeline', {
+        jobId: timeline.jobId,
+        error,
+      })
       throw error
     }
   }
@@ -655,7 +703,7 @@ export class ReconciliationStorageManager {
       const filePath = this.getTimelineFilePath(jobId)
       const content = await fs.readFile(filePath, 'utf-8')
       const record = JSON.parse(content) as ReconciliationTimelineRecord
-      
+
       // Convert record back to timeline
       const timeline: ReconciliationTimeline = {
         ...record,
@@ -664,12 +712,14 @@ export class ReconciliationStorageManager {
           date: new Date(entry.date),
           changes: {
             ...entry.changes,
-            timestamp: new Date(entry.changes.timestamp)
-          }
+            timestamp: new Date(entry.changes.timestamp),
+          },
         })),
-        estimatedCompletion: record.estimatedCompletion ? new Date(record.estimatedCompletion) : undefined
+        estimatedCompletion: record.estimatedCompletion
+          ? new Date(record.estimatedCompletion)
+          : undefined,
       }
-      
+
       return timeline
     } catch {
       logger.info('Reconciliation timeline not found', { jobId })
@@ -696,7 +746,11 @@ export class ReconciliationStorageManager {
   async saveConfig(config: ReconciliationConfig): Promise<void> {
     try {
       await this.init() // Ensure directories exist
-      await fs.writeFile(this.configFile, JSON.stringify(config, null, 2), 'utf-8')
+      await fs.writeFile(
+        this.configFile,
+        JSON.stringify(config, null, 2),
+        'utf-8'
+      )
       logger.info('Reconciliation configuration saved')
     } catch (error) {
       logger.error('Failed to save reconciliation configuration', error)
@@ -715,18 +769,18 @@ export class ReconciliationStorageManager {
   }> {
     try {
       const index = await this.loadIndex()
-      
+
       const jobsByStatus: Record<string, number> = {}
       const jobsByDistrict: Record<string, number> = {}
-      
+
       for (const [status, jobIds] of Object.entries(index.byStatus || {})) {
         jobsByStatus[status] = (jobIds as string[]).length
       }
-      
+
       for (const [districtId, jobIds] of Object.entries(index.districts)) {
         jobsByDistrict[districtId] = (jobIds as string[]).length
       }
-      
+
       // Calculate storage size
       let storageSize = 0
       try {
@@ -744,17 +798,17 @@ export class ReconciliationStorageManager {
           }
           return size
         }
-        
+
         storageSize = await calculateDirSize(this.storageDir)
       } catch {
         // Ignore size calculation errors
       }
-      
+
       return {
         totalJobs: Object.keys(index.jobs).length,
         jobsByStatus,
         jobsByDistrict,
-        storageSize
+        storageSize,
       }
     } catch (error) {
       logger.error('Failed to get storage statistics', error)
@@ -762,7 +816,7 @@ export class ReconciliationStorageManager {
         totalJobs: 0,
         jobsByStatus: {},
         jobsByDistrict: {},
-        storageSize: 0
+        storageSize: 0,
       }
     }
   }
@@ -790,10 +844,10 @@ export class ReconciliationStorageManager {
           // Directory might not exist
         }
       }
-      
+
       await removeDir(this.storageDir)
       this.indexCache = null
-      
+
       logger.info('All reconciliation data cleared')
     } catch (error) {
       logger.error('Failed to clear reconciliation data', error)
@@ -813,7 +867,9 @@ export class ReconciliationStorageManager {
       // Find old completed/failed/cancelled jobs
       for (const [jobId, jobInfo] of Object.entries(index.jobs)) {
         if (
-          (jobInfo.status === 'completed' || jobInfo.status === 'failed' || jobInfo.status === 'cancelled') &&
+          (jobInfo.status === 'completed' ||
+            jobInfo.status === 'failed' ||
+            jobInfo.status === 'cancelled') &&
           jobInfo.endDate &&
           new Date(jobInfo.endDate) < sevenDaysAgo
         ) {
@@ -827,7 +883,9 @@ export class ReconciliationStorageManager {
       }
 
       if (jobsToDelete.length > 0) {
-        logger.info('Cleaned up old reconciliation jobs', { count: jobsToDelete.length })
+        logger.info('Cleaned up old reconciliation jobs', {
+          count: jobsToDelete.length,
+        })
       }
     } catch (error) {
       logger.error('Failed to cleanup old reconciliation jobs', { error })

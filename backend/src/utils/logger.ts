@@ -21,7 +21,11 @@ class Logger {
     this.environment = process.env.NODE_ENV || 'development'
   }
 
-  private formatLog(level: LogLevel, message: string, data?: unknown): LogEntry {
+  private formatLog(
+    level: LogLevel,
+    message: string,
+    data?: unknown
+  ): LogEntry {
     return {
       timestamp: new Date().toISOString(),
       level,
@@ -60,13 +64,14 @@ class Logger {
   }
 
   error(message: string, error?: Error | unknown): void {
-    const errorData = error instanceof Error
-      ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-        }
-      : error
+    const errorData =
+      error instanceof Error
+        ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          }
+        : error
 
     this.output(this.formatLog('error', message, errorData))
   }

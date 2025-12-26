@@ -15,9 +15,18 @@ interface MockToastmastersScraper {
   getAllDistrictsList: () => Promise<Array<{ id: string; name: string }>>
   getAllDistricts: () => Promise<ScrapedRecord[]>
   getAllDistrictsForDate: (dateString: string) => Promise<ScrapedRecord[]>
-  getDistrictPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
-  getDivisionPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
-  getClubPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
+  getDistrictPerformance: (
+    districtId: string,
+    dateString?: string
+  ) => Promise<ScrapedRecord[]>
+  getDivisionPerformance: (
+    districtId: string,
+    dateString?: string
+  ) => Promise<ScrapedRecord[]>
+  getClubPerformance: (
+    districtId: string,
+    dateString?: string
+  ) => Promise<ScrapedRecord[]>
   scrapePage: (url: string, selector: string) => Promise<string>
 }
 
@@ -207,12 +216,21 @@ describe('DistrictBackfillService', () => {
         getAllDistricts: vi.fn().mockResolvedValue([]),
         getAllDistrictsForDate: vi.fn().mockResolvedValue([]),
         scrapePage: vi.fn().mockResolvedValue(''),
-        getDistrictPerformance: vi.fn().mockRejectedValue(new Error('Scraper error')),
-        getDivisionPerformance: vi.fn().mockRejectedValue(new Error('Scraper error')),
-        getClubPerformance: vi.fn().mockRejectedValue(new Error('Scraper error')),
+        getDistrictPerformance: vi
+          .fn()
+          .mockRejectedValue(new Error('Scraper error')),
+        getDivisionPerformance: vi
+          .fn()
+          .mockRejectedValue(new Error('Scraper error')),
+        getClubPerformance: vi
+          .fn()
+          .mockRejectedValue(new Error('Scraper error')),
       }
 
-      const errorBackfillService = new DistrictBackfillService(cacheManager, errorScraper as unknown as ToastmastersScraper)
+      const errorBackfillService = new DistrictBackfillService(
+        cacheManager,
+        errorScraper as unknown as ToastmastersScraper
+      )
 
       const backfillId = await errorBackfillService.initiateDistrictBackfill({
         districtId: '42',
@@ -253,7 +271,10 @@ describe('DistrictBackfillService', () => {
         getClubPerformance: vi.fn().mockResolvedValue([]),
       }
 
-      const mixedBackfillService = new DistrictBackfillService(cacheManager, mixedScraper as unknown as ToastmastersScraper)
+      const mixedBackfillService = new DistrictBackfillService(
+        cacheManager,
+        mixedScraper as unknown as ToastmastersScraper
+      )
 
       const backfillId = await mixedBackfillService.initiateDistrictBackfill({
         districtId: '42',
@@ -275,7 +296,7 @@ describe('DistrictBackfillService', () => {
   describe('cleanupOldJobs', () => {
     it('should remove old completed jobs', async () => {
       const districtId = '42'
-      
+
       // Use mock scraper to avoid real network calls
       const mockScraper: MockToastmastersScraper = {
         config: { baseUrl: 'test', headless: true, timeout: 30000 },
@@ -292,8 +313,11 @@ describe('DistrictBackfillService', () => {
         getClubPerformance: vi.fn().mockResolvedValue([]),
       }
 
-      const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper as unknown as ToastmastersScraper)
-      
+      const testBackfillService = new DistrictBackfillService(
+        cacheManager,
+        mockScraper as unknown as ToastmastersScraper
+      )
+
       const backfillId = await testBackfillService.initiateDistrictBackfill({
         districtId,
         startDate: '2024-11-01',
@@ -307,7 +331,9 @@ describe('DistrictBackfillService', () => {
       const status = testBackfillService.getBackfillStatus(backfillId)
       if (status) {
         // Access private jobs map through type assertion
-        const service = testBackfillService as unknown as { jobs: Map<string, { createdAt: number; status: string }> }
+        const service = testBackfillService as unknown as {
+          jobs: Map<string, { createdAt: number; status: string }>
+        }
         const job = service.jobs.get(backfillId)
         if (job) {
           job.createdAt = Date.now() - 2 * 60 * 60 * 1000 // 2 hours ago
@@ -318,7 +344,8 @@ describe('DistrictBackfillService', () => {
       await testBackfillService.cleanupOldJobs()
 
       // Job should be removed
-      const statusAfterCleanup = testBackfillService.getBackfillStatus(backfillId)
+      const statusAfterCleanup =
+        testBackfillService.getBackfillStatus(backfillId)
       expect(statusAfterCleanup).toBeNull()
     }, 5000) // Increase timeout to 5 seconds
   })

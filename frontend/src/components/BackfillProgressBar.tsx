@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useBackfillStatus, useCancelBackfill } from '../hooks/useBackfill'
-import { useDistrictBackfillStatus, useCancelDistrictBackfill } from '../hooks/useDistrictBackfill'
+import {
+  useDistrictBackfillStatus,
+  useCancelDistrictBackfill,
+} from '../hooks/useDistrictBackfill'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface BackfillProgressBarProps {
@@ -11,17 +14,20 @@ interface BackfillProgressBarProps {
   onCancel: () => void
 }
 
-export function BackfillProgressBar({ 
-  backfillId, 
+export function BackfillProgressBar({
+  backfillId,
   type = 'global',
   districtId,
-  onComplete, 
-  onCancel 
+  onComplete,
+  onCancel,
 }: BackfillProgressBarProps) {
   const queryClient = useQueryClient()
-  
+
   // Use appropriate hooks based on backfill type
-  const { data: globalBackfillStatus } = useBackfillStatus(backfillId, type === 'global')
+  const { data: globalBackfillStatus } = useBackfillStatus(
+    backfillId,
+    type === 'global'
+  )
   const { data: districtBackfillStatus } = useDistrictBackfillStatus(
     districtId || '',
     backfillId,
@@ -29,29 +35,40 @@ export function BackfillProgressBar({
   )
   const globalCancelMutation = useCancelBackfill()
   const districtCancelMutation = useCancelDistrictBackfill(districtId || '')
-  
+
   // Select the appropriate status and cancel mutation
-  const backfillStatus = type === 'district' ? districtBackfillStatus : globalBackfillStatus
-  const cancelMutation = type === 'district' ? districtCancelMutation : globalCancelMutation
+  const backfillStatus =
+    type === 'district' ? districtBackfillStatus : globalBackfillStatus
+  const cancelMutation =
+    type === 'district' ? districtCancelMutation : globalCancelMutation
 
   // Handle completion
   useEffect(() => {
-    if (backfillStatus?.status === 'complete' || backfillStatus?.status === 'error') {
+    if (
+      backfillStatus?.status === 'complete' ||
+      backfillStatus?.status === 'error'
+    ) {
       // Refresh cached dates based on type
       if (type === 'global') {
         queryClient.invalidateQueries({ queryKey: ['cached-dates'] })
         queryClient.invalidateQueries({ queryKey: ['district-rankings'] })
       } else if (type === 'district' && districtId) {
-        queryClient.invalidateQueries({ queryKey: ['district-cached-dates', districtId] })
-        queryClient.invalidateQueries({ queryKey: ['district-analytics', districtId] })
-        queryClient.invalidateQueries({ queryKey: ['district-data', districtId] })
+        queryClient.invalidateQueries({
+          queryKey: ['district-cached-dates', districtId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['district-analytics', districtId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ['district-data', districtId],
+        })
       }
-      
+
       // Auto-dismiss after 5 seconds
       const timer = setTimeout(() => {
         onComplete()
       }, 5000)
-      
+
       return () => clearTimeout(timer)
     }
   }, [backfillStatus?.status, onComplete, queryClient, type, districtId])
@@ -130,24 +147,22 @@ export function BackfillProgressBar({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-gray-900">
-                {backfillStatus.status === 'processing' && (
-                  type === 'district' 
+                {backfillStatus.status === 'processing' &&
+                  (type === 'district'
                     ? `Backfilling district ${districtId} data...`
-                    : 'Backfilling historical data...'
-                )}
-                {backfillStatus.status === 'complete' && (
-                  type === 'district'
+                    : 'Backfilling historical data...')}
+                {backfillStatus.status === 'complete' &&
+                  (type === 'district'
                     ? `District ${districtId} backfill complete!`
-                    : 'Backfill complete!'
-                )}
-                {backfillStatus.status === 'error' && (
-                  type === 'district'
+                    : 'Backfill complete!')}
+                {backfillStatus.status === 'error' &&
+                  (type === 'district'
                     ? `District ${districtId} backfill failed`
-                    : 'Backfill failed'
-                )}
+                    : 'Backfill failed')}
               </span>
               <span className="text-sm text-gray-600">
-                {backfillStatus.status === 'processing' && `${progressPercentage}%`}
+                {backfillStatus.status === 'processing' &&
+                  `${progressPercentage}%`}
               </span>
             </div>
 
@@ -162,16 +177,21 @@ export function BackfillProgressBar({
                 <div className="space-y-1">
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span>
-                      {backfillStatus.progress.completed}/{backfillStatus.progress.total} dates
+                      {backfillStatus.progress.completed}/
+                      {backfillStatus.progress.total} dates
                     </span>
                     {backfillStatus.progress.skipped > 0 && (
                       <span>• {backfillStatus.progress.skipped} cached</span>
                     )}
                     {backfillStatus.progress.unavailable > 0 && (
-                      <span>• {backfillStatus.progress.unavailable} unavailable</span>
+                      <span>
+                        • {backfillStatus.progress.unavailable} unavailable
+                      </span>
                     )}
                     {backfillStatus.progress.failed > 0 && (
-                      <span className="text-red-600">• {backfillStatus.progress.failed} failed</span>
+                      <span className="text-red-600">
+                        • {backfillStatus.progress.failed} failed
+                      </span>
                     )}
                   </div>
                   {backfillStatus.progress.current && (
@@ -192,7 +212,9 @@ export function BackfillProgressBar({
             )}
 
             {backfillStatus.status === 'error' && (
-              <p className="text-xs text-red-600">{backfillStatus.error || 'An error occurred'}</p>
+              <p className="text-xs text-red-600">
+                {backfillStatus.error || 'An error occurred'}
+              </p>
             )}
           </div>
 
@@ -207,7 +229,8 @@ export function BackfillProgressBar({
                 Cancel
               </button>
             )}
-            {(backfillStatus.status === 'complete' || backfillStatus.status === 'error') && (
+            {(backfillStatus.status === 'complete' ||
+              backfillStatus.status === 'error') && (
               <button
                 onClick={onComplete}
                 className="text-sm text-gray-600 hover:text-gray-900 font-medium"
