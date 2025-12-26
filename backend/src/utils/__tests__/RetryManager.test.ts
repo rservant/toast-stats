@@ -156,8 +156,9 @@ describe('RetryManager', () => {
       )
 
       // Use expect.rejects to properly handle the promise rejection
-      const promise = expect(retryableFunction()).rejects.toThrow('network timeout')
-      
+      const promise =
+        expect(retryableFunction()).rejects.toThrow('network timeout')
+
       // Fast-forward through the delay to complete all retries
       await vi.advanceTimersByTimeAsync(1000)
 

@@ -203,7 +203,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         mockDistrictData, // Current data (same as cached)
         mockDistrictData // Cached data
       )
-      
+
       // Continue adding cycles until we have enough stable days
       let cycleCount = 3
       while (finalCycleStatus.daysStable < 3 && cycleCount < 10) {
@@ -212,7 +212,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
           baseDate.getTime() + cycleCount * 24 * 60 * 60 * 1000
         )
         vi.setSystemTime(nextDate)
-        
+
         finalCycleStatus = await orchestrator.processReconciliationCycle(
           job.id,
           mockDistrictData, // Current data (same as cached)
@@ -220,7 +220,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         )
         cycleCount++
       }
-      
+
       // The stability period should now be met
       expect(finalCycleStatus.daysStable).toBeGreaterThanOrEqual(3)
 
