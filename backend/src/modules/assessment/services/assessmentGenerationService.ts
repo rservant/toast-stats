@@ -2,6 +2,7 @@ import CacheIntegrationService from './cacheIntegrationService.js'
 import { saveMonthlyAssessment, getMonthlyAssessment } from '../storage/assessmentStore.js'
 import { calculateAllGoals } from './assessmentCalculator.js'
 import { loadConfig } from './configService.js'
+import { CalculatedAssessment } from '../types/assessment.js'
 
 export class AssessmentGenerationService {
   private cacheService: CacheIntegrationService
@@ -47,7 +48,7 @@ export class AssessmentGenerationService {
     // Build assessment object - follow existing types while adding generation metadata
     const now = new Date().toISOString()
 
-    const assessment: any = {
+    const assessment: CalculatedAssessment & { generated_at: string; generated_from_cache_date: string } = {
       district_number,
       program_year,
       month,
@@ -76,6 +77,10 @@ export class AssessmentGenerationService {
           csv_row_count: complete.csv_row_count ?? 0
         }
       },
+      // Initialize goal statuses - will be calculated below
+      goal_1_status: { goal_number: 1, status: 'Pending Data', actual: 0, target: 0, delta: 0 },
+      goal_2_status: { goal_number: 2, status: 'Pending Data', actual: 0, target: 0, delta: 0 },
+      goal_3_status: { goal_number: 3, status: 'Pending Data', actual: 0, target: 0, delta: 0 },
       read_only: true,
       created_at: now,
       updated_at: now

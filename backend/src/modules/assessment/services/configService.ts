@@ -8,6 +8,13 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import { DistrictConfig } from '../types/assessment.js';
 
+interface ErrnoException extends Error {
+  code?: string;
+  errno?: number;
+  path?: string;
+  syscall?: string;
+}
+
 interface CacheEntry {
   config: DistrictConfig;
   timestamp: number;
@@ -72,7 +79,7 @@ export async function loadConfig(
     
     return config;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       throw new Error(`Configuration file not found at ${configPath}`);
     }
     throw err;

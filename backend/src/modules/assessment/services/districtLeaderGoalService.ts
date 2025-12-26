@@ -433,7 +433,7 @@ export async function deleteGoalById(
  * @param goal - Goal object to validate
  * @returns { valid: boolean; errors: string[] }
  */
-export function validateGoal(goal: any): { valid: boolean; errors: string[] } {
+export function validateGoal(goal: Partial<DistrictLeaderGoal>): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   if (!goal.id) errors.push('Missing id');

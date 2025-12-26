@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 import type { AvailableDatesResponse } from '../types/districts';
@@ -24,8 +24,31 @@ const MONTHS = [
 ];
 
 const DateSelector: React.FC<DateSelectorProps> = ({ onDateChange, selectedDate }) => {
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  // Parse selected date to set month and day
+  const { initialMonth, initialDay } = useMemo(() => {
+    if (selectedDate) {
+      const date = new Date(selectedDate);
+      return {
+        initialMonth: date.getMonth() + 1,
+        initialDay: date.getDate()
+      };
+    }
+    return { initialMonth: null, initialDay: null };
+  }, [selectedDate]);
+
+  // Initialize state from selectedDate - use key to reset component when selectedDate changes
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(initialMonth);
+  const [selectedDay, setSelectedDay] = useState<number | null>(initialDay);
+
+  // Reset state when selectedDate prop changes (using key would be better but this works)
+  React.useEffect(() => {
+    if (initialMonth !== selectedMonth) {
+      setSelectedMonth(initialMonth);
+    }
+    if (initialDay !== selectedDay) {
+      setSelectedDay(initialDay);
+    }
+  }, [initialMonth, initialDay, selectedMonth, selectedDay]);
 
   // Fetch available dates from backend
   const { data: availableDatesData, isLoading } = useQuery<AvailableDatesResponse>({
@@ -37,16 +60,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({ onDateChange, selectedDate 
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const availableDates = availableDatesData?.dates || [];
-
-  // Parse selected date to set month and day
-  useEffect(() => {
-    if (selectedDate) {
-      const date = new Date(selectedDate);
-      setSelectedMonth(date.getMonth() + 1);
-      setSelectedDay(date.getDate());
-    }
-  }, [selectedDate]);
+  const availableDates = useMemo(() => availableDatesData?.dates || [], [availableDatesData]);
 
   // Get available months (months that have at least one date)
   const availableMonths = React.useMemo(() => {

@@ -8,6 +8,7 @@ import { CacheManager } from '../services/CacheManager.js'
 import { DistrictBackfillService } from '../services/DistrictBackfillService.js'
 import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
+import { DistrictAnalytics, ClubTrend, DivisionAnalytics, AreaAnalytics } from '../types/analytics.js'
 import { AnalyticsEngine } from '../services/AnalyticsEngine.js'
 import {
   transformDistrictsResponse,
@@ -2097,11 +2098,11 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
 /**
  * Helper function to generate CSV content from district analytics
  */
-function generateDistrictAnalyticsCSV(analytics: any, districtId: string): string {
+function generateDistrictAnalyticsCSV(analytics: DistrictAnalytics, districtId: string): string {
   const lines: string[] = []
   
   // Helper to escape CSV values
-  const escapeCSV = (value: any): string => {
+  const escapeCSV = (value: unknown): string => {
     const str = String(value ?? '')
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
       return `"${str.replace(/"/g, '""')}"`
@@ -2134,7 +2135,7 @@ function generateDistrictAnalyticsCSV(analytics: any, districtId: string): strin
   // Membership trend
   lines.push('Membership Trend')
   lines.push('Date,Member Count')
-  analytics.membershipTrend.forEach((point: any) => {
+  analytics.membershipTrend.forEach((point: { date: string; count: number }) => {
     lines.push(`${escapeCSV(point.date)},${point.count}`)
   })
   lines.push('')
@@ -2143,7 +2144,7 @@ function generateDistrictAnalyticsCSV(analytics: any, districtId: string): strin
   if (analytics.topGrowthClubs && analytics.topGrowthClubs.length > 0) {
     lines.push('Top Growth Clubs')
     lines.push('Club ID,Club Name,Growth')
-    analytics.topGrowthClubs.forEach((club: any) => {
+    analytics.topGrowthClubs.forEach((club: { clubId: string; clubName: string; growth: number }) => {
       lines.push(`${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${club.growth}`)
     })
     lines.push('')
@@ -2153,7 +2154,7 @@ function generateDistrictAnalyticsCSV(analytics: any, districtId: string): strin
   if (analytics.atRiskClubs && analytics.atRiskClubs.length > 0) {
     lines.push('At-Risk Clubs')
     lines.push('Club ID,Club Name,Status,Current Membership,Current DCP Goals,Risk Factors')
-    analytics.atRiskClubs.forEach((club: any) => {
+    analytics.atRiskClubs.forEach((club: ClubTrend) => {
       const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
       const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
       const riskFactors = club.riskFactors.join('; ')
@@ -2168,7 +2169,7 @@ function generateDistrictAnalyticsCSV(analytics: any, districtId: string): strin
   if (analytics.allClubs && analytics.allClubs.length > 0) {
     lines.push('All Clubs Performance')
     lines.push('Club ID,Club Name,Division,Area,Current Membership,Current DCP Goals,Status,Distinguished Level')
-    analytics.allClubs.forEach((club: any) => {
+    analytics.allClubs.forEach((club: ClubTrend) => {
       const currentMembership = club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
       const currentDcpGoals = club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
       lines.push(
@@ -2182,7 +2183,7 @@ function generateDistrictAnalyticsCSV(analytics: any, districtId: string): strin
   if (analytics.divisionRankings && analytics.divisionRankings.length > 0) {
     lines.push('Division Rankings')
     lines.push('Rank,Division ID,Division Name,Total Clubs,Total DCP Goals,Average Club Health,Trend')
-    analytics.divisionRankings.forEach((division: any) => {
+    analytics.divisionRankings.forEach((division: DivisionAnalytics) => {
       lines.push(
         `${division.rank},${escapeCSV(division.divisionId)},${escapeCSV(division.divisionName)},${division.totalClubs},${division.totalDcpGoals},${division.averageClubHealth.toFixed(2)},${escapeCSV(division.trend)}`
       )
@@ -2194,7 +2195,7 @@ function generateDistrictAnalyticsCSV(analytics: any, districtId: string): strin
   if (analytics.topPerformingAreas && analytics.topPerformingAreas.length > 0) {
     lines.push('Top Performing Areas')
     lines.push('Area ID,Area Name,Division ID,Total Clubs,Total DCP Goals,Average Club Health,Normalized Score')
-    analytics.topPerformingAreas.forEach((area: any) => {
+    analytics.topPerformingAreas.forEach((area: AreaAnalytics) => {
       lines.push(
         `${escapeCSV(area.areaId)},${escapeCSV(area.areaName)},${escapeCSV(area.divisionId)},${area.totalClubs},${area.totalDcpGoals},${area.averageClubHealth.toFixed(2)},${area.normalizedScore.toFixed(2)}`
       )

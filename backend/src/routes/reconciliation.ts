@@ -1258,7 +1258,7 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
       type: string
       message: string
       severity: string
-      details: any
+      details: Record<string, unknown>
     }
 
     const healthStatus: {
@@ -1267,7 +1267,7 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
         status: string
         timestamp: string
       }
-      components: any
+      components: Record<string, unknown>
       issues: HealthIssue[]
     } = {
       overall: {
@@ -1304,11 +1304,13 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
         type: 'critical_alerts',
         message: `${criticalAlerts.length} critical alerts active`,
         severity: 'high',
-        details: criticalAlerts.map(alert => ({
-          id: alert.id,
-          title: alert.title,
-          category: alert.category
-        }))
+        details: {
+          alerts: criticalAlerts.map(alert => ({
+            id: alert.id,
+            title: alert.title,
+            category: alert.category
+          }))
+        }
       })
     }
 
@@ -1317,12 +1319,14 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
         type: 'long_running_jobs',
         message: `${longRunningJobs.length} jobs running longer than expected`,
         severity: 'medium',
-        details: longRunningJobs.map(job => ({
-          id: job.id,
-          districtId: job.districtId,
-          targetMonth: job.targetMonth,
-          daysSinceStart: Math.round((Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
-        }))
+        details: {
+          jobs: longRunningJobs.map(job => ({
+            id: job.id,
+            districtId: job.districtId,
+            targetMonth: job.targetMonth,
+            daysSinceStart: Math.round((Date.now() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
+          }))
+        }
       })
     }
 

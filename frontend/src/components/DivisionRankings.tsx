@@ -11,6 +11,26 @@ interface DivisionRankingsProps {
 type SortField = 'rank' | 'name' | 'clubs' | 'dcpGoals' | 'health' | 'trend';
 type SortDirection = 'asc' | 'desc';
 
+// Sort icon component moved outside render
+const SortIcon: React.FC<{ field: SortField; sortField: SortField; sortDirection: SortDirection }> = ({ field, sortField, sortDirection }) => {
+  if (sortField !== field) {
+    return (
+      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    );
+  }
+  return sortDirection === 'asc' ? (
+    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+};
+
 export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
   divisions,
   isLoading = false,
@@ -73,8 +93,8 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
   // Sort divisions
   const sortedDivisions = useMemo(() => {
     const sorted = [...divisions].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortField) {
         case 'rank':
@@ -97,11 +117,12 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
           aValue = a.averageClubHealth;
           bValue = b.averageClubHealth;
           break;
-        case 'trend':
+        case 'trend': {
           const trendOrder = { improving: 2, stable: 1, declining: 0 };
           aValue = trendOrder[a.trend];
           bValue = trendOrder[b.trend];
           break;
+        }
         default:
           return 0;
       }
@@ -122,26 +143,6 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
       setSortField(field);
       setSortDirection(field === 'rank' ? 'asc' : 'desc'); // Default to ascending for rank, descending for others
     }
-  };
-
-  // Sort icon
-  const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
-    if (sortField !== field) {
-      return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
   };
 
   return (
@@ -192,7 +193,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Rank
-                    <SortIcon field="rank" />
+                    <SortIcon field="rank" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -201,7 +202,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Division
-                    <SortIcon field="name" />
+                    <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -210,7 +211,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Total Clubs
-                    <SortIcon field="clubs" />
+                    <SortIcon field="clubs" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -219,7 +220,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Total DCP Goals
-                    <SortIcon field="dcpGoals" />
+                    <SortIcon field="dcpGoals" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -228,7 +229,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Health Score
-                    <SortIcon field="health" />
+                    <SortIcon field="health" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -237,7 +238,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Trend
-                    <SortIcon field="trend" />
+                    <SortIcon field="trend" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">

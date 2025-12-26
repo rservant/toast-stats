@@ -1,14 +1,14 @@
 import React from 'react';
 
-interface DCPGoalAnalysis {
+interface DCPGoal {
   goalNumber: number;
   achievementCount: number;
   achievementPercentage: number;
 }
 
 interface DCPGoalAnalysisData {
-  mostCommonlyAchieved: DCPGoalAnalysis[];
-  leastCommonlyAchieved: DCPGoalAnalysis[];
+  mostCommonlyAchieved: DCPGoal[];
+  leastCommonlyAchieved: DCPGoal[];
 }
 
 interface DCPGoalAnalysisProps {
@@ -66,7 +66,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
     10: 'Membership-renewal dues on time & Club officer list on time',
   };
 
-  const renderGoalBar = (goal: DCPGoalAnalysis) => (
+  const renderGoalBar = (goal: DCPGoal) => (
     <div
       key={goal.goalNumber}
       className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

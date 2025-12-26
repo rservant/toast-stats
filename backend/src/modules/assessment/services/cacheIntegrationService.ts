@@ -78,12 +78,13 @@ export class CacheIntegrationService {
    */
   async getAvailableDates(districtId: string): Promise<Array<{ date: string; has_district_data: boolean; has_club_data: boolean; club_count: number; data_completeness: 'complete' | 'partial' | 'missing' }>> {
     const dates = await this.cacheManager.getCachedDatesForDistrict(districtId)
-    const out: any[] = []
+    const out: Array<{ date: string; has_district_data: boolean; has_club_data: boolean; club_count: number; data_completeness: 'complete' | 'partial' | 'missing' }> = []
 
     for (const d of dates) {
       const data = await this.cacheManager.getDistrictData(districtId, d)
-      const has_club_data = !!(data && Array.isArray((data as any).clubPerformance) && (data as any).clubPerformance.length > 0)
-      const club_count = has_club_data ? (data as any).clubPerformance.length : 0
+      const dataWithClubs = data as { clubPerformance?: unknown[] } | null
+      const has_club_data = !!(dataWithClubs && Array.isArray(dataWithClubs.clubPerformance) && dataWithClubs.clubPerformance.length > 0)
+      const club_count = has_club_data ? dataWithClubs.clubPerformance!.length : 0
       const completeness = has_club_data ? 'complete' : 'partial'
 
       out.push({ date: d, has_district_data: true, has_club_data, club_count, data_completeness: completeness })

@@ -7,6 +7,16 @@ interface BackfillButtonProps {
   onBackfillStart?: (backfillId: string) => void
 }
 
+interface ApiError {
+  response?: {
+    data?: {
+      error?: {
+        message?: string;
+      };
+    };
+  };
+}
+
 interface BackfillRequest {
   startDate?: string
   endDate?: string
@@ -29,27 +39,6 @@ export function BackfillButton({ className = '', onBackfillStart }: BackfillButt
     !!backfillId
   )
 
-  // Update backfillId when initiate mutation succeeds
-  useEffect(() => {
-    if (initiateMutation.isSuccess && initiateMutation.data) {
-      const id = initiateMutation.data.backfillId
-      setBackfillId(id)
-      // Notify parent and close modal
-      if (onBackfillStart) {
-        onBackfillStart(id)
-        setTimeout(() => setShowModal(false), 300)
-      }
-    }
-  }, [initiateMutation.isSuccess, initiateMutation.data, onBackfillStart])
-
-  // Handle cancel mutation success
-  useEffect(() => {
-    if (cancelMutation.isSuccess) {
-      setBackfillId(null)
-      setShowModal(false)
-    }
-  }, [cancelMutation.isSuccess])
-
   // Refresh cached dates when backfill completes
   useEffect(() => {
     if (backfillStatus?.status === 'complete') {
@@ -63,12 +52,27 @@ export function BackfillButton({ className = '', onBackfillStart }: BackfillButt
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     }
-    initiateMutation.mutate(request)
+    initiateMutation.mutate(request, {
+      onSuccess: (data) => {
+        const id = data.backfillId
+        setBackfillId(id)
+        // Notify parent and close modal
+        if (onBackfillStart) {
+          onBackfillStart(id)
+          setTimeout(() => setShowModal(false), 300)
+        }
+      }
+    })
   }
 
   const handleCancel = () => {
     if (backfillId) {
-      cancelMutation.mutate(backfillId)
+      cancelMutation.mutate(backfillId, {
+        onSuccess: () => {
+          setBackfillId(null)
+          setShowModal(false)
+        }
+      })
     } else {
       setShowModal(false)
     }
@@ -166,7 +170,7 @@ export function BackfillButton({ className = '', onBackfillStart }: BackfillButt
                 {(initiateMutation.isError || isStatusError) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-800">
-                      Error: {(initiateMutation.error as any)?.response?.data?.error?.message || 'Failed to initiate backfill'}
+                      Error: {(initiateMutation.error as ApiError)?.response?.data?.error?.message || 'Failed to initiate backfill'}
                     </p>
                   </div>
                 )}

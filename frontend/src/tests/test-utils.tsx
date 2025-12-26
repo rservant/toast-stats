@@ -8,19 +8,26 @@ import { ProgramYearProvider } from '../contexts/ProgramYearContext'
 // Ensure a minimal localStorage is available in the test environment
 // Some test setups (or JSDOM versions) may not provide a working localStorage
 if (typeof (globalThis as any).localStorage === 'undefined' || typeof (globalThis as any).localStorage.getItem !== 'function') {
-  const store: Record<string, string> = {}
-  ;(globalThis as any).localStorage = {
+  const store: Record<string, string> = {};
+  (globalThis as any).localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
-      store[key] = String(value)
+      store[key] = String(value);
     },
     removeItem: (key: string) => {
-      delete store[key]
+      delete store[key];
     },
     clear: () => {
-      for (const k of Object.keys(store)) delete store[k]
+      for (const k of Object.keys(store)) delete store[k];
     },
-  }
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store);
+      return keys[index] || null;
+    }
+  };
 }
 
 export const renderWithProviders = (ui: React.ReactElement) => {

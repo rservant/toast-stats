@@ -1,6 +1,6 @@
 declare module 'jest-axe' {
-  export function axe(element: Element | Document): Promise<any>
-  export function toHaveNoViolations(received: any): {
+  export function axe(element: Element | Document): Promise<unknown>
+  export function toHaveNoViolations(received: unknown): {
     message(): string
     pass: boolean
   }
@@ -8,13 +8,13 @@ declare module 'jest-axe' {
 
 declare global {
   namespace Vi {
-    interface Assertion<T = any> {
+    interface Assertion<T = unknown> {
       toHaveNoViolations(): T
     }
   }
   
   namespace Vitest {
-    interface Assertion<T = any> {
+    interface Assertion<T = unknown> {
       toHaveNoViolations(): T
     }
   }

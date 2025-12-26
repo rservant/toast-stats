@@ -29,6 +29,52 @@ interface YearOverYearComparisonProps {
   isLoading?: boolean;
 }
 
+interface ComparisonDataItem {
+  metric: string;
+  previous: number;
+  current: number;
+  change: number;
+  percentChange: string;
+}
+
+// Custom tooltip moved outside render
+const CustomTooltip = ({ 
+  active, 
+  payload, 
+  comparisonData 
+}: { 
+  active?: boolean; 
+  payload?: Array<{ payload: { metric: string } }>; 
+  comparisonData: ComparisonDataItem[];
+}) => {
+  if (active && payload && payload.length) {
+    const metric = payload[0].payload.metric;
+    const data = comparisonData.find(d => d.metric === metric);
+    
+    if (data) {
+      return (
+        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+          <p className="text-sm font-medium text-gray-900 mb-2">{metric}</p>
+          <div className="space-y-1">
+            <p className="text-sm text-gray-600">
+              Previous: <span className="font-semibold">{data.previous.toFixed(metric === 'Club Health %' ? 1 : 0)}</span>
+            </p>
+            <p className="text-sm text-gray-600">
+              Current: <span className="font-semibold">{data.current.toFixed(metric === 'Club Health %' ? 1 : 0)}</span>
+            </p>
+            <p className={`text-sm font-semibold ${
+              data.change >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {data.change >= 0 ? '+' : ''}{data.change.toFixed(metric === 'Club Health %' ? 1 : 0)} ({data.percentChange}%)
+            </p>
+          </div>
+        </div>
+      );
+    }
+  }
+  return null;
+};
+
 export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
   yearOverYear,
   currentYear,
@@ -45,28 +91,6 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
         message="Year-over-year comparison requires data from previous program years. Continue collecting data to enable this feature."
         icon="data"
       />
-    );
-  }
-
-  // Continue with the rest of the component
-  if (false) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6" role="status" aria-label="Year-over-year comparison">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Year-Over-Year Comparison
-        </h2>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-gray-600 mb-2">No historical data available for comparison</p>
-            <p className="text-sm text-gray-500">
-              Year-over-year comparison requires data from the previous program year.
-            </p>
-          </div>
-        </div>
-      </div>
     );
   }
 
@@ -114,36 +138,6 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
     'Previous Year': item.previous,
     'Current Year': item.current,
   }));
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const metric = payload[0].payload.metric;
-      const data = comparisonData.find(d => d.metric === metric);
-      
-      if (data) {
-        return (
-          <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-            <p className="text-sm font-medium text-gray-900 mb-2">{metric}</p>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">
-                Previous: <span className="font-semibold">{data.previous.toFixed(metric === 'Club Health %' ? 1 : 0)}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Current: <span className="font-semibold">{data.current.toFixed(metric === 'Club Health %' ? 1 : 0)}</span>
-              </p>
-              <p className={`text-sm font-semibold ${
-                data.change >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {data.change >= 0 ? '+' : ''}{data.change.toFixed(metric === 'Club Health %' ? 1 : 0)} ({data.percentChange}%)
-              </p>
-            </div>
-          </div>
-        );
-      }
-    }
-    return null;
-  };
 
   // Determine overall trend
   const improvements = comparisonData.filter(d => d.change > 0).length;
@@ -325,7 +319,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                   style: { fontSize: '12px' },
                 }}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip comparisonData={comparisonData} />} />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
                 verticalAlign="top"

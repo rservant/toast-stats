@@ -20,6 +20,52 @@ interface HistoricalRankChartProps {
 
 type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished';
 
+interface TooltipPayload {
+  dataKey: string;
+  value: number;
+  color: string;
+}
+
+// Custom tooltip moved outside render
+const CustomTooltip = ({ 
+  active, 
+  payload, 
+  data, 
+  selectedMetric 
+}: { 
+  active?: boolean; 
+  payload?: TooltipPayload[]; 
+  data: RankHistoryResponse[];
+  selectedMetric: RankMetric;
+}) => {
+  if (active && payload && payload.length) {
+    const date = (payload[0] as unknown as { payload: { date: string } }).payload.date;
+    const formattedDate = new Date(date).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    return (
+      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
+        <p className="text-sm font-medium text-gray-900 mb-2">
+          {formattedDate}
+        </p>
+        {payload.map((entry: TooltipPayload, index: number) => {
+          const districtData = data.find(d => d.districtId === entry.dataKey);
+          return (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              <span className="font-semibold">{districtData?.districtName || entry.dataKey}:</span>{' '}
+              {selectedMetric === 'aggregate' ? `Score ${Math.round(entry.value)}` : `Rank #${entry.value}`}
+            </p>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
+
 const DISTRICT_COLORS = [
   '#3b82f6', // blue
   '#ef4444', // red
@@ -104,7 +150,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
 
   // Transform data for chart
   const chartData = sortedDates.map(date => {
-    const dataPoint: any = { date };
+    const dataPoint: Record<string, string | number> = { date };
     
     data.forEach(district => {
       const point = district.history.find(p => p.date === date);
@@ -129,36 +175,6 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     
     return dataPoint;
   });
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const date = payload[0].payload.date;
-      const formattedDate = new Date(date).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-
-      return (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
-          <p className="text-sm font-medium text-gray-900 mb-2">
-            {formattedDate}
-          </p>
-          {payload.map((entry: any, index: number) => {
-            const districtData = data.find(d => d.districtId === entry.dataKey);
-            return (
-              <p key={index} className="text-sm" style={{ color: entry.color }}>
-                <span className="font-semibold">{districtData?.districtName || entry.dataKey}:</span>{' '}
-                {selectedMetric === 'aggregate' ? `Score ${Math.round(entry.value)}` : `Rank #${entry.value}`}
-              </p>
-            );
-          })}
-        </div>
-      );
-    }
-    return null;
-  };
 
   // Generate chart description for accessibility
   const metricLabel = {
@@ -275,7 +291,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                     : { value: 'Rank (lower is better)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }
                 }
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip data={data} selectedMetric={selectedMetric} />} />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
                 verticalAlign="top"

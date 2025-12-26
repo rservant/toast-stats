@@ -25,6 +25,33 @@ interface EducationalAwardsChartProps {
 
 type ChartView = 'byType' | 'byMonth' | 'topClubs';
 
+// Custom tooltip for monthly chart moved outside render
+const MonthlyTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { fullDate: string; awards: number; [key: string]: unknown } }> }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const formattedDate = new Date(data.fullDate).toLocaleDateString(
+      'en-US',
+      {
+        month: 'long',
+        year: 'numeric',
+      }
+    );
+
+    return (
+      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+        <p className="text-sm font-medium text-gray-900 mb-1">
+          {formattedDate}
+        </p>
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold">Awards:</span>{' '}
+          {data.awards.toLocaleString()}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
   districtId,
   districtName,
@@ -130,33 +157,6 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
     ...club,
     color: colors[index % colors.length],
   }));
-
-  // Custom tooltip for monthly chart
-  const MonthlyTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const formattedDate = new Date(data.fullDate).toLocaleDateString(
-        'en-US',
-        {
-          month: 'long',
-          year: 'numeric',
-        }
-      );
-
-      return (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium text-gray-900 mb-1">
-            {formattedDate}
-          </p>
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">Awards:</span>{' '}
-            {data.awards.toLocaleString()}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <section className="bg-white rounded-lg shadow-md p-4 sm:p-6" aria-label="Educational awards chart">

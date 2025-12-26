@@ -383,14 +383,10 @@ export class RealToastmastersAPIService {
    * Get daily reports
    */
   async getDailyReports(districtId: string, _startDate: string, _endDate: string) {
-    try {
-      // Daily reports would require additional scraping or different data source
-      // For now, return empty structure
-      return { reports: [] }
-    } catch (error) {
-      logger.error('Failed to get daily reports', { districtId, error })
-      throw error
-    }
+    // Daily reports would require additional scraping or different data source
+    // For now, return empty structure
+    logger.info('Getting daily reports (placeholder)', { districtId })
+    return { reports: [] }
   }
 
   /**

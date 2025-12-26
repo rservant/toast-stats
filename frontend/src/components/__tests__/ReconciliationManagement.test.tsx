@@ -4,7 +4,7 @@ import { ReconciliationManagement } from '../ReconciliationManagement';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-(globalThis as any).fetch = mockFetch;
+(globalThis as unknown as { fetch: typeof vi.fn }).fetch = mockFetch;
 
 // Mock window.open
 const mockWindowOpen = vi.fn();
@@ -116,7 +116,7 @@ describe('ReconciliationManagement', () => {
   };
 
   // Helper function to setup successful mocks
-  const setupSuccessfulMocks = (jobs: any[] = [], config = mockConfig) => {
+  const setupSuccessfulMocks = (jobs: unknown[] = [], config = mockConfig) => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,

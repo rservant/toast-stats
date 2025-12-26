@@ -17,7 +17,7 @@ export const useRankHistory = ({ districtIds, startDate, endDate }: UseRankHisto
     queryFn: async () => {
       // Fetch rank history for each district
       const promises = districtIds.map(async (districtId) => {
-        const params: any = {};
+        const params: Record<string, string> = {};
         if (startDate) params.startDate = startDate;
         if (endDate) params.endDate = endDate;
         

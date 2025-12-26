@@ -2,14 +2,53 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
 
 /**
+ * Interface for club performance data
+ */
+export interface ClubPerformance {
+  'Club Number': string;
+  'Club Name': string;
+  'Division': string;
+  'Area': string;
+  'Active Members': string;
+  'Goals Met': string;
+  'Club Status': string;
+  'Club Distinguished Status': string;
+  'Mem. Base': string;
+  [key: string]: string; // Allow additional dynamic fields
+}
+
+/**
+ * Interface for division performance data
+ */
+export interface DivisionPerformance {
+  'Division': string;
+  'Total Clubs': string;
+  'Total Members': string;
+  'Goals Met': string;
+  [key: string]: string; // Allow additional dynamic fields
+}
+
+/**
+ * Interface for district performance data
+ */
+export interface DistrictPerformance {
+  'District': string;
+  'Total Clubs': string;
+  'Total Members': string;
+  'Goals Met': string;
+  'Distinguished Clubs': string;
+  [key: string]: string; // Allow additional dynamic fields
+}
+
+/**
  * Interface for district cache entry containing all three report types
  */
 export interface DistrictCacheEntry {
   districtId: string;
   date: string;
-  districtPerformance: any[];
-  divisionPerformance: any[];
-  clubPerformance: any[];
+  districtPerformance: DistrictPerformance[];
+  divisionPerformance: DivisionPerformance[];
+  clubPerformance: ClubPerformance[];
   fetchedAt: string;
 }
 
@@ -56,10 +95,13 @@ export const useDistrictData = (
     },
     enabled: enabled && !!districtId && !!date,
     staleTime: 10 * 60 * 1000, // 10 minutes - data is historical and doesn't change
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // Don't retry on 404 (no data) or 400 (bad request)
-      if (error?.response?.status === 404 || error?.response?.status === 400) {
-        return false;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404 || axiosError.response?.status === 400) {
+          return false;
+        }
       }
       // Retry up to 2 times for network errors
       return failureCount < 2;
@@ -96,10 +138,13 @@ export const useDistrictCachedDates = (
     },
     enabled: enabled && !!districtId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // Don't retry on 404 (no data) or 400 (bad request)
-      if (error?.response?.status === 404 || error?.response?.status === 400) {
-        return false;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404 || axiosError.response?.status === 400) {
+          return false;
+        }
       }
       // Retry up to 2 times for network errors
       return failureCount < 2;

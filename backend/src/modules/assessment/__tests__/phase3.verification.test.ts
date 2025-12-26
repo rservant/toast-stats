@@ -2,14 +2,36 @@ import { describe, it, expect } from 'vitest';
 import fixtures from './fixtures/sampleData.json';
 import { calculateAllGoals } from '../services/assessmentCalculator.js';
 import { calculateCumulativeTarget, getMonthNumber } from '../services/monthlyTargetService.js';
+import { MonthlyAssessment, DistrictConfig } from '../types/assessment.js';
+
+interface MonthlyData {
+  month: string;
+  membership_payments_ytd: number;
+  paid_clubs_ytd: number;
+  distinguished_clubs_ytd: number;
+  csp_submissions_ytd: number;
+}
+
+interface FixtureData {
+  district_number: number;
+  program_year: string;
+  config: DistrictConfig;
+  monthly_data: MonthlyData[];
+}
+
+interface Fixtures {
+  fixtures: {
+    district61_2024_2025: FixtureData;
+  };
+}
 
 describe('Phase 3 Verification - Assessment Calculator vs. expected targets', () => {
-  const data = (fixtures as any).fixtures.district61_2024_2025;
+  const data = (fixtures as Fixtures).fixtures.district61_2024_2025;
   const config = data.config;
 
-  data.monthly_data.forEach((monthData: any) => {
+  data.monthly_data.forEach((monthData: MonthlyData) => {
     it(`calculates correct goals for ${monthData.month}`, () => {
-      const assessment = {
+      const assessment: MonthlyAssessment = {
         district_number: data.district_number,
         program_year: data.program_year,
         month: monthData.month,

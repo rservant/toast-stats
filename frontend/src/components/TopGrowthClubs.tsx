@@ -35,7 +35,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
     );
   }
 
-  const getDistinguishedBadge = (level?: 'Smedley' | 'President' | 'Select' | 'Distinguished'): JSX.Element | null => {
+  const getDistinguishedBadge = (level?: 'Smedley' | 'President' | 'Select' | 'Distinguished'): React.ReactElement | null => {
     if (!level) return null;
 
     const colors = {
@@ -52,7 +52,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
     );
   };
 
-  const getGrowthIcon = (growth: number): JSX.Element => {
+  const getGrowthIcon = (growth: number): React.ReactElement => {
     if (growth > 0) {
       return (
         <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +67,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
     );
   };
 
-  const getTrophyIcon = (rank: number): JSX.Element => {
+  const getTrophyIcon = (rank: number): React.ReactElement => {
     const colors = ['text-yellow-500', 'text-gray-400', 'text-orange-600'];
     const color = colors[rank - 1] || 'text-gray-300';
 

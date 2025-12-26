@@ -62,12 +62,16 @@ export function useEnhancedMembershipData(
  */
 export function useEnhancedClubs(
   districtId: string | null,
-  _daysToConsider: number = 7
+  daysToConsider: number = 7 // TODO: Use this when detailed daily reports are available
 ) {
+  // Explicitly acknowledge the parameter for future use
+  void daysToConsider;
+  
   const { data: clubsData, isLoading: isLoadingClubs, error: clubsError } = 
     useClubs(districtId);
 
   // TODO: When detailed daily reports are available, enhance clubs with recent changes
+  // This will use the daysToConsider parameter to analyze recent membership changes
   // For now, return clubs as-is
   const enhancedClubs = useMemo<ClubWithRecentChanges[]>(() => {
     return clubsData?.clubs || [];

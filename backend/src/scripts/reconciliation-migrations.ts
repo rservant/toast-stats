@@ -307,18 +307,20 @@ export async function runMigrations(command: string = 'migrate', targetVersion?:
         await runner.rollback(targetVersion)
         break
       
-      case 'status':
+      case 'status': {
         const status = await runner.getStatus()
         console.log('Migration Status:', JSON.stringify(status, null, 2))
         break
+      }
       
-      case 'validate':
+      case 'validate': {
         const validation = await runner.validateIntegrity()
         console.log('Integrity Validation:', JSON.stringify(validation, null, 2))
         if (!validation.valid) {
           process.exit(1)
         }
         break
+      }
       
       default:
         throw new Error(`Unknown command: ${command}`)

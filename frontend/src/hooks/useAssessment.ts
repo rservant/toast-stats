@@ -9,7 +9,27 @@ export interface AssessmentSummary {
   distinctClubsSeen?: number;
 }
 
-export const extractMembershipFromClub = (club: any): number => {
+export interface ClubData {
+  clubId?: string;
+  id?: string;
+  club_id?: string;
+  clubName?: string;
+  membership?: number;
+  members?: number;
+  membershipTotal?: number;
+  membership_count?: number;
+  currentMembers?: number;
+  totalMembers?: number;
+  [key: string]: unknown; // Allow additional dynamic fields
+}
+
+export interface DistrictDataResponse {
+  clubPerformance?: ClubData[];
+  districtPerformance?: unknown[];
+  [key: string]: unknown;
+}
+
+export const extractMembershipFromClub = (club: ClubData): number => {
   if (!club || typeof club !== 'object') return 0;
   const candidates = ['membership', 'members', 'membershipTotal', 'membership_count', 'currentMembers', 'totalMembers'];
   for (const key of candidates) {
@@ -49,7 +69,7 @@ export const useAssessment = () => {
         datesInMonth.map((d) => apiClient.get(`/districts/${districtId}/data/${d}`).then((r) => r.data).catch(() => null))
       );
 
-      const validResponses = responses.filter(Boolean) as any[];
+      const validResponses = responses.filter(Boolean) as DistrictDataResponse[];
       // Determine latest available date in the month
       const latest = [...datesInMonth]
         .filter((_, i) => !!responses[i])
@@ -57,14 +77,14 @@ export const useAssessment = () => {
         .pop();
 
       // Snapshot comes from latest day's data if present
-      const latestData = latest ? await apiClient.get(`/districts/${districtId}/data/${latest}`).then((r) => r.data).catch(() => null) : null;
+      const latestData: DistrictDataResponse | null = latest ? await apiClient.get(`/districts/${districtId}/data/${latest}`).then((r) => r.data).catch(() => null) : null;
 
       let totalClubs: number | undefined = undefined;
       let totalMembership: number | undefined = undefined;
 
       if (latestData && Array.isArray(latestData.clubPerformance)) {
         totalClubs = latestData.clubPerformance.length;
-        totalMembership = latestData.clubPerformance.reduce((acc: number, club: any) => acc + extractMembershipFromClub(club), 0);
+        totalMembership = latestData.clubPerformance.reduce((acc: number, club: ClubData) => acc + extractMembershipFromClub(club), 0);
       } else if (latestData && Array.isArray(latestData.districtPerformance)) {
         totalClubs = latestData.districtPerformance.length;
       }
@@ -92,10 +112,11 @@ export const useAssessment = () => {
 
       setIsComputing(false);
       return summary;
-    } catch (err: any) {
-      setError(err);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error occurred');
+      setError(error);
       setIsComputing(false);
-      throw err;
+      throw error;
     }
   };
 
@@ -117,9 +138,12 @@ export const useAssessment = () => {
     try {
       const resp = await apiClient.get(`/assessment/monthly/${districtId}/${encodeURIComponent(programYear)}/${encodeURIComponent(month)}`);
       return resp.data;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If server returns 404 or no assessment, we return null for caller to decide
-      if (err?.response?.status === 404) return null;
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { status?: number } };
+        if (axiosError.response?.status === 404) return null;
+      }
       throw err;
     }
   };

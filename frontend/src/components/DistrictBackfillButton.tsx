@@ -61,40 +61,36 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
   const initiateMutation = useInitiateDistrictBackfill(districtId)
   const cancelMutation = useCancelDistrictBackfill(districtId)
 
+  // Handle initiate mutation success
+  const handleInitiateSuccess = (data: { backfillId: string }) => {
+    const id = data.backfillId
+    setBackfillId(id)
+    // Set as active backfill in global context
+    addBackfill({
+      backfillId: id,
+      type: 'district',
+      districtId: districtId
+    })
+    // Notify parent and close modal
+    if (onBackfillStart) {
+      onBackfillStart(id)
+      setTimeout(() => setShowModal(false), 300)
+    }
+  }
+
+  // Handle cancel mutation success
+  const handleCancelSuccess = () => {
+    setBackfillId(null)
+    removeBackfill(backfillId || '')
+    setShowModal(false)
+  }
+
   // Poll backfill status when we have a backfillId
   const { data: backfillStatus, isError: isStatusError } = useDistrictBackfillStatus(
     districtId,
     backfillId,
     !!backfillId
   )
-
-  // Update backfillId when initiate mutation succeeds
-  useEffect(() => {
-    if (initiateMutation.isSuccess && initiateMutation.data) {
-      const id = initiateMutation.data.backfillId
-      setBackfillId(id)
-      // Set as active backfill in global context
-      addBackfill({
-        backfillId: id,
-        type: 'district',
-        districtId: districtId
-      })
-      // Notify parent and close modal
-      if (onBackfillStart) {
-        onBackfillStart(id)
-        setTimeout(() => setShowModal(false), 300)
-      }
-    }
-  }, [initiateMutation.isSuccess, initiateMutation.data, onBackfillStart, addBackfill, districtId])
-
-  // Handle cancel mutation success
-  useEffect(() => {
-    if (cancelMutation.isSuccess) {
-      setBackfillId(null)
-      removeBackfill(backfillId || '')
-      setShowModal(false)
-    }
-  }, [cancelMutation.isSuccess, removeBackfill, backfillId])
 
   // Refresh cached dates when backfill completes
   useEffect(() => {
@@ -110,12 +106,16 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     }
-    initiateMutation.mutate(request)
+    initiateMutation.mutate(request, {
+      onSuccess: handleInitiateSuccess
+    })
   }
 
   const handleCancel = () => {
     if (backfillId) {
-      cancelMutation.mutate(backfillId)
+      cancelMutation.mutate(backfillId, {
+        onSuccess: handleCancelSuccess
+      })
     } else {
       setShowModal(false)
     }

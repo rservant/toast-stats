@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 /**
  * ReconciliationManagement Component
@@ -60,7 +60,7 @@ export const ReconciliationManagement: React.FC<ReconciliationManagementProps> =
   const [configError, setConfigError] = useState<string | null>(null);
 
   // Load data on component mount and when refreshed
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!isAdmin) return;
     
     setLoading(true);
@@ -89,11 +89,11 @@ export const ReconciliationManagement: React.FC<ReconciliationManagementProps> =
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
     loadData();
-  }, [isAdmin]);
+  }, [isAdmin, loadData]);
 
   // Initialize config form data when config is loaded
   useEffect(() => {

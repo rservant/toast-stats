@@ -8,6 +8,13 @@ interface Props {
   selectedDate?: string | undefined;
 }
 
+interface ApiError {
+  message?: string;
+  response?: {
+    status?: number;
+  };
+}
+
 const monthFromDate = (d: string) => d.slice(0, 7); // YYYY-MM
 
 const uniqueMonths = (dates: string[]) => {
@@ -101,8 +108,9 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
       } else {
         setPersisted(null);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to fetch persisted assessment');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      setError(error?.message || 'Failed to fetch persisted assessment');
     }
   };
 
@@ -118,7 +126,7 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
         month,
       };
       console.log('AssessmentPanel.handleGenerate - sending payload:', payload);
-      const res = await generateAssessment(payload as any);
+      const res = await generateAssessment(payload);
       console.log('AssessmentPanel.handleGenerate - response:', res);
       setGenResult(res);
       // After generation, fetch persisted assessment to reflect authoritative copy
@@ -127,13 +135,14 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
         console.log('AssessmentPanel.handleGenerate - fetched persisted:', persistedRes.data);
         setPersisted(persistedRes.data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       console.error('AssessmentPanel.handleGenerate - error:', {
-        status: err?.response?.status,
-        data: err?.response?.data,
-        message: err?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
       });
-      setError(err?.response?.data?.error?.message || err?.message || 'Failed to generate assessment');
+      setError(error?.response?.data?.error?.message || error?.message || 'Failed to generate assessment');
     } finally {
       setIsGenerating(false);
     }
@@ -158,7 +167,7 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
         programYearEnd: selectedProgramYear.endDate,
         month,
       };
-      const res = await generateAssessment(payload as any);
+      const res = await generateAssessment(payload);
       console.log('AssessmentPanel.handleRegenerate - regenerated:', res);
       setGenResult(res);
       // Fetch persisted assessment
@@ -167,9 +176,10 @@ const AssessmentPanel: React.FC<Props> = ({ districtId, selectedProgramYear, sel
         console.log('AssessmentPanel.handleRegenerate - fetched persisted:', persistedRes.data);
         setPersisted(persistedRes.data);
       }
-    } catch (err: any) {
-      console.error('AssessmentPanel.handleRegenerate - error:', err?.message);
-      setError(err?.message || 'Failed to regenerate assessment');
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      console.error('AssessmentPanel.handleRegenerate - error:', error?.message);
+      setError(error?.message || 'Failed to regenerate assessment');
     } finally {
       setIsGenerating(false);
     }

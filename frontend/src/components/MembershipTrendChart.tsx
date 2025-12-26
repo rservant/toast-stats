@@ -18,6 +18,56 @@ interface MembershipTrendChartProps {
   isLoading?: boolean;
 }
 
+interface Period {
+  start: number;
+  end: number;
+  type: 'growth' | 'decline';
+}
+
+// Custom tooltip moved outside render
+const CustomTooltip = ({ 
+  active, 
+  payload, 
+  sortedData, 
+  periods 
+}: { 
+  active?: boolean; 
+  payload?: Array<{ payload: { date: string; count: number } }>; 
+  sortedData: Array<{ date: string; count: number }>;
+  periods: Period[];
+}) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const date = new Date(data.date);
+    const formattedDate = date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    // Find if this point is in a growth/decline period
+    const pointIndex = sortedData.findIndex(d => d.date === data.date);
+    const period = periods.find(p => pointIndex >= p.start && pointIndex <= p.end);
+
+    return (
+      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+        <p className="text-sm font-medium text-gray-900 mb-1">{formattedDate}</p>
+        <p className="text-sm text-blue-600 font-semibold">
+          Members: {data.count.toLocaleString()}
+        </p>
+        {period && (
+          <p className={`text-xs mt-1 ${
+            period.type === 'growth' ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {period.type === 'growth' ? '📈 Growth Period' : '📉 Decline Period'}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
 export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   membershipTrend,
   isLoading = false,
@@ -119,40 +169,6 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
       });
     }
   }
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const date = new Date(data.date);
-      const formattedDate = date.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-
-      // Find if this point is in a growth/decline period
-      const pointIndex = sortedData.findIndex(d => d.date === data.date);
-      const period = periods.find(p => pointIndex >= p.start && pointIndex <= p.end);
-
-      return (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium text-gray-900 mb-1">{formattedDate}</p>
-          <p className="text-sm text-blue-600 font-semibold">
-            Members: {data.count.toLocaleString()}
-          </p>
-          {period && (
-            <p className={`text-xs mt-1 ${
-              period.type === 'growth' ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {period.type === 'growth' ? '📈 Growth Period' : '📉 Decline Period'}
-            </p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
 
   // Format date for X-axis
   const formatXAxis = (dateStr: string) => {
@@ -259,7 +275,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                   style: { fontSize: '12px' },
                 }}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip sortedData={sortedData} periods={periods} />} />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
                 verticalAlign="top"

@@ -98,10 +98,11 @@ describe('DataStatusIndicator Property Tests', () => {
             case 'monitoring':
               expect(container).toHaveTextContent('Monitoring Changes');
               break;
-            case 'stabilizing':
+            case 'stabilizing': {
               const stabilizingText = `Stabilizing (${dataStatus.reconciliationStatus.daysStable}/${dataStatus.reconciliationStatus.daysActive} days)`;
               expect(container).toHaveTextContent(stabilizingText);
               break;
+            }
             case 'finalizing':
               expect(container).toHaveTextContent('Finalizing');
               break;

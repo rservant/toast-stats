@@ -137,7 +137,7 @@ export interface DailyReportsResponse {
   }>;
 }
 
-export interface DailyReportDetailResponse extends DailyReport {}
+export type DailyReportDetailResponse = DailyReport;
 
 // Historical Rank Types
 

@@ -1,9 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 
+type ClubData = {
+  [key: string]: string | number | undefined;
+}
+
 type ExtractResult = {
   csp_count: number
-  clubs_with_csp: any[]
+  clubs_with_csp: ClubData[]
   total_clubs: number
   csp_field_name: string | null
 }
@@ -94,7 +98,7 @@ export class CspExtractorService {
       return { csp_count: 0, clubs_with_csp: [], total_clubs, csp_field_name: null }
     }
 
-    const clubs_with_csp: any[] = []
+    const clubs_with_csp: ClubData[] = []
     let csp_count = 0
 
     for (const rec of clubRecords) {

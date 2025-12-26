@@ -15,22 +15,22 @@ interface ProgramYearProviderProps {
 }
 
 export const ProgramYearProvider: React.FC<ProgramYearProviderProps> = ({ children }) => {
-  // Initialize with current program year
-  const [selectedProgramYear, setSelectedProgramYear] = useState<ProgramYear>(getCurrentProgramYear());
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
-
-  // Load from localStorage on mount
-  useEffect(() => {
+  // Initialize with saved program year or current program year
+  const [selectedProgramYear, setSelectedProgramYear] = useState<ProgramYear>(() => {
     const savedYear = localStorage.getItem('selectedProgramYear');
     if (savedYear) {
       try {
         const year = parseInt(savedYear);
-        setSelectedProgramYear(getProgramYear(year));
+        return getProgramYear(year);
       } catch (error) {
         console.error('Failed to load saved program year:', error);
       }
     }
-  }, []);
+    return getCurrentProgramYear();
+  });
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+
+  // No useEffect needed for initialization - handled in lazy initial state
 
   // Save to localStorage when changed
   useEffect(() => {

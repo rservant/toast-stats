@@ -30,7 +30,7 @@ interface AreaDirectorCorrelation {
   correlation: 'positive' | 'neutral' | 'negative';
 }
 
-interface LeadershipInsights {
+interface LeadershipInsightsData {
   leadershipScores: LeadershipEffectivenessScore[];
   bestPracticeDivisions: LeadershipEffectivenessScore[];
   leadershipChanges: LeadershipChange[];
@@ -44,7 +44,7 @@ interface LeadershipInsights {
 }
 
 interface LeadershipInsightsProps {
-  insights: LeadershipInsights | null;
+  insights: LeadershipInsightsData | null;
   isLoading: boolean;
 }
 
@@ -84,7 +84,7 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
     return 'bg-red-100';
   };
 
-  const getTrendIcon = (trend: 'improved' | 'declined' | 'stable'): JSX.Element => {
+  const getTrendIcon = (trend: 'improved' | 'declined' | 'stable'): React.ReactElement => {
     if (trend === 'improved') {
       return (
         <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

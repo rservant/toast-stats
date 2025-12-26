@@ -90,10 +90,13 @@ export const useDistrictAnalytics = (
     enabled: !!districtId,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache for common date ranges
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // Don't retry on 404 (no data) or 400 (bad request)
-      if (error?.response?.status === 404 || error?.response?.status === 400) {
-        return false;
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404 || axiosError.response?.status === 400) {
+          return false;
+        }
       }
       // Retry up to 2 times for other errors
       return failureCount < 2;

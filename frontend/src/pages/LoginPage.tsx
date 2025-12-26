@@ -46,14 +46,15 @@ const LoginPage: React.FC = () => {
       await login(username, password);
       // Redirect to dashboard on successful login
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Display error message for authentication failures
-      if (err.response?.status === 401) {
+      const error = err as { response?: { status?: number; data?: { message?: string } } };
+      if (error.response?.status === 401) {
         setError('Invalid username or password');
-      } else if (err.response?.data?.error?.message) {
-        setError(err.response.data.error.message);
-      } else if (err.message) {
-        setError(err.message);
+      } else if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else if (error instanceof Error && error.message) {
+        setError(error.message);
       } else {
         setError('An error occurred during login. Please try again.');
       }

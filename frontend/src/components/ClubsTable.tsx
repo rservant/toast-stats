@@ -33,6 +33,34 @@ type SortField = 'name' | 'membership' | 'dcpGoals' | 'status' | 'division' | 'a
 type SortDirection = 'asc' | 'desc';
 
 /**
+ * SortIcon Component - displays sort indicators for table headers
+ */
+interface SortIconProps {
+  field: SortField;
+  currentSortField: SortField | null;
+  sortDirection: SortDirection;
+}
+
+const SortIcon: React.FC<SortIconProps> = ({ field, currentSortField, sortDirection }) => {
+  if (currentSortField !== field) {
+    return (
+      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    );
+  }
+  return sortDirection === 'asc' ? (
+    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+};
+
+/**
  * ClubsTable Component
  * 
  * Displays a comprehensive, sortable, and filterable table of all clubs in a district.
@@ -136,8 +164,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
 
     // Sort clubs
     const sorted = [...filtered].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortField) {
         case 'name':
@@ -152,11 +180,12 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           aValue = getLatestDcpGoals(a);
           bValue = getLatestDcpGoals(b);
           break;
-        case 'status':
+        case 'status': {
           const statusOrder = { critical: 0, 'at-risk': 1, healthy: 2 };
           aValue = statusOrder[a.currentStatus];
           bValue = statusOrder[b.currentStatus];
           break;
+        }
         case 'division':
           aValue = a.divisionName.toLowerCase();
           bValue = b.divisionName.toLowerCase();
@@ -191,26 +220,6 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       setSortField(field);
       setSortDirection('asc');
     }
-  };
-
-  // Sort icon
-  const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
-    if (sortField !== field) {
-      return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
   };
 
   return (
@@ -252,7 +261,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           <div className="sm:w-48">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'healthy' | 'at-risk' | 'critical')}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
             >
               <option value="all">All Status</option>
@@ -321,7 +330,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Club Name
-                    <SortIcon field="name" />
+                    <SortIcon field="name" currentSortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -330,7 +339,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Division
-                    <SortIcon field="division" />
+                    <SortIcon field="division" currentSortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -339,7 +348,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Area
-                    <SortIcon field="area" />
+                    <SortIcon field="area" currentSortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -348,7 +357,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Members
-                    <SortIcon field="membership" />
+                    <SortIcon field="membership" currentSortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -357,7 +366,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     DCP Goals
-                    <SortIcon field="dcpGoals" />
+                    <SortIcon field="dcpGoals" currentSortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -369,7 +378,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 >
                   <div className="flex items-center gap-2">
                     Status
-                    <SortIcon field="status" />
+                    <SortIcon field="status" currentSortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
               </tr>

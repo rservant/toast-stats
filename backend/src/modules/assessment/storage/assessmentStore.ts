@@ -7,6 +7,13 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { MonthlyAssessment, DistrictLeaderGoal, DistrictConfig } from '../types/assessment.js';
 
+interface ErrnoException extends Error {
+  code?: string;
+  errno?: number;
+  path?: string;
+  syscall?: string;
+}
+
 const DATA_DIR = path.resolve(__dirname, 'data');
 
 /**
@@ -84,7 +91,7 @@ export async function saveMonthlyAssessment(data: MonthlyAssessment): Promise<vo
     throw new Error('Assessment already exists and is immutable. Delete before regenerating.');
   } catch (err) {
     // If ENOENT, file does not exist and we can proceed
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if ((err as ErrnoException).code !== 'ENOENT') {
       // rethrow other access errors
       throw err;
     }
@@ -106,7 +113,7 @@ export async function getMonthlyAssessment(
     const data = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(data) as MonthlyAssessment;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       return null;
     }
     throw err;

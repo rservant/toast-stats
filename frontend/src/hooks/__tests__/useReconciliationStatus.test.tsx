@@ -7,7 +7,12 @@ import { ReactNode } from 'react';
 
 // Mock the API client
 vi.mock('../../services/api');
-const mockedApiClient = apiClient as any;
+
+interface MockedApiClient {
+  get: ReturnType<typeof vi.fn>;
+}
+
+const mockedApiClient = apiClient as unknown as MockedApiClient;
 
 // Create a wrapper for React Query
 const createWrapper = () => {

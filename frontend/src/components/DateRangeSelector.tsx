@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface DateRangeSelectorProps {
   onDateRangeChange: (startDate: string, endDate: string) => void;
@@ -9,20 +9,21 @@ export const DateRangeSelector = ({
   onDateRangeChange,
   maxDays = 90,
 }: DateRangeSelectorProps) => {
-  const today = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0];
+  const { today, thirtyDaysAgo } = useMemo(() => {
+    const now = new Date();
+    const todayDate = now.toISOString().split('T')[0];
+    const thirtyDaysAgoDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+    return { today: todayDate, thirtyDaysAgo: thirtyDaysAgoDate };
+  }, []);
 
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
   const [error, setError] = useState<string | null>(null);
 
+  // Validate and emit when dates change
   useEffect(() => {
-    validateAndEmit();
-  }, [startDate, endDate]);
-
-  const validateAndEmit = () => {
     setError(null);
 
     if (!startDate || !endDate) {
@@ -48,7 +49,7 @@ export const DateRangeSelector = ({
     }
 
     onDateRangeChange(startDate, endDate);
-  };
+  }, [startDate, endDate, maxDays, onDateRangeChange]);
 
   const handlePresetRange = (days: number) => {
     const end = new Date();

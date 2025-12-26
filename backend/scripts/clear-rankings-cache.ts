@@ -24,7 +24,6 @@
  */
 
 import { CacheManager } from '../src/services/CacheManager.js'
-import { logger } from '../src/utils/logger.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
