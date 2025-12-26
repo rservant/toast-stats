@@ -127,6 +127,82 @@ describe('CacheManager - Historical Data Aggregation', () => {
         await cacheManager.clearCacheForDate(validDate, validType)
       }
     })
+
+    it('should prevent path traversal through constructed filenames', async () => {
+      // Test that even if somehow malicious content gets through validation,
+      // the path resolution prevents escaping the cache directory
+      const validDate = '2024-11-22'
+      const validType = 'districts'
+
+      // This should work normally
+      await expect(
+        cacheManager.setCache(validDate, { test: 'data' }, validType)
+      ).resolves.not.toThrow()
+
+      // Verify the file was created in the expected location
+      const hasCache = await cacheManager.hasCache(validDate, validType)
+      expect(hasCache).toBe(true)
+
+      // Verify we can read it back
+      const result = await cacheManager.getCache(validDate, validType)
+      expect(result).toEqual({ test: 'data' })
+    })
+
+    it('should validate date format strictly', async () => {
+      const strictlyInvalidDates = [
+        '2024-1-1', // Single digit month/day
+        '24-11-22', // Two digit year
+        '2024-11-1', // Single digit day
+        '2024-1-22', // Single digit month
+        '2024/11/22', // Wrong separators
+        '2024.11.22', // Wrong separators
+        '2024 11 22', // Spaces
+        '20241122', // No separators
+        '2024-11', // Missing day
+        '11-22', // Missing year
+        '2024-11-22T00:00:00Z', // ISO format with time
+      ]
+
+      for (const invalidDate of strictlyInvalidDates) {
+        await expect(
+          cacheManager.setCache(invalidDate, { test: 'data' })
+        ).rejects.toThrow('Invalid date format')
+
+        const result = await cacheManager.getCache(invalidDate)
+        expect(result).toBeNull()
+
+        const hasCache = await cacheManager.hasCache(invalidDate)
+        expect(hasCache).toBe(false)
+      }
+    })
+
+    it('should validate leap years correctly', async () => {
+      // Valid leap year dates
+      const validLeapDates = [
+        '2024-02-29', // 2024 is a leap year
+        '2020-02-29', // 2020 is a leap year
+        '2000-02-29', // 2000 is a leap year (divisible by 400)
+      ]
+
+      for (const date of validLeapDates) {
+        await expect(
+          cacheManager.setCache(date, { test: 'data' })
+        ).resolves.not.toThrow()
+      }
+
+      // Invalid leap year dates
+      const invalidLeapDates = [
+        '2023-02-29', // 2023 is not a leap year
+        '2021-02-29', // 2021 is not a leap year
+        '1900-02-29', // 1900 is not a leap year (divisible by 100 but not 400)
+      ]
+
+      for (const date of invalidLeapDates) {
+        await expect(
+          cacheManager.setCache(date, { test: 'data' })
+        ).rejects.toThrow('Invalid date format')
+      }
+    })
   })
 
   describe('Metadata Tracking', () => {

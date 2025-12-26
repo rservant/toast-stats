@@ -108,12 +108,24 @@ export class CacheManager {
     // Construct the filename using only validated components
     const filename = `${type}_${date}.json`
 
-    // Use path.resolve to get absolute path and ensure it's within cache directory
-    const filePath = path.resolve(this.cacheDir, filename)
-    const cacheDir = path.resolve(this.cacheDir)
+    // Additional validation: ensure filename doesn't contain path separators
+    if (
+      filename.includes('/') ||
+      filename.includes('\\') ||
+      filename.includes('..')
+    ) {
+      throw new Error(`Unsafe characters in constructed filename: ${filename}`)
+    }
+
+    // Resolve paths and validate containment
+    const normalizedCacheDir = path.resolve(this.cacheDir)
+    const filePath = path.resolve(normalizedCacheDir, filename)
 
     // Ensure the resolved path is within the cache directory (prevent directory traversal)
-    if (!filePath.startsWith(cacheDir + path.sep) && filePath !== cacheDir) {
+    if (
+      filePath !== normalizedCacheDir &&
+      !filePath.startsWith(normalizedCacheDir + path.sep)
+    ) {
       throw new Error(
         `Constructed path is outside cache directory: ${filePath}`
       )
@@ -127,25 +139,31 @@ export class CacheManager {
    */
   private getMetadataFilePath(date: string): string {
     // Validate date format to prevent path traversal
-    const datePattern = /^\d{4}-\d{2}-\d{2}$/
-    if (!datePattern.test(date) || !this.isValidDateKey(date)) {
+    if (!this.isValidDateKey(date)) {
       throw new Error(`Invalid date format for metadata file path: ${date}`)
     }
 
     // Construct the filename using only validated components
     const filename = `metadata_${date}.json`
 
-    // Extra safeguard: ensure no path separators slipped into the filename
-    if (filename.includes('/') || filename.includes('\\')) {
+    // Additional validation: ensure filename doesn't contain path separators
+    if (
+      filename.includes('/') ||
+      filename.includes('\\') ||
+      filename.includes('..')
+    ) {
       throw new Error(`Unsafe characters in metadata filename: ${filename}`)
     }
 
-    // Use path.resolve to get absolute path and ensure it's within cache directory
-    const cacheDir = path.resolve(this.cacheDir)
-    const filePath = path.resolve(cacheDir, filename)
+    // Resolve paths and validate containment
+    const normalizedCacheDir = path.resolve(this.cacheDir)
+    const filePath = path.resolve(normalizedCacheDir, filename)
 
     // Ensure the resolved path is within the cache directory (prevent directory traversal)
-    if (!filePath.startsWith(cacheDir + path.sep) && filePath !== cacheDir) {
+    if (
+      filePath !== normalizedCacheDir &&
+      !filePath.startsWith(normalizedCacheDir + path.sep)
+    ) {
       throw new Error(
         `Constructed path is outside cache directory: ${filePath}`
       )
@@ -158,12 +176,17 @@ export class CacheManager {
    * Get index file path
    */
   private getIndexFilePath(): string {
-    // Use path.resolve to get absolute path and ensure it's within cache directory
-    const filePath = path.resolve(this.cacheDir, 'historical_index.json')
-    const cacheDir = path.resolve(this.cacheDir)
+    const filename = 'historical_index.json'
+
+    // Resolve paths and validate containment
+    const normalizedCacheDir = path.resolve(this.cacheDir)
+    const filePath = path.resolve(normalizedCacheDir, filename)
 
     // Ensure the resolved path is within the cache directory (prevent directory traversal)
-    if (!filePath.startsWith(cacheDir + path.sep) && filePath !== cacheDir) {
+    if (
+      filePath !== normalizedCacheDir &&
+      !filePath.startsWith(normalizedCacheDir + path.sep)
+    ) {
       throw new Error(
         `Constructed path is outside cache directory: ${filePath}`
       )

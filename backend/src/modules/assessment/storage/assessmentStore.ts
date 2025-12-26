@@ -79,13 +79,35 @@ function sanitizeForFilename(input: string): string {
  * Resolve a filename within the DATA_DIR and ensure it does not escape the directory.
  */
 function resolveDataPath(fileName: string): string {
-  const fullPath = path.resolve(DATA_DIR, fileName)
-  const dataDirWithSep = DATA_DIR.endsWith(path.sep)
-    ? DATA_DIR
-    : DATA_DIR + path.sep
-  if (!(fullPath === DATA_DIR || fullPath.startsWith(dataDirWithSep))) {
-    throw new Error('Resolved path escapes data directory')
+  // Validate fileName doesn't contain path traversal attempts
+  if (!fileName || typeof fileName !== 'string') {
+    throw new Error('Invalid filename: must be a non-empty string')
   }
+
+  // Reject any filename containing path separators or traversal sequences
+  if (
+    fileName.includes('/') ||
+    fileName.includes('\\') ||
+    fileName.includes('..')
+  ) {
+    throw new Error(
+      'Invalid filename: contains path separators or traversal sequences'
+    )
+  }
+
+  // Resolve the full path
+  const fullPath = path.resolve(DATA_DIR, fileName)
+  const normalizedDataDir = path.resolve(DATA_DIR)
+
+  // Ensure the resolved path is within the data directory
+  // The path must either be exactly the data directory or be a child of it
+  if (
+    fullPath !== normalizedDataDir &&
+    !fullPath.startsWith(normalizedDataDir + path.sep)
+  ) {
+    throw new Error(`Resolved path escapes data directory: ${fullPath}`)
+  }
+
   return fullPath
 }
 
