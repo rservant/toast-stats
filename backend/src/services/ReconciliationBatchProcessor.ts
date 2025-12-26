@@ -89,6 +89,36 @@ export class ReconciliationBatchProcessor {
       memoryThresholdMB: 1024, // 1GB
       ...config,
     }
+
+    // Defensive normalization of config values to prevent resource exhaustion
+    const clampNumber = (value: number, min: number, max: number): number => {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return min
+      }
+      if (value < min) return min
+      if (value > max) return max
+      return value
+    }
+
+    this.config.maxConcurrentJobs = clampNumber(
+      this.config.maxConcurrentJobs,
+      1,
+      20
+    )
+    this.config.batchSize = clampNumber(this.config.batchSize, 1, 100)
+    this.config.retryAttempts = clampNumber(this.config.retryAttempts, 0, 10)
+    this.config.retryDelayMs = clampNumber(
+      this.config.retryDelayMs,
+      100,
+      600000
+    )
+    // Ensure timeoutMs used for timers is within a bounded range
+    this.config.timeoutMs = clampNumber(this.config.timeoutMs, 1000, 1800000)
+    this.config.memoryThresholdMB = clampNumber(
+      this.config.memoryThresholdMB,
+      128,
+      4096
+    )
   }
 
   /**

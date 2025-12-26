@@ -55,9 +55,9 @@ describe('ProgressTracker - Property-Based Tests', () => {
       stabilityPeriodDays: fc.integer({ min: 1, max: 5 }), // Reduced range for performance
       checkFrequencyHours: fc.integer({ min: 12, max: 24 }), // More realistic range
       significantChangeThresholds: fc.record({
-        membershipPercent: fc.float({ min: 0.5, max: 5.0 }),
+        membershipPercent: fc.float({ min: 0.5, max: 5.0, noNaN: true }),
         clubCountAbsolute: fc.integer({ min: 1, max: 5 }),
-        distinguishedPercent: fc.float({ min: 1.0, max: 10.0 }),
+        distinguishedPercent: fc.float({ min: 1.0, max: 10.0, noNaN: true }),
       }),
       autoExtensionEnabled: fc.boolean(),
       maxExtensionDays: fc.integer({ min: 1, max: 5 }),
@@ -82,7 +82,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
         fc.record({
           previous: fc.integer({ min: 100, max: 10000 }),
           current: fc.integer({ min: 100, max: 10000 }),
-          percentChange: fc.float({ min: -50, max: 50 }),
+          percentChange: fc.float({ min: -50, max: 50, noNaN: true }),
         })
       ),
       clubCountChange: fc.option(
@@ -96,7 +96,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
         fc.record({
           previous: generateDistinguishedCounts(),
           current: generateDistinguishedCounts(),
-          percentChange: fc.float({ min: -30, max: 30 }),
+          percentChange: fc.float({ min: -30, max: 30, noNaN: true }),
         })
       ),
       timestamp: fc
@@ -168,7 +168,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             'finalizing',
             'completed'
           ),
-          completionPercentage: fc.float({ min: 0, max: 100 }),
+          completionPercentage: fc.float({ min: 0, max: 100, noNaN: true }),
         }),
         metadata: fc.record({
           createdAt: fc
@@ -695,9 +695,17 @@ describe('ProgressTracker - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           generateReconciliationJob(),
-          fc.float({ min: Math.fround(0.1), max: Math.fround(20.0) }), // Membership change percentage
+          fc.float({
+            min: Math.fround(0.1),
+            max: Math.fround(20.0),
+            noNaN: true,
+          }), // Membership change percentage
           fc.integer({ min: 1, max: 50 }), // Club count change
-          fc.float({ min: Math.fround(0.1), max: Math.fround(30.0) }), // Distinguished change percentage
+          fc.float({
+            min: Math.fround(0.1),
+            max: Math.fround(30.0),
+            noNaN: true,
+          }), // Distinguished change percentage
           async (
             job,
             membershipChangePercent,
