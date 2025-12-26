@@ -20,7 +20,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (_error) {
+    } catch (error) {
       // Ignore if directory doesn't exist
     }
   })
@@ -29,7 +29,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (_error) {
+    } catch (error) {
       // Ignore errors
     }
   })

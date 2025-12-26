@@ -38,7 +38,7 @@ async function testScraper() {
     }
 
     console.log('✓ All tests passed!')
-  } catch (_error) {
+  } catch (error) {
     console.error('✗ Test failed:', error)
   } finally {
     // Clean up

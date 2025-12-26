@@ -111,7 +111,7 @@ export class CircuitBreaker {
       const result = await operation()
       this.onSuccess(context)
       return result
-    } catch (_error) {
+    } catch (error) {
       this.onFailure(error instanceof Error ? error : new Error(String(error)), context)
       throw error
     }

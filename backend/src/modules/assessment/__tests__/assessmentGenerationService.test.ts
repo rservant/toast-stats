@@ -34,7 +34,7 @@ describe('AssessmentGenerationService', () => {
     const saveSpy = vi.spyOn(mod, 'saveMonthlyAssessment').mockImplementation(async () => {})
     const getSpy = vi.spyOn(mod, 'getMonthlyAssessment').mockImplementation(async () => null)
 
-    const svc = new AssessmentGenerationService(mockCacheSvc)
+    const svc = new AssessmentGenerationService(mockCacheSvc as any)
 
     const result = await svc.generateMonthlyAssessment({ district_number: 61, program_year: '2024-2025', month: 'July' })
 
@@ -62,7 +62,7 @@ describe('AssessmentGenerationService', () => {
       updated_at: '2024-07-31T00:00:00Z'
     }))
 
-    const svc = new AssessmentGenerationService(mockCacheSvc)
+    const svc = new AssessmentGenerationService(mockCacheSvc as any)
 
     await expect(svc.generateMonthlyAssessment({ district_number: 61, program_year: '2024-2025', month: 'July' })).rejects.toThrow()
 

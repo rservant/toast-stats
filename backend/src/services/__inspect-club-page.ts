@@ -53,7 +53,7 @@ async function inspectClubPage() {
     await page.screenshot({ path: 'club-page-screenshot.png', fullPage: true })
     console.log('\nScreenshot saved to club-page-screenshot.png')
 
-  } catch (_error) {
+  } catch (error) {
     console.error('Error:', _error)
   } finally {
     await browser.close()

@@ -63,7 +63,7 @@ export class ReconciliationStorageManager {
         storageDir: this.storageDir,
         schemaVersion: ReconciliationStorageManager.SCHEMA_VERSION
       })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to initialize reconciliation storage', error)
       throw error
     }
@@ -186,7 +186,7 @@ export class ReconciliationStorageManager {
       
       this.indexCache = index as ReconciliationIndex
       return this.indexCache
-    } catch (_error) {
+    } catch (error) {
       if ((error as any).code === 'ENOENT') {
         // File doesn't exist, create new index
         logger.info('Index file does not exist, creating new index')
@@ -260,7 +260,7 @@ export class ReconciliationStorageManager {
       index.lastUpdated = new Date().toISOString()
       await fs.writeFile(this.indexFile, JSON.stringify(index, null, 2), 'utf-8')
       this.indexCache = index
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to save reconciliation index', error)
       throw error
     }
@@ -410,7 +410,7 @@ export class ReconciliationStorageManager {
       await this.saveIndex(index)
       
       logger.info('Reconciliation job saved', { jobId: job.id, status: job.status })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to save reconciliation job', { jobId: job.id, error })
       throw error
     }
@@ -425,7 +425,7 @@ export class ReconciliationStorageManager {
       const content = await fs.readFile(filePath, 'utf-8')
       const record = JSON.parse(content) as ReconciliationJobRecord
       return this.recordToJob(record)
-    } catch (_error) {
+    } catch (error) {
       logger.info('Reconciliation job not found', { jobId })
       return null
     }
@@ -447,7 +447,7 @@ export class ReconciliationStorageManager {
       }
       
       return jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get all reconciliation jobs', error)
       return []
     }
@@ -470,7 +470,7 @@ export class ReconciliationStorageManager {
       }
       
       return jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get jobs by district', { districtId, error })
       return []
     }
@@ -493,7 +493,7 @@ export class ReconciliationStorageManager {
       }
       
       return jobs.sort((a, b) => b.metadata.createdAt.getTime() - a.metadata.createdAt.getTime())
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get jobs by status', { status, error })
       return []
     }
@@ -546,7 +546,7 @@ export class ReconciliationStorageManager {
       }
 
       return jobs
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get jobs with filters', { options, error })
       return []
     }
@@ -607,7 +607,7 @@ export class ReconciliationStorageManager {
       
       logger.info('Reconciliation job deleted', { jobId })
       return true
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to delete reconciliation job', { jobId, error })
       return false
     }
@@ -638,7 +638,7 @@ export class ReconciliationStorageManager {
       await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
       
       logger.info('Reconciliation timeline saved', { jobId: timeline.jobId })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to save reconciliation timeline', { jobId: timeline.jobId, error })
       throw error
     }
@@ -668,7 +668,7 @@ export class ReconciliationStorageManager {
       }
       
       return timeline
-    } catch (_error) {
+    } catch (error) {
       logger.info('Reconciliation timeline not found', { jobId })
       return null
     }
@@ -681,7 +681,7 @@ export class ReconciliationStorageManager {
     try {
       const content = await fs.readFile(this.configFile, 'utf-8')
       return JSON.parse(content) as ReconciliationConfig
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get reconciliation configuration', error)
       throw error
     }
@@ -695,7 +695,7 @@ export class ReconciliationStorageManager {
       await this.init() // Ensure directories exist
       await fs.writeFile(this.configFile, JSON.stringify(config, null, 2), 'utf-8')
       logger.info('Reconciliation configuration saved')
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to save reconciliation configuration', error)
       throw error
     }
@@ -753,7 +753,7 @@ export class ReconciliationStorageManager {
         jobsByDistrict,
         storageSize
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get storage statistics', error)
       return {
         totalJobs: 0,
@@ -792,7 +792,7 @@ export class ReconciliationStorageManager {
       this.indexCache = null
       
       logger.info('All reconciliation data cleared')
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to clear reconciliation data', error)
       throw error
     }
@@ -826,7 +826,7 @@ export class ReconciliationStorageManager {
       if (jobsToDelete.length > 0) {
         logger.info('Cleaned up old reconciliation jobs', { count: jobsToDelete.length })
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to cleanup old reconciliation jobs', { error })
     }
   }

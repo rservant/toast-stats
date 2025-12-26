@@ -45,7 +45,7 @@ router.get('/stats', async (req, res) => {
         totalOperations: allStats.length
       })
     }
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to get performance stats', { error })
     res.status(500).json({ error: 'Failed to retrieve performance statistics' })
   }
@@ -68,7 +68,7 @@ router.get('/bottlenecks', async (req, res) => {
       mediumSeverityCount: bottlenecks.filter(b => b.severity === 'medium').length,
       lowSeverityCount: bottlenecks.filter(b => b.severity === 'low').length
     })
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to get performance bottlenecks', { error })
     res.status(500).json({ error: 'Failed to retrieve performance bottlenecks' })
   }
@@ -88,7 +88,7 @@ router.get('/report', async (req, res) => {
       generatedAt: new Date().toISOString(),
       timeWindowMs
     })
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to generate performance report', { error })
     res.status(500).json({ error: 'Failed to generate performance report' })
   }
@@ -108,7 +108,7 @@ router.get('/cache', async (_req, res) => {
       storage: storageStats,
       timestamp: new Date().toISOString()
     })
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to get cache stats', { error })
     res.status(500).json({ error: 'Failed to retrieve cache statistics' })
   }
@@ -143,7 +143,7 @@ router.post('/cache/clear', async (req, res) => {
       clearedItems,
       timestamp: new Date().toISOString()
     })
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to clear caches', { error })
     res.status(500).json({ error: 'Failed to clear caches' })
   }
@@ -165,7 +165,7 @@ router.get('/resources', async (req, res) => {
       timeWindowMs,
       dataPoints: resourceMetrics.length
     })
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to get resource metrics', { error })
     res.status(500).json({ error: 'Failed to retrieve resource metrics' })
   }
@@ -232,7 +232,7 @@ router.post('/batch/process', async (req, res) => {
         batchProcessor.cleanup()
       })
     
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to start batch processing', { error })
     res.status(500).json({ error: 'Failed to start batch processing' })
   }
@@ -318,7 +318,7 @@ router.get('/optimization/recommendations', async (req, res) => {
       generatedAt: new Date().toISOString()
     })
     
-  } catch (_error) {
+  } catch (error) {
     logger.error('Failed to generate optimization recommendations', { error })
     res.status(500).json({ error: 'Failed to generate optimization recommendations' })
   }

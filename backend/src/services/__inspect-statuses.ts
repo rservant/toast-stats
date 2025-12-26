@@ -35,7 +35,7 @@ async function inspectStatuses() {
     
     console.log(`\nTotal unique statuses: ${statusArray.length}`)
     
-  } catch (_error) {
+  } catch (error) {
     console.error('Error:', error)
   } finally {
     await scraper.closeBrowser()

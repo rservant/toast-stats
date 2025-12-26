@@ -97,7 +97,7 @@ export class ReconciliationPerformanceMonitor {
     try {
       result = await operation()
       return result
-    } catch (_error) {
+    } catch (error) {
       success = false
       throw error
     } finally {
@@ -261,7 +261,7 @@ export class ReconciliationPerformanceMonitor {
         })
       }
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to record resource metrics', { error })
     }
   }

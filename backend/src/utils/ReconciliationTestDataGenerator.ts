@@ -76,7 +76,7 @@ export class ReconciliationTestDataGenerator {
         try {
           const testData = this.generateTestData(patternName)
           testSets.push(testData)
-        } catch (_error) {
+        } catch (error) {
           logger.warn('Failed to generate test data', { 
             pattern: patternName, 
             iteration: i,

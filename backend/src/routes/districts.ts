@@ -89,7 +89,7 @@ router.get(
       const districts = transformDistrictsResponse(apiResponse) as DistrictsResponse
 
       res.json(districts)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       res.status(500).json({
@@ -121,7 +121,7 @@ router.get(
       const rankings = await toastmastersAPI.getAllDistrictsRankings(date)
 
       res.json(rankings)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       res.status(500).json({
@@ -143,7 +143,7 @@ router.get('/cache/dates', async (_req: Request, res: Response) => {
   try {
     const dates = await toastmastersAPI.getCachedDates()
     res.json({ dates })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -163,7 +163,7 @@ router.get('/cache/statistics', async (_req: Request, res: Response) => {
   try {
     const statistics = await toastmastersAPI.getCacheStatistics()
     res.json(statistics)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -207,7 +207,7 @@ router.get('/cache/metadata/:date', async (req: Request, res: Response) => {
     }
     
     res.json(metadata)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -227,7 +227,7 @@ router.delete('/cache', async (_req: Request, res: Response) => {
   try {
     await toastmastersAPI.clearCache()
     res.json({ success: true, message: 'Cache cleared successfully' })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -266,7 +266,7 @@ router.get('/cache/version', async (_req: Request, res: Response) => {
         2: 'Borda count scoring with percentage-based ranking (current)',
       },
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -296,7 +296,7 @@ router.get('/cache/stats', async (_req: Request, res: Response) => {
 
     const statistics = await cacheManager.getCacheStatistics()
     res.json(statistics)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -316,7 +316,7 @@ router.get('/available-dates', async (_req: Request, res: Response) => {
   try {
     const availableDates = await toastmastersAPI.getAvailableDates()
     res.json(availableDates)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
       error: {
@@ -361,7 +361,7 @@ router.get(
       const statistics = transformDistrictStatisticsResponse(apiResponse) as DistrictStatistics
 
       res.json(statistics)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check if it's a 404 error (district not found)
@@ -437,7 +437,7 @@ router.get(
       const history = transformMembershipHistoryResponse(apiResponse) as MembershipHistoryResponse
 
       res.json(history)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check if it's a 404 error (district not found)
@@ -495,7 +495,7 @@ router.get(
       const clubs = transformClubsResponse(apiResponse) as ClubsResponse
 
       res.json(clubs)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check if it's a 404 error (district not found)
@@ -571,7 +571,7 @@ router.get(
       const awards = transformEducationalAwardsResponse(apiResponse)
 
       res.json(awards)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check if it's a 404 error (district not found)
@@ -707,7 +707,7 @@ router.get(
       const reports = transformDailyReportsResponse(apiResponse) as DailyReportsResponse
 
       res.json(reports)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check if it's a 404 error (district not found)
@@ -794,7 +794,7 @@ router.get(
       const report = transformDailyReportDetailResponse(apiResponse) as DailyReportDetailResponse
 
       res.json(report)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check if it's a 404 error (district or report not found)
@@ -850,7 +850,7 @@ router.get(
       )
 
       res.json(rankHistory)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       res.status(500).json({
@@ -913,7 +913,7 @@ router.post('/backfill', async (req: Request, res: Response) => {
     const status = backfillService.getBackfillStatus(backfillId)
 
     res.json(status)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -947,7 +947,7 @@ router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
     }
 
     res.json(status)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -984,7 +984,7 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
       success: true,
       message: 'Backfill cancelled successfully',
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1042,7 +1042,7 @@ router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
     }
 
     res.json(data)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1088,7 +1088,7 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
       count: dates.length,
       dateRange,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1180,7 +1180,7 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
     const status = districtBackfillService.getBackfillStatus(backfillId)
 
     res.json(status)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     // Check for specific error messages
@@ -1259,7 +1259,7 @@ router.get('/:districtId/backfill/:backfillId', async (req: Request, res: Respon
     }
 
     res.json(status)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1331,7 +1331,7 @@ router.delete('/:districtId/backfill/:backfillId', async (req: Request, res: Res
       success: true,
       message: 'Backfill cancelled successfully',
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1410,7 +1410,7 @@ router.get('/:districtId/membership-analytics', async (req: Request, res: Respon
     )
 
     res.json(analytics)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     // Check for specific error messages
@@ -1517,7 +1517,7 @@ router.get(
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(analytics)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check for specific error messages
@@ -1601,7 +1601,7 @@ router.get(
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(clubTrend)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check for specific error messages
@@ -1669,7 +1669,7 @@ router.get(
         atRiskClubs: atRiskClubs.filter(c => c.currentStatus === 'at-risk').length,
         clubs: atRiskClubs,
       })
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check for specific error messages
@@ -1777,7 +1777,7 @@ router.get(
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(insights)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check for specific error messages
@@ -1885,7 +1885,7 @@ router.get(
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(analytics)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check for specific error messages
@@ -1958,7 +1958,7 @@ router.get(
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(comparison)
-    } catch (_error) {
+    } catch (error) {
       const errorResponse = transformErrorResponse(error)
       
       // Check for specific error messages
@@ -2068,7 +2068,7 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
 
     // Stream the CSV content
     res.send(csvContent)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     // Check for specific error messages

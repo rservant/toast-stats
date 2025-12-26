@@ -197,7 +197,7 @@ export class ReconciliationReplayEngine {
         significantChanges: session.replayState.debugInfo.significantChanges
       })
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Replay execution failed', {
         sessionId,
         step: session.currentStep,
@@ -324,7 +324,7 @@ export class ReconciliationReplayEngine {
         extensionCount: session.replayState.debugInfo.extensionCount
       }
 
-    } catch (_error) {
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       stepResult.errors.push(`Step execution failed: ${errorMessage}`)
       logger.error('Replay step failed', { sessionId: session.id, stepNumber, error: errorMessage })

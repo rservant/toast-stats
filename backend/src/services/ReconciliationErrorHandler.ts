@@ -28,6 +28,7 @@ export interface ReconciliationErrorContext {
   targetMonth?: string
   operation: string
   attempt?: number
+  [key: string]: unknown
 }
 
 export class ReconciliationErrorHandler {
@@ -123,7 +124,7 @@ export class ReconciliationErrorHandler {
       
       return result
 
-    } catch (_error) {
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
       // Track failure
@@ -183,7 +184,7 @@ export class ReconciliationErrorHandler {
       
       return { success: true, result }
 
-    } catch (_error) {
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
       // Track failure

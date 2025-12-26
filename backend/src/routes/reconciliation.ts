@@ -149,7 +149,7 @@ router.get('/jobs', async (_req: Request, res: Response) => {
         limit: limitNum,
       },
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -279,7 +279,7 @@ router.post('/start', async (_req: Request, res: Response) => {
       message: 'Reconciliation started successfully',
       job: transformedJob,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     // Check for specific error types
@@ -366,7 +366,7 @@ router.delete('/jobs/:jobId', async (_req: Request, res: Response) => {
       message: 'Reconciliation cancelled successfully',
       jobId,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -477,7 +477,7 @@ router.get('/jobs/:jobId/status', async (_req: Request, res: Response) => {
     }
 
     res.json(jobStatus)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -568,7 +568,7 @@ router.get('/jobs/:jobId/timeline', async (_req: Request, res: Response) => {
     }
 
     res.json(timelineResponse)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -671,7 +671,7 @@ router.get('/jobs/:jobId/estimate', async (_req: Request, res: Response) => {
     }
 
     res.json(estimateResponse)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -711,7 +711,7 @@ router.get('/config', async (_req: Request, res: Response) => {
       success: true,
       config: configResponse,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -780,7 +780,7 @@ router.put('/config', async (_req: Request, res: Response) => {
       message: 'Configuration updated successfully',
       config: configResponse,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     // Check for specific error types
@@ -836,7 +836,7 @@ router.post('/config/validate', async (_req: Request, res: Response) => {
       warnings: validationResult.warnings || [],
       validatedConfig: validationResult.isValid ? validationResult.validatedConfig : null,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -939,7 +939,7 @@ router.get('/status/:districtId/:targetMonth', async (_req: Request, res: Respon
       targetMonth,
       dataStatus,
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1063,7 +1063,7 @@ router.get('/metrics', async (_req: Request, res: Response) => {
       metrics: monitoringMetrics,
       jobDurations: jobDurations.slice(0, 50) // Limit to recent 50 jobs for performance
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1148,7 +1148,7 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
         byCategory: alertStats.byCategory
       }
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1213,7 +1213,7 @@ router.post('/monitoring/alerts/:alertId/resolve', async (_req: Request, res: Re
       resolvedBy: resolvedBy || null,
       resolvedAt: new Date().toISOString()
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1340,7 +1340,7 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
     }
 
     res.json(healthStatus)
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({
@@ -1380,7 +1380,7 @@ router.post('/monitoring/cleanup', async (_req: Request, res: Response) => {
         timestamp: new Date().toISOString()
       }
     })
-  } catch (_error) {
+  } catch (error) {
     const errorResponse = transformErrorResponse(error)
     
     res.status(500).json({

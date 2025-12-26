@@ -53,7 +53,7 @@ export class DistrictCacheManager {
       const districtDir = path.join(this.cacheDir, 'districts', districtId)
       await fs.mkdir(districtDir, { recursive: true })
       logger.debug('District cache directory initialized', { districtId, districtDir })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to initialize district cache directory', { districtId, error })
       throw error
     }
@@ -130,7 +130,7 @@ export class DistrictCacheManager {
         divisionRecords: divisionPerformance.length,
         clubRecords: clubPerformance.length,
       })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to cache district data', { districtId, date, error })
       
       // Clean up temp file if it exists
@@ -173,7 +173,7 @@ export class DistrictCacheManager {
 
       logger.debug('District cache hit', { districtId, date })
       return data
-    } catch (_error) {
+    } catch (error) {
       if ((error as ErrnoException).code === 'ENOENT') {
         logger.debug('District cache miss', { districtId, date })
         return null
@@ -213,14 +213,14 @@ export class DistrictCacheManager {
         
         // Removed debug log to reduce noise - this is called frequently
         return dates
-      } catch (_error) {
+      } catch (error) {
         if ((error as ErrnoException).code === 'ENOENT') {
           // Directory doesn't exist yet - no need to log, this is expected
           return []
         }
         throw error
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get cached dates for district', { districtId, error })
       return []
     }
@@ -283,7 +283,7 @@ export class DistrictCacheManager {
         startDate: dates[0],
         endDate: dates[dates.length - 1],
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get district data range', { districtId, error })
       return null
     }
@@ -306,7 +306,7 @@ export class DistrictCacheManager {
         await fs.rmdir(districtDir)
         
         logger.info('District cache cleared', { districtId, filesDeleted: files.length })
-      } catch (_error) {
+      } catch (error) {
         if ((error as ErrnoException).code === 'ENOENT') {
           // Directory doesn't exist, nothing to clear
           logger.debug('No cache to clear for district', { districtId })
@@ -314,7 +314,7 @@ export class DistrictCacheManager {
         }
         throw error
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to clear district cache', { districtId, error })
       throw error
     }
@@ -328,7 +328,7 @@ export class DistrictCacheManager {
       const filePath = this.getDistrictCacheFilePath(districtId, date)
       await fs.unlink(filePath)
       logger.info('District cache cleared for date', { districtId, date })
-    } catch (_error) {
+    } catch (error) {
       if ((error as ErrnoException).code === 'ENOENT') {
         logger.debug('No cache to clear for district date', { districtId, date })
         return
@@ -355,7 +355,7 @@ export class DistrictCacheManager {
         
         logger.debug('Retrieved cached districts', { count: districts.length })
         return districts
-      } catch (_error) {
+      } catch (error) {
         if ((error as ErrnoException).code === 'ENOENT') {
           // Districts directory doesn't exist yet
           logger.debug('No cached districts')
@@ -363,7 +363,7 @@ export class DistrictCacheManager {
         }
         throw error
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get cached districts', error)
       return []
     }

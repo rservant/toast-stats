@@ -105,7 +105,7 @@ export class CspExtractorService {
       const val = rec[cspField]
       if (this.isTrueValue(val)) {
         csp_count++
-        clubs_with_csp.push(rec)
+        clubs_with_csp.push(rec as ClubData)
       }
     }
 

@@ -217,7 +217,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
         timelines: timelineOperations.length
       })
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Batch processing failed', { error, operationCount: operations.length })
       throw error
     }

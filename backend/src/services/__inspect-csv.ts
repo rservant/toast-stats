@@ -24,7 +24,7 @@ async function inspectCsv() {
         })
       })
     }
-  } catch (_error) {
+  } catch (error) {
     console.error('Error:', error)
   } finally {
     await scraper.closeBrowser()

@@ -625,7 +625,7 @@ describe('District Leader Goals Service', () => {
         text: 'Goal',
         assigned_to: 'INVALID' as never, // Intentionally invalid for testing
         deadline: '2025-06-30',
-        status: 'in_progress',
+        status: 'in_progress' as const,
         created_at: '2025-11-26T00:00:00.000Z',
         updated_at: '2025-11-26T00:00:00.000Z',
       };

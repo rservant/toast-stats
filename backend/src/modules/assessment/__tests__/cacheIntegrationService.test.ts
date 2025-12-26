@@ -24,7 +24,7 @@ describe('CacheIntegrationService', () => {
 
     const mockManager = new MockCacheManager(sample)
     const cspSvc = new CspExtractorService()
-    const svc = new CacheIntegrationService(mockManager, cspSvc)
+    const svc = new CacheIntegrationService(mockManager as any, cspSvc)
 
     const data = await svc.getCompleteAssessmentDataByDate('61', '2024-07-31')
 
@@ -38,7 +38,7 @@ describe('CacheIntegrationService', () => {
 
   it('getLatestCacheDate returns end date', async () => {
     const mockManager = new MockCacheManager({})
-    const svc = new CacheIntegrationService(mockManager, new CspExtractorService())
+    const svc = new CacheIntegrationService(mockManager as any, new CspExtractorService())
     const latest = await svc.getLatestCacheDate('61')
     expect(latest).toBe('2024-07-31')
   })

@@ -23,7 +23,7 @@ describe('ReconciliationConfigService Integration', () => {
     // Clean up test config file
     try {
       await fs.unlink(testConfigPath)
-    } catch (_error) {
+    } catch (error) {
       // File might not exist, ignore error
     }
   })

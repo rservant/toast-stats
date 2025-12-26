@@ -91,7 +91,7 @@ export class RetryManager {
           totalDuration
         }
 
-      } catch (_error) {
+      } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
         const totalDuration = Date.now() - startTime
 

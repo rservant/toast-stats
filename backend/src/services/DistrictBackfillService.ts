@@ -435,7 +435,7 @@ export class DistrictBackfillService {
         isDataAvailable: true
       }
 
-    } catch (_error) {
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
       logger.error('Critical error in reconciliation data fetch', {
@@ -536,7 +536,7 @@ export class DistrictBackfillService {
 
       return districtStats
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Critical error getting cached reconciliation data', {
         districtId,
         targetDate,
@@ -945,7 +945,7 @@ export class DistrictBackfillService {
 
           // Add a delay to avoid overwhelming the server
           await new Promise((resolve) => setTimeout(resolve, 2000))
-        } catch (_error) {
+        } catch (error) {
           // Check if it's a "date not available" error vs actual failure
           const errorMessage = error instanceof Error ? error.message : String(error)
 
@@ -992,7 +992,7 @@ export class DistrictBackfillService {
         skipped: job.progress.skipped,
         totalProcessed: dates.length,
       })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Error processing district backfill', { backfillId, districtId, error })
       job.status = 'error'
       job.error = error instanceof Error ? error.message : 'Unknown error'

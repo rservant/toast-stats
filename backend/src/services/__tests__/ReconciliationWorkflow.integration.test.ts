@@ -498,7 +498,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         )
         // If it succeeds, that's fine - retry logic worked
         expect(status).toBeDefined()
-      } catch (_error) {
+      } catch (error) {
         // If it fails, verify it's the expected error
         expect((error as Error).message).toContain('Storage unavailable')
       }

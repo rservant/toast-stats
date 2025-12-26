@@ -297,7 +297,7 @@ export class ReconciliationCacheService {
           triggerJobId: jobId,
           prefetchedCount: relatedJobIds.length
         })
-      } catch (_error) {
+      } catch (error) {
         logger.warn('Prefetch failed', { jobId, error })
       }
     }

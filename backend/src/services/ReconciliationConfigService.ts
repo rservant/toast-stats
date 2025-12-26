@@ -68,7 +68,7 @@ export class ReconciliationConfigService {
       cacheService.set(this.cacheKey, config, this.cacheTTL)
       
       return config
-    } catch (_error) {
+    } catch (error) {
       logger.error('Error getting reconciliation config:', error)
       logger.warn('Falling back to default reconciliation configuration')
       return this.defaultConfig
@@ -101,7 +101,7 @@ export class ReconciliationConfigService {
 
       logger.info('Reconciliation configuration updated successfully', { updatedConfig })
       return updatedConfig
-    } catch (_error) {
+    } catch (error) {
       logger.error('Error updating reconciliation config:', error)
       throw error
     }
@@ -206,7 +206,7 @@ export class ReconciliationConfigService {
       cacheService.invalidate(this.cacheKey)
       logger.info('Reconciliation configuration reset to defaults')
       return this.defaultConfig
-    } catch (_error) {
+    } catch (error) {
       logger.error('Error resetting reconciliation config to defaults:', error)
       throw error
     }
@@ -262,7 +262,7 @@ export class ReconciliationConfigService {
         }
         throw fileError
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Error loading config from file:', error)
       return this.defaultConfig
     }
@@ -281,7 +281,7 @@ export class ReconciliationConfigService {
       
       await fs.writeFile(configPath, configData, 'utf-8')
       logger.debug('Reconciliation configuration saved to file', { configPath })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Error saving config to file:', error)
       throw error
     }

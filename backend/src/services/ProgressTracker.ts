@@ -92,7 +92,7 @@ export class ProgressTracker {
         totalEntries: timeline.entries.length 
       })
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to record data update', { jobId, date, error })
       throw error
     }
@@ -150,7 +150,7 @@ export class ProgressTracker {
 
       return timeline
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get reconciliation timeline', { jobId, error })
       throw error
     }
@@ -263,7 +263,7 @@ export class ProgressTracker {
 
       return estimatedCompletion
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to estimate completion', { error })
       return null
     }
@@ -322,7 +322,7 @@ export class ProgressTracker {
         daysStable: timeline.status.daysStable
       })
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to mark reconciliation as finalized', { jobId, finalDate, error })
       throw error
     }
@@ -421,7 +421,7 @@ export class ProgressTracker {
         stabilityPeriod
       }
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get progress statistics', { jobId, error })
       throw error
     }
@@ -694,7 +694,7 @@ export class ProgressTracker {
         stabilityInfo: updatedStabilityInfo
       }
 
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to check finalization readiness', { jobId, error })
       throw error
     }

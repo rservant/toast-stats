@@ -36,7 +36,7 @@ export class CacheManager {
     try {
       await fs.mkdir(this.cacheDir, { recursive: true })
       logger.info('Cache directory initialized', { cacheDir: this.cacheDir })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to initialize cache directory', error)
       throw error
     }
@@ -85,7 +85,7 @@ export class CacheManager {
       const data = await fs.readFile(filePath, 'utf-8')
       logger.info('Cache hit', { date, type })
       return JSON.parse(data)
-    } catch (_error) {
+    } catch (error) {
       logger.info('Cache miss', { date, type })
       return null
     }
@@ -106,7 +106,7 @@ export class CacheManager {
         await this.updateMetadata(date, data)
         await this.updateHistoricalIndex(date, data)
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to cache data', error)
       throw error
     }
@@ -148,7 +148,7 @@ export class CacheManager {
       this.metadataCache.set(date, metadata)
 
       logger.info('Metadata updated', { date, dataCompleteness, districtCount })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to update metadata', { date, error })
       // Don't throw - metadata is supplementary
     }
@@ -209,7 +209,7 @@ export class CacheManager {
         totalDates: indexData.dates.length,
         totalDistricts: indexData.districtIds.length 
       })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to update historical index', { date, error })
       // Don't throw - index is supplementary
     }
@@ -228,7 +228,7 @@ export class CacheManager {
         .map(f => f.replace(prefix, '').replace('.json', ''))
         .sort()
       return dates
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get cached dates', error)
       return []
     }
@@ -260,7 +260,7 @@ export class CacheManager {
       this.indexLoaded = false
       
       logger.info('District rankings cache cleared', { filesDeleted: filesToDelete.length })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to clear cache', error)
       throw error
     }
@@ -274,7 +274,7 @@ export class CacheManager {
       const filePath = this.getCacheFilePath(date, type)
       await fs.unlink(filePath)
       logger.info('Cache cleared for date', { date, type })
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to clear cache for date', error)
       throw error
     }
@@ -326,7 +326,7 @@ export class CacheManager {
       }
       
       return this.metadataCache
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get all metadata', error)
       return new Map()
     }
@@ -371,7 +371,7 @@ export class CacheManager {
         dates: indexData.dates?.length || 0,
         districts: indexData.districtIds?.length || 0 
       })
-    } catch (_error) {
+    } catch (error) {
       logger.warn('Failed to load historical index, will build on demand', error)
       this.indexLoaded = true // Mark as loaded to avoid repeated attempts
     }
@@ -468,7 +468,7 @@ export class CacheManager {
         programYears: Array.from(programYearsSet).sort(),
         cacheSize,
       }
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to get cache statistics', error)
       return {
         totalDates: 0,
@@ -507,7 +507,7 @@ export class CacheManager {
       }
       
       return true
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to check cache version', { date, error })
       return false
     }
@@ -560,7 +560,7 @@ export class CacheManager {
       
       logger.info('Incompatible cache cleanup complete', { clearedCount })
       return clearedCount
-    } catch (_error) {
+    } catch (error) {
       logger.error('Failed to clear incompatible cache', error)
       throw error
     }
