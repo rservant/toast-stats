@@ -79,7 +79,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
   beforeEach(async () => {
     // Initialize test storage with unique paths
-    const testCachePath = `./cache/test-reconciliation-workflow-${Date.now()}`
+    const testCachePath = `./cache/test-reconciliation-workflow-${Math.random().toString(36).substring(2, 8)}`
     storageManager = new ReconciliationStorageOptimizer(testCachePath)
     await storageManager.init()
 

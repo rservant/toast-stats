@@ -278,7 +278,14 @@ export class DistrictCacheManager {
   async getCachedDatesForDistrict(districtId: string): Promise<string[]> {
     try {
       const safeDistrictId = sanitizeDistrictId(districtId)
-      const districtDir = path.join(this.cacheDir, 'districts', safeDistrictId)
+      const districtDir = path.resolve(this.districtRoot, safeDistrictId)
+
+      // Ensure the resolved district directory is still under the districtRoot
+      if (!districtDir.startsWith(this.districtRoot + path.sep)) {
+        throw new Error(
+          `Resolved district cache directory escapes root: ${districtDir}`
+        )
+      }
 
       try {
         const files = await fs.readdir(districtDir)
@@ -297,6 +304,11 @@ export class DistrictCacheManager {
         throw error
       }
     } catch (error) {
+      // Re-throw validation errors (from sanitizeDistrictId)
+      if (error instanceof Error && error.message === 'Invalid district ID') {
+        throw error
+      }
+
       logger.error('Failed to get cached dates for district', {
         districtId,
         error,
@@ -375,7 +387,15 @@ export class DistrictCacheManager {
    */
   async clearDistrictCache(districtId: string): Promise<void> {
     try {
-      const districtDir = path.join(this.cacheDir, 'districts', districtId)
+      const safeDistrictId = sanitizeDistrictId(districtId)
+      const districtDir = path.resolve(this.districtRoot, safeDistrictId)
+
+      // Ensure the resolved district directory is still under the districtRoot
+      if (!districtDir.startsWith(this.districtRoot + path.sep)) {
+        throw new Error(
+          `Resolved district cache directory escapes root: ${districtDir}`
+        )
+      }
 
       try {
         const files = await fs.readdir(districtDir)
@@ -438,7 +458,7 @@ export class DistrictCacheManager {
    */
   async getCachedDistricts(): Promise<string[]> {
     try {
-      const districtsDir = path.join(this.cacheDir, 'districts')
+      const districtsDir = this.districtRoot
 
       try {
         const entries = await fs.readdir(districtsDir, { withFileTypes: true })

@@ -255,4 +255,94 @@ describe('DistrictCacheManager', () => {
       expect(districts).toEqual(['10', '42', '5', '99'])
     })
   })
+
+  describe('security validation', () => {
+    it('should reject district IDs with path traversal attempts', async () => {
+      const maliciousIds = [
+        '../../../etc/passwd',
+        '..\\..\\windows\\system32',
+        '../test',
+        'test/../other',
+      ]
+
+      for (const maliciousId of maliciousIds) {
+        await expect(
+          cacheManager.cacheDistrictData(maliciousId, '2024-11-22', [], [], [])
+        ).rejects.toThrow('Invalid districtId for cache directory')
+
+        await expect(
+          cacheManager.getDistrictData(maliciousId, '2024-11-22')
+        ).rejects.toThrow('Invalid districtId for cache file path')
+
+        await expect(
+          cacheManager.getCachedDatesForDistrict(maliciousId)
+        ).rejects.toThrow('Invalid district ID')
+
+        await expect(
+          cacheManager.clearDistrictCache(maliciousId)
+        ).rejects.toThrow('Invalid district ID')
+      }
+    })
+
+    it('should reject district IDs with special characters', async () => {
+      const invalidIds = [
+        'test/path',
+        'test\\path',
+        'test:path',
+        'test*path',
+        'test?path',
+        'test<path',
+        'test>path',
+        'test|path',
+      ]
+
+      for (const invalidId of invalidIds) {
+        await expect(
+          cacheManager.cacheDistrictData(invalidId, '2024-11-22', [], [], [])
+        ).rejects.toThrow('Invalid districtId for cache directory')
+
+        await expect(
+          cacheManager.getCachedDatesForDistrict(invalidId)
+        ).rejects.toThrow('Invalid district ID')
+      }
+    })
+
+    it('should accept valid district IDs', async () => {
+      const validIds = [
+        '42',
+        'D42',
+        'district-123',
+        'district_456',
+        'ABC-123_XYZ',
+      ]
+
+      for (const validId of validIds) {
+        await expect(
+          cacheManager.cacheDistrictData(validId, '2024-11-22', [], [], [])
+        ).resolves.not.toThrow()
+
+        await expect(
+          cacheManager.getCachedDatesForDistrict(validId)
+        ).resolves.not.toThrow()
+
+        await expect(
+          cacheManager.clearDistrictCache(validId)
+        ).resolves.not.toThrow()
+      }
+    })
+
+    it('should reject invalid date formats that could be path traversal', async () => {
+      const invalidDates = ['../../../etc/passwd', '2024/11/22', '2024.11.22']
+
+      for (const invalidDate of invalidDates) {
+        await expect(
+          cacheManager.cacheDistrictData('42', invalidDate, [], [], [])
+        ).rejects.toThrow('Invalid date for cache file path')
+
+        await expect(
+          cacheManager.getDistrictData('42', invalidDate)
+        ).rejects.toThrow('Invalid date for cache file path')
+      }
+    })
+  })
 })
