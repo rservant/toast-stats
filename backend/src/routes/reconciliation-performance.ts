@@ -7,7 +7,10 @@ import { logger } from '../utils/logger.js'
 import { ReconciliationPerformanceMonitor } from '../services/ReconciliationPerformanceMonitor.js'
 import { ReconciliationCacheService } from '../services/ReconciliationCacheService.js'
 import { ReconciliationStorageOptimizer } from '../services/ReconciliationStorageOptimizer.js'
-import { ReconciliationBatchProcessor } from '../services/ReconciliationBatchProcessor.js'
+import {
+  ReconciliationBatchProcessor,
+  BatchProcessingConfig,
+} from '../services/ReconciliationBatchProcessor.js'
 
 const router = express.Router()
 
@@ -202,7 +205,7 @@ router.post('/batch/process', async (req, res) => {
     }
 
     // Validate and sanitize batch processing config to prevent resource exhaustion
-    const safeConfig: any = {}
+    const safeConfig: Partial<BatchProcessingConfig> = {}
     if (config && typeof config === 'object') {
       const {
         maxConcurrentJobs,
@@ -228,12 +231,7 @@ router.post('/batch/process', async (req, res) => {
         return value
       }
 
-      safeConfig.maxConcurrentJobs = clampNumber(
-        maxConcurrentJobs,
-        1,
-        20,
-        5
-      )
+      safeConfig.maxConcurrentJobs = clampNumber(maxConcurrentJobs, 1, 20, 5)
       safeConfig.batchSize = clampNumber(batchSize, 1, 100, 20)
       safeConfig.retryAttempts = clampNumber(retryAttempts, 0, 10, 3)
       safeConfig.retryDelayMs = clampNumber(retryDelayMs, 100, 600000, 5000)
