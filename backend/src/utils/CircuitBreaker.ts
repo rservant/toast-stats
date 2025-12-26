@@ -79,7 +79,7 @@ export class CircuitBreaker {
    */
   async execute<T>(
     operation: () => Promise<T>,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ): Promise<T> {
     this.totalRequests++
 
@@ -111,7 +111,7 @@ export class CircuitBreaker {
       const result = await operation()
       this.onSuccess(context)
       return result
-    } catch (error) {
+    } catch (_error) {
       this.onFailure(error instanceof Error ? error : new Error(String(error)), context)
       throw error
     }
@@ -163,7 +163,7 @@ export class CircuitBreaker {
   /**
    * Handle successful operation
    */
-  private onSuccess(context: Record<string, any>): void {
+  private onSuccess(context: Record<string, unknown>): void {
     this.totalSuccesses++
     this.lastSuccessTime = new Date()
 
@@ -188,7 +188,7 @@ export class CircuitBreaker {
   /**
    * Handle failed operation
    */
-  private onFailure(error: Error, context: Record<string, any>): void {
+  private onFailure(error: Error, context: Record<string, unknown>): void {
     // Check if this error should count as a failure
     if (!this.options.expectedErrors!(error)) {
       logger.debug('Error not counted as circuit breaker failure', {

@@ -4,6 +4,19 @@
 
 import { chromium } from 'playwright'
 
+// DOM type declarations for browser context
+declare global {
+  interface Element {
+    textContent: string | null;
+    id: string;
+    tagName: string;
+    className: string;
+  }
+  interface HTMLInputElement extends Element {
+    value: string;
+  }
+}
+
 async function inspectPage() {
   const browser = await chromium.launch({ headless: false })
   const page = await browser.newPage()
@@ -52,8 +65,8 @@ async function inspectPage() {
 
     console.log('\n\nPress Ctrl+C to close the browser...')
     await page.waitForTimeout(300000) // Wait 5 minutes so you can inspect manually
-  } catch (error) {
-    console.error('Error:', error)
+  } catch (_error) {
+    console.error('Error:', _error)
   } finally {
     await browser.close()
   }

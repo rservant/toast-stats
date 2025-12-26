@@ -84,7 +84,7 @@ export class CspExtractorService {
   /**
    * Extract CSP count from an array of club record objects
    */
-  extractCspCount(clubRecords: Record<string, any>[]): ExtractResult {
+  extractCspCount(clubRecords: Record<string, unknown>[]): ExtractResult {
     const total_clubs = clubRecords.length
 
     if (total_clubs === 0) {

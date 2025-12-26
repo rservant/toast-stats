@@ -26,7 +26,7 @@ export class ReconciliationScheduler {
   private storageManager: ReconciliationStorageManager
   private scheduledReconciliations: Map<string, ScheduledReconciliation> = new Map()
   private isRunning: boolean = false
-  private checkInterval?: NodeJS.Timeout
+  private checkInterval?: ReturnType<typeof setTimeout>
 
   constructor(
     orchestrator?: ReconciliationOrchestrator,
@@ -167,7 +167,7 @@ export class ReconciliationScheduler {
 
       return allJobs
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to check pending reconciliations', { error })
       throw error
     }
@@ -187,7 +187,7 @@ export class ReconciliationScheduler {
       await this.orchestrator.cancelReconciliation(jobId)
 
       // Also remove from scheduled reconciliations if it exists
-      for (const [_key, scheduled] of this.scheduledReconciliations.entries()) {
+      for (const [, scheduled] of this.scheduledReconciliations.entries()) {
         if (scheduled.status === 'pending') {
           // We don't have the job ID for pending schedules, so we can't match directly
           // This is handled by the orchestrator for active jobs
@@ -197,7 +197,7 @@ export class ReconciliationScheduler {
 
       logger.info('Reconciliation cancelled successfully', { jobId })
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to cancel reconciliation', { jobId, error })
       throw error
     }
@@ -241,7 +241,7 @@ export class ReconciliationScheduler {
           await this.scheduleMonthEndReconciliation(districtId, previousMonth)
           scheduledCount++
         }
-      } catch (error) {
+      } catch (_error) {
         // Log error but continue with other districts
         logger.warn('Failed to auto-schedule reconciliation for district', { 
           districtId, 
@@ -277,7 +277,7 @@ export class ReconciliationScheduler {
       if (autoScheduledCount > 0) {
         logger.info('Auto-scheduled reconciliations for month transition', { count: autoScheduledCount })
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to auto-schedule for month transition', { error })
     }
 
@@ -316,7 +316,7 @@ export class ReconciliationScheduler {
             jobId: job.id
           })
 
-        } catch (error) {
+        } catch (_error) {
           // Mark as failed and increment attempts
           scheduled.status = 'failed'
           scheduled.attempts++
@@ -383,7 +383,7 @@ export class ReconciliationScheduler {
     // Also clean up old completed reconciliation jobs via storage manager
     try {
       await this.storageManager.cleanupOldJobs()
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to cleanup old reconciliation jobs', { error })
     }
   }

@@ -39,9 +39,11 @@ describe('Phase 3 Verification - Assessment Calculator vs. expected targets', ()
         paid_clubs_ytd: monthData.paid_clubs_ytd,
         distinguished_clubs_ytd: monthData.distinguished_clubs_ytd,
         csp_submissions_ytd: monthData.csp_submissions_ytd,
-      } as any;
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      };
 
-      const result = calculateAllGoals(assessment, config as any);
+      const result = calculateAllGoals(assessment, config);
 
       // Expected Goal 1
       const monthNumber = getMonthNumber(monthData.month);

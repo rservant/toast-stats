@@ -35,7 +35,7 @@ async function initializeReconciliation(): Promise<void> {
     const status = await runner.getStatus()
     logger.info('System status', status)
     
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to initialize reconciliation system', error)
     process.exit(1)
   }

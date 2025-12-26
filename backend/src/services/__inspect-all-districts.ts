@@ -24,7 +24,7 @@ async function inspectAllDistricts() {
         })
       })
     }
-  } catch (error) {
+  } catch (_error) {
     console.error('Error:', error)
   } finally {
     await scraper.closeBrowser()

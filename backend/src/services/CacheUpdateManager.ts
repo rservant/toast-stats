@@ -102,7 +102,7 @@ export class CacheUpdateManager {
 
       return result
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to update cache', { districtId, date, error })
       result.error = error as Error
 
@@ -186,7 +186,7 @@ export class CacheUpdateManager {
 
       return result
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Cache consistency check failed', { districtId, date, error })
       result.consistent = false
       result.cacheIntegrity = false
@@ -226,7 +226,7 @@ export class CacheUpdateManager {
       logger.debug('Cache backup created', { districtId, date, backupKey })
       return true
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to create cache backup', { districtId, date, error })
       return false
     }
@@ -270,7 +270,7 @@ export class CacheUpdateManager {
 
       logger.info('Cache rollback completed', { districtId, date })
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Cache rollback failed', { districtId, date, error })
       throw error
     }
@@ -413,7 +413,7 @@ export class CacheUpdateManager {
       const backupDistrictId = `${districtId}${this.backupSuffix}`
       await this.cacheManager.clearDistrictCache(backupDistrictId)
       logger.debug('Backup cleanup completed', { districtId })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to cleanup backups', { districtId, error })
       // Don't throw - cleanup failures shouldn't break the main flow
     }

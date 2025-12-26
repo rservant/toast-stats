@@ -11,7 +11,7 @@ import { CacheManager } from './CacheManager.js'
 
 // Interface for API service that can fetch rankings
 interface ToastmastersAPIService {
-  getAllDistrictsRankings(date?: string): Promise<any>
+  getAllDistrictsRankings(date?: string): Promise<unknown>
 }
 
 export class BackfillService {
@@ -212,7 +212,7 @@ export class BackfillService {
 
           // Add a delay to avoid overwhelming the server
           await new Promise((resolve) => setTimeout(resolve, 2000))
-        } catch (error) {
+        } catch (_error) {
           // Check if it's a "date not available" error vs actual failure
           const errorMessage = error instanceof Error ? error.message : String(error)
           
@@ -246,7 +246,7 @@ export class BackfillService {
         skipped: job.progress.skipped,
         totalProcessed: dates.length,
       })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error processing backfill', { backfillId, error })
       job.status = 'error'
       job.error = error instanceof Error ? error.message : 'Unknown error'

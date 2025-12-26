@@ -115,7 +115,7 @@ export class ToastmastersScraper {
       logger.info('CSV downloaded successfully', { size: csvContent.length })
       
       return csvContent
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to download CSV', error)
       throw new Error(`CSV download failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
@@ -150,7 +150,7 @@ export class ToastmastersScraper {
       })
       
       return filteredRecords
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to parse CSV', error)
       throw new Error(`CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
@@ -357,7 +357,7 @@ export class ToastmastersScraper {
       
       logger.info('Successfully parsed date', { month, day, year, selectedText })
       return { month, day, year, dateString: selectedText }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get selected date', error)
       return null
     }

@@ -48,7 +48,7 @@ export interface MonthlyAssessment {
   generated_at?: string;
   generated_from_cache_date?: string;
   read_only?: boolean;
-  data_sources?: Record<string, any>;
+  data_sources?: Record<string, unknown>;
   notes?: string;
   created_at: string; // ISO 8601 timestamp
   updated_at: string;

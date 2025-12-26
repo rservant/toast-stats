@@ -57,7 +57,7 @@ export class RetryManager {
   static async executeWithRetry<T>(
     operation: () => Promise<T>,
     options: Partial<RetryOptions> = {},
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ): Promise<RetryResult<T>> {
     const config = { ...RetryManager.DEFAULT_OPTIONS, ...options }
     const startTime = Date.now()
@@ -91,7 +91,7 @@ export class RetryManager {
           totalDuration
         }
 
-      } catch (error) {
+      } catch (_error) {
         lastError = error instanceof Error ? error : new Error(String(error))
         const totalDuration = Date.now() - startTime
 
@@ -155,7 +155,7 @@ export class RetryManager {
    * @param options - Retry configuration options
    * @returns A function that executes with retry logic
    */
-  static createRetryableFunction<T extends any[], R>(
+  static createRetryableFunction<T extends unknown[], R>(
     operation: (...args: T) => Promise<R>,
     options: Partial<RetryOptions> = {}
   ): (...args: T) => Promise<R> {

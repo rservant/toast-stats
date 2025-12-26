@@ -30,7 +30,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   private indexCacheTimestamp: number = 0
   private config: StorageOptimizationConfig
   private pendingOperations = new Map<string, BatchOperation<any>>()
-  private batchTimer: NodeJS.Timeout | null = null
+  private batchTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
     storageDir: string = './cache/reconciliation',
@@ -217,7 +217,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
         timelines: timelineOperations.length
       })
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Batch processing failed', { error, operationCount: operations.length })
       throw error
     }

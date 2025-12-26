@@ -86,7 +86,7 @@ export class ReconciliationMigrationRunner {
       const filePath = path.join(this.migrationsDir, filename)
       
       await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Failed to record migration', { migration: migration.version, direction, error })
       // Don't throw - migration recording is not critical
     }
@@ -124,14 +124,14 @@ export class ReconciliationMigrationRunner {
           await this.recordMigration(migration, 'up')
           
           logger.info('Migration applied successfully', { version: migration.version })
-        } catch (error) {
+        } catch (_error) {
           logger.error('Migration failed', { version: migration.version, error })
           throw new Error(`Migration ${migration.version} failed: ${error}`)
         }
       }
 
       logger.info('All migrations completed successfully')
-    } catch (error) {
+    } catch (_error) {
       logger.error('Migration process failed', error)
       throw error
     }
@@ -171,7 +171,7 @@ export class ReconciliationMigrationRunner {
           await this.recordMigration(migration, 'down')
           
           logger.info('Migration rolled back successfully', { version: migration.version })
-        } catch (error) {
+        } catch (_error) {
           logger.error('Migration rollback failed', { version: migration.version, error })
           throw new Error(`Migration ${migration.version} rollback failed: ${error}`)
         }
@@ -183,7 +183,7 @@ export class ReconciliationMigrationRunner {
       await this.updateSchemaVersion(targetVersion, description)
 
       logger.info('Rollback completed successfully', { targetVersion })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Rollback process failed', error)
       throw error
     }
@@ -227,7 +227,7 @@ export class ReconciliationMigrationRunner {
         pendingMigrations,
         lastMigration
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get migration status', error)
       throw error
     }
@@ -257,7 +257,7 @@ export class ReconciliationMigrationRunner {
         if (!config.stabilityPeriodDays || config.stabilityPeriodDays <= 0) {
           errors.push('Invalid stabilityPeriodDays in configuration')
         }
-      } catch (error) {
+      } catch (_error) {
         errors.push(`Configuration validation failed: ${error}`)
       }
 
@@ -265,7 +265,7 @@ export class ReconciliationMigrationRunner {
       try {
         const jobs = await this.storageManager.getAllJobs()
         logger.info('Integrity check: jobs loaded', { count: jobs.length })
-      } catch (error) {
+      } catch (_error) {
         errors.push(`Job loading failed: ${error}`)
       }
 
@@ -273,7 +273,7 @@ export class ReconciliationMigrationRunner {
       try {
         const stats = await this.storageManager.getStorageStats()
         logger.info('Integrity check: storage stats', stats)
-      } catch (error) {
+      } catch (_error) {
         warnings.push(`Storage statistics unavailable: ${error}`)
       }
 
@@ -281,7 +281,7 @@ export class ReconciliationMigrationRunner {
       logger.info('Data integrity validation completed', { valid, errors: errors.length, warnings: warnings.length })
 
       return { valid, errors, warnings }
-    } catch (error) {
+    } catch (_error) {
       errors.push(`Integrity validation failed: ${error}`)
       return { valid: false, errors, warnings }
     }
@@ -325,7 +325,7 @@ export async function runMigrations(command: string = 'migrate', targetVersion?:
       default:
         throw new Error(`Unknown command: ${command}`)
     }
-  } catch (error) {
+  } catch (_error) {
     logger.error('Migration command failed', { command, error })
     process.exit(1)
   }

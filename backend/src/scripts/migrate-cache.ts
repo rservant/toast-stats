@@ -82,7 +82,7 @@ async function main() {
     console.log('  3. New cache will use v' + currentVersion + ' format')
     console.log()
 
-  } catch (error) {
+  } catch (_error) {
     console.error()
     console.error('✗ Migration failed:', error)
     logger.error('Cache migration failed', error)

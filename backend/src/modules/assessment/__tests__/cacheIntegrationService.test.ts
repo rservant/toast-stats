@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest'
 import CacheIntegrationService from '../services/cacheIntegrationService.js'
 import { CspExtractorService } from '../services/cspExtractorService.js'
 
-class MockCacheManager {
+interface MockCacheManagerInterface {
+  getDistrictData(districtId: string, date: string): Promise<unknown>;
+  getDistrictDataRange(): Promise<{ startDate: string; endDate: string }>;
+}
+
+class MockCacheManager implements MockCacheManagerInterface {
   private data: unknown
   constructor(data: unknown) { this.data = data }
   async getDistrictData(_districtId: string, _date: string) { return this.data }
@@ -19,7 +24,7 @@ describe('CacheIntegrationService', () => {
 
     const mockManager = new MockCacheManager(sample)
     const cspSvc = new CspExtractorService()
-    const svc = new CacheIntegrationService(mockManager as any, cspSvc)
+    const svc = new CacheIntegrationService(mockManager, cspSvc)
 
     const data = await svc.getCompleteAssessmentDataByDate('61', '2024-07-31')
 
@@ -33,7 +38,7 @@ describe('CacheIntegrationService', () => {
 
   it('getLatestCacheDate returns end date', async () => {
     const mockManager = new MockCacheManager({})
-    const svc = new CacheIntegrationService(mockManager as any, new CspExtractorService())
+    const svc = new CacheIntegrationService(mockManager, new CspExtractorService())
     const latest = await svc.getLatestCacheDate('61')
     expect(latest).toBe('2024-07-31')
   })

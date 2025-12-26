@@ -16,6 +16,11 @@ import { loadConfig } from '../services/configService.js';
 // types used by services and storage
 import AssessmentGenerationService from '../services/assessmentGenerationService.js';
 import CacheIntegrationService from '../services/cacheIntegrationService.js';
+import type { MonthlyAssessment } from '../types/assessment.js';
+
+interface AssessmentWithReadOnly extends MonthlyAssessment {
+  read_only?: boolean;
+}
 
 const router = Router();
 
@@ -109,7 +114,7 @@ router.post(
         if (month === currentMonth) {
           const cacheSvc = new CacheIntegrationService();
           const dates = await cacheSvc.getAvailableDates(String(district_number));
-          const available = (dates || []).map((d: any) => d.date);
+          const available = (dates || []).map((d: { date: string }) => d.date);
           if (!available.includes(prevLastStr)) {
             res.status(400).json({
               error: {
@@ -186,7 +191,7 @@ router.get(
       success: true,
       data: assessment,
       audit_trail: audit,
-      read_only: !!(assessment as any)?.read_only,
+      read_only: !!(assessment as AssessmentWithReadOnly)?.read_only,
       immutable: true,
     });
   })

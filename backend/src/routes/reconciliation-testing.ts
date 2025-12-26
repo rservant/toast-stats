@@ -44,7 +44,7 @@ router.get('/scenarios', async (_req: Request, res: Response) => {
         count: scenarios.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to get simulation scenarios', { error })
     res.status(500).json({
       success: false,
@@ -80,7 +80,7 @@ router.post('/scenarios', async (_req: Request, res: Response) => {
         scenarioName: scenario.name
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to create custom scenario', { error })
     res.status(500).json({
       success: false,
@@ -117,7 +117,7 @@ router.post('/simulate/:scenarioName', async (_req: Request, res: Response) => {
         changeEventsCount: result.changeEvents.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Simulation failed', { scenarioName: _req.params.scenarioName, error })
     res.status(500).json({
       success: false,
@@ -164,7 +164,7 @@ router.post('/simulate/batch', async (_req: Request, res: Response) => {
         }
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Batch simulation failed', { error })
     res.status(500).json({
       success: false,
@@ -188,7 +188,7 @@ router.get('/test-data/patterns', async (_req: Request, res: Response) => {
         count: patterns.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to get test data patterns', { error })
     res.status(500).json({
       success: false,
@@ -222,7 +222,7 @@ router.post('/test-data/generate/:pattern', async (_req: Request, res: Response)
         metadata: testData.metadata
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Test data generation failed', { pattern: _req.params.pattern, error })
     res.status(500).json({
       success: false,
@@ -278,7 +278,7 @@ router.post('/test-data/batch', async (_req: Request, res: Response) => {
         }
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Batch test data generation failed', { error })
     res.status(500).json({
       success: false,
@@ -309,7 +309,7 @@ router.get('/test-data/edge-cases', async (_req: Request, res: Response) => {
         count: edgeCases.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Edge case generation failed', { error })
     res.status(500).json({
       success: false,
@@ -352,7 +352,7 @@ router.post('/test-data/property-tests/:property', async (_req: Request, res: Re
         count: testCases.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Property test case generation failed', { property: _req.params.property, error })
     res.status(500).json({
       success: false,
@@ -391,7 +391,7 @@ router.post('/replay/sessions', async (_req: Request, res: Response) => {
         originalEntriesCount: session.originalTimeline.entries.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Replay session creation failed', { error })
     res.status(500).json({
       success: false,
@@ -423,7 +423,7 @@ router.get('/replay/sessions', async (_req: Request, res: Response) => {
         count: sessions.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to get replay sessions', { error })
     res.status(500).json({
       success: false,
@@ -467,7 +467,7 @@ router.get('/replay/sessions/:sessionId', async (_req: Request, res: Response) =
         }
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Failed to get replay session', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
@@ -511,7 +511,7 @@ router.post('/replay/sessions/:sessionId/execute', async (_req: Request, res: Re
         processedEntries: session.replayState.processedEntries.length
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Replay execution failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
@@ -535,7 +535,7 @@ router.get('/replay/sessions/:sessionId/export', async (_req: Request, res: Resp
       success: true,
       data: exportData
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Replay export failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
@@ -559,7 +559,7 @@ router.get('/replay/sessions/:sessionId/compare', async (_req: Request, res: Res
       success: true,
       data: comparison
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Replay comparison failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,
@@ -592,7 +592,7 @@ router.delete('/replay/sessions/:sessionId', async (_req: Request, res: Response
         message: 'Replay session deleted successfully'
       }
     })
-  } catch (error) {
+  } catch (_error) {
     logger.error('Replay session deletion failed', { sessionId: _req.params.sessionId, error })
     res.status(500).json({
       success: false,

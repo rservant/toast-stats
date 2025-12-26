@@ -505,7 +505,7 @@ describe('Assessment Report Generator', () => {
     it('should detect invalid goal status values', () => {
       const assessment = createAssessment('August', 25, 3, 5, 20);
       const report = renderMonthlyReport(assessment, mockConfig);
-      report.goal_1.status = null as any; // Invalid
+      report.goal_1.status = null as never; // Invalid - testing error handling
 
       const validation = validateReportStructure(report);
 

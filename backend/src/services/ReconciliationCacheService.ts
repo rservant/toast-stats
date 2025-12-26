@@ -49,7 +49,7 @@ export class ReconciliationCacheService {
     prefetches: 0
   }
   
-  private cleanupTimer: NodeJS.Timeout | null = null
+  private cleanupTimer: ReturnType<typeof setTimeout> | null = null
   private config: CacheConfig
 
   constructor(config: Partial<CacheConfig> = {}) {
@@ -297,7 +297,7 @@ export class ReconciliationCacheService {
           triggerJobId: jobId,
           prefetchedCount: relatedJobIds.length
         })
-      } catch (error) {
+      } catch (_error) {
         logger.warn('Prefetch failed', { jobId, error })
       }
     }

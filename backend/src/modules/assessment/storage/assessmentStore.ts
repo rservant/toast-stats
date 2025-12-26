@@ -14,6 +14,10 @@ interface ErrnoException extends Error {
   syscall?: string;
 }
 
+interface AssessmentWithDataSources extends MonthlyAssessment {
+  data_sources?: Record<string, { cache_file?: string }>;
+}
+
 const DATA_DIR = path.resolve(__dirname, 'data');
 
 /**
@@ -132,7 +136,7 @@ export async function deleteMonthlyAssessment(
     const filePath = getAssessmentPath(districtNumber, programYear, month);
     await fs.unlink(filePath);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       // File doesn't exist, return silently (idempotent)
       return;
     }
@@ -162,7 +166,7 @@ export async function listMonthlyAssessments(
     
     return assessments.sort((a, b) => a.month.localeCompare(b.month));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       return [];
     }
     throw err;
@@ -181,12 +185,13 @@ export async function getAuditTrail(
   if (!assessment) return { created_at: null }
 
   const created_at = assessment.created_at ?? null
-  const generated_from_cache_date = (assessment as any).generated_from_cache_date ?? null
+  const assessmentWithSources = assessment as AssessmentWithDataSources
+  const generated_from_cache_date = assessmentWithSources.generated_from_cache_date ?? null
   const cache_files_used: string[] = []
 
-  if ((assessment as any).data_sources) {
-    for (const key of Object.keys((assessment as any).data_sources)) {
-      const entry = (assessment as any).data_sources[key]
+  if (assessmentWithSources.data_sources) {
+    for (const key of Object.keys(assessmentWithSources.data_sources)) {
+      const entry = assessmentWithSources.data_sources[key]
       if (entry && entry.cache_file) cache_files_used.push(entry.cache_file)
     }
   }
@@ -206,7 +211,7 @@ export async function saveGoal(goal: DistrictLeaderGoal): Promise<void> {
     const data = await fs.readFile(filePath, 'utf-8');
     goals = JSON.parse(data) as DistrictLeaderGoal[];
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if ((err as ErrnoException).code !== 'ENOENT') {
       throw err;
     }
   }
@@ -243,7 +248,7 @@ export async function getGoal(id: string): Promise<DistrictLeaderGoal | null> {
     
     return null;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       return null;
     }
     throw err;
@@ -262,7 +267,7 @@ export async function listGoals(
     const data = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(data) as DistrictLeaderGoal[];
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       return [];
     }
     throw err;
@@ -288,7 +293,7 @@ export async function deleteGoal(districtNumber: number, programYear: string, go
     
     return false;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       return false;
     }
     throw err;
@@ -313,7 +318,7 @@ export async function getConfig(districtNumber: number, programYear: string): Pr
     const data = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(data) as DistrictConfig;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as ErrnoException).code === 'ENOENT') {
       return null;
     }
     throw err;

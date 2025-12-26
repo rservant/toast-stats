@@ -6,7 +6,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import _reconciliationRouter from '../reconciliation.js'
 import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.js'
 import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.js'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
@@ -89,7 +88,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         res.json(jobStatus)
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({
           error: {
             code: 'STATUS_ERROR',
@@ -139,7 +138,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         res.json(timelineResponse)
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({
           error: {
             code: 'TIMELINE_ERROR',
@@ -209,7 +208,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
         }
 
         res.json(estimateResponse)
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({
           error: {
             code: 'ESTIMATE_ERROR',
@@ -241,7 +240,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           success: true,
           config: configResponse,
         })
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({
           error: {
             code: 'CONFIG_ERROR',
@@ -299,7 +298,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           message: 'Configuration updated successfully',
           config: configResponse,
         })
-      } catch (error) {
+      } catch (_error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to update configuration'
         
         if (errorMessage.includes('validation')) {
@@ -344,7 +343,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
           warnings: validationResult.warnings || [],
           validatedConfig: validationResult.isValid ? validationResult.validatedConfig : null,
         })
-      } catch (error) {
+      } catch (_error) {
         res.status(500).json({
           error: {
             code: 'VALIDATION_ERROR',
@@ -364,7 +363,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
     // Cleanup test data
     try {
       await storageManager.clearAll()
-    } catch (error) {
+    } catch (_error) {
       // Ignore cleanup errors
     }
   })

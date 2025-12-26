@@ -80,7 +80,18 @@ export function transformDailyReportsResponse(apiResponse: unknown): unknown {
 
   // Transform the API response to match our internal format
   // This handles aggregated daily reports for a date range
-  const response = apiResponse as any
+  
+  interface ApiResponse {
+    reports?: Array<{
+      date: string;
+      newMembers: number;
+      renewals: number;
+      clubChanges?: unknown[];
+      awards?: number;
+    }>;
+  }
+  
+  const response = apiResponse as ApiResponse
   
   if (!Array.isArray(response.reports)) {
     // If the API returns data in a different structure, adapt it
@@ -88,8 +99,8 @@ export function transformDailyReportsResponse(apiResponse: unknown): unknown {
   }
 
   // Calculate day-over-day changes for each report
-  const reports = response.reports.map((report: any, index: number) => {
-    const previousReport = index > 0 ? response.reports[index - 1] : null
+  const reports = response.reports.map((report, index: number) => {
+    const previousReport = index > 0 ? response.reports![index - 1] : null
     const dayOverDayChange = previousReport 
       ? (report.newMembers - report.renewals) - (previousReport.newMembers - previousReport.renewals)
       : 0
@@ -118,7 +129,14 @@ export function transformDailyReportDetailResponse(apiResponse: unknown): unknow
     throw new Error('Invalid daily report detail response format')
   }
 
-  const response = apiResponse as any
+  const response = apiResponse as {
+    date?: string;
+    newMembers?: unknown[];
+    renewals?: unknown[];
+    clubChanges?: unknown[];
+    awards?: unknown[];
+    dayOverDayChange?: number;
+  }
 
   // Calculate summary metrics
   const totalNewMembers = Array.isArray(response.newMembers) ? response.newMembers.length : 0
@@ -153,7 +171,12 @@ export function transformEducationalAwardsResponse(apiResponse: unknown): unknow
 
   // Transform the API response to match our internal format
   // This handles educational awards with monthly breakdown
-  const response = apiResponse as any
+  const response = apiResponse as {
+    totalAwards?: number;
+    byType?: unknown[];
+    topClubs?: unknown[];
+    byMonth?: unknown[];
+  }
 
   return {
     totalAwards: response.totalAwards || 0,

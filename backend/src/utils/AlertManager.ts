@@ -29,7 +29,7 @@ export interface Alert {
   category: AlertCategory
   title: string
   message: string
-  context: Record<string, any>
+  context: Record<string, unknown>
   resolved: boolean
   resolvedAt?: Date
   acknowledgedBy?: string
@@ -77,7 +77,7 @@ export class AlertManager {
     category: AlertCategory,
     title: string,
     message: string,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ): Promise<string | null> {
     const alertId = this.generateAlertId(category, title)
     
@@ -181,7 +181,7 @@ export class AlertManager {
     districtId: string,
     date: string,
     issue: string,
-    details: Record<string, any>
+    details: Record<string, unknown>
   ): Promise<string | null> {
     return this.sendAlert(
       AlertSeverity.MEDIUM,

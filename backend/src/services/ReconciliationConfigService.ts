@@ -3,6 +3,13 @@ import { cacheService } from './CacheService'
 import { logger } from '../utils/logger'
 import { config } from '../config/index'
 
+interface ErrnoException extends Error {
+  code?: string;
+  errno?: number;
+  path?: string;
+  syscall?: string;
+}
+
 export interface ReconciliationConfigOptions {
   configFilePath?: string
   cacheKey?: string
@@ -12,7 +19,7 @@ export interface ReconciliationConfigOptions {
 export interface ConfigValidationError {
   field: string
   message: string
-  value: any
+  value: unknown
 }
 
 export class ReconciliationConfigService {
@@ -61,7 +68,7 @@ export class ReconciliationConfigService {
       cacheService.set(this.cacheKey, config, this.cacheTTL)
       
       return config
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error getting reconciliation config:', error)
       logger.warn('Falling back to default reconciliation configuration')
       return this.defaultConfig
@@ -94,7 +101,7 @@ export class ReconciliationConfigService {
 
       logger.info('Reconciliation configuration updated successfully', { updatedConfig })
       return updatedConfig
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error updating reconciliation config:', error)
       throw error
     }
@@ -199,7 +206,7 @@ export class ReconciliationConfigService {
       cacheService.invalidate(this.cacheKey)
       logger.info('Reconciliation configuration reset to defaults')
       return this.defaultConfig
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error resetting reconciliation config to defaults:', error)
       throw error
     }
@@ -248,14 +255,14 @@ export class ReconciliationConfigService {
         logger.info('Reconciliation configuration loaded from file', { configPath })
         return config
       } catch (fileError) {
-        if ((fileError as any).code === 'ENOENT') {
+        if ((fileError as ErrnoException).code === 'ENOENT') {
           logger.info('Config file not found, creating with defaults', { configPath })
           await this.saveConfigToFile(this.defaultConfig)
           return this.defaultConfig
         }
         throw fileError
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error loading config from file:', error)
       return this.defaultConfig
     }
@@ -274,7 +281,7 @@ export class ReconciliationConfigService {
       
       await fs.writeFile(configPath, configData, 'utf-8')
       logger.debug('Reconciliation configuration saved to file', { configPath })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error saving config to file:', error)
       throw error
     }

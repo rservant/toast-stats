@@ -158,7 +158,7 @@ export class ReconciliationOrchestrator {
       logger.info('Reconciliation job created', { jobId: job.id, districtId, targetMonth })
       return job
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to start reconciliation', { districtId, targetMonth, error })
       throw error
     }
@@ -245,7 +245,7 @@ export class ReconciliationOrchestrator {
           cachedData,
           currentData
         )
-      } catch (error) {
+      } catch (_error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         logger.error('Change detection failed', { jobId, error: errorMessage })
         
@@ -416,7 +416,7 @@ export class ReconciliationOrchestrator {
 
       return status
 
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error('Failed to process reconciliation cycle', { jobId, error: errorMessage })
       
@@ -510,7 +510,7 @@ export class ReconciliationOrchestrator {
         daysStable: timeline.status.daysStable
       })
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to finalize reconciliation', { jobId, error })
       throw error
     }
@@ -595,7 +595,7 @@ export class ReconciliationOrchestrator {
         totalExtensionDays: currentExtensionDays + additionalDays
       })
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to extend reconciliation', { jobId, error })
       throw error
     }
@@ -649,7 +649,7 @@ export class ReconciliationOrchestrator {
 
       logger.info('Reconciliation cancelled', { jobId })
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to cancel reconciliation', { jobId, error })
       throw error
     }

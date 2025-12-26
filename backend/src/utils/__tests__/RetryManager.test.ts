@@ -159,7 +159,7 @@ describe('RetryManager', () => {
       try {
         await promise
         expect.fail('Expected promise to reject')
-      } catch (error) {
+      } catch (_error) {
         expect(error).toBeInstanceOf(Error)
         expect((error as Error).message).toBe('network timeout')
       }

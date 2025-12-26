@@ -140,7 +140,7 @@ export class ReconciliationBatchProcessor {
 
       return this.results
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Batch processing failed', { error })
       throw error
     } finally {
@@ -238,7 +238,7 @@ export class ReconciliationBatchProcessor {
           retryCount
         }
 
-      } catch (error) {
+      } catch (_error) {
         lastError = error as Error
         retryCount++
         
@@ -334,7 +334,7 @@ export class ReconciliationBatchProcessor {
         retryCount: 0
       }
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Job execution failed', {
         districtId: job.districtId,
         targetMonth: job.targetMonth,
@@ -376,7 +376,7 @@ export class ReconciliationBatchProcessor {
         // Wait for memory to stabilize
         await this.delay(2000)
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Resource usage check failed', { error })
     }
   }

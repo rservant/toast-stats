@@ -609,7 +609,7 @@ describe('District Leader Goals Service', () => {
     });
 
     it('should detect missing required fields', () => {
-      const invalidGoal = { id: '123', assigned_to: 'DD' as any }; // Test with minimal data
+      const invalidGoal = { id: '123', assigned_to: 'DD' as never }; // Test with minimal data - intentionally incomplete
 
       const validation = validateGoal(invalidGoal);
 
@@ -623,9 +623,9 @@ describe('District Leader Goals Service', () => {
         district_number: 61,
         program_year: '2024-2025',
         text: 'Goal',
-        assigned_to: 'INVALID' as any, // Intentionally invalid for testing
+        assigned_to: 'INVALID' as never, // Intentionally invalid for testing
         deadline: '2025-06-30',
-        status: 'in_progress' as any, // Valid status but using any for consistency
+        status: 'in_progress',
         created_at: '2025-11-26T00:00:00.000Z',
         updated_at: '2025-11-26T00:00:00.000Z',
       };

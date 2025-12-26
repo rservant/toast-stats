@@ -62,7 +62,7 @@ async function scrapeDistricts() {
       console.log(`\nFound district mentions: ${districtMatches.slice(0, 20).join(', ')}`)
     }
 
-  } catch (error) {
+  } catch (_error) {
     console.error('Error:', error)
   } finally {
     await browser.close()

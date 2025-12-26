@@ -117,7 +117,7 @@ export class ReconciliationSimulator {
       try {
         const result = await this.simulateScenario(scenarioName)
         results.push(result)
-      } catch (error) {
+      } catch (_error) {
         logger.error('Scenario simulation failed', { 
           scenario: scenarioName, 
           error: error instanceof Error ? error.message : String(error)

@@ -435,7 +435,7 @@ export class DistrictBackfillService {
         isDataAvailable: true
       }
 
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
       logger.error('Critical error in reconciliation data fetch', {
@@ -536,7 +536,7 @@ export class DistrictBackfillService {
 
       return districtStats
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Critical error getting cached reconciliation data', {
         districtId,
         targetDate,
@@ -698,7 +698,7 @@ export class DistrictBackfillService {
         }
 
         // Look for date patterns in any string field
-        for (const [_key, value] of Object.entries(record)) {
+        for (const [, value] of Object.entries(record)) {
           if (typeof value === 'string') {
             // Look for patterns like "as of November 15, 2024" or "Data as of 2024-11-15"
             const asOfMatch = value.match(/as of\s+(\w+\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2})/i)
@@ -710,7 +710,7 @@ export class DistrictBackfillService {
                 if (!isNaN(parsedDate.getTime())) {
                   return parsedDate.toISOString().split('T')[0]
                 }
-              } catch (e) {
+              } catch {
                 // Continue searching
               }
             }
@@ -945,7 +945,7 @@ export class DistrictBackfillService {
 
           // Add a delay to avoid overwhelming the server
           await new Promise((resolve) => setTimeout(resolve, 2000))
-        } catch (error) {
+        } catch (_error) {
           // Check if it's a "date not available" error vs actual failure
           const errorMessage = error instanceof Error ? error.message : String(error)
 
@@ -992,7 +992,7 @@ export class DistrictBackfillService {
         skipped: job.progress.skipped,
         totalProcessed: dates.length,
       })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Error processing district backfill', { backfillId, districtId, error })
       job.status = 'error'
       job.error = error instanceof Error ? error.message : 'Unknown error'

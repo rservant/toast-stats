@@ -212,7 +212,7 @@ Verify data:
     `);
 
     log('Done!', 'success');
-  } catch (error) {
+  } catch (_error) {
     log(`Error during seeding: ${error instanceof Error ? error.message : String(error)}`, 'error');
     process.exit(1);
   }

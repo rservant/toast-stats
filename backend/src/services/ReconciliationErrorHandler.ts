@@ -123,7 +123,7 @@ export class ReconciliationErrorHandler {
       
       return result
 
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
       // Track failure
@@ -183,7 +183,7 @@ export class ReconciliationErrorHandler {
       
       return { success: true, result }
 
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       
       // Track failure

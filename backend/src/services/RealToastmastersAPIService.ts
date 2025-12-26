@@ -32,7 +32,7 @@ export class RealToastmastersAPIService {
       
       logger.info('Districts fetched', { count: districts.length })
       return { districts }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get districts', error)
       throw error
     }
@@ -165,7 +165,7 @@ export class RealToastmastersAPIService {
       await this.cacheManager.setCache(targetDate, result, 'districts')
       
       return result
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get district rankings', error)
       throw error
     }
@@ -264,7 +264,7 @@ export class RealToastmastersAPIService {
           topClubs: [],
         },
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get district statistics', { districtId, error })
       throw error
     }
@@ -295,7 +295,7 @@ export class RealToastmastersAPIService {
       }
       
       return { data }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get membership history', { districtId, error })
       throw error
     }
@@ -343,7 +343,7 @@ export class RealToastmastersAPIService {
       })
       
       return { clubs }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get clubs', { districtId, error })
       throw error
     }
@@ -373,7 +373,7 @@ export class RealToastmastersAPIService {
         topClubs: [],
         byMonth,
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get educational awards', { districtId, error })
       throw error
     }
@@ -410,7 +410,7 @@ export class RealToastmastersAPIService {
           dayOverDayChange: 0,
         },
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get daily report detail', { districtId, date, error })
       throw error
     }
@@ -448,7 +448,7 @@ export class RealToastmastersAPIService {
           year: CacheManager.getProgramYear(),
         },
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get available dates', error)
       throw error
     }
@@ -490,7 +490,7 @@ export class RealToastmastersAPIService {
           year: CacheManager.getProgramYear(),
         },
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get district rank history', { districtId, error })
       throw error
     }
@@ -502,7 +502,7 @@ export class RealToastmastersAPIService {
   async getCacheStatistics() {
     try {
       return await this.cacheManager.getCacheStatistics()
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get cache statistics', error)
       throw error
     }
@@ -514,7 +514,7 @@ export class RealToastmastersAPIService {
   async getCacheMetadata(date: string) {
     try {
       return await this.cacheManager.getMetadata(date)
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get cache metadata', { date, error })
       throw error
     }

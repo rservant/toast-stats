@@ -41,7 +41,7 @@ export class ReconciliationPerformanceMonitor {
   private resourceMetrics: SystemResourceMetrics[] = []
   private maxMetricsHistory = 10000
   private maxResourceHistory = 1000
-  private monitoringInterval: NodeJS.Timeout | null = null
+  private monitoringInterval: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     this.startResourceMonitoring()
@@ -97,7 +97,7 @@ export class ReconciliationPerformanceMonitor {
     try {
       result = await operation()
       return result
-    } catch (error) {
+    } catch (_error) {
       success = false
       throw error
     } finally {
@@ -261,7 +261,7 @@ export class ReconciliationPerformanceMonitor {
         })
       }
 
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to record resource metrics', { error })
     }
   }

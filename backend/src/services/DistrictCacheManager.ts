@@ -26,6 +26,13 @@ import path from 'path'
 import { logger } from '../utils/logger.js'
 import type { DistrictCacheEntry, DistrictDataRange } from '../types/districts.js'
 
+interface ErrnoException extends Error {
+  code?: string;
+  errno?: number;
+  path?: string;
+  syscall?: string;
+}
+
 export class DistrictCacheManager {
   private cacheDir: string
 
@@ -46,7 +53,7 @@ export class DistrictCacheManager {
       const districtDir = path.join(this.cacheDir, 'districts', districtId)
       await fs.mkdir(districtDir, { recursive: true })
       logger.debug('District cache directory initialized', { districtId, districtDir })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to initialize district cache directory', { districtId, error })
       throw error
     }
@@ -123,7 +130,7 @@ export class DistrictCacheManager {
         divisionRecords: divisionPerformance.length,
         clubRecords: clubPerformance.length,
       })
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to cache district data', { districtId, date, error })
       
       // Clean up temp file if it exists
@@ -166,8 +173,8 @@ export class DistrictCacheManager {
 
       logger.debug('District cache hit', { districtId, date })
       return data
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    } catch (_error) {
+      if ((error as ErrnoException).code === 'ENOENT') {
         logger.debug('District cache miss', { districtId, date })
         return null
       }
@@ -206,14 +213,14 @@ export class DistrictCacheManager {
         
         // Removed debug log to reduce noise - this is called frequently
         return dates
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      } catch (_error) {
+        if ((error as ErrnoException).code === 'ENOENT') {
           // Directory doesn't exist yet - no need to log, this is expected
           return []
         }
         throw error
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get cached dates for district', { districtId, error })
       return []
     }
@@ -276,7 +283,7 @@ export class DistrictCacheManager {
         startDate: dates[0],
         endDate: dates[dates.length - 1],
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get district data range', { districtId, error })
       return null
     }
@@ -299,15 +306,15 @@ export class DistrictCacheManager {
         await fs.rmdir(districtDir)
         
         logger.info('District cache cleared', { districtId, filesDeleted: files.length })
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      } catch (_error) {
+        if ((error as ErrnoException).code === 'ENOENT') {
           // Directory doesn't exist, nothing to clear
           logger.debug('No cache to clear for district', { districtId })
           return
         }
         throw error
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to clear district cache', { districtId, error })
       throw error
     }
@@ -321,8 +328,8 @@ export class DistrictCacheManager {
       const filePath = this.getDistrictCacheFilePath(districtId, date)
       await fs.unlink(filePath)
       logger.info('District cache cleared for date', { districtId, date })
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    } catch (_error) {
+      if ((error as ErrnoException).code === 'ENOENT') {
         logger.debug('No cache to clear for district date', { districtId, date })
         return
       }
@@ -348,15 +355,15 @@ export class DistrictCacheManager {
         
         logger.debug('Retrieved cached districts', { count: districts.length })
         return districts
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      } catch (_error) {
+        if ((error as ErrnoException).code === 'ENOENT') {
           // Districts directory doesn't exist yet
           logger.debug('No cached districts')
           return []
         }
         throw error
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get cached districts', error)
       return []
     }

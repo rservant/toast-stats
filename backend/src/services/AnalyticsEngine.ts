@@ -95,7 +95,7 @@ export class AnalyticsEngine {
       })
 
       return validEntries
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to load district data', { districtId, error })
       throw error
     }
@@ -190,7 +190,7 @@ export class AnalyticsEngine {
               clubHealthChange,
             }
           }
-        } catch (error) {
+        } catch (_error) {
           logger.warn('Failed to calculate full year-over-year comparison', { districtId, error })
           yearOverYear = {
             membershipChange: yearOverYearData.percentageChange,
@@ -227,7 +227,7 @@ export class AnalyticsEngine {
       })
 
       return analytics
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to generate district analytics', { districtId, error })
       throw error
     }
@@ -255,7 +255,7 @@ export class AnalyticsEngine {
       }
 
       return clubTrend
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to get club trends', { districtId, clubId, error })
       throw error
     }
@@ -276,7 +276,7 @@ export class AnalyticsEngine {
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
       
       return clubTrends.filter(c => c.currentStatus !== 'healthy')
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to identify at-risk clubs', { districtId, error })
       throw error
     }
@@ -294,7 +294,7 @@ export class AnalyticsEngine {
       }
 
       return this.analyzeDivisions([entry])
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to compare divisions', { districtId, date, error })
       throw error
     }
@@ -348,7 +348,7 @@ export class AnalyticsEngine {
         metrics,
         multiYearTrends,
       }
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to calculate year-over-year metrics', { districtId, currentDate, error })
       throw error
     }
@@ -598,7 +598,7 @@ export class AnalyticsEngine {
           dcpGoalsTrend,
         },
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Failed to calculate multi-year trends', { districtId, currentDate, error })
       return {
         available: false,
@@ -727,7 +727,7 @@ export class AnalyticsEngine {
       })
 
       return analytics
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to generate membership analytics', { districtId, error })
       throw error
     }
@@ -787,7 +787,7 @@ export class AnalyticsEngine {
       })
 
       return analytics
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to generate distinguished club analytics', { districtId, error })
       throw error
     }
@@ -1400,7 +1400,7 @@ export class AnalyticsEngine {
         percentageChange,
         membershipChange,
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Failed to calculate year-over-year membership comparison', {
         districtId,
         currentDate,
@@ -1630,7 +1630,7 @@ export class AnalyticsEngine {
           distinguished: previousCounts.distinguished,
         },
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('Failed to calculate year-over-year distinguished comparison', {
         districtId,
         currentDate,
@@ -1820,7 +1820,7 @@ export class AnalyticsEngine {
       })
 
       return insights
-    } catch (error) {
+    } catch (_error) {
       logger.error('Failed to generate leadership insights', { districtId, error })
       throw error
     }

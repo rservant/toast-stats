@@ -4,6 +4,16 @@
 
 import { chromium } from 'playwright'
 
+// DOM type declarations for browser context
+declare global {
+  interface Element {
+    textContent: string | null;
+    id: string;
+    tagName: string;
+    className: string;
+  }
+}
+
 async function inspectClubPage() {
   const browser = await chromium.launch({ headless: false })
   const page = await browser.newPage()
@@ -23,14 +33,14 @@ async function inspectClubPage() {
         .filter(el => {
           const text = el.textContent?.toLowerCase() || ''
           const id = el.id?.toLowerCase() || ''
-          const className = (el as HTMLElement).className?.toLowerCase() || ''
+          const className = el.className?.toLowerCase() || ''
           return text.includes('export') || text.includes('csv') || id.includes('export') || className.includes('export')
         })
         .map(el => ({
           tag: el.tagName,
           text: el.textContent?.trim().substring(0, 100),
           id: el.id,
-          class: (el as HTMLElement).className,
+          class: el.className,
         }))
     )
 
@@ -43,8 +53,8 @@ async function inspectClubPage() {
     await page.screenshot({ path: 'club-page-screenshot.png', fullPage: true })
     console.log('\nScreenshot saved to club-page-screenshot.png')
 
-  } catch (error) {
-    console.error('Error:', error)
+  } catch (_error) {
+    console.error('Error:', _error)
   } finally {
     await browser.close()
   }
