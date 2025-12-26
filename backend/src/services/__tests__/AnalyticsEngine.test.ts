@@ -213,10 +213,11 @@ describe('AnalyticsEngine', () => {
       const yoyMetrics = await analyticsEngine.calculateYearOverYear(districtId, currentDate)
 
       expect(yoyMetrics).toBeDefined()
-      expect(yoyMetrics.dataAvailable).toBe(true)
-      expect(yoyMetrics.metrics.membership.current).toBe(30)
-      expect(yoyMetrics.metrics.membership.previous).toBe(25)
-      expect(yoyMetrics.metrics.membership.change).toBe(5)
+      expect(yoyMetrics).not.toBeNull()
+      expect(yoyMetrics!.dataAvailable).toBe(true)
+      expect(yoyMetrics!.metrics!.membership.current).toBe(30)
+      expect(yoyMetrics!.metrics!.membership.previous).toBe(25)
+      expect(yoyMetrics!.metrics!.membership.change).toBe(5)
     })
 
     it('should handle missing previous year data gracefully', async () => {
@@ -244,8 +245,9 @@ describe('AnalyticsEngine', () => {
       const yoyMetrics = await analyticsEngine.calculateYearOverYear(districtId, currentDate)
 
       expect(yoyMetrics).toBeDefined()
-      expect(yoyMetrics.dataAvailable).toBe(false)
-      expect(yoyMetrics.message).toContain('N/A')
+      expect(yoyMetrics).not.toBeNull()
+      expect(yoyMetrics!.dataAvailable).toBe(false)
+      expect(yoyMetrics!.message).toContain('N/A')
     })
   })
 

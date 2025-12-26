@@ -20,6 +20,7 @@ import type {
   LeadershipEffectivenessScore,
   LeadershipChange,
   AreaDirectorCorrelation,
+  YearOverYearComparison,
 } from '../types/analytics.js'
 import type { DistrictCacheEntry, ScrapedRecord } from '../types/districts.js'
 
@@ -321,14 +322,7 @@ export class AnalyticsEngine {
    * Calculate year-over-year metrics
    * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
    */
-  async calculateYearOverYear(districtId: string, currentDate: string): Promise<{
-    currentDate: string;
-    previousYearDate: string;
-    dataAvailable: boolean;
-    message?: string;
-    metrics?: unknown;
-    multiYearTrends?: unknown;
-  } | null> {
+  async calculateYearOverYear(districtId: string, currentDate: string): Promise<YearOverYearComparison | null> {
     try {
       // Find same date in previous program year (Requirement 9.1)
       const previousYearDate = this.findPreviousProgramYearDate(currentDate)

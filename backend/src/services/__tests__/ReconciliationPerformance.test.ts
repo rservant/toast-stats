@@ -262,7 +262,7 @@ describe('ReconciliationCacheService', () => {
 
       // Cache should not exceed max size due to eviction
       // Check job cache size specifically since we're only adding jobs
-      const jobCacheSize = (smallCache as any).jobCache.size
+      const jobCacheSize = (smallCache as unknown as { jobCache: { size: number } }).jobCache.size
       expect(jobCacheSize).toBeLessThanOrEqual(cacheSize)
       
       // The most recently added item should still be in cache

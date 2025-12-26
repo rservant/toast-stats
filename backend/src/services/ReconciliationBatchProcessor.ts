@@ -5,7 +5,7 @@
 
 import { logger } from '../utils/logger.js'
 import { ReconciliationOrchestrator } from './ReconciliationOrchestrator.js'
-import { ReconciliationCacheService } from './ReconciliationCacheService.js'
+import { ReconciliationCacheService, CacheStats } from './ReconciliationCacheService.js'
 import { ReconciliationStorageOptimizer } from './ReconciliationStorageOptimizer.js'
 import type {
   ReconciliationConfig,
@@ -443,7 +443,7 @@ export class ReconciliationBatchProcessor {
     successRate: number
     averageProcessingTime: number
     totalProcessingTime: number
-    cacheStats: any
+    cacheStats: CacheStats
   } {
     const totalProcessed = this.results.length
     const successful = this.results.filter(r => r.success).length

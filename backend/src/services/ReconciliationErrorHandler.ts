@@ -8,7 +8,7 @@
 
 import { logger } from '../utils/logger.js'
 import { RetryManager, RetryOptions } from '../utils/RetryManager.js'
-import { CircuitBreaker, CircuitBreakerManager, CircuitState } from '../utils/CircuitBreaker.js'
+import { CircuitBreaker, CircuitBreakerManager, CircuitState, CircuitBreakerStats } from '../utils/CircuitBreaker.js'
 import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
 import { DistrictBackfillService } from './DistrictBackfillService.js'
 import type { ReconciliationDataFetchResult } from './DistrictBackfillService.js'
@@ -268,7 +268,7 @@ export class ReconciliationErrorHandler {
   async handleCircuitBreakerStateChange(
     circuitName: string,
     newState: CircuitState,
-    stats: any
+    stats: CircuitBreakerStats
   ): Promise<void> {
     logger.info('Circuit breaker state changed', {
       circuitName,
@@ -291,7 +291,7 @@ export class ReconciliationErrorHandler {
    * Get error handling statistics
    */
   getErrorStats(): {
-    circuitBreakers: Record<string, any>
+    circuitBreakers: Record<string, CircuitBreakerStats>
     failureTracking: Record<string, { count: number; lastFailure: string }>
     config: ErrorHandlingConfig
   } {

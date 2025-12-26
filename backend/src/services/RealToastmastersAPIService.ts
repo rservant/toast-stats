@@ -6,6 +6,7 @@
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { CacheManager } from './CacheManager.js'
 import { logger } from '../utils/logger.js'
+import type { ScrapedRecord, DistrictRankingsResponse } from '../types/districts.js'
 
 export class RealToastmastersAPIService {
   private scraper: ToastmastersScraper
@@ -42,7 +43,7 @@ export class RealToastmastersAPIService {
    * Get all districts with performance rankings
    * Uses file-based cache to avoid re-downloading data
    */
-  async getAllDistrictsRankings(date?: string) {
+  async getAllDistrictsRankings(date?: string): Promise<DistrictRankingsResponse> {
     try {
       const targetDate = date || CacheManager.getTodayDate()
       
@@ -50,7 +51,7 @@ export class RealToastmastersAPIService {
       const cachedData = await this.cacheManager.getCache(targetDate, 'districts')
       if (cachedData) {
         logger.info('Using cached district rankings', { date: targetDate })
-        return cachedData
+        return cachedData as DistrictRankingsResponse
       }
 
       // Cache miss - fetch from scraper
@@ -65,21 +66,21 @@ export class RealToastmastersAPIService {
       }
       
       // First pass: collect all metrics
-      const districtData = allDistricts.map((row: any) => ({
-        districtId: row['DISTRICT'] || '',
-        districtName: `District ${row['DISTRICT']}`,
-        region: row['REGION'] || '',
-        paidClubs: parseInt(row['Paid Clubs'] || '0', 10),
-        paidClubBase: parseInt(row['Paid Club Base'] || '0', 10),
-        clubGrowthPercent: parseFloat(row['% Club Growth']?.replace('%', '') || '0'),
-        totalPayments: parseInt(row['Total YTD Payments'] || '0', 10),
-        paymentBase: parseInt(row['Payment Base'] || '0', 10),
-        paymentGrowthPercent: parseFloat(row['% Payment Growth']?.replace('%', '') || '0'),
-        activeClubs: parseInt(row['Active Clubs'] || '0', 10),
-        distinguishedClubs: parseInt(row['Total Distinguished Clubs'] || '0', 10),
-        selectDistinguished: parseInt(row['Select Distinguished Clubs'] || '0', 10),
-        presidentsDistinguished: parseInt(row['Presidents Distinguished Clubs'] || '0', 10),
-        distinguishedPercent: parseFloat(row['% Distinguished Clubs']?.replace('%', '') || '0'),
+      const districtData = allDistricts.map((row: ScrapedRecord) => ({
+        districtId: (row['DISTRICT'] || '').toString(),
+        districtName: `District ${row['DISTRICT'] || ''}`,
+        region: (row['REGION'] || '').toString(),
+        paidClubs: parseInt((row['Paid Clubs'] || '0').toString(), 10),
+        paidClubBase: parseInt((row['Paid Club Base'] || '0').toString(), 10),
+        clubGrowthPercent: parseFloat((row['% Club Growth'] || '0').toString().replace('%', '')),
+        totalPayments: parseInt((row['Total YTD Payments'] || '0').toString(), 10),
+        paymentBase: parseInt((row['Payment Base'] || '0').toString(), 10),
+        paymentGrowthPercent: parseFloat((row['% Payment Growth'] || '0').toString().replace('%', '')),
+        activeClubs: parseInt((row['Active Clubs'] || '0').toString(), 10),
+        distinguishedClubs: parseInt((row['Total Distinguished Clubs'] || '0').toString(), 10),
+        selectDistinguished: parseInt((row['Select Distinguished Clubs'] || '0').toString(), 10),
+        presidentsDistinguished: parseInt((row['Presidents Distinguished Clubs'] || '0').toString(), 10),
+        distinguishedPercent: parseFloat((row['% Distinguished Clubs'] || '0').toString().replace('%', '')),
       }))
 
       // Second pass: rank each district in each category (1 = best)
@@ -101,9 +102,9 @@ export class RealToastmastersAPIService {
         if (i > 0 && d.clubGrowthPercent < previousValue) {
           currentRank = i + 1
         }
-        clubsRank.set(d.districtId, currentRank)
+        clubsRank.set((d.districtId || '').toString(), currentRank)
         const bordaPoints = totalDistricts - currentRank + 1
-        clubsBordaPoints.set(d.districtId, bordaPoints)
+        clubsBordaPoints.set((d.districtId || '').toString(), bordaPoints)
         previousValue = d.clubGrowthPercent
       })
 
@@ -115,9 +116,9 @@ export class RealToastmastersAPIService {
         if (i > 0 && d.paymentGrowthPercent < previousValue) {
           currentRank = i + 1
         }
-        paymentsRank.set(d.districtId, currentRank)
+        paymentsRank.set((d.districtId || '').toString(), currentRank)
         const bordaPoints = totalDistricts - currentRank + 1
-        paymentsBordaPoints.set(d.districtId, bordaPoints)
+        paymentsBordaPoints.set((d.districtId || '').toString(), bordaPoints)
         previousValue = d.paymentGrowthPercent
       })
 
@@ -129,21 +130,21 @@ export class RealToastmastersAPIService {
         if (i > 0 && d.distinguishedPercent < previousValue) {
           currentRank = i + 1
         }
-        distinguishedRank.set(d.districtId, currentRank)
+        distinguishedRank.set((d.districtId || '').toString(), currentRank)
         const bordaPoints = totalDistricts - currentRank + 1
-        distinguishedBordaPoints.set(d.districtId, bordaPoints)
+        distinguishedBordaPoints.set((d.districtId || '').toString(), bordaPoints)
         previousValue = d.distinguishedPercent
       })
 
       // Third pass: calculate aggregate score using Borda count (sum of Borda points - higher is better)
       const rankings = districtData.map((district) => {
-        const clubRank = clubsRank.get(district.districtId) || 999
-        const paymentRank = paymentsRank.get(district.districtId) || 999
-        const distRank = distinguishedRank.get(district.districtId) || 999
+        const clubRank = clubsRank.get(district.districtId.toString()) || 999
+        const paymentRank = paymentsRank.get(district.districtId.toString()) || 999
+        const distRank = distinguishedRank.get(district.districtId.toString()) || 999
         
-        const clubBorda = clubsBordaPoints.get(district.districtId) || 1
-        const paymentBorda = paymentsBordaPoints.get(district.districtId) || 1
-        const distBorda = distinguishedBordaPoints.get(district.districtId) || 1
+        const clubBorda = clubsBordaPoints.get(district.districtId.toString()) || 1
+        const paymentBorda = paymentsBordaPoints.get(district.districtId.toString()) || 1
+        const distBorda = distinguishedBordaPoints.get(district.districtId.toString()) || 1
         
         // Sum of Borda points (higher is better, so we'll sort descending)
         const aggregateScore = clubBorda + paymentBorda + distBorda
@@ -194,37 +195,37 @@ export class RealToastmastersAPIService {
 
       // Calculate statistics from club data
       const totalClubs = clubData.length
-      const activeClubs = clubData.filter((club: any) => 
-        club['Club Status']?.toLowerCase() === 'active'
+      const activeClubs = clubData.filter((club: ScrapedRecord) => 
+        club['Club Status']?.toString().toLowerCase() === 'active'
       ).length
       
-      const suspendedClubs = clubData.filter((club: any) => 
-        club['Club Status']?.toLowerCase() === 'suspended'
+      const suspendedClubs = clubData.filter((club: ScrapedRecord) => 
+        club['Club Status']?.toString().toLowerCase() === 'suspended'
       ).length
       
-      const ineligibleClubs = clubData.filter((club: any) => 
-        club['Club Status']?.toLowerCase() === 'ineligible'
+      const ineligibleClubs = clubData.filter((club: ScrapedRecord) => 
+        club['Club Status']?.toString().toLowerCase() === 'ineligible'
       ).length
       
-      const lowClubs = clubData.filter((club: any) => 
-        club['Club Status']?.toLowerCase() === 'low'
+      const lowClubs = clubData.filter((club: ScrapedRecord) => 
+        club['Club Status']?.toString().toLowerCase() === 'low'
       ).length
       
-      const distinguishedClubs = clubData.filter((club: any) => {
-        const status = club['Club Distinguished Status'] || ''
+      const distinguishedClubs = clubData.filter((club: ScrapedRecord) => {
+        const status = (club['Club Distinguished Status'] || '').toString()
         return status.toLowerCase().includes('distinguished') || 
                status.toLowerCase().includes('select') ||
                status.toLowerCase().includes('president')
       }).length
 
       // Calculate membership stats
-      const totalMembers = clubData.reduce((sum: number, club: any) => {
-        const members = parseInt(club['Active Members'] || '0', 10)
+      const totalMembers = clubData.reduce((sum: number, club: ScrapedRecord) => {
+        const members = parseInt(club['Active Members']?.toString() || '0', 10)
         return sum + members
       }, 0)
 
-      const baseMembership = clubData.reduce((sum: number, club: any) => {
-        const base = parseInt(club['Mem. Base'] || '0', 10)
+      const baseMembership = clubData.reduce((sum: number, club: ScrapedRecord) => {
+        const base = parseInt(club['Mem. Base']?.toString() || '0', 10)
         return sum + base
       }, 0)
 
@@ -233,12 +234,12 @@ export class RealToastmastersAPIService {
 
       // Get top clubs by membership
       const topClubs = clubData
-        .map((club: any) => ({
-          clubId: club['Club Number'] || '',
-          clubName: club['Club Name'] || 'Unknown Club',
-          memberCount: parseInt(club['Active Members'] || '0', 10),
+        .map((club: ScrapedRecord) => ({
+          clubId: club['Club Number']?.toString() || '',
+          clubName: club['Club Name']?.toString() || 'Unknown Club',
+          memberCount: parseInt(club['Active Members']?.toString() || '0', 10),
         }))
-        .sort((a: any, b: any) => b.memberCount - a.memberCount)
+        .sort((a, b) => b.memberCount - a.memberCount)
         .slice(0, 10)
 
       return {
@@ -308,8 +309,8 @@ export class RealToastmastersAPIService {
     try {
       const clubData = await this.scraper.getClubPerformance(districtId)
       
-      const clubs = clubData.map((row: any) => {
-        const distinguishedStatus = row['Club Distinguished Status'] || ''
+      const clubs = clubData.map((row: ScrapedRecord) => {
+        const distinguishedStatus = (row['Club Distinguished Status'] || '').toString()
         const distinguished = distinguishedStatus.trim().length > 0
         let distinguishedLevel: 'select' | 'distinguished' | 'president' | undefined
         
@@ -325,17 +326,17 @@ export class RealToastmastersAPIService {
         }
         
         // Calculate total awards
-        const level1s = parseInt(row['Level 1s'] || '0', 10)
-        const level2s = parseInt(row['Level 2s'] || '0', 10)
-        const level3s = parseInt(row['Level 3s'] || '0', 10)
-        const level4s = parseInt(row['Level 4s, Path Completions, or DTM Awards'] || '0', 10)
+        const level1s = parseInt((row['Level 1s'] || '0').toString(), 10)
+        const level2s = parseInt((row['Level 2s'] || '0').toString(), 10)
+        const level3s = parseInt((row['Level 3s'] || '0').toString(), 10)
+        const level4s = parseInt((row['Level 4s, Path Completions, or DTM Awards'] || '0').toString(), 10)
         const totalAwards = level1s + level2s + level3s + level4s
         
         return {
           id: row['Club Number'] || '',
           name: row['Club Name'] || 'Unknown Club',
-          status: (row['Club Status']?.toLowerCase() || 'active') as 'active' | 'suspended' | 'ineligible' | 'low',
-          memberCount: parseInt(row['Active Members'] || '0', 10),
+          status: ((row['Club Status'] || 'active').toString().toLowerCase()) as 'active' | 'suspended' | 'ineligible' | 'low',
+          memberCount: parseInt((row['Active Members'] || '0').toString(), 10),
           distinguished,
           distinguishedLevel,
           awards: totalAwards,

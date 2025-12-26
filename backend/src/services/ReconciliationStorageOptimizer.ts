@@ -29,7 +29,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   private timelineCache = new Map<string, ReconciliationTimeline>()
   private indexCacheTimestamp: number = 0
   private config: StorageOptimizationConfig
-  private pendingOperations = new Map<string, BatchOperation<any>>()
+  private pendingOperations = new Map<string, BatchOperation<unknown>>()
   private batchTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(

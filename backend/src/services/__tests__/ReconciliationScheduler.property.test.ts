@@ -20,19 +20,90 @@ describe('ReconciliationScheduler Property Tests', () => {
   beforeEach(() => {
     // Create mocks
     mockOrchestrator = {
+      changeDetectionEngine: {} as unknown,
+      storageManager: {} as unknown,
+      cacheService: {} as unknown,
+      configService: {} as unknown,
+      performanceMonitor: {} as unknown,
+      jobs: new Map(),
+      activeJobs: new Map(),
+      jobQueue: [],
+      isProcessing: false,
+      config: {},
       startReconciliation: vi.fn(),
-      cancelReconciliation: vi.fn()
-    } as any
+      cancelReconciliation: vi.fn(),
+      getStatus: vi.fn(),
+      pauseReconciliation: vi.fn(),
+      resumeReconciliation: vi.fn(),
+      getAllJobs: vi.fn(),
+      getJobsByDistrict: vi.fn(),
+      cleanupOldJobs: vi.fn(),
+      getJobHistory: vi.fn(),
+      getPerformanceMetrics: vi.fn(),
+      validateJobConfiguration: vi.fn(),
+      scheduleReconciliation: vi.fn(),
+      cancelScheduledReconciliation: vi.fn(),
+      getScheduledJobs: vi.fn(),
+      updateJobPriority: vi.fn(),
+      getJobQueue: vi.fn(),
+      pauseAllJobs: vi.fn(),
+      resumeAllJobs: vi.fn(),
+      getSystemStatus: vi.fn(),
+      shutdown: vi.fn()
+    } as unknown as ReconciliationOrchestrator
 
     mockStorageManager = {
+      storageDir: './test',
+      jobsDir: './test/jobs',
+      timelinesDir: './test/timelines',
+      configFile: './test/config.json',
       getJobsByDistrict: vi.fn(),
       getAllJobs: vi.fn(),
-      cleanupOldJobs: vi.fn()
-    } as any
+      cleanupOldJobs: vi.fn(),
+      saveJob: vi.fn(),
+      getJob: vi.fn(),
+      saveTimeline: vi.fn(),
+      getTimeline: vi.fn(),
+      getAllTimelines: vi.fn(),
+      getTimelinesByDistrict: vi.fn(),
+      getTimelinesByMonth: vi.fn(),
+      cleanupOldTimelines: vi.fn(),
+      getConfig: vi.fn(),
+      validateConfig: vi.fn(),
+      updateConfig: vi.fn(),
+      resetToDefaults: vi.fn(),
+      initializeStorage: vi.fn(),
+      getStorageStats: vi.fn(),
+      exportData: vi.fn(),
+      importData: vi.fn(),
+      backupStorage: vi.fn(),
+      restoreFromBackup: vi.fn(),
+      compactStorage: vi.fn(),
+      validateStorageIntegrity: vi.fn(),
+      repairStorage: vi.fn(),
+      migrateStorage: vi.fn(),
+      getStorageVersion: vi.fn(),
+      setStorageVersion: vi.fn()
+    } as unknown as ReconciliationStorageManager
 
     mockConfigService = {
-      getConfig: vi.fn()
-    } as any
+      configFilePath: './test/config.json',
+      cacheKey: 'test-config',
+      cacheTTL: 3600,
+      defaultConfig: {},
+      cacheService: {} as unknown,
+      config: {},
+      getConfig: vi.fn(),
+      validateConfig: vi.fn(),
+      updateConfig: vi.fn(),
+      resetToDefaults: vi.fn(),
+      watchConfigChanges: vi.fn(),
+      stopWatching: vi.fn(),
+      exportConfig: vi.fn(),
+      importConfig: vi.fn(),
+      backupConfig: vi.fn(),
+      restoreConfig: vi.fn()
+    } as unknown as ReconciliationConfigService
 
     scheduler = new ReconciliationScheduler(mockOrchestrator, mockStorageManager, mockConfigService)
   })
@@ -74,7 +145,7 @@ describe('ReconciliationScheduler Property Tests', () => {
           // Mock date with proper spread operator
           const OriginalDate = Date
           vi.stubGlobal('Date', class extends OriginalDate {
-            constructor(...args: any[]) {
+            constructor(...args: unknown[]) {
               if (args.length === 0) {
                 super(testDate.getTime())
               } else {
@@ -119,7 +190,7 @@ describe('ReconciliationScheduler Property Tests', () => {
           
           const OriginalDate = Date
           vi.stubGlobal('Date', class extends OriginalDate {
-            constructor(...args: any[]) {
+            constructor(...args: unknown[]) {
               if (args.length === 0) {
                 super(testDate.getTime())
               } else {
@@ -165,7 +236,7 @@ describe('ReconciliationScheduler Property Tests', () => {
           
           const OriginalDate = Date
           vi.stubGlobal('Date', class extends OriginalDate {
-            constructor(...args: any[]) {
+            constructor(...args: unknown[]) {
               if (args.length === 0) {
                 super(testDate.getTime())
               } else {

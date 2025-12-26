@@ -75,6 +75,55 @@ export interface DistrictPerformance {
 // Raw scraped data types (CSV records with dynamic columns)
 export type ScrapedRecord = Record<string, string | number | null>
 
+// Raw CSV performance data interfaces (from dashboard exports)
+export interface ClubPerformanceRecord {
+  'Club Number': string
+  'Club Name': string
+  'Division': string
+  'Area': string
+  'Active Members': string
+  'Goals Met': string
+  'Club Status'?: string
+  'Club Distinguished Status'?: string
+  'Mem. Base'?: string
+  'Status'?: string
+  'Membership'?: string
+  [key: string]: string | undefined // Allow additional dynamic fields
+}
+
+export interface DivisionPerformanceRecord {
+  'Division': string
+  'Total Clubs': string
+  'Total Members': string
+  'Goals Met': string
+  [key: string]: string | undefined // Allow additional dynamic fields
+}
+
+export interface DistrictPerformanceRecord {
+  'District': string
+  'Total Clubs': string
+  'Total Members': string
+  'Goals Met': string
+  'Distinguished Clubs': string
+  [key: string]: string | undefined // Allow additional dynamic fields
+}
+
+// Raw CSV data from getAllDistricts API call
+export interface AllDistrictsCSVRecord {
+  'DISTRICT': string
+  'REGION': string
+  'Paid Clubs': string
+  'Paid Club Base': string
+  '% Club Growth': string
+  'Total YTD Payments': string
+  'Payment Base': string
+  '% Payment Growth': string
+  'Active Clubs': string
+  'Total Distinguished Clubs': string
+  'Select Distinguished Clubs': string
+  [key: string]: string | undefined // Allow additional dynamic fields
+}
+
 // District list from dropdown
 export interface DistrictInfo {
   id: string
@@ -244,6 +293,33 @@ export interface BackfillResponse {
   status: 'processing' | 'complete' | 'error'
   progress: BackfillProgress
   error?: string
+}
+
+// District Rankings Types (for getAllDistrictsRankings API)
+export interface DistrictRanking {
+  districtId: string
+  districtName: string
+  region: string
+  paidClubs: number
+  paidClubBase: number
+  clubGrowthPercent: number
+  totalPayments: number
+  paymentBase: number
+  paymentGrowthPercent: number
+  activeClubs: number
+  distinguishedClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+  distinguishedPercent: number
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  aggregateScore: number
+}
+
+export interface DistrictRankingsResponse {
+  rankings: DistrictRanking[]
+  date: string
 }
 
 // District-Level Cache Types

@@ -136,7 +136,7 @@ describe('ReconciliationConfigService - Property-Based Tests', () => {
           } 
         }
       case 'autoExtensionEnabled_not_boolean':
-        return { ...baseConfig, autoExtensionEnabled: 'true' as any }
+        return { ...baseConfig, autoExtensionEnabled: 'true' as unknown as boolean }
       case 'maxExtensionDays_negative':
         return { ...baseConfig, maxExtensionDays: -Math.floor(seed * 10) - 1 }
       case 'maxExtensionDays_too_large':
@@ -361,8 +361,8 @@ describe('ReconciliationConfigService - Property-Based Tests', () => {
         const config = generateValidConfig(seed)
         const configWithMissingThresholds = {
           ...config,
-          significantChangeThresholds: undefined as any
-        }
+          significantChangeThresholds: undefined as unknown
+        } as unknown as ReconciliationConfig
         
         // Property: Missing thresholds should be detected and rejected
         const errors = configService.validateConfig(configWithMissingThresholds)
@@ -379,23 +379,23 @@ describe('ReconciliationConfigService - Property-Based Tests', () => {
         
         // Test various type violations
         const typeViolations = [
-          { ...baseConfig, maxReconciliationDays: '15' as any },
-          { ...baseConfig, stabilityPeriodDays: '3' as any },
-          { ...baseConfig, checkFrequencyHours: '24' as any },
-          { ...baseConfig, maxExtensionDays: '5' as any },
-          { ...baseConfig, autoExtensionEnabled: 1 as any },
+          { ...baseConfig, maxReconciliationDays: '15' as unknown as number },
+          { ...baseConfig, stabilityPeriodDays: '3' as unknown as number },
+          { ...baseConfig, checkFrequencyHours: '24' as unknown as number },
+          { ...baseConfig, maxExtensionDays: '5' as unknown as number },
+          { ...baseConfig, autoExtensionEnabled: 1 as unknown as boolean },
           { 
             ...baseConfig, 
             significantChangeThresholds: {
               ...baseConfig.significantChangeThresholds,
-              membershipPercent: '1' as any
+              membershipPercent: '1' as unknown as number
             }
           },
           { 
             ...baseConfig, 
             significantChangeThresholds: {
               ...baseConfig.significantChangeThresholds,
-              distinguishedPercent: '2' as any
+              distinguishedPercent: '2' as unknown as number
             }
           }
         ]

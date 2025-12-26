@@ -35,7 +35,7 @@ import { CircuitBreaker, CircuitBreakerManager } from '../utils/CircuitBreaker.j
 import { AlertManager, AlertSeverity, AlertCategory } from '../utils/AlertManager.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
-import type { DistrictStatistics } from '../types/districts.js'
+import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
 
 export interface DistrictBackfillRequest {
   districtId: string
@@ -644,9 +644,9 @@ export class DistrictBackfillService {
    * @returns The extracted source data date or fallback date
    */
   private extractSourceDataDate(
-    districtPerformance: any[],
-    divisionPerformance: any[],
-    clubPerformance: any[],
+    districtPerformance: ScrapedRecord[],
+    divisionPerformance: ScrapedRecord[],
+    clubPerformance: ScrapedRecord[],
     fallbackDate: string
   ): string {
     // Look for date indicators in the data
@@ -676,7 +676,7 @@ export class DistrictBackfillService {
    * @param data - Array of data records to search
    * @returns Extracted date string or null if not found
    */
-  private findSourceDateInData(data: any[]): string | null {
+  private findSourceDateInData(data: ScrapedRecord[]): string | null {
     if (!data || data.length === 0) {
       return null
     }
@@ -741,13 +741,13 @@ export class DistrictBackfillService {
   private convertToDistrictStatistics(
     districtId: string,
     asOfDate: string,
-    _districtPerformance: any[],
-    _divisionPerformance: any[],
-    clubPerformance: any[]
+    _districtPerformance: ScrapedRecord[],
+    _divisionPerformance: ScrapedRecord[],
+    clubPerformance: ScrapedRecord[]
   ): DistrictStatistics {
     // Calculate membership statistics from club data
     const totalMembers = clubPerformance.reduce((sum, club) => {
-      const members = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const members = parseInt((club['Active Members'] || club['Membership'] || '0').toString())
       return sum + (isNaN(members) ? 0 : members)
     }, 0)
 
@@ -766,7 +766,7 @@ export class DistrictBackfillService {
     ).length
 
     const lowClubs = clubPerformance.filter(club => {
-      const members = parseInt(club['Active Members'] || club['Membership'] || '0')
+      const members = parseInt((club['Active Members'] || club['Membership'] || '0').toString())
       return !isNaN(members) && members < 20 // Typically low membership threshold
     }).length
 
@@ -783,7 +783,7 @@ export class DistrictBackfillService {
 
     // Calculate education statistics (simplified)
     const totalAwards = clubPerformance.reduce((sum, club) => {
-      const awards = parseInt(club['Awards'] || club['Total Awards'] || '0')
+      const awards = parseInt((club['Awards'] || club['Total Awards'] || '0').toString())
       return sum + (isNaN(awards) ? 0 : awards)
     }, 0)
 
@@ -795,9 +795,9 @@ export class DistrictBackfillService {
         change: 0, // Would need historical data to calculate
         changePercent: 0, // Would need historical data to calculate
         byClub: clubPerformance.map(club => ({
-          clubId: club['Club Number'] || club['Club ID'] || '',
-          clubName: club['Club Name'] || '',
-          memberCount: parseInt(club['Active Members'] || club['Membership'] || '0') || 0
+          clubId: (club['Club Number'] || club['Club ID'] || '').toString(),
+          clubName: (club['Club Name'] || '').toString(),
+          memberCount: parseInt((club['Active Members'] || club['Membership'] || '0').toString()) || 0
         }))
       },
       clubs: {

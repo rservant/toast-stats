@@ -11,7 +11,24 @@ import { DistrictBackfillService } from '../DistrictBackfillService.js'
 import { DistrictCacheManager } from '../DistrictCacheManager.js'
 import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import type { DistrictStatistics } from '../../types/districts.js'
+import type { ScrapedRecord } from '../../types/districts.js'
 import fs from 'fs/promises'
+
+// Mock interface for ToastmastersScraper
+interface MockToastmastersScraper {
+  config: { baseUrl: string; headless: boolean; timeout: number }
+  browser: null
+  getProgramYear: (dateString: string) => string
+  buildBaseUrl: (dateString: string) => string
+  closeBrowser: () => Promise<void>
+  getAllDistrictsList: () => Promise<Array<{ id: string; name: string }>>
+  getAllDistricts: () => Promise<ScrapedRecord[]>
+  getAllDistrictsForDate: (dateString: string) => Promise<ScrapedRecord[]>
+  getDistrictPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
+  getDivisionPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
+  getClubPerformance: (districtId: string, dateString?: string) => Promise<ScrapedRecord[]>
+  scrapePage: (url: string, selector: string) => Promise<string>
+}
 
 describe('DistrictBackfillService - Property-Based Tests', () => {
   const testCacheDir = './test-cache-backfill-property'
@@ -156,7 +173,16 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
 
           // Mock the scraper to return different data based on call order
           let callCount = 0
-          const mockScraper = {
+          const mockScraper: MockToastmastersScraper = {
+            config: { baseUrl: 'test', headless: true, timeout: 30000 },
+            browser: null,
+            getProgramYear: vi.fn().mockReturnValue('2024-2025'),
+            buildBaseUrl: vi.fn().mockReturnValue('test-url'),
+            closeBrowser: vi.fn().mockResolvedValue(undefined),
+            getAllDistrictsList: vi.fn().mockResolvedValue([]),
+            getAllDistricts: vi.fn().mockResolvedValue([]),
+            getAllDistrictsForDate: vi.fn().mockResolvedValue([]),
+            scrapePage: vi.fn().mockResolvedValue(''),
             getDistrictPerformance: vi.fn().mockImplementation(async () => {
               const dataPoint = dataPoints[callCount % dataPoints.length]
               callCount++
@@ -170,9 +196,9 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
               const dataPoint = dataPoints[(callCount - 1) % dataPoints.length]
               return dataPoint.rawData.clubPerformance
             })
-          } as any
+          }
 
-          const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper)
+          const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper as unknown as ToastmastersScraper)
 
           // Simulate multiple reconciliation data fetches
           const results = []
@@ -209,11 +235,10 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           if (uniqueSourceDates.length > 1) {
             // Test the source date extraction logic directly
             const testData = expectedLatest.rawData
-            const extractedDate = (testBackfillService as any).extractSourceDataDate(
+            const extractedDate = (testBackfillService as unknown as { extractSourceDataDate: (a: unknown, b: unknown, c: unknown) => string }).extractSourceDataDate(
               testData.districtPerformance,
               testData.divisionPerformance,
-              testData.clubPerformance,
-              targetDate
+              testData.clubPerformance
             )
 
             // The extracted date should be the latest available or the fallback
@@ -252,11 +277,10 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           const rawData = generateRawDashboardData(stats)
 
           // Test the source date extraction
-          const extractedDate = (backfillService as any).extractSourceDataDate(
+          const extractedDate = (backfillService as unknown as { extractSourceDataDate: (a: unknown, b: unknown, c: unknown) => string }).extractSourceDataDate(
             rawData.districtPerformance,
             rawData.divisionPerformance,
-            rawData.clubPerformance,
-            targetDate
+            rawData.clubPerformance
           )
 
           // Property 1: Extracted date should be valid
@@ -293,7 +317,16 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
         fc.boolean(),
         async (districtId, targetDate, shouldHaveData) => {
           // Mock scraper to simulate various data availability scenarios
-          const mockScraper = {
+          const mockScraper: MockToastmastersScraper = {
+            config: { baseUrl: 'test', headless: true, timeout: 30000 },
+            browser: null,
+            getProgramYear: vi.fn().mockReturnValue('2024-2025'),
+            buildBaseUrl: vi.fn().mockReturnValue('test-url'),
+            closeBrowser: vi.fn().mockResolvedValue(undefined),
+            getAllDistrictsList: vi.fn().mockResolvedValue([]),
+            getAllDistricts: vi.fn().mockResolvedValue([]),
+            getAllDistrictsForDate: vi.fn().mockResolvedValue([]),
+            scrapePage: vi.fn().mockResolvedValue(''),
             getDistrictPerformance: vi.fn().mockImplementation(async () => {
               if (!shouldHaveData) {
                 throw new Error('Date not available on dashboard')
@@ -312,9 +345,9 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
               }
               return [{ 'Club Number': '123', 'Club Name': 'Test Club' }]
             })
-          } as any
+          }
 
-          const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper)
+          const testBackfillService = new DistrictBackfillService(cacheManager, mockScraper as unknown as ToastmastersScraper)
           const result = await testBackfillService.fetchReconciliationData(districtId, targetDate)
 
           // Property 1: Result should always have a success field

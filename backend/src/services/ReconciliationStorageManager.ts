@@ -179,7 +179,7 @@ export class ReconciliationStorageManager {
         return this.indexCache
       }
       
-      let index = JSON.parse(indexContent) as any
+      let index = JSON.parse(indexContent) as unknown
       
       // Migrate old index format to new format
       index = this.migrateIndex(index)
@@ -187,7 +187,7 @@ export class ReconciliationStorageManager {
       this.indexCache = index as ReconciliationIndex
       return this.indexCache
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as { code?: string }).code === 'ENOENT') {
         // File doesn't exist, create new index
         logger.info('Index file does not exist, creating new index')
         const newIndex = this.createEmptyIndex()
@@ -211,45 +211,48 @@ export class ReconciliationStorageManager {
   /**
    * Migrate old index format to new format
    */
-  private migrateIndex(index: any): ReconciliationIndex {
+  private migrateIndex(index: unknown): ReconciliationIndex {
+    // Cast to a mutable object for migration
+    const mutableIndex = index as Record<string, unknown>
+    
     // Ensure all required properties exist
-    if (!index.version) {
-      index.version = '1.0.0'
+    if (!mutableIndex.version) {
+      mutableIndex.version = '1.0.0'
     }
     
-    if (!index.jobs) {
-      index.jobs = {}
+    if (!mutableIndex.jobs) {
+      mutableIndex.jobs = {}
     }
     
     // Migrate byDistrict to districts
-    if (index.byDistrict && !index.districts) {
-      index.districts = index.byDistrict
-      delete index.byDistrict
+    if (mutableIndex.byDistrict && !mutableIndex.districts) {
+      mutableIndex.districts = mutableIndex.byDistrict
+      delete mutableIndex.byDistrict
     }
     
-    if (!index.districts) {
-      index.districts = {}
+    if (!mutableIndex.districts) {
+      mutableIndex.districts = {}
     }
     
     // Migrate byMonth to months
-    if (index.byMonth && !index.months) {
-      index.months = index.byMonth
-      delete index.byMonth
+    if (mutableIndex.byMonth && !mutableIndex.months) {
+      mutableIndex.months = mutableIndex.byMonth
+      delete mutableIndex.byMonth
     }
     
-    if (!index.months) {
-      index.months = {}
+    if (!mutableIndex.months) {
+      mutableIndex.months = {}
     }
     
-    if (!index.byStatus) {
-      index.byStatus = {}
+    if (!mutableIndex.byStatus) {
+      mutableIndex.byStatus = {}
     }
     
-    if (!index.lastUpdated) {
-      index.lastUpdated = new Date().toISOString()
+    if (!mutableIndex.lastUpdated) {
+      mutableIndex.lastUpdated = new Date().toISOString()
     }
     
-    return index as ReconciliationIndex
+    return mutableIndex as unknown as ReconciliationIndex
   }
 
   /**

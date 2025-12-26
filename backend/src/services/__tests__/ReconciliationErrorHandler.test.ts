@@ -8,23 +8,56 @@ vi.mock('../DistrictBackfillService.js')
 vi.mock('../../utils/AlertManager.js')
 vi.mock('../../utils/CircuitBreaker.js')
 
+// Interface for mock backfill service
+interface MockBackfillService {
+  fetchReconciliationData: ReturnType<typeof vi.fn>
+}
+
+// Interface for mock alert manager
+interface MockAlertManager {
+  sendAlert: ReturnType<typeof vi.fn>
+  sendReconciliationFailureAlert: ReturnType<typeof vi.fn>
+  sendReconciliationTimeoutAlert: ReturnType<typeof vi.fn>
+  sendDashboardUnavailableAlert: ReturnType<typeof vi.fn>
+  sendDataQualityAlert: ReturnType<typeof vi.fn>
+}
+
+// Interface for mock circuit breaker
+interface MockCircuitBreaker {
+  execute: ReturnType<typeof vi.fn>
+  getStats: ReturnType<typeof vi.fn>
+}
+
+// Interface for mock circuit manager
+interface MockCircuitManager {
+  getCircuitBreaker: ReturnType<typeof vi.fn>
+  getAllStats: ReturnType<typeof vi.fn>
+  resetAll: ReturnType<typeof vi.fn>
+}
+
+// Interface for reconciliation data
+interface ReconciliationData {
+  districtId: string
+  [key: string]: unknown
+}
+
 describe('ReconciliationErrorHandler', () => {
   let errorHandler: ReconciliationErrorHandler
-  let mockBackfillService: any
-  let mockAlertManager: any
+  let mockBackfillService: MockBackfillService
+  let mockAlertManager: MockAlertManager
 
   beforeEach(() => {
     vi.useFakeTimers()
     
     // Reset singleton instances
-    ;(ReconciliationErrorHandler as any).instance = undefined
-    ;(AlertManager as any).instance = undefined
-    ;(CircuitBreakerManager as any).instance = undefined
+    ;(ReconciliationErrorHandler as unknown as { instance: undefined }).instance = undefined
+    ;(AlertManager as unknown as { instance: undefined }).instance = undefined
+    ;(CircuitBreakerManager as unknown as { instance: undefined }).instance = undefined
     
     // Create mocks
     mockBackfillService = {
       fetchReconciliationData: vi.fn(),
-    } as any
+    }
     
     mockAlertManager = {
       sendAlert: vi.fn().mockResolvedValue('alert-id'),
@@ -32,13 +65,13 @@ describe('ReconciliationErrorHandler', () => {
       sendReconciliationTimeoutAlert: vi.fn().mockResolvedValue('alert-id'),
       sendDashboardUnavailableAlert: vi.fn().mockResolvedValue('alert-id'),
       sendDataQualityAlert: vi.fn().mockResolvedValue('alert-id'),
-    } as any
+    }
     
     // Mock AlertManager.getInstance
-    vi.mocked(AlertManager.getInstance).mockReturnValue(mockAlertManager)
+    vi.mocked(AlertManager.getInstance).mockReturnValue(mockAlertManager as unknown as AlertManager)
     
     // Mock CircuitBreakerManager
-    const mockCircuitBreaker = {
+    const mockCircuitBreaker: MockCircuitBreaker = {
       execute: vi.fn(),
       getStats: vi.fn().mockReturnValue({
         state: CircuitState.CLOSED,
@@ -47,13 +80,13 @@ describe('ReconciliationErrorHandler', () => {
       }),
     }
     
-    const mockCircuitManager = {
+    const mockCircuitManager: MockCircuitManager = {
       getCircuitBreaker: vi.fn().mockReturnValue(mockCircuitBreaker),
       getAllStats: vi.fn().mockReturnValue({}),
       resetAll: vi.fn(),
     }
     
-    vi.mocked(CircuitBreakerManager.getInstance).mockReturnValue(mockCircuitManager as any)
+    vi.mocked(CircuitBreakerManager.getInstance).mockReturnValue(mockCircuitManager as unknown as CircuitBreakerManager)
     
     errorHandler = ReconciliationErrorHandler.getInstance({
       circuitBreakerEnabled: true,
@@ -79,7 +112,7 @@ describe('ReconciliationErrorHandler', () => {
     it('should execute successful dashboard fetch', async () => {
       const mockResult = {
         success: true,
-        data: { districtId: 'D123' } as any,
+        data: { districtId: 'D123' } as ReconciliationData,
         sourceDataDate: '2024-01-31',
         isDataAvailable: true,
       }
@@ -94,7 +127,7 @@ describe('ReconciliationErrorHandler', () => {
       })
       
       const result = await errorHandler.executeDashboardFetch(
-        mockBackfillService,
+        mockBackfillService as unknown as Parameters<typeof errorHandler.executeDashboardFetch>[0],
         'D123',
         '2024-01-31',
         { districtId: 'D123', operation: 'test-fetch' }
@@ -114,7 +147,7 @@ describe('ReconciliationErrorHandler', () => {
       vi.mocked(mockCircuitBreaker.execute).mockRejectedValue(mockError)
       
       const result = await errorHandler.executeDashboardFetch(
-        mockBackfillService,
+        mockBackfillService as unknown as Parameters<typeof errorHandler.executeDashboardFetch>[0],
         'D123',
         '2024-01-31',
         { districtId: 'D123', operation: 'test-fetch' }
@@ -126,7 +159,7 @@ describe('ReconciliationErrorHandler', () => {
 
     it('should work without circuit breaker when disabled', async () => {
       // Create error handler with circuit breaker disabled
-      ;(ReconciliationErrorHandler as any).instance = undefined
+      ;(ReconciliationErrorHandler as unknown as { instance: undefined }).instance = undefined
       const errorHandlerNoCircuit = ReconciliationErrorHandler.getInstance({
         circuitBreakerEnabled: false,
         alertingEnabled: true,
@@ -134,7 +167,7 @@ describe('ReconciliationErrorHandler', () => {
       
       const mockResult = {
         success: true,
-        data: { districtId: 'D123' } as any,
+        data: { districtId: 'D123' } as ReconciliationData,
         sourceDataDate: '2024-01-31',
         isDataAvailable: true,
       }
@@ -142,7 +175,7 @@ describe('ReconciliationErrorHandler', () => {
       mockBackfillService.fetchReconciliationData.mockResolvedValue(mockResult)
       
       const result = await errorHandlerNoCircuit.executeDashboardFetch(
-        mockBackfillService,
+        mockBackfillService as unknown as Parameters<typeof errorHandlerNoCircuit.executeDashboardFetch>[0],
         'D123',
         '2024-01-31',
         { districtId: 'D123', operation: 'test-fetch' }
@@ -297,7 +330,7 @@ describe('ReconciliationErrorHandler', () => {
   describe('alerting configuration', () => {
     it('should not send alerts when alerting is disabled', async () => {
       // Create error handler with alerting disabled
-      ;(ReconciliationErrorHandler as any).instance = undefined
+      ;(ReconciliationErrorHandler as unknown as { instance: undefined }).instance = undefined
       const errorHandlerNoAlerts = ReconciliationErrorHandler.getInstance({
         alertingEnabled: false,
       })

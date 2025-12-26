@@ -44,8 +44,8 @@ export interface StepResult {
   stepNumber: number
   timestamp: Date
   action: 'data_update' | 'change_detection' | 'status_calculation' | 'extension' | 'finalization'
-  input: any
-  output: any
+  input: Record<string, unknown>
+  output: Record<string, unknown> | null
   changes: DataChanges | null
   isSignificant: boolean
   newStatus: ReconciliationStatus
@@ -74,6 +74,71 @@ export interface ReplayOptions {
   pauseOnSignificantChanges: boolean
   pauseOnErrors: boolean
   maxSteps?: number
+}
+
+export interface ReplaySessionExport {
+  session: {
+    id: string
+    name: string
+    description: string
+    createdAt: Date
+    lastUpdated: Date
+    currentStep: number
+  }
+  originalData: {
+    job: ReconciliationJob
+    timeline: ReconciliationTimeline
+    dataSequence: DistrictStatistics[]
+  }
+  replayResults: {
+    finalState: ReplayState
+    stepResults: StepResult[]
+    debugInfo: DebugInfo
+  }
+  analysis: ReplayAnalysis
+}
+
+export interface ReplayComparison {
+  entryCount: {
+    original: number
+    replay: number
+    difference: number
+  }
+  significantChanges: {
+    original: number
+    replay: number
+  }
+  finalStatus: {
+    original: ReconciliationStatus
+    replay: ReconciliationStatus
+  }
+  differences: Array<{
+    step: number
+    field: string
+    originalValue: unknown
+    replayValue: unknown
+  }>
+}
+
+export interface ReplayAnalysis {
+  summary: {
+    totalSteps: number
+    significantChanges: number
+    extensionCount: number
+    finalStabilityDays: number
+    configViolations: number
+  }
+  performance: {
+    averageStepTime: number
+    totalProcessingTime: number
+    memoryUsage: number
+  }
+  patterns: {
+    changeFrequency: number
+    significanceRate: number
+    errorRate: number
+  }
+  recommendations: string[]
 }
 
 export class ReconciliationReplayEngine {
@@ -366,7 +431,7 @@ export class ReconciliationReplayEngine {
   /**
    * Export replay session for analysis
    */
-  exportReplaySession(sessionId: string): any {
+  exportReplaySession(sessionId: string): ReplaySessionExport {
     const session = this.sessions.get(sessionId)
     if (!session) {
       throw new Error(`Replay session not found: ${sessionId}`)
@@ -398,7 +463,7 @@ export class ReconciliationReplayEngine {
   /**
    * Compare replay results with original timeline
    */
-  compareWithOriginal(sessionId: string): any {
+  compareWithOriginal(sessionId: string): ReplayComparison {
     const session = this.sessions.get(sessionId)
     if (!session) {
       throw new Error(`Replay session not found: ${sessionId}`)
@@ -421,7 +486,12 @@ export class ReconciliationReplayEngine {
         original: session.originalTimeline.status,
         replay: session.replayState.currentTimeline.status
       },
-      differences: [] as any[]
+      differences: [] as Array<{
+        step: number
+        field: string
+        originalValue: unknown
+        replayValue: unknown
+      }>
     }
 
     // Compare individual entries
@@ -432,23 +502,25 @@ export class ReconciliationReplayEngine {
 
       if (!original && replay) {
         comparison.differences.push({
-          index: i,
-          type: 'extra_replay_entry',
-          replay: replay
+          step: i,
+          field: 'extra_replay_entry',
+          originalValue: undefined,
+          replayValue: replay
         })
       } else if (original && !replay) {
         comparison.differences.push({
-          index: i,
-          type: 'missing_replay_entry',
-          original: original
+          step: i,
+          field: 'missing_replay_entry',
+          originalValue: original,
+          replayValue: undefined
         })
       } else if (original && replay) {
         if (original.isSignificant !== replay.isSignificant) {
           comparison.differences.push({
-            index: i,
-            type: 'significance_mismatch',
-            original: original.isSignificant,
-            replay: replay.isSignificant
+            step: i,
+            field: 'significance_mismatch',
+            originalValue: original.isSignificant,
+            replayValue: replay.isSignificant
           })
         }
       }
@@ -622,7 +694,7 @@ export class ReconciliationReplayEngine {
   /**
    * Analyze replay results
    */
-  private analyzeReplayResults(session: ReplaySession): any {
+  private analyzeReplayResults(session: ReplaySession): ReplayAnalysis {
     const stepResults = session.replayState.stepResults
     const debugInfo = session.replayState.debugInfo
 

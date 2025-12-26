@@ -10,7 +10,7 @@ export interface PerformanceMetrics {
   duration: number
   timestamp: number
   success: boolean
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface PerformanceStats {
@@ -54,7 +54,7 @@ export class ReconciliationPerformanceMonitor {
     operationName: string,
     duration: number,
     success: boolean = true,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     const metric: PerformanceMetrics = {
       operationName,
@@ -88,7 +88,7 @@ export class ReconciliationPerformanceMonitor {
   async timeOperation<T>(
     operationName: string,
     operation: () => Promise<T>,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<T> {
     const startTime = Date.now()
     let success = true

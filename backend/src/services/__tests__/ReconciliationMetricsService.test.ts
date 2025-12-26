@@ -79,20 +79,66 @@ vi.mock('../../utils/logger.js', () => ({
   }
 }))
 
+// Mock interface for AlertManager
+interface MockAlertManager {
+  alerts: Map<string, unknown>
+  alertRules: Map<string, unknown>
+  throttleTracker: Map<string, Date>
+  sendAlert: ReturnType<typeof vi.fn>
+  getAlertHistory: ReturnType<typeof vi.fn>
+  sendReconciliationFailureAlert: ReturnType<typeof vi.fn>
+  sendCircuitBreakerAlert: ReturnType<typeof vi.fn>
+  sendPerformanceDegradationAlert: ReturnType<typeof vi.fn>
+  sendDataInconsistencyAlert: ReturnType<typeof vi.fn>
+  sendResourceExhaustionAlert: ReturnType<typeof vi.fn>
+  sendSecurityAlert: ReturnType<typeof vi.fn>
+  sendComplianceAlert: ReturnType<typeof vi.fn>
+  sendBusinessCriticalAlert: ReturnType<typeof vi.fn>
+  sendSystemHealthAlert: ReturnType<typeof vi.fn>
+  sendUserExperienceAlert: ReturnType<typeof vi.fn>
+  sendIntegrationAlert: ReturnType<typeof vi.fn>
+  sendMaintenanceAlert: ReturnType<typeof vi.fn>
+  sendConfigurationAlert: ReturnType<typeof vi.fn>
+  sendCapacityAlert: ReturnType<typeof vi.fn>
+  sendNetworkAlert: ReturnType<typeof vi.fn>
+  sendDatabaseAlert: ReturnType<typeof vi.fn>
+  sendFileSystemAlert: ReturnType<typeof vi.fn>
+}
+
 describe('ReconciliationMetricsService', () => {
   let metricsService: ReconciliationMetricsService
-  let mockAlertManager: any
+  let mockAlertManager: MockAlertManager
 
   beforeEach(() => {
     // Reset singleton instance
-    ;(ReconciliationMetricsService as any).instance = undefined
+    ;(ReconciliationMetricsService as unknown as { instance: undefined }).instance = undefined
     
     mockAlertManager = {
+      alerts: new Map(),
+      alertRules: new Map(),
+      throttleTracker: new Map(),
       sendAlert: vi.fn(),
-      sendReconciliationFailureAlert: vi.fn()
+      getAlertHistory: vi.fn(),
+      sendReconciliationFailureAlert: vi.fn(),
+      sendCircuitBreakerAlert: vi.fn(),
+      sendPerformanceDegradationAlert: vi.fn(),
+      sendDataInconsistencyAlert: vi.fn(),
+      sendResourceExhaustionAlert: vi.fn(),
+      sendSecurityAlert: vi.fn(),
+      sendComplianceAlert: vi.fn(),
+      sendBusinessCriticalAlert: vi.fn(),
+      sendSystemHealthAlert: vi.fn(),
+      sendUserExperienceAlert: vi.fn(),
+      sendIntegrationAlert: vi.fn(),
+      sendMaintenanceAlert: vi.fn(),
+      sendConfigurationAlert: vi.fn(),
+      sendCapacityAlert: vi.fn(),
+      sendNetworkAlert: vi.fn(),
+      sendDatabaseAlert: vi.fn(),
+      sendFileSystemAlert: vi.fn()
     }
     
-    vi.mocked(AlertManager.getInstance).mockReturnValue(mockAlertManager)
+    vi.mocked(AlertManager.getInstance).mockReturnValue(mockAlertManager as unknown as AlertManager)
     
     metricsService = ReconciliationMetricsService.getInstance()
   })

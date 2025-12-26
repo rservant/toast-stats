@@ -66,9 +66,10 @@ describe('Year-Over-Year Comparison Logic', () => {
       const result = await analyticsEngine.calculateYearOverYear('42', currentDate)
 
       expect(result).toBeDefined()
-      expect(result.currentDate).toBe(currentDate)
-      expect(result.previousYearDate).toBe(previousDate)
-      expect(result.dataAvailable).toBe(true)
+      expect(result).not.toBeNull()
+      expect(result!.currentDate).toBe(currentDate)
+      expect(result!.previousYearDate).toBe(previousDate)
+      expect(result!.dataAvailable).toBe(true)
     })
   })
 
@@ -114,23 +115,24 @@ describe('Year-Over-Year Comparison Logic', () => {
 
       const result = await analyticsEngine.calculateYearOverYear('42', currentDate)
 
-      expect(result.dataAvailable).toBe(true)
-      expect(result.metrics).toBeDefined()
+      expect(result).not.toBeNull()
+      expect(result!.dataAvailable).toBe(true)
+      expect(result!.metrics).toBeDefined()
 
       // Check membership metrics
-      expect(result.metrics.membership.current).toBe(55) // 30 + 25
-      expect(result.metrics.membership.previous).toBe(45) // 25 + 20
-      expect(result.metrics.membership.change).toBe(10)
-      expect(result.metrics.membership.percentageChange).toBeCloseTo(22.2, 1)
+      expect(result!.metrics!.membership.current).toBe(55) // 30 + 25
+      expect(result!.metrics!.membership.previous).toBe(45) // 25 + 20
+      expect(result!.metrics!.membership.change).toBe(10)
+      expect(result!.metrics!.membership.percentageChange).toBeCloseTo(22.2, 1)
 
       // Check DCP goals metrics
-      expect(result.metrics.dcpGoals.totalGoals.current).toBe(14) // 8 + 6
-      expect(result.metrics.dcpGoals.totalGoals.previous).toBe(9) // 5 + 4
-      expect(result.metrics.dcpGoals.totalGoals.change).toBe(5)
+      expect(result!.metrics!.dcpGoals.totalGoals.current).toBe(14) // 8 + 6
+      expect(result!.metrics!.dcpGoals.totalGoals.previous).toBe(9) // 5 + 4
+      expect(result!.metrics!.dcpGoals.totalGoals.change).toBe(5)
 
       // Check club count
-      expect(result.metrics.clubCount.current).toBe(2)
-      expect(result.metrics.clubCount.previous).toBe(2)
+      expect(result!.metrics!.clubCount.current).toBe(2)
+      expect(result!.metrics!.clubCount.previous).toBe(2)
     })
   })
 
@@ -153,9 +155,10 @@ describe('Year-Over-Year Comparison Logic', () => {
       const result = await analyticsEngine.calculateYearOverYear('42', currentDate)
 
       expect(result).toBeDefined()
-      expect(result.dataAvailable).toBe(false)
-      expect(result.message).toContain('N/A')
-      expect(result.metrics).toBeUndefined()
+      expect(result).not.toBeNull()
+      expect(result!.dataAvailable).toBe(false)
+      expect(result!.message).toContain('N/A')
+      expect(result!.metrics).toBeUndefined()
     })
 
     it('should handle missing current year data gracefully (Requirement 9.3)', async () => {
@@ -190,12 +193,13 @@ describe('Year-Over-Year Comparison Logic', () => {
 
       const result = await analyticsEngine.calculateYearOverYear(districtId, '2024-11-22')
 
-      expect(result.dataAvailable).toBe(true)
-      expect(result.multiYearTrends).toBeDefined()
-      expect(result.multiYearTrends.available).toBe(true)
-      expect(result.multiYearTrends.years).toHaveLength(3)
-      expect(result.multiYearTrends.trends).toBeDefined()
-      expect(result.multiYearTrends.trends.membershipTrend).toBe('increasing')
+      expect(result).not.toBeNull()
+      expect(result!.dataAvailable).toBe(true)
+      expect(result!.multiYearTrends).toBeDefined()
+      expect(result!.multiYearTrends!.available).toBe(true)
+      expect(result!.multiYearTrends!.years).toHaveLength(3)
+      expect(result!.multiYearTrends!.trends).toBeDefined()
+      expect(result!.multiYearTrends!.trends!.membershipTrend).toBe('increasing')
     })
 
     it('should not provide multi-year trends when less than 3 years available', async () => {
@@ -218,9 +222,10 @@ describe('Year-Over-Year Comparison Logic', () => {
 
       const result = await analyticsEngine.calculateYearOverYear(districtId, '2024-11-22')
 
-      expect(result.dataAvailable).toBe(true)
-      expect(result.multiYearTrends).toBeDefined()
-      expect(result.multiYearTrends.available).toBe(false)
+      expect(result).not.toBeNull()
+      expect(result!.dataAvailable).toBe(true)
+      expect(result!.multiYearTrends).toBeDefined()
+      expect(result!.multiYearTrends!.available).toBe(false)
     })
   })
 
@@ -249,13 +254,14 @@ describe('Year-Over-Year Comparison Logic', () => {
 
       const result = await analyticsEngine.calculateYearOverYear('42', currentDate)
 
-      expect(result.dataAvailable).toBe(true)
-      expect(result.metrics.distinguishedClubs.current).toBe(4)
-      expect(result.metrics.distinguishedClubs.previous).toBe(3)
-      expect(result.metrics.distinguishedClubs.change).toBe(1)
-      expect(result.metrics.distinguishedClubs.byLevel.presidents.current).toBe(2)
-      expect(result.metrics.distinguishedClubs.byLevel.presidents.previous).toBe(1)
-      expect(result.metrics.distinguishedClubs.byLevel.presidents.change).toBe(1)
+      expect(result).not.toBeNull()
+      expect(result!.dataAvailable).toBe(true)
+      expect(result!.metrics!.distinguishedClubs.current).toBe(4)
+      expect(result!.metrics!.distinguishedClubs.previous).toBe(3)
+      expect(result!.metrics!.distinguishedClubs.change).toBe(1)
+      expect(result!.metrics!.distinguishedClubs.byLevel.presidents.current).toBe(2)
+      expect(result!.metrics!.distinguishedClubs.byLevel.presidents.previous).toBe(1)
+      expect(result!.metrics!.distinguishedClubs.byLevel.presidents.change).toBe(1)
     })
   })
 })

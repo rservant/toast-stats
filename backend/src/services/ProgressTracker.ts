@@ -12,7 +12,8 @@ import type {
   ReconciliationEntry,
   ReconciliationStatus,
   DataChanges,
-  ReconciliationJob
+  ReconciliationJob,
+  ReconciliationConfig
 } from '../types/reconciliation.js'
 
 export class ProgressTracker {
@@ -707,7 +708,7 @@ export class ProgressTracker {
    * @param thresholds - The significance thresholds
    * @returns true if changes are significant
    */
-  private isSignificantChange(changes: DataChanges, thresholds: any): boolean {
+  private isSignificantChange(changes: DataChanges, thresholds: ReconciliationConfig['significantChangeThresholds']): boolean {
     if (!changes.hasChanges) {
       return false
     }

@@ -93,7 +93,7 @@ describe('ReconciliationConfigService', () => {
     it('should use defaults when file does not exist', async () => {
       mockCacheService.get.mockReturnValue(undefined)
       const fileError = new Error('File not found')
-      ;(fileError as any).code = 'ENOENT'
+      ;(fileError as unknown as { code: string }).code = 'ENOENT'
       mockReadFile.mockRejectedValue(fileError)
       mockWriteFile.mockResolvedValue(undefined)
 
@@ -225,7 +225,7 @@ describe('ReconciliationConfigService', () => {
     })
 
     it('should validate autoExtensionEnabled', () => {
-      const invalidConfig = { ...defaultConfig, autoExtensionEnabled: 'true' as any }
+      const invalidConfig = { ...defaultConfig, autoExtensionEnabled: 'true' as unknown as boolean }
       const errors = configService.validateConfig(invalidConfig)
       
       expect(errors).toHaveLength(1)

@@ -432,8 +432,8 @@ export class ReconciliationOrchestrator {
       
       // Send alert for critical reconciliation processing failures
       await this.alertManager.sendAlert(
-        'HIGH' as any,
-        'RECONCILIATION' as any,
+        AlertSeverity.HIGH,
+        AlertCategory.RECONCILIATION,
         'Reconciliation Processing Failed',
         `Critical error processing reconciliation cycle for job ${jobId}: ${errorMessage}`,
         { jobId, error: errorMessage }

@@ -102,7 +102,7 @@ export class CacheManager {
       logger.info('Data cached', { date, type, filePath })
 
       // For district rankings, update metadata and index
-      if (type === 'districts' && data.rankings) {
+      if (type === 'districts' && data && typeof data === 'object' && 'rankings' in data) {
         await this.updateMetadata(date, data)
         await this.updateHistoricalIndex(date, data)
       }
@@ -181,7 +181,7 @@ export class CacheManager {
       this.indexCache.set(date, snapshots)
 
       // Load existing index or create new one
-      let indexData: Record<string, unknown> = {}
+      let indexData: Record<string, unknown> = { dates: [], districtIds: [] }
       try {
         const indexPath = this.getIndexFilePath()
         const indexContent = await fs.readFile(indexPath, 'utf-8')
@@ -192,14 +192,16 @@ export class CacheManager {
       }
 
       // Update dates list
-      if (!indexData.dates.includes(date)) {
-        indexData.dates.push(date)
-        indexData.dates.sort()
+      const dates = indexData.dates as string[]
+      if (!dates.includes(date)) {
+        dates.push(date)
+        dates.sort()
       }
 
       // Update district IDs list
       const newDistrictIds = snapshots.map(s => s.districtId)
-      const existingIds = new Set(indexData.districtIds || [])
+      const districtIds = indexData.districtIds as string[]
+      const existingIds = new Set(districtIds)
       newDistrictIds.forEach(id => existingIds.add(id))
       indexData.districtIds = Array.from(existingIds).sort()
 
@@ -209,8 +211,8 @@ export class CacheManager {
 
       logger.info('Historical index updated', { 
         date, 
-        totalDates: indexData.dates.length,
-        totalDistricts: indexData.districtIds.length 
+        totalDates: (indexData.dates as string[]).length,
+        totalDistricts: (indexData.districtIds as string[]).length 
       })
     } catch (error) {
       logger.error('Failed to update historical index', { date, error })

@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest'
 import type { 
   ReconciliationConfig, 
   ReconciliationJob, 
+  ReconciliationJobStatus,
   DataChanges, 
   DistinguishedCounts
 } from '../reconciliation'
@@ -37,7 +38,7 @@ describe('Reconciliation Data Models - Property-Based Tests', () => {
       id: `job-${Math.floor(seed * 10000)}`,
       districtId: `D${Math.floor(seed * 100)}`,
       targetMonth: `2024-${String(Math.floor(seed * 12) + 1).padStart(2, '0')}`,
-      status: ['active', 'completed', 'failed', 'cancelled'][Math.floor(seed * 4)] as any,
+      status: ['active', 'completed', 'failed', 'cancelled'][Math.floor(seed * 4)] as ReconciliationJobStatus,
       startDate,
       maxEndDate: new Date(startDate.getTime() + config.maxReconciliationDays * 24 * 60 * 60 * 1000),
       currentDataDate: seed > 0.5 ? `2024-${String(Math.floor(seed * 12) + 1).padStart(2, '0')}-${String(Math.floor(seed * 28) + 1).padStart(2, '0')}` : undefined,

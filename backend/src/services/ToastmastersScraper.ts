@@ -125,7 +125,7 @@ export class ToastmastersScraper {
   /**
    * Parse CSV content into array of objects
    */
-  private parseCsv(csvContent: string): any[] {
+  private parseCsv(csvContent: string): ScrapedRecord[] {
     try {
       const records = parse(csvContent, {
         columns: true,
@@ -133,10 +133,10 @@ export class ToastmastersScraper {
         trim: true,
         relax_column_count: true, // Allow inconsistent column counts
         relax_quotes: true, // Be lenient with quotes
-      })
+      }) as ScrapedRecord[]
       
       // Filter out "Month of" rows (summary/aggregate rows)
-      const filteredRecords = records.filter((record: any) => {
+      const filteredRecords = records.filter((record: ScrapedRecord) => {
         // Check if any field contains "Month of"
         const hasMonthOf = Object.values(record).some(value => 
           typeof value === 'string' && value.includes('Month of')
@@ -287,7 +287,8 @@ export class ToastmastersScraper {
       
       for (const select of allSelects) {
         const selectedText = await select.evaluate((el) => {
-          const selectedOption = (el as any).options[(el as any).selectedIndex]
+          const selectElement = el as { options: { text: string }[]; selectedIndex: number }
+          const selectedOption = selectElement.options[selectElement.selectedIndex]
           return selectedOption ? selectedOption.text : null
         })
         
@@ -305,7 +306,8 @@ export class ToastmastersScraper {
       
       // Get the selected option text (e.g., "As of 10-Oct-2025")
       const selectedText = await daySelect.evaluate((select) => {
-        const selectedOption = (select as any).options[(select as any).selectedIndex]
+        const selectElement = select as { options: { text: string }[]; selectedIndex: number }
+        const selectedOption = selectElement.options[selectElement.selectedIndex]
         return selectedOption ? selectedOption.text : null
       })
       

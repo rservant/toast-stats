@@ -221,3 +221,95 @@ Every pull request MUST:
 **Accountability**: Team members are responsible for maintaining lint compliance in their code areas.
 
 **Continuous Improvement**: Regular reviews of this policy to ensure it supports development velocity while maintaining quality.
+
+## 12. Lint-TypeScript Compatibility Patterns
+
+### Safe `any` Type Elimination
+When removing `any` types to achieve lint compliance:
+
+1. **MUST** use `unknown` as intermediate step
+2. **SHOULD** create proper interfaces for complex objects
+3. **MAY** use `unknown as SpecificType` for type assertions
+4. **MUST NOT** use `any` even temporarily
+
+### Test Mock Type Safety
+All test mocks MUST have proper type definitions:
+- Create mock-specific interfaces
+- Use `ReturnType<typeof vi.fn>` for mock functions
+- Avoid `Partial<RealType>` when possible - create dedicated mock interfaces
+
+### Type Assertion Best Practices
+When type assertions are necessary:
+1. **Prefer**: `unknown as SpecificType`
+2. **Avoid**: `value as any as SpecificType`
+3. **Document**: Why the assertion is safe
+4. **Plan**: Migration to proper typing
+
+### Error Resolution Order
+Fix lint errors in this priority order:
+1. **Explicit `any` types** (critical - breaks lint and safety)
+2. **Unused variables/imports** (high - breaks lint)
+3. **Missing type definitions** (medium - improves safety)
+4. **Style violations** (low - consistency)
+
+### Verification Workflow
+After fixing lint errors:
+1. **MUST** run `npm run lint` (verify 0 errors)
+2. **MUST** run `npx tsc --noEmit` (verify no new TypeScript errors)
+3. **SHOULD** run tests to ensure functionality preserved
+4. **MAY** run type coverage tools to measure improvement
+
+### Proven Patterns for Safe Error Resolution
+
+#### Type Safety Patterns
+1. **Unknown-First Pattern**: Always use `unknown` as intermediate step when eliminating `any`
+   ```typescript
+   // GOOD: Safe type assertion
+   const result = (data as unknown) as SpecificType
+   
+   // BAD: Direct any casting
+   const result = data as any as SpecificType
+   ```
+
+2. **Helper Function Pattern**: Create type-safe parsing utilities
+   ```typescript
+   // Create reusable helpers
+   function parseIntSafe(value: unknown): number {
+     return typeof value === 'string' ? parseInt(value, 10) : 0
+   }
+   
+   function ensureString(value: unknown): string {
+     return typeof value === 'string' ? value : ''
+   }
+   ```
+
+3. **Interface Creation Pattern**: Define proper interfaces instead of using `Partial<RealType>`
+   ```typescript
+   // GOOD: Dedicated mock interface
+   interface MockToastmastersScraper {
+     scrapeDistrictData: Mock<Procedure | Constructable>
+     scrapeClubData: Mock<Procedure | Constructable>
+   }
+   
+   // BAD: Partial real type
+   const mock: Partial<ToastmastersScraper> = { ... }
+   ```
+
+#### Test Mock Safety Patterns
+1. **Complete Mock Interfaces**: Always define all required properties for test mocks
+2. **Type-Safe Mock Creation**: Use proper typing for mock return values
+3. **Null Safety in Tests**: Add proper null checks before assertions
+
+#### Error Resolution Priority
+1. **Critical**: Explicit `any` types (breaks both lint and type safety)
+2. **High**: Incomplete mock interfaces (breaks type safety)
+3. **Medium**: Missing null checks in tests (runtime safety)
+4. **Low**: Style and formatting issues
+
+### Common Anti-Patterns to Avoid
+- Using `@ts-ignore` to suppress lint errors
+- Converting `any` directly to specific types without `unknown`
+- Creating overly broad interfaces just to satisfy linting
+- Disabling lint rules instead of fixing violations
+- Using `Partial<RealType>` for test mocks instead of dedicated interfaces
+- Skipping null checks in test assertions

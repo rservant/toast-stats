@@ -51,6 +51,12 @@ export interface SimulationResult {
   }
 }
 
+export interface SignificanceThresholds {
+  membershipPercent: number
+  clubCountAbsolute: number
+  distinguishedPercent: number
+}
+
 export class ReconciliationSimulator {
   private scenarios: Map<string, SimulationScenario> = new Map()
 
@@ -656,7 +662,7 @@ export class ReconciliationSimulator {
   /**
    * Check if changes are significant based on thresholds
    */
-  private isSignificantChange(changes: DataChanges, thresholds: any): boolean {
+  private isSignificantChange(changes: DataChanges, thresholds: SignificanceThresholds): boolean {
     if (!changes.hasChanges) return false
 
     if (changes.membershipChange && Math.abs(changes.membershipChange.percentChange) >= thresholds.membershipPercent) {

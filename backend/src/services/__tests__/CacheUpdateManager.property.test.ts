@@ -12,6 +12,19 @@ import type { DistrictStatistics } from '../../types/districts'
 import type { DataChanges } from '../../types/reconciliation'
 import fs from 'fs/promises'
 
+// Test interfaces
+interface CacheUpdateResult {
+  success: boolean
+  updated: boolean
+}
+
+interface TestUpdateData {
+  districtId: string
+  date: string
+  result: CacheUpdateResult
+  newData: DistrictStatistics
+}
+
 describe('CacheUpdateManager - Property-Based Tests', () => {
   let cacheUpdateManager: CacheUpdateManager
   let cacheManager: DistrictCacheManager
@@ -317,7 +330,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
     it('should maintain cache consistency across multiple concurrent updates', async () => {
       // Test concurrent updates to different districts
       const concurrentUpdates = 8
-      const promises: Promise<any>[] = []
+      const promises: Promise<TestUpdateData>[] = []
 
       for (let i = 0; i < concurrentUpdates; i++) {
         const seed = i / concurrentUpdates
@@ -343,21 +356,21 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
           const changes = generateDataChanges(true, seed)
 
           // Perform concurrent update
-          const result = await cacheUpdateManager.updateCacheImmediately(
+          const result: CacheUpdateResult = await cacheUpdateManager.updateCacheImmediately(
             districtId,
             date,
             newData,
             changes
           )
 
-          return { districtId, date, result, newData }
+          return { districtId, date, result, newData } as TestUpdateData
         })()
 
         promises.push(updatePromise)
       }
 
       // Wait for all concurrent updates to complete
-      const results = await Promise.all(promises)
+      const results: TestUpdateData[] = await Promise.all(promises)
 
       // Property: All concurrent updates should succeed and maintain consistency
       for (const { districtId, date, result, newData } of results) {

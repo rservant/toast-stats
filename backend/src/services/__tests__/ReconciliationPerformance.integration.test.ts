@@ -8,6 +8,9 @@ import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.js'
 import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
 import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
+import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
+import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
+import { CacheUpdateManager } from '../CacheUpdateManager.js'
 import type { ReconciliationJob, DistrictStatistics } from '../../types/reconciliation.js'
 import { createTestReconciliationJob } from '../../utils/test-helpers.js'
 
@@ -101,7 +104,16 @@ describe('Reconciliation Performance Integration', () => {
   let cacheService: ReconciliationCacheService
   let storageOptimizer: ReconciliationStorageOptimizer
   let orchestrator: ReconciliationOrchestrator
-  let mockChangeDetectionEngine: any
+  let mockChangeDetectionEngine: {
+    detectChanges: ReturnType<typeof vi.fn>
+    getChangeHistory: ReturnType<typeof vi.fn>
+    clearHistory: ReturnType<typeof vi.fn>
+    isSignificantChange: ReturnType<typeof vi.fn>
+    calculateChangeMetrics: ReturnType<typeof vi.fn>
+    detectMembershipChanges: ReturnType<typeof vi.fn>
+    detectClubCountChanges: ReturnType<typeof vi.fn>
+    detectDistinguishedChanges: ReturnType<typeof vi.fn>
+  }
 
   beforeEach(() => {
     // Create mock instances
@@ -117,7 +129,13 @@ describe('Reconciliation Performance Integration', () => {
         timestamp: new Date(),
         sourceDataDate: '2025-01-15'
       }),
-      isSignificantChange: vi.fn().mockReturnValue(false)
+      getChangeHistory: vi.fn().mockReturnValue([]),
+      clearHistory: vi.fn(),
+      isSignificantChange: vi.fn().mockReturnValue(false),
+      calculateChangeMetrics: vi.fn().mockReturnValue({ totalChanges: 1, significantChanges: 0 }),
+      detectMembershipChanges: vi.fn(),
+      detectClubCountChanges: vi.fn(),
+      detectDistinguishedChanges: vi.fn()
     }
 
     const mockConfigService = {
@@ -134,11 +152,6 @@ describe('Reconciliation Performance Integration', () => {
         maxExtensionDays: 5
       }),
       updateConfig: vi.fn().mockResolvedValue(undefined)
-    }
-
-    const mockCacheUpdateManager = {
-      updateCache: vi.fn().mockResolvedValue(undefined),
-      invalidateCache: vi.fn().mockResolvedValue(undefined)
     }
 
     performanceMonitor = new ReconciliationPerformanceMonitor()
@@ -164,9 +177,16 @@ describe('Reconciliation Performance Integration', () => {
     
     // Create a mock storage optimizer that tracks saved jobs
     const savedJobs = new Map()
-    const savedTimelines = new Map()
     
     storageOptimizer = {
+      jobCache: new Map(),
+      timelineCache: new Map(),
+      indexCacheTimestamp: Date.now(),
+      config: {},
+      storageDir: './test',
+      jobsDir: './test/jobs',
+      timelinesDir: './test/timelines',
+      configFile: './test/config.json',
       saveJob: vi.fn().mockImplementation(async (job) => {
         savedJobs.set(job.id, job)
         // Also pre-populate cache when job is saved
@@ -179,49 +199,68 @@ describe('Reconciliation Performance Integration', () => {
         return savedJobs.get(jobId) || null
       }),
       getAllJobs: vi.fn().mockResolvedValue([]),
-      getJobsByDistrict: vi.fn().mockResolvedValue([]), // Add missing method
-      deleteJob: vi.fn().mockResolvedValue(true),
-      cleanup: vi.fn().mockResolvedValue(undefined),
-      getStats: vi.fn().mockReturnValue({ totalJobs: 0, cacheHitRate: 0.8 }),
-      getCacheStats: vi.fn().mockReturnValue({ // Add missing method
-        hitRate: 0.85,
-        totalRequests: 100,
-        cacheSize: 50,
-        jobCacheSize: 10,
-        timelineCacheSize: 5,
-        pendingOperations: 0
-      }),
-      saveTimeline: vi.fn().mockImplementation(async (timeline) => {
-        savedTimelines.set(timeline.jobId, timeline)
-        return undefined
-      }),
-      getTimeline: vi.fn().mockImplementation(async (jobId) => {
-        const existing = savedTimelines.get(jobId)
-        if (existing) return existing
-        
-        // Return a default timeline structure if none exists
-        return {
-          jobId,
-          districtId: 'D1',
-          targetMonth: '2025-01',
-          entries: [],
-          status: {
-            phase: 'monitoring',
-            daysActive: 0,
-            daysStable: 0,
-            message: 'Monitoring for changes'
-          }
-        }
-      }),
-      flush: vi.fn().mockResolvedValue(undefined) // Add missing method
-    } as any
-    
+      getJobsByDistrict: vi.fn().mockResolvedValue([]),
+      cleanupOldJobs: vi.fn().mockResolvedValue(undefined),
+      saveTimeline: vi.fn().mockResolvedValue(undefined),
+      getTimeline: vi.fn().mockResolvedValue(null),
+      getAllTimelines: vi.fn().mockResolvedValue([]),
+      getTimelinesByDistrict: vi.fn().mockResolvedValue([]),
+      getTimelinesByMonth: vi.fn().mockResolvedValue([]),
+      cleanupOldTimelines: vi.fn().mockResolvedValue(undefined),
+      getConfig: vi.fn().mockResolvedValue({}),
+      validateConfig: vi.fn().mockReturnValue([]),
+      updateConfig: vi.fn().mockResolvedValue(undefined),
+      resetToDefaults: vi.fn().mockResolvedValue(undefined),
+      initializeStorage: vi.fn().mockResolvedValue(undefined),
+      getStorageStats: vi.fn().mockResolvedValue({ totalJobs: 0, totalTimelines: 0 }),
+      exportData: vi.fn().mockResolvedValue(''),
+      importData: vi.fn().mockResolvedValue(undefined),
+      backupStorage: vi.fn().mockResolvedValue(''),
+      restoreFromBackup: vi.fn().mockResolvedValue(undefined),
+      compactStorage: vi.fn().mockResolvedValue(undefined),
+      validateStorageIntegrity: vi.fn().mockResolvedValue([]),
+      repairStorage: vi.fn().mockResolvedValue(undefined),
+      migrateStorage: vi.fn().mockResolvedValue(undefined),
+      getStorageVersion: vi.fn().mockReturnValue('1.0.0'),
+      setStorageVersion: vi.fn().mockResolvedValue(undefined),
+      archiveOldData: vi.fn().mockResolvedValue(undefined),
+      getArchivedData: vi.fn().mockResolvedValue([]),
+      restoreArchivedData: vi.fn().mockResolvedValue(undefined),
+      deleteArchivedData: vi.fn().mockResolvedValue(undefined),
+      optimizeStorage: vi.fn().mockResolvedValue(undefined),
+      getOptimizationStats: vi.fn().mockResolvedValue({ compressionRatio: 1.0, spaceSaved: 0 }),
+      scheduleOptimization: vi.fn().mockResolvedValue(undefined),
+      cancelOptimization: vi.fn().mockResolvedValue(undefined)
+    } as unknown as ReconciliationStorageOptimizer
+
+    // Create performance monitor
+    performanceMonitor = new ReconciliationPerformanceMonitor()
+
+    cacheService = new ReconciliationCacheService({
+      maxSize: 100,
+      ttlMs: 300000 // 5 minutes
+    })
+
+    const mockCacheUpdateManager = {
+      cacheManager: {} as unknown,
+      backupSuffix: '_backup',
+      updateCacheImmediately: vi.fn().mockResolvedValue({ success: true, updated: true }),
+      checkCacheConsistency: vi.fn().mockResolvedValue(true),
+      rollbackCache: vi.fn().mockResolvedValue(undefined),
+      optimizeCache: vi.fn().mockResolvedValue(undefined),
+      getCacheStats: vi.fn().mockReturnValue({ hitRate: 0.8, totalRequests: 100 }),
+      clearCache: vi.fn().mockResolvedValue(undefined),
+      warmupCache: vi.fn().mockResolvedValue(undefined),
+      scheduleOptimization: vi.fn().mockResolvedValue(undefined),
+      cancelOptimization: vi.fn().mockResolvedValue(undefined)
+    } as unknown as CacheUpdateManager
+
     orchestrator = new ReconciliationOrchestrator(
-      mockChangeDetectionEngine,
+      mockChangeDetectionEngine as unknown as ChangeDetectionEngine,
       storageOptimizer,
       cacheService,
-      mockConfigService as any,
-      mockCacheUpdateManager as any
+      mockConfigService as unknown as ReconciliationConfigService,
+      mockCacheUpdateManager
     )
   })
 

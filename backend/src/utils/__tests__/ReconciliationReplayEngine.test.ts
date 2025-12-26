@@ -28,12 +28,24 @@ vi.mock('../logger.js', () => ({
   }
 }))
 
+// Mock interface for ChangeDetectionEngine
+interface MockChangeDetectionEngine {
+  detectChanges: ReturnType<typeof vi.fn>
+  getChangeHistory: ReturnType<typeof vi.fn>
+  clearHistory: ReturnType<typeof vi.fn>
+  isSignificantChange: ReturnType<typeof vi.fn>
+  calculateChangeMetrics: ReturnType<typeof vi.fn>
+  detectMembershipChanges: ReturnType<typeof vi.fn>
+  detectClubCountChanges: ReturnType<typeof vi.fn>
+  detectDistinguishedChanges: ReturnType<typeof vi.fn>
+}
+
 // Mock ChangeDetectionEngine
 vi.mock('../../services/ChangeDetectionEngine.js')
 
 describe('ReconciliationReplayEngine', () => {
   let replayEngine: ReconciliationReplayEngine
-  let mockChangeDetectionEngine: any
+  let mockChangeDetectionEngine: MockChangeDetectionEngine
 
   // Test data
   const mockJob: ReconciliationJob = {
@@ -132,13 +144,18 @@ describe('ReconciliationReplayEngine', () => {
   beforeEach(() => {
     mockChangeDetectionEngine = {
       detectChanges: vi.fn(),
+      getChangeHistory: vi.fn(),
+      clearHistory: vi.fn(),
       isSignificantChange: vi.fn(),
-      calculateChangeMetrics: vi.fn()
-    } as any
+      calculateChangeMetrics: vi.fn(),
+      detectMembershipChanges: vi.fn(),
+      detectClubCountChanges: vi.fn(),
+      detectDistinguishedChanges: vi.fn()
+    }
 
-    vi.mocked(ChangeDetectionEngine).mockImplementation(() => mockChangeDetectionEngine)
+    vi.mocked(ChangeDetectionEngine).mockImplementation(() => mockChangeDetectionEngine as unknown as ChangeDetectionEngine)
     
-    replayEngine = new ReconciliationReplayEngine(mockChangeDetectionEngine)
+    replayEngine = new ReconciliationReplayEngine(mockChangeDetectionEngine as unknown as ChangeDetectionEngine)
   })
 
   describe('createReplaySession', () => {
@@ -607,7 +624,7 @@ describe('ReconciliationReplayEngine', () => {
       const comparison = replayEngine.compareWithOriginal(session.id)
 
       expect(comparison.differences.length).toBeGreaterThan(0)
-      const significanceDiff = comparison.differences.find((d: any) => d.type === 'significance_mismatch')
+      const significanceDiff = comparison.differences.find((d: { field: string }) => d.field === 'significance_mismatch')
       expect(significanceDiff).toBeDefined()
     })
 

@@ -228,7 +228,7 @@ describe('ReconciliationTestDataGenerator', () => {
         expect(testCase.seed).toBeGreaterThan(0)
         
         // Inputs should be district statistics
-        const [prevData, currData] = testCase.inputs
+        const [prevData, currData] = testCase.inputs as [{ districtId: string; membership: unknown }, { districtId: string; membership: unknown }]
         expect(prevData.districtId).toBeTruthy()
         expect(currData.districtId).toBeTruthy()
         expect(prevData.membership).toBeDefined()
