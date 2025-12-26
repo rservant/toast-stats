@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Cache Migration Script
- * 
+ *
  * Automatically clears cache entries that don't match the current cache version.
  * This is necessary when the cache format or calculation methodology changes.
- * 
+ *
  * Usage:
  *   npm run migrate-cache
  *   or
@@ -22,7 +22,7 @@ async function main() {
 
   try {
     const cacheManager = new CacheManager()
-    
+
     // Check current version
     const currentVersion = CacheManager.getCacheVersion()
     console.log(`Current cache version: v${currentVersion}`)
@@ -48,7 +48,7 @@ async function main() {
       const isCompatible = await cacheManager.isCacheVersionCompatible(date)
       const metadata = await cacheManager.getMetadata(date)
       const version = metadata?.cacheVersion || 1
-      
+
       if (!isCompatible) {
         console.log(`  ✗ ${date} - v${version} (incompatible)`)
         incompatibleDates.push(date)
@@ -69,7 +69,7 @@ async function main() {
     console.log()
 
     const clearedCount = await cacheManager.clearIncompatibleCache()
-    
+
     console.log()
     console.log('='.repeat(60))
     console.log('Migration Complete')
@@ -81,7 +81,6 @@ async function main() {
     console.log('  2. First request may be slower while fetching fresh data')
     console.log('  3. New cache will use v' + currentVersion + ' format')
     console.log()
-
   } catch (error) {
     console.error()
     console.error('✗ Migration failed:', error)

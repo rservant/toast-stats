@@ -55,7 +55,7 @@ describe('CacheService', () => {
       expect(cacheService.get(key)).toBe(value)
 
       // Wait for expiration
-      await new Promise((resolve) => setTimeout(resolve, 150))
+      await new Promise(resolve => setTimeout(resolve, 150))
 
       // Should be expired
       expect(cacheService.get(key)).toBeUndefined()

@@ -39,7 +39,8 @@ The following optimizations have been implemented to improve application perform
 - Improves performance on pages with multiple charts
 - Shows loading skeleton until chart is ready to render
 
-**Usage in**: 
+**Usage in**:
+
 - `DistrictDetailPage` for all chart components
 - `DistinguishedProgressChart`
 - `AreaPerformanceChart`
@@ -65,12 +66,14 @@ The following optimizations have been implemented to improve application perform
 
 ## 5. Optimized Component Rendering
 
-**Memoization**: 
+**Memoization**:
+
 - Used `useMemo` for expensive filtering and sorting operations in `ClubsTable`
 - Prevents unnecessary recalculations on every render
 - Only recomputes when dependencies change
 
-**Virtual Scrolling**: 
+**Virtual Scrolling**:
+
 - Pagination effectively implements a form of virtual scrolling
 - Only renders visible items (25 per page)
 - Dramatically reduces DOM nodes for large datasets
@@ -78,12 +81,14 @@ The following optimizations have been implemented to improve application perform
 ## Performance Metrics
 
 ### Before Optimizations
+
 - Clubs table with 150 clubs: ~150 DOM nodes, sluggish scrolling
 - Search input: Filters on every keystroke, causing lag
 - Charts: All rendered immediately on page load
 - Analytics: Fetched on every navigation
 
 ### After Optimizations
+
 - Clubs table with 150 clubs: ~25 DOM nodes per page, smooth scrolling
 - Search input: Debounced, no lag during typing
 - Charts: Lazy loaded, faster initial page load
@@ -92,6 +97,7 @@ The following optimizations have been implemented to improve application perform
 ## Browser Compatibility
 
 All optimizations use modern web APIs with broad browser support:
+
 - Intersection Observer API (supported in all modern browsers)
 - React hooks (React 16.8+)
 - ES6+ features (transpiled by Vite)
@@ -99,6 +105,7 @@ All optimizations use modern web APIs with broad browser support:
 ## Future Enhancements
 
 Potential additional optimizations:
+
 1. Virtual scrolling library (e.g., react-window) for extremely large lists
 2. Web Workers for heavy analytics calculations
 3. Service Worker for offline caching
@@ -109,6 +116,7 @@ Potential additional optimizations:
 ## Testing
 
 To verify performance improvements:
+
 1. Use Chrome DevTools Performance tab
 2. Measure Time to Interactive (TTI)
 3. Check Largest Contentful Paint (LCP)
@@ -118,6 +126,7 @@ To verify performance improvements:
 ## Maintenance
 
 When adding new features:
+
 - Use `useDebounce` for search/filter inputs
 - Wrap charts in `LazyChart` component
 - Use `usePagination` for large lists

@@ -163,5 +163,3 @@ This document outlines the requirements for a Toastmasters District Statistics V
 6. THE Visualizer SHALL provide interactive tooltips showing detailed rank information when hovering over data points
 7. WHEN multiple districts are selected, THE Visualizer SHALL use distinct colors for each district's line on the chart
 8. THE Visualizer SHALL allow toggling between different ranking metrics (aggregate score, clubs rank, payments rank, distinguished rank)
-
-

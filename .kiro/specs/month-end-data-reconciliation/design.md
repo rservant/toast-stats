@@ -52,9 +52,13 @@ The solution extends the existing DistrictBackfillService with intelligent recon
 **Purpose**: Automatically initiates reconciliation monitoring when months transition.
 
 **Key Methods**:
+
 ```typescript
 interface ReconciliationScheduler {
-  scheduleMonthEndReconciliation(districtId: string, monthEndDate: Date): Promise<void>
+  scheduleMonthEndReconciliation(
+    districtId: string,
+    monthEndDate: Date
+  ): Promise<void>
   checkPendingReconciliations(): Promise<ReconciliationJob[]>
   cancelReconciliation(jobId: string): Promise<void>
 }
@@ -65,10 +69,18 @@ interface ReconciliationScheduler {
 **Purpose**: Compares current dashboard data with cached data to identify changes.
 
 **Key Methods**:
+
 ```typescript
 interface ChangeDetectionEngine {
-  detectChanges(districtId: string, cachedData: DistrictData, currentData: DistrictData): DataChanges
-  isSignificantChange(changes: DataChanges, thresholds: ChangeThresholds): boolean
+  detectChanges(
+    districtId: string,
+    cachedData: DistrictData,
+    currentData: DistrictData
+  ): DataChanges
+  isSignificantChange(
+    changes: DataChanges,
+    thresholds: ChangeThresholds
+  ): boolean
   calculateChangeMetrics(changes: DataChanges): ChangeMetrics
 }
 ```
@@ -78,9 +90,13 @@ interface ChangeDetectionEngine {
 **Purpose**: Coordinates the entire reconciliation process for a district/month.
 
 **Key Methods**:
+
 ```typescript
 interface ReconciliationOrchestrator {
-  startReconciliation(districtId: string, targetMonth: string): Promise<ReconciliationJob>
+  startReconciliation(
+    districtId: string,
+    targetMonth: string
+  ): Promise<ReconciliationJob>
   processReconciliationCycle(jobId: string): Promise<ReconciliationStatus>
   finalizeReconciliation(jobId: string): Promise<void>
   extendReconciliation(jobId: string, additionalDays: number): Promise<void>
@@ -92,9 +108,14 @@ interface ReconciliationOrchestrator {
 **Purpose**: Tracks and stores reconciliation progress for visibility and analysis.
 
 **Key Methods**:
+
 ```typescript
 interface ProgressTracker {
-  recordDataUpdate(jobId: string, date: Date, changes: DataChanges): Promise<void>
+  recordDataUpdate(
+    jobId: string,
+    date: Date,
+    changes: DataChanges
+  ): Promise<void>
   getReconciliationTimeline(jobId: string): Promise<ReconciliationTimeline>
   estimateCompletion(jobId: string): Promise<Date | null>
   markAsFinalized(jobId: string, finalDate: Date): Promise<void>
@@ -104,6 +125,7 @@ interface ProgressTracker {
 ## Data Models
 
 ### ReconciliationJob
+
 ```typescript
 interface ReconciliationJob {
   id: string
@@ -125,6 +147,7 @@ interface ReconciliationJob {
 ```
 
 ### ReconciliationConfig
+
 ```typescript
 interface ReconciliationConfig {
   maxReconciliationDays: number // Default: 15
@@ -141,6 +164,7 @@ interface ReconciliationConfig {
 ```
 
 ### DataChanges
+
 ```typescript
 interface DataChanges {
   hasChanges: boolean
@@ -166,6 +190,7 @@ interface DataChanges {
 ```
 
 ### ReconciliationTimeline
+
 ```typescript
 interface ReconciliationTimeline {
   jobId: string
@@ -188,62 +213,75 @@ interface ReconciliationEntry {
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Automatic Reconciliation Initiation
-*For any* month transition, the system should automatically initiate reconciliation monitoring for the previous month without manual intervention
+
+_For any_ month transition, the system should automatically initiate reconciliation monitoring for the previous month without manual intervention
 **Validates: Requirements 2.1**
 
 ### Property 2: Real-time Cache Updates
-*For any* data changes detected during reconciliation, the cached month-end entry should be immediately updated with the new data
+
+_For any_ data changes detected during reconciliation, the cached month-end entry should be immediately updated with the new data
 **Validates: Requirements 2.3, 5.3**
 
 ### Property 3: Change Detection Accuracy
-*For any* comparison between cached and current dashboard data, the system should correctly identify all significant changes based on configured thresholds
+
+_For any_ comparison between cached and current dashboard data, the system should correctly identify all significant changes based on configured thresholds
 **Validates: Requirements 2.2, 6.2**
 
 ### Property 4: Finalization Logic
-*For any* reconciliation period where no changes are detected for the configured stability period, the system should mark the month-end data as final
+
+_For any_ reconciliation period where no changes are detected for the configured stability period, the system should mark the month-end data as final
 **Validates: Requirements 1.5, 2.4**
 
 ### Property 5: Data Status Indicators
-*For any* month-end data display, the system should show the correct status (preliminary/final) with accurate collection dates
+
+_For any_ month-end data display, the system should show the correct status (preliminary/final) with accurate collection dates
 **Validates: Requirements 1.3, 3.1, 3.2, 3.4**
 
 ### Property 6: Latest Data Selection
-*For any* month with multiple data points during reconciliation, the system should always use the data with the latest "as of" date from the dashboard
+
+_For any_ month with multiple data points during reconciliation, the system should always use the data with the latest "as of" date from the dashboard
 **Validates: Requirements 4.4, 4.5**
 
 ### Property 7: Reconciliation Timeline Accuracy
-*For any* reconciliation job, the progress timeline should accurately reflect all data changes and their timestamps during the reconciliation period
+
+_For any_ reconciliation job, the progress timeline should accurately reflect all data changes and their timestamps during the reconciliation period
 **Validates: Requirements 3.3, 5.1, 5.2**
 
 ### Property 8: Configuration Compliance
-*For any* reconciliation job, the system should respect all configured parameters including maximum periods, thresholds, and monitoring frequency
+
+_For any_ reconciliation job, the system should respect all configured parameters including maximum periods, thresholds, and monitoring frequency
 **Validates: Requirements 6.1, 6.2, 6.3**
 
 ### Property 9: Stability Period Detection
-*For any* sequence of consecutive days without data changes, the system should correctly identify and display the stability period
+
+_For any_ sequence of consecutive days without data changes, the system should correctly identify and display the stability period
 **Validates: Requirements 5.4**
 
 ### Property 10: Extension Logic
-*For any* reconciliation where significant changes are detected near the end of the monitoring period, the system should extend monitoring when auto-extension is enabled
+
+_For any_ reconciliation where significant changes are detected near the end of the monitoring period, the system should extend monitoring when auto-extension is enabled
 **Validates: Requirements 4.3**
 
 ## Error Handling
 
 ### Reconciliation Failures
+
 - **Dashboard Unavailable**: Retry with exponential backoff, alert if extended outage
 - **Data Parsing Errors**: Log detailed error, use previous valid data, alert administrators
 - **Cache Update Failures**: Retry cache operations, maintain data consistency
 - **Configuration Errors**: Validate configuration on startup and changes
 
 ### Timeout Handling
+
 - **Max Period Exceeded**: Finalize with best available data, log timeout reason
 - **Network Timeouts**: Implement circuit breaker pattern for dashboard requests
 - **Processing Timeouts**: Queue reconciliation jobs to prevent blocking
 
 ### Data Inconsistency
+
 - **Conflicting Updates**: Use timestamp-based conflict resolution
 - **Missing Data**: Attempt to backfill missing periods before reconciliation
 - **Corrupted Cache**: Rebuild cache from source data when possible
@@ -251,12 +289,14 @@ interface ReconciliationEntry {
 ## Testing Strategy
 
 ### Unit Testing
+
 - Test change detection algorithms with various data scenarios
 - Test reconciliation logic with different configuration parameters
 - Test timeline generation and progress tracking
 - Test configuration validation and error handling
 
 ### Property-Based Testing
+
 - **Property 1**: Generate random month transitions and verify automatic reconciliation initiation
 - **Property 2**: Generate data changes and verify immediate cache updates
 - **Property 3**: Generate various data sets and verify change detection accuracy
@@ -269,12 +309,14 @@ interface ReconciliationEntry {
 - **Property 10**: Generate late changes and verify extension logic
 
 ### Integration Testing
+
 - Test end-to-end reconciliation workflows with mock dashboard data
 - Test interaction with existing DistrictBackfillService
 - Test API endpoints for reconciliation status and progress
 - Test configuration changes during active reconciliation
 
 ### Performance Testing
+
 - Test reconciliation performance with large numbers of districts
 - Test memory usage during extended reconciliation periods
 - Test database performance with reconciliation timeline storage
@@ -283,24 +325,28 @@ interface ReconciliationEntry {
 ## Implementation Phases
 
 ### Phase 1: Core Reconciliation Engine (Week 1-2)
+
 - Implement ReconciliationOrchestrator and ChangeDetectionEngine
 - Create data models and database schema
 - Implement basic reconciliation workflow
 - Add configuration management
 
 ### Phase 2: Scheduling and Automation (Week 2-3)
+
 - Implement ReconciliationScheduler for automatic initiation
 - Add job queue management for concurrent reconciliations
 - Implement retry logic and error handling
 - Add monitoring and alerting
 
 ### Phase 3: Progress Tracking and UI (Week 3-4)
+
 - Implement ProgressTracker for timeline management
 - Create API endpoints for reconciliation status
 - Build frontend components for reconciliation visibility
 - Add reconciliation management interface
 
 ### Phase 4: Advanced Features (Week 4-5)
+
 - Implement estimation algorithms for completion dates
 - Add advanced configuration options
 - Implement testing and simulation tools
@@ -309,22 +355,26 @@ interface ReconciliationEntry {
 ## Deployment Considerations
 
 ### Database Changes
+
 - Add reconciliation job tables
 - Add reconciliation timeline tables
 - Add configuration tables
 - Create indexes for performance
 
 ### Configuration Management
+
 - Add reconciliation settings to application config
 - Provide environment-specific defaults
 - Add runtime configuration validation
 
 ### Monitoring and Alerting
+
 - Add metrics for reconciliation job success/failure rates
 - Monitor reconciliation duration and data change patterns
 - Alert on failed reconciliations or extended periods without finalization
 
 ### Backward Compatibility
+
 - Ensure existing month-end data remains accessible
 - Provide migration path for historical data
 - Maintain existing API contracts while adding new endpoints

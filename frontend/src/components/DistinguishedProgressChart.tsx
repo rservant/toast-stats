@@ -1,66 +1,77 @@
-import React from 'react';
-import { LoadingSkeleton } from './LoadingSkeleton';
-import { Tooltip, InfoIcon } from './Tooltip';
+import React from 'react'
+import { LoadingSkeleton } from './LoadingSkeleton'
+import { Tooltip, InfoIcon } from './Tooltip'
 
 interface DistinguishedProgressChartProps {
   distinguishedClubs: {
-    smedley: number;
-    presidents: number;
-    select: number;
-    distinguished: number;
-    total: number;
-  };
-  distinguishedProjection: number;
-  totalClubs: number;
-  isLoading?: boolean;
+    smedley: number
+    presidents: number
+    select: number
+    distinguished: number
+    total: number
+  }
+  distinguishedProjection: number
+  totalClubs: number
+  isLoading?: boolean
 }
 
-export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProps> = ({
+export const DistinguishedProgressChart: React.FC<
+  DistinguishedProgressChartProps
+> = ({
   distinguishedClubs,
   distinguishedProjection,
   totalClubs,
   isLoading = false,
 }) => {
   // Calculate percentages
-  const currentPercentage = totalClubs > 0 ? (distinguishedClubs.total / totalClubs) * 100 : 0;
-  const projectedPercentage = totalClubs > 0 ? (distinguishedProjection / totalClubs) * 100 : 0;
+  const currentPercentage =
+    totalClubs > 0 ? (distinguishedClubs.total / totalClubs) * 100 : 0
+  const projectedPercentage =
+    totalClubs > 0 ? (distinguishedProjection / totalClubs) * 100 : 0
 
   // Calculate individual level percentages for the breakdown
-  const smedleyPercentage = distinguishedClubs.total > 0 
-    ? (distinguishedClubs.smedley / distinguishedClubs.total) * 100 
-    : 0;
-  const presidentsPercentage = distinguishedClubs.total > 0 
-    ? (distinguishedClubs.presidents / distinguishedClubs.total) * 100 
-    : 0;
-  const selectPercentage = distinguishedClubs.total > 0 
-    ? (distinguishedClubs.select / distinguishedClubs.total) * 100 
-    : 0;
-  const distinguishedPercentage = distinguishedClubs.total > 0 
-    ? (distinguishedClubs.distinguished / distinguishedClubs.total) * 100 
-    : 0;
+  const smedleyPercentage =
+    distinguishedClubs.total > 0
+      ? (distinguishedClubs.smedley / distinguishedClubs.total) * 100
+      : 0
+  const presidentsPercentage =
+    distinguishedClubs.total > 0
+      ? (distinguishedClubs.presidents / distinguishedClubs.total) * 100
+      : 0
+  const selectPercentage =
+    distinguishedClubs.total > 0
+      ? (distinguishedClubs.select / distinguishedClubs.total) * 100
+      : 0
+  const distinguishedPercentage =
+    distinguishedClubs.total > 0
+      ? (distinguishedClubs.distinguished / distinguishedClubs.total) * 100
+      : 0
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center gap-2 mb-6">
-        <h3 className="text-xl font-bold text-gray-900">Distinguished Club Progress</h3>
+        <h3 className="text-xl font-bold text-gray-900">
+          Distinguished Club Progress
+        </h3>
         <Tooltip content="Track clubs achieving Distinguished (5+ goals), Select (7+ goals), President's (9+ goals), or Smedley (10+ goals) status">
           <InfoIcon />
         </Tooltip>
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <LoadingSkeleton variant="chart" />
-      )}
+      {isLoading && <LoadingSkeleton variant="chart" />}
 
       {!isLoading && (
         <div className="space-y-6">
           {/* Current Progress Gauge */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Current Progress</span>
+              <span className="text-sm font-medium text-gray-700">
+                Current Progress
+              </span>
               <span className="text-sm font-bold text-gray-900">
-                {distinguishedClubs.total} / {totalClubs} ({currentPercentage.toFixed(1)}%)
+                {distinguishedClubs.total} / {totalClubs} (
+                {currentPercentage.toFixed(1)}%)
               </span>
             </div>
             <div className="relative w-full h-8 bg-gray-200 rounded-full overflow-hidden">
@@ -80,9 +91,12 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
           {/* Projected Year-End */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Projected Year-End</span>
+              <span className="text-sm font-medium text-gray-700">
+                Projected Year-End
+              </span>
               <span className="text-sm font-bold text-gray-900">
-                {distinguishedProjection} / {totalClubs} ({projectedPercentage.toFixed(1)}%)
+                {distinguishedProjection} / {totalClubs} (
+                {projectedPercentage.toFixed(1)}%)
               </span>
             </div>
             <div className="relative w-full h-8 bg-gray-200 rounded-full overflow-hidden">
@@ -99,21 +113,26 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
             </div>
             {distinguishedProjection > distinguishedClubs.total && (
               <p className="text-xs text-gray-600 mt-1">
-                +{distinguishedProjection - distinguishedClubs.total} clubs projected to achieve distinguished status
+                +{distinguishedProjection - distinguishedClubs.total} clubs
+                projected to achieve distinguished status
               </p>
             )}
           </div>
 
           {/* Breakdown by Level */}
           <div className="border-t pt-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">Breakdown by Level</h4>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">
+              Breakdown by Level
+            </h4>
             <div className="space-y-3">
               {/* Smedley Distinguished */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
-                    <span className="text-sm text-gray-700">Smedley Distinguished</span>
+                    <span className="text-sm text-gray-700">
+                      Smedley Distinguished
+                    </span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">
                     {distinguishedClubs.smedley}
@@ -132,7 +151,9 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-purple-700 rounded-full"></div>
-                    <span className="text-sm text-gray-700">President's Distinguished</span>
+                    <span className="text-sm text-gray-700">
+                      President's Distinguished
+                    </span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">
                     {distinguishedClubs.presidents}
@@ -151,7 +172,9 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                    <span className="text-sm text-gray-700">Select Distinguished</span>
+                    <span className="text-sm text-gray-700">
+                      Select Distinguished
+                    </span>
                   </div>
                   <span className="text-sm font-medium text-gray-900">
                     {distinguishedClubs.select}
@@ -189,19 +212,27 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-3 pt-4 border-t">
             <div className="text-center">
-              <p className="text-xl font-bold text-yellow-600">{distinguishedClubs.smedley}</p>
+              <p className="text-xl font-bold text-yellow-600">
+                {distinguishedClubs.smedley}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Smedley</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold text-purple-700">{distinguishedClubs.presidents}</p>
+              <p className="text-xl font-bold text-purple-700">
+                {distinguishedClubs.presidents}
+              </p>
               <p className="text-xs text-gray-600 mt-1">President's</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold text-purple-600">{distinguishedClubs.select}</p>
+              <p className="text-xl font-bold text-purple-600">
+                {distinguishedClubs.select}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Select</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-bold text-purple-500">{distinguishedClubs.distinguished}</p>
+              <p className="text-xl font-bold text-purple-500">
+                {distinguishedClubs.distinguished}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Distinguished</p>
             </div>
           </div>
@@ -210,18 +241,23 @@ export const DistinguishedProgressChart: React.FC<DistinguishedProgressChartProp
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-900">Achievement Rate</p>
+                <p className="text-sm font-medium text-purple-900">
+                  Achievement Rate
+                </p>
                 <p className="text-xs text-purple-700 mt-1">
-                  {currentPercentage.toFixed(1)}% of clubs have achieved distinguished status
+                  {currentPercentage.toFixed(1)}% of clubs have achieved
+                  distinguished status
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold text-purple-900">{currentPercentage.toFixed(0)}%</p>
+                <p className="text-3xl font-bold text-purple-900">
+                  {currentPercentage.toFixed(0)}%
+                </p>
               </div>
             </div>
           </div>
         </div>
       )}
     </div>
-  );
-};
+  )
+}

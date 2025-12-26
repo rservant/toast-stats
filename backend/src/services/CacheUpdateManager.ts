@@ -1,13 +1,16 @@
 /**
  * Cache Update Manager for Month-End Data Reconciliation
- * 
+ *
  * Handles immediate cache updates when changes are detected during reconciliation.
  * Provides cache consistency checks and rollback mechanisms for failed updates.
  */
 
 import { logger } from '../utils/logger.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
-import type { DistrictStatistics, DistrictCacheEntry } from '../types/districts.js'
+import type {
+  DistrictStatistics,
+  DistrictCacheEntry,
+} from '../types/districts.js'
 import type { DataChanges } from '../types/reconciliation.js'
 
 export interface CacheUpdateResult {
@@ -35,7 +38,7 @@ export class CacheUpdateManager {
 
   /**
    * Update cache immediately when changes are detected
-   * 
+   *
    * @param districtId - The district ID
    * @param date - The date to update (YYYY-MM-DD format)
    * @param newData - The new district data to cache
@@ -48,24 +51,27 @@ export class CacheUpdateManager {
     newData: DistrictStatistics,
     changes: DataChanges
   ): Promise<CacheUpdateResult> {
-    logger.info('Updating cache immediately', { 
-      districtId, 
-      date, 
+    logger.info('Updating cache immediately', {
+      districtId,
+      date,
       hasChanges: changes.hasChanges,
-      sourceDataDate: changes.sourceDataDate
+      sourceDataDate: changes.sourceDataDate,
     })
 
     const result: CacheUpdateResult = {
       success: false,
       updated: false,
       backupCreated: false,
-      rollbackAvailable: false
+      rollbackAvailable: false,
     }
 
     try {
       // Skip update if no changes detected
       if (!changes.hasChanges) {
-        logger.debug('No changes detected, skipping cache update', { districtId, date })
+        logger.debug('No changes detected, skipping cache update', {
+          districtId,
+          date,
+        })
         result.success = true
         return result
       }
@@ -85,23 +91,28 @@ export class CacheUpdateManager {
       )
 
       // Verify the update was successful
-      const consistencyCheck = await this.checkCacheConsistency(districtId, date, newData)
+      const consistencyCheck = await this.checkCacheConsistency(
+        districtId,
+        date,
+        newData
+      )
       if (!consistencyCheck.consistent) {
-        throw new Error(`Cache consistency check failed: ${consistencyCheck.issues.join(', ')}`)
+        throw new Error(
+          `Cache consistency check failed: ${consistencyCheck.issues.join(', ')}`
+        )
       }
 
       result.success = true
       result.updated = true
 
-      logger.info('Cache updated successfully', { 
-        districtId, 
+      logger.info('Cache updated successfully', {
+        districtId,
         date,
         sourceDataDate: changes.sourceDataDate,
-        backupCreated: result.backupCreated
+        backupCreated: result.backupCreated,
       })
 
       return result
-
     } catch (error) {
       logger.error('Failed to update cache', { districtId, date, error })
       result.error = error as Error
@@ -112,7 +123,11 @@ export class CacheUpdateManager {
           await this.rollbackCacheUpdate(districtId, date)
           logger.info('Cache rollback successful', { districtId, date })
         } catch (rollbackError) {
-          logger.error('Cache rollback failed', { districtId, date, rollbackError })
+          logger.error('Cache rollback failed', {
+            districtId,
+            date,
+            rollbackError,
+          })
         }
       }
 
@@ -122,7 +137,7 @@ export class CacheUpdateManager {
 
   /**
    * Check cache consistency for a specific district and date
-   * 
+   *
    * @param districtId - The district ID
    * @param date - The date to check
    * @param expectedData - Optional expected data to compare against
@@ -138,12 +153,15 @@ export class CacheUpdateManager {
     const result: CacheConsistencyCheck = {
       consistent: true,
       issues: [],
-      cacheIntegrity: true
+      cacheIntegrity: true,
     }
 
     try {
       // Check if cache entry exists
-      const cacheEntry = await this.cacheManager.getDistrictData(districtId, date)
+      const cacheEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        date
+      )
       if (!cacheEntry) {
         result.consistent = false
         result.issues.push('Cache entry does not exist')
@@ -162,7 +180,10 @@ export class CacheUpdateManager {
 
       // If expected data is provided, compare it
       if (expectedData) {
-        const dataMatches = this.compareCacheWithExpectedData(cacheEntry, expectedData)
+        const dataMatches = this.compareCacheWithExpectedData(
+          cacheEntry,
+          expectedData
+        )
         if (!dataMatches.matches) {
           result.consistent = false
           result.issues.push(...dataMatches.issues)
@@ -177,17 +198,20 @@ export class CacheUpdateManager {
         result.issues.push(...corruptionCheck.issues)
       }
 
-      logger.debug('Cache consistency check completed', { 
-        districtId, 
-        date, 
+      logger.debug('Cache consistency check completed', {
+        districtId,
+        date,
         consistent: result.consistent,
-        issueCount: result.issues.length
+        issueCount: result.issues.length,
       })
 
       return result
-
     } catch (error) {
-      logger.error('Cache consistency check failed', { districtId, date, error })
+      logger.error('Cache consistency check failed', {
+        districtId,
+        date,
+        error,
+      })
       result.consistent = false
       result.cacheIntegrity = false
       result.issues.push(`Consistency check error: ${(error as Error).message}`)
@@ -197,14 +221,20 @@ export class CacheUpdateManager {
 
   /**
    * Create a backup of the current cache entry before updating
-   * 
+   *
    * @param districtId - The district ID
    * @param date - The date to backup
    * @returns true if backup was created successfully
    */
-  private async createCacheBackup(districtId: string, date: string): Promise<boolean> {
+  private async createCacheBackup(
+    districtId: string,
+    date: string
+  ): Promise<boolean> {
     try {
-      const existingEntry = await this.cacheManager.getDistrictData(districtId, date)
+      const existingEntry = await this.cacheManager.getDistrictData(
+        districtId,
+        date
+      )
       if (!existingEntry) {
         logger.debug('No existing cache entry to backup', { districtId, date })
         return false
@@ -212,7 +242,7 @@ export class CacheUpdateManager {
 
       // Create backup by temporarily storing the existing data
       const backupKey = `${districtId}-${date}${this.backupSuffix}`
-      
+
       // Store backup in memory or temporary location
       // For simplicity, we'll use the same cache manager with a backup suffix
       await this.cacheManager.cacheDistrictData(
@@ -225,7 +255,6 @@ export class CacheUpdateManager {
 
       logger.debug('Cache backup created', { districtId, date, backupKey })
       return true
-
     } catch (error) {
       logger.error('Failed to create cache backup', { districtId, date, error })
       return false
@@ -234,7 +263,7 @@ export class CacheUpdateManager {
 
   /**
    * Rollback a cache update using the backup
-   * 
+   *
    * @param districtId - The district ID
    * @param date - The date to rollback
    * @returns void
@@ -269,7 +298,6 @@ export class CacheUpdateManager {
       )
 
       logger.info('Cache rollback completed', { districtId, date })
-
     } catch (error) {
       logger.error('Cache rollback failed', { districtId, date, error })
       throw error
@@ -278,11 +306,14 @@ export class CacheUpdateManager {
 
   /**
    * Validate the structure of a cache entry
-   * 
+   *
    * @param entry - The cache entry to validate
    * @returns Validation result
    */
-  private validateCacheEntryStructure(entry: DistrictCacheEntry): { valid: boolean; issues: string[] } {
+  private validateCacheEntryStructure(entry: DistrictCacheEntry): {
+    valid: boolean
+    issues: string[]
+  } {
     const issues: string[] = []
 
     // Check required fields
@@ -317,13 +348,13 @@ export class CacheUpdateManager {
 
     return {
       valid: issues.length === 0,
-      issues
+      issues,
     }
   }
 
   /**
    * Compare cached data with expected data
-   * 
+   *
    * @param cacheEntry - The cached data entry
    * @param expectedData - The expected data
    * @returns Comparison result
@@ -335,41 +366,64 @@ export class CacheUpdateManager {
     const issues: string[] = []
 
     // Compare array lengths
-    if (expectedData.districtPerformance && 
-        cacheEntry.districtPerformance.length !== expectedData.districtPerformance.length) {
-      issues.push(`District performance count mismatch: expected ${expectedData.districtPerformance.length}, got ${cacheEntry.districtPerformance.length}`)
+    if (
+      expectedData.districtPerformance &&
+      cacheEntry.districtPerformance.length !==
+        expectedData.districtPerformance.length
+    ) {
+      issues.push(
+        `District performance count mismatch: expected ${expectedData.districtPerformance.length}, got ${cacheEntry.districtPerformance.length}`
+      )
     }
 
-    if (expectedData.divisionPerformance && 
-        cacheEntry.divisionPerformance.length !== expectedData.divisionPerformance.length) {
-      issues.push(`Division performance count mismatch: expected ${expectedData.divisionPerformance.length}, got ${cacheEntry.divisionPerformance.length}`)
+    if (
+      expectedData.divisionPerformance &&
+      cacheEntry.divisionPerformance.length !==
+        expectedData.divisionPerformance.length
+    ) {
+      issues.push(
+        `Division performance count mismatch: expected ${expectedData.divisionPerformance.length}, got ${cacheEntry.divisionPerformance.length}`
+      )
     }
 
-    if (expectedData.clubPerformance && 
-        cacheEntry.clubPerformance.length !== expectedData.clubPerformance.length) {
-      issues.push(`Club performance count mismatch: expected ${expectedData.clubPerformance.length}, got ${cacheEntry.clubPerformance.length}`)
+    if (
+      expectedData.clubPerformance &&
+      cacheEntry.clubPerformance.length !== expectedData.clubPerformance.length
+    ) {
+      issues.push(
+        `Club performance count mismatch: expected ${expectedData.clubPerformance.length}, got ${cacheEntry.clubPerformance.length}`
+      )
     }
 
     return {
       matches: issues.length === 0,
-      issues
+      issues,
     }
   }
 
   /**
    * Check for data corruption indicators
-   * 
+   *
    * @param entry - The cache entry to check
    * @returns Corruption check result
    */
-  private checkForDataCorruption(entry: DistrictCacheEntry): { clean: boolean; issues: string[] } {
+  private checkForDataCorruption(entry: DistrictCacheEntry): {
+    clean: boolean
+    issues: string[]
+  } {
     const issues: string[] = []
 
     // Check for null or undefined arrays
-    if (entry.districtPerformance === null || entry.districtPerformance === undefined) {
+    if (
+      entry.districtPerformance === null ||
+      entry.districtPerformance === undefined
+    ) {
       issues.push('District performance data is null/undefined')
     }
-    if (entry.divisionPerformance === null || entry.divisionPerformance === undefined) {
+    if (
+      entry.divisionPerformance === null ||
+      entry.divisionPerformance === undefined
+    ) {
       issues.push('Division performance data is null/undefined')
     }
     if (entry.clubPerformance === null || entry.clubPerformance === undefined) {
@@ -378,33 +432,48 @@ export class CacheUpdateManager {
 
     // Check for extremely large arrays (potential memory issues)
     const maxReasonableSize = 10000
-    if (entry.districtPerformance && entry.districtPerformance.length > maxReasonableSize) {
-      issues.push(`District performance array unusually large: ${entry.districtPerformance.length} items`)
+    if (
+      entry.districtPerformance &&
+      entry.districtPerformance.length > maxReasonableSize
+    ) {
+      issues.push(
+        `District performance array unusually large: ${entry.districtPerformance.length} items`
+      )
     }
-    if (entry.divisionPerformance && entry.divisionPerformance.length > maxReasonableSize) {
-      issues.push(`Division performance array unusually large: ${entry.divisionPerformance.length} items`)
+    if (
+      entry.divisionPerformance &&
+      entry.divisionPerformance.length > maxReasonableSize
+    ) {
+      issues.push(
+        `Division performance array unusually large: ${entry.divisionPerformance.length} items`
+      )
     }
-    if (entry.clubPerformance && entry.clubPerformance.length > maxReasonableSize) {
-      issues.push(`Club performance array unusually large: ${entry.clubPerformance.length} items`)
+    if (
+      entry.clubPerformance &&
+      entry.clubPerformance.length > maxReasonableSize
+    ) {
+      issues.push(
+        `Club performance array unusually large: ${entry.clubPerformance.length} items`
+      )
     }
 
     // Check for future dates (potential corruption)
     const futureThreshold = new Date()
     futureThreshold.setDate(futureThreshold.getDate() + 1) // Allow 1 day in future
-    
+
     if (entry.fetchedAt && new Date(entry.fetchedAt) > futureThreshold) {
       issues.push('FetchedAt date is in the future')
     }
 
     return {
       clean: issues.length === 0,
-      issues
+      issues,
     }
   }
 
   /**
    * Clean up backup files for a district
-   * 
+   *
    * @param districtId - The district ID
    * @returns void
    */

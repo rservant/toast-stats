@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   BarChart,
   Bar,
@@ -11,41 +11,77 @@ import {
   ResponsiveContainer,
   Legend,
   Cell,
-} from 'recharts';
-import { useEducationalAwards } from '../hooks/useEducationalAwards';
-import { useDistrictStatistics } from '../hooks/useMembershipData';
-import { ExportButton } from './ExportButton';
-import { exportEducationalAwards } from '../utils/csvExport';
+} from 'recharts'
+import { useEducationalAwards } from '../hooks/useEducationalAwards'
+import { useDistrictStatistics } from '../hooks/useMembershipData'
+import { ExportButton } from './ExportButton'
+import { exportEducationalAwards } from '../utils/csvExport'
 
 interface EducationalAwardsChartProps {
-  districtId: string;
-  districtName: string;
-  months?: number;
+  districtId: string
+  districtName: string
+  months?: number
 }
 
-type ChartView = 'byType' | 'byMonth' | 'topClubs';
+type ChartView = 'byType' | 'byMonth' | 'topClubs'
+
+// Custom tooltip for monthly chart moved outside render
+const MonthlyTooltip = ({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{
+    payload: { fullDate: string; awards: number; [key: string]: unknown }
+  }>
+}) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    const formattedDate = new Date(data.fullDate).toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    })
+
+    return (
+      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+        <p className="text-sm font-medium text-gray-900 mb-1">
+          {formattedDate}
+        </p>
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold">Awards:</span>{' '}
+          {data.awards.toLocaleString()}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
 
 const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
   districtId,
   districtName,
   months = 12,
 }) => {
-  const [chartView, setChartView] = useState<ChartView>('byType');
+  const [chartView, setChartView] = useState<ChartView>('byType')
   const { data, isLoading, isError, error } = useEducationalAwards(
     districtId,
     months
-  );
-  const { data: statistics } = useDistrictStatistics(districtId);
+  )
+  const { data: statistics } = useDistrictStatistics(districtId)
 
   const handleExport = () => {
     if (data) {
-      exportEducationalAwards(data, districtId, districtName);
+      exportEducationalAwards(data, districtId, districtName)
     }
-  };
+  }
 
   if (isLoading) {
     return (
-      <section className="bg-white rounded-lg shadow-md p-6" aria-busy="true" aria-label="Loading educational awards">
+      <section
+        className="bg-white rounded-lg shadow-md p-6"
+        aria-busy="true"
+        aria-label="Loading educational awards"
+      >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Educational Awards
         </h2>
@@ -56,12 +92,16 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           </div>
         </div>
       </section>
-    );
+    )
   }
 
   if (isError) {
     return (
-      <section className="bg-white rounded-lg shadow-md p-6" role="alert" aria-label="Educational awards error">
+      <section
+        className="bg-white rounded-lg shadow-md p-6"
+        role="alert"
+        aria-label="Educational awards error"
+      >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Educational Awards
         </h2>
@@ -76,12 +116,16 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           </div>
         </div>
       </section>
-    );
+    )
   }
 
   if (!data) {
     return (
-      <section className="bg-white rounded-lg shadow-md p-6" role="status" aria-label="Educational awards">
+      <section
+        className="bg-white rounded-lg shadow-md p-6"
+        role="status"
+        aria-label="Educational awards"
+      >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Educational Awards
         </h2>
@@ -89,13 +133,13 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           <p className="text-gray-600">No educational awards data available</p>
         </div>
       </section>
-    );
+    )
   }
 
   // Calculate average awards per member
-  const totalMembers = statistics?.membership.total || 0;
+  const totalMembers = statistics?.membership.total || 0
   const averageAwardsPerMember =
-    totalMembers > 0 ? (data.totalAwards / totalMembers).toFixed(2) : '0.00';
+    totalMembers > 0 ? (data.totalAwards / totalMembers).toFixed(2) : '0.00'
 
   // Color palette for charts
   const colors = [
@@ -107,66 +151,46 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
     '#06b6d4',
     '#6366f1',
     '#f97316',
-  ];
+  ]
 
   // Format data for by-type chart
   const byTypeData = data.byType.map((item, index) => ({
     ...item,
     color: colors[index % colors.length],
-  }));
+  }))
 
   // Format data for monthly chart
-  const byMonthData = data.byMonth.map((point) => ({
+  const byMonthData = data.byMonth.map(point => ({
     month: new Date(point.month).toLocaleDateString('en-US', {
       month: 'short',
       year: 'numeric',
     }),
     awards: point.count,
     fullDate: point.month,
-  }));
+  }))
 
   // Format data for top clubs
   const topClubsData = data.topClubs.slice(0, 10).map((club, index) => ({
     ...club,
     color: colors[index % colors.length],
-  }));
-
-  // Custom tooltip for monthly chart
-  const MonthlyTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const formattedDate = new Date(data.fullDate).toLocaleDateString(
-        'en-US',
-        {
-          month: 'long',
-          year: 'numeric',
-        }
-      );
-
-      return (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-          <p className="text-sm font-medium text-gray-900 mb-1">
-            {formattedDate}
-          </p>
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">Awards:</span>{' '}
-            {data.awards.toLocaleString()}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  }))
 
   return (
-    <section className="bg-white rounded-lg shadow-md p-4 sm:p-6" aria-label="Educational awards chart">
+    <section
+      className="bg-white rounded-lg shadow-md p-4 sm:p-6"
+      aria-label="Educational awards chart"
+    >
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
               Educational Awards
             </h2>
-            <div className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600" role="status" aria-live="polite">
+            <div
+              className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600"
+              role="status"
+              aria-live="polite"
+            >
               <div>
                 <span className="font-medium">Total Awards:</span>{' '}
                 {data.totalAwards.toLocaleString()}
@@ -187,7 +211,11 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
         </div>
 
         {/* View Toggle Buttons */}
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Chart view options">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Chart view options"
+        >
           <button
             onClick={() => setChartView('byType')}
             className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
@@ -235,7 +263,11 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
               Awards by Type
             </h3>
             {byTypeData.length > 0 ? (
-              <div role="img" aria-label={`Bar chart showing ${data.totalAwards} educational awards distributed across ${byTypeData.length} award types`} className="w-full overflow-x-auto">
+              <div
+                role="img"
+                aria-label={`Bar chart showing ${data.totalAwards} educational awards distributed across ${byTypeData.length} award types`}
+                className="w-full overflow-x-auto"
+              >
                 <div className="min-w-[320px]">
                   <ResponsiveContainer width="100%" height={280} minWidth={320}>
                     <BarChart
@@ -290,7 +322,11 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
               Awards Over Time ({months} Months)
             </h3>
             {byMonthData.length > 0 ? (
-              <div role="img" aria-label={`Line chart showing educational awards earned over ${months} months`} className="w-full overflow-x-auto">
+              <div
+                role="img"
+                aria-label={`Line chart showing educational awards earned over ${months} months`}
+                className="w-full overflow-x-auto"
+              >
                 <div className="min-w-[320px]">
                   <ResponsiveContainer width="100%" height={280} minWidth={320}>
                     <LineChart
@@ -312,7 +348,7 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                         stroke="#6b7280"
                         style={{ fontSize: '10px' }}
                         allowDecimals={false}
-                        tickFormatter={(value) => value.toLocaleString()}
+                        tickFormatter={value => value.toLocaleString()}
                         width={50}
                       />
                       <Tooltip content={<MonthlyTooltip />} />
@@ -349,7 +385,11 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
               Top Performing Clubs (by Educational Awards)
             </h3>
             {topClubsData.length > 0 ? (
-              <div role="img" aria-label={`Bar chart showing top ${topClubsData.length} clubs ranked by educational awards`} className="w-full overflow-x-auto">
+              <div
+                role="img"
+                aria-label={`Bar chart showing top ${topClubsData.length} clubs ranked by educational awards`}
+                className="w-full overflow-x-auto"
+              >
                 <div className="min-w-[320px]">
                   <ResponsiveContainer width="100%" height={320} minWidth={320}>
                     <BarChart
@@ -400,7 +440,7 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
         )}
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default EducationalAwardsChart;
+export default EducationalAwardsChart

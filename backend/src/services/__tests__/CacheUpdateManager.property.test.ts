@@ -1,6 +1,6 @@
 /**
  * Property-Based Tests for CacheUpdateManager
- * 
+ *
  * **Feature: month-end-data-reconciliation, Property 2: Real-time Cache Updates**
  * **Validates: Requirements 2.3, 5.3**
  */
@@ -8,10 +8,22 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { CacheUpdateManager } from '../CacheUpdateManager'
 import { DistrictCacheManager } from '../DistrictCacheManager'
-import type { DistrictStatistics, DistrictCacheEntry } from '../../types/districts'
+import type { DistrictStatistics } from '../../types/districts'
 import type { DataChanges } from '../../types/reconciliation'
 import fs from 'fs/promises'
-import path from 'path'
+
+// Test interfaces
+interface CacheUpdateResult {
+  success: boolean
+  updated: boolean
+}
+
+interface TestUpdateData {
+  districtId: string
+  date: string
+  result: CacheUpdateResult
+  newData: DistrictStatistics
+}
 
 describe('CacheUpdateManager - Property-Based Tests', () => {
   let cacheUpdateManager: CacheUpdateManager
@@ -40,19 +52,23 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
   })
 
   // Test data generators
-  const generateDistrictStatistics = (seed: number = Math.random()): DistrictStatistics => {
+  const generateDistrictStatistics = (
+    seed: number = Math.random()
+  ): DistrictStatistics => {
     const membershipTotal = Math.floor(seed * 5000) + 100 // 100-5100 members
     const clubsTotal = Math.floor(seed * 100) + 10 // 10-110 clubs
     const distinguishedCount = Math.floor(seed * clubsTotal * 0.8) // 0-80% of clubs
 
     return {
       districtId: `D${Math.floor(seed * 100)}`,
-      asOfDate: new Date(2024, 0, Math.floor(seed * 28) + 1).toISOString().split('T')[0],
+      asOfDate: new Date(2024, 0, Math.floor(seed * 28) + 1)
+        .toISOString()
+        .split('T')[0],
       membership: {
         total: membershipTotal,
         change: Math.floor((seed - 0.5) * 200), // -100 to +100 change
         changePercent: (seed - 0.5) * 20, // -10% to +10%
-        byClub: []
+        byClub: [],
       },
       clubs: {
         total: clubsTotal,
@@ -60,28 +76,34 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         suspended: Math.floor(clubsTotal * seed * 0.1), // 0-10% suspended
         ineligible: Math.floor(clubsTotal * seed * 0.05), // 0-5% ineligible
         low: Math.floor(clubsTotal * seed * 0.05), // 0-5% low
-        distinguished: distinguishedCount
+        distinguished: distinguishedCount,
       },
       education: {
         totalAwards: Math.floor(seed * 500),
         byType: [],
-        topClubs: []
+        topClubs: [],
       },
-      districtPerformance: Array.from({ length: Math.floor(seed * 5) + 1 }, (_, i) => ({
-        id: `district-${i}`,
-        name: `District ${i}`,
-        performance: seed * 100
-      })),
-      divisionPerformance: Array.from({ length: Math.floor(seed * 10) + 1 }, (_, i) => ({
-        id: `division-${i}`,
-        name: `Division ${i}`,
-        performance: seed * 100
-      })),
+      districtPerformance: Array.from(
+        { length: Math.floor(seed * 5) + 1 },
+        (_, i) => ({
+          id: `district-${i}`,
+          name: `District ${i}`,
+          performance: seed * 100,
+        })
+      ),
+      divisionPerformance: Array.from(
+        { length: Math.floor(seed * 10) + 1 },
+        (_, i) => ({
+          id: `division-${i}`,
+          name: `Division ${i}`,
+          performance: seed * 100,
+        })
+      ),
       clubPerformance: Array.from({ length: clubsTotal }, (_, i) => ({
         id: `club-${i}`,
         name: `Club ${i}`,
-        performance: seed * 100
-      }))
+        performance: seed * 100,
+      })),
     }
   }
 
@@ -89,14 +111,16 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
     hasChanges: boolean,
     seed: number = Math.random()
   ): DataChanges => {
-    const sourceDate = new Date(2024, 0, Math.floor(seed * 28) + 1).toISOString().split('T')[0]
-    
+    const sourceDate = new Date(2024, 0, Math.floor(seed * 28) + 1)
+      .toISOString()
+      .split('T')[0]
+
     if (!hasChanges) {
       return {
         hasChanges: false,
         changedFields: [],
         timestamp: new Date(),
-        sourceDataDate: sourceDate
+        sourceDataDate: sourceDate,
       }
     }
 
@@ -104,7 +128,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       hasChanges: true,
       changedFields: [],
       timestamp: new Date(),
-      sourceDataDate: sourceDate
+      sourceDataDate: sourceDate,
     }
 
     // Randomly add different types of changes
@@ -113,7 +137,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       changes.membershipChange = {
         previous: Math.floor(seed * 1000) + 500,
         current: Math.floor(seed * 1000) + 600,
-        percentChange: (seed - 0.5) * 10
+        percentChange: (seed - 0.5) * 10,
       }
     }
 
@@ -122,16 +146,16 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       changes.clubCountChange = {
         previous: Math.floor(seed * 50) + 25,
         current: Math.floor(seed * 50) + 30,
-        absoluteChange: Math.floor((seed - 0.5) * 10)
+        absoluteChange: Math.floor((seed - 0.5) * 10),
       }
     }
 
     if (seed > 0.8) {
       changes.changedFields.push('distinguished')
       changes.distinguishedChange = {
-        previous: { president: 5, select: 3, distinguished: 2 },
-        current: { president: 6, select: 4, distinguished: 3 },
-        percentChange: seed * 20
+        previous: { president: 5, select: 3, distinguished: 2, total: 10 },
+        current: { president: 6, select: 4, distinguished: 3, total: 13 },
+        percentChange: seed * 20,
       }
     }
 
@@ -140,7 +164,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
 
   /**
    * Property 2: Real-time Cache Updates
-   * For any data changes detected during reconciliation, the cached month-end entry 
+   * For any data changes detected during reconciliation, the cached month-end entry
    * should be immediately updated with the new data
    */
   describe('Property 2: Real-time Cache Updates', () => {
@@ -149,12 +173,12 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       for (let i = 0; i < 25; i++) {
         const seed = i / 25
         const districtId = `D${i}`
-        const date = `2024-01-${(i % 28 + 1).toString().padStart(2, '0')}`
-        
+        const date = `2024-01-${((i % 28) + 1).toString().padStart(2, '0')}`
+
         // Generate initial data and cache it
         const initialData = generateDistrictStatistics(seed)
         initialData.districtId = districtId
-        
+
         await cacheManager.cacheDistrictData(
           districtId,
           date,
@@ -166,7 +190,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         // Generate new data with changes
         const newData = generateDistrictStatistics(seed + 0.1)
         newData.districtId = districtId
-        
+
         // Generate changes (always has changes for this test)
         const changes = generateDataChanges(true, seed)
 
@@ -187,11 +211,17 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         expect(cachedData).toBeDefined()
         expect(cachedData!.districtId).toBe(districtId)
         expect(cachedData!.date).toBe(date)
-        
+
         // Verify data arrays match the new data
-        expect(cachedData!.districtPerformance).toEqual(newData.districtPerformance || [])
-        expect(cachedData!.divisionPerformance).toEqual(newData.divisionPerformance || [])
-        expect(cachedData!.clubPerformance).toEqual(newData.clubPerformance || [])
+        expect(cachedData!.districtPerformance).toEqual(
+          newData.districtPerformance || []
+        )
+        expect(cachedData!.divisionPerformance).toEqual(
+          newData.divisionPerformance || []
+        )
+        expect(cachedData!.clubPerformance).toEqual(
+          newData.clubPerformance || []
+        )
 
         // Verify fetchedAt timestamp is recent (within last 5 seconds)
         const fetchedAt = new Date(cachedData!.fetchedAt)
@@ -206,12 +236,12 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       for (let i = 0; i < 15; i++) {
         const seed = i / 15
         const districtId = `D${i + 100}`
-        const date = `2024-02-${(i % 28 + 1).toString().padStart(2, '0')}`
-        
+        const date = `2024-02-${((i % 28) + 1).toString().padStart(2, '0')}`
+
         // Generate initial data and cache it
         const initialData = generateDistrictStatistics(seed)
         initialData.districtId = districtId
-        
+
         await cacheManager.cacheDistrictData(
           districtId,
           date,
@@ -221,7 +251,10 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         )
 
         // Get the initial cache entry to compare timestamps later
-        const initialCacheEntry = await cacheManager.getDistrictData(districtId, date)
+        const initialCacheEntry = await cacheManager.getDistrictData(
+          districtId,
+          date
+        )
         expect(initialCacheEntry).toBeDefined()
 
         // Generate changes with no actual changes
@@ -240,12 +273,23 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         expect(result.updated).toBe(false)
 
         // Verify cache entry is unchanged
-        const unchangedCacheEntry = await cacheManager.getDistrictData(districtId, date)
+        const unchangedCacheEntry = await cacheManager.getDistrictData(
+          districtId,
+          date
+        )
         expect(unchangedCacheEntry).toBeDefined()
-        expect(unchangedCacheEntry!.fetchedAt).toBe(initialCacheEntry!.fetchedAt)
-        expect(unchangedCacheEntry!.districtPerformance).toEqual(initialCacheEntry!.districtPerformance)
-        expect(unchangedCacheEntry!.divisionPerformance).toEqual(initialCacheEntry!.divisionPerformance)
-        expect(unchangedCacheEntry!.clubPerformance).toEqual(initialCacheEntry!.clubPerformance)
+        expect(unchangedCacheEntry!.fetchedAt).toBe(
+          initialCacheEntry!.fetchedAt
+        )
+        expect(unchangedCacheEntry!.districtPerformance).toEqual(
+          initialCacheEntry!.districtPerformance
+        )
+        expect(unchangedCacheEntry!.divisionPerformance).toEqual(
+          initialCacheEntry!.divisionPerformance
+        )
+        expect(unchangedCacheEntry!.clubPerformance).toEqual(
+          initialCacheEntry!.clubPerformance
+        )
       }
     })
 
@@ -254,12 +298,12 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       for (let i = 0; i < 10; i++) {
         const seed = i / 10
         const districtId = `D${i + 200}`
-        const date = `2024-03-${(i % 28 + 1).toString().padStart(2, '0')}`
-        
+        const date = `2024-03-${((i % 28) + 1).toString().padStart(2, '0')}`
+
         // Generate and cache initial data
         const initialData = generateDistrictStatistics(seed)
         initialData.districtId = districtId
-        
+
         await cacheManager.cacheDistrictData(
           districtId,
           date,
@@ -269,23 +313,30 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         )
 
         // Get initial cache entry
-        const initialCacheEntry = await cacheManager.getDistrictData(districtId, date)
+        const initialCacheEntry = await cacheManager.getDistrictData(
+          districtId,
+          date
+        )
         expect(initialCacheEntry).toBeDefined()
 
         // Create a mock cache manager that will fail on the second write (the actual update)
         let writeCount = 0
         const failingCacheManager = new DistrictCacheManager(testCacheDir)
-        const originalCacheMethod = failingCacheManager.cacheDistrictData.bind(failingCacheManager)
-        
+        const originalCacheMethod =
+          failingCacheManager.cacheDistrictData.bind(failingCacheManager)
+
         failingCacheManager.cacheDistrictData = async (...args) => {
           writeCount++
-          if (writeCount === 2) { // Fail on the actual update (after backup creation)
+          if (writeCount === 2) {
+            // Fail on the actual update (after backup creation)
             throw new Error('Simulated cache write failure')
           }
           return originalCacheMethod(...args)
         }
 
-        const failingCacheUpdateManager = new CacheUpdateManager(failingCacheManager)
+        const failingCacheUpdateManager = new CacheUpdateManager(
+          failingCacheManager
+        )
 
         // Generate new data and changes
         const newData = generateDistrictStatistics(seed + 0.2)
@@ -307,29 +358,38 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         expect(result.error).toBeDefined()
 
         // Verify original data is still in cache (rollback occurred)
-        const rolledBackEntry = await cacheManager.getDistrictData(districtId, date)
+        const rolledBackEntry = await cacheManager.getDistrictData(
+          districtId,
+          date
+        )
         expect(rolledBackEntry).toBeDefined()
-        expect(rolledBackEntry!.districtPerformance).toEqual(initialCacheEntry!.districtPerformance)
-        expect(rolledBackEntry!.divisionPerformance).toEqual(initialCacheEntry!.divisionPerformance)
-        expect(rolledBackEntry!.clubPerformance).toEqual(initialCacheEntry!.clubPerformance)
+        expect(rolledBackEntry!.districtPerformance).toEqual(
+          initialCacheEntry!.districtPerformance
+        )
+        expect(rolledBackEntry!.divisionPerformance).toEqual(
+          initialCacheEntry!.divisionPerformance
+        )
+        expect(rolledBackEntry!.clubPerformance).toEqual(
+          initialCacheEntry!.clubPerformance
+        )
       }
     })
 
     it('should maintain cache consistency across multiple concurrent updates', async () => {
       // Test concurrent updates to different districts
       const concurrentUpdates = 8
-      const promises: Promise<any>[] = []
+      const promises: Promise<TestUpdateData>[] = []
 
       for (let i = 0; i < concurrentUpdates; i++) {
         const seed = i / concurrentUpdates
         const districtId = `D${i + 300}`
-        const date = `2024-04-${(i % 28 + 1).toString().padStart(2, '0')}`
+        const date = `2024-04-${((i % 28) + 1).toString().padStart(2, '0')}`
 
         const updatePromise = (async () => {
           // Generate and cache initial data
           const initialData = generateDistrictStatistics(seed)
           initialData.districtId = districtId
-          
+
           await cacheManager.cacheDistrictData(
             districtId,
             date,
@@ -344,21 +404,22 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
           const changes = generateDataChanges(true, seed)
 
           // Perform concurrent update
-          const result = await cacheUpdateManager.updateCacheImmediately(
-            districtId,
-            date,
-            newData,
-            changes
-          )
+          const result: CacheUpdateResult =
+            await cacheUpdateManager.updateCacheImmediately(
+              districtId,
+              date,
+              newData,
+              changes
+            )
 
-          return { districtId, date, result, newData }
+          return { districtId, date, result, newData } as TestUpdateData
         })()
 
         promises.push(updatePromise)
       }
 
       // Wait for all concurrent updates to complete
-      const results = await Promise.all(promises)
+      const results: TestUpdateData[] = await Promise.all(promises)
 
       // Property: All concurrent updates should succeed and maintain consistency
       for (const { districtId, date, result, newData } of results) {
@@ -370,9 +431,15 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         expect(cachedData).toBeDefined()
         expect(cachedData!.districtId).toBe(districtId)
         expect(cachedData!.date).toBe(date)
-        expect(cachedData!.districtPerformance).toEqual(newData.districtPerformance || [])
-        expect(cachedData!.divisionPerformance).toEqual(newData.divisionPerformance || [])
-        expect(cachedData!.clubPerformance).toEqual(newData.clubPerformance || [])
+        expect(cachedData!.districtPerformance).toEqual(
+          newData.districtPerformance || []
+        )
+        expect(cachedData!.divisionPerformance).toEqual(
+          newData.divisionPerformance || []
+        )
+        expect(cachedData!.clubPerformance).toEqual(
+          newData.clubPerformance || []
+        )
       }
     })
 
@@ -381,12 +448,12 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       for (let i = 0; i < 12; i++) {
         const seed = i / 12
         const districtId = `D${i + 400}`
-        const date = `2024-05-${(i % 28 + 1).toString().padStart(2, '0')}`
-        
+        const date = `2024-05-${((i % 28) + 1).toString().padStart(2, '0')}`
+
         // Generate and cache data
         const data = generateDistrictStatistics(seed)
         data.districtId = districtId
-        
+
         await cacheManager.cacheDistrictData(
           districtId,
           date,
@@ -408,11 +475,8 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         expect(consistencyCheck.lastUpdateDate).toBeDefined()
 
         // Verify consistency check with expected data comparison
-        const consistencyWithExpected = await cacheUpdateManager.checkCacheConsistency(
-          districtId,
-          date,
-          data
-        )
+        const consistencyWithExpected =
+          await cacheUpdateManager.checkCacheConsistency(districtId, date, data)
 
         expect(consistencyWithExpected.consistent).toBe(true)
         expect(consistencyWithExpected.issues).toHaveLength(0)
@@ -424,12 +488,12 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       for (let i = 0; i < 8; i++) {
         const seed = i / 8
         const districtId = `D${i + 500}`
-        const date = `2024-06-${(i % 28 + 1).toString().padStart(2, '0')}`
-        
+        const date = `2024-06-${((i % 28) + 1).toString().padStart(2, '0')}`
+
         // Generate and cache initial data
         const cachedData = generateDistrictStatistics(seed)
         cachedData.districtId = districtId
-        
+
         await cacheManager.cacheDistrictData(
           districtId,
           date,
@@ -452,7 +516,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
         // Should detect inconsistency due to data mismatch
         expect(consistencyCheck.consistent).toBe(false)
         expect(consistencyCheck.issues.length).toBeGreaterThan(0)
-        
+
         // Should still have cache integrity (structure is valid)
         expect(consistencyCheck.cacheIntegrity).toBe(true)
       }
@@ -463,14 +527,14 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
       for (let i = 0; i < 15; i++) {
         const seed = i / 15
         const districtId = `D${i + 600}`
-        const date = `2024-07-${(i % 28 + 1).toString().padStart(2, '0')}`
-        
+        const date = `2024-07-${((i % 28) + 1).toString().padStart(2, '0')}`
+
         // Generate initial and new data
         const initialData = generateDistrictStatistics(seed)
         const newData = generateDistrictStatistics(seed + 0.5)
         initialData.districtId = districtId
         newData.districtId = districtId
-        
+
         // Cache initial data
         await cacheManager.cacheDistrictData(
           districtId,
@@ -493,36 +557,58 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
 
         if (result.success) {
           // If update succeeded, all data should be the new data
-          const cachedEntry = await cacheManager.getDistrictData(districtId, date)
+          const cachedEntry = await cacheManager.getDistrictData(
+            districtId,
+            date
+          )
           expect(cachedEntry).toBeDefined()
-          expect(cachedEntry!.districtPerformance).toEqual(newData.districtPerformance || [])
-          expect(cachedEntry!.divisionPerformance).toEqual(newData.divisionPerformance || [])
-          expect(cachedEntry!.clubPerformance).toEqual(newData.clubPerformance || [])
+          expect(cachedEntry!.districtPerformance).toEqual(
+            newData.districtPerformance || []
+          )
+          expect(cachedEntry!.divisionPerformance).toEqual(
+            newData.divisionPerformance || []
+          )
+          expect(cachedEntry!.clubPerformance).toEqual(
+            newData.clubPerformance || []
+          )
         } else {
           // If update failed, all data should still be the original data
-          const cachedEntry = await cacheManager.getDistrictData(districtId, date)
+          const cachedEntry = await cacheManager.getDistrictData(
+            districtId,
+            date
+          )
           expect(cachedEntry).toBeDefined()
-          expect(cachedEntry!.districtPerformance).toEqual(initialData.districtPerformance || [])
-          expect(cachedEntry!.divisionPerformance).toEqual(initialData.divisionPerformance || [])
-          expect(cachedEntry!.clubPerformance).toEqual(initialData.clubPerformance || [])
+          expect(cachedEntry!.districtPerformance).toEqual(
+            initialData.districtPerformance || []
+          )
+          expect(cachedEntry!.divisionPerformance).toEqual(
+            initialData.divisionPerformance || []
+          )
+          expect(cachedEntry!.clubPerformance).toEqual(
+            initialData.clubPerformance || []
+          )
         }
 
         // Property: No partial updates should occur
         const finalEntry = await cacheManager.getDistrictData(districtId, date)
         expect(finalEntry).toBeDefined()
-        
+
         // Verify that the cached data is either completely the initial data or completely the new data
-        const matchesInitial = (
-          JSON.stringify(finalEntry!.districtPerformance) === JSON.stringify(initialData.districtPerformance || []) &&
-          JSON.stringify(finalEntry!.divisionPerformance) === JSON.stringify(initialData.divisionPerformance || []) &&
-          JSON.stringify(finalEntry!.clubPerformance) === JSON.stringify(initialData.clubPerformance || [])
-        )
-        
-        const matchesNew = (
-          JSON.stringify(finalEntry!.districtPerformance) === JSON.stringify(newData.districtPerformance || []) &&
-          JSON.stringify(finalEntry!.divisionPerformance) === JSON.stringify(newData.divisionPerformance || []) &&
-          JSON.stringify(finalEntry!.clubPerformance) === JSON.stringify(newData.clubPerformance || [])
-        )
+        const matchesInitial =
+          JSON.stringify(finalEntry!.districtPerformance) ===
+            JSON.stringify(initialData.districtPerformance || []) &&
+          JSON.stringify(finalEntry!.divisionPerformance) ===
+            JSON.stringify(initialData.divisionPerformance || []) &&
+          JSON.stringify(finalEntry!.clubPerformance) ===
+            JSON.stringify(initialData.clubPerformance || [])
+
+        const matchesNew =
+          JSON.stringify(finalEntry!.districtPerformance) ===
+            JSON.stringify(newData.districtPerformance || []) &&
+          JSON.stringify(finalEntry!.divisionPerformance) ===
+            JSON.stringify(newData.divisionPerformance || []) &&
+          JSON.stringify(finalEntry!.clubPerformance) ===
+            JSON.stringify(newData.clubPerformance || [])
 
         // Must match either initial or new data completely (no partial updates)
         expect(matchesInitial || matchesNew).toBe(true)

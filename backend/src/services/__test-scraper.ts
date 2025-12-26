@@ -15,7 +15,12 @@ async function testScraper() {
     console.log('1. Fetching all districts...')
     const districts = await service.getDistricts()
     console.log(`   ✓ Found ${districts.districts.length} districts`)
-    console.log(`   Sample: ${districts.districts.slice(0, 3).map((d: any) => `${d.id}: ${d.name}`).join(', ')}\n`)
+    console.log(
+      `   Sample: ${districts.districts
+        .slice(0, 3)
+        .map((d: { id: string; name: string }) => `${d.id}: ${d.name}`)
+        .join(', ')}\n`
+    )
 
     // Test 2: Get district statistics (using first district)
     if (districts.districts.length > 0) {
@@ -33,7 +38,9 @@ async function testScraper() {
       console.log(`   ✓ Found ${clubs.clubs.length} clubs`)
       if (clubs.clubs.length > 0) {
         const sampleClub = clubs.clubs[0]
-        console.log(`   Sample: ${sampleClub.name} (${sampleClub.memberCount} members)\n`)
+        console.log(
+          `   Sample: ${sampleClub.name} (${sampleClub.memberCount} members)\n`
+        )
       }
     }
 

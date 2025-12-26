@@ -2,6 +2,23 @@ import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import { createTestApp } from './setup.js'
 
+// Interface for district ranking data used in tests
+interface DistrictRanking {
+  districtId: string
+  districtName: string
+  region: string
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  aggregateScore: number
+  clubGrowthPercent: number
+  paymentGrowthPercent: number
+  distinguishedPercent: number
+}
+
 describe('Districts API Integration Tests', () => {
   const app = createTestApp()
 
@@ -62,7 +79,9 @@ describe('Districts API Integration Tests', () => {
 
     it('should return 400 for invalid date format', async () => {
       const response = await request(app)
-        .get('/api/districts/D123/daily-reports?startDate=2024-13-01&endDate=2024-12-31')
+        .get(
+          '/api/districts/D123/daily-reports?startDate=2024-13-01&endDate=2024-12-31'
+        )
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
@@ -70,7 +89,9 @@ describe('Districts API Integration Tests', () => {
 
     it('should return 400 when startDate is after endDate', async () => {
       const response = await request(app)
-        .get('/api/districts/D123/daily-reports?startDate=2024-12-31&endDate=2024-01-01')
+        .get(
+          '/api/districts/D123/daily-reports?startDate=2024-12-31&endDate=2024-01-01'
+        )
         .expect(400)
 
       expect(response.body.error.code).toBe('INVALID_DATE_RANGE')
@@ -78,7 +99,9 @@ describe('Districts API Integration Tests', () => {
 
     it('should return 400 when date range exceeds 90 days', async () => {
       const response = await request(app)
-        .get('/api/districts/D123/daily-reports?startDate=2024-01-01&endDate=2024-12-31')
+        .get(
+          '/api/districts/D123/daily-reports?startDate=2024-01-01&endDate=2024-12-31'
+        )
         .expect(400)
 
       expect(response.body.error.code).toBe('DATE_RANGE_TOO_LARGE')
@@ -290,7 +313,9 @@ describe('Districts API Integration Tests', () => {
 
       it('should return 400 when startDate is after endDate', async () => {
         const response = await request(app)
-          .get('/api/districts/D123/analytics?startDate=2024-12-31&endDate=2024-01-01')
+          .get(
+            '/api/districts/D123/analytics?startDate=2024-12-31&endDate=2024-01-01'
+          )
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_RANGE')
@@ -484,15 +509,17 @@ describe('Districts API Integration Tests', () => {
           const totalDistricts = rankings.length
 
           // Verify Borda point calculation for each district
-          rankings.forEach((district: any) => {
+          rankings.forEach((district: DistrictRanking) => {
             // Borda points = totalDistricts - rank + 1
             // So for rank 1: points = totalDistricts
             // For rank N: points = 1
-            
+
             // Aggregate score should be sum of three Borda point values
             // So minimum is 3 (1+1+1) and maximum is 3*totalDistricts
             expect(district.aggregateScore).toBeGreaterThanOrEqual(3)
-            expect(district.aggregateScore).toBeLessThanOrEqual(3 * totalDistricts)
+            expect(district.aggregateScore).toBeLessThanOrEqual(
+              3 * totalDistricts
+            )
           })
         }
       })
@@ -522,12 +549,12 @@ describe('Districts API Integration Tests', () => {
         const rankings = response.body.rankings
 
         if (rankings.length > 0) {
-          rankings.forEach((district: any) => {
+          rankings.forEach((district: DistrictRanking) => {
             // Verify percentage fields exist and are numbers
             expect(district).toHaveProperty('clubGrowthPercent')
             expect(district).toHaveProperty('paymentGrowthPercent')
             expect(district).toHaveProperty('distinguishedPercent')
-            
+
             expect(typeof district.clubGrowthPercent).toBe('number')
             expect(typeof district.paymentGrowthPercent).toBe('number')
             expect(typeof district.distinguishedPercent).toBe('number')
@@ -565,8 +592,8 @@ describe('Districts API Integration Tests', () => {
         if (rankings.length > 1) {
           // Check if there are any ties in the data - ranking is based on PERCENTAGES
           const clubPercentages = new Map<number, string[]>()
-          
-          rankings.forEach((district: any) => {
+
+          rankings.forEach((district: DistrictRanking) => {
             const clubPercent = district.clubGrowthPercent
             if (!clubPercentages.has(clubPercent)) {
               clubPercentages.set(clubPercent, [])
@@ -575,13 +602,15 @@ describe('Districts API Integration Tests', () => {
           })
 
           // If we find districts with same percentage values, they should have same rank
-          clubPercentages.forEach((districtIds) => {
+          clubPercentages.forEach(districtIds => {
             if (districtIds.length > 1) {
               const ranks = districtIds.map(id => {
-                const district = rankings.find((d: any) => d.districtId === id)
+                const district = rankings.find(
+                  (d: DistrictRanking) => d.districtId === id
+                )
                 return district?.clubsRank
               })
-              
+
               // All tied districts should have the same rank
               const firstRank = ranks[0]
               ranks.forEach(rank => {
@@ -603,13 +632,15 @@ describe('Districts API Integration Tests', () => {
 
           if (rankings.length > 1) {
             // Sort by club growth percentage (descending) to verify ranking logic
-            const sortedByClubPercent = [...rankings].sort((a, b) => b.clubGrowthPercent - a.clubGrowthPercent)
-            
+            const sortedByClubPercent = [...rankings].sort(
+              (a, b) => b.clubGrowthPercent - a.clubGrowthPercent
+            )
+
             // Verify that districts with higher club growth percentage get better (lower) ranks
             let previousRank = 0
             let previousPercent = Number.MAX_VALUE
-            
-            sortedByClubPercent.forEach((district: any) => {
+
+            sortedByClubPercent.forEach((district: DistrictRanking) => {
               if (district.clubGrowthPercent < previousPercent) {
                 // Percentage decreased, so rank should be worse (higher number) or equal
                 expect(district.clubsRank).toBeGreaterThanOrEqual(previousRank)
@@ -622,14 +653,18 @@ describe('Districts API Integration Tests', () => {
             })
 
             // Same verification for payment growth percentage
-            const sortedByPaymentPercent = [...rankings].sort((a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent)
-            
+            const sortedByPaymentPercent = [...rankings].sort(
+              (a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent
+            )
+
             previousRank = 0
             previousPercent = Number.MAX_VALUE
-            
-            sortedByPaymentPercent.forEach((district: any) => {
+
+            sortedByPaymentPercent.forEach((district: DistrictRanking) => {
               if (district.paymentGrowthPercent < previousPercent) {
-                expect(district.paymentsRank).toBeGreaterThanOrEqual(previousRank)
+                expect(district.paymentsRank).toBeGreaterThanOrEqual(
+                  previousRank
+                )
               } else if (district.paymentGrowthPercent === previousPercent) {
                 expect(district.paymentsRank).toBe(previousRank)
               }
@@ -648,24 +683,29 @@ describe('Districts API Integration Tests', () => {
           const totalDistricts = rankings.length
 
           if (totalDistricts > 0) {
-            rankings.forEach((district: any) => {
+            rankings.forEach((district: DistrictRanking) => {
               // Calculate expected Borda points for each category
               const clubBordaPoints = totalDistricts - district.clubsRank + 1
-              const paymentBordaPoints = totalDistricts - district.paymentsRank + 1
-              const distinguishedBordaPoints = totalDistricts - district.distinguishedRank + 1
-              
-              const expectedAggregateScore = clubBordaPoints + paymentBordaPoints + distinguishedBordaPoints
-              
+              const paymentBordaPoints =
+                totalDistricts - district.paymentsRank + 1
+              const distinguishedBordaPoints =
+                totalDistricts - district.distinguishedRank + 1
+
+              const expectedAggregateScore =
+                clubBordaPoints + paymentBordaPoints + distinguishedBordaPoints
+
               // Verify the aggregate score matches the sum of Borda points
               expect(district.aggregateScore).toBe(expectedAggregateScore)
-              
+
               // Verify individual Borda point calculations are within valid range
               expect(clubBordaPoints).toBeGreaterThanOrEqual(1)
               expect(clubBordaPoints).toBeLessThanOrEqual(totalDistricts)
               expect(paymentBordaPoints).toBeGreaterThanOrEqual(1)
               expect(paymentBordaPoints).toBeLessThanOrEqual(totalDistricts)
               expect(distinguishedBordaPoints).toBeGreaterThanOrEqual(1)
-              expect(distinguishedBordaPoints).toBeLessThanOrEqual(totalDistricts)
+              expect(distinguishedBordaPoints).toBeLessThanOrEqual(
+                totalDistricts
+              )
             })
           }
         })
@@ -678,16 +718,16 @@ describe('Districts API Integration Tests', () => {
           const rankings = response.body.rankings
 
           if (rankings.length > 0) {
-            rankings.forEach((district: any) => {
+            rankings.forEach((district: DistrictRanking) => {
               // Verify all three percentage fields are present and are numbers
               expect(district).toHaveProperty('clubGrowthPercent')
               expect(district).toHaveProperty('paymentGrowthPercent')
               expect(district).toHaveProperty('distinguishedPercent')
-              
+
               expect(typeof district.clubGrowthPercent).toBe('number')
               expect(typeof district.paymentGrowthPercent).toBe('number')
               expect(typeof district.distinguishedPercent).toBe('number')
-              
+
               // Verify percentages are reasonable values (not NaN or Infinity)
               expect(Number.isFinite(district.clubGrowthPercent)).toBe(true)
               expect(Number.isFinite(district.paymentGrowthPercent)).toBe(true)
@@ -708,17 +748,21 @@ describe('Districts API Integration Tests', () => {
             for (let i = 0; i < rankings.length - 1; i++) {
               const currentScore = rankings[i].aggregateScore
               const nextScore = rankings[i + 1].aggregateScore
-              
+
               // Current district should have higher or equal aggregate score than next
               expect(currentScore).toBeGreaterThanOrEqual(nextScore)
             }
-            
+
             // Verify that the first district has the highest aggregate score
-            const maxScore = Math.max(...rankings.map((d: any) => d.aggregateScore))
+            const maxScore = Math.max(
+              ...rankings.map((d: DistrictRanking) => d.aggregateScore)
+            )
             expect(rankings[0].aggregateScore).toBe(maxScore)
-            
+
             // Verify that the last district has the lowest aggregate score
-            const minScore = Math.min(...rankings.map((d: any) => d.aggregateScore))
+            const minScore = Math.min(
+              ...rankings.map((d: DistrictRanking) => d.aggregateScore)
+            )
             expect(rankings[rankings.length - 1].aggregateScore).toBe(minScore)
           }
         })
@@ -738,22 +782,33 @@ describe('Districts API Integration Tests', () => {
 
           if (rankings.length > 0) {
             const district = rankings[0]
-            
+
             // Verify complete district data structure
             const requiredFields = [
-              'districtId', 'districtName', 'region',
-              'paidClubs', 'paidClubBase', 'clubGrowthPercent',
-              'totalPayments', 'paymentBase', 'paymentGrowthPercent',
-              'activeClubs', 'distinguishedClubs', 'selectDistinguished',
-              'presidentsDistinguished', 'distinguishedPercent',
-              'clubsRank', 'paymentsRank', 'distinguishedRank',
-              'aggregateScore'
+              'districtId',
+              'districtName',
+              'region',
+              'paidClubs',
+              'paidClubBase',
+              'clubGrowthPercent',
+              'totalPayments',
+              'paymentBase',
+              'paymentGrowthPercent',
+              'activeClubs',
+              'distinguishedClubs',
+              'selectDistinguished',
+              'presidentsDistinguished',
+              'distinguishedPercent',
+              'clubsRank',
+              'paymentsRank',
+              'distinguishedRank',
+              'aggregateScore',
             ]
-            
+
             requiredFields.forEach(field => {
               expect(district).toHaveProperty(field)
             })
-            
+
             // Verify data types
             expect(typeof district.districtId).toBe('string')
             expect(typeof district.districtName).toBe('string')
@@ -781,11 +836,14 @@ describe('Districts API Integration Tests', () => {
 
           if (totalDistricts > 0) {
             // Find districts with rank 1 (should get maximum Borda points)
-            const rank1Districts = rankings.filter((d: any) => 
-              d.clubsRank === 1 || d.paymentsRank === 1 || d.distinguishedRank === 1
+            const rank1Districts = rankings.filter(
+              (d: DistrictRanking) =>
+                d.clubsRank === 1 ||
+                d.paymentsRank === 1 ||
+                d.distinguishedRank === 1
             )
-            
-            rank1Districts.forEach((district: any) => {
+
+            rank1Districts.forEach((district: DistrictRanking) => {
               if (district.clubsRank === 1) {
                 const expectedPoints = totalDistricts - 1 + 1 // totalDistricts
                 const actualPoints = totalDistricts - district.clubsRank + 1
@@ -798,18 +856,26 @@ describe('Districts API Integration Tests', () => {
               }
               if (district.distinguishedRank === 1) {
                 const expectedPoints = totalDistricts - 1 + 1 // totalDistricts
-                const actualPoints = totalDistricts - district.distinguishedRank + 1
+                const actualPoints =
+                  totalDistricts - district.distinguishedRank + 1
                 expect(actualPoints).toBe(expectedPoints)
               }
             })
 
             // Find districts with worst rank (should get minimum Borda points = 1)
-            const maxRank = Math.max(...rankings.map((d: any) => Math.max(d.clubsRank, d.paymentsRank, d.distinguishedRank)))
-            const worstRankDistricts = rankings.filter((d: any) => 
-              d.clubsRank === maxRank || d.paymentsRank === maxRank || d.distinguishedRank === maxRank
+            const maxRank = Math.max(
+              ...rankings.map((d: DistrictRanking) =>
+                Math.max(d.clubsRank, d.paymentsRank, d.distinguishedRank)
+              )
             )
-            
-            worstRankDistricts.forEach((district: any) => {
+            const worstRankDistricts = rankings.filter(
+              (d: DistrictRanking) =>
+                d.clubsRank === maxRank ||
+                d.paymentsRank === maxRank ||
+                d.distinguishedRank === maxRank
+            )
+
+            worstRankDistricts.forEach((district: DistrictRanking) => {
               if (district.clubsRank === maxRank) {
                 const actualPoints = totalDistricts - district.clubsRank + 1
                 expect(actualPoints).toBeGreaterThanOrEqual(1)
@@ -819,7 +885,8 @@ describe('Districts API Integration Tests', () => {
                 expect(actualPoints).toBeGreaterThanOrEqual(1)
               }
               if (district.distinguishedRank === maxRank) {
-                const actualPoints = totalDistricts - district.distinguishedRank + 1
+                const actualPoints =
+                  totalDistricts - district.distinguishedRank + 1
                 expect(actualPoints).toBeGreaterThanOrEqual(1)
               }
             })
@@ -865,7 +932,9 @@ describe('Districts API Integration Tests', () => {
 
       it('should return 400 when startDate is after endDate', async () => {
         const response = await request(app)
-          .get('/api/districts/D123/export?format=csv&startDate=2024-12-31&endDate=2024-01-01')
+          .get(
+            '/api/districts/D123/export?format=csv&startDate=2024-12-31&endDate=2024-01-01'
+          )
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DATE_RANGE')

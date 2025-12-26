@@ -47,7 +47,13 @@ describe('AnalyticsEngine', () => {
         },
       ]
 
-      await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
+      await cacheManager.cacheDistrictData(
+        districtId,
+        date,
+        [],
+        [],
+        clubPerformance
+      )
 
       const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId)
 
@@ -55,7 +61,9 @@ describe('AnalyticsEngine', () => {
       const criticalClub = atRiskClubs.find(c => c.clubId === '123')
       expect(criticalClub).toBeDefined()
       expect(criticalClub?.currentStatus).toBe('critical')
-      expect(criticalClub?.riskFactors).toContain('Membership below 12 (critical)')
+      expect(criticalClub?.riskFactors).toContain(
+        'Membership below 12 (critical)'
+      )
     })
 
     it('should identify clubs with zero DCP goals as at-risk', async () => {
@@ -73,7 +81,13 @@ describe('AnalyticsEngine', () => {
         },
       ]
 
-      await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
+      await cacheManager.cacheDistrictData(
+        districtId,
+        date,
+        [],
+        [],
+        clubPerformance
+      )
 
       const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId)
 
@@ -100,14 +114,22 @@ describe('AnalyticsEngine', () => {
             Area: '3',
           },
         ]
-        await cacheManager.cacheDistrictData(districtId, dates[i], [], [], clubPerformance)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          dates[i],
+          [],
+          [],
+          clubPerformance
+        )
       }
 
       const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId)
 
       const decliningClub = atRiskClubs.find(c => c.clubId === '999')
       expect(decliningClub).toBeDefined()
-      expect(decliningClub?.riskFactors).toContain('Declining membership for 3+ months')
+      expect(decliningClub?.riskFactors).toContain(
+        'Declining membership for 3+ months'
+      )
     })
   })
 
@@ -128,10 +150,17 @@ describe('AnalyticsEngine', () => {
             Area: '1',
           },
         ]
-        await cacheManager.cacheDistrictData(districtId, dates[i], [], [], clubPerformance)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          dates[i],
+          [],
+          [],
+          clubPerformance
+        )
       }
 
-      const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+      const analytics =
+        await analyticsEngine.generateDistrictAnalytics(districtId)
 
       expect(analytics.membershipTrend).toBeDefined()
       expect(analytics.membershipTrend.length).toBe(3)
@@ -156,7 +185,13 @@ describe('AnalyticsEngine', () => {
             Area: '1',
           },
         ]
-        await cacheManager.cacheDistrictData(districtId, dates[i], [], [], clubPerformance)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          dates[i],
+          [],
+          [],
+          clubPerformance
+        )
       }
 
       const clubTrend = await analyticsEngine.getClubTrends(districtId, clubId)
@@ -210,13 +245,17 @@ describe('AnalyticsEngine', () => {
         ]
       )
 
-      const yoyMetrics = await analyticsEngine.calculateYearOverYear(districtId, currentDate)
+      const yoyMetrics = await analyticsEngine.calculateYearOverYear(
+        districtId,
+        currentDate
+      )
 
       expect(yoyMetrics).toBeDefined()
-      expect(yoyMetrics.dataAvailable).toBe(true)
-      expect(yoyMetrics.metrics.membership.current).toBe(30)
-      expect(yoyMetrics.metrics.membership.previous).toBe(25)
-      expect(yoyMetrics.metrics.membership.change).toBe(5)
+      expect(yoyMetrics).not.toBeNull()
+      expect(yoyMetrics!.dataAvailable).toBe(true)
+      expect(yoyMetrics!.metrics!.membership.current).toBe(30)
+      expect(yoyMetrics!.metrics!.membership.previous).toBe(25)
+      expect(yoyMetrics!.metrics!.membership.change).toBe(5)
     })
 
     it('should handle missing previous year data gracefully', async () => {
@@ -241,11 +280,15 @@ describe('AnalyticsEngine', () => {
         ]
       )
 
-      const yoyMetrics = await analyticsEngine.calculateYearOverYear(districtId, currentDate)
+      const yoyMetrics = await analyticsEngine.calculateYearOverYear(
+        districtId,
+        currentDate
+      )
 
       expect(yoyMetrics).toBeDefined()
-      expect(yoyMetrics.dataAvailable).toBe(false)
-      expect(yoyMetrics.message).toContain('N/A')
+      expect(yoyMetrics).not.toBeNull()
+      expect(yoyMetrics!.dataAvailable).toBe(false)
+      expect(yoyMetrics!.message).toContain('N/A')
     })
   })
 
@@ -274,10 +317,17 @@ describe('AnalyticsEngine', () => {
             Area: '1',
           },
         ]
-        await cacheManager.cacheDistrictData(districtId, dates[i], [], [], clubPerformance)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          dates[i],
+          [],
+          [],
+          clubPerformance
+        )
       }
 
-      const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+      const analytics =
+        await analyticsEngine.generateDistrictAnalytics(districtId)
 
       expect(analytics.distinguishedProjection).toBeDefined()
       expect(analytics.distinguishedProjection).toBeGreaterThan(0)
@@ -319,7 +369,13 @@ describe('AnalyticsEngine', () => {
         },
       ]
 
-      await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
+      await cacheManager.cacheDistrictData(
+        districtId,
+        date,
+        [],
+        [],
+        clubPerformance
+      )
 
       const divisions = await analyticsEngine.compareDivisions(districtId, date)
 
@@ -345,7 +401,10 @@ describe('AnalyticsEngine', () => {
 
       await cacheManager.cacheDistrictData(districtId, date, [], [], [])
 
-      const clubTrend = await analyticsEngine.getClubTrends(districtId, 'non-existent')
+      const clubTrend = await analyticsEngine.getClubTrends(
+        districtId,
+        'non-existent'
+      )
 
       expect(clubTrend).toBeNull()
     })
@@ -370,13 +429,21 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         // Verify Goal 5 is counted (which uses the field name resolution)
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -398,12 +465,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -425,12 +500,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -450,14 +533,22 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         // Should not throw error, should use fallback
         expect(analytics).toBeDefined()
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(0)
       })
@@ -481,12 +572,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(0)
       })
@@ -508,12 +607,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -535,12 +642,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -562,12 +677,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -589,12 +712,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
         expect(goal5).toBeDefined()
         expect(goal5?.achievementCount).toBe(1)
       })
@@ -618,12 +749,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal6 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
+        const goal6 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
         expect(goal6).toBeDefined()
         expect(goal6?.achievementCount).toBe(0)
       })
@@ -645,12 +784,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal6 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
+        const goal6 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
         expect(goal6).toBeDefined()
         expect(goal6?.achievementCount).toBe(0)
       })
@@ -672,12 +819,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal6 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
+        const goal6 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
         expect(goal6).toBeDefined()
         expect(goal6?.achievementCount).toBe(1)
       })
@@ -699,12 +854,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal6 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
+        const goal6 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
         expect(goal6).toBeDefined()
         expect(goal6?.achievementCount).toBe(1)
       })
@@ -726,12 +889,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal6 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
+        const goal6 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
         expect(goal6).toBeDefined()
         expect(goal6?.achievementCount).toBe(1)
       })
@@ -755,12 +926,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal3 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 3) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 3)
+        const goal3 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 3) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 3)
         expect(goal3).toBeDefined()
         expect(goal3?.achievementCount).toBe(0)
       })
@@ -782,12 +961,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal3 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 3) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 3)
+        const goal3 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 3) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 3)
         expect(goal3).toBeDefined()
         expect(goal3?.achievementCount).toBe(1)
       })
@@ -809,12 +996,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal8 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 8) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 8)
+        const goal8 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 8) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 8)
         expect(goal8).toBeDefined()
         expect(goal8?.achievementCount).toBe(0)
       })
@@ -836,12 +1031,20 @@ describe('AnalyticsEngine', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(districtId, date, [], [], clubPerformance)
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        await cacheManager.cacheDistrictData(
+          districtId,
+          date,
+          [],
+          [],
+          clubPerformance
+        )
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal8 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 8) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 8)
+        const goal8 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 8) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 8)
         expect(goal8).toBeDefined()
         expect(goal8?.achievementCount).toBe(1)
       })
@@ -857,17 +1060,22 @@ describe('AnalyticsEngine', () => {
 
         // Skip test if data doesn't exist
         if (!entry) {
-          console.log('Skipping integration test - no cached data for 2024-11-22')
+          console.log(
+            'Skipping integration test - no cached data for 2024-11-22'
+          )
           return
         }
 
-        const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+        const analytics =
+          await analyticsEngine.generateDistrictAnalytics(districtId)
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
-        const goal5 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
-        const goal6 = dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
-                      dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
+        const goal5 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 5) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 5)
+        const goal6 =
+          dcpGoals.mostCommonlyAchieved.find(g => g.goalNumber === 6) ||
+          dcpGoals.leastCommonlyAchieved.find(g => g.goalNumber === 6)
 
         expect(goal5).toBeDefined()
         expect(goal6).toBeDefined()

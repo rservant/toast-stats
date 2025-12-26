@@ -3,6 +3,13 @@ import { cacheService } from './CacheService'
 import { logger } from '../utils/logger'
 import { config } from '../config/index'
 
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+  path?: string
+  syscall?: string
+}
+
 export interface ReconciliationConfigOptions {
   configFilePath?: string
   cacheKey?: string
@@ -12,7 +19,7 @@ export interface ReconciliationConfigOptions {
 export interface ConfigValidationError {
   field: string
   message: string
-  value: any
+  value: unknown
 }
 
 export class ReconciliationConfigService {
@@ -22,10 +29,11 @@ export class ReconciliationConfigService {
   private readonly defaultConfig: ReconciliationConfig
 
   constructor(options: ReconciliationConfigOptions = {}) {
-    this.configFilePath = options.configFilePath || config.reconciliation.configFilePath
+    this.configFilePath =
+      options.configFilePath || config.reconciliation.configFilePath
     this.cacheKey = options.cacheKey || config.reconciliation.cacheKey
     this.cacheTTL = options.cacheTTL || config.reconciliation.cacheTTL
-    
+
     // Default configuration as specified in the design document
     this.defaultConfig = {
       maxReconciliationDays: 15,
@@ -34,10 +42,10 @@ export class ReconciliationConfigService {
       significantChangeThresholds: {
         membershipPercent: 1,
         clubCountAbsolute: 1,
-        distinguishedPercent: 2
+        distinguishedPercent: 2,
       },
       autoExtensionEnabled: true,
-      maxExtensionDays: 5
+      maxExtensionDays: 5,
     }
   }
 
@@ -56,10 +64,10 @@ export class ReconciliationConfigService {
 
       // Load from file or use defaults
       const config = await this.loadConfigFromFile()
-      
+
       // Cache the loaded config
       cacheService.set(this.cacheKey, config, this.cacheTTL)
-      
+
       return config
     } catch (error) {
       logger.error('Error getting reconciliation config:', error)
@@ -72,7 +80,9 @@ export class ReconciliationConfigService {
    * Update the reconciliation configuration
    * Validates the config before saving and caching
    */
-  async updateConfig(newConfig: Partial<ReconciliationConfig>): Promise<ReconciliationConfig> {
+  async updateConfig(
+    newConfig: Partial<ReconciliationConfig>
+  ): Promise<ReconciliationConfig> {
     try {
       // Get current config and merge with updates
       const currentConfig = await this.getConfig()
@@ -92,7 +102,9 @@ export class ReconciliationConfigService {
       // Update cache
       cacheService.set(this.cacheKey, updatedConfig, this.cacheTTL)
 
-      logger.info('Reconciliation configuration updated successfully', { updatedConfig })
+      logger.info('Reconciliation configuration updated successfully', {
+        updatedConfig,
+      })
       return updatedConfig
     } catch (error) {
       logger.error('Error updating reconciliation config:', error)
@@ -108,29 +120,41 @@ export class ReconciliationConfigService {
     const errors: ConfigValidationError[] = []
 
     // Validate maxReconciliationDays
-    if (!Number.isInteger(config.maxReconciliationDays) || config.maxReconciliationDays < 1 || config.maxReconciliationDays > 60) {
+    if (
+      !Number.isInteger(config.maxReconciliationDays) ||
+      config.maxReconciliationDays < 1 ||
+      config.maxReconciliationDays > 60
+    ) {
       errors.push({
         field: 'maxReconciliationDays',
         message: 'Must be an integer between 1 and 60',
-        value: config.maxReconciliationDays
+        value: config.maxReconciliationDays,
       })
     }
 
     // Validate stabilityPeriodDays
-    if (!Number.isInteger(config.stabilityPeriodDays) || config.stabilityPeriodDays < 1 || config.stabilityPeriodDays > config.maxReconciliationDays) {
+    if (
+      !Number.isInteger(config.stabilityPeriodDays) ||
+      config.stabilityPeriodDays < 1 ||
+      config.stabilityPeriodDays > config.maxReconciliationDays
+    ) {
       errors.push({
         field: 'stabilityPeriodDays',
         message: `Must be an integer between 1 and maxReconciliationDays (${config.maxReconciliationDays})`,
-        value: config.stabilityPeriodDays
+        value: config.stabilityPeriodDays,
       })
     }
 
     // Validate checkFrequencyHours
-    if (!Number.isInteger(config.checkFrequencyHours) || config.checkFrequencyHours < 1 || config.checkFrequencyHours > 168) {
+    if (
+      !Number.isInteger(config.checkFrequencyHours) ||
+      config.checkFrequencyHours < 1 ||
+      config.checkFrequencyHours > 168
+    ) {
       errors.push({
         field: 'checkFrequencyHours',
         message: 'Must be an integer between 1 and 168 (1 week)',
-        value: config.checkFrequencyHours
+        value: config.checkFrequencyHours,
       })
     }
 
@@ -139,32 +163,43 @@ export class ReconciliationConfigService {
       errors.push({
         field: 'significantChangeThresholds',
         message: 'Significant change thresholds are required',
-        value: config.significantChangeThresholds
+        value: config.significantChangeThresholds,
       })
     } else {
       const thresholds = config.significantChangeThresholds
 
-      if (typeof thresholds.membershipPercent !== 'number' || thresholds.membershipPercent < 0 || thresholds.membershipPercent > 100) {
+      if (
+        typeof thresholds.membershipPercent !== 'number' ||
+        thresholds.membershipPercent < 0 ||
+        thresholds.membershipPercent > 100
+      ) {
         errors.push({
           field: 'significantChangeThresholds.membershipPercent',
           message: 'Must be a number between 0 and 100',
-          value: thresholds.membershipPercent
+          value: thresholds.membershipPercent,
         })
       }
 
-      if (!Number.isInteger(thresholds.clubCountAbsolute) || thresholds.clubCountAbsolute < 0) {
+      if (
+        !Number.isInteger(thresholds.clubCountAbsolute) ||
+        thresholds.clubCountAbsolute < 0
+      ) {
         errors.push({
           field: 'significantChangeThresholds.clubCountAbsolute',
           message: 'Must be a non-negative integer',
-          value: thresholds.clubCountAbsolute
+          value: thresholds.clubCountAbsolute,
         })
       }
 
-      if (typeof thresholds.distinguishedPercent !== 'number' || thresholds.distinguishedPercent < 0 || thresholds.distinguishedPercent > 100) {
+      if (
+        typeof thresholds.distinguishedPercent !== 'number' ||
+        thresholds.distinguishedPercent < 0 ||
+        thresholds.distinguishedPercent > 100
+      ) {
         errors.push({
           field: 'significantChangeThresholds.distinguishedPercent',
           message: 'Must be a number between 0 and 100',
-          value: thresholds.distinguishedPercent
+          value: thresholds.distinguishedPercent,
         })
       }
     }
@@ -174,16 +209,20 @@ export class ReconciliationConfigService {
       errors.push({
         field: 'autoExtensionEnabled',
         message: 'Must be a boolean value',
-        value: config.autoExtensionEnabled
+        value: config.autoExtensionEnabled,
       })
     }
 
     // Validate maxExtensionDays
-    if (!Number.isInteger(config.maxExtensionDays) || config.maxExtensionDays < 0 || config.maxExtensionDays > 30) {
+    if (
+      !Number.isInteger(config.maxExtensionDays) ||
+      config.maxExtensionDays < 0 ||
+      config.maxExtensionDays > 30
+    ) {
       errors.push({
         field: 'maxExtensionDays',
         message: 'Must be an integer between 0 and 30',
-        value: config.maxExtensionDays
+        value: config.maxExtensionDays,
       })
     }
 
@@ -228,28 +267,36 @@ export class ReconciliationConfigService {
     try {
       const fs = await import('fs/promises')
       const path = await import('path')
-      
+
       const configPath = path.resolve(process.cwd(), this.configFilePath)
-      
+
       try {
         const configData = await fs.readFile(configPath, 'utf-8')
-        const parsedConfig = JSON.parse(configData) as Partial<ReconciliationConfig>
-        
+        const parsedConfig = JSON.parse(
+          configData
+        ) as Partial<ReconciliationConfig>
+
         // Merge with defaults to ensure all required fields are present
         const config = this.mergeConfigs(this.defaultConfig, parsedConfig)
-        
+
         // Validate the loaded config
         const validationErrors = this.validateConfig(config)
         if (validationErrors.length > 0) {
-          logger.warn('Loaded config has validation errors, using defaults', { validationErrors })
+          logger.warn('Loaded config has validation errors, using defaults', {
+            validationErrors,
+          })
           return this.defaultConfig
         }
-        
-        logger.info('Reconciliation configuration loaded from file', { configPath })
+
+        logger.info('Reconciliation configuration loaded from file', {
+          configPath,
+        })
         return config
       } catch (fileError) {
-        if ((fileError as any).code === 'ENOENT') {
-          logger.info('Config file not found, creating with defaults', { configPath })
+        if ((fileError as ErrnoException).code === 'ENOENT') {
+          logger.info('Config file not found, creating with defaults', {
+            configPath,
+          })
           await this.saveConfigToFile(this.defaultConfig)
           return this.defaultConfig
         }
@@ -268,10 +315,10 @@ export class ReconciliationConfigService {
     try {
       const fs = await import('fs/promises')
       const path = await import('path')
-      
+
       const configPath = path.resolve(process.cwd(), this.configFilePath)
       const configData = JSON.stringify(config, null, 2)
-      
+
       await fs.writeFile(configPath, configData, 'utf-8')
       logger.debug('Reconciliation configuration saved to file', { configPath })
     } catch (error) {
@@ -283,14 +330,17 @@ export class ReconciliationConfigService {
   /**
    * Merge two configuration objects, with newConfig taking precedence
    */
-  private mergeConfigs(baseConfig: ReconciliationConfig, newConfig: Partial<ReconciliationConfig>): ReconciliationConfig {
+  private mergeConfigs(
+    baseConfig: ReconciliationConfig,
+    newConfig: Partial<ReconciliationConfig>
+  ): ReconciliationConfig {
     return {
       ...baseConfig,
       ...newConfig,
       significantChangeThresholds: {
         ...baseConfig.significantChangeThresholds,
-        ...(newConfig.significantChangeThresholds || {})
-      }
+        ...(newConfig.significantChangeThresholds || {}),
+      },
     }
   }
 }

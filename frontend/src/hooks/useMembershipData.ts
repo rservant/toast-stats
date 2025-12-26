@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../services/api';
+import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '../services/api'
 import type {
   DistrictStatistics,
   MembershipHistoryResponse,
-} from '../types/districts';
+} from '../types/districts'
 
 /**
  * React Query hook to fetch district statistics including membership data
@@ -13,18 +13,18 @@ export const useDistrictStatistics = (districtId: string | null) => {
     queryKey: ['districtStatistics', districtId],
     queryFn: async () => {
       if (!districtId) {
-        throw new Error('District ID is required');
+        throw new Error('District ID is required')
       }
       const response = await apiClient.get<DistrictStatistics>(
         `/districts/${districtId}/statistics`
-      );
-      return response.data;
+      )
+      return response.data
     },
     enabled: !!districtId,
     staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
     retry: 2,
-  });
-};
+  })
+}
 
 /**
  * React Query hook to fetch membership history data
@@ -37,18 +37,18 @@ export const useMembershipHistory = (
     queryKey: ['membershipHistory', districtId, months],
     queryFn: async () => {
       if (!districtId) {
-        throw new Error('District ID is required');
+        throw new Error('District ID is required')
       }
       const response = await apiClient.get<MembershipHistoryResponse>(
         `/districts/${districtId}/membership-history`,
         {
           params: { months },
         }
-      );
-      return response.data;
+      )
+      return response.data
     },
     enabled: !!districtId,
     staleTime: 15 * 60 * 1000, // 15 minutes - matches backend cache
     retry: 2,
-  });
-};
+  })
+}

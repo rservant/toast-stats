@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   LineChart,
   Line,
@@ -8,17 +8,68 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-} from 'recharts';
-import type { RankHistoryResponse } from '../types/districts';
+} from 'recharts'
+import type { RankHistoryResponse } from '../types/districts'
 
 interface HistoricalRankChartProps {
-  data: RankHistoryResponse[];
-  isLoading: boolean;
-  isError: boolean;
-  error?: Error | null;
+  data: RankHistoryResponse[]
+  isLoading: boolean
+  isError: boolean
+  error?: Error | null
 }
 
-type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished';
+type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished'
+
+interface TooltipPayload {
+  dataKey: string
+  value: number
+  color: string
+}
+
+// Custom tooltip moved outside render
+const CustomTooltip = ({
+  active,
+  payload,
+  data,
+  selectedMetric,
+}: {
+  active?: boolean
+  payload?: TooltipPayload[]
+  data: RankHistoryResponse[]
+  selectedMetric: RankMetric
+}) => {
+  if (active && payload && payload.length) {
+    const date = (payload[0] as unknown as { payload: { date: string } })
+      .payload.date
+    const formattedDate = new Date(date).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+
+    return (
+      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
+        <p className="text-sm font-medium text-gray-900 mb-2">
+          {formattedDate}
+        </p>
+        {payload.map((entry: TooltipPayload, index: number) => {
+          const districtData = data.find(d => d.districtId === entry.dataKey)
+          return (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              <span className="font-semibold">
+                {districtData?.districtName || entry.dataKey}:
+              </span>{' '}
+              {selectedMetric === 'aggregate'
+                ? `Score ${Math.round(entry.value)}`
+                : `Rank #${entry.value}`}
+            </p>
+          )
+        })}
+      </div>
+    )
+  }
+  return null
+}
 
 const DISTRICT_COLORS = [
   '#3b82f6', // blue
@@ -29,7 +80,7 @@ const DISTRICT_COLORS = [
   '#ec4899', // pink
   '#14b8a6', // teal
   '#f97316', // orange
-];
+]
 
 const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   data,
@@ -37,11 +88,15 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   isError,
   error,
 }) => {
-  const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate');
+  const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
 
   if (isLoading) {
     return (
-      <section className="bg-white rounded-lg shadow-md p-6" aria-busy="true" aria-label="Loading historical rank data">
+      <section
+        className="bg-white rounded-lg shadow-md p-6"
+        aria-busy="true"
+        aria-label="Loading historical rank data"
+      >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Historical Rank Progression
         </h2>
@@ -52,12 +107,16 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </div>
         </div>
       </section>
-    );
+    )
   }
 
   if (isError) {
     return (
-      <section className="bg-white rounded-lg shadow-md p-6" role="alert" aria-label="Historical rank data error">
+      <section
+        className="bg-white rounded-lg shadow-md p-6"
+        role="alert"
+        aria-label="Historical rank data error"
+      >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Historical Rank Progression
         </h2>
@@ -72,93 +131,70 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </div>
         </div>
       </section>
-    );
+    )
   }
 
   if (!data || data.length === 0) {
     return (
-      <section className="bg-white rounded-lg shadow-md p-6" role="status" aria-label="Historical rank data">
+      <section
+        className="bg-white rounded-lg shadow-md p-6"
+        role="status"
+        aria-label="Historical rank data"
+      >
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Historical Rank Progression
         </h2>
         <div className="flex items-center justify-center h-80">
-          <p className="text-gray-600">No historical rank data available. Select districts to view their progression.</p>
+          <p className="text-gray-600">
+            No historical rank data available. Select districts to view their
+            progression.
+          </p>
         </div>
       </section>
-    );
+    )
   }
 
   // Get program year info from first district
-  const programYear = data[0]?.programYear;
+  const programYear = data[0]?.programYear
 
   // Combine all dates from all districts
-  const allDates = new Set<string>();
+  const allDates = new Set<string>()
   data.forEach(district => {
     district.history.forEach(point => {
-      allDates.add(point.date);
-    });
-  });
+      allDates.add(point.date)
+    })
+  })
 
   // Sort dates chronologically
-  const sortedDates = Array.from(allDates).sort();
+  const sortedDates = Array.from(allDates).sort()
 
   // Transform data for chart
   const chartData = sortedDates.map(date => {
-    const dataPoint: any = { date };
-    
+    const dataPoint: Record<string, string | number> = { date }
+
     data.forEach(district => {
-      const point = district.history.find(p => p.date === date);
+      const point = district.history.find(p => p.date === date)
       if (point) {
-        let value: number;
+        let value: number
         switch (selectedMetric) {
           case 'clubs':
-            value = point.clubsRank;
-            break;
+            value = point.clubsRank
+            break
           case 'payments':
-            value = point.paymentsRank;
-            break;
+            value = point.paymentsRank
+            break
           case 'distinguished':
-            value = point.distinguishedRank;
-            break;
+            value = point.distinguishedRank
+            break
           default:
-            value = point.aggregateScore;
+            value = point.aggregateScore
         }
-        dataPoint[district.districtId] = value;
+        dataPoint[district.districtId] = value
       }
-    });
-    
-    return dataPoint;
-  });
+    })
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const date = payload[0].payload.date;
-      const formattedDate = new Date(date).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-
-      return (
-        <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
-          <p className="text-sm font-medium text-gray-900 mb-2">
-            {formattedDate}
-          </p>
-          {payload.map((entry: any, index: number) => {
-            const districtData = data.find(d => d.districtId === entry.dataKey);
-            return (
-              <p key={index} className="text-sm" style={{ color: entry.color }}>
-                <span className="font-semibold">{districtData?.districtName || entry.dataKey}:</span>{' '}
-                {selectedMetric === 'aggregate' ? `Score ${Math.round(entry.value)}` : `Rank #${entry.value}`}
-              </p>
-            );
-          })}
-        </div>
-      );
-    }
-    return null;
-  };
+    return dataPoint
+  })
 
   // Generate chart description for accessibility
   const metricLabel = {
@@ -166,12 +202,12 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     clubs: 'Paid Clubs Rank',
     payments: 'Total Payments Rank',
     distinguished: 'Distinguished Clubs Rank',
-  }[selectedMetric];
+  }[selectedMetric]
 
-  const chartDescription = `Line chart showing ${metricLabel} progression for ${data.length} district${data.length !== 1 ? 's' : ''} over the program year from ${programYear?.startDate || 'July 1'} to ${programYear?.endDate || 'June 30'}.`;
+  const chartDescription = `Line chart showing ${metricLabel} progression for ${data.length} district${data.length !== 1 ? 's' : ''} over the program year from ${programYear?.startDate || 'July 1'} to ${programYear?.endDate || 'June 30'}.`
 
   return (
-    <section 
+    <section
       className="bg-white rounded-lg shadow-md p-4 sm:p-6"
       aria-label="Historical rank progression chart"
     >
@@ -182,14 +218,17 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </h2>
           {programYear && (
             <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Program Year: {programYear.year} ({programYear.startDate} to {programYear.endDate})
+              Program Year: {programYear.year} ({programYear.startDate} to{' '}
+              {programYear.endDate})
             </p>
           )}
         </div>
 
         {/* Metric Toggle */}
         <div className="flex flex-wrap gap-2">
-          <span className="text-sm font-medium text-gray-700 self-center mr-2">View:</span>
+          <span className="text-sm font-medium text-gray-700 self-center mr-2">
+            View:
+          </span>
           <button
             onClick={() => setSelectedMetric('aggregate')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -237,8 +276,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         </div>
       </div>
 
-      <div 
-        role="img" 
+      <div
+        role="img"
         aria-label={chartDescription}
         aria-describedby="rank-chart-desc"
         className="w-full overflow-x-auto"
@@ -259,9 +298,12 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 textAnchor="end"
                 height={80}
                 interval="preserveStartEnd"
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                tickFormatter={value => {
+                  const date = new Date(value)
+                  return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })
                 }}
               />
               <YAxis
@@ -271,18 +313,32 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 reversed={selectedMetric !== 'aggregate'}
                 label={
                   selectedMetric === 'aggregate'
-                    ? { value: 'Score (lower is better)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }
-                    : { value: 'Rank (lower is better)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }
+                    ? {
+                        value: 'Score (lower is better)',
+                        angle: -90,
+                        position: 'insideLeft',
+                        style: { fontSize: '12px' },
+                      }
+                    : {
+                        value: 'Rank (lower is better)',
+                        angle: -90,
+                        position: 'insideLeft',
+                        style: { fontSize: '12px' },
+                      }
                 }
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip
+                content={
+                  <CustomTooltip data={data} selectedMetric={selectedMetric} />
+                }
+              />
               <Legend
                 wrapperStyle={{ fontSize: '12px' }}
                 verticalAlign="top"
                 height={36}
-                formatter={(value) => {
-                  const district = data.find(d => d.districtId === value);
-                  return district?.districtName || value;
+                formatter={value => {
+                  const district = data.find(d => d.districtId === value)
+                  return district?.districtName || value
                 }}
               />
               {data.map((district, index) => (
@@ -292,7 +348,10 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                   dataKey={district.districtId}
                   stroke={DISTRICT_COLORS[index % DISTRICT_COLORS.length]}
                   strokeWidth={2}
-                  dot={{ fill: DISTRICT_COLORS[index % DISTRICT_COLORS.length], r: 3 }}
+                  dot={{
+                    fill: DISTRICT_COLORS[index % DISTRICT_COLORS.length],
+                    r: 3,
+                  }}
                   activeDot={{ r: 5 }}
                   name={district.districtId}
                   connectNulls
@@ -306,7 +365,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         {chartDescription}
       </p>
     </section>
-  );
-};
+  )
+}
 
-export default HistoricalRankChart;
+export default HistoricalRankChart

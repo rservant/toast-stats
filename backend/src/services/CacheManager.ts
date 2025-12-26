@@ -7,18 +7,22 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import type { CacheMetadata, DistrictRankSnapshot, CacheStatistics } from '../types/districts.js'
+import type {
+  CacheMetadata,
+  DistrictRankSnapshot,
+  CacheStatistics,
+} from '../types/districts.js'
 
 export class CacheManager {
   private cacheDir: string
   private metadataCache: Map<string, CacheMetadata> = new Map()
   private indexCache: Map<string, DistrictRankSnapshot[]> = new Map()
   private indexLoaded: boolean = false
-  
+
   /**
    * Cache version for tracking data format changes
    * Increment this when making breaking changes to cached data structure or calculations
-   * 
+   *
    * Version History:
    * - v1: Initial implementation with simple rank-sum scoring
    * - v2: Borda count scoring system (November 2025)
@@ -79,13 +83,16 @@ export class CacheManager {
   /**
    * Get cached data for a given date
    */
-  async getCache(date: string, type: string = 'districts'): Promise<any | null> {
+  async getCache(
+    date: string,
+    type: string = 'districts'
+  ): Promise<unknown | null> {
     try {
       const filePath = this.getCacheFilePath(date, type)
       const data = await fs.readFile(filePath, 'utf-8')
       logger.info('Cache hit', { date, type })
       return JSON.parse(data)
-    } catch (error) {
+    } catch {
       logger.info('Cache miss', { date, type })
       return null
     }
@@ -94,7 +101,11 @@ export class CacheManager {
   /**
    * Save data to cache with automatic metadata and index updates
    */
-  async setCache(date: string, data: any, type: string = 'districts'): Promise<void> {
+  async setCache(
+    date: string,
+    data: unknown,
+    type: string = 'districts'
+  ): Promise<void> {
     try {
       await this.init() // Ensure directory exists
       const filePath = this.getCacheFilePath(date, type)
@@ -102,7 +113,12 @@ export class CacheManager {
       logger.info('Data cached', { date, type, filePath })
 
       // For district rankings, update metadata and index
-      if (type === 'districts' && data.rankings) {
+      if (
+        type === 'districts' &&
+        data &&
+        typeof data === 'object' &&
+        'rankings' in data
+      ) {
         await this.updateMetadata(date, data)
         await this.updateHistoricalIndex(date, data)
       }
@@ -115,9 +131,12 @@ export class CacheManager {
   /**
    * Update metadata for a cached date
    */
-  private async updateMetadata(date: string, data: any): Promise<void> {
+  private async updateMetadata(date: string, data: unknown): Promise<void> {
     try {
-      const rankings = data.rankings || []
+      const rankings =
+        data && typeof data === 'object' && 'rankings' in data
+          ? (data as { rankings: unknown[] }).rankings
+          : []
       const districtCount = rankings.length
 
       let dataCompleteness: 'complete' | 'partial' | 'empty' = 'empty'
@@ -142,7 +161,11 @@ export class CacheManager {
 
       // Save metadata to file
       const metadataPath = this.getMetadataFilePath(date)
-      await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8')
+      await fs.writeFile(
+        metadataPath,
+        JSON.stringify(metadata, null, 2),
+        'utf-8'
+      )
 
       // Update in-memory cache
       this.metadataCache.set(date, metadata)
@@ -157,28 +180,37 @@ export class CacheManager {
   /**
    * Update historical index with new data
    */
-  private async updateHistoricalIndex(date: string, data: any): Promise<void> {
+  private async updateHistoricalIndex(
+    date: string,
+    data: unknown
+  ): Promise<void> {
     try {
-      const rankings = data.rankings || []
-      
+      const rankings =
+        data && typeof data === 'object' && 'rankings' in data
+          ? (data as { rankings: unknown[] }).rankings
+          : []
+
       // Extract district rank snapshots
-      const snapshots: DistrictRankSnapshot[] = rankings.map((r: any) => ({
-        districtId: r.districtId,
-        districtName: r.districtName,
-        aggregateScore: r.aggregateScore,
-        clubsRank: r.clubsRank,
-        paymentsRank: r.paymentsRank,
-        distinguishedRank: r.distinguishedRank,
-        paidClubs: r.paidClubs,
-        totalPayments: r.totalPayments,
-        distinguishedClubs: r.distinguishedClubs,
-      }))
+      const snapshots: DistrictRankSnapshot[] = rankings.map((r: unknown) => {
+        const ranking = r as Record<string, unknown>
+        return {
+          districtId: String(ranking.districtId || ''),
+          districtName: String(ranking.districtName || ''),
+          aggregateScore: Number(ranking.aggregateScore || 0),
+          clubsRank: Number(ranking.clubsRank || 0),
+          paymentsRank: Number(ranking.paymentsRank || 0),
+          distinguishedRank: Number(ranking.distinguishedRank || 0),
+          paidClubs: Number(ranking.paidClubs || 0),
+          totalPayments: Number(ranking.totalPayments || 0),
+          distinguishedClubs: Number(ranking.distinguishedClubs || 0),
+        }
+      })
 
       // Update in-memory index
       this.indexCache.set(date, snapshots)
 
       // Load existing index or create new one
-      let indexData: any = {}
+      let indexData: Record<string, unknown> = { dates: [], districtIds: [] }
       try {
         const indexPath = this.getIndexFilePath()
         const indexContent = await fs.readFile(indexPath, 'utf-8')
@@ -189,14 +221,16 @@ export class CacheManager {
       }
 
       // Update dates list
-      if (!indexData.dates.includes(date)) {
-        indexData.dates.push(date)
-        indexData.dates.sort()
+      const dates = indexData.dates as string[]
+      if (!dates.includes(date)) {
+        dates.push(date)
+        dates.sort()
       }
 
       // Update district IDs list
       const newDistrictIds = snapshots.map(s => s.districtId)
-      const existingIds = new Set(indexData.districtIds || [])
+      const districtIds = indexData.districtIds as string[]
+      const existingIds = new Set(districtIds)
       newDistrictIds.forEach(id => existingIds.add(id))
       indexData.districtIds = Array.from(existingIds).sort()
 
@@ -204,10 +238,10 @@ export class CacheManager {
       const indexPath = this.getIndexFilePath()
       await fs.writeFile(indexPath, JSON.stringify(indexData, null, 2), 'utf-8')
 
-      logger.info('Historical index updated', { 
-        date, 
-        totalDates: indexData.dates.length,
-        totalDistricts: indexData.districtIds.length 
+      logger.info('Historical index updated', {
+        date,
+        totalDates: (indexData.dates as string[]).length,
+        totalDistricts: (indexData.districtIds as string[]).length,
       })
     } catch (error) {
       logger.error('Failed to update historical index', { date, error })
@@ -242,24 +276,28 @@ export class CacheManager {
       const files = await fs.readdir(this.cacheDir)
       const filesToDelete = files.filter(file => {
         // Only delete district rankings files and metadata, not the districts subdirectory
-        return file.startsWith('districts_') || 
-               file.startsWith('metadata_') || 
-               file === 'historical_index.json'
+        return (
+          file.startsWith('districts_') ||
+          file.startsWith('metadata_') ||
+          file === 'historical_index.json'
+        )
       })
-      
+
       await Promise.all(
-        filesToDelete.map(async (file) => {
+        filesToDelete.map(async file => {
           const filePath = path.join(this.cacheDir, file)
           await fs.unlink(filePath)
         })
       )
-      
+
       // Clear in-memory caches
       this.metadataCache.clear()
       this.indexCache.clear()
       this.indexLoaded = false
-      
-      logger.info('District rankings cache cleared', { filesDeleted: filesToDelete.length })
+
+      logger.info('District rankings cache cleared', {
+        filesDeleted: filesToDelete.length,
+      })
     } catch (error) {
       logger.error('Failed to clear cache', error)
       throw error
@@ -269,7 +307,10 @@ export class CacheManager {
   /**
    * Clear cache for a specific date
    */
-  async clearCacheForDate(date: string, type: string = 'districts'): Promise<void> {
+  async clearCacheForDate(
+    date: string,
+    type: string = 'districts'
+  ): Promise<void> {
     try {
       const filePath = this.getCacheFilePath(date, type)
       await fs.unlink(filePath)
@@ -302,10 +343,10 @@ export class CacheManager {
       const metadataPath = this.getMetadataFilePath(date)
       const content = await fs.readFile(metadataPath, 'utf-8')
       const metadata = JSON.parse(content) as CacheMetadata
-      
+
       // Cache in memory
       this.metadataCache.set(date, metadata)
-      
+
       return metadata
     } catch {
       return null
@@ -318,13 +359,13 @@ export class CacheManager {
   async getAllMetadata(): Promise<Map<string, CacheMetadata>> {
     try {
       const dates = await this.getCachedDates('districts')
-      
+
       for (const date of dates) {
         if (!this.metadataCache.has(date)) {
           await this.getMetadata(date)
         }
       }
-      
+
       return this.metadataCache
     } catch (error) {
       logger.error('Failed to get all metadata', error)
@@ -349,30 +390,43 @@ export class CacheManager {
       for (const date of indexData.dates || []) {
         if (!this.indexCache.has(date)) {
           const cachedData = await this.getCache(date, 'districts')
-          if (cachedData && cachedData.rankings) {
-            const snapshots: DistrictRankSnapshot[] = cachedData.rankings.map((r: any) => ({
-              districtId: r.districtId,
-              districtName: r.districtName,
-              aggregateScore: r.aggregateScore,
-              clubsRank: r.clubsRank,
-              paymentsRank: r.paymentsRank,
-              distinguishedRank: r.distinguishedRank,
-              paidClubs: r.paidClubs,
-              totalPayments: r.totalPayments,
-              distinguishedClubs: r.distinguishedClubs,
-            }))
+          if (
+            cachedData &&
+            typeof cachedData === 'object' &&
+            'rankings' in cachedData
+          ) {
+            const rankings = (cachedData as { rankings: unknown[] }).rankings
+            const snapshots: DistrictRankSnapshot[] = rankings.map(
+              (r: unknown) => {
+                const ranking = r as Record<string, unknown>
+                return {
+                  districtId: String(ranking.districtId || ''),
+                  districtName: String(ranking.districtName || ''),
+                  aggregateScore: Number(ranking.aggregateScore || 0),
+                  clubsRank: Number(ranking.clubsRank || 0),
+                  paymentsRank: Number(ranking.paymentsRank || 0),
+                  distinguishedRank: Number(ranking.distinguishedRank || 0),
+                  paidClubs: Number(ranking.paidClubs || 0),
+                  totalPayments: Number(ranking.totalPayments || 0),
+                  distinguishedClubs: Number(ranking.distinguishedClubs || 0),
+                }
+              }
+            )
             this.indexCache.set(date, snapshots)
           }
         }
       }
 
       this.indexLoaded = true
-      logger.info('Historical index loaded', { 
+      logger.info('Historical index loaded', {
         dates: indexData.dates?.length || 0,
-        districts: indexData.districtIds?.length || 0 
+        districts: indexData.districtIds?.length || 0,
       })
     } catch (error) {
-      logger.warn('Failed to load historical index, will build on demand', error)
+      logger.warn(
+        'Failed to load historical index, will build on demand',
+        error
+      )
       this.indexLoaded = true // Mark as loaded to avoid repeated attempts
     }
   }
@@ -380,7 +434,9 @@ export class CacheManager {
   /**
    * Get district ranks for a specific date from index
    */
-  async getDistrictRanksForDate(date: string): Promise<DistrictRankSnapshot[] | null> {
+  async getDistrictRanksForDate(
+    date: string
+  ): Promise<DistrictRankSnapshot[] | null> {
     await this.loadHistoricalIndex()
     return this.indexCache.get(date) || null
   }
@@ -388,7 +444,11 @@ export class CacheManager {
   /**
    * Get rank history for a specific district across all cached dates
    */
-  async getDistrictRankHistory(districtId: string, startDate?: string, endDate?: string): Promise<Array<DistrictRankSnapshot & { date: string }>> {
+  async getDistrictRankHistory(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<Array<DistrictRankSnapshot & { date: string }>> {
     await this.loadHistoricalIndex()
 
     const allDates = Array.from(this.indexCache.keys()).sort()
@@ -401,7 +461,9 @@ export class CacheManager {
       if (date >= start && date <= end) {
         const snapshots = this.indexCache.get(date)
         if (snapshots) {
-          const districtSnapshot = snapshots.find(s => s.districtId === districtId)
+          const districtSnapshot = snapshots.find(
+            s => s.districtId === districtId
+          )
           if (districtSnapshot) {
             history.push({ ...districtSnapshot, date })
           }
@@ -422,7 +484,7 @@ export class CacheManager {
 
       const dates = Array.from(this.indexCache.keys()).sort()
       const allDistrictIds = new Set<string>()
-      
+
       // Collect all unique district IDs
       for (const snapshots of this.indexCache.values()) {
         snapshots.forEach(s => allDistrictIds.add(s.districtId))
@@ -438,7 +500,7 @@ export class CacheManager {
         if (metadata.dataCompleteness === 'complete') completeDates++
         else if (metadata.dataCompleteness === 'partial') partialDates++
         else emptyDates++
-        
+
         programYearsSet.add(metadata.programYear)
       }
 
@@ -493,10 +555,10 @@ export class CacheManager {
       if (!metadata) {
         return false
       }
-      
+
       // If no version is set, it's legacy cache (v1)
       const cacheVersion = metadata.cacheVersion || 1
-      
+
       if (cacheVersion !== CacheManager.CACHE_VERSION) {
         logger.warn('Cache version mismatch', {
           date,
@@ -505,7 +567,7 @@ export class CacheManager {
         })
         return false
       }
-      
+
       return true
     } catch (error) {
       logger.error('Failed to check cache version', { date, error })
@@ -528,12 +590,12 @@ export class CacheManager {
     try {
       const dates = await this.getCachedDates('districts')
       let clearedCount = 0
-      
+
       for (const date of dates) {
         const isCompatible = await this.isCacheVersionCompatible(date)
         if (!isCompatible) {
           await this.clearCacheForDate(date, 'districts')
-          
+
           // Also clear metadata
           try {
             const metadataPath = this.getMetadataFilePath(date)
@@ -541,12 +603,12 @@ export class CacheManager {
           } catch {
             // Ignore if metadata doesn't exist
           }
-          
+
           clearedCount++
           logger.info('Cleared incompatible cache', { date })
         }
       }
-      
+
       // Clear historical index if any cache was cleared
       if (clearedCount > 0) {
         try {
@@ -557,7 +619,7 @@ export class CacheManager {
           // Ignore if index doesn't exist
         }
       }
-      
+
       logger.info('Incompatible cache cleanup complete', { clearedCount })
       return clearedCount
     } catch (error) {
@@ -573,7 +635,7 @@ export class CacheManager {
   static getProgramYear(date: Date = new Date()): string {
     const year = date.getFullYear()
     const month = date.getMonth() + 1 // 0-indexed
-    
+
     if (month >= 7) {
       // July-December: current year to next year
       return `${year}-${year + 1}`
@@ -589,7 +651,7 @@ export class CacheManager {
   static getProgramYearStart(date: Date = new Date()): Date {
     const year = date.getFullYear()
     const month = date.getMonth() + 1
-    
+
     if (month >= 7) {
       return new Date(year, 6, 1) // July 1 of current year
     } else {

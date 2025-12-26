@@ -1,62 +1,70 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'
 
 interface DateRangeSelectorProps {
-  onDateRangeChange: (startDate: string, endDate: string) => void;
-  maxDays?: number;
+  onDateRangeChange: (startDate: string, endDate: string) => void
+  maxDays?: number
 }
 
 export const DateRangeSelector = ({
   onDateRangeChange,
   maxDays = 90,
 }: DateRangeSelectorProps) => {
-  const today = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0];
+  const { today, thirtyDaysAgo } = useMemo(() => {
+    const now = new Date()
+    const todayDate = now.toISOString().split('T')[0]
+    const thirtyDaysAgoDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0]
+    return { today: todayDate, thirtyDaysAgo: thirtyDaysAgoDate }
+  }, [])
 
-  const [startDate, setStartDate] = useState(thirtyDaysAgo);
-  const [endDate, setEndDate] = useState(today);
-  const [error, setError] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState(thirtyDaysAgo)
+  const [endDate, setEndDate] = useState(today)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    validateAndEmit();
-  }, [startDate, endDate]);
-
-  const validateAndEmit = () => {
-    setError(null);
-
+  // Validation using useMemo instead of useEffect
+  const validationError = useMemo(() => {
     if (!startDate || !endDate) {
-      setError('Both start and end dates are required');
-      return;
+      return 'Both start and end dates are required'
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startDate)
+    const end = new Date(endDate)
 
     if (start > end) {
-      setError('Start date must be before end date');
-      return;
+      return 'Start date must be before end date'
     }
 
     const daysDiff = Math.ceil(
       (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    )
 
     if (daysDiff > maxDays) {
-      setError(`Date range cannot exceed ${maxDays} days`);
-      return;
+      return `Date range cannot exceed ${maxDays} days`
     }
 
-    onDateRangeChange(startDate, endDate);
-  };
+    return null
+  }, [startDate, endDate, maxDays])
+
+  // Update error state when validation changes
+  useEffect(() => {
+    setError(validationError)
+  }, [validationError])
+
+  // Emit valid date ranges
+  useEffect(() => {
+    if (!validationError) {
+      onDateRangeChange(startDate, endDate)
+    }
+  }, [startDate, endDate, validationError, onDateRangeChange])
 
   const handlePresetRange = (days: number) => {
-    const end = new Date();
-    const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const end = new Date()
+    const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
-    setEndDate(end.toISOString().split('T')[0]);
-    setStartDate(start.toISOString().split('T')[0]);
-  };
+    setEndDate(end.toISOString().split('T')[0])
+    setStartDate(start.toISOString().split('T')[0])
+  }
 
   return (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
@@ -78,7 +86,7 @@ export const DateRangeSelector = ({
               id="start-date"
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={e => setStartDate(e.target.value)}
               max={today}
               className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-gray-900 bg-white"
             />
@@ -95,7 +103,7 @@ export const DateRangeSelector = ({
               id="end-date"
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={e => setEndDate(e.target.value)}
               max={today}
               className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-gray-900 bg-white"
             />
@@ -149,5 +157,5 @@ export const DateRangeSelector = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

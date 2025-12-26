@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, ReactNode } from 'react'
 
 interface BackfillInfo {
@@ -16,11 +17,14 @@ interface BackfillContextType {
   removeBackfill: (backfillId: string) => void
 }
 
-const BackfillContext = createContext<BackfillContextType | undefined>(undefined)
+const BackfillContext = createContext<BackfillContextType | undefined>(
+  undefined
+)
 
 export function BackfillProvider({ children }: { children: ReactNode }) {
   const [activeBackfillId, setActiveBackfillId] = useState<string | null>(null)
-  const [activeBackfillInfo, setActiveBackfillInfo] = useState<BackfillInfo | null>(null)
+  const [activeBackfillInfo, setActiveBackfillInfo] =
+    useState<BackfillInfo | null>(null)
   const [activeBackfills, setActiveBackfills] = useState<BackfillInfo[]>([])
 
   const addBackfill = (info: BackfillInfo) => {
@@ -36,15 +40,17 @@ export function BackfillProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <BackfillContext.Provider value={{ 
-      activeBackfillId, 
-      setActiveBackfillId,
-      activeBackfillInfo,
-      setActiveBackfillInfo,
-      activeBackfills,
-      addBackfill,
-      removeBackfill
-    }}>
+    <BackfillContext.Provider
+      value={{
+        activeBackfillId,
+        setActiveBackfillId,
+        activeBackfillInfo,
+        setActiveBackfillInfo,
+        activeBackfills,
+        addBackfill,
+        removeBackfill,
+      }}
+    >
       {children}
     </BackfillContext.Provider>
   )

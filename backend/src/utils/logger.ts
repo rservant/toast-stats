@@ -2,13 +2,15 @@
  * Simple logging utility for production monitoring
  */
 
+import type { Request, Response, NextFunction } from 'express'
+
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 interface LogEntry {
   timestamp: string
   level: LogLevel
   message: string
-  data?: any
+  data?: unknown
   environment: string
 }
 
@@ -19,7 +21,11 @@ class Logger {
     this.environment = process.env.NODE_ENV || 'development'
   }
 
-  private formatLog(level: LogLevel, message: string, data?: any): LogEntry {
+  private formatLog(
+    level: LogLevel,
+    message: string,
+    data?: unknown
+  ): LogEntry {
     return {
       timestamp: new Date().toISOString(),
       level,
@@ -49,33 +55,34 @@ class Logger {
     }
   }
 
-  info(message: string, data?: any): void {
+  info(message: string, data?: unknown): void {
     this.output(this.formatLog('info', message, data))
   }
 
-  warn(message: string, data?: any): void {
+  warn(message: string, data?: unknown): void {
     this.output(this.formatLog('warn', message, data))
   }
 
-  error(message: string, error?: Error | any): void {
-    const errorData = error instanceof Error
-      ? {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-        }
-      : error
+  error(message: string, error?: Error | unknown): void {
+    const errorData =
+      error instanceof Error
+        ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          }
+        : error
 
     this.output(this.formatLog('error', message, errorData))
   }
 
-  debug(message: string, data?: any): void {
+  debug(message: string, data?: unknown): void {
     this.output(this.formatLog('debug', message, data))
   }
 
   // Request logging middleware
   requestLogger() {
-    return (req: any, res: any, next: any) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const start = Date.now()
 
       res.on('finish', () => {

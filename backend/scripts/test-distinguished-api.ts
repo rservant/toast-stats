@@ -19,7 +19,9 @@ async function testDistinguishedAPI() {
   const startDate = '2025-11-22'
   const endDate = '2025-11-22'
 
-  console.log(`Testing: /api/districts/${districtId}/distinguished-club-analytics`)
+  console.log(
+    `Testing: /api/districts/${districtId}/distinguished-club-analytics`
+  )
   console.log(`Date Range: ${startDate} to ${endDate}`)
   console.log()
 
@@ -41,7 +43,8 @@ async function testDistinguishedAPI() {
 
       console.log('Most Commonly Achieved Goals:')
       analytics.dcpGoalAnalysis.mostCommonlyAchieved.forEach(goal => {
-        const highlight = goal.goalNumber === 5 || goal.goalNumber === 6 ? '→' : ' '
+        const highlight =
+          goal.goalNumber === 5 || goal.goalNumber === 6 ? '→' : ' '
         console.log(
           `${highlight} Goal ${goal.goalNumber}: ${goal.achievementCount} clubs (${goal.achievementPercentage}%)`
         )
@@ -50,7 +53,8 @@ async function testDistinguishedAPI() {
       console.log()
       console.log('Least Commonly Achieved Goals:')
       analytics.dcpGoalAnalysis.leastCommonlyAchieved.forEach(goal => {
-        const highlight = goal.goalNumber === 5 || goal.goalNumber === 6 ? '→' : ' '
+        const highlight =
+          goal.goalNumber === 5 || goal.goalNumber === 6 ? '→' : ' '
         console.log(
           `${highlight} Goal ${goal.goalNumber}: ${goal.achievementCount} clubs (${goal.achievementPercentage}%)`
         )
@@ -62,32 +66,36 @@ async function testDistinguishedAPI() {
       // Find Goals 5 and 6
       const allGoals = [
         ...analytics.dcpGoalAnalysis.mostCommonlyAchieved,
-        ...analytics.dcpGoalAnalysis.leastCommonlyAchieved
+        ...analytics.dcpGoalAnalysis.leastCommonlyAchieved,
       ]
       const goal5 = allGoals.find(g => g.goalNumber === 5)
       const goal6 = allGoals.find(g => g.goalNumber === 6)
 
       if (goal5 && goal5.achievementCount > 0) {
-        console.log(`  ✓ Goal 5: ${goal5.achievementCount} clubs (${goal5.achievementPercentage}%) - PASS`)
+        console.log(
+          `  ✓ Goal 5: ${goal5.achievementCount} clubs (${goal5.achievementPercentage}%) - PASS`
+        )
       } else {
         console.log(`  ❌ Goal 5: 0 clubs - FAIL`)
       }
 
       if (goal6 && goal6.achievementCount > 0) {
-        console.log(`  ✓ Goal 6: ${goal6.achievementCount} clubs (${goal6.achievementPercentage}%) - PASS`)
+        console.log(
+          `  ✓ Goal 6: ${goal6.achievementCount} clubs (${goal6.achievementPercentage}%) - PASS`
+        )
       } else {
-        console.log(`  ⚠ Goal 6: 0 clubs - May be correct if no clubs have 2+ awards`)
+        console.log(
+          `  ⚠ Goal 6: 0 clubs - May be correct if no clubs have 2+ awards`
+        )
       }
 
       console.log()
       console.log('✓ Frontend will receive correct DCP goal data')
       console.log('✓ Goals 5 and 6 show non-zero counts')
       console.log('✓ Percentages are calculated correctly')
-
     } else {
       console.log('❌ DCP Goal Analysis is missing from response')
     }
-
   } catch (error) {
     console.error('❌ Error:', error)
   }

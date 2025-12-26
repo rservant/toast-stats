@@ -1,9 +1,9 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode } from 'react'
 
 export interface DashboardLayoutProps {
-  children: ReactNode;
-  header?: ReactNode;
-  className?: string;
+  children: ReactNode
+  header?: ReactNode
+  className?: string
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -19,9 +19,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             {header}
           </header>
         )}
-        
-        <main 
-          id="main-content" 
+
+        <main
+          id="main-content"
           className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 ${className}`}
           role="main"
           aria-label="District statistics dashboard"
@@ -30,7 +30,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         </main>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DashboardLayout;
+export default DashboardLayout

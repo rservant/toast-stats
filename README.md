@@ -74,6 +74,7 @@ npm run lint
 ## Technology Stack
 
 ### Frontend
+
 - React 18
 - TypeScript
 - Vite
@@ -84,6 +85,7 @@ npm run lint
 - Axios
 
 ### Backend
+
 - Node.js
 - Express
 - TypeScript
@@ -101,6 +103,7 @@ The application can fetch data from the public Toastmasters dashboards at https:
 - **Real Data**: Scrapes live data from Toastmasters dashboards
 
 Toggle between them in `backend/.env`:
+
 ```bash
 USE_MOCK_DATA=true   # Use mock data (fast)
 USE_MOCK_DATA=false  # Use real scraping (slower, requires Playwright)
@@ -123,6 +126,7 @@ USE_MOCK_DATA=false  # Use real scraping (slower, requires Playwright)
 For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 Quick deployment options:
+
 - **Docker Compose**: `docker-compose --env-file .env.production up -d`
 - **Kubernetes**: See `k8s/` directory for manifests
 - **Static Hosting**: Build frontend and deploy to Vercel/Netlify

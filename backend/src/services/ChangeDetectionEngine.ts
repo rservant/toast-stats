@@ -1,37 +1,37 @@
 /**
  * Change Detection Engine for Month-End Data Reconciliation
- * 
+ *
  * This service compares district data to detect changes during reconciliation periods.
  * It implements significance threshold checking and change metrics calculation.
  */
 
 import { logger } from '../utils/logger'
-import type { 
-  DataChanges, 
-  ChangeThresholds, 
-  ChangeMetrics, 
-  DistinguishedCounts 
+import type {
+  DataChanges,
+  ChangeThresholds,
+  ChangeMetrics,
+  DistinguishedCounts,
 } from '../types/reconciliation'
 import type { DistrictStatistics } from '../types/districts'
 
 export class ChangeDetectionEngine {
   /**
    * Detects changes between cached and current district data
-   * 
+   *
    * @param districtId - The district ID being compared
    * @param cachedData - Previously cached district statistics
    * @param currentData - Current district statistics from dashboard
    * @returns DataChanges object with detailed change information
    */
   detectChanges(
-    districtId: string, 
-    cachedData: DistrictStatistics, 
+    districtId: string,
+    cachedData: DistrictStatistics,
     currentData: DistrictStatistics
   ): DataChanges {
-    logger.debug('Detecting changes for district', { 
-      districtId, 
+    logger.debug('Detecting changes for district', {
+      districtId,
       cachedDate: cachedData.asOfDate,
-      currentDate: currentData.asOfDate 
+      currentDate: currentData.asOfDate,
     })
 
     const changedFields: string[] = []
@@ -39,11 +39,14 @@ export class ChangeDetectionEngine {
       hasChanges: false,
       changedFields,
       timestamp: new Date(),
-      sourceDataDate: currentData.asOfDate
+      sourceDataDate: currentData.asOfDate,
     }
 
     // Check membership changes
-    const membershipChange = this.detectMembershipChanges(cachedData, currentData)
+    const membershipChange = this.detectMembershipChanges(
+      cachedData,
+      currentData
+    )
     if (membershipChange) {
       changes.membershipChange = membershipChange
       changedFields.push('membership')
@@ -57,7 +60,10 @@ export class ChangeDetectionEngine {
     }
 
     // Check distinguished club changes
-    const distinguishedChange = this.detectDistinguishedChanges(cachedData, currentData)
+    const distinguishedChange = this.detectDistinguishedChanges(
+      cachedData,
+      currentData
+    )
     if (distinguishedChange) {
       changes.distinguishedChange = distinguishedChange
       changedFields.push('distinguished')
@@ -68,7 +74,7 @@ export class ChangeDetectionEngine {
     logger.debug('Change detection completed', {
       districtId,
       hasChanges: changes.hasChanges,
-      changedFields: changes.changedFields
+      changedFields: changes.changedFields,
     })
 
     return changes
@@ -76,12 +82,15 @@ export class ChangeDetectionEngine {
 
   /**
    * Determines if detected changes meet significance thresholds
-   * 
+   *
    * @param changes - The detected changes
    * @param thresholds - Significance thresholds to check against
    * @returns true if changes are significant, false otherwise
    */
-  isSignificantChange(changes: DataChanges, thresholds: ChangeThresholds): boolean {
+  isSignificantChange(
+    changes: DataChanges,
+    thresholds: ChangeThresholds
+  ): boolean {
     if (!changes.hasChanges) {
       return false
     }
@@ -92,7 +101,7 @@ export class ChangeDetectionEngine {
       if (membershipPercent >= thresholds.membershipPercent) {
         logger.debug('Significant membership change detected', {
           percentChange: membershipPercent,
-          threshold: thresholds.membershipPercent
+          threshold: thresholds.membershipPercent,
         })
         return true
       }
@@ -104,7 +113,7 @@ export class ChangeDetectionEngine {
       if (clubCountChange >= thresholds.clubCountAbsolute) {
         logger.debug('Significant club count change detected', {
           absoluteChange: clubCountChange,
-          threshold: thresholds.clubCountAbsolute
+          threshold: thresholds.clubCountAbsolute,
         })
         return true
       }
@@ -112,11 +121,13 @@ export class ChangeDetectionEngine {
 
     // Check distinguished club significance
     if (changes.distinguishedChange) {
-      const distinguishedPercent = Math.abs(changes.distinguishedChange.percentChange)
+      const distinguishedPercent = Math.abs(
+        changes.distinguishedChange.percentChange
+      )
       if (distinguishedPercent >= thresholds.distinguishedPercent) {
         logger.debug('Significant distinguished change detected', {
           percentChange: distinguishedPercent,
-          threshold: thresholds.distinguishedPercent
+          threshold: thresholds.distinguishedPercent,
         })
         return true
       }
@@ -127,7 +138,7 @@ export class ChangeDetectionEngine {
 
   /**
    * Calculates comprehensive change metrics for analysis
-   * 
+   *
    * @param changes - The detected changes
    * @returns ChangeMetrics with calculated impact scores
    */
@@ -138,13 +149,16 @@ export class ChangeDetectionEngine {
       membershipImpact: 0,
       clubCountImpact: 0,
       distinguishedImpact: 0,
-      overallSignificance: 0
+      overallSignificance: 0,
     }
 
     // Calculate membership impact
     if (changes.membershipChange) {
-      metrics.membershipImpact = Math.abs(changes.membershipChange.percentChange)
-      if (metrics.membershipImpact >= 1.0) { // Default threshold
+      metrics.membershipImpact = Math.abs(
+        changes.membershipChange.percentChange
+      )
+      if (metrics.membershipImpact >= 1.0) {
+        // Default threshold
         metrics.significantChanges++
       }
     }
@@ -152,20 +166,28 @@ export class ChangeDetectionEngine {
     // Calculate club count impact
     if (changes.clubCountChange) {
       // Normalize club count change to percentage-like scale
-      const clubCountPercent = changes.clubCountChange.previous > 0 
-        ? Math.abs(changes.clubCountChange.absoluteChange / changes.clubCountChange.previous) * 100
-        : Math.abs(changes.clubCountChange.absoluteChange) * 10 // Arbitrary scaling for zero base
+      const clubCountPercent =
+        changes.clubCountChange.previous > 0
+          ? Math.abs(
+              changes.clubCountChange.absoluteChange /
+                changes.clubCountChange.previous
+            ) * 100
+          : Math.abs(changes.clubCountChange.absoluteChange) * 10 // Arbitrary scaling for zero base
 
       metrics.clubCountImpact = clubCountPercent
-      if (Math.abs(changes.clubCountChange.absoluteChange) >= 1) { // Default threshold
+      if (Math.abs(changes.clubCountChange.absoluteChange) >= 1) {
+        // Default threshold
         metrics.significantChanges++
       }
     }
 
     // Calculate distinguished impact
     if (changes.distinguishedChange) {
-      metrics.distinguishedImpact = Math.abs(changes.distinguishedChange.percentChange)
-      if (metrics.distinguishedImpact >= 2.0) { // Default threshold
+      metrics.distinguishedImpact = Math.abs(
+        changes.distinguishedChange.percentChange
+      )
+      if (metrics.distinguishedImpact >= 2.0) {
+        // Default threshold
         metrics.significantChanges++
       }
     }
@@ -174,13 +196,13 @@ export class ChangeDetectionEngine {
     const weights = {
       membership: 0.4,
       clubCount: 0.3,
-      distinguished: 0.3
+      distinguished: 0.3,
     }
 
-    metrics.overallSignificance = 
-      (metrics.membershipImpact * weights.membership) +
-      (metrics.clubCountImpact * weights.clubCount) +
-      (metrics.distinguishedImpact * weights.distinguished)
+    metrics.overallSignificance =
+      metrics.membershipImpact * weights.membership +
+      metrics.clubCountImpact * weights.clubCount +
+      metrics.distinguishedImpact * weights.distinguished
 
     logger.debug('Change metrics calculated', { metrics })
 
@@ -191,7 +213,7 @@ export class ChangeDetectionEngine {
    * Detects membership-related changes
    */
   private detectMembershipChanges(
-    cachedData: DistrictStatistics, 
+    cachedData: DistrictStatistics,
     currentData: DistrictStatistics
   ) {
     const previous = cachedData.membership.total
@@ -201,14 +223,13 @@ export class ChangeDetectionEngine {
       return null
     }
 
-    const percentChange = previous > 0 
-      ? ((current - previous) / previous) * 100 
-      : 0
+    const percentChange =
+      previous > 0 ? ((current - previous) / previous) * 100 : 0
 
     return {
       previous,
       current,
-      percentChange: parseFloat(percentChange.toFixed(2))
+      percentChange: parseFloat(percentChange.toFixed(2)),
     }
   }
 
@@ -216,7 +237,7 @@ export class ChangeDetectionEngine {
    * Detects club count changes
    */
   private detectClubCountChanges(
-    cachedData: DistrictStatistics, 
+    cachedData: DistrictStatistics,
     currentData: DistrictStatistics
   ) {
     const previous = cachedData.clubs.total
@@ -229,7 +250,7 @@ export class ChangeDetectionEngine {
     return {
       previous,
       current,
-      absoluteChange: current - previous
+      absoluteChange: current - previous,
     }
   }
 
@@ -237,7 +258,7 @@ export class ChangeDetectionEngine {
    * Detects distinguished club changes
    */
   private detectDistinguishedChanges(
-    cachedData: DistrictStatistics, 
+    cachedData: DistrictStatistics,
     currentData: DistrictStatistics
   ) {
     // Extract distinguished counts from club data
@@ -245,7 +266,7 @@ export class ChangeDetectionEngine {
     const currentCounts = this.extractDistinguishedCounts(currentData)
 
     // Check if any distinguished metrics changed
-    const hasChanges = 
+    const hasChanges =
       previousCounts.select !== currentCounts.select ||
       previousCounts.distinguished !== currentCounts.distinguished ||
       previousCounts.president !== currentCounts.president ||
@@ -256,14 +277,17 @@ export class ChangeDetectionEngine {
     }
 
     // Calculate percentage change based on total distinguished clubs
-    const percentChange = previousCounts.total > 0 
-      ? ((currentCounts.total - previousCounts.total) / previousCounts.total) * 100 
-      : 0
+    const percentChange =
+      previousCounts.total > 0
+        ? ((currentCounts.total - previousCounts.total) /
+            previousCounts.total) *
+          100
+        : 0
 
     return {
       previous: previousCounts,
       current: currentCounts,
-      percentChange: parseFloat(percentChange.toFixed(2))
+      percentChange: parseFloat(percentChange.toFixed(2)),
     }
   }
 
@@ -272,10 +296,12 @@ export class ChangeDetectionEngine {
    * Note: This is a simplified implementation. In a real system, you would
    * need to parse the actual distinguished status data from the clubs.
    */
-  private extractDistinguishedCounts(data: DistrictStatistics): DistinguishedCounts {
+  private extractDistinguishedCounts(
+    data: DistrictStatistics
+  ): DistinguishedCounts {
     // For now, we'll use the total distinguished count and estimate breakdowns
     const total = data.clubs.distinguished
-    
+
     // These would need to be calculated from actual club data in a real implementation
     // For now, we'll use reasonable estimates based on typical distributions
     const select = Math.floor(total * 0.15) // ~15% are typically Select Distinguished
@@ -286,7 +312,7 @@ export class ChangeDetectionEngine {
       select,
       distinguished: Math.max(0, distinguished),
       president,
-      total
+      total,
     }
   }
 }

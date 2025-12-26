@@ -18,6 +18,7 @@ The application has been designed with accessibility as a core principle, ensuri
 ### 2. Screen Reader Support
 
 #### ARIA Labels and Roles
+
 - All interactive elements have descriptive `aria-label` attributes
 - Charts and graphs have `role="img"` with descriptive `aria-label`
 - Loading states use `aria-busy="true"`
@@ -25,11 +26,13 @@ The application has been designed with accessibility as a core principle, ensuri
 - Status updates use `role="status"` with `aria-live="polite"`
 
 #### Semantic HTML
+
 - Proper use of `<main>`, `<header>`, `<nav>`, `<section>`, and `<article>` elements
 - Form inputs properly associated with labels using `htmlFor` and `id`
 - Tables use proper `<thead>`, `<tbody>`, `<th scope="col">` structure
 
 #### Skip Navigation
+
 - Skip to main content link at the top of the page
 - Hidden by default, visible on keyboard focus
 - Allows users to bypass repetitive navigation
@@ -37,17 +40,20 @@ The application has been designed with accessibility as a core principle, ensuri
 ### 3. Visual Accessibility
 
 #### Color Contrast
+
 - All text meets WCAG 2.1 Level AA contrast ratio of 4.5:1
 - Updated gray colors to ensure sufficient contrast:
   - `.text-gray-600`: #4b5563 (ensures 4.5:1 on white)
   - `.text-gray-700`: #374151 (better contrast)
 
 #### Focus Indicators
+
 - 2px solid blue outline on all focusable elements
 - 2px offset for better visibility
 - Enhanced to 3px in high contrast mode
 
 #### Color Independence
+
 - Information is not conveyed by color alone
 - Trend indicators include both color and symbols (↑, ↓, →)
 - Status badges include text labels in addition to colors
@@ -55,6 +61,7 @@ The application has been designed with accessibility as a core principle, ensuri
 ### 4. Charts and Visualizations
 
 All charts include:
+
 - Descriptive `aria-label` providing context about the data
 - `role="img"` to identify them as images to screen readers
 - Hidden decorative elements with `aria-hidden="true"`
@@ -62,15 +69,14 @@ All charts include:
 - Interactive tooltips with detailed information
 
 Example:
+
 ```tsx
-<div 
-  role="img" 
+<div
+  role="img"
   aria-label="Line chart showing membership trends over 12 months. Starting with 1,234 members and ending with 1,456 members."
 >
   <ResponsiveContainer>
-    <LineChart aria-hidden="true">
-      {/* Chart content */}
-    </LineChart>
+    <LineChart aria-hidden="true">{/* Chart content */}</LineChart>
   </ResponsiveContainer>
 </div>
 ```
@@ -123,6 +129,7 @@ Example:
 ## CSS Classes
 
 ### Screen Reader Only Content
+
 ```css
 .sr-only {
   position: absolute;
@@ -138,6 +145,7 @@ Example:
 ```
 
 ### Skip Navigation Link
+
 ```css
 .skip-link {
   position: absolute;
@@ -159,6 +167,7 @@ Example:
 ## Testing Recommendations
 
 ### Manual Testing
+
 1. **Keyboard Navigation**: Tab through entire application without using mouse
 2. **Screen Reader**: Test with NVDA (Windows), JAWS (Windows), or VoiceOver (Mac)
 3. **Zoom**: Test at 200% zoom level
@@ -166,12 +175,14 @@ Example:
 5. **High Contrast**: Enable high contrast mode in OS settings
 
 ### Automated Testing
+
 - Use axe DevTools browser extension
 - Run Lighthouse accessibility audit
 - Use WAVE browser extension
 - Validate HTML with W3C validator
 
 ### Screen Reader Testing Checklist
+
 - [ ] All images and charts have descriptive labels
 - [ ] Form inputs are properly labeled
 - [ ] Error messages are announced
@@ -184,6 +195,7 @@ Example:
 ## Browser Support
 
 Accessibility features are supported in:
+
 - Chrome/Edge 90+
 - Firefox 88+
 - Safari 14+
@@ -192,6 +204,7 @@ Accessibility features are supported in:
 ## Compliance
 
 This application aims to meet:
+
 - WCAG 2.1 Level AA
 - Section 508
 - ADA compliance requirements
@@ -199,6 +212,7 @@ This application aims to meet:
 ## Future Improvements
 
 Potential enhancements for accessibility:
+
 1. Add keyboard shortcuts documentation
 2. Implement custom focus management for modals
 3. Add voice control support

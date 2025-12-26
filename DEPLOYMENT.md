@@ -18,6 +18,7 @@ cp .env.production.example .env.production
 ```
 
 Edit `.env.production` and set:
+
 - `JWT_SECRET` - Use a strong random string (minimum 32 characters)
 - `CORS_ORIGIN` - Your frontend domain (e.g., https://yourdomain.com)
 - `TOASTMASTERS_DASHBOARD_URL` - Usually https://dashboard.toastmasters.org
@@ -73,6 +74,7 @@ curl http://localhost:5001/health
 ```
 
 Expected response:
+
 ```json
 {
   "status": "ok",
@@ -150,23 +152,23 @@ netlify deploy --prod --dir=dist
 
 ### Backend Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `NODE_ENV` | No | development | Environment mode |
-| `PORT` | No | 5001 | Server port |
-| `JWT_SECRET` | Yes | - | Secret key for JWT tokens |
-| `JWT_EXPIRES_IN` | No | 1h | JWT token expiration |
-| `TOASTMASTERS_DASHBOARD_URL` | Yes | - | Toastmasters API URL |
-| `CORS_ORIGIN` | Yes (prod) | * | Allowed CORS origins |
-| `CACHE_TTL` | No | 900 | Cache TTL in seconds |
-| `RATE_LIMIT_WINDOW_MS` | No | 900000 | Rate limit window |
-| `RATE_LIMIT_MAX_REQUESTS` | No | 100 | Max requests per window |
+| Variable                     | Required   | Default     | Description               |
+| ---------------------------- | ---------- | ----------- | ------------------------- |
+| `NODE_ENV`                   | No         | development | Environment mode          |
+| `PORT`                       | No         | 5001        | Server port               |
+| `JWT_SECRET`                 | Yes        | -           | Secret key for JWT tokens |
+| `JWT_EXPIRES_IN`             | No         | 1h          | JWT token expiration      |
+| `TOASTMASTERS_DASHBOARD_URL` | Yes        | -           | Toastmasters API URL      |
+| `CORS_ORIGIN`                | Yes (prod) | \*          | Allowed CORS origins      |
+| `CACHE_TTL`                  | No         | 900         | Cache TTL in seconds      |
+| `RATE_LIMIT_WINDOW_MS`       | No         | 900000      | Rate limit window         |
+| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100         | Max requests per window   |
 
 ### Frontend Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `VITE_API_URL` | No | /api | Backend API URL |
+| Variable       | Required | Default | Description     |
+| -------------- | -------- | ------- | --------------- |
+| `VITE_API_URL` | No       | /api    | Backend API URL |
 
 ## Security Considerations
 
@@ -209,10 +211,12 @@ docker-compose logs -f frontend
 ### Health Monitoring
 
 Set up monitoring for these endpoints:
+
 - Backend: `http://your-backend:5001/health`
 - Frontend: `http://your-frontend:80/health`
 
 Recommended monitoring tools:
+
 - Uptime Robot
 - Pingdom
 - DataDog
@@ -221,6 +225,7 @@ Recommended monitoring tools:
 ### Log Aggregation
 
 For production, consider using:
+
 - ELK Stack (Elasticsearch, Logstash, Kibana)
 - Splunk
 - CloudWatch (AWS)
@@ -285,6 +290,7 @@ Currently, the application doesn't persist data. All data is fetched from the To
 ### Configuration Backup
 
 Backup these files:
+
 - `.env.production`
 - `docker-compose.yml`
 - Any custom nginx configurations
@@ -383,6 +389,7 @@ rm -rf backend/cache/historical_index.json
 ## Support
 
 For issues or questions:
+
 1. Check logs first
 2. Verify environment configuration
 3. Review this deployment guide

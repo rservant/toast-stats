@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit TypeScript checks..."
+
+# Check backend TypeScript compilation
+echo "Checking backend TypeScript..."
+cd backend
+BACKEND_ERRORS=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+
+if [ "$BACKEND_ERRORS" -gt 0 ]; then
+  echo "❌ Backend has $BACKEND_ERRORS TypeScript errors:"
+  npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | head -10
+  echo ""
+  echo "🚫 COMMIT BLOCKED: Fix TypeScript errors before committing"
+  echo "See .kiro/steering/typescript-policy.md for policy details"
+  exit 1
+fi
+
+cd ..
+
+# Check frontend TypeScript compilation
+echo "Checking frontend TypeScript..."
+cd frontend
+FRONTEND_ERRORS=$(npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+
+if [ "$FRONTEND_ERRORS" -gt 0 ]; then
+  echo "❌ Frontend has $FRONTEND_ERRORS TypeScript errors:"
+  npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "error TS[0-9]+" | head -10
+  echo ""
+  echo "🚫 COMMIT BLOCKED: Fix TypeScript errors before committing"
+  echo "See .kiro/steering/typescript-policy.md for policy details"
+  exit 1
+fi
+
+cd ..
+
+echo "✅ TypeScript compilation successful - commit allowed"
+echo "📊 Backend errors: $BACKEND_ERRORS, Frontend errors: $FRONTEND_ERRORS"

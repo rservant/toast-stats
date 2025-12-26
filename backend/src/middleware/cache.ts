@@ -39,7 +39,7 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
         })
 
     // Try to get cached response
-    const cachedResponse = cacheService.get<any>(cacheKey)
+    const cachedResponse = cacheService.get<unknown>(cacheKey)
 
     if (cachedResponse !== undefined) {
       // Serve from cache
@@ -50,7 +50,7 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
     const originalJson = res.json.bind(res)
 
     // Override res.json to cache the response
-    res.json = function (body: any) {
+    res.json = function (body: unknown) {
       // Cache the response body
       const ttl = options.ttl
       cacheService.set(cacheKey, body, ttl)
@@ -76,7 +76,7 @@ export function invalidateCacheMiddleware(
     const originalJson = res.json.bind(res)
 
     // Override res.json to invalidate cache after successful response
-    res.json = function (body: any) {
+    res.json = function (body: unknown) {
       // Only invalidate on successful responses (2xx status codes)
       if (res.statusCode >= 200 && res.statusCode < 300) {
         const pattern =
@@ -86,7 +86,7 @@ export function invalidateCacheMiddleware(
         const allKeys = cacheService.keys()
 
         // Find keys matching the pattern
-        const keysToInvalidate = allKeys.filter((key) => {
+        const keysToInvalidate = allKeys.filter(key => {
           // Simple wildcard matching
           const regexPattern = pattern
             .replace(/\*/g, '.*')
@@ -119,7 +119,7 @@ export function clearCacheOnLogout() {
     const originalJson = res.json.bind(res)
 
     // Override res.json to clear cache after successful logout
-    res.json = function (body: any) {
+    res.json = function (body: unknown) {
       // Only clear cache on successful logout (2xx status codes)
       if (res.statusCode >= 200 && res.statusCode < 300) {
         cacheService.clear()

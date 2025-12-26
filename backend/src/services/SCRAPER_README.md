@@ -58,21 +58,25 @@ This uses `RealToastmastersAPIService` which scrapes live data from the Toastmas
 The scraper can fetch data from these dashboard pages:
 
 ### 1. All Districts Summary
+
 - **URL**: `https://dashboards.toastmasters.org/`
 - **Data**: Cross-district summary with membership, payments, growth metrics
 - **Method**: `scraper.getAllDistricts()`
 
 ### 2. District Performance
+
 - **URL**: `https://dashboards.toastmasters.org/District.aspx?id={DISTRICT_ID}`
 - **Data**: District-level summary with Division → Area → Club hierarchy
 - **Method**: `scraper.getDistrictPerformance(districtId)`
 
 ### 3. Division & Area Performance
+
 - **URL**: `https://dashboards.toastmasters.org/Division.aspx?id={DISTRICT_ID}`
 - **Data**: Division goals and Area breakdowns
 - **Method**: `scraper.getDivisionPerformance(districtId)`
 
 ### 4. Club Performance
+
 - **URL**: `https://dashboards.toastmasters.org/Club.aspx?id={DISTRICT_ID}`
 - **Data**: Club-level metrics (membership, growth, training, recognition)
 - **Method**: `scraper.getClubPerformance(districtId)`
@@ -89,16 +93,19 @@ The scraper can fetch data from these dashboard pages:
 ## Performance Considerations
 
 ### Caching
+
 - All scraped data is cached for 15 minutes (configurable via `CACHE_TTL`)
 - This reduces load on Toastmasters servers
 - Improves response times for repeated requests
 
 ### Browser Reuse
+
 - The browser instance is reused across multiple requests
 - Reduces startup overhead
 - Automatically closed when the service is shut down
 
 ### Rate Limiting
+
 - Built-in rate limiting prevents excessive requests
 - Configurable via `RATE_LIMIT_*` environment variables
 
@@ -115,6 +122,7 @@ The scraper can fetch data from these dashboard pages:
 ### CSV Column Mapping
 
 The scraper attempts to handle various CSV column names:
+
 - `District` / `District ID` / `district`
 - `District Name` / `Name` / `name`
 - `Club Number` / `Club` / `ID`
@@ -160,6 +168,7 @@ Then update the column mapping in `RealToastmastersAPIService.ts`.
 ### Memory Issues
 
 If running multiple concurrent scrapes causes memory issues:
+
 - Ensure browser instances are properly closed
 - Reduce concurrent request limits
 - Increase server memory allocation

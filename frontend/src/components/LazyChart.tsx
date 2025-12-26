@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { LoadingSkeleton } from './LoadingSkeleton';
+import React, { useEffect, useRef, useState } from 'react'
+import { LoadingSkeleton } from './LoadingSkeleton'
 
 interface LazyChartProps {
-  children: React.ReactNode;
-  height?: string;
-  threshold?: number;
+  children: React.ReactNode
+  height?: string
+  threshold?: number
 }
 
 /**
@@ -16,36 +16,37 @@ export const LazyChart: React.FC<LazyChartProps> = ({
   height = '400px',
   threshold = 0.1,
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const container = containerRef.current
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           if (entry.isIntersecting && !hasLoaded) {
-            setIsVisible(true);
-            setHasLoaded(true);
+            setIsVisible(true)
+            setHasLoaded(true)
           }
-        });
+        })
       },
       {
         threshold,
         rootMargin: '50px', // Start loading slightly before visible
       }
-    );
+    )
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
+    if (container) {
+      observer.observe(container)
     }
 
     return () => {
-      if (containerRef.current) {
-        observer.unobserve(containerRef.current);
+      if (container) {
+        observer.unobserve(container)
       }
-    };
-  }, [threshold, hasLoaded]);
+    }
+  }, [threshold, hasLoaded])
 
   return (
     <div ref={containerRef} style={{ minHeight: height }}>
@@ -55,5 +56,5 @@ export const LazyChart: React.FC<LazyChartProps> = ({
         <LoadingSkeleton variant="chart" height={height} />
       )}
     </div>
-  );
-};
+  )
+}

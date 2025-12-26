@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useBackfillContext } from '../contexts/BackfillContext'
-import { useInitiateDistrictBackfill, useDistrictBackfillStatus, useCancelDistrictBackfill } from '../hooks/useDistrictBackfill'
+import {
+  useInitiateDistrictBackfill,
+  useDistrictBackfillStatus,
+  useCancelDistrictBackfill,
+} from '../hooks/useDistrictBackfill'
 import { useQueryClient } from '@tanstack/react-query'
 
 /**
@@ -27,7 +31,7 @@ interface DistrictBackfillRequest {
 
 /**
  * DistrictBackfillButton Component
- * 
+ *
  * Provides a button and modal interface for initiating and monitoring district-level
  * historical data backfills. The component handles the complete backfill workflow:
  * - Date range selection
@@ -35,11 +39,11 @@ interface DistrictBackfillRequest {
  * - Real-time progress tracking
  * - Error handling
  * - Cancellation support
- * 
+ *
  * The backfill process fetches district, division, and club performance data for
  * all missing dates in the specified range. Progress is displayed with detailed
  * statistics including completed, skipped, unavailable, and failed dates.
- * 
+ *
  * @component
  * @example
  * ```tsx
@@ -49,7 +53,11 @@ interface DistrictBackfillRequest {
  * />
  * ```
  */
-export function DistrictBackfillButton({ districtId, className = '', onBackfillStart }: DistrictBackfillButtonProps) {
+export function DistrictBackfillButton({
+  districtId,
+  className = '',
+  onBackfillStart,
+}: DistrictBackfillButtonProps) {
   const [showModal, setShowModal] = useState(false)
   const [backfillId, setBackfillId] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
@@ -61,46 +69,43 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
   const initiateMutation = useInitiateDistrictBackfill(districtId)
   const cancelMutation = useCancelDistrictBackfill(districtId)
 
-  // Poll backfill status when we have a backfillId
-  const { data: backfillStatus, isError: isStatusError } = useDistrictBackfillStatus(
-    districtId,
-    backfillId,
-    !!backfillId
-  )
-
-  // Update backfillId when initiate mutation succeeds
-  useEffect(() => {
-    if (initiateMutation.isSuccess && initiateMutation.data) {
-      const id = initiateMutation.data.backfillId
-      setBackfillId(id)
-      // Set as active backfill in global context
-      addBackfill({
-        backfillId: id,
-        type: 'district',
-        districtId: districtId
-      })
-      // Notify parent and close modal
-      if (onBackfillStart) {
-        onBackfillStart(id)
-        setTimeout(() => setShowModal(false), 300)
-      }
+  // Handle initiate mutation success
+  const handleInitiateSuccess = (data: { backfillId: string }) => {
+    const id = data.backfillId
+    setBackfillId(id)
+    // Set as active backfill in global context
+    addBackfill({
+      backfillId: id,
+      type: 'district',
+      districtId: districtId,
+    })
+    // Notify parent and close modal
+    if (onBackfillStart) {
+      onBackfillStart(id)
+      setTimeout(() => setShowModal(false), 300)
     }
-  }, [initiateMutation.isSuccess, initiateMutation.data, onBackfillStart, addBackfill, districtId])
+  }
 
   // Handle cancel mutation success
-  useEffect(() => {
-    if (cancelMutation.isSuccess) {
-      setBackfillId(null)
-      removeBackfill(backfillId || '')
-      setShowModal(false)
-    }
-  }, [cancelMutation.isSuccess, removeBackfill, backfillId])
+  const handleCancelSuccess = () => {
+    setBackfillId(null)
+    removeBackfill(backfillId || '')
+    setShowModal(false)
+  }
+
+  // Poll backfill status when we have a backfillId
+  const { data: backfillStatus, isError: isStatusError } =
+    useDistrictBackfillStatus(districtId, backfillId, !!backfillId)
 
   // Refresh cached dates when backfill completes
   useEffect(() => {
     if (backfillStatus?.status === 'complete') {
-      queryClient.invalidateQueries({ queryKey: ['district-cached-dates', districtId] })
-      queryClient.invalidateQueries({ queryKey: ['district-analytics', districtId] })
+      queryClient.invalidateQueries({
+        queryKey: ['district-cached-dates', districtId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['district-analytics', districtId],
+      })
       queryClient.invalidateQueries({ queryKey: ['district-data', districtId] })
     }
   }, [backfillStatus?.status, queryClient, districtId])
@@ -110,12 +115,16 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     }
-    initiateMutation.mutate(request)
+    initiateMutation.mutate(request, {
+      onSuccess: handleInitiateSuccess,
+    })
   }
 
   const handleCancel = () => {
     if (backfillId) {
-      cancelMutation.mutate(backfillId)
+      cancelMutation.mutate(backfillId, {
+        onSuccess: handleCancelSuccess,
+      })
     } else {
       setShowModal(false)
     }
@@ -129,7 +138,10 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
   }
 
   const progressPercentage = backfillStatus
-    ? Math.round((backfillStatus.progress.completed / backfillStatus.progress.total) * 100)
+    ? Math.round(
+        (backfillStatus.progress.completed / backfillStatus.progress.total) *
+          100
+      )
     : 0
 
   return (
@@ -162,7 +174,7 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
       {showModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={(e) => {
+          onClick={e => {
             if (e.target === e.currentTarget && !backfillId) {
               setShowModal(false)
             }
@@ -172,40 +184,50 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
           aria-labelledby="district-backfill-title"
         >
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h2 id="district-backfill-title" className="text-2xl font-bold mb-4">
+            <h2
+              id="district-backfill-title"
+              className="text-2xl font-bold mb-4"
+            >
               Backfill District Historical Data
             </h2>
 
             {!backfillId ? (
               <>
                 <p className="text-sm text-gray-600 mb-4">
-                  This will fetch district, division, and club performance data for dates that aren't already
-                  cached. Only missing dates will be downloaded.
+                  This will fetch district, division, and club performance data
+                  for dates that aren't already cached. Only missing dates will
+                  be downloaded.
                 </p>
 
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label htmlFor="district-backfill-start-date" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="district-backfill-start-date"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Start Date (optional, defaults to program year start)
                     </label>
                     <input
                       id="district-backfill-start-date"
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={e => setStartDate(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 bg-white"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="district-backfill-end-date" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="district-backfill-end-date"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       End Date (optional, defaults to today)
                     </label>
                     <input
                       id="district-backfill-end-date"
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={e => setEndDate(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 bg-white"
                     />
                   </div>
@@ -214,7 +236,13 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
                 {(initiateMutation.isError || isStatusError) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-800">
-                      Error: {(initiateMutation.error as Error & { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to initiate backfill'}
+                      Error:{' '}
+                      {(
+                        initiateMutation.error as Error & {
+                          response?: { data?: { error?: { message?: string } } }
+                        }
+                      )?.response?.data?.error?.message ||
+                        'Failed to initiate backfill'}
                     </p>
                   </div>
                 )}
@@ -225,7 +253,9 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
                     disabled={initiateMutation.isPending}
                     className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
-                    {initiateMutation.isPending ? 'Starting...' : 'Start Backfill'}
+                    {initiateMutation.isPending
+                      ? 'Starting...'
+                      : 'Start Backfill'}
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
@@ -259,19 +289,30 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
 
                     <div className="text-sm text-gray-600">
                       <p>
-                        Processing: {backfillStatus.progress.completed} of {backfillStatus.progress.total} dates
+                        Processing: {backfillStatus.progress.completed} of{' '}
+                        {backfillStatus.progress.total} dates
                       </p>
                       <div className="text-xs text-gray-500 mt-2 space-y-1">
                         {backfillStatus.progress.skipped > 0 && (
-                          <p>✓ Skipped: {backfillStatus.progress.skipped} (already cached)</p>
+                          <p>
+                            ✓ Skipped: {backfillStatus.progress.skipped}{' '}
+                            (already cached)
+                          </p>
                         )}
                         {backfillStatus.progress.unavailable > 0 && (
-                          <p>○ Unavailable: {backfillStatus.progress.unavailable} (blackout/reconciliation)</p>
+                          <p>
+                            ○ Unavailable: {backfillStatus.progress.unavailable}{' '}
+                            (blackout/reconciliation)
+                          </p>
                         )}
                         {backfillStatus.progress.failed > 0 && (
-                          <p className="text-red-600">✗ Failed: {backfillStatus.progress.failed}</p>
+                          <p className="text-red-600">
+                            ✗ Failed: {backfillStatus.progress.failed}
+                          </p>
                         )}
-                        <p className="font-medium">Current: {backfillStatus.progress.current}</p>
+                        <p className="font-medium">
+                          Current: {backfillStatus.progress.current}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -286,16 +327,28 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
                       <div className="text-xs text-green-700 mt-2 space-y-1">
                         <p>Processed {backfillStatus.progress.total} dates</p>
                         {backfillStatus.progress.skipped > 0 && (
-                          <p>• Skipped: {backfillStatus.progress.skipped} (already cached)</p>
+                          <p>
+                            • Skipped: {backfillStatus.progress.skipped}{' '}
+                            (already cached)
+                          </p>
                         )}
                         {backfillStatus.progress.unavailable > 0 && (
-                          <p>• Unavailable: {backfillStatus.progress.unavailable} (blackout/reconciliation periods)</p>
+                          <p>
+                            • Unavailable: {backfillStatus.progress.unavailable}{' '}
+                            (blackout/reconciliation periods)
+                          </p>
                         )}
                         {backfillStatus.progress.failed > 0 && (
-                          <p className="text-red-700">• Failed: {backfillStatus.progress.failed}</p>
+                          <p className="text-red-700">
+                            • Failed: {backfillStatus.progress.failed}
+                          </p>
                         )}
                         <p className="font-medium mt-2">
-                          Successfully fetched: {backfillStatus.progress.total - backfillStatus.progress.unavailable - backfillStatus.progress.failed} new dates
+                          Successfully fetched:{' '}
+                          {backfillStatus.progress.total -
+                            backfillStatus.progress.unavailable -
+                            backfillStatus.progress.failed}{' '}
+                          new dates
                         </p>
                       </div>
                     </div>
@@ -322,10 +375,13 @@ export function DistrictBackfillButton({ districtId, className = '', onBackfillS
                       disabled={cancelMutation.isPending}
                       className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
-                      {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Backfill'}
+                      {cancelMutation.isPending
+                        ? 'Cancelling...'
+                        : 'Cancel Backfill'}
                     </button>
                   )}
-                  {(backfillStatus?.status === 'complete' || backfillStatus?.status === 'error') && (
+                  {(backfillStatus?.status === 'complete' ||
+                    backfillStatus?.status === 'error') && (
                     <button
                       onClick={handleClose}
                       className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"

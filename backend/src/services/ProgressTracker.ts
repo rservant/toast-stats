@@ -1,18 +1,19 @@
 /**
  * Progress Tracker for Month-End Data Reconciliation
- * 
+ *
  * Tracks and stores reconciliation progress for visibility and analysis.
  * Records timeline entries, estimates completion, and manages progress data.
  */
 
 import { logger } from '../utils/logger.js'
 import { ReconciliationStorageManager } from './ReconciliationStorageManager.js'
-import type { 
+import type {
   ReconciliationTimeline,
   ReconciliationEntry,
   ReconciliationStatus,
   DataChanges,
-  ReconciliationJob
+  ReconciliationJob,
+  ReconciliationConfig,
 } from '../types/reconciliation.js'
 
 export class ProgressTracker {
@@ -24,14 +25,22 @@ export class ProgressTracker {
 
   /**
    * Record a data update in the reconciliation timeline
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @param date - The date of the update
    * @param changes - The data changes detected
    * @returns void
    */
-  async recordDataUpdate(jobId: string, date: Date, changes: DataChanges): Promise<void> {
-    logger.debug('Recording data update', { jobId, date, hasChanges: changes.hasChanges })
+  async recordDataUpdate(
+    jobId: string,
+    date: Date,
+    changes: DataChanges
+  ): Promise<void> {
+    logger.debug('Recording data update', {
+      jobId,
+      date,
+      hasChanges: changes.hasChanges,
+    })
 
     try {
       // Get job details first
@@ -42,7 +51,7 @@ export class ProgressTracker {
 
       // Get existing timeline or create new one
       let timeline = await this.storageManager.getTimeline(jobId)
-      
+
       if (!timeline) {
         timeline = {
           jobId,
@@ -53,12 +62,15 @@ export class ProgressTracker {
             phase: 'monitoring',
             daysActive: 0,
             daysStable: 0,
-            message: 'Timeline initialized'
-          }
+            message: 'Timeline initialized',
+          },
         }
       }
 
-      const isSignificant = this.isSignificantChange(changes, job.config.significantChangeThresholds)
+      const isSignificant = this.isSignificantChange(
+        changes,
+        job.config.significantChangeThresholds
+      )
 
       // Create new timeline entry
       const entry: ReconciliationEntry = {
@@ -67,8 +79,11 @@ export class ProgressTracker {
         changes,
         isSignificant,
         cacheUpdated: changes.hasChanges, // Assume cache was updated if there were changes
-        notes: isSignificant ? 'Significant changes detected' : 
-               changes.hasChanges ? 'Minor changes detected' : 'No changes detected'
+        notes: isSignificant
+          ? 'Significant changes detected'
+          : changes.hasChanges
+            ? 'Minor changes detected'
+            : 'No changes detected',
       }
 
       // Add entry to timeline (maintain chronological order)
@@ -85,13 +100,12 @@ export class ProgressTracker {
       // Save updated timeline
       await this.storageManager.saveTimeline(timeline)
 
-      logger.info('Data update recorded', { 
-        jobId, 
-        date, 
-        isSignificant, 
-        totalEntries: timeline.entries.length 
+      logger.info('Data update recorded', {
+        jobId,
+        date,
+        isSignificant,
+        totalEntries: timeline.entries.length,
       })
-
     } catch (error) {
       logger.error('Failed to record data update', { jobId, date, error })
       throw error
@@ -100,16 +114,18 @@ export class ProgressTracker {
 
   /**
    * Get the reconciliation timeline for a job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @returns The reconciliation timeline
    */
-  async getReconciliationTimeline(jobId: string): Promise<ReconciliationTimeline> {
+  async getReconciliationTimeline(
+    jobId: string
+  ): Promise<ReconciliationTimeline> {
     logger.debug('Getting reconciliation timeline', { jobId })
 
     try {
       const timeline = await this.storageManager.getTimeline(jobId)
-      
+
       if (!timeline) {
         // If no timeline exists, create an empty one
         const job = await this.storageManager.getJob(jobId)
@@ -126,8 +142,8 @@ export class ProgressTracker {
             phase: 'monitoring',
             daysActive: this.calculateDaysActive(job),
             daysStable: 0,
-            message: 'No timeline entries yet'
-          }
+            message: 'No timeline entries yet',
+          },
         }
 
         return emptyTimeline
@@ -137,10 +153,13 @@ export class ProgressTracker {
       const job = await this.storageManager.getJob(jobId)
       if (job) {
         timeline.status = this.calculateTimelineStatus(timeline, job)
-        
+
         // Only calculate estimated completion for active jobs
         if (job.status === 'active') {
-          const estimatedCompletion = await this.estimateCompletion(timeline, job)
+          const estimatedCompletion = await this.estimateCompletion(
+            timeline,
+            job
+          )
           timeline.estimatedCompletion = estimatedCompletion || undefined
         } else if (job.status === 'completed') {
           // Keep estimated completion undefined for completed jobs
@@ -149,7 +168,6 @@ export class ProgressTracker {
       }
 
       return timeline
-
     } catch (error) {
       logger.error('Failed to get reconciliation timeline', { jobId, error })
       throw error
@@ -158,14 +176,17 @@ export class ProgressTracker {
 
   /**
    * Estimate completion date for a reconciliation job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @returns Estimated completion date or null if cannot be estimated
    */
   async estimateCompletion(jobId: string): Promise<Date | null>
-  async estimateCompletion(timeline: ReconciliationTimeline, job: ReconciliationJob): Promise<Date | null>
   async estimateCompletion(
-    timelineOrJobId: ReconciliationTimeline | string, 
+    timeline: ReconciliationTimeline,
+    job: ReconciliationJob
+  ): Promise<Date | null>
+  async estimateCompletion(
+    timelineOrJobId: ReconciliationTimeline | string,
     job?: ReconciliationJob
   ): Promise<Date | null> {
     try {
@@ -190,16 +211,24 @@ export class ProgressTracker {
           throw new Error('Job parameter is required when timeline is provided')
         }
         reconciliationJob = job
-        logger.debug('Estimating completion from timeline', { jobId: timeline.jobId })
+        logger.debug('Estimating completion from timeline', {
+          jobId: timeline.jobId,
+        })
       }
 
       // If job is already completed, return the finalized date
-      if (reconciliationJob.status === 'completed' && reconciliationJob.finalizedDate) {
+      if (
+        reconciliationJob.status === 'completed' &&
+        reconciliationJob.finalizedDate
+      ) {
         return reconciliationJob.finalizedDate
       }
 
       // If job is failed or cancelled, no completion estimate
-      if (reconciliationJob.status === 'failed' || reconciliationJob.status === 'cancelled') {
+      if (
+        reconciliationJob.status === 'failed' ||
+        reconciliationJob.status === 'cancelled'
+      ) {
         return null
       }
 
@@ -208,61 +237,79 @@ export class ProgressTracker {
 
       // Calculate current stability period
       const daysStable = this.calculateDaysStable(timeline)
-      
+
       // If we already have enough stable days, completion is imminent
       if (daysStable >= config.stabilityPeriodDays) {
-        return new Date(now.getTime() + (config.checkFrequencyHours * 60 * 60 * 1000))
+        return new Date(
+          now.getTime() + config.checkFrequencyHours * 60 * 60 * 1000
+        )
       }
 
       // If we're close to max end date, use that as the completion estimate
-      const timeUntilMaxEnd = reconciliationJob.maxEndDate.getTime() - now.getTime()
+      const timeUntilMaxEnd =
+        reconciliationJob.maxEndDate.getTime() - now.getTime()
       const daysUntilMaxEnd = timeUntilMaxEnd / (24 * 60 * 60 * 1000)
-      
+
       if (daysUntilMaxEnd <= 1) {
         return reconciliationJob.maxEndDate
       }
 
       // Analyze recent activity patterns to estimate completion
       const recentEntries = timeline.entries.filter(entry => {
-        const daysSinceEntry = (now.getTime() - entry.date.getTime()) / (24 * 60 * 60 * 1000)
+        const daysSinceEntry =
+          (now.getTime() - entry.date.getTime()) / (24 * 60 * 60 * 1000)
         return daysSinceEntry <= 7 // Last 7 days
       })
 
       if (recentEntries.length === 0) {
         // No recent activity, use conservative estimate based on remaining stability period
-        const remainingStableDays = Math.max(0, config.stabilityPeriodDays - daysStable)
+        const remainingStableDays = Math.max(
+          0,
+          config.stabilityPeriodDays - daysStable
+        )
         const estimatedDays = remainingStableDays + 2 // Add buffer
-        return new Date(now.getTime() + (estimatedDays * 24 * 60 * 60 * 1000))
+        return new Date(now.getTime() + estimatedDays * 24 * 60 * 60 * 1000)
       }
 
       // Calculate change frequency in recent entries
-      const significantChanges = recentEntries.filter(entry => entry.isSignificant).length
-      const changeFrequency = significantChanges / Math.max(1, recentEntries.length)
+      const significantChanges = recentEntries.filter(
+        entry => entry.isSignificant
+      ).length
+      const changeFrequency =
+        significantChanges / Math.max(1, recentEntries.length)
 
       // Estimate based on change frequency
       let estimatedDaysToStability: number
-      
+
       if (changeFrequency > 0.5) {
         // High change frequency - likely to take longer
-        estimatedDaysToStability = config.stabilityPeriodDays + Math.ceil(changeFrequency * 5)
+        estimatedDaysToStability =
+          config.stabilityPeriodDays + Math.ceil(changeFrequency * 5)
       } else if (changeFrequency > 0.2) {
         // Moderate change frequency
-        estimatedDaysToStability = config.stabilityPeriodDays + Math.ceil(changeFrequency * 3)
+        estimatedDaysToStability =
+          config.stabilityPeriodDays + Math.ceil(changeFrequency * 3)
       } else {
         // Low change frequency - likely to stabilize soon
-        const remainingStableDays = Math.max(0, config.stabilityPeriodDays - daysStable)
+        const remainingStableDays = Math.max(
+          0,
+          config.stabilityPeriodDays - daysStable
+        )
         estimatedDaysToStability = remainingStableDays + 1
       }
 
       // Ensure estimate doesn't exceed max end date
-      const estimatedCompletion = new Date(now.getTime() + (estimatedDaysToStability * 24 * 60 * 60 * 1000))
-      
-      if (estimatedCompletion.getTime() > reconciliationJob.maxEndDate.getTime()) {
+      const estimatedCompletion = new Date(
+        now.getTime() + estimatedDaysToStability * 24 * 60 * 60 * 1000
+      )
+
+      if (
+        estimatedCompletion.getTime() > reconciliationJob.maxEndDate.getTime()
+      ) {
         return reconciliationJob.maxEndDate
       }
 
       return estimatedCompletion
-
     } catch (error) {
       logger.error('Failed to estimate completion', { error })
       return null
@@ -271,7 +318,7 @@ export class ProgressTracker {
 
   /**
    * Mark a reconciliation as finalized
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @param finalDate - The finalization date
    * @returns void
@@ -306,7 +353,7 @@ export class ProgressTracker {
         phase: 'completed',
         daysActive: this.calculateDaysActiveFromTimeline(timeline, finalDate),
         daysStable: this.calculateDaysStable(timeline),
-        message: 'Reconciliation completed and finalized'
+        message: 'Reconciliation completed and finalized',
       }
 
       // Clear estimated completion since it's now finalized
@@ -315,22 +362,25 @@ export class ProgressTracker {
       // Save updated timeline
       await this.storageManager.saveTimeline(timeline)
 
-      logger.info('Reconciliation marked as finalized', { 
-        jobId, 
+      logger.info('Reconciliation marked as finalized', {
+        jobId,
         finalDate,
         daysActive: timeline.status.daysActive,
-        daysStable: timeline.status.daysStable
+        daysStable: timeline.status.daysStable,
       })
-
     } catch (error) {
-      logger.error('Failed to mark reconciliation as finalized', { jobId, finalDate, error })
+      logger.error('Failed to mark reconciliation as finalized', {
+        jobId,
+        finalDate,
+        error,
+      })
       throw error
     }
   }
 
   /**
    * Get progress statistics for a reconciliation job
-   * 
+   *
    * @param jobId - The reconciliation job ID
    * @returns Progress statistics
    */
@@ -344,12 +394,21 @@ export class ProgressTracker {
     oldestEntry?: Date
     changeFrequency: number
     stabilityTrend: 'improving' | 'stable' | 'declining' | 'unknown'
+    stabilityPeriod: {
+      consecutiveStableDays: number
+      stabilityStartDate?: Date
+      lastSignificantChangeDate?: Date
+      isInStabilityPeriod: boolean
+      stabilityPeriodProgress: number
+      requiredStabilityDays: number
+    }
   }> {
     logger.debug('Getting progress statistics', { jobId })
 
     try {
       const timeline = await this.getReconciliationTimeline(jobId)
-      
+      const job = await this.storageManager.getJob(jobId)
+
       if (timeline.entries.length === 0) {
         return {
           totalEntries: 0,
@@ -358,33 +417,65 @@ export class ProgressTracker {
           noChangeEntries: 0,
           averageTimeBetweenEntries: 0,
           changeFrequency: 0,
-          stabilityTrend: 'unknown'
+          stabilityTrend: 'unknown',
+          stabilityPeriod: {
+            consecutiveStableDays: 0,
+            isInStabilityPeriod: false,
+            stabilityPeriodProgress: 0,
+            requiredStabilityDays: job?.config.stabilityPeriodDays || 3,
+          },
         }
       }
 
       // Calculate basic statistics
       const totalEntries = timeline.entries.length
-      const significantChanges = timeline.entries.filter(e => e.isSignificant).length
-      const minorChanges = timeline.entries.filter(e => e.changes.hasChanges && !e.isSignificant).length
-      const noChangeEntries = timeline.entries.filter(e => !e.changes.hasChanges).length
+      const significantChanges = timeline.entries.filter(
+        e => e.isSignificant
+      ).length
+      const minorChanges = timeline.entries.filter(
+        e => e.changes.hasChanges && !e.isSignificant
+      ).length
+      const noChangeEntries = timeline.entries.filter(
+        e => !e.changes.hasChanges
+      ).length
 
       // Calculate time-based statistics
-      const sortedEntries = [...timeline.entries].sort((a, b) => a.date.getTime() - b.date.getTime())
+      const sortedEntries = [...timeline.entries].sort(
+        (a, b) => a.date.getTime() - b.date.getTime()
+      )
       const oldestEntry = sortedEntries[0]?.date
       const mostRecentEntry = sortedEntries[sortedEntries.length - 1]?.date
 
       let averageTimeBetweenEntries = 0
       if (sortedEntries.length > 1) {
-        const totalTimeSpan = mostRecentEntry!.getTime() - oldestEntry!.getTime()
+        const totalTimeSpan =
+          mostRecentEntry!.getTime() - oldestEntry!.getTime()
         averageTimeBetweenEntries = totalTimeSpan / (sortedEntries.length - 1)
       }
 
       // Calculate change frequency (changes per day)
-      const changeFrequency = totalEntries > 1 && oldestEntry && mostRecentEntry ? 
-        (significantChanges + minorChanges) / Math.max(1, (mostRecentEntry.getTime() - oldestEntry.getTime()) / (24 * 60 * 60 * 1000)) : 0
+      const changeFrequency =
+        totalEntries > 1 && oldestEntry && mostRecentEntry
+          ? (significantChanges + minorChanges) /
+            Math.max(
+              1,
+              (mostRecentEntry.getTime() - oldestEntry.getTime()) /
+                (24 * 60 * 60 * 1000)
+            )
+          : 0
 
       // Analyze stability trend
       const stabilityTrend = this.analyzeStabilityTrend(timeline)
+
+      // Get detailed stability period information
+      const stabilityInfo = this.getStabilityPeriodInfo(
+        timeline,
+        job?.config.stabilityPeriodDays || 3
+      )
+      const stabilityPeriod = {
+        ...stabilityInfo,
+        requiredStabilityDays: job?.config.stabilityPeriodDays || 3,
+      }
 
       return {
         totalEntries,
@@ -395,9 +486,9 @@ export class ProgressTracker {
         mostRecentEntry,
         oldestEntry,
         changeFrequency,
-        stabilityTrend
+        stabilityTrend,
+        stabilityPeriod,
       }
-
     } catch (error) {
       logger.error('Failed to get progress statistics', { jobId, error })
       throw error
@@ -406,15 +497,22 @@ export class ProgressTracker {
 
   /**
    * Calculate the current timeline status based on entries and job configuration
-   * 
+   *
    * @param timeline - The reconciliation timeline
    * @param job - The reconciliation job
    * @returns Current reconciliation status
    */
-  private calculateTimelineStatus(timeline: ReconciliationTimeline, job: ReconciliationJob): ReconciliationStatus {
+  private calculateTimelineStatus(
+    timeline: ReconciliationTimeline,
+    job: ReconciliationJob
+  ): ReconciliationStatus {
     const now = new Date()
     const daysActive = this.calculateDaysActive(job)
-    const daysStable = this.calculateDaysStable(timeline)
+    const stabilityInfo = this.getStabilityPeriodInfo(
+      timeline,
+      job.config.stabilityPeriodDays
+    )
+    const daysStable = stabilityInfo.consecutiveStableDays
 
     // Check if job is already completed
     if (job.status === 'completed') {
@@ -422,7 +520,8 @@ export class ProgressTracker {
         phase: 'completed',
         daysActive,
         daysStable,
-        message: 'Reconciliation completed and finalized'
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
+        message: 'Reconciliation completed and finalized',
       }
     }
 
@@ -432,74 +531,104 @@ export class ProgressTracker {
         phase: 'finalizing',
         daysActive,
         daysStable,
-        message: 'Maximum reconciliation period reached - ready for finalization'
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
+        message:
+          'Maximum reconciliation period reached - ready for finalization',
       }
     }
 
     // Check if stability period has been met
     if (daysStable >= job.config.stabilityPeriodDays) {
+      const stabilityMessage = stabilityInfo.stabilityStartDate
+        ? `Stability period met (${daysStable}/${job.config.stabilityPeriodDays} days since ${stabilityInfo.stabilityStartDate.toISOString().split('T')[0]}) - ready for finalization`
+        : `Stability period met (${daysStable}/${job.config.stabilityPeriodDays} days) - ready for finalization`
+
       return {
         phase: 'finalizing',
         daysActive,
         daysStable,
-        message: `Stability period met (${daysStable}/${job.config.stabilityPeriodDays} days) - ready for finalization`
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
+        message: stabilityMessage,
       }
     }
 
     // Check if we're in stabilizing phase (some stable days but not enough)
     if (daysStable > 0) {
+      const stabilityMessage = stabilityInfo.stabilityStartDate
+        ? `Stabilizing since ${stabilityInfo.stabilityStartDate.toISOString().split('T')[0]} - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+        : `Stabilizing - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+
       return {
         phase: 'stabilizing',
         daysActive,
         daysStable,
-        nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-        message: `Stabilizing - ${daysStable}/${job.config.stabilityPeriodDays} stable days`
+        lastChangeDate: stabilityInfo.lastSignificantChangeDate,
+        nextCheckDate: new Date(
+          now.getTime() + job.config.checkFrequencyHours * 60 * 60 * 1000
+        ),
+        message: stabilityMessage,
       }
     }
 
     // Still monitoring for changes
+    const monitoringMessage = stabilityInfo.lastSignificantChangeDate
+      ? `Monitoring for changes (last significant change: ${stabilityInfo.lastSignificantChangeDate.toISOString().split('T')[0]})`
+      : 'Monitoring for changes'
+
     return {
       phase: 'monitoring',
       daysActive,
       daysStable,
-      nextCheckDate: new Date(now.getTime() + (job.config.checkFrequencyHours * 60 * 60 * 1000)),
-      message: 'Monitoring for changes'
+      lastChangeDate: stabilityInfo.lastSignificantChangeDate,
+      nextCheckDate: new Date(
+        now.getTime() + job.config.checkFrequencyHours * 60 * 60 * 1000
+      ),
+      message: monitoringMessage,
     }
   }
 
   /**
    * Calculate the number of days the reconciliation has been active
-   * 
+   *
    * @param job - The reconciliation job
    * @returns Number of days active
    */
   private calculateDaysActive(job: ReconciliationJob): number {
     const now = new Date()
     const endDate = job.endDate || now
-    return Math.floor((endDate.getTime() - job.startDate.getTime()) / (24 * 60 * 60 * 1000))
+    return Math.floor(
+      (endDate.getTime() - job.startDate.getTime()) / (24 * 60 * 60 * 1000)
+    )
   }
 
   /**
    * Calculate days active from timeline entries
-   * 
+   *
    * @param timeline - The reconciliation timeline
    * @param endDate - The end date to calculate from
    * @returns Number of days active
    */
-  private calculateDaysActiveFromTimeline(timeline: ReconciliationTimeline, endDate: Date): number {
+  private calculateDaysActiveFromTimeline(
+    timeline: ReconciliationTimeline,
+    endDate: Date
+  ): number {
     if (timeline.entries.length === 0) {
       return 0
     }
 
-    const sortedEntries = [...timeline.entries].sort((a, b) => a.date.getTime() - b.date.getTime())
+    const sortedEntries = [...timeline.entries].sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    )
     const startDate = sortedEntries[0].date
-    
-    return Math.floor((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
+
+    return Math.floor(
+      (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)
+    )
   }
 
   /**
    * Calculate the number of consecutive stable days (no significant changes)
-   * 
+   *
    * @param timeline - The reconciliation timeline
    * @returns Number of consecutive stable days
    */
@@ -509,7 +638,9 @@ export class ProgressTracker {
     }
 
     // Sort entries by date (most recent first)
-    const sortedEntries = [...timeline.entries].sort((a, b) => b.date.getTime() - a.date.getTime())
+    const sortedEntries = [...timeline.entries].sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
+    )
 
     let stableDays = 0
     for (const entry of sortedEntries) {
@@ -525,34 +656,199 @@ export class ProgressTracker {
   }
 
   /**
+   * Get detailed stability period information
+   *
+   * @param timeline - The reconciliation timeline
+   * @param requiredStabilityDays - The number of required stability days from job config
+   * @returns Detailed stability period information
+   */
+  getStabilityPeriodInfo(
+    timeline: ReconciliationTimeline,
+    requiredStabilityDays: number = 3
+  ): {
+    consecutiveStableDays: number
+    stabilityStartDate?: Date
+    lastSignificantChangeDate?: Date
+    isInStabilityPeriod: boolean
+    stabilityPeriodProgress: number
+    requiredStabilityDays: number
+  } {
+    if (timeline.entries.length === 0) {
+      return {
+        consecutiveStableDays: 0,
+        isInStabilityPeriod: false,
+        stabilityPeriodProgress: 0,
+        requiredStabilityDays,
+      }
+    }
+
+    // Sort entries by date (most recent first)
+    const sortedEntries = [...timeline.entries].sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
+    )
+
+    let consecutiveStableDays = 0
+    let stabilityStartDate: Date | undefined
+    let lastSignificantChangeDate: Date | undefined
+
+    // Count consecutive stable days from most recent
+    for (let i = 0; i < sortedEntries.length; i++) {
+      const entry = sortedEntries[i]
+
+      if (!entry.isSignificant) {
+        consecutiveStableDays++
+        // Set stability start date to the earliest stable entry in the sequence
+        stabilityStartDate = entry.date
+      } else {
+        // Found a significant change, this is where stability period started
+        lastSignificantChangeDate = entry.date
+        break
+      }
+    }
+
+    // If we went through all entries without finding a significant change,
+    // check if there are any significant changes at all
+    if (!lastSignificantChangeDate && sortedEntries.length > 0) {
+      const hasAnySignificantChanges = sortedEntries.some(
+        entry => entry.isSignificant
+      )
+      if (!hasAnySignificantChanges && consecutiveStableDays > 0) {
+        // All entries are stable, stability started with the first entry
+        stabilityStartDate = sortedEntries[sortedEntries.length - 1].date
+      }
+    }
+
+    const isInStabilityPeriod = consecutiveStableDays > 0
+    const stabilityPeriodProgress = Math.min(
+      consecutiveStableDays / requiredStabilityDays,
+      1.0
+    )
+
+    return {
+      consecutiveStableDays,
+      stabilityStartDate,
+      lastSignificantChangeDate,
+      isInStabilityPeriod,
+      stabilityPeriodProgress,
+      requiredStabilityDays,
+    }
+  }
+
+  /**
+   * Check if reconciliation is ready for finalization based on stability period
+   *
+   * @param jobId - The reconciliation job ID
+   * @returns Whether the reconciliation is ready for finalization
+   */
+  async isReadyForFinalization(jobId: string): Promise<{
+    isReady: boolean
+    reason: string
+    stabilityInfo: {
+      consecutiveStableDays: number
+      stabilityStartDate?: Date
+      lastSignificantChangeDate?: Date
+      isInStabilityPeriod: boolean
+      stabilityPeriodProgress: number
+      requiredStabilityDays: number
+    }
+  }> {
+    try {
+      const job = await this.storageManager.getJob(jobId)
+      if (!job) {
+        throw new Error(`Reconciliation job not found: ${jobId}`)
+      }
+
+      const timeline = await this.getReconciliationTimeline(jobId)
+      const stabilityInfo = this.getStabilityPeriodInfo(
+        timeline,
+        job.config.stabilityPeriodDays
+      )
+
+      // Update required stability days from job config
+      const updatedStabilityInfo = {
+        ...stabilityInfo,
+        requiredStabilityDays: job.config.stabilityPeriodDays,
+      }
+
+      // Check if stability period requirement is met
+      if (
+        updatedStabilityInfo.consecutiveStableDays >=
+        job.config.stabilityPeriodDays
+      ) {
+        return {
+          isReady: true,
+          reason: `Stability period met: ${updatedStabilityInfo.consecutiveStableDays}/${job.config.stabilityPeriodDays} consecutive stable days`,
+          stabilityInfo: updatedStabilityInfo,
+        }
+      }
+
+      // Check if maximum reconciliation period is reached
+      const now = new Date()
+      if (now >= job.maxEndDate) {
+        return {
+          isReady: true,
+          reason: `Maximum reconciliation period reached (${job.maxEndDate.toISOString()})`,
+          stabilityInfo: updatedStabilityInfo,
+        }
+      }
+
+      // Not ready for finalization
+      const remainingDays =
+        job.config.stabilityPeriodDays -
+        updatedStabilityInfo.consecutiveStableDays
+      return {
+        isReady: false,
+        reason: `Need ${remainingDays} more consecutive stable days for finalization`,
+        stabilityInfo: updatedStabilityInfo,
+      }
+    } catch (error) {
+      logger.error('Failed to check finalization readiness', { jobId, error })
+      throw error
+    }
+  }
+
+  /**
    * Determine if changes are significant based on thresholds
-   * 
+   *
    * @param changes - The data changes
    * @param thresholds - The significance thresholds
    * @returns true if changes are significant
    */
-  private isSignificantChange(changes: DataChanges, thresholds: any): boolean {
+  private isSignificantChange(
+    changes: DataChanges,
+    thresholds: ReconciliationConfig['significantChangeThresholds']
+  ): boolean {
     if (!changes.hasChanges) {
       return false
     }
 
     // Check membership changes
     if (changes.membershipChange) {
-      if (Math.abs(changes.membershipChange.percentChange) >= thresholds.membershipPercent) {
+      if (
+        Math.abs(changes.membershipChange.percentChange) >=
+        thresholds.membershipPercent
+      ) {
         return true
       }
     }
 
     // Check club count changes
     if (changes.clubCountChange) {
-      if (Math.abs(changes.clubCountChange.absoluteChange) >= thresholds.clubCountAbsolute) {
+      if (
+        Math.abs(changes.clubCountChange.absoluteChange) >=
+        thresholds.clubCountAbsolute
+      ) {
         return true
       }
     }
 
     // Check distinguished club changes
     if (changes.distinguishedChange) {
-      if (Math.abs(changes.distinguishedChange.percentChange) >= thresholds.distinguishedPercent) {
+      const percentChange = changes.distinguishedChange.percentChange
+      // Handle NaN/null values - treat NaN or null as 0 for comparison purposes
+      const safePercentChange =
+        isNaN(percentChange) || percentChange === null ? 0 : percentChange
+      if (Math.abs(safePercentChange) >= thresholds.distinguishedPercent) {
         return true
       }
     }
@@ -562,26 +858,32 @@ export class ProgressTracker {
 
   /**
    * Analyze the stability trend of a reconciliation timeline
-   * 
+   *
    * @param timeline - The reconciliation timeline
    * @returns Stability trend analysis
    */
-  private analyzeStabilityTrend(timeline: ReconciliationTimeline): 'improving' | 'stable' | 'declining' | 'unknown' {
+  private analyzeStabilityTrend(
+    timeline: ReconciliationTimeline
+  ): 'improving' | 'stable' | 'declining' | 'unknown' {
     if (timeline.entries.length < 3) {
       return 'unknown'
     }
 
     // Sort entries by date
-    const sortedEntries = [...timeline.entries].sort((a, b) => a.date.getTime() - b.date.getTime())
-    
+    const sortedEntries = [...timeline.entries].sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    )
+
     // Split into two halves to compare trends
     const midpoint = Math.floor(sortedEntries.length / 2)
     const firstHalf = sortedEntries.slice(0, midpoint)
     const secondHalf = sortedEntries.slice(midpoint)
 
     // Calculate significant change rates for each half
-    const firstHalfSignificantRate = firstHalf.filter(e => e.isSignificant).length / firstHalf.length
-    const secondHalfSignificantRate = secondHalf.filter(e => e.isSignificant).length / secondHalf.length
+    const firstHalfSignificantRate =
+      firstHalf.filter(e => e.isSignificant).length / firstHalf.length
+    const secondHalfSignificantRate =
+      secondHalf.filter(e => e.isSignificant).length / secondHalf.length
 
     const rateDifference = secondHalfSignificantRate - firstHalfSignificantRate
 

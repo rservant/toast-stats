@@ -11,10 +11,22 @@
     "dev:backend": "npm run dev --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:backend": "npm run test --workspace=backend",
+    "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "typecheck": "npm run typecheck --workspaces",
+    "typecheck:backend": "npm run typecheck --workspace=backend",
+    "typecheck:frontend": "npm run typecheck --workspace=frontend",
+    "typecheck:count": "npm run typecheck:count --workspaces",
+    "typecheck:report": "node scripts/typescript-status.js",
+    "typecheck:detailed": "node scripts/typescript-status.js --detailed",
+    "pre-commit": "npm run typecheck && npm run lint",
+    "prepare": "husky install"
   },
   "devDependencies": {
-    "prettier": "^3.1.0"
+    "prettier": "^3.1.0",
+    "husky": "^8.0.3"
   }
 }

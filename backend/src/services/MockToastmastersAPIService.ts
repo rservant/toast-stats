@@ -17,114 +17,148 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getAllDistrictsRankings() {
-    const districtIds = ['1', '2', '10', '25', '46', '61', '101', '120']
-    const mockData = []
-    
-    for (let i = 0; i < districtIds.length; i++) {
-      const id = districtIds[i]
-      const paidClubs = 80 + Math.floor(Math.random() * 100)
-      const totalPayments = 2000 + Math.floor(Math.random() * 3000)
-      const distinguishedClubs = Math.floor(Math.random() * 40)
-      
-      mockData.push({
-        districtId: id,
-        districtName: `District ${id}`,
-        region: `0${Math.floor(i / 2) + 1}`,
-        paidClubs,
-        paidClubBase: paidClubs + Math.floor(Math.random() * 20) - 10,
-        clubGrowthPercent: (Math.random() * 20) - 10,
-        totalPayments,
-        paymentBase: totalPayments + Math.floor(Math.random() * 1000) - 500,
-        paymentGrowthPercent: (Math.random() * 30) - 15,
-        activeClubs: paidClubs + Math.floor(Math.random() * 10),
-        distinguishedClubs,
-        selectDistinguished: Math.floor(distinguishedClubs * 0.3),
-        presidentsDistinguished: Math.floor(distinguishedClubs * 0.2),
-        distinguishedPercent: (distinguishedClubs / paidClubs) * 100,
+  async getAllDistrictsRankings(date?: string) {
+    try {
+      const districtIds = ['1', '2', '10', '25', '46', '61', '101', '120']
+      const mockData = []
+
+      for (let i = 0; i < districtIds.length; i++) {
+        const id = districtIds[i]
+        const paidClubs = 80 + Math.floor(Math.random() * 100)
+        const totalPayments = 2000 + Math.floor(Math.random() * 3000)
+        const distinguishedClubs = Math.floor(Math.random() * 40)
+
+        // Ensure paidClubs is never zero to avoid division by zero
+        const safePaidClubs = Math.max(paidClubs, 1)
+
+        mockData.push({
+          districtId: id,
+          districtName: `District ${id}`,
+          region: `0${Math.floor(i / 2) + 1}`,
+          paidClubs: safePaidClubs,
+          paidClubBase: safePaidClubs + Math.floor(Math.random() * 20) - 10,
+          clubGrowthPercent: Math.random() * 20 - 10,
+          totalPayments,
+          paymentBase: totalPayments + Math.floor(Math.random() * 1000) - 500,
+          paymentGrowthPercent: Math.random() * 30 - 15,
+          activeClubs: safePaidClubs + Math.floor(Math.random() * 10),
+          distinguishedClubs,
+          selectDistinguished: Math.floor(distinguishedClubs * 0.3),
+          presidentsDistinguished: Math.floor(distinguishedClubs * 0.2),
+          distinguishedPercent: (distinguishedClubs / safePaidClubs) * 100,
+        })
+      }
+
+      // Rank by each category with tie handling - RANK BY PERCENTAGES, not absolute counts
+      const sortedByClubs = [...mockData].sort(
+        (a, b) => b.clubGrowthPercent - a.clubGrowthPercent
+      )
+      const sortedByPayments = [...mockData].sort(
+        (a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent
+      )
+      const sortedByDistinguished = [...mockData].sort(
+        (a, b) => b.distinguishedPercent - a.distinguishedPercent
+      )
+
+      const totalDistricts = mockData.length
+
+      // Ensure we have data to work with
+      if (totalDistricts === 0) {
+        return {
+          rankings: [],
+          date: date || new Date().toISOString().split('T')[0],
+        }
+      }
+
+      // Create ranking maps with tie handling and Borda points
+      // Borda point formula: bordaPoints = totalDistricts - rank + 1
+      const clubsRank = new Map<string, number>()
+      const clubsBordaPoints = new Map<string, number>()
+      let currentRank = 1
+      let previousValue = sortedByClubs[0]?.clubGrowthPercent ?? 0
+      sortedByClubs.forEach((d, i) => {
+        if (i > 0 && d.clubGrowthPercent < previousValue) {
+          currentRank = i + 1
+        }
+        clubsRank.set(d.districtId, currentRank)
+        const bordaPoints = totalDistricts - currentRank + 1
+        clubsBordaPoints.set(d.districtId, bordaPoints)
+        previousValue = d.clubGrowthPercent
       })
-    }
 
-    // Rank by each category with tie handling - RANK BY PERCENTAGES, not absolute counts
-    const sortedByClubs = [...mockData].sort((a, b) => b.clubGrowthPercent - a.clubGrowthPercent)
-    const sortedByPayments = [...mockData].sort((a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent)
-    const sortedByDistinguished = [...mockData].sort((a, b) => b.distinguishedPercent - a.distinguishedPercent)
+      const paymentsRank = new Map<string, number>()
+      const paymentsBordaPoints = new Map<string, number>()
+      currentRank = 1
+      previousValue = sortedByPayments[0]?.paymentGrowthPercent ?? 0
+      sortedByPayments.forEach((d, i) => {
+        if (i > 0 && d.paymentGrowthPercent < previousValue) {
+          currentRank = i + 1
+        }
+        paymentsRank.set(d.districtId, currentRank)
+        const bordaPoints = totalDistricts - currentRank + 1
+        paymentsBordaPoints.set(d.districtId, bordaPoints)
+        previousValue = d.paymentGrowthPercent
+      })
 
-    const totalDistricts = mockData.length
+      const distinguishedRank = new Map<string, number>()
+      const distinguishedBordaPoints = new Map<string, number>()
+      currentRank = 1
+      previousValue = sortedByDistinguished[0]?.distinguishedPercent ?? 0
+      sortedByDistinguished.forEach((d, i) => {
+        if (i > 0 && d.distinguishedPercent < previousValue) {
+          currentRank = i + 1
+        }
+        distinguishedRank.set(d.districtId, currentRank)
+        const bordaPoints = totalDistricts - currentRank + 1
+        distinguishedBordaPoints.set(d.districtId, bordaPoints)
+        previousValue = d.distinguishedPercent
+      })
 
-    // Create ranking maps with tie handling and Borda points
-    // Borda point formula: bordaPoints = totalDistricts - rank + 1
-    const clubsRank = new Map<string, number>()
-    const clubsBordaPoints = new Map<string, number>()
-    let currentRank = 1
-    let previousValue = sortedByClubs[0]?.clubGrowthPercent
-    sortedByClubs.forEach((d, i) => {
-      if (i > 0 && d.clubGrowthPercent < previousValue) {
-        currentRank = i + 1
-      }
-      clubsRank.set(d.districtId, currentRank)
-      const bordaPoints = totalDistricts - currentRank + 1
-      clubsBordaPoints.set(d.districtId, bordaPoints)
-      previousValue = d.clubGrowthPercent
-    })
+      const rankings = mockData
+        .map(district => {
+          const clubBorda = clubsBordaPoints.get(district.districtId) || 1
+          const paymentBorda = paymentsBordaPoints.get(district.districtId) || 1
+          const distBorda =
+            distinguishedBordaPoints.get(district.districtId) || 1
 
-    const paymentsRank = new Map<string, number>()
-    const paymentsBordaPoints = new Map<string, number>()
-    currentRank = 1
-    previousValue = sortedByPayments[0]?.paymentGrowthPercent
-    sortedByPayments.forEach((d, i) => {
-      if (i > 0 && d.paymentGrowthPercent < previousValue) {
-        currentRank = i + 1
-      }
-      paymentsRank.set(d.districtId, currentRank)
-      const bordaPoints = totalDistricts - currentRank + 1
-      paymentsBordaPoints.set(d.districtId, bordaPoints)
-      previousValue = d.paymentGrowthPercent
-    })
+          return {
+            ...district,
+            clubsRank: clubsRank.get(district.districtId) || 999,
+            paymentsRank: paymentsRank.get(district.districtId) || 999,
+            distinguishedRank:
+              distinguishedRank.get(district.districtId) || 999,
+            aggregateScore: clubBorda + paymentBorda + distBorda,
+          }
+        })
+        .sort((a, b) => b.aggregateScore - a.aggregateScore) // Higher score is better
 
-    const distinguishedRank = new Map<string, number>()
-    const distinguishedBordaPoints = new Map<string, number>()
-    currentRank = 1
-    previousValue = sortedByDistinguished[0]?.distinguishedPercent
-    sortedByDistinguished.forEach((d, i) => {
-      if (i > 0 && d.distinguishedPercent < previousValue) {
-        currentRank = i + 1
-      }
-      distinguishedRank.set(d.districtId, currentRank)
-      const bordaPoints = totalDistricts - currentRank + 1
-      distinguishedBordaPoints.set(d.districtId, bordaPoints)
-      previousValue = d.distinguishedPercent
-    })
-
-    const rankings = mockData.map((district) => {
-      const clubBorda = clubsBordaPoints.get(district.districtId) || 1
-      const paymentBorda = paymentsBordaPoints.get(district.districtId) || 1
-      const distBorda = distinguishedBordaPoints.get(district.districtId) || 1
-      
+      return { rankings, date: date || new Date().toISOString().split('T')[0] }
+    } catch (error) {
+      console.error(
+        'Error in MockToastmastersAPIService.getAllDistrictsRankings:',
+        error
+      )
+      // Return empty rankings instead of throwing
       return {
-        ...district,
-        clubsRank: clubsRank.get(district.districtId) || 999,
-        paymentsRank: paymentsRank.get(district.districtId) || 999,
-        distinguishedRank: distinguishedRank.get(district.districtId) || 999,
-        aggregateScore: clubBorda + paymentBorda + distBorda,
+        rankings: [],
+        date: date || new Date().toISOString().split('T')[0],
       }
-    }).sort((a, b) => b.aggregateScore - a.aggregateScore) // Higher score is better
-    
-    return { rankings, date: new Date().toISOString().split('T')[0] }
+    }
   }
 
   async getDistrictStatistics(_districtId: string) {
     const baseMembers = 3000
     const baseMemberCount = baseMembers + Math.floor(Math.random() * 500)
     const previousMemberCount = baseMemberCount - 50
-    
+
     return {
       districtId: _districtId,
       asOfDate: new Date().toISOString().split('T')[0],
       membership: {
         total: baseMemberCount,
         change: baseMemberCount - previousMemberCount,
-        changePercent: ((baseMemberCount - previousMemberCount) / previousMemberCount) * 100,
+        changePercent:
+          ((baseMemberCount - previousMemberCount) / previousMemberCount) * 100,
         byClub: Array.from({ length: 10 }, (_, i) => ({
           clubId: `club-${i + 1}`,
           clubName: `Sample Club ${i + 1}`,
@@ -161,7 +195,7 @@ export class MockToastmastersAPIService {
     const data = []
     const now = new Date()
     let baseCount = 2800
-    
+
     for (let i = months - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
       baseCount += Math.floor(Math.random() * 40) - 15 // Random growth/decline
@@ -170,18 +204,29 @@ export class MockToastmastersAPIService {
         count: baseCount,
       })
     }
-    
+
     return { data }
   }
 
   async getClubs(_districtId: string) {
     const clubs = []
     const statuses: Array<'active' | 'suspended' | 'ineligible' | 'low'> = [
-      'active', 'active', 'active', 'active', 'active', 'active',
-      'suspended', 'ineligible', 'low'
+      'active',
+      'active',
+      'active',
+      'active',
+      'active',
+      'active',
+      'suspended',
+      'ineligible',
+      'low',
     ]
-    const levels: Array<'select' | 'distinguished' | 'president'> = ['select', 'distinguished', 'president']
-    
+    const levels: Array<'select' | 'distinguished' | 'president'> = [
+      'select',
+      'distinguished',
+      'president',
+    ]
+
     for (let i = 1; i <= 20; i++) {
       const status = statuses[i % statuses.length]
       const distinguished = i % 3 === 0
@@ -191,7 +236,9 @@ export class MockToastmastersAPIService {
         status,
         memberCount: 20 + Math.floor(Math.random() * 30),
         distinguished,
-        distinguishedLevel: distinguished ? levels[i % levels.length] : undefined,
+        distinguishedLevel: distinguished
+          ? levels[i % levels.length]
+          : undefined,
         awards: Math.floor(Math.random() * 15),
       })
     }
@@ -201,7 +248,7 @@ export class MockToastmastersAPIService {
   async getEducationalAwards(_districtId: string, months: number) {
     const byMonth = []
     const now = new Date()
-    
+
     for (let i = months - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
       byMonth.push({
@@ -209,7 +256,7 @@ export class MockToastmastersAPIService {
         count: Math.floor(Math.random() * 30) + 10,
       })
     }
-    
+
     return {
       totalAwards: byMonth.reduce((sum, m) => sum + m.count, 0),
       byType: [
@@ -228,11 +275,15 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getDailyReports(_districtId: string, startDate: string, endDate: string) {
+  async getDailyReports(
+    _districtId: string,
+    startDate: string,
+    endDate: string
+  ) {
     const reports = []
     const start = new Date(startDate)
     const end = new Date(endDate)
-    
+
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const newMembers = Math.floor(Math.random() * 10)
       const renewals = Math.floor(Math.random() * 20)
@@ -244,7 +295,7 @@ export class MockToastmastersAPIService {
         awards: Math.floor(Math.random() * 5),
       })
     }
-    
+
     return { reports }
   }
 
@@ -254,20 +305,20 @@ export class MockToastmastersAPIService {
       clubId: `club-${i + 1}`,
       clubName: `Sample Club ${i + 1}`,
     }))
-    
+
     const renewals = Array.from({ length: 15 }, (_, i) => ({
       name: `Renewed Member ${i + 1}`,
       clubId: `club-${(i % 10) + 1}`,
       clubName: `Sample Club ${(i % 10) + 1}`,
     }))
-    
+
     const awards = Array.from({ length: 3 }, (_, i) => ({
       type: `Level ${i + 1}`,
       recipient: `Member ${i + 1}`,
       clubId: `club-${i + 1}`,
       clubName: `Sample Club ${i + 1}`,
     }))
-    
+
     return {
       date,
       newMembers,
@@ -285,79 +336,119 @@ export class MockToastmastersAPIService {
   }
 
   async getCachedDates(): Promise<string[]> {
-    // Return some mock cached dates
-    const dates = []
-    const today = new Date()
-    for (let i = 0; i < 10; i++) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i * 7) // Weekly dates
-      dates.push(date.toISOString().split('T')[0])
+    try {
+      // Return some mock cached dates
+      const dates = []
+      const today = new Date()
+      for (let i = 0; i < 10; i++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - i * 7) // Weekly dates
+        dates.push(date.toISOString().split('T')[0])
+      }
+      return dates.reverse()
+    } catch (error) {
+      console.error(
+        'Error in MockToastmastersAPIService.getCachedDates:',
+        error
+      )
+      return []
     }
-    return dates.reverse()
   }
 
-  async clearCache(): Promise<void> {
-    // Mock implementation - does nothing
-    return Promise.resolve()
+  async clearCache() {
+    // Mock implementation - just return success
+    return { success: true, message: 'Mock cache cleared' }
   }
 
   async getAvailableDates() {
-    const cachedDates = await this.getCachedDates()
-    
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ]
-    
-    const dates = cachedDates.map(dateStr => {
-      const date = new Date(dateStr + 'T00:00:00')
+    try {
+      const cachedDates = await this.getCachedDates()
+
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ]
+
+      const dates = cachedDates.map(dateStr => {
+        const date = new Date(dateStr + 'T00:00:00')
+        return {
+          date: dateStr,
+          month: date.getMonth() + 1,
+          day: date.getDate(),
+          monthName: monthNames[date.getMonth()],
+        }
+      })
+
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = now.getMonth() + 1
+
+      const programYearStart =
+        month >= 7 ? new Date(year, 6, 1) : new Date(year - 1, 6, 1)
+
       return {
-        date: dateStr,
-        month: date.getMonth() + 1,
-        day: date.getDate(),
-        monthName: monthNames[date.getMonth()],
+        dates,
+        programYear: {
+          startDate: programYearStart.toISOString().split('T')[0],
+          endDate: new Date(programYearStart.getFullYear() + 1, 5, 30)
+            .toISOString()
+            .split('T')[0],
+          year: month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`,
+        },
       }
-    })
-    
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
-    
-    const programYearStart = month >= 7 
-      ? new Date(year, 6, 1) 
-      : new Date(year - 1, 6, 1)
-    
-    return {
-      dates,
-      programYear: {
-        startDate: programYearStart.toISOString().split('T')[0],
-        endDate: new Date(programYearStart.getFullYear() + 1, 5, 30).toISOString().split('T')[0],
-        year: month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`,
-      },
+    } catch (error) {
+      console.error(
+        'Error in MockToastmastersAPIService.getAvailableDates:',
+        error
+      )
+      return {
+        dates: [],
+        programYear: {
+          startDate: '2024-07-01',
+          endDate: '2025-06-30',
+          year: '2024-2025',
+        },
+      }
     }
   }
 
-  async getDistrictRankHistory(districtId: string, startDate?: string, endDate?: string) {
+  async getDistrictRankHistory(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ) {
     const cachedDates = await this.getCachedDates()
     const start = startDate || cachedDates[0]
     const end = endDate || cachedDates[cachedDates.length - 1]
-    
-    const datesInRange = cachedDates.filter(date => date >= start && date <= end)
-    
+
+    const datesInRange = cachedDates.filter(
+      date => date >= start && date <= end
+    )
+
     // Generate mock historical rank data with Borda count system
     // With 8 districts, ranks range from 1-8, Borda points range from 8-1
     // Aggregate score is sum of 3 categories, so range is 3-24
-    const history = datesInRange.map((date) => {
+    const history = datesInRange.map(date => {
       const clubsRank = 3 + Math.floor(Math.random() * 4) // Rank 3-6
       const paymentsRank = 2 + Math.floor(Math.random() * 5) // Rank 2-6
       const distinguishedRank = 4 + Math.floor(Math.random() * 4) // Rank 4-7
-      
+
       // Calculate Borda points for each rank (8 districts total)
       const totalDistricts = 8
       const clubsBorda = totalDistricts - clubsRank + 1
       const paymentsBorda = totalDistricts - paymentsRank + 1
       const distinguishedBorda = totalDistricts - distinguishedRank + 1
-      
+
       return {
         date,
         aggregateScore: clubsBorda + paymentsBorda + distinguishedBorda,
@@ -366,11 +457,11 @@ export class MockToastmastersAPIService {
         distinguishedRank,
       }
     })
-    
+
     const now = new Date()
     const year = now.getFullYear()
     const month = now.getMonth() + 1
-    
+
     return {
       districtId,
       districtName: `District ${districtId}`,
@@ -405,7 +496,7 @@ export class MockToastmastersAPIService {
     if (!dates.includes(date)) {
       return null
     }
-    
+
     return {
       date,
       timestamp: Date.now(),

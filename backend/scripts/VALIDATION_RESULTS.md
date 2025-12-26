@@ -16,10 +16,12 @@ All validation tests have passed successfully. The DCP goal counting fix correct
 - **Field Format:** 2025+ ("Level 4s, Path Completions, or DTM Awards")
 
 **Results:**
+
 - Goal 5: 69 clubs (41.8%) ✅
 - Goal 6: 31 clubs (18.8%) ✅
 
 **Sample Data:**
+
 - Club 00003045: base=1, additional=1 (achieves both Goal 5 and 6)
 - Club 07833019: base=1, additional=1 (achieves both Goal 5 and 6)
 - Club 00008032: base=1, additional=0 (achieves only Goal 5)
@@ -34,10 +36,12 @@ All validation tests have passed successfully. The DCP goal counting fix correct
 - **Field Format:** 2020-2024 ("Level 4s, Level 5s, or DTM award")
 
 **Results:**
+
 - Goal 5: 57 clubs (32.6%) ✅
 - Goal 6: 23 clubs (13.1%) ✅
 
 **Sample Data:**
+
 - Club 01570163: base=1, additional=3 (achieves both goals)
 - Club 04544358: base=1, additional=4 (achieves both goals)
 - Club 01849755: base=1, additional=0 (achieves only Goal 5)
@@ -52,6 +56,7 @@ All validation tests have passed successfully. The DCP goal counting fix correct
 - **Field Format:** 2019 ("CL/AL/DTMs")
 
 **Results:**
+
 - Goal 5: 48 clubs (24.7%) ✅
 - Goal 6: 22 clubs (11.3%) ✅
 
@@ -62,12 +67,14 @@ All validation tests have passed successfully. The DCP goal counting fix correct
 **Endpoint:** `/api/districts/:districtId/distinguished-club-analytics`
 
 **Results:**
+
 - DCP Goal Analysis is included in API response ✅
 - Goal 5 shows 69 clubs (41.8%) ✅
 - Goal 6 shows 31 clubs (18.8%) ✅
 - Percentages are calculated correctly ✅
 
 **API Response Structure:**
+
 ```json
 {
   "distinguishedClubs": { ... },
@@ -104,6 +111,7 @@ The frontend is configured to display DCP goal data through:
 3. **API Endpoint:** `/api/districts/:districtId/distinguished-club-analytics`
 
 **Expected Frontend Display:**
+
 - DCP Goal Analysis chart will show non-zero values for Goals 5 and 6
 - Goal 5 will display: "69 clubs (41.8%)" with appropriate color coding
 - Goal 6 will display: "31 clubs (18.8%)" with appropriate color coding

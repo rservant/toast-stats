@@ -1,14 +1,14 @@
-import React from 'react';
+import React from 'react'
 
 interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  startIndex: number;
-  endIndex: number;
-  totalItems: number;
-  canGoNext: boolean;
-  canGoPrevious: boolean;
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  startIndex: number
+  endIndex: number
+  totalItems: number
+  canGoNext: boolean
+  canGoPrevious: boolean
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -23,43 +23,43 @@ export const Pagination: React.FC<PaginationProps> = ({
 }) => {
   // Generate page numbers to display
   const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    const maxPagesToShow = 7;
+    const pages: (number | string)[] = []
+    const maxPagesToShow = 7
 
     if (totalPages <= maxPagesToShow) {
       // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
+        pages.push(i)
       }
     } else {
       // Always show first page
-      pages.push(1);
+      pages.push(1)
 
       if (currentPage > 3) {
-        pages.push('...');
+        pages.push('...')
       }
 
       // Show pages around current page
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
 
       for (let i = start; i <= end; i++) {
-        pages.push(i);
+        pages.push(i)
       }
 
       if (currentPage < totalPages - 2) {
-        pages.push('...');
+        pages.push('...')
       }
 
       // Always show last page
-      pages.push(totalPages);
+      pages.push(totalPages)
     }
 
-    return pages;
-  };
+    return pages
+  }
 
   if (totalPages <= 1) {
-    return null;
+    return null
   }
 
   return (
@@ -87,8 +87,18 @@ export const Pagination: React.FC<PaginationProps> = ({
           `}
           aria-label="Previous page"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
 
@@ -97,14 +107,17 @@ export const Pagination: React.FC<PaginationProps> = ({
           {getPageNumbers().map((page, index) => {
             if (page === '...') {
               return (
-                <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-500">
+                <span
+                  key={`ellipsis-${index}`}
+                  className="px-3 py-2 text-gray-500"
+                >
                   ...
                 </span>
-              );
+              )
             }
 
-            const pageNumber = page as number;
-            const isActive = pageNumber === currentPage;
+            const pageNumber = page as number
+            const isActive = pageNumber === currentPage
 
             return (
               <button
@@ -123,7 +136,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               >
                 {pageNumber}
               </button>
-            );
+            )
           })}
         </div>
 
@@ -141,11 +154,21 @@ export const Pagination: React.FC<PaginationProps> = ({
           `}
           aria-label="Next page"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       </div>
     </div>
-  );
-};
+  )
+}

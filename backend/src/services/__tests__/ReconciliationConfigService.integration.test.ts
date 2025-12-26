@@ -10,12 +10,15 @@ describe('ReconciliationConfigService Integration', () => {
 
   beforeEach(async () => {
     // Create a unique test config file path
-    testConfigPath = path.join(process.cwd(), `test-reconciliation-config-${Date.now()}.json`)
-    
+    testConfigPath = path.join(
+      process.cwd(),
+      `test-reconciliation-config-${Date.now()}.json`
+    )
+
     configService = new ReconciliationConfigService({
       configFilePath: testConfigPath,
       cacheKey: `test:reconciliation:config:${Date.now()}`,
-      cacheTTL: 60
+      cacheTTL: 60,
     })
   })
 
@@ -23,7 +26,7 @@ describe('ReconciliationConfigService Integration', () => {
     // Clean up test config file
     try {
       await fs.unlink(testConfigPath)
-    } catch (error) {
+    } catch {
       // File might not exist, ignore error
     }
   })
@@ -38,14 +41,17 @@ describe('ReconciliationConfigService Integration', () => {
       significantChangeThresholds: {
         membershipPercent: 1,
         clubCountAbsolute: 1,
-        distinguishedPercent: 2
+        distinguishedPercent: 2,
       },
       autoExtensionEnabled: true,
-      maxExtensionDays: 5
+      maxExtensionDays: 5,
     })
 
     // Verify file was created
-    const fileExists = await fs.access(testConfigPath).then(() => true).catch(() => false)
+    const fileExists = await fs
+      .access(testConfigPath)
+      .then(() => true)
+      .catch(() => false)
     expect(fileExists).toBe(true)
   })
 
@@ -56,20 +62,22 @@ describe('ReconciliationConfigService Integration', () => {
       significantChangeThresholds: {
         membershipPercent: 2.5,
         clubCountAbsolute: 2,
-        distinguishedPercent: 3
-      }
+        distinguishedPercent: 3,
+      },
     }
 
     const updatedConfig = await configService.updateConfig(updates)
 
     expect(updatedConfig.maxReconciliationDays).toBe(20)
-    expect(updatedConfig.significantChangeThresholds.membershipPercent).toBe(2.5)
+    expect(updatedConfig.significantChangeThresholds.membershipPercent).toBe(
+      2.5
+    )
 
     // Create new service instance to test persistence
     const newConfigService = new ReconciliationConfigService({
       configFilePath: testConfigPath,
       cacheKey: `test:reconciliation:config:new:${Date.now()}`,
-      cacheTTL: 60
+      cacheTTL: 60,
     })
 
     const loadedConfig = await newConfigService.getConfig()
@@ -77,14 +85,16 @@ describe('ReconciliationConfigService Integration', () => {
     expect(loadedConfig.maxReconciliationDays).toBe(20)
     expect(loadedConfig.significantChangeThresholds.membershipPercent).toBe(2.5)
     expect(loadedConfig.significantChangeThresholds.clubCountAbsolute).toBe(2)
-    expect(loadedConfig.significantChangeThresholds.distinguishedPercent).toBe(3)
+    expect(loadedConfig.significantChangeThresholds.distinguishedPercent).toBe(
+      3
+    )
   })
 
   it('should validate configuration and reject invalid updates', async () => {
     const invalidUpdates = {
       maxReconciliationDays: -5,
       stabilityPeriodDays: 100,
-      checkFrequencyHours: 200
+      checkFrequencyHours: 200,
     }
 
     await expect(configService.updateConfig(invalidUpdates)).rejects.toThrow(
@@ -105,7 +115,7 @@ describe('ReconciliationConfigService Integration', () => {
     const newConfigService = new ReconciliationConfigService({
       configFilePath: testConfigPath,
       cacheKey: `test:reconciliation:config:reset:${Date.now()}`,
-      cacheTTL: 60
+      cacheTTL: 60,
     })
 
     const loadedConfig = await newConfigService.getConfig()

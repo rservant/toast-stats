@@ -45,11 +45,13 @@ The changes will affect both the backend ranking calculation logic and the front
 #### 1. RealToastmastersAPIService.ts
 
 **Current Behavior:**
+
 - Ranks districts in each category (1 = best)
 - Calculates aggregate score as sum of ranks (lower is better)
 - Example: Rank #5 + Rank #3 + Rank #8 = Score 16
 
 **New Behavior (Borda Count):**
+
 - Ranks districts in each category (1 = best) based on:
   - **Paid Clubs**: Club growth percentage (highest positive % = rank 1)
   - **Total Payments**: Payment growth percentage (highest positive % = rank 1)
@@ -59,6 +61,7 @@ The changes will affect both the backend ranking calculation logic and the front
 - Example: If 100 districts, rank #5 gets 96 points, rank #3 gets 98 points, rank #8 gets 93 points → Total: 287 points
 
 **Borda Point Formula:**
+
 ```
 bordaPoints = totalDistricts - rank + 1
 ```
@@ -71,24 +74,24 @@ The existing `DistrictRanking` interface already includes the necessary fields:
 
 ```typescript
 interface DistrictRanking {
-  districtId: string;
-  districtName: string;
-  region: string;
-  paidClubs: number;
-  paidClubBase: number;
-  clubGrowthPercent: number;          // Already available!
-  totalPayments: number;
-  paymentBase: number;
-  paymentGrowthPercent: number;       // Already available!
-  activeClubs: number;
-  distinguishedClubs: number;
-  selectDistinguished: number;
-  presidentsDistinguished: number;
-  distinguishedPercent: number;
-  clubsRank: number;
-  paymentsRank: number;
-  distinguishedRank: number;
-  aggregateScore: number;             // Will now be sum of Borda points
+  districtId: string
+  districtName: string
+  region: string
+  paidClubs: number
+  paidClubBase: number
+  clubGrowthPercent: number // Already available!
+  totalPayments: number
+  paymentBase: number
+  paymentGrowthPercent: number // Already available!
+  activeClubs: number
+  distinguishedClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+  distinguishedPercent: number
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  aggregateScore: number // Will now be sum of Borda points
 }
 ```
 
@@ -99,6 +102,7 @@ No interface changes needed - the percentage values are already being scraped an
 #### 1. LandingPage.tsx - Rankings Table
 
 **Current Display:**
+
 ```
 Paid Clubs Column:
   123
@@ -106,6 +110,7 @@ Paid Clubs Column:
 ```
 
 **New Display:**
+
 ```
 Paid Clubs Column:
   123
@@ -115,18 +120,25 @@ Paid Clubs Column:
 **Implementation Approach:**
 
 1. Add a helper function to format percentage display:
+
 ```typescript
 const formatPercentage = (percent: number): { text: string; color: string } => {
-  const sign = percent > 0 ? '+' : percent < 0 ? '' : '';
-  const color = percent > 0 ? 'text-green-600' : percent < 0 ? 'text-red-600' : 'text-gray-600';
+  const sign = percent > 0 ? '+' : percent < 0 ? '' : ''
+  const color =
+    percent > 0
+      ? 'text-green-600'
+      : percent < 0
+        ? 'text-red-600'
+        : 'text-gray-600'
   return {
     text: `${sign}${percent.toFixed(1)}%`,
-    color
-  };
-};
+    color,
+  }
+}
 ```
 
 2. Update table cells to display both rank and percentage:
+
 ```tsx
 <td className="px-6 py-4 whitespace-nowrap text-right">
   <div className="text-sm font-medium text-gray-900">
@@ -145,6 +157,7 @@ const formatPercentage = (percent: number): { text: string; color: string } => {
 3. Apply same pattern to Total Payments column using `paymentGrowthPercent`
 
 4. Update Distinguished Clubs column to show percentage:
+
 ```tsx
 <td className="px-6 py-4 whitespace-nowrap text-right">
   <div className="text-sm font-medium text-gray-900">
@@ -166,20 +179,24 @@ Update the legend section to explain the new Borda count system:
 
 ```tsx
 <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm">
-  <p className="font-medium text-blue-900 mb-2">Ranking Formula (Borda Count System):</p>
+  <p className="font-medium text-blue-900 mb-2">
+    Ranking Formula (Borda Count System):
+  </p>
   <p className="text-blue-800">
-    Each district is ranked in three categories: Paid Clubs, Total Payments, and Distinguished Clubs.
-    Points are awarded based on rank position (higher rank = more points).
+    Each district is ranked in three categories: Paid Clubs, Total Payments, and
+    Distinguished Clubs. Points are awarded based on rank position (higher rank
+    = more points).
   </p>
   <p className="text-blue-700 mt-2">
-    <strong>Point Allocation:</strong> If there are N districts, rank #1 receives N points, 
-    rank #2 receives N-1 points, and so on. The <strong>Overall Score</strong> is the sum 
-    of points from all three categories (higher is better).
+    <strong>Point Allocation:</strong> If there are N districts, rank #1
+    receives N points, rank #2 receives N-1 points, and so on. The{' '}
+    <strong>Overall Score</strong> is the sum of points from all three
+    categories (higher is better).
   </p>
   <p className="text-blue-700 mt-2 text-xs">
-    Example: With 100 districts, if a district ranks #5 in Paid Clubs (96 pts), 
-    #3 in Payments (98 pts), and #8 in Distinguished Clubs (93 pts), 
-    their Overall Score = 96 + 98 + 93 = 287 points
+    Example: With 100 districts, if a district ranks #5 in Paid Clubs (96 pts),
+    #3 in Payments (98 pts), and #8 in Distinguished Clubs (93 pts), their
+    Overall Score = 96 + 98 + 93 = 287 points
   </p>
 </div>
 ```
@@ -271,41 +288,47 @@ No new data models required. The existing `DistrictRanking` interface contains a
 
 ```typescript
 // Pseudocode for Borda point calculation
-const totalDistricts = districtData.length;
+const totalDistricts = districtData.length
 
 // For Paid Clubs - rank by growth percentage
-const sortedByClubGrowth = [...districtData].sort((a, b) => b.clubGrowthPercent - a.clubGrowthPercent);
+const sortedByClubGrowth = [...districtData].sort(
+  (a, b) => b.clubGrowthPercent - a.clubGrowthPercent
+)
 
 // For Total Payments - rank by growth percentage
-const sortedByPaymentGrowth = [...districtData].sort((a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent);
+const sortedByPaymentGrowth = [...districtData].sort(
+  (a, b) => b.paymentGrowthPercent - a.paymentGrowthPercent
+)
 
 // For Distinguished Clubs - rank by percentage
-const sortedByDistinguished = [...districtData].sort((a, b) => b.distinguishedPercent - a.distinguishedPercent);
+const sortedByDistinguished = [...districtData].sort(
+  (a, b) => b.distinguishedPercent - a.distinguishedPercent
+)
 
 // Calculate ranks and Borda points for each category
 const calculateRanksAndPoints = (sortedData, metricKey) => {
-  const ranks = new Map<string, number>();
-  const bordaPoints = new Map<string, number>();
-  let currentRank = 1;
-  let previousValue = sortedData[0]?.[metricKey];
+  const ranks = new Map<string, number>()
+  const bordaPoints = new Map<string, number>()
+  let currentRank = 1
+  let previousValue = sortedData[0]?.[metricKey]
 
   sortedData.forEach((district, index) => {
     // Update rank if value changed
     if (index > 0 && district[metricKey] < previousValue) {
-      currentRank = index + 1;
+      currentRank = index + 1
     }
-    
-    ranks.set(district.districtId, currentRank);
-    
+
+    ranks.set(district.districtId, currentRank)
+
     // Calculate Borda points: totalDistricts - rank + 1
-    const points = totalDistricts - currentRank + 1;
-    bordaPoints.set(district.districtId, points);
-    
-    previousValue = district[metricKey];
-  });
-  
-  return { ranks, bordaPoints };
-};
+    const points = totalDistricts - currentRank + 1
+    bordaPoints.set(district.districtId, points)
+
+    previousValue = district[metricKey]
+  })
+
+  return { ranks, bordaPoints }
+}
 ```
 
 ### Migration Considerations

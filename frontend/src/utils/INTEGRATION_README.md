@@ -37,6 +37,7 @@ Custom React Query hooks that combine multiple data sources:
 **Location:** `frontend/src/components/MembershipChart.tsx`
 
 **Features:**
+
 - Overlays daily report events on membership time-series
 - Shows significant events with star markers
 - Enhanced tooltips display:
@@ -51,6 +52,7 @@ Custom React Query hooks that combine multiple data sources:
 **Location:** `frontend/src/components/ClubPerformanceTable.tsx`
 
 **Features:**
+
 - New "Recent Activity (7d)" column
 - Shows per-club:
   - New members count
@@ -64,6 +66,7 @@ Custom React Query hooks that combine multiple data sources:
 **Location:** `frontend/src/components/RealTimeMembershipCard.tsx`
 
 **Features:**
+
 - Displays current membership count
 - Combines base statistics with recent daily reports
 - Shows "Live" badge when real-time data is available
@@ -75,6 +78,7 @@ Custom React Query hooks that combine multiple data sources:
 **Location:** `frontend/src/components/SignificantEventsPanel.tsx`
 
 **Features:**
+
 - Highlights notable events from the last 30 days
 - Event types:
   - 📈 Membership spikes (>15 members)

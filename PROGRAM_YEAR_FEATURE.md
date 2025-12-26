@@ -1,13 +1,15 @@
 # Program Year Feature Implementation
 
 ## Overview
+
 This feature adds program year boundaries and switching functionality to the Toastmasters District Rankings application. Users can now view and analyze data within specific Toastmasters program years (July 1 - June 30).
 
 ## What's New
 
 ### 1. Program Year Selector
+
 - **Location**: Available on both Landing Page and District Detail Page
-- **Functionality**: 
+- **Functionality**:
   - Dropdown to switch between available program years
   - Shows program year in format "2024-2025"
   - Displays date range (Jul 1, 2024 - Jun 30, 2025)
@@ -15,11 +17,13 @@ This feature adds program year boundaries and switching functionality to the Toa
   - Automatically detects current program year
 
 ### 2. Date Filtering
+
 - **Automatic Filtering**: All dates are now filtered to show only those within the selected program year
 - **Smart Defaults**: Automatically selects the most recent date in the selected program year
 - **Date Counter**: Shows how many dates are available in the selected program year
 
 ### 3. Global State Management
+
 - **Context API**: Program year selection persists across page navigation
 - **LocalStorage**: Selected program year is saved and restored on page reload
 - **Synchronized**: Both Landing Page and District Detail Page use the same program year selection
@@ -29,7 +33,9 @@ This feature adds program year boundaries and switching functionality to the Toa
 ### New Files Created
 
 #### 1. `frontend/src/utils/programYear.ts`
+
 Utility functions for program year calculations:
+
 - `getCurrentProgramYear()` - Gets the current program year
 - `getProgramYear(year)` - Gets a specific program year
 - `getAvailableProgramYears(dates)` - Extracts program years from date list
@@ -38,14 +44,18 @@ Utility functions for program year calculations:
 - `getProgramYearProgress(programYear)` - Calculates progress percentage
 
 #### 2. `frontend/src/components/ProgramYearSelector.tsx`
+
 Reusable component for program year selection:
+
 - Dropdown selector with all available program years
 - Optional progress bar showing year completion
 - Date range display
 - Responsive design
 
 #### 3. `frontend/src/contexts/ProgramYearContext.tsx`
+
 Global state management:
+
 - Manages selected program year across the app
 - Manages selected date within program year
 - Persists selection to localStorage
@@ -54,16 +64,19 @@ Global state management:
 ### Modified Files
 
 #### 1. `frontend/src/App.tsx`
+
 - Added `ProgramYearProvider` wrapper around the app
 - Ensures program year context is available everywhere
 
 #### 2. `frontend/src/pages/LandingPage.tsx`
+
 - Integrated `ProgramYearSelector` component
 - Filters cached dates by selected program year
 - Auto-selects most recent date when program year changes
 - Updated date selector to show only dates in selected program year
 
 #### 3. `frontend/src/pages/DistrictDetailPage.tsx`
+
 - Integrated `ProgramYearSelector` component
 - Filters cached dates by selected program year
 - Auto-selects most recent date when program year changes
@@ -73,6 +86,7 @@ Global state management:
 ## User Experience
 
 ### Landing Page
+
 1. **Program Year Selector** (top right)
    - Select from available program years
    - See progress bar for current year
@@ -88,6 +102,7 @@ Global state management:
    - All metrics reflect the selected program year context
 
 ### District Detail Page
+
 1. **Program Year Selector** (top right)
    - Same functionality as Landing Page
    - Selection synced across pages
@@ -107,15 +122,18 @@ Global state management:
 ## Program Year Logic
 
 ### Definition
+
 - **Start Date**: July 1
 - **End Date**: June 30 (following year)
 - **Label Format**: "YYYY-YYYY" (e.g., "2024-2025")
 
 ### Current Program Year Detection
+
 - If current month is July-December: Program year started this year
 - If current month is January-June: Program year started last year
 
 ### Example
+
 - Date: November 15, 2024
 - Current Program Year: 2024-2025 (Jul 1, 2024 - Jun 30, 2025)
 
@@ -130,6 +148,7 @@ Global state management:
 ## Future Enhancements
 
 Potential improvements for future versions:
+
 1. **Year-over-Year Comparison**: Side-by-side comparison of multiple program years
 2. **Program Year Summary**: Aggregate statistics for entire program year
 3. **Goal Tracking**: Track progress toward program year goals
@@ -139,6 +158,7 @@ Potential improvements for future versions:
 ## Testing
 
 To test the feature:
+
 1. Navigate to Landing Page
 2. Select different program years from dropdown
 3. Observe date selector updates to show only dates in selected year

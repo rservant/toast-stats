@@ -1,70 +1,76 @@
-import React, { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import React, { useState, FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<{
-    username?: string;
-    password?: string;
-  }>({});
+    username?: string
+    password?: string
+  }>({})
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   const validateForm = (): boolean => {
-    const errors: { username?: string; password?: string } = {};
+    const errors: { username?: string; password?: string } = {}
 
     if (!username.trim()) {
-      errors.username = 'Username is required';
+      errors.username = 'Username is required'
     }
 
     if (!password.trim()) {
-      errors.password = 'Password is required';
+      errors.password = 'Password is required'
     }
 
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-    setValidationErrors({});
+    e.preventDefault()
+    setError('')
+    setValidationErrors({})
 
     // Validate form
     if (!validateForm()) {
-      return;
+      return
     }
 
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
-      await login(username, password);
+      await login(username, password)
       // Redirect to dashboard on successful login
-      navigate('/dashboard');
-    } catch (err: any) {
+      navigate('/dashboard')
+    } catch (err: unknown) {
       // Display error message for authentication failures
-      if (err.response?.status === 401) {
-        setError('Invalid username or password');
-      } else if (err.response?.data?.error?.message) {
-        setError(err.response.data.error.message);
-      } else if (err.message) {
-        setError(err.message);
+      const error = err as {
+        response?: { status?: number; data?: { message?: string } }
+      }
+      if (error.response?.status === 401) {
+        setError('Invalid username or password')
+      } else if (error.response?.data?.message) {
+        setError(error.response.data.message)
+      } else if (error instanceof Error && error.message) {
+        setError(error.message)
       } else {
-        setError('An error occurred during login. Please try again.');
+        setError('An error occurred during login. Please try again.')
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <main className="bg-white p-8 rounded-lg shadow-md w-full max-w-md" id="main-content">
+      <main
+        className="bg-white p-8 rounded-lg shadow-md w-full max-w-md"
+        id="main-content"
+      >
         <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">
           Toastmasters District Visualizer
         </h1>
@@ -95,11 +101,9 @@ const LoginPage: React.FC = () => {
               type="text"
               id="username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={e => setUsername(e.target.value)}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                validationErrors.username
-                  ? 'border-red-500'
-                  : 'border-gray-300'
+                validationErrors.username ? 'border-red-500' : 'border-gray-300'
               }`}
               disabled={isLoading}
               aria-invalid={!!validationErrors.username}
@@ -130,11 +134,9 @@ const LoginPage: React.FC = () => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                validationErrors.password
-                  ? 'border-red-500'
-                  : 'border-gray-300'
+                validationErrors.password ? 'border-red-500' : 'border-gray-300'
               }`}
               disabled={isLoading}
               aria-invalid={!!validationErrors.password}
@@ -195,7 +197,7 @@ const LoginPage: React.FC = () => {
         </form>
       </main>
     </div>
-  );
-};
+  )
+}
 
-export default LoginPage;
+export default LoginPage

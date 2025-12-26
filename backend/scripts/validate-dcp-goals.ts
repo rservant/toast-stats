@@ -18,19 +18,37 @@ async function validateDCPGoals() {
   // Test 1: 2025 program year data (November 2025)
   console.log('TEST 1: 2025 Program Year Data')
   console.log('-'.repeat(80))
-  await testProgramYear('61', '2025-11-22', '2025+', cacheManager, analyticsEngine)
+  await testProgramYear(
+    '61',
+    '2025-11-22',
+    '2025+',
+    cacheManager,
+    analyticsEngine
+  )
   console.log()
 
   // Test 2: 2020-2024 program year data (November 2023)
   console.log('TEST 2: 2020-2024 Program Year Data')
   console.log('-'.repeat(80))
-  await testProgramYear('61', '2023-11-22', '2020-2024', cacheManager, analyticsEngine)
+  await testProgramYear(
+    '61',
+    '2023-11-22',
+    '2020-2024',
+    cacheManager,
+    analyticsEngine
+  )
   console.log()
 
   // Test 3: 2019 program year data (November 2019)
   console.log('TEST 3: 2019 Program Year Data')
   console.log('-'.repeat(80))
-  await testProgramYear('61', '2019-11-22', '2019', cacheManager, analyticsEngine)
+  await testProgramYear(
+    '61',
+    '2019-11-22',
+    '2019',
+    cacheManager,
+    analyticsEngine
+  )
   console.log()
 
   console.log('='.repeat(80))
@@ -52,19 +70,19 @@ async function testProgramYear(
 
   // Load the cached data
   const entry = await cacheManager.getDistrictData(districtId, date)
-  
+
   if (!entry) {
     console.log(`❌ ERROR: No cached data found for ${districtId} on ${date}`)
     return
   }
 
   console.log(`✓ Loaded cached data: ${entry.clubPerformance.length} clubs`)
-  
+
   // Check field names in first club
   const firstClub = entry.clubPerformance[0]
   console.log()
   console.log('Field names detected:')
-  
+
   if ('Level 4s, Path Completions, or DTM Awards' in firstClub) {
     console.log('  ✓ 2025+ format: "Level 4s, Path Completions, or DTM Awards"')
   } else if ('Level 4s, Level 5s, or DTM award' in firstClub) {
@@ -73,17 +91,27 @@ async function testProgramYear(
     console.log('  ✓ 2019 format: "CL/AL/DTMs"')
   } else {
     console.log('  ⚠ Unknown format - checking available fields...')
-    const relevantFields = Object.keys(firstClub).filter(k => 
-      k.includes('Level 4') || k.includes('Level 5') || k.includes('DTM') || k.includes('CL/AL')
+    const relevantFields = Object.keys(firstClub).filter(
+      k =>
+        k.includes('Level 4') ||
+        k.includes('Level 5') ||
+        k.includes('DTM') ||
+        k.includes('CL/AL')
     )
     console.log('  Available fields:', relevantFields)
   }
 
   // Get analytics
-  const analytics = await analyticsEngine.generateDistrictAnalytics(districtId, date, date)
-  
+  const analytics = await analyticsEngine.generateDistrictAnalytics(
+    districtId,
+    date,
+    date
+  )
+
   if (!analytics) {
-    console.log(`❌ ERROR: Failed to get analytics for ${districtId} on ${date}`)
+    console.log(
+      `❌ ERROR: Failed to get analytics for ${districtId} on ${date}`
+    )
     return
   }
 
@@ -120,7 +148,7 @@ async function testProgramYear(
     // Goal 5 & 6: Level 4/Path Completion/DTM awards
     let baseField = ''
     let additionalField = ''
-    
+
     if ('Level 4s, Path Completions, or DTM Awards' in club) {
       baseField = 'Level 4s, Path Completions, or DTM Awards'
       additionalField = 'Add. Level 4s, Path Completions, or DTM award'
@@ -135,10 +163,10 @@ async function testProgramYear(
     if (baseField) {
       const level4s = parseInt(club[baseField] || '0')
       const addLevel4s = parseInt(club[additionalField] || '0')
-      
+
       // Goal 5: Need 1 Level 4 award
       if (level4s >= 1) goalCounts[4]++
-      
+
       // Goal 6: Need 1 base + 1 additional = 2 total
       if (level4s >= 1 && addLevel4s >= 1) goalCounts[5]++
     }
@@ -167,7 +195,8 @@ async function testProgramYear(
   for (let i = 0; i < 10; i++) {
     const goalNumber = i + 1
     const count = goalCounts[i]
-    const percentage = totalClubs > 0 ? Math.round((count / totalClubs) * 1000) / 10 : 0
+    const percentage =
+      totalClubs > 0 ? Math.round((count / totalClubs) * 1000) / 10 : 0
     const emoji = count > 0 ? '✓' : '○'
     const highlight = goalNumber === 5 || goalNumber === 6 ? '→' : ' '
     console.log(
@@ -177,7 +206,7 @@ async function testProgramYear(
 
   console.log()
   console.log('Validation Results:')
-  
+
   if (goalCounts[4] > 0) {
     console.log(`  ✓ Goal 5: ${goalCounts[4]} clubs achieved (PASS)`)
   } else {
@@ -187,13 +216,15 @@ async function testProgramYear(
   if (goalCounts[5] > 0) {
     console.log(`  ✓ Goal 6: ${goalCounts[5]} clubs achieved (PASS)`)
   } else {
-    console.log(`  ⚠ Goal 6: 0 clubs achieved (may be correct if no clubs have 2+ awards)`)
+    console.log(
+      `  ⚠ Goal 6: 0 clubs achieved (may be correct if no clubs have 2+ awards)`
+    )
   }
 
   // Manual inspection of raw data
   console.log()
   console.log('Manual Data Inspection (first 5 clubs with Level 4 awards):')
-  
+
   let clubsWithAwards = 0
   for (const club of entry.clubPerformance) {
     let baseField = ''
@@ -217,7 +248,9 @@ async function testProgramYear(
       addValue = parseInt(club[addField] || '0')
 
       if (baseValue > 0 && clubsWithAwards < 5) {
-        console.log(`  Club ${club['Club Number']}: base=${baseValue}, additional=${addValue}`)
+        console.log(
+          `  Club ${club['Club Number']}: base=${baseValue}, additional=${addValue}`
+        )
         clubsWithAwards++
       }
     }

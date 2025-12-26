@@ -1,19 +1,19 @@
-import React from 'react';
+import React from 'react'
 
-interface DCPGoalAnalysis {
-  goalNumber: number;
-  achievementCount: number;
-  achievementPercentage: number;
+interface DCPGoal {
+  goalNumber: number
+  achievementCount: number
+  achievementPercentage: number
 }
 
 interface DCPGoalAnalysisData {
-  mostCommonlyAchieved: DCPGoalAnalysis[];
-  leastCommonlyAchieved: DCPGoalAnalysis[];
+  mostCommonlyAchieved: DCPGoal[]
+  leastCommonlyAchieved: DCPGoal[]
 }
 
 interface DCPGoalAnalysisProps {
-  dcpGoalAnalysis: DCPGoalAnalysisData | null;
-  isLoading: boolean;
+  dcpGoalAnalysis: DCPGoalAnalysisData | null
+  isLoading: boolean
 }
 
 export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
@@ -28,30 +28,33 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
           <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
-    );
+    )
   }
 
   if (!dcpGoalAnalysis) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
-        <p className="text-gray-600">No DCP goal analysis available. Please initiate a backfill to fetch historical data.</p>
+        <p className="text-gray-600">
+          No DCP goal analysis available. Please initiate a backfill to fetch
+          historical data.
+        </p>
       </div>
-    );
+    )
   }
 
   const getPercentageColor = (percentage: number): string => {
-    if (percentage >= 75) return 'bg-green-500';
-    if (percentage >= 50) return 'bg-yellow-500';
-    if (percentage >= 25) return 'bg-orange-500';
-    return 'bg-red-500';
-  };
+    if (percentage >= 75) return 'bg-green-500'
+    if (percentage >= 50) return 'bg-yellow-500'
+    if (percentage >= 25) return 'bg-orange-500'
+    return 'bg-red-500'
+  }
 
   const getPercentageTextColor = (percentage: number): string => {
-    if (percentage >= 75) return 'text-green-600';
-    if (percentage >= 50) return 'text-yellow-600';
-    if (percentage >= 25) return 'text-orange-600';
-    return 'text-red-600';
-  };
+    if (percentage >= 75) return 'text-green-600'
+    if (percentage >= 50) return 'text-yellow-600'
+    if (percentage >= 25) return 'text-orange-600'
+    return 'text-red-600'
+  }
 
   const dcpGoalNames: { [key: number]: string } = {
     1: 'Level 1 awards (4 required)',
@@ -64,9 +67,9 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
     8: 'More new members (4 required)',
     9: 'Club officer roles trained (4 June-Aug, 4 Nov-Feb)',
     10: 'Membership-renewal dues on time & Club officer list on time',
-  };
+  }
 
-  const renderGoalBar = (goal: DCPGoalAnalysis) => (
+  const renderGoalBar = (goal: DCPGoal) => (
     <div
       key={goal.goalNumber}
       className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -86,7 +89,9 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
           </div>
         </div>
         <div className="text-right">
-          <p className={`text-2xl font-bold ${getPercentageTextColor(goal.achievementPercentage)}`}>
+          <p
+            className={`text-2xl font-bold ${getPercentageTextColor(goal.achievementPercentage)}`}
+          >
             {goal.achievementPercentage.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-600">{goal.achievementCount} clubs</p>
@@ -99,7 +104,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
         ></div>
       </div>
     </div>
-  );
+  )
 
   return (
     <div className="space-y-6">
@@ -107,8 +112,16 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            <svg
+              className="w-5 h-5 text-green-600"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
             </svg>
             <p className="text-sm text-gray-600">Most Achieved Goal</p>
           </div>
@@ -116,14 +129,25 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
             Goal {dcpGoalAnalysis.mostCommonlyAchieved[0]?.goalNumber || 'N/A'}
           </p>
           <p className="text-sm text-green-600 font-medium mt-1">
-            {dcpGoalAnalysis.mostCommonlyAchieved[0]?.achievementPercentage.toFixed(1)}% of clubs
+            {dcpGoalAnalysis.mostCommonlyAchieved[0]?.achievementPercentage.toFixed(
+              1
+            )}
+            % of clubs
           </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <svg
+              className="w-5 h-5 text-red-600"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
             </svg>
             <p className="text-sm text-gray-600">Least Achieved Goal</p>
           </div>
@@ -131,22 +155,32 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
             Goal {dcpGoalAnalysis.leastCommonlyAchieved[0]?.goalNumber || 'N/A'}
           </p>
           <p className="text-sm text-red-600 font-medium mt-1">
-            {dcpGoalAnalysis.leastCommonlyAchieved[0]?.achievementPercentage.toFixed(1)}% of clubs
+            {dcpGoalAnalysis.leastCommonlyAchieved[0]?.achievementPercentage.toFixed(
+              1
+            )}
+            % of clubs
           </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-2 mb-2">
-            <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className="w-5 h-5 text-blue-600"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
             </svg>
             <p className="text-sm text-gray-600">Average Achievement</p>
           </div>
           <p className="text-2xl font-bold text-gray-900">
             {(
-              dcpGoalAnalysis.mostCommonlyAchieved.reduce((sum, g) => sum + g.achievementPercentage, 0) /
-              dcpGoalAnalysis.mostCommonlyAchieved.length
-            ).toFixed(1)}%
+              dcpGoalAnalysis.mostCommonlyAchieved.reduce(
+                (sum, g) => sum + g.achievementPercentage,
+                0
+              ) / dcpGoalAnalysis.mostCommonlyAchieved.length
+            ).toFixed(1)}
+            %
           </p>
           <p className="text-sm text-gray-600 mt-1">across all goals</p>
         </div>
@@ -155,64 +189,90 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
       {/* Most Commonly Achieved Goals */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center gap-2 mb-4">
-          <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-green-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clipRule="evenodd"
+            />
           </svg>
-          <h3 className="text-xl font-semibold text-gray-900">Most Commonly Achieved Goals</h3>
+          <h3 className="text-xl font-semibold text-gray-900">
+            Most Commonly Achieved Goals
+          </h3>
         </div>
         <p className="text-sm text-gray-600 mb-4">
           Goals that clubs are successfully achieving across the district
         </p>
         <div className="space-y-3">
-          {dcpGoalAnalysis.mostCommonlyAchieved.map((goal) => renderGoalBar(goal))}
+          {dcpGoalAnalysis.mostCommonlyAchieved.map(goal =>
+            renderGoalBar(goal)
+          )}
         </div>
       </div>
 
       {/* Least Commonly Achieved Goals */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center gap-2 mb-4">
-          <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-red-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
           </svg>
-          <h3 className="text-xl font-semibold text-gray-900">Goals Needing Attention</h3>
+          <h3 className="text-xl font-semibold text-gray-900">
+            Goals Needing Attention
+          </h3>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Goals that clubs are struggling to achieve - opportunities for district support
+          Goals that clubs are struggling to achieve - opportunities for
+          district support
         </p>
         <div className="space-y-3">
-          {dcpGoalAnalysis.leastCommonlyAchieved.map((goal) => renderGoalBar(goal))}
+          {dcpGoalAnalysis.leastCommonlyAchieved.map(goal =>
+            renderGoalBar(goal)
+          )}
         </div>
       </div>
 
       {/* Heatmap Visualization */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">DCP Goal Achievement Heatmap</h3>
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          DCP Goal Achievement Heatmap
+        </h3>
         <p className="text-sm text-gray-600 mb-4">
           Visual representation of goal achievement across all 10 DCP goals
         </p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[...dcpGoalAnalysis.mostCommonlyAchieved]
             .sort((a, b) => a.goalNumber - b.goalNumber)
-            .map((goal) => (
-              <div
-                key={goal.goalNumber}
-                className="relative group"
-              >
+            .map(goal => (
+              <div key={goal.goalNumber} className="relative group">
                 <div
                   className={`aspect-square rounded-lg flex flex-col items-center justify-center p-3 transition-transform hover:scale-105 ${
                     goal.achievementPercentage >= 75
                       ? 'bg-green-100 border-2 border-green-500'
                       : goal.achievementPercentage >= 50
-                      ? 'bg-yellow-100 border-2 border-yellow-500'
-                      : goal.achievementPercentage >= 25
-                      ? 'bg-orange-100 border-2 border-orange-500'
-                      : 'bg-red-100 border-2 border-red-500'
+                        ? 'bg-yellow-100 border-2 border-yellow-500'
+                        : goal.achievementPercentage >= 25
+                          ? 'bg-orange-100 border-2 border-orange-500'
+                          : 'bg-red-100 border-2 border-red-500'
                   }`}
                 >
                   <span className="text-2xl font-bold text-gray-900">
                     {goal.goalNumber}
                   </span>
-                  <span className={`text-lg font-semibold mt-1 ${getPercentageTextColor(goal.achievementPercentage)}`}>
+                  <span
+                    className={`text-lg font-semibold mt-1 ${getPercentageTextColor(goal.achievementPercentage)}`}
+                  >
                     {goal.achievementPercentage.toFixed(0)}%
                   </span>
                   <span className="text-xs text-gray-600 mt-1 text-center">
@@ -250,28 +310,41 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
       {/* Recommendations */}
       <div className="bg-blue-50 rounded-lg shadow-md p-6 border border-blue-200">
         <div className="flex items-start gap-3">
-          <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          <svg
+            className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
           </svg>
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">District Support Recommendations</h4>
+            <h4 className="font-semibold text-gray-900 mb-2">
+              District Support Recommendations
+            </h4>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 mt-0.5">•</span>
                 <span>
-                  Focus training and resources on goals with low achievement rates (below 50%)
+                  Focus training and resources on goals with low achievement
+                  rates (below 50%)
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 mt-0.5">•</span>
                 <span>
-                  Share best practices from clubs successfully achieving difficult goals
+                  Share best practices from clubs successfully achieving
+                  difficult goals
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 mt-0.5">•</span>
                 <span>
-                  Provide targeted coaching for clubs struggling with specific goals
+                  Provide targeted coaching for clubs struggling with specific
+                  goals
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -285,5 +358,5 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
