@@ -387,12 +387,19 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       const districts = ['D42', 'D43', 'D44']
       const jobs: ReconciliationJob[] = []
 
+      // Use longer stability period to prevent immediate completion
+      // Also set maxReconciliationDays to ensure validation passes
+      const testConfig = {
+        stabilityPeriodDays: 7,
+        maxReconciliationDays: 15,
+      }
+
       // Start concurrent reconciliation jobs
       for (const districtId of districts) {
         const job = await orchestrator.startReconciliation(
           districtId,
           testTargetMonth,
-          undefined,
+          testConfig,
           'automatic'
         )
         jobs.push(job)
@@ -419,10 +426,12 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         )
       ).toBe(true)
 
-      // Verify all jobs are properly tracked
+      // Verify all jobs are properly tracked - jobs should remain active with longer stability period
       await storageManager.flush() // Force immediate write
       const allJobs = await storageManager.getAllJobs()
-      expect(allJobs.filter(job => job.status === 'active')).toHaveLength(3)
+      // With 7-day stability period and only 1 cycle, jobs should still be active
+      const activeJobs = allJobs.filter(job => job.status === 'active')
+      expect(activeJobs).toHaveLength(3)
     })
 
     it('should prevent duplicate reconciliation jobs for same district/month', async () => {
