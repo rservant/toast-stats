@@ -39,7 +39,23 @@ export class CacheManager {
    */
   private isValidDateKey(date: string): boolean {
     // Accept only digits and hyphens in strict YYYY-MM-DD format
-    return /^\d{4}-\d{2}-\d{2}$/.test(date)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return false
+    }
+
+    // Additional validation: check if it's a valid date
+    const [year, month, day] = date.split('-').map(Number)
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return false
+    }
+
+    // Check if the date is actually valid (handles leap years, month lengths, etc.)
+    const dateObj = new Date(year, month - 1, day)
+    return (
+      dateObj.getFullYear() === year &&
+      dateObj.getMonth() === month - 1 &&
+      dateObj.getDate() === day
+    )
   }
 
   /**
@@ -59,13 +75,26 @@ export class CacheManager {
    * Get cache file path for a given date
    */
   private getCacheFilePath(date: string, type: string): string {
-    return path.join(this.cacheDir, `${type}_${date}.json`)
+    // Validate date format to prevent path traversal
+    if (!this.isValidDateKey(date)) {
+      throw new Error(`Invalid date format for cache file path: ${date}`)
+    }
+
+    // Sanitize type parameter to prevent path traversal
+    const sanitizedType = type.replace(/[^A-Za-z0-9_-]/g, '_')
+
+    return path.join(this.cacheDir, `${sanitizedType}_${date}.json`)
   }
 
   /**
    * Get metadata file path for a given date
    */
   private getMetadataFilePath(date: string): string {
+    // Validate date format to prevent path traversal
+    if (!this.isValidDateKey(date)) {
+      throw new Error(`Invalid date format for metadata file path: ${date}`)
+    }
+
     return path.join(this.cacheDir, `metadata_${date}.json`)
   }
 
@@ -80,6 +109,12 @@ export class CacheManager {
    * Check if cache exists for a given date
    */
   async hasCache(date: string, type: string = 'districts'): Promise<boolean> {
+    // Validate inputs before using in file path
+    if (!this.isValidDateKey(date)) {
+      logger.warn('Rejected cache check with invalid date key', { date })
+      return false
+    }
+
     try {
       const filePath = this.getCacheFilePath(date, type)
       await fs.access(filePath)
@@ -96,6 +131,12 @@ export class CacheManager {
     date: string,
     type: string = 'districts'
   ): Promise<unknown | null> {
+    // Validate inputs before using in file path
+    if (!this.isValidDateKey(date)) {
+      logger.warn('Rejected cache retrieval with invalid date key', { date })
+      return null
+    }
+
     try {
       const filePath = this.getCacheFilePath(date, type)
       const data = await fs.readFile(filePath, 'utf-8')
@@ -115,6 +156,11 @@ export class CacheManager {
     data: unknown,
     type: string = 'districts'
   ): Promise<void> {
+    // Validate inputs before using in file path
+    if (!this.isValidDateKey(date)) {
+      throw new Error(`Invalid date format for cache: ${date}`)
+    }
+
     try {
       await this.init() // Ensure directory exists
       const filePath = this.getCacheFilePath(date, type)
@@ -265,10 +311,15 @@ export class CacheManager {
     try {
       await this.init()
       const files = await fs.readdir(this.cacheDir)
-      const prefix = `${type}_`
+
+      // Sanitize type parameter to prevent path traversal
+      const sanitizedType = type.replace(/[^A-Za-z0-9_-]/g, '_')
+      const prefix = `${sanitizedType}_`
+
       const dates = files
         .filter(f => f.startsWith(prefix) && f.endsWith('.json'))
         .map(f => f.replace(prefix, '').replace('.json', ''))
+        .filter(date => this.isValidDateKey(date)) // Additional validation
         .sort()
       return dates
     } catch (error) {
@@ -320,6 +371,11 @@ export class CacheManager {
     date: string,
     type: string = 'districts'
   ): Promise<void> {
+    // Validate inputs before using in file path
+    if (!this.isValidDateKey(date)) {
+      throw new Error(`Invalid date format for cache clearing: ${date}`)
+    }
+
     try {
       const filePath = this.getCacheFilePath(date, type)
       await fs.unlink(filePath)

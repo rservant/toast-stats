@@ -25,6 +25,49 @@ interface AssessmentWithDataSources extends MonthlyAssessment {
 const DATA_DIR = path.resolve(__dirname, 'data')
 
 /**
+ * Validate district number to ensure it's a positive integer
+ */
+function validateDistrictNumber(districtNumber: number): void {
+  if (!Number.isInteger(districtNumber) || districtNumber <= 0) {
+    throw new Error('Invalid district number: must be a positive integer')
+  }
+}
+
+/**
+ * Validate program year format (YYYY-YYYY)
+ */
+function validateProgramYear(programYear: string): void {
+  if (!/^\d{4}-\d{4}$/.test(programYear)) {
+    throw new Error('Invalid program year format: must be YYYY-YYYY')
+  }
+}
+
+/**
+ * Validate month format (YYYY-MM)
+ */
+function validateMonth(month: string): void {
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    throw new Error('Invalid month format: must be YYYY-MM')
+  }
+}
+
+/**
+ * Validate goal ID to ensure it's safe for file operations
+ */
+function validateGoalId(goalId: string): void {
+  if (!goalId || typeof goalId !== 'string' || goalId.trim().length === 0) {
+    throw new Error('Invalid goal ID: must be a non-empty string')
+  }
+
+  // Ensure goal ID doesn't contain path separators or other unsafe characters
+  if (!/^[A-Za-z0-9_-]+$/.test(goalId.trim())) {
+    throw new Error(
+      'Invalid goal ID: must contain only alphanumeric characters, underscores, and dashes'
+    )
+  }
+}
+
+/**
  * Sanitize a value so it is safe to use in a filename.
  * Allows only alphanumerics, underscore, and dash; replaces everything else with "_".
  */
@@ -58,9 +101,9 @@ async function ensureDataDir(): Promise<void> {
 }
 
 /**
- * Get file path for monthly assessment data
+ * Get file path for monthly assessment data (internal - assumes validation already done)
  */
-function getAssessmentPath(
+function getAssessmentPathInternal(
   districtNumber: number,
   programYear: string,
   month: string
@@ -73,9 +116,29 @@ function getAssessmentPath(
 }
 
 /**
+ * Get file path for monthly assessment data
+ */
+function getAssessmentPath(
+  districtNumber: number,
+  programYear: string,
+  month: string
+): string {
+  // Validate inputs before using in file path
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+  validateMonth(month)
+
+  return getAssessmentPathInternal(districtNumber, programYear, month)
+}
+
+/**
  * Get file path for goals
  */
 function getGoalsPath(districtNumber: number, programYear: string): string {
+  // Validate inputs before using in file path
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+
   const sanitizedDistrict = sanitizeForFilename(String(districtNumber))
   const sanitizedYear = sanitizeForFilename(programYear)
   const fileName = `goals_${sanitizedDistrict}_${sanitizedYear}.json`
@@ -86,6 +149,10 @@ function getGoalsPath(districtNumber: number, programYear: string): string {
  * Get file path for configuration
  */
 function getConfigPath(districtNumber: number, programYear: string): string {
+  // Validate inputs before using in file path
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+
   const sanitizedDistrict = sanitizeForFilename(String(districtNumber))
   const sanitizedYear = sanitizeForFilename(programYear)
   const fileName = `config_${sanitizedDistrict}_${sanitizedYear}.json`
@@ -130,11 +197,21 @@ export async function getMonthlyAssessment(
   programYear: string,
   month: string
 ): Promise<MonthlyAssessment | null> {
+  // Validate inputs before using in file path - these should throw immediately
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+  validateMonth(month)
+
   try {
-    const filePath = getAssessmentPath(districtNumber, programYear, month)
+    const filePath = getAssessmentPathInternal(
+      districtNumber,
+      programYear,
+      month
+    )
     const data = await fs.readFile(filePath, 'utf-8')
     return JSON.parse(data) as MonthlyAssessment
   } catch (err) {
+    // Only catch file system errors, not validation errors
     if ((err as ErrnoException).code === 'ENOENT') {
       return null
     }
@@ -150,6 +227,11 @@ export async function deleteMonthlyAssessment(
   programYear: string,
   month: string
 ): Promise<void> {
+  // Validate inputs before using in file path
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+  validateMonth(month)
+
   try {
     const filePath = getAssessmentPath(districtNumber, programYear, month)
     await fs.unlink(filePath)
@@ -169,6 +251,10 @@ export async function listMonthlyAssessments(
   districtNumber: number,
   programYear: string
 ): Promise<MonthlyAssessment[]> {
+  // Validate inputs before using in file operations
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+
   try {
     await ensureDataDir()
     const files = await fs.readdir(DATA_DIR)
@@ -203,6 +289,11 @@ export async function getAuditTrail(
   generated_from_cache_date?: string | null
   cache_files_used?: string[]
 }> {
+  // Validate inputs before using in file operations
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+  validateMonth(month)
+
   const assessment = await getMonthlyAssessment(
     districtNumber,
     programYear,
@@ -258,6 +349,9 @@ export async function saveGoal(goal: DistrictLeaderGoal): Promise<void> {
  * Retrieve goal by ID
  */
 export async function getGoal(id: string): Promise<DistrictLeaderGoal | null> {
+  // Validate goal ID before using in file operations
+  validateGoalId(id)
+
   try {
     await ensureDataDir()
     const files = await fs.readdir(DATA_DIR)
@@ -289,6 +383,10 @@ export async function listGoals(
   districtNumber: number,
   programYear: string
 ): Promise<DistrictLeaderGoal[]> {
+  // Validate inputs before using in file operations
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+
   try {
     const filePath = getGoalsPath(districtNumber, programYear)
     const data = await fs.readFile(filePath, 'utf-8')
@@ -309,6 +407,11 @@ export async function deleteGoal(
   programYear: string,
   goalId: string
 ): Promise<boolean> {
+  // Validate inputs before using in file operations
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+  validateGoalId(goalId)
+
   try {
     const filePath = getGoalsPath(districtNumber, programYear)
     const data = await fs.readFile(filePath, 'utf-8')
@@ -347,6 +450,10 @@ export async function getConfig(
   districtNumber: number,
   programYear: string
 ): Promise<DistrictConfig | null> {
+  // Validate inputs before using in file operations
+  validateDistrictNumber(districtNumber)
+  validateProgramYear(programYear)
+
   try {
     const filePath = getConfigPath(districtNumber, programYear)
     const data = await fs.readFile(filePath, 'utf-8')

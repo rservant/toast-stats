@@ -118,6 +118,22 @@ export class DistrictCacheManager {
       throw new Error(`Invalid date for cache file path: ${date}`)
     }
 
+    // Additional validation: check if it's a valid date
+    const [year, month, day] = date.split('-').map(Number)
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      throw new Error(`Invalid date values for cache file path: ${date}`)
+    }
+
+    // Check if the date is actually valid (handles leap years, month lengths, etc.)
+    const dateObj = new Date(year, month - 1, day)
+    if (
+      dateObj.getFullYear() !== year ||
+      dateObj.getMonth() !== month - 1 ||
+      dateObj.getDate() !== day
+    ) {
+      throw new Error(`Invalid date for cache file path: ${date}`)
+    }
+
     const resolvedPath = path.resolve(
       this.districtRoot,
       districtId,
@@ -337,11 +353,16 @@ export class DistrictCacheManager {
    */
   async hasDistrictData(districtId: string, date: string): Promise<boolean> {
     try {
+      // This will throw if inputs are invalid
       const filePath = this.getDistrictCacheFilePath(districtId, date)
       await fs.access(filePath)
       return true
-    } catch {
-      return false
+    } catch (error) {
+      // Only catch file access errors, not validation errors
+      if ((error as ErrnoException).code === 'ENOENT') {
+        return false
+      }
+      throw error
     }
   }
 
