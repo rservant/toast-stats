@@ -18,6 +18,7 @@ import type {
 
 export class ReconciliationStorageManager {
   private storageDir: string
+  private initPromise: Promise<void> | null = null
   private jobsDir: string
   private timelinesDir: string
   private configFile: string
@@ -44,11 +45,30 @@ export class ReconciliationStorageManager {
    * Initialize storage directories and schema
    */
   async init(): Promise<void> {
+    // Use a mutex to ensure only one initialization happens at a time
+    if (this.initPromise) {
+      return this.initPromise
+    }
+
+    this.initPromise = this.performInit()
     try {
-      // Create directories
-      await fs.mkdir(this.storageDir, { recursive: true })
-      await fs.mkdir(this.jobsDir, { recursive: true })
-      await fs.mkdir(this.timelinesDir, { recursive: true })
+      await this.initPromise
+    } catch (error) {
+      // Reset the promise on error so it can be retried
+      this.initPromise = null
+      throw error
+    }
+  }
+
+  /**
+   * Perform the actual initialization
+   */
+  private async performInit(): Promise<void> {
+    try {
+      // Create directories with proper error handling for concurrent access
+      await this.ensureDirectoryExists(this.storageDir)
+      await this.ensureDirectoryExists(this.jobsDir)
+      await this.ensureDirectoryExists(this.timelinesDir)
 
       // Initialize schema
       await this.initializeSchema()
@@ -66,6 +86,33 @@ export class ReconciliationStorageManager {
     } catch (error) {
       logger.error('Failed to initialize reconciliation storage', error)
       throw error
+    }
+  }
+
+  /**
+   * Ensure directory exists with proper error handling for concurrent access
+   */
+  private async ensureDirectoryExists(dirPath: string): Promise<void> {
+    try {
+      await fs.mkdir(dirPath, { recursive: true })
+    } catch (error) {
+      const err = error as { code?: string }
+      // Ignore EEXIST errors (directory already exists)
+      // For ENOENT errors, try once more in case of race condition
+      if (err.code === 'ENOENT') {
+        try {
+          // Try again - might be a race condition where parent was created
+          await fs.mkdir(dirPath, { recursive: true })
+        } catch (retryError) {
+          // If it still fails, ignore if it's because directory now exists
+          const retryErr = retryError as { code?: string }
+          if (retryErr.code !== 'EEXIST') {
+            throw retryError
+          }
+        }
+      } else if (err.code !== 'EEXIST') {
+        throw error
+      }
     }
   }
 
@@ -375,7 +422,19 @@ export class ReconciliationStorageManager {
 
       const record = this.jobToRecord(job)
       const filePath = this.getJobFilePath(job.id)
-      await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
+
+      // Ensure directory exists before writing file (handle concurrent access)
+      try {
+        await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
+      } catch (error) {
+        // If directory was removed, recreate it and try again
+        if ((error as { code?: string }).code === 'ENOENT') {
+          await fs.mkdir(this.jobsDir, { recursive: true })
+          await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
+        } else {
+          throw error
+        }
+      }
 
       // Update index
       const index = await this.loadIndex()
@@ -683,7 +742,19 @@ export class ReconciliationStorageManager {
       }
 
       const filePath = this.getTimelineFilePath(timeline.jobId)
-      await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
+
+      // Ensure directory exists before writing file (handle concurrent access)
+      try {
+        await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
+      } catch (error) {
+        // If directory was removed, recreate it and try again
+        if ((error as { code?: string }).code === 'ENOENT') {
+          await fs.mkdir(this.timelinesDir, { recursive: true })
+          await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
+        } else {
+          throw error
+        }
+      }
 
       logger.info('Reconciliation timeline saved', { jobId: timeline.jobId })
     } catch (error) {
