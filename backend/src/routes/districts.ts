@@ -7,6 +7,7 @@ import { BackfillService } from '../services/BackfillService.js'
 import { CacheManager } from '../services/CacheManager.js'
 import { DistrictBackfillService } from '../services/DistrictBackfillService.js'
 import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
+import { CacheConfigService } from '../services/CacheConfigService.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
 import {
   DistrictAnalytics,
@@ -46,18 +47,28 @@ const toastmastersAPI = useMockData
   ? new MockToastmastersAPIService()
   : new RealToastmastersAPIService()
 
-// Initialize services
-const cacheManager = new CacheManager()
+// Initialize cache configuration service and get cache directory
+const cacheConfig = CacheConfigService.getInstance()
+const cacheDirectory = cacheConfig.getCacheDirectory()
+
+// Initialize services with configured cache directory
+const cacheManager = new CacheManager(cacheDirectory)
 const backfillService = new BackfillService(cacheManager, toastmastersAPI)
 
-// Initialize district-level services
-const districtCacheManager = new DistrictCacheManager()
+// Initialize district-level services with configured cache directory
+const districtCacheManager = new DistrictCacheManager(cacheDirectory)
 const scraper = new ToastmastersScraper()
 const districtBackfillService = new DistrictBackfillService(
   districtCacheManager,
   scraper
 )
 const analyticsEngine = new AnalyticsEngine(districtCacheManager)
+
+// Initialize cache configuration asynchronously (validation happens lazily)
+cacheConfig.initialize().catch(error => {
+  console.error('Failed to initialize cache configuration:', error)
+  // Services will still work with the resolved cache directory path
+})
 
 // Cleanup old jobs every hour
 setInterval(

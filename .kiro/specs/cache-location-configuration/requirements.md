@@ -35,7 +35,7 @@ This specification defines the requirements for making all on-disk caching locat
 #### Acceptance Criteria
 
 1. WHEN initializing CacheManager in routes, THE System SHALL use the configured cache directory
-2. WHEN initializing DistrictCacheManager in routes, THE System SHALL use the configured cache directory  
+2. WHEN initializing DistrictCacheManager in routes, THE System SHALL use the configured cache directory
 3. THE System SHALL pass cache directory configuration to all cache service constructors
 4. THE System SHALL ensure all route-level cache managers use consistent configuration
 5. THE System SHALL maintain existing cache functionality without breaking changes

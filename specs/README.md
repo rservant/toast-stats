@@ -5,11 +5,13 @@ This directory contains feature specifications for the Toastmasters District Sta
 ## Active Specifications
 
 ### 001-assessment-worksheet-generator/
+
 **Status**: ✅ Complete and production-ready with active maintenance  
 **Purpose**: District Assessment Worksheet Report Generator  
 **Description**: Generates monthly district assessment reports that reproduce the logic and outputs of the Excel-based assessment worksheet, with automated calculation of Goals 1–3.
 
 **Key Features**:
+
 - Monthly assessment report generation
 - Goal 1-3 calculation engine
 - District leader goal tracking
@@ -17,12 +19,14 @@ This directory contains feature specifications for the Toastmasters District Sta
 - Year-end summary reports
 
 **Implementation Status**:
+
 - All 46 tasks completed
-- >80% test coverage achieved
+- > 80% test coverage achieved
 - Production-ready with comprehensive testing
 - Active maintenance for configuration updates
 
 **Files**:
+
 - `spec.md` - Complete feature specification
 - `tasks.md` - Implementation task breakdown
 - `plan.md` - Project planning document

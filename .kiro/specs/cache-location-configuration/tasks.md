@@ -40,16 +40,17 @@ This implementation plan converts the cache location configuration design into a
   - **Property 7: Fallback on Validation Failure**
   - **Validates: Requirements 4.5, 4.4**
 
-- [ ] 3. Update Main Application Routes
+- [x] 3. Update Main Application Routes ✅ **COMPLETED**
   - Modify `backend/src/routes/districts.ts` to use `CacheConfigService`
   - Replace hardcoded `new CacheManager()` with configured initialization
   - Replace hardcoded `new DistrictCacheManager()` with configured initialization
   - Ensure all route-level cache managers use consistent configuration
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 3.1 Write property test for service configuration consistency
+- [x] 3.1 Write property test for service configuration consistency ✅ **COMPLETED**
   - **Property 3: Service Configuration Consistency**
   - **Validates: Requirements 1.4, 2.1, 2.2, 2.4, 3.3, 6.4**
+  - **Status: All 21 property-based tests passing**
 
 - [ ] 4. Update Assessment Module Configuration
   - Modify `CacheIntegrationService` to use `CacheConfigService`

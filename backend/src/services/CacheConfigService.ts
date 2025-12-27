@@ -1,9 +1,9 @@
 /**
  * Cache Configuration Service
- * 
+ *
  * Centralized service for managing cache directory configuration across the entire application.
  * Provides a single source of truth for cache directory paths using the CACHE_DIR environment variable.
- * 
+ *
  * Features:
  * - Singleton pattern for consistent configuration
  * - Environment variable support with fallback
@@ -31,7 +31,7 @@ export class CacheDirectoryValidator {
     try {
       // Check for path traversal attempts
       const normalizedPath = path.resolve(cacheDir)
-      
+
       // Reject paths containing dangerous patterns
       if (
         cacheDir.includes('..') ||
@@ -44,22 +44,30 @@ export class CacheDirectoryValidator {
           isValid: false,
           isAccessible: false,
           isSecure: false,
-          errorMessage: 'Path contains unsafe patterns or points to system root'
+          errorMessage:
+            'Path contains unsafe patterns or points to system root',
         }
       }
 
       // Check if path is secure (not pointing to sensitive system directories)
-      const sensitiveDirectories = ['/etc', '/usr', '/var', '/sys', '/proc', '/boot']
-      const isSystemPath = sensitiveDirectories.some(dir => 
+      const sensitiveDirectories = [
+        '/etc',
+        '/usr',
+        '/var',
+        '/sys',
+        '/proc',
+        '/boot',
+      ]
+      const isSystemPath = sensitiveDirectories.some(dir =>
         normalizedPath.startsWith(dir)
       )
-      
+
       if (isSystemPath) {
         return {
           isValid: false,
           isAccessible: false,
           isSecure: false,
-          errorMessage: 'Path points to sensitive system directory'
+          errorMessage: 'Path points to sensitive system directory',
         }
       }
 
@@ -71,7 +79,7 @@ export class CacheDirectoryValidator {
           isValid: true,
           isAccessible: false,
           isSecure: true,
-          errorMessage: `Cannot create directory: ${error instanceof Error ? error.message : 'Unknown error'}`
+          errorMessage: `Cannot create directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
         }
       }
 
@@ -85,21 +93,21 @@ export class CacheDirectoryValidator {
           isValid: true,
           isAccessible: false,
           isSecure: true,
-          errorMessage: `Directory is not writable: ${error instanceof Error ? error.message : 'Unknown error'}`
+          errorMessage: `Directory is not writable: ${error instanceof Error ? error.message : 'Unknown error'}`,
         }
       }
 
       return {
         isValid: true,
         isAccessible: true,
-        isSecure: true
+        isSecure: true,
       }
     } catch (error) {
       return {
         isValid: false,
         isAccessible: false,
         isSecure: false,
-        errorMessage: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        errorMessage: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       }
     }
   }
@@ -133,7 +141,7 @@ export class CacheConfigService {
     this.cacheDir = this.resolveCacheDirectory()
     const envCacheDir = process.env.CACHE_DIR
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
-    
+
     this.configuration = {
       baseDirectory: this.cacheDir,
       isConfigured,
@@ -141,8 +149,8 @@ export class CacheConfigService {
       validationStatus: {
         isValid: false,
         isAccessible: false,
-        isSecure: false
-      }
+        isSecure: false,
+      },
     }
   }
 
@@ -183,36 +191,49 @@ export class CacheConfigService {
       const validation = await CacheDirectoryValidator.validate(this.cacheDir)
       this.configuration.validationStatus = validation
 
-      if (!validation.isValid || !validation.isAccessible || !validation.isSecure) {
-        const errorMessage = validation.errorMessage || 'Cache directory validation failed'
-        
+      if (
+        !validation.isValid ||
+        !validation.isAccessible ||
+        !validation.isSecure
+      ) {
+        const errorMessage =
+          validation.errorMessage || 'Cache directory validation failed'
+
         // If configured path is invalid, try fallback
         if (this.configuration.source === 'environment') {
-          logger.warn('Configured cache directory is invalid, falling back to default', {
-            configuredPath: this.cacheDir,
-            error: errorMessage
-          })
-          
+          logger.warn(
+            'Configured cache directory is invalid, falling back to default',
+            {
+              configuredPath: this.cacheDir,
+              error: errorMessage,
+            }
+          )
+
           // Try default fallback
           const fallbackPath = path.resolve('./cache')
-          const fallbackValidation = await CacheDirectoryValidator.validate(fallbackPath)
-          
-          if (fallbackValidation.isValid && fallbackValidation.isAccessible && fallbackValidation.isSecure) {
+          const fallbackValidation =
+            await CacheDirectoryValidator.validate(fallbackPath)
+
+          if (
+            fallbackValidation.isValid &&
+            fallbackValidation.isAccessible &&
+            fallbackValidation.isSecure
+          ) {
             // Update configuration to use fallback
             Object.assign(this.configuration, {
               baseDirectory: fallbackPath,
               source: 'default' as const,
-              validationStatus: fallbackValidation
+              validationStatus: fallbackValidation,
             })
-            
+
             // Update internal cache directory
             Object.defineProperty(this, 'cacheDir', {
               value: fallbackPath,
-              writable: false
+              writable: false,
             })
-            
+
             logger.info('Successfully fell back to default cache directory', {
-              fallbackPath
+              fallbackPath,
             })
           } else {
             throw new CacheConfigurationError(
@@ -233,12 +254,12 @@ export class CacheConfigService {
       logger.info('Cache configuration initialized successfully', {
         cacheDirectory: this.cacheDir,
         source: this.configuration.source,
-        isConfigured: this.configuration.isConfigured
+        isConfigured: this.configuration.isConfigured,
       })
     } catch (error) {
       logger.error('Failed to initialize cache configuration', {
         cacheDirectory: this.cacheDir,
-        error
+        error,
       })
       throw error
     }
@@ -253,7 +274,11 @@ export class CacheConfigService {
     }
 
     const validation = this.configuration.validationStatus
-    if (!validation.isValid || !validation.isAccessible || !validation.isSecure) {
+    if (
+      !validation.isValid ||
+      !validation.isAccessible ||
+      !validation.isSecure
+    ) {
       throw new CacheConfigurationError(
         validation.errorMessage || 'Cache directory validation failed',
         this.cacheDir
@@ -265,10 +290,12 @@ export class CacheConfigService {
    * Check if the cache configuration is ready for use
    */
   isReady(): boolean {
-    return this.initialized && 
-           this.configuration.validationStatus.isValid &&
-           this.configuration.validationStatus.isAccessible &&
-           this.configuration.validationStatus.isSecure
+    return (
+      this.initialized &&
+      this.configuration.validationStatus.isValid &&
+      this.configuration.validationStatus.isAccessible &&
+      this.configuration.validationStatus.isSecure
+    )
   }
 
   /**

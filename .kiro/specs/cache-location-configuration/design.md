@@ -11,11 +11,13 @@ The design focuses on simplicity and consistency, providing a single configurati
 ### Current State Analysis
 
 **Existing Cache Services:**
+
 - `CacheManager`: Manages historical district rankings and metadata (currently hardcoded to `./cache`)
 - `DistrictCacheManager`: Manages district-specific performance data (accepts constructor parameter, defaults to `./cache`)
 - `Assessment Module`: Uses `DISTRICT_CACHE_DIR` environment variable with complex fallback logic
 
 **Current Issues:**
+
 - Inconsistent configuration approaches across services
 - Hardcoded cache paths in main application routes
 - Complex fallback logic in assessment module
@@ -24,6 +26,7 @@ The design focuses on simplicity and consistency, providing a single configurati
 ### Target Architecture
 
 **Unified Configuration Approach:**
+
 - Single `CACHE_DIR` environment variable for all cache operations
 - Consistent cache directory usage across all services
 - Simplified configuration without complex hierarchies
@@ -72,6 +75,7 @@ export class CacheConfigService {
 ### 2. Updated Cache Manager Initialization
 
 **Modified Route Initialization:**
+
 ```typescript
 // Before (hardcoded)
 const cacheManager = new CacheManager()
@@ -87,6 +91,7 @@ const districtCacheManager = new DistrictCacheManager(cacheDir)
 ### 3. Assessment Module Integration
 
 **Simplified Cache Path Selection:**
+
 ```typescript
 export class CacheIntegrationService {
   constructor(
@@ -111,6 +116,7 @@ export class CacheIntegrationService {
 ### 4. Configuration Validation
 
 **Security and Accessibility Validation:**
+
 ```typescript
 interface CacheDirectoryValidation {
   isValid: boolean
@@ -145,6 +151,7 @@ interface CacheConfiguration {
 ### Cache Directory Structure
 
 The cache directory structure remains unchanged:
+
 ```
 cache/
 ├── districts/
@@ -242,46 +249,56 @@ class CacheConfigurationError extends Error {
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Environment Variable Configuration
-*For any* valid cache directory path set in `CACHE_DIR` environment variable, all cache services should use that directory as their base cache location
+
+_For any_ valid cache directory path set in `CACHE_DIR` environment variable, all cache services should use that directory as their base cache location
 **Validates: Requirements 1.1, 1.2**
 
-### Property 2: Default Fallback Behavior  
-*For any* system initialization when `CACHE_DIR` is not set, the system should use `./cache` as the default cache directory
+### Property 2: Default Fallback Behavior
+
+_For any_ system initialization when `CACHE_DIR` is not set, the system should use `./cache` as the default cache directory
 **Validates: Requirements 1.3**
 
 ### Property 3: Service Configuration Consistency
-*For any* cache service initialization (CacheManager, DistrictCacheManager, Assessment services), all services should receive and use the same cache directory configuration
+
+_For any_ cache service initialization (CacheManager, DistrictCacheManager, Assessment services), all services should receive and use the same cache directory configuration
 **Validates: Requirements 1.4, 2.1, 2.2, 2.4, 3.3, 6.4**
 
 ### Property 4: Security Validation
-*For any* cache directory configuration input, the system should validate path format, prevent path traversal attempts, and reject malicious paths
+
+_For any_ cache directory configuration input, the system should validate path format, prevent path traversal attempts, and reject malicious paths
 **Validates: Requirements 1.5, 4.1, 4.2**
 
 ### Property 5: Unified Configuration Usage
-*For any* cache operation across the system, only the `CACHE_DIR` environment variable should be used for cache directory configuration
+
+_For any_ cache operation across the system, only the `CACHE_DIR` environment variable should be used for cache directory configuration
 **Validates: Requirements 3.1, 6.2, 6.3**
 
 ### Property 6: Permission Validation
-*For any* configured cache directory, the system should verify write permissions during initialization and handle permission failures appropriately
+
+_For any_ configured cache directory, the system should verify write permissions during initialization and handle permission failures appropriately
 **Validates: Requirements 4.3, 4.4**
 
 ### Property 7: Fallback on Validation Failure
-*For any* invalid cache directory configuration, the system should fall back to the default cache location and log appropriate error messages
+
+_For any_ invalid cache directory configuration, the system should fall back to the default cache location and log appropriate error messages
 **Validates: Requirements 4.5, 4.4**
 
 ### Property 8: Backward Compatibility
-*For any* existing cache functionality, the new configuration system should maintain the same behavior and preserve existing cache data
+
+_For any_ existing cache functionality, the new configuration system should maintain the same behavior and preserve existing cache data
 **Validates: Requirements 2.5, 6.5**
 
 ### Property 9: Test Environment Isolation
-*For any* test execution with different cache directory configurations, the system should support isolated cache locations without conflicts
+
+_For any_ test execution with different cache directory configurations, the system should support isolated cache locations without conflicts
 **Validates: Requirements 5.1, 5.4, 5.5**
 
 ### Property 10: Configuration Migration
-*For any* system component that previously used hardcoded cache paths, the component should now use the configurable cache directory system
+
+_For any_ system component that previously used hardcoded cache paths, the component should now use the configurable cache directory system
 **Validates: Requirements 6.1**
 
 ## Testing Strategy
@@ -291,12 +308,14 @@ class CacheConfigurationError extends Error {
 ### Unit Testing Approach
 
 **Configuration Service Tests:**
+
 - Test environment variable reading and path resolution
 - Validate security checks and permission verification
 - Test error handling and fallback behavior
 - Verify singleton pattern implementation
 
 **Service Integration Tests:**
+
 - Test cache service initialization with different configurations
 - Verify consistent cache directory usage across services
 - Test migration from old to new configuration approach
@@ -307,8 +326,9 @@ class CacheConfigurationError extends Error {
 Each correctness property will be implemented as a property-based test with minimum 100 iterations:
 
 **Property Test Configuration:**
+
 - **Feature: cache-location-configuration, Property 1**: Environment variable configuration consistency
-- **Feature: cache-location-configuration, Property 2**: Default fallback behavior validation  
+- **Feature: cache-location-configuration, Property 2**: Default fallback behavior validation
 - **Feature: cache-location-configuration, Property 3**: Service configuration consistency across all cache services
 - **Feature: cache-location-configuration, Property 4**: Security validation for all path inputs
 - **Feature: cache-location-configuration, Property 5**: Unified configuration variable usage
@@ -383,28 +403,32 @@ Each correctness property will be implemented as a property-based test with mini
 ## Configuration Examples
 
 ### Development Environment
+
 ```bash
 # Use local cache directory
 CACHE_DIR=./cache
 ```
 
 ### Docker Deployment
+
 ```dockerfile
 ENV CACHE_DIR=/app/cache
 VOLUME ["/app/cache"]
 ```
 
 ### Kubernetes Deployment
+
 ```yaml
 env:
   - name: CACHE_DIR
-    value: "/var/cache/toastmasters"
+    value: '/var/cache/toastmasters'
 volumeMounts:
   - name: cache-volume
     mountPath: /var/cache/toastmasters
 ```
 
 ### Testing Environment
+
 ```bash
 # Use temporary directory for tests
 CACHE_DIR=/tmp/test-cache-${TEST_ID}
