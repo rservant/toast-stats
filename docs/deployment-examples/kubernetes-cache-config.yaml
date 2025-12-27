@@ -1,0 +1,252 @@
+# Kubernetes Deployment Example with Cache Configuration
+# This example shows how to configure cache directories in Kubernetes deployments
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: toastmasters-config
+  namespace: toastmasters
+data:
+  dashboard-url: "https://dashboard.toastmasters.org"
+  cors-origin: "https://yourdomain.com"
+  cache-dir: "/var/cache/toastmasters"
+  cache-ttl: "900"
+  rate-limit-window-ms: "900000"
+  rate-limit-max-requests: "100"
+
+---
+# Secret for sensitive configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: toastmasters-secrets
+  namespace: toastmasters
+type: Opaque
+data:
+  # Base64 encoded JWT secret
+  # Generate with: echo -n "your-secret-key" | base64
+  jwt-secret: eW91ci1zZWNyZXQta2V5
+
+---
+# Persistent Volume Claim for cache storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: toastmasters-cache-pvc
+  namespace: toastmasters
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd  # Use appropriate storage class
+
+---
+# Backend Deployment with cache configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toastmasters-backend
+  namespace: toastmasters
+  labels:
+    app: toastmasters-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: toastmasters-backend
+  template:
+    metadata:
+      labels:
+        app: toastmasters-backend
+    spec:
+      containers:
+      - name: backend
+        image: toastmasters-backend:latest
+        ports:
+        - containerPort: 5001
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "5001"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: toastmasters-secrets
+              key: jwt-secret
+        - name: TOASTMASTERS_DASHBOARD_URL
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: dashboard-url
+        - name: CORS_ORIGIN
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: cors-origin
+        # Cache configuration from ConfigMap
+        - name: CACHE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: cache-dir
+        - name: CACHE_TTL
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: cache-ttl
+        - name: RATE_LIMIT_WINDOW_MS
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: rate-limit-window-ms
+        - name: RATE_LIMIT_MAX_REQUESTS
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: rate-limit-max-requests
+        # Volume mount for cache directory
+        volumeMounts:
+        - name: cache-volume
+          mountPath: /var/cache/toastmasters
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      # Volume definition
+      volumes:
+      - name: cache-volume
+        persistentVolumeClaim:
+          claimName: toastmasters-cache-pvc
+
+---
+# Service for backend
+apiVersion: v1
+kind: Service
+metadata:
+  name: toastmasters-backend
+  namespace: toastmasters
+spec:
+  selector:
+    app: toastmasters-backend
+  ports:
+  - protocol: TCP
+    port: 5001
+    targetPort: 5001
+  type: ClusterIP
+
+---
+# Frontend Deployment (unchanged from original)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toastmasters-frontend
+  namespace: toastmasters
+  labels:
+    app: toastmasters-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: toastmasters-frontend
+  template:
+    metadata:
+      labels:
+        app: toastmasters-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: toastmasters-frontend:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: BACKEND_URL
+          value: "http://toastmasters-backend:5001"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+# Service for frontend
+apiVersion: v1
+kind: Service
+metadata:
+  name: toastmasters-frontend
+  namespace: toastmasters
+spec:
+  selector:
+    app: toastmasters-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+
+---
+# Ingress for external access (optional)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: toastmasters-ingress
+  namespace: toastmasters
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - yourdomain.com
+    secretName: toastmasters-tls
+  rules:
+  - host: yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: toastmasters-frontend
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: toastmasters-backend
+            port:
+              number: 5001

@@ -5,3 +5,4 @@ metadata:
 data:
   dashboard-url: "https://dashboard.toastmasters.org"
   cors-origin: "https://yourdomain.com"
+  cache-dir: "/var/cache/toastmasters"
