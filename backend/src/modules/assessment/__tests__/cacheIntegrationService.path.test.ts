@@ -23,20 +23,20 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
   it('uses CACHE_DIR when set', () => {
     process.env.CACHE_DIR = '/tmp/some-cache'
     CacheConfigService.resetInstance()
-    
+
     const configService = CacheConfigService.getInstance()
     const cachePath = configService.getCacheDirectory()
-    
+
     expect(cachePath).toBe(path.resolve('/tmp/some-cache'))
   })
 
   it('uses default cache directory when CACHE_DIR is not set', () => {
     delete process.env.CACHE_DIR
     CacheConfigService.resetInstance()
-    
+
     const configService = CacheConfigService.getInstance()
     const cachePath = configService.getCacheDirectory()
-    
+
     expect(cachePath).toBe(path.resolve('./cache'))
   })
 
@@ -44,10 +44,10 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
     process.env.CACHE_DIR = '/tmp/unified-cache'
     process.env.DISTRICT_CACHE_DIR = '/tmp/old-cache'
     CacheConfigService.resetInstance()
-    
+
     const configService = CacheConfigService.getInstance()
     const cachePath = configService.getCacheDirectory()
-    
+
     expect(cachePath).toBe(path.resolve('/tmp/unified-cache'))
     expect(cachePath).not.toBe(path.resolve('/tmp/old-cache'))
   })
@@ -55,10 +55,10 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
   it('falls back to default when CACHE_DIR is empty', () => {
     process.env.CACHE_DIR = ''
     CacheConfigService.resetInstance()
-    
+
     const configService = CacheConfigService.getInstance()
     const cachePath = configService.getCacheDirectory()
-    
+
     expect(cachePath).toBe(path.resolve('./cache'))
   })
 })

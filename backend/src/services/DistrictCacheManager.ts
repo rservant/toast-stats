@@ -15,7 +15,9 @@
  *
  * @example
  * ```typescript
- * const cacheManager = new DistrictCacheManager('./cache');
+ * const cacheManager = new DistrictCacheManager(); // Uses configured cache directory
+ * // or
+ * const cacheManager = new DistrictCacheManager('/custom/cache/path');
  * await cacheManager.cacheDistrictData('123', '2025-01-15', districtData, divisionData, clubData);
  * const cached = await cacheManager.getDistrictData('123', '2025-01-15');
  * ```
@@ -24,6 +26,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
+import { CacheConfigService } from './CacheConfigService.js'
 import type {
   DistrictCacheEntry,
   DistrictDataRange,
@@ -63,10 +66,16 @@ export class DistrictCacheManager {
   /**
    * Creates a new DistrictCacheManager instance
    *
-   * @param cacheDir - Base directory for cache storage (default: './cache')
+   * @param cacheDir - Base directory for cache storage (uses configured cache directory if not provided)
    */
-  constructor(cacheDir: string = './cache') {
-    this.cacheDir = cacheDir
+  constructor(cacheDir?: string) {
+    if (cacheDir) {
+      this.cacheDir = cacheDir
+    } else {
+      // Use configured cache directory as default
+      const cacheConfig = CacheConfigService.getInstance()
+      this.cacheDir = cacheConfig.getCacheDirectory()
+    }
     // Normalize and fix the root directory for all district cache files
     this.districtRoot = path.resolve(this.cacheDir, 'districts')
   }

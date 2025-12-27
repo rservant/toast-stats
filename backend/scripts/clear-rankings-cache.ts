@@ -24,6 +24,7 @@
  */
 
 import { CacheManager } from '../src/services/CacheManager.js'
+import { CacheConfigService } from '../src/services/CacheConfigService.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -35,8 +36,11 @@ async function clearRankingsCache() {
     console.log('🧹 Clearing district rankings cache...')
     console.log('')
 
-    // Initialize cache manager with production cache directory
-    const cacheDir = path.join(__dirname, '..', 'cache')
+    // Use configured cache directory
+    const cacheConfig = CacheConfigService.getInstance()
+    await cacheConfig.initialize()
+    const cacheDir = cacheConfig.getCacheDirectory()
+
     const cacheManager = new CacheManager(cacheDir)
 
     console.log(`📁 Cache directory: ${cacheDir}`)

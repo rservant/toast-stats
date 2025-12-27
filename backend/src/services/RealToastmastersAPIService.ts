@@ -5,6 +5,7 @@
 
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { CacheManager } from './CacheManager.js'
+import { CacheConfigService } from './CacheConfigService.js'
 import { logger } from '../utils/logger.js'
 import type {
   ScrapedRecord,
@@ -24,7 +25,11 @@ export class RealToastmastersAPIService {
     }
 
     this.scraper = new ToastmastersScraper()
-    this.cacheManager = new CacheManager()
+
+    // Use configured cache directory
+    const cacheConfig = CacheConfigService.getInstance()
+    const cacheDir = cacheConfig.getCacheDirectory()
+    this.cacheManager = new CacheManager(cacheDir)
   }
 
   /**

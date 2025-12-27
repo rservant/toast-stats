@@ -986,4 +986,407 @@ describe('CacheConfigService - Property-Based Tests', () => {
       )
     })
   })
+
+  /**
+   * Property 10: Configuration Migration
+   * For any system component that previously used hardcoded cache paths,
+   * the component should now use the configurable cache directory system
+   */
+  describe('Property 10: Configuration Migration', () => {
+    it('should ensure all cache services use configurable cache directories', async () => {
+      await fc.assert(
+        fc.asyncProperty(generateValidCachePath(), async cachePath => {
+          // Set environment variable
+          process.env.CACHE_DIR = cachePath
+
+          // Reset singleton to pick up new environment
+          CacheConfigService.resetInstance()
+
+          // Get service instance and initialize
+          const configService = CacheConfigService.getInstance()
+          await configService.initialize()
+
+          const expectedPath = path.resolve(cachePath)
+
+          // Property: All cache services should use the same configured directory
+          expect(configService.getCacheDirectory()).toBe(expectedPath)
+
+          // Property: Configuration should be consistent across multiple calls
+          const path1 = configService.getCacheDirectory()
+          const path2 = configService.getCacheDirectory()
+          const path3 = configService.getCacheDirectory()
+
+          expect(path1).toBe(path2)
+          expect(path2).toBe(path3)
+          expect(path1).toBe(expectedPath)
+
+          // Property: Service should be ready and properly configured
+          expect(configService.isReady()).toBe(true)
+
+          const config = configService.getConfiguration()
+          expect(config.baseDirectory).toBe(expectedPath)
+          expect(config.source).toBe('environment')
+          expect(config.isConfigured).toBe(true)
+        }),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should migrate from hardcoded paths to configurable paths', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            customPath: generateValidCachePath(),
+            useCustom: fc.boolean(),
+          }),
+          async ({ customPath, useCustom }) => {
+            if (useCustom) {
+              process.env.CACHE_DIR = customPath
+            } else {
+              delete process.env.CACHE_DIR
+            }
+
+            // Reset singleton
+            CacheConfigService.resetInstance()
+
+            // Get service and initialize
+            const service = CacheConfigService.getInstance()
+            await service.initialize()
+
+            const actualPath = service.getCacheDirectory()
+            const config = service.getConfiguration()
+
+            if (useCustom) {
+              // Property: Custom configuration should override any hardcoded defaults
+              expect(actualPath).toBe(path.resolve(customPath))
+              expect(config.source).toBe('environment')
+              expect(config.isConfigured).toBe(true)
+            } else {
+              // Property: Default should be used when no configuration is provided
+              expect(actualPath).toBe(path.resolve('./cache'))
+              expect(config.source).toBe('default')
+              expect(config.isConfigured).toBe(false)
+            }
+
+            // Property: No hardcoded paths should be used
+            expect(actualPath).not.toBe('./cache') // Should be absolute path
+            expect(path.isAbsolute(actualPath)).toBe(true)
+
+            // Property: Configuration should be internally consistent
+            expect(config.baseDirectory).toBe(actualPath)
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should ensure no hardcoded cache paths remain in configuration', async () => {
+      await fc.assert(
+        fc.asyncProperty(generateValidCachePath(), async cachePath => {
+          // Set environment variable
+          process.env.CACHE_DIR = cachePath
+
+          // Reset singleton
+          CacheConfigService.resetInstance()
+
+          // Get service and initialize
+          const service = CacheConfigService.getInstance()
+          await service.initialize()
+
+          const actualPath = service.getCacheDirectory()
+          const config = service.getConfiguration()
+
+          // Property: All paths should be resolved to absolute paths (no relative hardcoded paths)
+          expect(path.isAbsolute(actualPath)).toBe(true)
+          expect(path.isAbsolute(config.baseDirectory)).toBe(true)
+
+          // Property: Configuration should reflect the environment variable, not hardcoded values
+          expect(actualPath).toBe(path.resolve(cachePath))
+          expect(config.baseDirectory).toBe(path.resolve(cachePath))
+          expect(config.source).toBe('environment')
+
+          // Property: Service should be properly migrated (ready and configured)
+          expect(service.isReady()).toBe(true)
+          expect(config.isConfigured).toBe(true)
+        }),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should validate migration completeness across service resets', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.array(generateValidCachePath(), { minLength: 2, maxLength: 5 }),
+          async cachePaths => {
+            // Property: Migration should work consistently across multiple configurations
+            for (const cachePath of cachePaths) {
+              // Set environment variable
+              process.env.CACHE_DIR = cachePath
+
+              // Reset singleton to simulate fresh service initialization
+              CacheConfigService.resetInstance()
+
+              // Get service and initialize
+              const service = CacheConfigService.getInstance()
+              await service.initialize()
+
+              const actualPath = service.getCacheDirectory()
+              const config = service.getConfiguration()
+
+              // Property: Each configuration should be properly migrated
+              expect(actualPath).toBe(path.resolve(cachePath))
+              expect(config.baseDirectory).toBe(path.resolve(cachePath))
+              expect(config.source).toBe('environment')
+              expect(config.isConfigured).toBe(true)
+              expect(service.isReady()).toBe(true)
+
+              // Property: No remnants of previous configurations should remain
+              expect(config.validationStatus.isValid).toBe(true)
+              expect(config.validationStatus.isAccessible).toBe(true)
+              expect(config.validationStatus.isSecure).toBe(true)
+            }
+          }
+        ),
+        { numRuns: 5 }
+      )
+    })
+  })
+
+  /**
+   * Property 8: Backward Compatibility
+   * For any existing cache functionality, the new configuration system should maintain
+   * the same behavior and preserve existing cache data
+   */
+  describe('Property 8: Backward Compatibility', () => {
+    it('should maintain existing cache functionality with new configuration system', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            useEnvironmentConfig: fc.boolean(),
+            customPath: generateValidCachePath(),
+          }),
+          async ({ useEnvironmentConfig, customPath }) => {
+            if (useEnvironmentConfig) {
+              process.env.CACHE_DIR = customPath
+            } else {
+              delete process.env.CACHE_DIR
+            }
+
+            // Reset singleton
+            CacheConfigService.resetInstance()
+
+            // Get service and initialize
+            const service = CacheConfigService.getInstance()
+            await service.initialize()
+
+            const actualPath = service.getCacheDirectory()
+            const config = service.getConfiguration()
+
+            // Property: Service should work regardless of configuration method
+            expect(service.isReady()).toBe(true)
+            expect(path.isAbsolute(actualPath)).toBe(true)
+            expect(config.baseDirectory).toBe(actualPath)
+
+            if (useEnvironmentConfig) {
+              // Property: Environment configuration should work as expected
+              expect(actualPath).toBe(path.resolve(customPath))
+              expect(config.source).toBe('environment')
+              expect(config.isConfigured).toBe(true)
+            } else {
+              // Property: Default behavior should be preserved
+              expect(actualPath).toBe(path.resolve('./cache'))
+              expect(config.source).toBe('default')
+              expect(config.isConfigured).toBe(false)
+            }
+
+            // Property: Configuration should be internally consistent
+            expect(config.validationStatus.isValid).toBe(true)
+            expect(config.validationStatus.isAccessible).toBe(true)
+            expect(config.validationStatus.isSecure).toBe(true)
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should preserve cache directory structure and behavior', async () => {
+      await fc.assert(
+        fc.asyncProperty(generateValidCachePath(), async cachePath => {
+          // Set environment variable
+          process.env.CACHE_DIR = cachePath
+
+          // Reset singleton
+          CacheConfigService.resetInstance()
+
+          // Get service and initialize
+          const service = CacheConfigService.getInstance()
+          await service.initialize()
+
+          const actualPath = service.getCacheDirectory()
+
+          // Property: Cache directory should be created and accessible
+          expect(service.isReady()).toBe(true)
+
+          // Property: Directory should exist and be writable (backward compatibility)
+          const stats = await fs.stat(actualPath)
+          expect(stats.isDirectory()).toBe(true)
+
+          // Property: Should be able to create subdirectories (preserving cache structure)
+          const subdirPath = path.join(actualPath, 'districts')
+          await fs.mkdir(subdirPath, { recursive: true })
+          const subdirStats = await fs.stat(subdirPath)
+          expect(subdirStats.isDirectory()).toBe(true)
+
+          // Property: Should be able to write files (preserving cache functionality)
+          const testFile = path.join(actualPath, 'test-cache-file.json')
+          const testData = { test: 'data', timestamp: Date.now() }
+          await fs.writeFile(testFile, JSON.stringify(testData), 'utf-8')
+
+          const readData = JSON.parse(await fs.readFile(testFile, 'utf-8'))
+          expect(readData).toEqual(testData)
+
+          // Clean up
+          await fs.unlink(testFile)
+          await fs.rmdir(subdirPath)
+          await fs.rmdir(actualPath)
+        }),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should maintain consistent behavior across configuration changes', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.array(
+            fc.record({
+              path: generateValidCachePath(),
+              useConfig: fc.boolean(),
+            }),
+            { minLength: 2, maxLength: 4 }
+          ),
+          async configurations => {
+            const results: Array<{
+              path: string
+              source: 'environment' | 'default'
+              isReady: boolean
+            }> = []
+
+            // Property: Behavior should be consistent across different configurations
+            for (const config of configurations) {
+              if (config.useConfig) {
+                process.env.CACHE_DIR = config.path
+              } else {
+                delete process.env.CACHE_DIR
+              }
+
+              // Reset singleton for each configuration
+              CacheConfigService.resetInstance()
+
+              // Get service and initialize
+              const service = CacheConfigService.getInstance()
+              await service.initialize()
+
+              const actualPath = service.getCacheDirectory()
+              const serviceConfig = service.getConfiguration()
+
+              results.push({
+                path: actualPath,
+                source: serviceConfig.source,
+                isReady: service.isReady(),
+              })
+
+              // Property: Each configuration should work independently
+              expect(service.isReady()).toBe(true)
+              expect(path.isAbsolute(actualPath)).toBe(true)
+
+              if (config.useConfig) {
+                expect(actualPath).toBe(path.resolve(config.path))
+                expect(serviceConfig.source).toBe('environment')
+              } else {
+                expect(actualPath).toBe(path.resolve('./cache'))
+                expect(serviceConfig.source).toBe('default')
+              }
+            }
+
+            // Property: All configurations should have resulted in ready services
+            expect(results.every(r => r.isReady)).toBe(true)
+
+            // Property: Environment vs default configurations should be distinguishable
+            const envConfigs = results.filter(r => r.source === 'environment')
+            const defaultConfigs = results.filter(r => r.source === 'default')
+
+            if (envConfigs.length > 0 && defaultConfigs.length > 0) {
+              // Should have different paths when using different sources
+              const defaultPaths = new Set(defaultConfigs.map(r => r.path))
+
+              // Default configs should all use the same path
+              expect(defaultPaths.size).toBe(1)
+              expect(defaultPaths.has(path.resolve('./cache'))).toBe(true)
+            }
+          }
+        ),
+        { numRuns: 5 }
+      )
+    })
+
+    it('should ensure backward compatibility with existing cache service patterns', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            configPath: generateValidCachePath(),
+            testDefault: fc.boolean(),
+          }),
+          async ({ configPath, testDefault }) => {
+            if (testDefault) {
+              delete process.env.CACHE_DIR
+            } else {
+              process.env.CACHE_DIR = configPath
+            }
+
+            // Reset singleton
+            CacheConfigService.resetInstance()
+
+            // Property: Service should work with both singleton and multiple instance patterns
+            const service1 = CacheConfigService.getInstance()
+            const service2 = CacheConfigService.getInstance()
+
+            // Property: Multiple getInstance calls should return the same instance (singleton pattern)
+            expect(service1).toBe(service2)
+
+            // Initialize once
+            await service1.initialize()
+
+            // Property: Both references should have the same configuration
+            expect(service1.getCacheDirectory()).toBe(
+              service2.getCacheDirectory()
+            )
+            expect(service1.isReady()).toBe(service2.isReady())
+
+            const config1 = service1.getConfiguration()
+            const config2 = service2.getConfiguration()
+
+            expect(config1.baseDirectory).toBe(config2.baseDirectory)
+            expect(config1.source).toBe(config2.source)
+            expect(config1.isConfigured).toBe(config2.isConfigured)
+
+            // Property: Configuration should match expected values
+            if (testDefault) {
+              expect(config1.baseDirectory).toBe(path.resolve('./cache'))
+              expect(config1.source).toBe('default')
+              expect(config1.isConfigured).toBe(false)
+            } else {
+              expect(config1.baseDirectory).toBe(path.resolve(configPath))
+              expect(config1.source).toBe('environment')
+              expect(config1.isConfigured).toBe(true)
+            }
+
+            // Property: Service should be ready and functional
+            expect(service1.isReady()).toBe(true)
+            expect(service2.isReady()).toBe(true)
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+  })
 })

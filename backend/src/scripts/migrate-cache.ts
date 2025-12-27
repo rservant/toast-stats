@@ -12,6 +12,7 @@
  */
 
 import { CacheManager } from '../services/CacheManager.js'
+import { CacheConfigService } from '../services/CacheConfigService.js'
 import { logger } from '../utils/logger.js'
 
 async function main() {
@@ -21,7 +22,12 @@ async function main() {
   console.log()
 
   try {
-    const cacheManager = new CacheManager()
+    // Use configured cache directory
+    const cacheConfig = CacheConfigService.getInstance()
+    await cacheConfig.initialize()
+    const cacheDir = cacheConfig.getCacheDirectory()
+
+    const cacheManager = new CacheManager(cacheDir)
 
     // Check current version
     const currentVersion = CacheManager.getCacheVersion()
