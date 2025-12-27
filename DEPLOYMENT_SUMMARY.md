@@ -1,189 +1,119 @@
-# Deployment Summary: District Rankings Improvements
+# Deployment Summary Template
+
+**Date**: [Deployment Date]  
+**Feature**: [Feature Name]  
+**Status**: [Deployment Status]  
 
 ## Overview
 
-This deployment introduces significant improvements to the district rankings system, including a new Borda count scoring methodology and enhanced display features.
+[Brief description of what was deployed and its purpose]
 
 ## Key Changes
 
-### 1. Borda Count Scoring System
+### [Change Category 1]
+- [Description of changes]
+- [Impact of changes]
 
-- **Old System**: Simple rank-sum scoring (lower total = better)
-- **New System**: Borda count scoring (higher total = better)
-- **Impact**: More accurate and fair ranking calculations
+### [Change Category 2]  
+- [Description of changes]
+- [Impact of changes]
 
-### 2. Percentage-Based Ranking
+## Critical Deployment Steps
 
-- **Old Method**: Rankings based on absolute counts
-- **New Method**: Rankings based on growth percentages
-- **Categories Affected**: Paid Clubs, Total Payments, Distinguished Clubs
+### ⚠️ IMPORTANT: [Critical Step if any]
 
-### 3. Enhanced Display
+**Why**: [Explanation of why this step is critical]
 
-- **Addition**: Percentage values shown alongside rank numbers
-- **Color Coding**: Green for positive growth, red for negative growth
-- **Format**: "Rank #5 • +12.5%" or "Rank #3 • -2.1%"
+**What**: [What needs to be done]
 
-## Critical Deployment Step: Cache Clearing
+**When**: [When to perform this step]
 
-### ⚠️ IMPORTANT: Cache Must Be Cleared
-
-**Why**: Existing cached rankings use the old scoring methodology and will display incorrect values if not cleared.
-
-**What to Clear**: District rankings cache files (preserves individual district performance data)
-
-**When**: Immediately after deploying the application code
-
-### Automated Cache Clearing (Recommended)
+### Commands
 
 ```bash
-# Docker deployment
-docker exec -it <backend-container> npm run clear-rankings-cache
+# [Description of command]
+[command here]
 
-# Direct deployment
-cd backend && npm run clear-rankings-cache
-```
-
-### Manual Cache Clearing (Fallback)
-
-```bash
-# Docker deployment
-docker exec -it <backend-container> rm -rf /app/cache/districts_*.json
-docker exec -it <backend-container> rm -rf /app/cache/metadata_*.json
-docker exec -it <backend-container> rm -rf /app/cache/historical_index.json
-
-# Direct deployment
-rm -rf backend/cache/districts_*.json
-rm -rf backend/cache/metadata_*.json
-rm -rf backend/cache/historical_index.json
+# [Description of alternative command]
+[alternative command]
 ```
 
 ## Verification Steps
 
-After deployment and cache clearing:
+After deployment:
 
-1. **Restart Application**: Ensure clean state
-
+1. **[Verification Step 1]**: [Description]
    ```bash
-   docker-compose restart backend
+   [verification command]
    ```
 
-2. **Access Rankings Page**: Trigger fresh data fetch
-
+2. **[Verification Step 2]**: [Description]
    ```bash
-   curl https://api.yourdomain.com/api/districts/rankings
+   [verification command]
    ```
 
-3. **Verify Display**: Check that rankings show:
-   - Higher aggregate scores for better-performing districts
-   - Percentage values alongside rank numbers
-   - Color-coded percentages (green/red)
-
-4. **Check Cache Version**: Confirm using new system
-   ```bash
-   curl https://api.yourdomain.com/api/districts/cache/version
-   ```
+3. **[Verification Step 3]**: Check that [expected behavior]
 
 ## Expected Results
 
-### Before (Old System)
-
-```json
-{
-  "districtId": "42",
-  "aggregateScore": 15, // Lower = better (rank sum)
-  "clubsRank": 5,
-  "paymentsRank": 3,
-  "distinguishedRank": 7
-}
+### Before Deployment
+```
+[Example of old behavior/output]
 ```
 
-### After (New System)
-
-```json
-{
-  "districtId": "42",
-  "aggregateScore": 285, // Higher = better (Borda points)
-  "clubsRank": 5, // Based on growth %
-  "paymentsRank": 3, // Based on growth %
-  "distinguishedRank": 7, // Based on % of clubs
-  "clubGrowthPercent": 12.5,
-  "paymentGrowthPercent": 8.3,
-  "distinguishedPercent": 45.2
-}
+### After Deployment
 ```
-
-### Frontend Display
-
-```
-Paid Clubs: 123
-Rank #5 • +12.5%
-
-Total Payments: $45,678
-Rank #3 • +8.3%
-
-Distinguished: 45
-Rank #7 • 45.2%
+[Example of new behavior/output]
 ```
 
 ## Rollback Plan
 
 If issues occur after deployment:
 
-1. **Revert Code**: Deploy previous version
-2. **Clear Cache**: Remove new cache entries
-3. **Restart**: Ensure clean state
-4. **Verify**: Confirm old system is working
+1. **[Rollback Step 1]**: [Description]
+2. **[Rollback Step 2]**: [Description]
+3. **[Rollback Step 3]**: [Description]
+4. **Verify**: [Verification of rollback success]
 
 ## Monitoring
 
 Monitor these metrics post-deployment:
 
-- **Cache Hit Rate**: Should drop initially, then recover
-- **API Response Times**: May be slower initially as cache rebuilds
-- **Error Rates**: Watch for cache-related errors
-- **User Feedback**: Verify rankings appear correct to users
+- **[Metric 1]**: [Expected behavior]
+- **[Metric 2]**: [Expected behavior]
+- **[Metric 3]**: [Expected behavior]
 
 ## Support Information
 
-### Cache Version System
-
-- **Current Version**: v2 (Borda Count System)
-- **Previous Version**: v1 (Simple Rank Sum)
-- **Compatibility**: Automatic detection and migration
+### [Support Category 1]
+- **[Item 1]**: [Description]
+- **[Item 2]**: [Description]
 
 ### Useful Commands
-
 ```bash
-# Check cache version
-curl https://api.yourdomain.com/api/districts/cache/version
+# [Command description]
+[command]
 
-# Get cache statistics
-curl https://api.yourdomain.com/api/districts/cache/stats
-
-# Clear cache via API
-curl -X DELETE https://api.yourdomain.com/api/districts/cache
+# [Command description]
+[command]
 ```
 
 ### Documentation
-
-- **Detailed Guide**: `backend/CACHE_MIGRATION_GUIDE.md`
-- **Deployment Checklist**: `DEPLOYMENT_CHECKLIST.md`
-- **Full Deployment Guide**: `DEPLOYMENT.md`
+- **[Doc 1]**: [Path/Link]
+- **[Doc 2]**: [Path/Link]
 
 ## Timeline
 
-1. **Deploy Code** (5 minutes)
-2. **Clear Cache** (1 minute)
-3. **Restart Services** (2 minutes)
-4. **Verification** (5 minutes)
-5. **Monitor** (30 minutes)
+1. **[Step 1]** ([duration])
+2. **[Step 2]** ([duration])
+3. **[Step 3]** ([duration])
+4. **[Step 4]** ([duration])
 
-**Total Estimated Downtime**: 2-3 minutes (during restart)
+**Total Estimated Downtime**: [duration]
 
 ---
 
-**Deployment Date**: **\*\***\_\_\_**\*\***  
-**Deployed By**: **\*\***\_\_\_**\*\***  
-**Cache Cleared**: ☐ Yes ☐ No  
+**Deployment Date**: _______________  
+**Deployed By**: _______________  
+**[Critical Step] Complete**: ☐ Yes ☐ No  
 **Verification Complete**: ☐ Yes ☐ No

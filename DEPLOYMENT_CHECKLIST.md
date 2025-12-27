@@ -63,54 +63,36 @@ Use this checklist to ensure a secure and successful production deployment.
 
 ### Cache Management
 
-**IMPORTANT: Clear cache after deploying ranking system changes**
-
-The district rankings calculation has been updated to use a Borda count scoring system with percentage-based ranking. Existing cached rankings use the old scoring methodology (absolute counts instead of percentages) and must be cleared to ensure users see accurate rankings.
-
-#### Automated Cache Clearing (Recommended)
-
-- [ ] Use the automated cache clearing script:
-
+- [ ] **Clean test cache directories** (if deploying after testing):
   ```bash
-  # If using Docker:
-  docker exec -it <backend-container> npm run clear-rankings-cache
-
-  # If running directly:
-  cd backend && npm run clear-rankings-cache
+  # Remove test cache directories
+  find backend/cache -name "test-*" -type d -exec rm -rf {} +
   ```
 
-- [ ] Verify script output shows successful cache clearing
-- [ ] Check that cache version compatibility was verified
-
-#### Manual Cache Clearing (Alternative)
-
-- [ ] Clear all cached district rankings manually:
-
+- [ ] **Clear rankings cache** if rankings logic has changed:
   ```bash
-  # If using Docker:
-  docker exec -it <backend-container> rm -rf /app/cache/districts_*.json
-  docker exec -it <backend-container> rm -rf /app/cache/metadata_*.json
-  docker exec -it <backend-container> rm -rf /app/cache/historical_index.json
-
-  # If running directly:
-  rm -rf backend/cache/districts_*.json
-  rm -rf backend/cache/metadata_*.json
-  rm -rf backend/cache/historical_index.json
+  npm run clear-rankings-cache
   ```
 
-- [ ] Verify cache was cleared (directory should be empty or only contain district-level data)
+- [ ] **Clean old historical data** (optional - keeps last 30 days):
+  ```bash
+  # Remove district data older than 30 days
+  find backend/cache -name "districts_*.json" -mtime +30 -delete
+  find backend/cache -name "metadata_*.json" -mtime +30 -delete
+  ```
 
-#### Post-Cache Clearing Verification
+- [ ] **Verify cache directory structure**:
+  ```bash
+  ls -la backend/cache/
+  # Should show: districts/, reconciliation/, and current data files
+  # Should NOT show: thousands of test-* directories
+  ```
 
-- [ ] Restart the application if it's currently running
-- [ ] Trigger fresh data fetch by accessing the rankings page
-- [ ] Verify new rankings display correctly with Borda scores (higher scores = better)
-- [ ] Verify percentage values display alongside rank numbers
-- [ ] Confirm rankings are based on growth percentages, not absolute counts
-
-**Note:** District-level performance data (in `cache/districts/{districtId}/` subdirectories) does not need to be cleared as it is not affected by the ranking calculation changes.
-
-**Cache Version:** The system now uses cache version 2 (Borda count system). Version 1 cache entries (simple rank-sum system) will be automatically detected and cleared.
+- [ ] **Check cache size** and ensure it's reasonable:
+  ```bash
+  du -sh backend/cache/
+  # Should be < 500MB for normal operation
+  ```
 
 ### Verification
 
@@ -122,8 +104,8 @@ The district rankings calculation has been updated to use a Borda count scoring 
 - [ ] Export functionality works
 - [ ] Mobile responsive design works
 - [ ] All API endpoints respond correctly
-- [ ] District rankings display with correct Borda scores (higher is better)
-- [ ] Percentage values display alongside rank numbers
+- [ ] District rankings display correctly
+- [ ] All data visualizations load properly
 
 ### Security Verification
 

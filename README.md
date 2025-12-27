@@ -121,6 +121,17 @@ USE_MOCK_DATA=false  # Use real scraping (slower, requires Playwright)
 - Responsive design for all devices
 - Accessibility compliant
 
+For detailed project status and implementation information, see [PROJECT_STATUS.md](./PROJECT_STATUS.md).
+
+## Project History
+
+This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs-archive/` for historical reference:
+
+- **toastmasters-district-visualizer**: Original project specification (fully implemented)
+- **district-level-data**: District analytics features (fully implemented)
+
+Active specifications for ongoing maintenance are located in `.kiro/specs/` and `specs/`.
+
 ## Deployment
 
 For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).

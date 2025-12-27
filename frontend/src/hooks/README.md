@@ -214,7 +214,7 @@ if (error) {
 
 ## Requirements Mapping
 
-These hooks fulfill the following requirements from the district-level-data spec:
+These hooks fulfill the following requirements from the archived district-level-data spec (now implemented):
 
 - **Requirement 1.4:** Cache district data retrieval (useDistrictData, useDistrictCachedDates)
 - **Requirement 2.2:** Backfill progress tracking (useDistrictBackfillStatus)
