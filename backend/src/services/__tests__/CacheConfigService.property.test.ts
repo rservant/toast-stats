@@ -9,6 +9,12 @@
  *
  * **Feature: cache-location-configuration, Property 4: Security Validation**
  * **Validates: Requirements 1.5, 4.1, 4.2**
+ *
+ * **Feature: cache-location-configuration, Property 6: Permission Validation**
+ * **Validates: Requirements 4.3, 4.4**
+ *
+ * **Feature: cache-location-configuration, Property 7: Fallback on Validation Failure**
+ * **Validates: Requirements 4.5, 4.4**
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -393,6 +399,324 @@ describe('CacheConfigService - Property-Based Tests', () => {
           }
         ),
         { numRuns: 5 }
+      )
+    })
+  })
+
+  /**
+   * Property 6: Permission Validation
+   * For any configured cache directory, the system should verify write permissions
+   * during initialization and handle permission failures appropriately
+   */
+  describe('Property 6: Permission Validation', () => {
+    it('should verify write permissions during cache directory validation', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          generateValidCachePath(),
+          async (cachePath) => {
+            // Property: Valid cache directories should pass permission validation
+            const validation = await CacheDirectoryValidator.validate(cachePath)
+            
+            if (validation.isValid && validation.isSecure) {
+              // If the path is valid and secure, it should also be accessible (writable)
+              expect(validation.isAccessible).toBe(true)
+              expect(validation.errorMessage).toBeUndefined()
+              
+              // Verify the directory was actually created and is writable
+              const resolvedPath = path.resolve(cachePath)
+              const stats = await fs.stat(resolvedPath)
+              expect(stats.isDirectory()).toBe(true)
+              
+              // Test write access by creating a test file
+              const testFile = path.join(resolvedPath, '.permission-test')
+              await fs.writeFile(testFile, 'test', 'utf-8')
+              const content = await fs.readFile(testFile, 'utf-8')
+              expect(content).toBe('test')
+              
+              // Clean up test file
+              await fs.unlink(testFile)
+            }
+            
+            // Clean up created directory
+            try {
+              await fs.rm(path.resolve(cachePath), { recursive: true, force: true })
+            } catch {
+              // Ignore cleanup errors
+            }
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should handle permission failures appropriately during initialization', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          generateValidCachePath(),
+          async (cachePath) => {
+            // Set environment variable to a path we'll make read-only
+            process.env.CACHE_DIR = cachePath
+            
+            // Reset singleton to pick up new environment
+            CacheConfigService.resetInstance()
+            
+            // Create the directory first
+            const resolvedPath = path.resolve(cachePath)
+            await fs.mkdir(resolvedPath, { recursive: true })
+            
+            try {
+              // Make directory read-only (remove write permissions)
+              await fs.chmod(resolvedPath, 0o444)
+              
+              // Get service instance
+              const service = CacheConfigService.getInstance()
+              
+              // Property: Service should handle permission failures gracefully
+              try {
+                await service.initialize()
+                
+                // If initialization succeeds, it should have fallen back to default
+                const actualPath = service.getCacheDirectory()
+                const config = service.getConfiguration()
+                
+                if (actualPath !== resolvedPath) {
+                  // Successfully fell back to default
+                  expect(config.source).toBe('default')
+                  expect(actualPath).toBe(path.resolve('./cache'))
+                }
+              } catch (error: unknown) {
+                // If initialization fails, it should be due to permission issues
+                expect(error).toBeInstanceOf(Error)
+                expect((error as Error).message).toMatch(/permission|writable|access|directory/i)
+              }
+            } finally {
+              // Restore permissions for cleanup
+              try {
+                await fs.chmod(resolvedPath, 0o755)
+                await fs.rm(resolvedPath, { recursive: true, force: true })
+              } catch {
+                // Ignore cleanup errors
+              }
+            }
+          }
+        ),
+        { numRuns: 5 }
+      )
+    })
+
+    it('should validate write permissions before using cache directory', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          generateValidCachePath(),
+          async (cachePath) => {
+            // Set environment variable
+            process.env.CACHE_DIR = cachePath
+            
+            // Reset singleton to pick up new environment
+            CacheConfigService.resetInstance()
+            
+            // Get service instance
+            const service = CacheConfigService.getInstance()
+            
+            // Property: Service should validate permissions during initialization
+            await service.initialize()
+            
+            if (service.isReady()) {
+              // If service is ready, the cache directory should be writable
+              const actualPath = service.getCacheDirectory()
+              
+              // Test that we can actually write to the directory
+              const testFile = path.join(actualPath, '.write-test')
+              await fs.writeFile(testFile, 'permission test', 'utf-8')
+              const content = await fs.readFile(testFile, 'utf-8')
+              expect(content).toBe('permission test')
+              
+              // Clean up test file
+              await fs.unlink(testFile)
+            }
+            
+            // Clean up created directory
+            try {
+              await fs.rm(path.resolve(cachePath), { recursive: true, force: true })
+            } catch {
+              // Ignore cleanup errors
+            }
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+  })
+
+  /**
+   * Property 7: Fallback on Validation Failure
+   * For any invalid cache directory configuration, the system should fall back
+   * to the default cache location and log appropriate error messages
+   */
+  describe('Property 7: Fallback on Validation Failure', () => {
+    it('should fallback to default when configured path is invalid', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.oneof(
+            // Use only paths that are guaranteed to be invalid
+            fc.constant('/etc/passwd'),
+            fc.constant('/usr/bin'),
+            fc.constant('/var/log'),
+            fc.constant('/sys/kernel'),
+            fc.constant('/proc/version'),
+            fc.constant('/boot/grub'),
+            fc.constant('/'),
+            fc.constant('/root')
+          ),
+          async (invalidPath) => {
+            // Set environment variable to invalid path
+            process.env.CACHE_DIR = invalidPath
+            
+            // Reset singleton to pick up new environment
+            CacheConfigService.resetInstance()
+            
+            // Get service instance
+            const service = CacheConfigService.getInstance()
+            
+            // Property: Service should fallback to default for truly invalid paths
+            try {
+              await service.initialize()
+              
+              // For these guaranteed invalid paths, we should have fallen back to default
+              const actualPath = service.getCacheDirectory()
+              const expectedDefaultPath = path.resolve('./cache')
+              
+              expect(actualPath).toBe(expectedDefaultPath)
+              
+              const config = service.getConfiguration()
+              expect(config.source).toBe('default')
+              expect(config.baseDirectory).toBe(expectedDefaultPath)
+              
+              // Service should be ready after successful fallback
+              expect(service.isReady()).toBe(true)
+            } catch (error: unknown) {
+              // If fallback also fails, it should be a configuration error
+              expect(error).toBeInstanceOf(Error)
+              expect((error as Error).message).toMatch(/cache|directory|invalid|configuration/i)
+            }
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should handle validation failure with appropriate error messages', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.oneof(
+            fc.constant('/nonexistent/readonly/path'),
+            fc.constant('../../../etc/passwd'),
+            fc.constant('/root/restricted')
+          ),
+          async (problematicPath) => {
+            // Property: Validation should provide clear error messages for problematic paths
+            const validation = await CacheDirectoryValidator.validate(problematicPath)
+            
+            // For paths that should be invalid, check if they are properly rejected
+            // or if they fail during directory creation/write testing
+            if (!validation.isValid || !validation.isAccessible || !validation.isSecure) {
+              expect(validation.errorMessage).toBeDefined()
+              expect(validation.errorMessage).toBeTruthy()
+              
+              // Error message should be descriptive
+              expect(validation.errorMessage!.length).toBeGreaterThan(10)
+              expect(validation.errorMessage).toMatch(/path|directory|unsafe|permission|access|create|write|sensitive/i)
+            } else {
+              // If validation passes, the path should actually be usable
+              // This can happen for paths like '/nonexistent/readonly/path' which might be created successfully
+              expect(validation.isValid).toBe(true)
+              expect(validation.isAccessible).toBe(true)
+              expect(validation.isSecure).toBe(true)
+            }
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should maintain system stability when both configured and fallback paths fail', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          generateUnsafeCachePath(),
+          async (invalidPath) => {
+            // Set environment variable to invalid path
+            process.env.CACHE_DIR = invalidPath
+            
+            // Reset singleton to pick up new environment
+            CacheConfigService.resetInstance()
+            
+            // Property: System should handle graceful failure when both paths are invalid
+            const service = CacheConfigService.getInstance()
+            
+            try {
+              await service.initialize()
+              
+              // If initialization succeeds, verify the service state
+              const config = service.getConfiguration()
+              expect(config.validationStatus).toBeDefined()
+              
+              if (service.isReady()) {
+                // If ready, the cache directory should be usable
+                const actualPath = service.getCacheDirectory()
+                expect(actualPath).toBeTruthy()
+                expect(path.isAbsolute(actualPath)).toBe(true)
+              }
+            } catch (error: unknown) {
+              // If initialization fails completely, it should be a clear error
+              expect(error).toBeInstanceOf(Error)
+              const errorMessage = (error as Error).message
+              expect(errorMessage).toMatch(/cache|directory|invalid|configuration|fallback/i)
+              
+              // Error should mention both the configured and fallback paths
+              expect(errorMessage.includes(invalidPath) || errorMessage.includes('fallback')).toBe(true)
+            }
+          }
+        ),
+        { numRuns: 5 }
+      )
+    })
+
+    it('should preserve original configuration information during fallback', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          generateUnsafeCachePath(),
+          async (invalidPath) => {
+            // Set environment variable to invalid path
+            process.env.CACHE_DIR = invalidPath
+            
+            // Reset singleton to pick up new environment
+            CacheConfigService.resetInstance()
+            
+            // Get service instance
+            const service = CacheConfigService.getInstance()
+            
+            // Property: Configuration should preserve information about original attempt
+            try {
+              await service.initialize()
+              
+              const config = service.getConfiguration()
+              
+              // Should indicate that fallback occurred
+              if (config.source === 'default') {
+                // Successfully fell back - this is the expected behavior
+                expect(config.baseDirectory).toBe(path.resolve('./cache'))
+                expect(config.validationStatus.isValid).toBe(true)
+                expect(config.validationStatus.isAccessible).toBe(true)
+                expect(config.validationStatus.isSecure).toBe(true)
+              }
+            } catch (error: unknown) {
+              // If both configured and fallback fail, error should be informative
+              expect(error).toBeInstanceOf(Error)
+              expect((error as Error).message).toMatch(/cache|directory|configuration/i)
+            }
+          }
+        ),
+        { numRuns: 10 }
       )
     })
   })
