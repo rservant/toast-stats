@@ -5,6 +5,7 @@
 
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { fileURLToPath } from 'url'
 import {
   MonthlyAssessment,
   DistrictLeaderGoal,
@@ -22,6 +23,8 @@ interface AssessmentWithDataSources extends MonthlyAssessment {
   data_sources?: Record<string, { cache_file?: string }>
 }
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 const DATA_DIR = path.resolve(__dirname, 'data')
 
 /**
