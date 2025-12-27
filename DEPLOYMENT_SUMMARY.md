@@ -122,7 +122,7 @@ Monitor these metrics post-deployment:
 
 ---
 
-**Deployment Date**: ******\_\_\_******  
-**Deployed By**: ******\_\_\_******  
+**Deployment Date**: **\*\***\_\_\_**\*\***  
+**Deployed By**: **\*\***\_\_\_**\*\***  
 **[Critical Step] Complete**: ☐ Yes ☐ No  
 **Verification Complete**: ☐ Yes ☐ No

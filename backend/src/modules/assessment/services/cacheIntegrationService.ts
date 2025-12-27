@@ -1,6 +1,5 @@
 import { DistrictCacheManager } from '../../../services/DistrictCacheManager.js'
-import fs from 'fs'
-import path from 'path'
+import { CacheConfigService } from '../../../services/CacheConfigService.js'
 import { CspExtractorService } from './cspExtractorService.js'
 
 export interface CompleteAssessmentData {
@@ -23,8 +22,9 @@ export class CacheIntegrationService {
     if (cacheManager) {
       this.cacheManager = cacheManager
     } else {
-      // Choose the cache path using a single helper so it's testable.
-      const cachePath = CacheIntegrationService.selectCachePath()
+      // Use the unified cache configuration service
+      const cacheConfig = CacheConfigService.getInstance()
+      const cachePath = cacheConfig.getCacheDirectory()
       this.cacheManager = new DistrictCacheManager(cachePath)
     }
     this.cspExtractor = cspExtractor ?? new CspExtractorService()
@@ -132,29 +132,6 @@ export class CacheIntegrationService {
     }
 
     return out
-  }
-
-  /**
-   * choose the cache path string used when no explicit
-   * DistrictCacheManager is provided. Honors DISTRICT_CACHE_DIR, then checks
-   * for process.cwd()/cache and process.cwd()/backend/cache before falling
-   * back to './cache'. Returns an absolute path.
-   */
-  static selectCachePath(): string {
-    const envPath = process.env.DISTRICT_CACHE_DIR
-    if (envPath) return path.resolve(envPath)
-
-    try {
-      const cwdCache = path.resolve(process.cwd(), 'cache')
-      const repoCache = path.resolve(process.cwd(), 'backend', 'cache')
-
-      if (fs.existsSync(cwdCache)) return cwdCache
-      if (fs.existsSync(repoCache)) return repoCache
-    } catch {
-      // ignore errors
-    }
-
-    return path.resolve('./cache')
   }
 }
 

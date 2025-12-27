@@ -1,51 +1,64 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import fs from 'fs'
+import { CacheConfigService } from '../../../services/CacheConfigService.js'
 import path from 'path'
-import CacheIntegrationService from '../services/cacheIntegrationService.js'
 
-describe('CacheIntegrationService.selectCachePath', () => {
-  const originalEnv = process.env.DISTRICT_CACHE_DIR
+describe('CacheIntegrationService Cache Path Configuration', () => {
+  let originalEnv: string | undefined
 
   beforeEach(() => {
-    delete process.env.DISTRICT_CACHE_DIR
+    originalEnv = process.env.CACHE_DIR
+    CacheConfigService.resetInstance()
   })
 
   afterEach(() => {
-    process.env.DISTRICT_CACHE_DIR = originalEnv
+    if (originalEnv !== undefined) {
+      process.env.CACHE_DIR = originalEnv
+    } else {
+      delete process.env.CACHE_DIR
+    }
+    CacheConfigService.resetInstance()
     vi.restoreAllMocks()
   })
 
-  it('honors DISTRICT_CACHE_DIR when set', () => {
-    process.env.DISTRICT_CACHE_DIR = '/tmp/some-cache'
-    const p = CacheIntegrationService.selectCachePath()
-    expect(path.resolve('/tmp/some-cache')).toBe(p)
+  it('uses CACHE_DIR when set', () => {
+    process.env.CACHE_DIR = '/tmp/some-cache'
+    CacheConfigService.resetInstance()
+    
+    const configService = CacheConfigService.getInstance()
+    const cachePath = configService.getCacheDirectory()
+    
+    expect(cachePath).toBe(path.resolve('/tmp/some-cache'))
   })
 
-  it('prefers cwd/cache when present', () => {
-    vi.spyOn(fs, 'existsSync').mockImplementation(p => {
-      if (p === path.resolve(process.cwd(), 'cache')) return true
-      return false
-    })
-
-    const p = CacheIntegrationService.selectCachePath()
-    expect(p).toBe(path.resolve(process.cwd(), 'cache'))
+  it('uses default cache directory when CACHE_DIR is not set', () => {
+    delete process.env.CACHE_DIR
+    CacheConfigService.resetInstance()
+    
+    const configService = CacheConfigService.getInstance()
+    const cachePath = configService.getCacheDirectory()
+    
+    expect(cachePath).toBe(path.resolve('./cache'))
   })
 
-  it('falls back to backend/cache when cwd/cache absent', () => {
-    vi.spyOn(fs, 'existsSync').mockImplementation(p => {
-      if (p === path.resolve(process.cwd(), 'cache')) return false
-      if (p === path.resolve(process.cwd(), 'backend', 'cache')) return true
-      return false
-    })
-
-    const p = CacheIntegrationService.selectCachePath()
-    expect(p).toBe(path.resolve(process.cwd(), 'backend', 'cache'))
+  it('ignores DISTRICT_CACHE_DIR environment variable', () => {
+    process.env.CACHE_DIR = '/tmp/unified-cache'
+    process.env.DISTRICT_CACHE_DIR = '/tmp/old-cache'
+    CacheConfigService.resetInstance()
+    
+    const configService = CacheConfigService.getInstance()
+    const cachePath = configService.getCacheDirectory()
+    
+    expect(cachePath).toBe(path.resolve('/tmp/unified-cache'))
+    expect(cachePath).not.toBe(path.resolve('/tmp/old-cache'))
   })
 
-  it('returns default ./cache when no other options exist', () => {
-    vi.spyOn(fs, 'existsSync').mockImplementation(() => false)
-
-    const p = CacheIntegrationService.selectCachePath()
-    expect(p).toBe(path.resolve('./cache'))
+  it('falls back to default when CACHE_DIR is empty', () => {
+    process.env.CACHE_DIR = ''
+    CacheConfigService.resetInstance()
+    
+    const configService = CacheConfigService.getInstance()
+    const cachePath = configService.getCacheDirectory()
+    
+    expect(cachePath).toBe(path.resolve('./cache'))
   })
 })
