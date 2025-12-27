@@ -132,7 +132,7 @@ export interface CacheConfiguration {
 }
 
 export class CacheConfigService {
-  private static instance: CacheConfigService
+  private static instance: CacheConfigService | undefined
   private readonly cacheDir: string
   private readonly configuration: CacheConfiguration
   private initialized: boolean = false
@@ -313,6 +313,6 @@ export class CacheConfigService {
    * Reset the singleton instance (for testing purposes)
    */
   static resetInstance(): void {
-    CacheConfigService.instance = undefined as any
+    CacheConfigService.instance = undefined
   }
 }

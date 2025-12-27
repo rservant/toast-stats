@@ -10,7 +10,11 @@ import { CacheUpdateManager } from '../CacheUpdateManager'
 import { DistrictCacheManager } from '../DistrictCacheManager'
 import type { DistrictStatistics } from '../../types/districts'
 import type { DataChanges } from '../../types/reconciliation'
-import fs from 'fs/promises'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  type TestCacheConfig,
+} from '../../__tests__/test-cache-helper.js'
 
 // Test interfaces
 interface CacheUpdateResult {
@@ -26,29 +30,18 @@ interface TestUpdateData {
 }
 
 describe('CacheUpdateManager - Property-Based Tests', () => {
+  let testCacheConfig: TestCacheConfig
   let cacheUpdateManager: CacheUpdateManager
   let cacheManager: DistrictCacheManager
-  const testCacheDir = './cache/test-cache-updates'
 
   beforeEach(async () => {
-    // Clean up any existing test cache
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore if directory doesn't exist
-    }
-
-    cacheManager = new DistrictCacheManager(testCacheDir)
+    testCacheConfig = await createTestCacheConfig('cache-update-manager')
+    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     cacheUpdateManager = new CacheUpdateManager(cacheManager)
   })
 
   afterEach(async () => {
-    // Clean up test cache
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   // Test data generators
@@ -321,7 +314,9 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
 
         // Create a mock cache manager that will fail on the second write (the actual update)
         let writeCount = 0
-        const failingCacheManager = new DistrictCacheManager(testCacheDir)
+        const failingCacheManager = new DistrictCacheManager(
+          testCacheConfig.cacheDir
+        )
         const originalCacheMethod =
           failingCacheManager.cacheDistrictData.bind(failingCacheManager)
 

@@ -62,6 +62,25 @@ describe('CacheConfigService - Property-Based Tests', () => {
           // Ignore cleanup errors
         }
       }
+
+      // Also clean up any remaining progress tracker test directories
+      try {
+        const cacheDir = './cache'
+        const entries = await fs.readdir(cacheDir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (
+            entry.isDirectory() &&
+            entry.name.startsWith('test-progress-tracker-')
+          ) {
+            await fs.rm(path.join(cacheDir, entry.name), {
+              recursive: true,
+              force: true,
+            })
+          }
+        }
+      } catch {
+        // Ignore if cache directory doesn't exist
+      }
     } catch {
       // Ignore cleanup errors
     }
@@ -1247,8 +1266,21 @@ describe('CacheConfigService - Property-Based Tests', () => {
 
           // Clean up
           await fs.unlink(testFile)
-          await fs.rmdir(subdirPath)
-          await fs.rmdir(actualPath)
+
+          // Use recursive removal to handle any remaining files
+          try {
+            await fs.rmdir(subdirPath)
+          } catch {
+            // If directory is not empty, remove recursively
+            await fs.rm(subdirPath, { recursive: true, force: true })
+          }
+
+          try {
+            await fs.rmdir(actualPath)
+          } catch {
+            // If directory is not empty, remove recursively
+            await fs.rm(actualPath, { recursive: true, force: true })
+          }
         }),
         { numRuns: 10 }
       )

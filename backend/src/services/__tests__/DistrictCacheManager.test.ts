@@ -1,22 +1,30 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import fs from 'fs/promises'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  initializeTestCache,
+  getTestCacheDirectory,
+} from '../../__tests__/test-cache-helper.js'
+import type { TestCacheConfig } from '../../__tests__/test-cache-helper.js'
 
 describe('DistrictCacheManager', () => {
-  const testCacheDir = './test-cache-districts'
   let cacheManager: DistrictCacheManager
+  let testCacheConfig: TestCacheConfig
 
   beforeEach(async () => {
+    // Create isolated test cache configuration
+    testCacheConfig = await createTestCacheConfig('district-cache-manager')
+    await initializeTestCache(testCacheConfig)
+
+    // Use configured cache directory
+    const testCacheDir = getTestCacheDirectory()
     cacheManager = new DistrictCacheManager(testCacheDir)
   })
 
   afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
+    // Clean up test cache configuration
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   describe('cacheDistrictData', () => {

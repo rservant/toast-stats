@@ -1,23 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { CacheManager } from '../CacheManager.js'
-import fs from 'fs/promises'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  initializeTestCache,
+  getTestCacheDirectory,
+} from '../../__tests__/test-cache-helper.js'
+import type { TestCacheConfig } from '../../__tests__/test-cache-helper.js'
 
 describe('CacheManager - Historical Data Aggregation', () => {
-  const testCacheDir = './test-cache'
   let cacheManager: CacheManager
+  let testCacheConfig: TestCacheConfig
 
   beforeEach(async () => {
+    // Create isolated test cache configuration
+    testCacheConfig = await createTestCacheConfig('cache-manager')
+    await initializeTestCache(testCacheConfig)
+
+    // Use configured cache directory
+    const testCacheDir = getTestCacheDirectory()
     cacheManager = new CacheManager(testCacheDir)
     await cacheManager.init()
   })
 
   afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
+    // Clean up test cache configuration
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   describe('Security Validation', () => {

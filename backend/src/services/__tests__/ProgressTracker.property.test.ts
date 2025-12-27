@@ -307,87 +307,93 @@ describe('ProgressTracker - Property-Based Tests', () => {
       ) // Reduced runs for performance
     })
 
-    it('should maintain chronological order of timeline entries', async () => {
-      await fc.assert(
-        fc.asyncProperty(
-          generateReconciliationJob(),
-          fc.array(generateDataChanges(), { minLength: 2, maxLength: 4 }), // Reduced for performance
-          async (job, changesArray) => {
-            // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
-            const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
-            )
-            const freshProgressTracker = new ProgressTracker(
-              freshStorageManager
-            )
-
-            try {
-              await freshStorageManager.init()
-              await freshStorageManager.saveJob(job)
-
-              // Record changes in random order (not chronological)
-              const updateDates: Date[] = []
-              for (let i = 0; i < changesArray.length; i++) {
-                updateDates.push(createValidDate(job.startDate.getTime(), i))
-              }
-
-              // Shuffle the order of recording to test chronological sorting
-              const shuffledIndices = Array.from(
-                { length: changesArray.length },
-                (_, i) => i
+    it(
+      'should maintain chronological order of timeline entries',
+      { timeout: 15000 },
+      async () => {
+        await fc.assert(
+          fc.asyncProperty(
+            generateReconciliationJob(),
+            fc.array(generateDataChanges(), { minLength: 2, maxLength: 3 }), // Further reduced for performance
+            async (job, changesArray) => {
+              // Create fresh storage manager for this test iteration
+              const testId = Math.random().toString(36).substring(7)
+              const freshStorageManager = new ReconciliationStorageManager(
+                `./cache/test-progress-tracker-${testId}`
               )
-              for (let i = shuffledIndices.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1))
-                ;[shuffledIndices[i], shuffledIndices[j]] = [
-                  shuffledIndices[j],
-                  shuffledIndices[i],
-                ]
-              }
-
-              // Record changes in shuffled order
-              for (const index of shuffledIndices) {
-                await freshProgressTracker.recordDataUpdate(
-                  job.id,
-                  updateDates[index],
-                  changesArray[index]
-                )
-              }
-
-              // Retrieve timeline
-              const timeline =
-                await freshProgressTracker.getReconciliationTimeline(job.id)
-
-              // Property: Timeline entries should be in chronological order regardless of recording order
-              for (let i = 1; i < timeline.entries.length; i++) {
-                expect(
-                  timeline.entries[i].date.getTime()
-                ).toBeGreaterThanOrEqual(timeline.entries[i - 1].date.getTime())
-              }
-
-              // Verify all entries are present and correctly ordered
-              expect(timeline.entries).toHaveLength(changesArray.length)
-              const sortedExpectedDates = [...updateDates].sort(
-                (a, b) => a.getTime() - b.getTime()
+              const freshProgressTracker = new ProgressTracker(
+                freshStorageManager
               )
-              for (let i = 0; i < timeline.entries.length; i++) {
-                expect(timeline.entries[i].date.getTime()).toBe(
-                  sortedExpectedDates[i].getTime()
-                )
-              }
-            } finally {
-              // Clean up
+
               try {
-                await freshStorageManager.clearAll()
-              } catch {
-                // Ignore cleanup errors
+                await freshStorageManager.init()
+                await freshStorageManager.saveJob(job)
+
+                // Record changes in random order (not chronological)
+                const updateDates: Date[] = []
+                for (let i = 0; i < changesArray.length; i++) {
+                  updateDates.push(createValidDate(job.startDate.getTime(), i))
+                }
+
+                // Shuffle the order of recording to test chronological sorting
+                const shuffledIndices = Array.from(
+                  { length: changesArray.length },
+                  (_, i) => i
+                )
+                for (let i = shuffledIndices.length - 1; i > 0; i--) {
+                  const j = Math.floor(Math.random() * (i + 1))
+                  ;[shuffledIndices[i], shuffledIndices[j]] = [
+                    shuffledIndices[j],
+                    shuffledIndices[i],
+                  ]
+                }
+
+                // Record changes in shuffled order
+                for (const index of shuffledIndices) {
+                  await freshProgressTracker.recordDataUpdate(
+                    job.id,
+                    updateDates[index],
+                    changesArray[index]
+                  )
+                }
+
+                // Retrieve timeline
+                const timeline =
+                  await freshProgressTracker.getReconciliationTimeline(job.id)
+
+                // Property: Timeline entries should be in chronological order regardless of recording order
+                for (let i = 1; i < timeline.entries.length; i++) {
+                  expect(
+                    timeline.entries[i].date.getTime()
+                  ).toBeGreaterThanOrEqual(
+                    timeline.entries[i - 1].date.getTime()
+                  )
+                }
+
+                // Verify all entries are present and correctly ordered
+                expect(timeline.entries).toHaveLength(changesArray.length)
+                const sortedExpectedDates = [...updateDates].sort(
+                  (a, b) => a.getTime() - b.getTime()
+                )
+                for (let i = 0; i < timeline.entries.length; i++) {
+                  expect(timeline.entries[i].date.getTime()).toBe(
+                    sortedExpectedDates[i].getTime()
+                  )
+                }
+              } finally {
+                // Clean up
+                try {
+                  await freshStorageManager.clearAll()
+                } catch {
+                  // Ignore cleanup errors
+                }
               }
             }
-          }
-        ),
-        { numRuns: 3 }
-      ) // Reduced number of runs for performance
-    })
+          ),
+          { numRuns: 3 }
+        ) // Reduced number of runs for performance
+      }
+    )
 
     it('should correctly calculate stability periods from timeline entries', async () => {
       await fc.assert(

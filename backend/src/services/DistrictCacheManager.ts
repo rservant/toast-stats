@@ -207,6 +207,9 @@ export class DistrictCacheManager {
 
       // Write atomically to file
       const filePath = this.getDistrictCacheFilePath(districtId, date)
+      // Ensure directory exists for temp file
+      await fs.mkdir(path.dirname(filePath), { recursive: true })
+
       const tempFilePath = `${filePath}.tmp`
 
       // Write to temp file first

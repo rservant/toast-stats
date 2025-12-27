@@ -12,7 +12,11 @@ import { DistrictCacheManager } from '../DistrictCacheManager.js'
 import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type { ScrapedRecord } from '../../types/districts.js'
-import fs from 'fs/promises'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  type TestCacheConfig,
+} from '../../__tests__/test-cache-helper.js'
 
 // Mock interface for ToastmastersScraper
 interface MockToastmastersScraper {
@@ -40,31 +44,22 @@ interface MockToastmastersScraper {
 }
 
 describe('DistrictBackfillService - Property-Based Tests', () => {
-  const testCacheDir = './test-cache-backfill-property'
+  let testCacheConfig: TestCacheConfig
   let cacheManager: DistrictCacheManager
   let scraper: ToastmastersScraper
   let backfillService: DistrictBackfillService
 
   beforeEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Directory might not exist, ignore
-    }
-
-    cacheManager = new DistrictCacheManager(testCacheDir)
+    testCacheConfig = await createTestCacheConfig(
+      'district-backfill-service-property'
+    )
+    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     scraper = new ToastmastersScraper()
     backfillService = new DistrictBackfillService(cacheManager, scraper)
   })
 
   afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   // Property test generators

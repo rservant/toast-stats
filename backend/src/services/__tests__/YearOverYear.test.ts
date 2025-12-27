@@ -6,32 +6,33 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { AnalyticsEngine } from '../AnalyticsEngine.js'
 import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import fs from 'fs/promises'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  initializeTestCache,
+  getTestCacheDirectory,
+} from '../../__tests__/test-cache-helper.js'
+import type { TestCacheConfig } from '../../__tests__/test-cache-helper.js'
 
 describe('Year-Over-Year Comparison Logic', () => {
-  const testCacheDir = 'test-cache-yoy'
   let cacheManager: DistrictCacheManager
   let analyticsEngine: AnalyticsEngine
+  let testCacheConfig: TestCacheConfig
 
   beforeEach(async () => {
+    // Create isolated test cache configuration
+    testCacheConfig = await createTestCacheConfig('year-over-year')
+    await initializeTestCache(testCacheConfig)
+
+    // Use configured cache directory
+    const testCacheDir = getTestCacheDirectory()
     cacheManager = new DistrictCacheManager(testCacheDir)
     analyticsEngine = new AnalyticsEngine(cacheManager)
-
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore if directory doesn't exist
-    }
   })
 
   afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore errors
-    }
+    // Clean up test cache configuration
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   describe('findPreviousProgramYearDate', () => {
