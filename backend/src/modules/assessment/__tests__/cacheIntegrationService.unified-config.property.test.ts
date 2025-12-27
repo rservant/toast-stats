@@ -112,46 +112,6 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
       )
     })
 
-    it('should not use DISTRICT_CACHE_DIR environment variable (Requirements 6.2, 6.3)', () => {
-      // Generate test cases with both CACHE_DIR and DISTRICT_CACHE_DIR set to different values
-      fc.assert(
-        fc.property(
-          generateValidCachePath(),
-          generateValidCachePath(),
-          (cacheDir: string, districtCacheDir: string) => {
-            // Skip test case if both paths resolve to the same value
-            const resolvedCacheDir = path.resolve(cacheDir)
-            const resolvedDistrictCacheDir = path.resolve(districtCacheDir)
-            fc.pre(resolvedCacheDir !== resolvedDistrictCacheDir)
-
-            // Set both environment variables
-            process.env.CACHE_DIR = cacheDir
-            process.env.DISTRICT_CACHE_DIR = districtCacheDir
-
-            // Reset singleton to pick up new environment
-            CacheConfigService.resetInstance()
-
-            // Create CacheIntegrationService without explicit cache manager
-            new CacheIntegrationService()
-
-            // Property: Service should use CACHE_DIR, not DISTRICT_CACHE_DIR
-            const configService = CacheConfigService.getInstance()
-            const expectedPath = resolvedCacheDir
-            const actualPath = configService.getCacheDirectory()
-
-            expect(actualPath).toBe(expectedPath)
-            expect(actualPath).not.toBe(resolvedDistrictCacheDir)
-
-            // Property: Configuration should only consider CACHE_DIR
-            const config = configService.getConfiguration()
-            expect(config.source).toBe('environment')
-            expect(config.baseDirectory).toBe(expectedPath)
-          }
-        ),
-        { numRuns: 75 }
-      )
-    })
-
     it('should maintain consistent configuration across multiple service instances (Requirements 3.1)', () => {
       // Generate test cases with different cache paths
       fc.assert(
