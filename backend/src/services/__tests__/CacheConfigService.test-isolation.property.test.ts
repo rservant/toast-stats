@@ -450,11 +450,21 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
               const cacheConfigService = CacheConfigService.getInstance()
               await cacheConfigService.initialize()
 
-              // Verify correct cache directory
-              expect(cacheConfigService.getCacheDirectory()).toBe(testCacheDir)
+              // Verify correct cache directory (accounting for security validation)
+              const hasUnsafePatterns = testCacheDir.includes('..') || 
+                                      testCacheDir.includes('~') ||
+                                      path.resolve(testCacheDir).includes('..') ||
+                                      path.resolve(testCacheDir) === '/' ||
+                                      path.resolve(testCacheDir) === path.parse(path.resolve(testCacheDir)).root
+              
+              const expectedDir = hasUnsafePatterns 
+                ? path.resolve('./cache')
+                : testCacheDir
+              expect(cacheConfigService.getCacheDirectory()).toBe(expectedDir)
 
-              // Store test data
-              const cacheManager = new DistrictCacheManager(testCacheDir)
+              // Store test data (use the actual cache directory that was configured)
+              const actualCacheDir = cacheConfigService.getCacheDirectory()
+              const cacheManager = new DistrictCacheManager(actualCacheDir)
               const testClubData = [
                 {
                   'Club Number': '1',
