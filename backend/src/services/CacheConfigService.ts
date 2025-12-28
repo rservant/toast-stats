@@ -310,6 +310,35 @@ export class CacheConfigService {
   }
 
   /**
+   * Refresh configuration from environment variables
+   * This is useful when environment variables are loaded after the service is instantiated
+   */
+  refreshConfiguration(): void {
+    const envCacheDir = process.env.CACHE_DIR
+    const isConfigured = !!(envCacheDir && envCacheDir.trim())
+    
+    if (isConfigured) {
+      const newCacheDir = this.resolveCacheDirectory()
+      
+      // Update the cache directory if it changed
+      if (newCacheDir !== this.cacheDir) {
+        Object.defineProperty(this, 'cacheDir', {
+          value: newCacheDir,
+          writable: false,
+        })
+      }
+      
+      // Update configuration
+      this.configuration.baseDirectory = newCacheDir
+      this.configuration.isConfigured = isConfigured
+      this.configuration.source = 'environment'
+      
+      // Reset initialization status so it will re-validate
+      this.initialized = false
+    }
+  }
+
+  /**
    * Reset the singleton instance (for testing purposes)
    */
   static resetInstance(): void {

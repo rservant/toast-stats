@@ -1,12 +1,15 @@
+import dotenv from 'dotenv'
+
+// Load environment variables FIRST, before any other imports
+dotenv.config()
+
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import districtRoutes from './routes/districts.js'
 import reconciliationRoutes from './routes/reconciliation.js'
 import assessmentRoutes from './modules/assessment/routes/assessmentRoutes.js'
 import { logger } from './utils/logger.js'
-
-dotenv.config()
+import { CacheConfigService } from './services/CacheConfigService.js'
 
 const app = express()
 const PORT = process.env.PORT || 5001
@@ -31,13 +34,44 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-  })
+app.get('/health', async (_req, res) => {
+  try {
+    const cacheConfig = CacheConfigService.getInstance()
+    const config = cacheConfig.getConfiguration()
+    
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      cache: {
+        directory: config.baseDirectory,
+        source: config.source,
+        isConfigured: config.isConfigured,
+        isReady: cacheConfig.isReady(),
+        validation: {
+          isValid: config.validationStatus.isValid,
+          isAccessible: config.validationStatus.isAccessible,
+          isSecure: config.validationStatus.isSecure,
+        },
+      },
+    })
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      error: 'Cache configuration error',
+      cache: {
+        directory: process.env.CACHE_DIR || './cache (default)',
+        source: process.env.CACHE_DIR ? 'environment' : 'default',
+        isConfigured: !!process.env.CACHE_DIR,
+        isReady: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    })
+  }
 })
 
 // API routes
@@ -76,12 +110,52 @@ app.use(
   }
 )
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   logger.info('Server started', {
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     healthCheck: `http://localhost:${PORT}/health`,
   })
+
+  // Initialize and log cache configuration
+  try {
+    const cacheConfig = CacheConfigService.getInstance()
+    
+    // Refresh configuration in case environment variables were loaded after instantiation
+    cacheConfig.refreshConfiguration()
+    
+    await cacheConfig.initialize()
+    
+    const config = cacheConfig.getConfiguration()
+    
+    logger.info('Cache configuration initialized', {
+      cacheDirectory: config.baseDirectory,
+      source: config.source,
+      isConfigured: config.isConfigured,
+      environmentVariable: process.env.CACHE_DIR || 'not set',
+      isValid: config.validationStatus.isValid,
+      isAccessible: config.validationStatus.isAccessible,
+      isSecure: config.validationStatus.isSecure,
+    })
+
+    if (config.source === 'environment') {
+      logger.info('✅ Using CACHE_DIR from environment configuration', {
+        configuredPath: process.env.CACHE_DIR,
+        resolvedPath: config.baseDirectory,
+      })
+    } else {
+      logger.warn('⚠️  CACHE_DIR not configured, using default cache directory', {
+        defaultPath: config.baseDirectory,
+        recommendation: 'Set CACHE_DIR environment variable for production use',
+      })
+    }
+  } catch (error) {
+    logger.error('❌ Failed to initialize cache configuration', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      environmentVariable: process.env.CACHE_DIR || 'not set',
+    })
+    // Don't exit the server, but log the critical error
+  }
 })
 
 // Graceful shutdown
