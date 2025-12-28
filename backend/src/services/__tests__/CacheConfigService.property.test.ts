@@ -28,9 +28,14 @@ import {
   CacheConfigService,
   CacheDirectoryValidator,
 } from '../CacheConfigService.ts'
+import { safeString } from '../../utils/test-string-generators'
+import { createTestSelfCleanup } from '../../utils/test-self-cleanup.ts'
 
 describe('CacheConfigService - Property-Based Tests', () => {
   let originalEnv: string | undefined
+  
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
 
   beforeEach(() => {
     // Reset singleton instance before each test
@@ -51,53 +56,17 @@ describe('CacheConfigService - Property-Based Tests', () => {
     // Reset singleton instance after each test
     CacheConfigService.resetInstance()
 
-    // Clean up any test directories
-    try {
-      const testDirs = ['./test-cache', './cache', '/tmp/test-cache-config']
-
-      for (const dir of testDirs) {
-        try {
-          await fs.rm(dir, { recursive: true, force: true })
-        } catch {
-          // Ignore cleanup errors
-        }
-      }
-
-      // Also clean up any remaining progress tracker test directories
-      try {
-        const cacheDir = './cache'
-        const entries = await fs.readdir(cacheDir, { withFileTypes: true })
-        for (const entry of entries) {
-          if (
-            entry.isDirectory() &&
-            entry.name.startsWith('test-progress-tracker-')
-          ) {
-            await fs.rm(path.join(cacheDir, entry.name), {
-              recursive: true,
-              force: true,
-            })
-          }
-        }
-      } catch {
-        // Ignore if cache directory doesn't exist
-      }
-    } catch {
-      // Ignore cleanup errors
-    }
+    // Perform self-cleanup of all tracked resources
+    await performCleanup()
   })
 
   // Test data generators
   const generateValidCachePath = (): fc.Arbitrary<string> =>
     fc.oneof(
       fc.constant('./cache'),
-      fc.constant('./test-cache'),
+      fc.constant('./test-dir/test-cache'),
       fc.constant('/tmp/test-cache-config'),
-      fc
-        .string({ minLength: 5, maxLength: 20 })
-        .filter(
-          s => !s.includes('..') && !s.includes('~') && !s.startsWith('/')
-        )
-        .map(s => `./test-${s.replace(/[^a-zA-Z0-9-]/g, 'x')}`)
+      safeString(5, 20).map(_s => `./test-dir/test-${_s}`)
     )
 
   const generateUnsafeCachePath = (): fc.Arbitrary<string> =>
@@ -111,8 +80,8 @@ describe('CacheConfigService - Property-Based Tests', () => {
       fc.constant('/proc'),
       fc.constant('/boot'),
       fc.constant('~/.ssh'),
-      fc.string({ minLength: 1, maxLength: 10 }).map(s => `../${s}`),
-      fc.string({ minLength: 1, maxLength: 10 }).map(s => `~/${s}`)
+      fc.string({ minLength: 1, maxLength: 10 }).map(_s => `../${_s}`),
+      fc.string({ minLength: 1, maxLength: 10 }).map(_s => `~/${_s}`)
     )
 
   /**
@@ -158,10 +127,7 @@ describe('CacheConfigService - Property-Based Tests', () => {
     it('should resolve relative paths to absolute paths', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc
-            .string({ minLength: 3, maxLength: 15 })
-            .filter(s => !s.includes('..') && !s.includes('~'))
-            .map(s => `./test-${s.replace(/[^a-zA-Z0-9-]/g, 'x')}`),
+          safeString(3, 15).map(_s => `./test-dir/test-${_s}`),
           async relativePath => {
             // Set environment variable with relative path
             process.env.CACHE_DIR = relativePath
@@ -594,10 +560,10 @@ describe('CacheConfigService - Property-Based Tests', () => {
             fc.constant('../../../root'),
             fc
               .string({ minLength: 1, maxLength: 5 })
-              .map(s => `../${s}/../../etc`),
+              .map(_s => `../${_s}/../../etc`),
             fc
               .string({ minLength: 1, maxLength: 5 })
-              .map(s => `${s}/../../../usr`)
+              .map(_s => `${_s}/../../../usr`)
           ),
           async traversalPath => {
             // Property: Path traversal attempts should be rejected

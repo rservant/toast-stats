@@ -7,6 +7,7 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import { deterministicSafeString } from './test-string-generators'
 import { CacheConfigService } from '../services/CacheConfigService.js'
 
 export interface TestCacheConfig {
@@ -21,13 +22,20 @@ export interface TestCacheConfig {
 export async function createTestCacheConfig(
   testName: string
 ): Promise<TestCacheConfig> {
-  // Generate unique test ID
+  // Generate unique test ID using deterministic approach
   const timestamp = Date.now()
-  const randomId = Math.random().toString(36).substring(7)
-  const testId = `${testName}-${timestamp}-${randomId}`
+  const deterministicId = deterministicSafeString(
+    timestamp + testName.length,
+    7
+  )
+  const testId = `${testName}-${timestamp}-${deterministicId}`
 
-  // Create test-specific cache directory
-  const cacheDir = path.resolve(`./test-cache-${testId}`)
+  // Create test-specific cache directory in dedicated test directory
+  const testBaseDir = path.resolve('./test-dir')
+  const cacheDir = path.resolve(testBaseDir, `test-cache-${testId}`)
+
+  // Ensure test base directory exists
+  await fs.mkdir(testBaseDir, { recursive: true })
 
   // Store original CACHE_DIR
   const originalCacheDir = process.env.CACHE_DIR

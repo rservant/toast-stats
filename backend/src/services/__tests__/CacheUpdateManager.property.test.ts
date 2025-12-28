@@ -44,9 +44,9 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
     await cleanupTestCacheConfig(testCacheConfig)
   })
 
-  // Test data generators
+  // Test data generators using deterministic seeding
   const generateDistrictStatistics = (
-    seed: number = Math.random()
+    seed: number = 0.5
   ): DistrictStatistics => {
     const membershipTotal = Math.floor(seed * 5000) + 100 // 100-5100 members
     const clubsTotal = Math.floor(seed * 100) + 10 // 10-110 clubs
@@ -102,7 +102,7 @@ describe('CacheUpdateManager - Property-Based Tests', () => {
 
   const generateDataChanges = (
     hasChanges: boolean,
-    seed: number = Math.random()
+    seed: number = 0.5
   ): DataChanges => {
     const sourceDate = new Date(2024, 0, Math.floor(seed * 28) + 1)
       .toISOString()

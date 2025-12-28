@@ -44,6 +44,7 @@ downloads/
 
 # Test artifacts - temporary directories only
 test-cache*/
+test-dir/
 
 # Generated reports
 typescript-report.json

@@ -3,7 +3,7 @@
  * Tests individual performance features in isolation
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.ts'
 import type {
@@ -12,6 +12,7 @@ import type {
   ReconciliationStatus,
 } from '../../types/reconciliation.ts'
 import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
+import { createTestSelfCleanup } from '../../utils/test-self-cleanup.ts'
 
 // Mock logger
 vi.mock('../../utils/logger.ts', () => ({
@@ -24,21 +25,30 @@ vi.mock('../../utils/logger.ts', () => ({
 }))
 
 describe('ReconciliationCacheService Unit Tests', () => {
-  let cacheService: ReconciliationCacheService
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  
+  // Each test cleans up after itself
+  afterEach(performCleanup)
 
-  beforeEach(() => {
-    cacheService = new ReconciliationCacheService({
+  function setupCacheService() {
+    const cacheService = new ReconciliationCacheService({
       maxSize: 10,
       ttlMs: 60000, // 1 minute
       enablePrefetch: false, // Disable for unit tests
     })
-  })
-
-  afterEach(() => {
-    cacheService.shutdown()
-  })
+    
+    // Register cleanup for the cache service
+    cleanup.addCleanupFunction(async () => {
+      cacheService.shutdown()
+    })
+    
+    return cacheService
+  }
 
   it('should cache and retrieve jobs correctly', () => {
+    const cacheService = setupCacheService()
+    
     const job: ReconciliationJob = createTestReconciliationJob({
       id: 'test-job-1',
       districtId: 'D1',
@@ -69,6 +79,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
   })
 
   it('should cache and retrieve timelines correctly', () => {
+    const cacheService = setupCacheService()
+    
     const timeline: ReconciliationTimeline = {
       jobId: 'test-job-1',
       districtId: 'D1',
@@ -115,6 +127,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
   })
 
   it('should cache and retrieve status correctly', () => {
+    const cacheService = setupCacheService()
+    
     const status: ReconciliationStatus = {
       phase: 'stabilizing',
       daysActive: 5,
@@ -140,6 +154,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
   })
 
   it('should invalidate cache entries correctly', () => {
+    const cacheService = setupCacheService()
+    
     const jobId = 'test-job-invalidate'
     const job: ReconciliationJob = createTestReconciliationJob({
       id: jobId,
@@ -186,6 +202,8 @@ describe('ReconciliationCacheService Unit Tests', () => {
   })
 
   it('should provide accurate cache statistics', () => {
+    const cacheService = setupCacheService()
+    
     // Initially empty
     let stats = cacheService.getStats()
     expect(stats.size).toBe(0)
@@ -225,17 +243,25 @@ describe('ReconciliationCacheService Unit Tests', () => {
 })
 
 describe('ReconciliationPerformanceMonitor Unit Tests', () => {
-  let monitor: ReconciliationPerformanceMonitor
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  
+  // Each test cleans up after itself
+  afterEach(performCleanup)
 
-  beforeEach(() => {
-    monitor = new ReconciliationPerformanceMonitor()
-  })
-
-  afterEach(() => {
-    monitor.shutdown()
-  })
+  function setupMonitor() {
+    const monitor = new ReconciliationPerformanceMonitor()
+    
+    // Register cleanup for the monitor
+    cleanup.addCleanupFunction(async () => {
+      monitor.shutdown()
+    })
+    
+    return monitor
+  }
 
   it('should record and retrieve operation metrics', () => {
+    const monitor = setupMonitor()
     const operationName = 'test-operation'
 
     // Record some metrics
@@ -256,6 +282,7 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
   })
 
   it('should time operations automatically', async () => {
+    const monitor = setupMonitor()
     const operationName = 'timed-operation'
     const expectedResult = 'operation-result'
 
@@ -275,6 +302,7 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
   })
 
   it('should handle operation failures correctly', async () => {
+    const monitor = setupMonitor()
     const operationName = 'failing-operation'
     const errorMessage = 'Test error'
 
@@ -293,6 +321,8 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
   })
 
   it('should identify performance bottlenecks', () => {
+    const monitor = setupMonitor()
+    
     // Record metrics for a slow operation
     monitor.recordMetric('slow-operation', 15000, true) // 15 seconds
     monitor.recordMetric('slow-operation', 20000, true) // 20 seconds
@@ -313,6 +343,8 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
   })
 
   it('should generate comprehensive performance reports', () => {
+    const monitor = setupMonitor()
+    
     // Record various metrics
     monitor.recordMetric('operation-1', 1000, true)
     monitor.recordMetric('operation-1', 1200, true)
@@ -330,6 +362,8 @@ describe('ReconciliationPerformanceMonitor Unit Tests', () => {
   })
 
   it('should clear metrics correctly', () => {
+    const monitor = setupMonitor()
+    
     // Record some metrics
     monitor.recordMetric('test-op', 100, true)
 

@@ -1,13 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { DistrictBackfillService } from '../DistrictBackfillService.ts'
 import { DistrictCacheManager } from '../DistrictCacheManager.ts'
 import { ToastmastersScraper } from '../ToastmastersScraper.ts'
 import type { ScrapedRecord } from '../../types/districts.ts'
-import {
-  createTestCacheConfig,
-  cleanupTestCacheConfig,
-  type TestCacheConfig,
-} from '../../utils/test-cache-helper.ts'
+import { createTestSelfCleanup, createUniqueTestDir } from '../../utils/test-self-cleanup.ts'
 
 // Mock interface for ToastmastersScraper
 interface MockToastmastersScraper {
@@ -35,24 +31,24 @@ interface MockToastmastersScraper {
 }
 
 describe('DistrictBackfillService', () => {
-  let testCacheConfig: TestCacheConfig
-  let cacheManager: DistrictCacheManager
-  let scraper: ToastmastersScraper
-  let backfillService: DistrictBackfillService
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  
+  // Each test cleans up after itself
+  afterEach(performCleanup)
 
-  beforeEach(async () => {
-    testCacheConfig = await createTestCacheConfig('district-backfill-service')
-    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
-    scraper = new ToastmastersScraper()
-    backfillService = new DistrictBackfillService(cacheManager, scraper)
-  })
-
-  afterEach(async () => {
-    await cleanupTestCacheConfig(testCacheConfig)
-  })
+  function setupBackfillService() {
+    const cacheDir = createUniqueTestDir(cleanup, 'district-backfill-service')
+    const cacheManager = new DistrictCacheManager(cacheDir)
+    const scraper = new ToastmastersScraper()
+    const backfillService = new DistrictBackfillService(cacheManager, scraper)
+    
+    return { cacheManager, scraper, backfillService }
+  }
 
   describe('initiateDistrictBackfill', () => {
     it('should create a backfill job with unique ID', async () => {
+      const { backfillService } = setupBackfillService()
       const districtId = '42'
       const startDate = '2024-11-01'
       const endDate = '2024-11-05'
@@ -69,6 +65,7 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should track job status and progress', async () => {
+      const { backfillService } = setupBackfillService()
       const districtId = '42'
       const startDate = '2024-11-01'
       const endDate = '2024-11-03'
@@ -90,6 +87,7 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should reject invalid date range', async () => {
+      const { backfillService } = setupBackfillService()
       const districtId = '42'
       const startDate = '2024-11-10'
       const endDate = '2024-11-05' // End before start
@@ -104,6 +102,7 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should reject future end date', async () => {
+      const { backfillService } = setupBackfillService()
       const districtId = '42'
       const futureDate = new Date()
       futureDate.setDate(futureDate.getDate() + 10)
@@ -118,6 +117,7 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should skip already cached dates', async () => {
+      const { cacheManager, backfillService } = setupBackfillService()
       const districtId = '42'
       const date = '2024-11-01'
 
@@ -137,6 +137,7 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should reject when all dates are already cached', async () => {
+      const { cacheManager, backfillService } = setupBackfillService()
       const districtId = '42'
       const dates = ['2024-11-01', '2024-11-02', '2024-11-03']
 
@@ -157,11 +158,13 @@ describe('DistrictBackfillService', () => {
 
   describe('getBackfillStatus', () => {
     it('should return null for non-existent job', () => {
+      const { backfillService } = setupBackfillService()
       const status = backfillService.getBackfillStatus('non-existent-id')
       expect(status).toBeNull()
     })
 
     it('should return current job status', async () => {
+      const { backfillService } = setupBackfillService()
       const districtId = '42'
       const backfillId = await backfillService.initiateDistrictBackfill({
         districtId,
@@ -180,6 +183,7 @@ describe('DistrictBackfillService', () => {
 
   describe('cancelBackfill', () => {
     it('should cancel a processing job', async () => {
+      const { backfillService } = setupBackfillService()
       const districtId = '42'
       const backfillId = await backfillService.initiateDistrictBackfill({
         districtId,
@@ -198,6 +202,7 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should return false for non-existent job', async () => {
+      const { backfillService } = setupBackfillService()
       const cancelled = await backfillService.cancelBackfill('non-existent-id')
       expect(cancelled).toBe(false)
     })
@@ -205,6 +210,8 @@ describe('DistrictBackfillService', () => {
 
   describe('error handling', () => {
     it('should handle scraper errors gracefully', async () => {
+      const { cacheManager } = setupBackfillService()
+      
       // Mock scraper to throw errors
       const errorScraper: MockToastmastersScraper = {
         config: { baseUrl: 'test', headless: true, timeout: 30000 },
@@ -248,6 +255,8 @@ describe('DistrictBackfillService', () => {
     })
 
     it('should continue processing after individual date failures', async () => {
+      const { cacheManager } = setupBackfillService()
+      
       // Mock scraper to fail on first date, succeed on second
       let callCount = 0
       const mixedScraper: MockToastmastersScraper = {
@@ -295,6 +304,7 @@ describe('DistrictBackfillService', () => {
 
   describe('cleanupOldJobs', () => {
     it('should remove old completed jobs', async () => {
+      const { cacheManager } = setupBackfillService()
       const districtId = '42'
 
       // Use mock scraper to avoid real network calls

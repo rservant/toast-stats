@@ -9,9 +9,9 @@ process.env.USE_MOCK_DATA = 'true'
 // Ensure NODE_ENV is set to test
 process.env.NODE_ENV = 'test'
 
-// Set default test cache directory if not already configured
+// Set deterministic test cache directory if not already configured
 if (!process.env.CACHE_DIR) {
-  process.env.CACHE_DIR = './test-cache-default'
+  process.env.CACHE_DIR = './test-dir/test-cache-default'
 }
 
 // Suppress unhandled promise rejection warnings in tests

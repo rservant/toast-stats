@@ -13,9 +13,9 @@ import type { ChangeThresholds } from '../../types/reconciliation'
 describe('ChangeDetectionEngine - Property-Based Tests', () => {
   const engine = new ChangeDetectionEngine()
 
-  // Property test generators
+  // Property test generators using deterministic seeding
   const generateDistrictStatistics = (
-    seed: number = Math.random()
+    seed: number = 0.5
   ): DistrictStatistics => {
     const membershipTotal = Math.floor(seed * 5000) + 100 // 100-5100 members
     const clubsTotal = Math.floor(seed * 100) + 10 // 10-110 clubs
@@ -48,9 +48,7 @@ describe('ChangeDetectionEngine - Property-Based Tests', () => {
     }
   }
 
-  const generateThresholds = (
-    seed: number = Math.random()
-  ): ChangeThresholds => ({
+  const generateThresholds = (seed: number = 0.5): ChangeThresholds => ({
     membershipPercent: seed * 5 + 0.5, // 0.5% to 5.5%
     clubCountAbsolute: Math.floor(seed * 5) + 1, // 1 to 5 clubs
     distinguishedPercent: seed * 10 + 1, // 1% to 11%

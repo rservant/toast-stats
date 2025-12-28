@@ -1,23 +1,32 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { AlertManager, AlertSeverity, AlertCategory } from '../AlertManager.ts'
+import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 
 describe('AlertManager', () => {
-  let alertManager: AlertManager
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
 
-  beforeEach(() => {
+  // Each test cleans up after itself
+  afterEach(performCleanup)
+
+  function setupAlertManager() {
     vi.useFakeTimers()
     // Reset singleton instance for testing
-    ;(AlertManager as unknown as { instance?: AlertManager }).instance =
-      undefined
-    alertManager = AlertManager.getInstance()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+    ;(AlertManager as unknown as { instance?: AlertManager }).instance = undefined
+    const alertManager = AlertManager.getInstance()
+    
+    // Register cleanup for timers
+    cleanup(() => {
+      vi.useRealTimers()
+    })
+    
+    return alertManager
+  }
 
   describe('singleton behavior', () => {
     it('should return the same instance', () => {
+      const alertManager = setupAlertManager()
+      
       const instance1 = AlertManager.getInstance()
       const instance2 = AlertManager.getInstance()
 
@@ -27,6 +36,8 @@ describe('AlertManager', () => {
 
   describe('sendAlert', () => {
     it('should send an alert successfully', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
         AlertCategory.RECONCILIATION,
@@ -46,6 +57,8 @@ describe('AlertManager', () => {
     })
 
     it('should throttle duplicate alerts', async () => {
+      const alertManager = setupAlertManager()
+      
       // Send first alert
       const alertId1 = await alertManager.sendAlert(
         AlertSeverity.HIGH,
@@ -70,6 +83,8 @@ describe('AlertManager', () => {
     })
 
     it('should allow alerts after throttle period', async () => {
+      const alertManager = setupAlertManager()
+      
       // Send first alert
       const alertId1 = await alertManager.sendAlert(
         AlertSeverity.HIGH,
@@ -100,6 +115,8 @@ describe('AlertManager', () => {
 
   describe('specialized alert methods', () => {
     it('should send reconciliation failure alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendReconciliationFailureAlert(
         'D123',
         '2024-01',
@@ -118,6 +135,8 @@ describe('AlertManager', () => {
     })
 
     it('should send circuit breaker alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendCircuitBreakerAlert(
         'dashboard-api',
         'OPEN',
@@ -134,6 +153,8 @@ describe('AlertManager', () => {
     })
 
     it('should send dashboard unavailable alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendDashboardUnavailableAlert(
         120000, // 2 minutes
         'Connection timeout',
@@ -149,6 +170,8 @@ describe('AlertManager', () => {
     })
 
     it('should send data quality alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendDataQualityAlert(
         'D123',
         '2024-01-31',
@@ -165,6 +188,8 @@ describe('AlertManager', () => {
     })
 
     it('should send reconciliation timeout alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendReconciliationTimeoutAlert(
         'D123',
         '2024-01',
@@ -183,6 +208,8 @@ describe('AlertManager', () => {
 
   describe('alert resolution', () => {
     it('should resolve an alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
         AlertCategory.RECONCILIATION,
@@ -200,11 +227,15 @@ describe('AlertManager', () => {
     })
 
     it('should not resolve non-existent alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const resolved = await alertManager.resolveAlert('non-existent-id')
       expect(resolved).toBe(false)
     })
 
     it('should not resolve already resolved alert', async () => {
+      const alertManager = setupAlertManager()
+      
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
         AlertCategory.RECONCILIATION,
@@ -226,6 +257,8 @@ describe('AlertManager', () => {
 
   describe('alert filtering', () => {
     it('should filter alerts by category', async () => {
+      const alertManager = setupAlertManager()
+      
       await alertManager.sendAlert(
         AlertSeverity.HIGH,
         AlertCategory.RECONCILIATION,
@@ -263,6 +296,8 @@ describe('AlertManager', () => {
 
   describe('alert statistics', () => {
     it('should provide accurate statistics', async () => {
+      const alertManager = setupAlertManager()
+      
       // Send various alerts with unique titles to avoid throttling
       const alert1Id = await alertManager.sendAlert(
         AlertSeverity.HIGH,
@@ -305,6 +340,8 @@ describe('AlertManager', () => {
 
   describe('cleanup', () => {
     it('should clean up old resolved alerts', async () => {
+      const alertManager = setupAlertManager()
+      
       // Send and resolve an alert
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
@@ -328,6 +365,8 @@ describe('AlertManager', () => {
     })
 
     it('should not clean up recent resolved alerts', async () => {
+      const alertManager = setupAlertManager()
+      
       // Send and resolve an alert
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,

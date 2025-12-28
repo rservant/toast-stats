@@ -5,9 +5,10 @@
  * step-by-step execution, and comparison with original timelines.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.ts'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.ts'
+import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 import type {
   ReplaySession,
   ReplayOptions,
@@ -44,8 +45,39 @@ interface MockChangeDetectionEngine {
 vi.mock('../../services/ChangeDetectionEngine.ts')
 
 describe('ReconciliationReplayEngine', () => {
-  let replayEngine: ReconciliationReplayEngine
-  let mockChangeDetectionEngine: MockChangeDetectionEngine
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+
+  // Each test cleans up after itself
+  afterEach(performCleanup)
+
+  function createReplayEngine() {
+    const mockChangeDetectionEngine: MockChangeDetectionEngine = {
+      detectChanges: vi.fn(),
+      getChangeHistory: vi.fn(),
+      clearHistory: vi.fn(),
+      isSignificantChange: vi.fn(),
+      calculateChangeMetrics: vi.fn(),
+      detectMembershipChanges: vi.fn(),
+      detectClubCountChanges: vi.fn(),
+      detectDistinguishedChanges: vi.fn(),
+    }
+
+    vi.mocked(ChangeDetectionEngine).mockImplementation(
+      () => mockChangeDetectionEngine as unknown as ChangeDetectionEngine
+    )
+
+    const replayEngine = new ReconciliationReplayEngine(
+      mockChangeDetectionEngine as unknown as ChangeDetectionEngine
+    )
+    
+    // Register cleanup for the replay engine
+    cleanup(() => {
+      // Add any cleanup needed for the replay engine
+    })
+    
+    return { replayEngine, mockChangeDetectionEngine }
+  }
 
   // Test data
   const mockJob: ReconciliationJob = {
@@ -193,29 +225,10 @@ describe('ReconciliationReplayEngine', () => {
     },
   ]
 
-  beforeEach(() => {
-    mockChangeDetectionEngine = {
-      detectChanges: vi.fn(),
-      getChangeHistory: vi.fn(),
-      clearHistory: vi.fn(),
-      isSignificantChange: vi.fn(),
-      calculateChangeMetrics: vi.fn(),
-      detectMembershipChanges: vi.fn(),
-      detectClubCountChanges: vi.fn(),
-      detectDistinguishedChanges: vi.fn(),
-    }
-
-    vi.mocked(ChangeDetectionEngine).mockImplementation(
-      () => mockChangeDetectionEngine as unknown as ChangeDetectionEngine
-    )
-
-    replayEngine = new ReconciliationReplayEngine(
-      mockChangeDetectionEngine as unknown as ChangeDetectionEngine
-    )
-  })
-
   describe('createReplaySession', () => {
     it('should create a new replay session', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Test Replay',
         'Testing replay functionality',
@@ -237,6 +250,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should initialize replay state correctly', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Test Replay',
         'Test description',
@@ -259,6 +274,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should store session for retrieval', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Test Replay',
         'Test description',
@@ -273,9 +290,9 @@ describe('ReconciliationReplayEngine', () => {
   })
 
   describe('executeReplay', () => {
-    let sessionId: string
-
-    beforeEach(() => {
+    function setupReplayTest() {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Test Replay',
         'Test description',
@@ -283,7 +300,7 @@ describe('ReconciliationReplayEngine', () => {
         mockTimeline,
         mockDataSequence
       )
-      sessionId = session.id
+      const sessionId = session.id
 
       // Setup mock change detection
       mockChangeDetectionEngine.detectChanges.mockReturnValue({
@@ -299,9 +316,13 @@ describe('ReconciliationReplayEngine', () => {
       })
 
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
-    })
+      
+      return { replayEngine, mockChangeDetectionEngine, sessionId }
+    }
 
     it('should execute complete replay successfully', async () => {
+      const { replayEngine, sessionId } = setupReplayTest()
+      
       const options: ReplayOptions = {
         stepByStep: false,
         includeDebugInfo: true,
@@ -321,6 +342,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should pause on step-by-step mode', async () => {
+      const { replayEngine, sessionId } = setupReplayTest()
+      
       const options: ReplayOptions = {
         stepByStep: true,
         includeDebugInfo: true,
@@ -336,6 +359,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should pause on significant changes when enabled', async () => {
+      const { replayEngine, mockChangeDetectionEngine, sessionId } = setupReplayTest()
+      
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
       const options: ReplayOptions = {
@@ -355,6 +380,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should respect maxSteps limit', async () => {
+      const { replayEngine, sessionId } = setupReplayTest()
+      
       const options: ReplayOptions = {
         stepByStep: false,
         includeDebugInfo: true,
@@ -371,6 +398,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should handle replay execution errors', async () => {
+      const { replayEngine, mockChangeDetectionEngine, sessionId } = setupReplayTest()
+      
       mockChangeDetectionEngine.detectChanges.mockImplementation(() => {
         throw new Error('Change detection failed')
       })
@@ -389,6 +418,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should throw error for non-existent session', async () => {
+      const { replayEngine } = setupReplayTest()
+      
       const options: ReplayOptions = {
         stepByStep: false,
         includeDebugInfo: true,
@@ -404,10 +435,10 @@ describe('ReconciliationReplayEngine', () => {
   })
 
   describe('executeStep', () => {
-    let session: ReplaySession
-
-    beforeEach(() => {
-      session = replayEngine.createReplaySession(
+    function setupStepTest() {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
+      const session = replayEngine.createReplaySession(
         'Test Replay',
         'Test description',
         mockJob,
@@ -428,9 +459,13 @@ describe('ReconciliationReplayEngine', () => {
       })
 
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(false)
-    })
+      
+      return { replayEngine, mockChangeDetectionEngine, session }
+    }
 
     it('should execute first step (data update only)', async () => {
+      const { replayEngine, session } = setupStepTest()
+      
       const options: ReplayOptions = {
         stepByStep: true,
         includeDebugInfo: true,
@@ -451,6 +486,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should execute subsequent step with change detection', async () => {
+      const { replayEngine, mockChangeDetectionEngine, session } = setupStepTest()
+      
       // First execute step 0
       session.currentStep = 0
       await replayEngine.executeStep(session, {
@@ -484,6 +521,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should detect significant changes', async () => {
+      const { replayEngine, mockChangeDetectionEngine, session } = setupStepTest()
+      
       mockChangeDetectionEngine.isSignificantChange.mockReturnValue(true)
 
       session.currentStep = 1
@@ -501,6 +540,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should handle step execution errors gracefully', async () => {
+      const { replayEngine, mockChangeDetectionEngine, session } = setupStepTest()
+      
       mockChangeDetectionEngine.detectChanges.mockImplementation(() => {
         throw new Error('Detection error')
       })
@@ -519,6 +560,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should validate replay state when enabled', async () => {
+      const { replayEngine, session } = setupStepTest()
+      
       session.currentStep = 1
       const stepResult = await replayEngine.executeStep(session, {
         stepByStep: true,
@@ -535,6 +578,8 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('session management', () => {
     it('should get all replay sessions', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const session1 = replayEngine.createReplaySession(
         'Session 1',
         'Description 1',
@@ -558,6 +603,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should delete replay session', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Test Session',
         'Description',
@@ -574,11 +621,15 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should return false when deleting non-existent session', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const deleted = replayEngine.deleteReplaySession('non-existent')
       expect(deleted).toBe(false)
     })
 
     it('should return null for non-existent session', () => {
+      const { replayEngine } = createReplayEngine()
+      
       const session = replayEngine.getReplaySession('non-existent')
       expect(session).toBeNull()
     })
@@ -586,6 +637,8 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('exportReplaySession', () => {
     it('should export complete replay session data', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Export Test',
         'Test export functionality',
@@ -635,6 +688,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should throw error for non-existent session', () => {
+      const { replayEngine } = createReplayEngine()
+      
       expect(() => replayEngine.exportReplaySession('non-existent')).toThrow(
         'Replay session not found: non-existent'
       )
@@ -643,6 +698,8 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('compareWithOriginal', () => {
     it('should compare replay results with original timeline', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Compare Test',
         'Test comparison functionality',
@@ -693,6 +750,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should identify differences between original and replay', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       // Create a timeline with different significance than what replay will generate
       const differentTimeline: ReconciliationTimeline = {
         ...mockTimeline,
@@ -739,6 +798,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should throw error for non-existent session', () => {
+      const { replayEngine } = createReplayEngine()
+      
       expect(() => replayEngine.compareWithOriginal('non-existent')).toThrow(
         'Replay session not found: non-existent'
       )
@@ -747,6 +808,8 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('extension handling', () => {
     it('should trigger extensions when conditions are met', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Extension Test',
         'Test extension logic',
@@ -783,6 +846,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should not trigger extensions when autoExtensionEnabled is false', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const jobWithoutExtensions = {
         ...mockJob,
         config: {
@@ -824,6 +889,8 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('status calculation', () => {
     it('should calculate monitoring status correctly', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Status Test',
         'Test status calculation',
@@ -855,6 +922,8 @@ describe('ReconciliationReplayEngine', () => {
     })
 
     it('should calculate completed status when stability is achieved', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Completion Test',
         'Test completion status',
@@ -891,6 +960,8 @@ describe('ReconciliationReplayEngine', () => {
 
   describe('performance metrics', () => {
     it('should track performance metrics during replay', async () => {
+      const { replayEngine, mockChangeDetectionEngine } = createReplayEngine()
+      
       const session = replayEngine.createReplaySession(
         'Performance Test',
         'Test performance tracking',

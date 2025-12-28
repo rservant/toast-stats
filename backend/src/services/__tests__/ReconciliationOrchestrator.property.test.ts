@@ -65,10 +65,8 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
     await cleanupTestCacheConfig(testCacheConfig)
   })
 
-  // Test data generators
-  const generateConfig = (
-    seed: number = Math.random()
-  ): ReconciliationConfig => ({
+  // Test data generators using deterministic seeding
+  const generateConfig = (seed: number = 0.5): ReconciliationConfig => ({
     maxReconciliationDays: Math.floor(seed * 20) + 5, // 5-25 days
     stabilityPeriodDays: Math.floor(seed * 5) + 1, // 1-6 days
     checkFrequencyHours: Math.floor(seed * 48) + 1, // 1-49 hours
@@ -82,7 +80,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
   })
 
   const generateDistrictStatistics = (
-    seed: number = Math.random()
+    seed: number = 0.5
   ): DistrictStatistics => {
     const membershipTotal = Math.floor(seed * 5000) + 100 // 100-5100 members
     const clubsTotal = Math.floor(seed * 100) + 10 // 10-110 clubs

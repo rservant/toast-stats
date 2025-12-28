@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fc from 'fast-check'
 import CacheIntegrationService from '../services/cacheIntegrationService.ts'
 import { CacheConfigService } from '../../../services/CacheConfigService.ts'
+import { safeString } from '../../../utils/test-string-generators'
 import path from 'path'
 
 describe('CacheIntegrationService - Property-Based Tests', () => {
@@ -37,15 +38,11 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
   const generateValidCachePath = (): fc.Arbitrary<string> =>
     fc.oneof(
       fc.constant('./cache'),
-      fc.constant('./test-cache'),
+      fc.constant('./test-dir/test-cache'),
       fc.constant('/tmp/cache'),
       fc.constant('./backend/cache'),
-      fc
-        .string({ minLength: 5, maxLength: 50 })
-        .map(s => `./cache-${s.replace(/[^a-zA-Z0-9-_]/g, '')}`),
-      fc
-        .string({ minLength: 3, maxLength: 20 })
-        .map(s => `/tmp/test-cache-${s.replace(/[^a-zA-Z0-9-_]/g, '')}`)
+      fc.string({ minLength: 5, maxLength: 50 }).map(_s => `./cache-${_s}`),
+      safeString(3, 20).map(_s => `/tmp/test-cache-${_s}`)
     )
 
   /**

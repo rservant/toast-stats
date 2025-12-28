@@ -395,7 +395,7 @@ describe('Cache Configuration System - End-to-End Integration Tests', () => {
   describe('Configuration Documentation and Examples', () => {
     it('should support documented configuration patterns', async () => {
       // Test relative path configuration
-      const relativePath = './test-cache-relative'
+      const relativePath = './test-dir/test-cache-relative'
       process.env.CACHE_DIR = relativePath
       CacheConfigService.resetInstance()
 

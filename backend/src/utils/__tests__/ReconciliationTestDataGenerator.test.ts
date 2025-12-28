@@ -5,8 +5,9 @@
  * property-based testing support, and edge case generation.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.ts'
+import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 
 // Mock logger
 vi.mock('../logger.ts', () => ({
@@ -19,14 +20,26 @@ vi.mock('../logger.ts', () => ({
 }))
 
 describe('ReconciliationTestDataGenerator', () => {
-  let generator: ReconciliationTestDataGenerator
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
 
-  beforeEach(() => {
-    generator = new ReconciliationTestDataGenerator()
-  })
+  // Each test cleans up after itself
+  afterEach(performCleanup)
+
+  function createGenerator() {
+    const generator = new ReconciliationTestDataGenerator()
+    
+    // Register cleanup for the generator if it has cleanup methods
+    cleanup(() => {
+      // Add any cleanup needed for the generator
+    })
+    
+    return generator
+  }
 
   describe('initialization', () => {
     it('should initialize with default patterns', () => {
+      const generator = createGenerator()
       const patterns = generator.getAvailablePatterns()
 
       expect(patterns).toHaveLength(7)
@@ -42,6 +55,7 @@ describe('ReconciliationTestDataGenerator', () => {
 
   describe('generateTestData', () => {
     it('should generate stable_no_changes pattern correctly', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('stable_no_changes', 1000)
 
       expect(testData.districtData).toHaveLength(10)
@@ -62,6 +76,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate gradual_growth pattern with changes', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('gradual_growth', 2000)
 
       expect(testData.districtData).toHaveLength(12)
@@ -86,6 +101,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate sudden_change pattern with significant change', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('sudden_change', 3000)
 
       expect(testData.districtData).toHaveLength(15)
@@ -105,6 +121,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate volatile_changes pattern with frequent changes', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('volatile_changes', 4000)
 
       expect(testData.districtData).toHaveLength(18)
@@ -123,6 +140,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate late_stabilization pattern', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('late_stabilization', 5000)
 
       expect(testData.districtData).toHaveLength(20)
@@ -135,6 +153,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate club_changes pattern', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('club_changes', 6000)
 
       expect(testData.districtData).toHaveLength(12)
@@ -157,6 +176,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate distinguished_changes pattern', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('distinguished_changes', 7000)
 
       expect(testData.districtData).toHaveLength(14)
@@ -179,12 +199,14 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should throw error for unknown pattern', () => {
+      const generator = createGenerator()
       expect(() => generator.generateTestData('unknown_pattern')).toThrow(
         'Test data pattern not found: unknown_pattern'
       )
     })
 
     it('should generate deterministic data with same seed', () => {
+      const generator = createGenerator()
       const testData1 = generator.generateTestData('stable_no_changes', 12345)
       const testData2 = generator.generateTestData('stable_no_changes', 12345)
 
@@ -200,6 +222,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate different data with different seeds', () => {
+      const generator = createGenerator()
       const testData1 = generator.generateTestData('gradual_growth', 11111)
       const testData2 = generator.generateTestData('gradual_growth', 22222)
 
@@ -215,6 +238,7 @@ describe('ReconciliationTestDataGenerator', () => {
 
   describe('generateBatchTestData', () => {
     it('should generate multiple test data sets', () => {
+      const generator = createGenerator()
       const patterns = ['stable_no_changes', 'gradual_growth']
       const testSets = generator.generateBatchTestData(patterns, 3)
 
@@ -233,6 +257,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should handle invalid patterns gracefully', () => {
+      const generator = createGenerator()
       const patterns = [
         'stable_no_changes',
         'invalid_pattern',
@@ -248,6 +273,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should handle empty pattern list', () => {
+      const generator = createGenerator()
       const testSets = generator.generateBatchTestData([], 5)
       expect(testSets).toHaveLength(0)
     })
@@ -255,6 +281,7 @@ describe('ReconciliationTestDataGenerator', () => {
 
   describe('generatePropertyTestCases', () => {
     it('should generate change_detection_accuracy test cases', () => {
+      const generator = createGenerator()
       const testCases = generator.generatePropertyTestCases(
         'change_detection_accuracy',
         10
@@ -282,6 +309,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate stability_period_calculation test cases', () => {
+      const generator = createGenerator()
       const testCases = generator.generatePropertyTestCases(
         'stability_period_calculation',
         5
@@ -303,6 +331,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate configuration_validation test cases', () => {
+      const generator = createGenerator()
       const testCases = generator.generatePropertyTestCases(
         'configuration_validation',
         8
@@ -322,6 +351,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should return empty array for unknown property', () => {
+      const generator = createGenerator()
       const testCases = generator.generatePropertyTestCases(
         'unknown_property',
         5
@@ -330,6 +360,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate unique seeds for each test case', () => {
+      const generator = createGenerator()
       const testCases = generator.generatePropertyTestCases(
         'change_detection_accuracy',
         20
@@ -344,6 +375,7 @@ describe('ReconciliationTestDataGenerator', () => {
 
   describe('generateEdgeCases', () => {
     it('should generate all edge cases', () => {
+      const generator = createGenerator()
       const edgeCases = generator.generateEdgeCases()
 
       expect(edgeCases).toHaveLength(5)
@@ -357,6 +389,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate zero membership edge case correctly', () => {
+      const generator = createGenerator()
       const edgeCases = generator.generateEdgeCases()
       const zeroCase = edgeCases.find(
         ec => ec.metadata.pattern === 'edge_case_zero_membership'
@@ -371,6 +404,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate single club edge case correctly', () => {
+      const generator = createGenerator()
       const edgeCases = generator.generateEdgeCases()
       const singleCase = edgeCases.find(
         ec => ec.metadata.pattern === 'edge_case_single_club'
@@ -385,6 +419,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate max size edge case correctly', () => {
+      const generator = createGenerator()
       const edgeCases = generator.generateEdgeCases()
       const maxCase = edgeCases.find(
         ec => ec.metadata.pattern === 'edge_case_max_size'
@@ -398,6 +433,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate all distinguished edge case correctly', () => {
+      const generator = createGenerator()
       const edgeCases = generator.generateEdgeCases()
       const allDistCase = edgeCases.find(
         ec => ec.metadata.pattern === 'edge_case_all_distinguished'
@@ -410,6 +446,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate no distinguished edge case correctly', () => {
+      const generator = createGenerator()
       const edgeCases = generator.generateEdgeCases()
       const noDistCase = edgeCases.find(
         ec => ec.metadata.pattern === 'edge_case_no_distinguished'
@@ -423,6 +460,7 @@ describe('ReconciliationTestDataGenerator', () => {
 
   describe('data validation', () => {
     it('should generate valid district statistics', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('gradual_growth', 8888)
 
       testData.districtData.forEach(data => {
@@ -461,6 +499,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate valid reconciliation jobs', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('sudden_change', 9999)
       const job = testData.reconciliationJob
 
@@ -477,6 +516,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate valid configurations', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('volatile_changes', 7777)
       const config = testData.config
 
@@ -497,6 +537,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should generate valid change events', () => {
+      const generator = createGenerator()
       const testData = generator.generateTestData('gradual_growth', 6666)
 
       testData.expectedChanges.forEach(change => {
@@ -528,6 +569,7 @@ describe('ReconciliationTestDataGenerator', () => {
 
   describe('seeded random generation', () => {
     it('should produce consistent results with same seed', () => {
+      const generator = createGenerator()
       const seed = 12345
 
       // Generate same pattern multiple times with same seed
@@ -552,6 +594,7 @@ describe('ReconciliationTestDataGenerator', () => {
     })
 
     it('should produce different results with different seeds', () => {
+      const generator = createGenerator()
       const results = []
       for (let i = 0; i < 10; i++) {
         results.push(generator.generateTestData('gradual_growth', 1000 + i))

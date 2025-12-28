@@ -14,6 +14,8 @@ export default defineConfig({
       // Skip Assessment module tests
       '**/modules/assessment/**',
       '**/assessment/**',
+      // Skip test directory artifacts
+      '**/test-dir/**',
     ],
     coverage: {
       provider: 'v8',
@@ -24,6 +26,8 @@ export default defineConfig({
         // Skip Assessment module from coverage
         '**/modules/assessment/**',
         '**/assessment/**',
+        // Skip test directory artifacts from coverage
+        '**/test-dir/**',
       ],
     },
   },

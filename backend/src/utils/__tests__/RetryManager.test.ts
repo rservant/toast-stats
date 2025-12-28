@@ -1,15 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { RetryManager } from '../RetryManager.ts'
 
 describe('RetryManager', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
   describe('executeWithRetry', () => {
     it('should succeed on first attempt', async () => {
       const operation = vi.fn().mockResolvedValue('success')
@@ -23,6 +15,8 @@ describe('RetryManager', () => {
     })
 
     it('should retry on retryable errors', async () => {
+      vi.useFakeTimers()
+
       const operation = vi
         .fn()
         .mockRejectedValueOnce(new Error('network timeout'))
@@ -42,6 +36,8 @@ describe('RetryManager', () => {
       expect(result.result).toBe('success')
       expect(result.attempts).toBe(2)
       expect(operation).toHaveBeenCalledTimes(2)
+
+      vi.useRealTimers()
     })
 
     it('should not retry on non-retryable errors', async () => {
@@ -58,6 +54,8 @@ describe('RetryManager', () => {
     })
 
     it('should fail after max attempts', async () => {
+      vi.useFakeTimers()
+
       const operation = vi.fn().mockRejectedValue(new Error('network timeout'))
 
       const promise = RetryManager.executeWithRetry(operation, {
@@ -74,9 +72,13 @@ describe('RetryManager', () => {
       expect(result.attempts).toBe(2)
       expect(result.error?.message).toBe('network timeout')
       expect(operation).toHaveBeenCalledTimes(2)
+
+      vi.useRealTimers()
     })
 
     it('should apply exponential backoff', async () => {
+      vi.useFakeTimers()
+
       const operation = vi
         .fn()
         .mockRejectedValueOnce(new Error('network timeout'))
@@ -98,9 +100,13 @@ describe('RetryManager', () => {
 
       expect(result.success).toBe(true)
       expect(result.attempts).toBe(3)
+
+      vi.useRealTimers()
     })
 
     it('should respect max delay', async () => {
+      vi.useFakeTimers()
+
       const operation = vi
         .fn()
         .mockRejectedValueOnce(new Error('network timeout'))
@@ -120,11 +126,15 @@ describe('RetryManager', () => {
 
       expect(result.success).toBe(true)
       expect(result.attempts).toBe(2)
+
+      vi.useRealTimers()
     })
   })
 
   describe('createRetryableFunction', () => {
     it('should create a retryable version of a function', async () => {
+      vi.useFakeTimers()
+
       const originalFunction = vi
         .fn()
         .mockRejectedValueOnce(new Error('network timeout'))
@@ -145,9 +155,13 @@ describe('RetryManager', () => {
       expect(result).toBe('success')
       expect(originalFunction).toHaveBeenCalledTimes(2)
       expect(originalFunction).toHaveBeenCalledWith('arg1', 'arg2')
+
+      vi.useRealTimers()
     })
 
     it('should throw error if all retries fail', async () => {
+      vi.useFakeTimers()
+
       const retryableFunction = RetryManager.createRetryableFunction(
         async () => {
           throw new Error('network timeout')
@@ -174,6 +188,8 @@ describe('RetryManager', () => {
 
       // Ensure all timers are cleared and promises are resolved
       await vi.runAllTimersAsync()
+
+      vi.useRealTimers()
     })
   })
 

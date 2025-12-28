@@ -17,6 +17,8 @@ import { CacheConfigService } from '../CacheConfigService.ts'
 import { DistrictCacheManager } from '../DistrictCacheManager.ts'
 import { CacheManager } from '../CacheManager.ts'
 import type { DistrictCacheEntry } from '../../types/districts.ts'
+import { safeString } from '../../utils/test-string-generators'
+import { createTestSelfCleanup, createUniqueTestDir } from '../../utils/test-self-cleanup.ts'
 
 // Test interfaces
 interface TestHistoricalData {
@@ -36,12 +38,13 @@ interface TestHistoricalData {
 
 describe('CacheConfigService - Test Environment Isolation Property Tests', () => {
   let originalCacheDir: string | undefined
-  let testCacheDirs: string[] = []
+  
+  // Self-cleanup setup - each test manages its own cleanup
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
 
   beforeEach(() => {
     // Store original CACHE_DIR
     originalCacheDir = process.env.CACHE_DIR
-    testCacheDirs = []
 
     // Reset singleton for each test
     CacheConfigService.resetInstance()
@@ -55,17 +58,11 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
       delete process.env.CACHE_DIR
     }
 
-    // Clean up all test cache directories
-    for (const dir of testCacheDirs) {
-      try {
-        await fs.rm(dir, { recursive: true, force: true })
-      } catch {
-        // Ignore cleanup errors
-      }
-    }
-
     // Reset singleton after cleanup
     CacheConfigService.resetInstance()
+    
+    // Perform self-cleanup of all tracked resources
+    await performCleanup()
   })
 
   /**
@@ -79,12 +76,8 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
         fc
           .array(
             fc.record({
-              testId: fc
-                .string({ minLength: 1, maxLength: 10 })
-                .filter(s => /^[a-zA-Z0-9-_]+$/.test(s)),
-              cacheSubdir: fc
-                .string({ minLength: 1, maxLength: 20 })
-                .filter(s => /^[a-zA-Z0-9-_]+$/.test(s)),
+              testId: safeString(1, 10),
+              cacheSubdir: safeString(1, 20),
             }),
             { minLength: 2, maxLength: 5 }
           )
@@ -106,10 +99,11 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
           try {
             // Create isolated cache configurations for each test
             for (const config of testConfigs) {
-              const testCacheDir = path.resolve(
-                `./test-cache-isolation-${config.testId}-${config.cacheSubdir}`
+              // Use self-cleanup utility to create and track unique test directories
+              const testCacheDir = createUniqueTestDir(
+                cleanup,
+                `cache-isolation-${config.testId}-${config.cacheSubdir}`
               )
-              testCacheDirs.push(testCacheDir)
 
               // Set unique cache directory for this test
               process.env.CACHE_DIR = testCacheDir
@@ -281,9 +275,7 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
         fc
           .array(
             fc.record({
-              testId: fc
-                .string({ minLength: 1, maxLength: 8 })
-                .filter(s => /^[a-zA-Z0-9-_]+$/.test(s)),
+              testId: safeString(1, 8),
               shouldCleanup: fc.boolean(),
             }),
             { minLength: 3, maxLength: 6 }
@@ -305,10 +297,11 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
           try {
             // Create multiple test cache directories
             for (const config of testConfigs) {
-              const testCacheDir = path.resolve(
-                `./test-cache-cleanup-${config.testId}`
+              // Use self-cleanup utility to create and track unique test directories
+              const testCacheDir = createUniqueTestDir(
+                cleanup,
+                `cache-cleanup-${config.testId}`
               )
-              testCacheDirs.push(testCacheDir)
 
               // Set cache directory and initialize
               process.env.CACHE_DIR = testCacheDir
@@ -409,12 +402,8 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
         fc
           .array(
             fc.record({
-              envValue: fc
-                .string({ minLength: 1, maxLength: 15 })
-                .filter(s => /^[a-zA-Z0-9-_./]+$/.test(s)),
-              testData: fc
-                .string({ minLength: 1, maxLength: 10 })
-                .filter(s => /^[a-zA-Z0-9-_]+$/.test(s)),
+              envValue: safeString(1, 15),
+              testData: safeString(1, 10),
             }),
             { minLength: 2, maxLength: 4 }
           )
@@ -436,10 +425,11 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
           try {
             // Test sequential environment changes
             for (const config of envConfigs) {
-              const testCacheDir = path.resolve(
-                `./test-cache-env-${config.envValue}`
+              // Use self-cleanup utility to create and track unique test directories
+              const testCacheDir = createUniqueTestDir(
+                cleanup,
+                `cache-env-${config.envValue}`
               )
-              testCacheDirs.push(testCacheDir)
 
               // Change environment variable
               process.env.CACHE_DIR = testCacheDir

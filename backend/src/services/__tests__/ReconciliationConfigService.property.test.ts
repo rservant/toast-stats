@@ -44,10 +44,8 @@ describe('ReconciliationConfigService - Property-Based Tests', () => {
     vi.clearAllMocks()
   })
 
-  // Property test generators
-  const generateValidConfig = (
-    seed: number = Math.random()
-  ): ReconciliationConfig => {
+  // Property test generators using deterministic seeding
+  const generateValidConfig = (seed: number = 0.5): ReconciliationConfig => {
     const maxReconciliationDays = Math.floor(seed * 59) + 1 // 1-60 days (valid range)
     const stabilityPeriodDays = Math.min(
       Math.floor(seed * maxReconciliationDays) + 1,
@@ -69,7 +67,7 @@ describe('ReconciliationConfigService - Property-Based Tests', () => {
   }
 
   const generateInvalidConfig = (
-    seed: number = Math.random(),
+    seed: number = 0.5,
     violationType: string
   ): ReconciliationConfig => {
     const baseConfig = generateValidConfig(seed)

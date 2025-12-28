@@ -15,10 +15,8 @@ import type {
 } from '../reconciliation'
 
 describe('Reconciliation Data Models - Property-Based Tests', () => {
-  // Property test generators
-  const generateValidConfig = (
-    seed: number = Math.random()
-  ): ReconciliationConfig => ({
+  // Property test generators using deterministic seeding
+  const generateValidConfig = (seed: number = 0.5): ReconciliationConfig => ({
     maxReconciliationDays: Math.floor(seed * 59) + 1, // 1-60 days (valid range)
     stabilityPeriodDays: Math.floor(seed * 10) + 1, // 1-10 days
     checkFrequencyHours: Math.floor(seed * 167) + 1, // 1-168 hours (valid range)
@@ -31,9 +29,7 @@ describe('Reconciliation Data Models - Property-Based Tests', () => {
     maxExtensionDays: Math.floor(seed * 30), // 0-30 days (valid range)
   })
 
-  const generateReconciliationJob = (
-    seed: number = Math.random()
-  ): ReconciliationJob => {
+  const generateReconciliationJob = (seed: number = 0.5): ReconciliationJob => {
     const startDate = new Date(2024, 0, Math.floor(seed * 28) + 1)
     const config = generateValidConfig(seed)
 
@@ -74,7 +70,7 @@ describe('Reconciliation Data Models - Property-Based Tests', () => {
     }
   }
 
-  const generateDataChanges = (seed: number = Math.random()): DataChanges => {
+  const generateDataChanges = (seed: number = 0.5): DataChanges => {
     const distinguishedCounts: DistinguishedCounts = {
       select: Math.floor(seed * 20),
       distinguished: Math.floor(seed * 30),

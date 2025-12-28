@@ -12,6 +12,7 @@ import fs from 'fs/promises'
 import { ProgressTracker } from '../ProgressTracker'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
 import { CacheConfigService } from '../CacheConfigService'
+import { deterministicSafeString } from '../../utils/test-string-generators'
 import type {
   ReconciliationJob,
   ReconciliationConfig,
@@ -33,8 +34,8 @@ describe('ProgressTracker - Property-Based Tests', () => {
   }
 
   beforeEach(async () => {
-    // Use unique temporary storage for each test
-    const testId = Math.random().toString(36).substring(7)
+    // Use deterministic temporary storage for each test
+    const testId = deterministicSafeString(Date.now(), 7)
     testCacheDir = createTestCacheDir(testId)
     storageManager = new ReconciliationStorageManager(testCacheDir)
 
@@ -243,7 +244,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
           fc.array(generateDataChanges(), { minLength: 1, maxLength: 5 }), // Reduced for performance
           async (job, changesArray) => {
             // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )
@@ -331,7 +335,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
             fc.array(generateDataChanges(), { minLength: 2, maxLength: 3 }), // Further reduced for performance
             async (job, changesArray) => {
               // Create fresh storage manager for this test iteration
-              const testId = Math.random().toString(36).substring(7)
+              const testId = deterministicSafeString(
+                Date.now() + job.id.length + 1,
+                7
+              )
               const freshStorageManager = new ReconciliationStorageManager(
                 createTestCacheDir(testId)
               )
@@ -354,8 +361,11 @@ describe('ProgressTracker - Property-Based Tests', () => {
                   { length: changesArray.length },
                   (_, i) => i
                 )
+                // Use deterministic shuffle based on job ID
+                let seed = job.id.length
                 for (let i = shuffledIndices.length - 1; i > 0; i--) {
-                  const j = Math.floor(Math.random() * (i + 1))
+                  seed = (seed * 9301 + 49297) % 233280 // Linear congruential generator
+                  const j = seed % (i + 1)
                   ;[shuffledIndices[i], shuffledIndices[j]] = [
                     shuffledIndices[j],
                     shuffledIndices[i],
@@ -430,7 +440,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
             }
 
             // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length + 2,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )
@@ -567,7 +580,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
             job.metadata.updatedAt = createValidDate(job.startDate.getTime())
 
             // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length + 3,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )
@@ -650,7 +666,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
           generateDataChanges(),
           async (job, changes) => {
             // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length + 4,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )
@@ -746,7 +765,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
             }
 
             // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length + 5,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )
@@ -869,7 +891,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
             }
 
             // Create fresh storage manager for this test iteration
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length + 6,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )
@@ -993,7 +1018,10 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // **Feature: month-end-data-reconciliation, Property 9: Stability Period Detection**
             // **Validates: Requirements 5.4**
 
-            const testId = Math.random().toString(36).substring(7)
+            const testId = deterministicSafeString(
+              Date.now() + job.id.length + 7,
+              7
+            )
             const freshStorageManager = new ReconciliationStorageManager(
               createTestCacheDir(testId)
             )

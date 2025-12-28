@@ -4,7 +4,11 @@ import path from 'path'
 import * as assessmentStore from '../assessmentStore.ts'
 
 describe('AssessmentStore Security Tests', () => {
-  const testDataDir = path.join(process.cwd(), 'test-assessment-data')
+  const testDataDir = path.join(
+    process.cwd(),
+    'test-dir',
+    'test-assessment-data'
+  )
 
   beforeEach(async () => {
     // Clean up any existing test data

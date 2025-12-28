@@ -17,7 +17,7 @@ const createTestApp = () => {
 }
 
 describe('Reconciliation Status API Integration Tests', () => {
-  const testCacheDir = path.join(process.cwd(), 'test-cache-status')
+  const testCacheDir = path.join(process.cwd(), 'test-dir', 'test-cache-status')
   let storageManager: ReconciliationStorageManager
 
   beforeEach(async () => {

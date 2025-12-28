@@ -12,6 +12,7 @@ describe('ReconciliationConfigService Integration', () => {
     // Create a unique test config file path
     testConfigPath = path.join(
       process.cwd(),
+      'test-dir',
       `test-reconciliation-config-${Date.now()}.json`
     )
 

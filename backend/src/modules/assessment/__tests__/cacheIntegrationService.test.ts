@@ -11,7 +11,7 @@ class MockDistrictCacheManager extends DistrictCacheManager {
   private mockData: unknown
 
   constructor(mockData: unknown) {
-    super('./test-cache')
+    super('./test-dir/test-cache')
     this.mockData = mockData
   }
 
