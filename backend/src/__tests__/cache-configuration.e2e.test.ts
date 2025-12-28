@@ -26,6 +26,13 @@ import {
   cleanupTestCacheConfig,
 } from './test-cache-helper.js'
 import type { TestCacheConfig } from './test-cache-helper.js'
+import type { ScrapedRecord } from '../types/districts.js'
+
+// Test data interface for isolation tests
+interface TestCacheData {
+  id: string
+  name: string
+}
 
 describe('Cache Configuration System - End-to-End Integration Tests', () => {
   let testConfig: TestCacheConfig
@@ -247,9 +254,17 @@ describe('Cache Configuration System - End-to-End Integration Tests', () => {
 
       // Test district-specific caching
       const districtData = {
-        districtPerformance: [{ id: '1', name: 'Test District' }] as any[],
-        divisionPerformance: [] as any[],
-        clubPerformance: [] as any[],
+        districtPerformance: [
+          {
+            District: '1',
+            'Total Clubs': '10',
+            'Total Members': '100',
+            'Goals Met': '5',
+            'Distinguished Clubs': '3',
+          },
+        ] as ScrapedRecord[],
+        divisionPerformance: [] as ScrapedRecord[],
+        clubPerformance: [] as ScrapedRecord[],
       }
 
       await districtCacheManager.cacheDistrictData(
@@ -364,8 +379,8 @@ describe('Cache Configuration System - End-to-End Integration Tests', () => {
         const data1 = await cacheManager1.getCache('2024-01-15', 'districts')
         const data2 = await cacheManager2.getCache('2024-01-15', 'districts')
 
-        expect((data1 as any[])[0].name).toBe('Test 1')
-        expect((data2 as any[])[0].name).toBe('Test 2')
+        expect((data1 as TestCacheData[])[0].name).toBe('Test 1')
+        expect((data2 as TestCacheData[])[0].name).toBe('Test 2')
 
         // Verify different cache directories
         expect(testConfig1.cacheDir).not.toBe(testConfig2.cacheDir)
