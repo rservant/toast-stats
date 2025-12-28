@@ -39,6 +39,11 @@ spec:
             configMapKeyRef:
               name: toastmasters-config
               key: cors-origin
+        - name: CACHE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: toastmasters-config
+              key: cache-dir
         - name: CACHE_TTL
           value: "900"
         - name: RATE_LIMIT_WINDOW_MS

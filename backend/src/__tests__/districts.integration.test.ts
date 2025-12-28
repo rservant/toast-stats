@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import request from 'supertest'
-import { createTestApp } from './setup.js'
+import { createTestApp } from './setup.ts'
 
 // Interface for district ranking data used in tests
 interface DistrictRanking {

@@ -1,25 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { AnalyticsEngine } from '../AnalyticsEngine.js'
-import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import fs from 'fs/promises'
+import { AnalyticsEngine } from '../AnalyticsEngine.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  type TestCacheConfig,
+} from '../../utils/test-cache-helper.ts'
 
 describe('AnalyticsEngine', () => {
-  const testCacheDir = './test-cache-analytics'
+  let testCacheConfig: TestCacheConfig
   let cacheManager: DistrictCacheManager
   let analyticsEngine: AnalyticsEngine
 
   beforeEach(async () => {
-    cacheManager = new DistrictCacheManager(testCacheDir)
+    testCacheConfig = await createTestCacheConfig('analytics-engine')
+    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     analyticsEngine = new AnalyticsEngine(cacheManager)
   })
 
   afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   describe('at-risk club detection', () => {

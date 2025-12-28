@@ -8,18 +8,18 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ReconciliationSimulator } from '../ReconciliationSimulator.js'
-import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.js'
-import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.js'
+import { ReconciliationSimulator } from '../ReconciliationSimulator.ts'
+import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.ts'
+import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.ts'
 import type {
   SimulationScenario,
   DataPattern,
-} from '../ReconciliationSimulator.js'
-import type { ReconciliationTimeline } from '../../types/reconciliation.js'
-import type { DistrictStatistics } from '../../types/districts.js'
+} from '../ReconciliationSimulator.ts'
+import type { ReconciliationTimeline } from '../../types/reconciliation.ts'
+import type { DistrictStatistics } from '../../types/districts.ts'
 
 // Mock logger
-vi.mock('../logger.js', () => ({
+vi.mock('../logger.ts', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

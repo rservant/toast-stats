@@ -42,9 +42,8 @@ lerna-debug.log*
 cache/
 downloads/
 
-# Test artifacts  
+# Test artifacts - temporary directories only
 test-cache*/
-**/test-*
 
 # Generated reports
 typescript-report.json

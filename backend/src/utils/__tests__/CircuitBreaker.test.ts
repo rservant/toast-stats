@@ -4,7 +4,7 @@ import {
   CircuitState,
   CircuitBreakerError,
   CircuitBreakerManager,
-} from '../CircuitBreaker.js'
+} from '../CircuitBreaker.ts'
 
 describe('CircuitBreaker', () => {
   beforeEach(() => {

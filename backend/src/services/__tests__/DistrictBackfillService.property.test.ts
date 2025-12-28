@@ -7,12 +7,16 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fc from 'fast-check'
-import { DistrictBackfillService } from '../DistrictBackfillService.js'
-import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import { ToastmastersScraper } from '../ToastmastersScraper.js'
-import type { DistrictStatistics } from '../../types/districts.js'
-import type { ScrapedRecord } from '../../types/districts.js'
-import fs from 'fs/promises'
+import { DistrictBackfillService } from '../DistrictBackfillService.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import { ToastmastersScraper } from '../ToastmastersScraper.ts'
+import type { DistrictStatistics } from '../../types/districts.ts'
+import type { ScrapedRecord } from '../../types/districts.ts'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  type TestCacheConfig,
+} from '../../utils/test-cache-helper.ts'
 
 // Mock interface for ToastmastersScraper
 interface MockToastmastersScraper {
@@ -40,31 +44,22 @@ interface MockToastmastersScraper {
 }
 
 describe('DistrictBackfillService - Property-Based Tests', () => {
-  const testCacheDir = './test-cache-backfill-property'
+  let testCacheConfig: TestCacheConfig
   let cacheManager: DistrictCacheManager
   let scraper: ToastmastersScraper
   let backfillService: DistrictBackfillService
 
   beforeEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Directory might not exist, ignore
-    }
-
-    cacheManager = new DistrictCacheManager(testCacheDir)
+    testCacheConfig = await createTestCacheConfig(
+      'district-backfill-service-property'
+    )
+    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     scraper = new ToastmastersScraper()
     backfillService = new DistrictBackfillService(cacheManager, scraper)
   })
 
   afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   // Property test generators

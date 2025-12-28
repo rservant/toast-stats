@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MockToastmastersAPIService } from '../MockToastmastersAPIService.js'
+import { MockToastmastersAPIService } from '../MockToastmastersAPIService.ts'
 
 describe('MockToastmastersAPIService', () => {
   const service = new MockToastmastersAPIService()

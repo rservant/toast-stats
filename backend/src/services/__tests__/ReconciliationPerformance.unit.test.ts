@@ -4,17 +4,17 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
-import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
+import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
+import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.ts'
 import type {
   ReconciliationJob,
   ReconciliationTimeline,
   ReconciliationStatus,
-} from '../../types/reconciliation.js'
-import { createTestReconciliationJob } from '../../utils/test-helpers.js'
+} from '../../types/reconciliation.ts'
+import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
 
 // Mock logger
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.ts', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),

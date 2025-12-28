@@ -1,0 +1,149 @@
+/**
+ * Test Cache Helper Utilities
+ *
+ * Provides utilities for configurable cache directories in tests,
+ * supporting test isolation and parallel execution.
+ */
+
+import fs from 'fs/promises'
+import path from 'path'
+import { CacheConfigService } from '../services/CacheConfigService.js'
+
+export interface TestCacheConfig {
+  testId: string
+  cacheDir: string
+  originalCacheDir?: string
+}
+
+/**
+ * Creates an isolated cache directory for a test
+ */
+export async function createTestCacheConfig(
+  testName: string
+): Promise<TestCacheConfig> {
+  // Generate unique test ID
+  const timestamp = Date.now()
+  const randomId = Math.random().toString(36).substring(7)
+  const testId = `${testName}-${timestamp}-${randomId}`
+
+  // Create test-specific cache directory
+  const cacheDir = path.resolve(`./test-cache-${testId}`)
+
+  // Store original CACHE_DIR
+  const originalCacheDir = process.env.CACHE_DIR
+
+  // Set test cache directory
+  process.env.CACHE_DIR = cacheDir
+
+  // Reset singleton to pick up new environment
+  CacheConfigService.resetInstance()
+
+  return {
+    testId,
+    cacheDir,
+    originalCacheDir,
+  }
+}
+
+/**
+ * Cleans up test cache configuration
+ */
+export async function cleanupTestCacheConfig(
+  config: TestCacheConfig
+): Promise<void> {
+  try {
+    // Restore original CACHE_DIR
+    if (config.originalCacheDir !== undefined) {
+      process.env.CACHE_DIR = config.originalCacheDir
+    } else {
+      delete process.env.CACHE_DIR
+    }
+
+    // Reset singleton
+    CacheConfigService.resetInstance()
+
+    // Clean up test cache directory
+    await fs.rm(config.cacheDir, { recursive: true, force: true })
+  } catch (error) {
+    // Ignore cleanup errors
+    console.warn(`Failed to cleanup test cache ${config.cacheDir}:`, error)
+  }
+}
+
+/**
+ * Creates multiple isolated cache configurations for parallel testing
+ */
+export async function createParallelTestCacheConfigs(
+  testName: string,
+  count: number
+): Promise<TestCacheConfig[]> {
+  const configs: TestCacheConfig[] = []
+
+  for (let i = 0; i < count; i++) {
+    const config = await createTestCacheConfig(`${testName}-${i}`)
+    configs.push(config)
+  }
+
+  return configs
+}
+
+/**
+ * Cleans up multiple test cache configurations
+ */
+export async function cleanupParallelTestCacheConfigs(
+  configs: TestCacheConfig[]
+): Promise<void> {
+  await Promise.all(configs.map(config => cleanupTestCacheConfig(config)))
+}
+
+/**
+ * Ensures test cache directory is properly initialized
+ */
+export async function initializeTestCache(
+  config: TestCacheConfig
+): Promise<void> {
+  // Set environment variable
+  process.env.CACHE_DIR = config.cacheDir
+
+  // Reset and initialize cache config service
+  CacheConfigService.resetInstance()
+  const cacheConfigService = CacheConfigService.getInstance()
+  await cacheConfigService.initialize()
+
+  // Verify configuration
+  if (!cacheConfigService.isReady()) {
+    throw new Error(`Failed to initialize test cache: ${config.cacheDir}`)
+  }
+}
+
+/**
+ * Gets a configured cache directory for the current test environment
+ */
+export function getTestCacheDirectory(): string {
+  const cacheConfigService = CacheConfigService.getInstance()
+  return cacheConfigService.getCacheDirectory()
+}
+
+/**
+ * Verifies that test cache directories are properly isolated
+ */
+export async function verifyTestCacheIsolation(
+  configs: TestCacheConfig[]
+): Promise<void> {
+  // Verify all cache directories are different
+  const cacheDirs = configs.map(config => config.cacheDir)
+  const uniqueCacheDirs = new Set(cacheDirs)
+
+  if (uniqueCacheDirs.size !== configs.length) {
+    throw new Error('Test cache directories are not properly isolated')
+  }
+
+  // Verify all directories exist
+  for (const config of configs) {
+    try {
+      await fs.access(config.cacheDir)
+    } catch {
+      throw new Error(`Test cache directory does not exist: ${config.cacheDir}`)
+    }
+  }
+}

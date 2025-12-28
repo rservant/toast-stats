@@ -1,5 +1,6 @@
 import { DistrictCacheManager } from '../src/services/DistrictCacheManager'
 import { AnalyticsEngine } from '../src/services/AnalyticsEngine'
+import { CacheConfigService } from '../src/services/CacheConfigService'
 
 /**
  * Validation script for DCP goal counting fix
@@ -7,7 +8,12 @@ import { AnalyticsEngine } from '../src/services/AnalyticsEngine'
  */
 
 async function validateDCPGoals() {
-  const cacheManager = new DistrictCacheManager('./backend/cache')
+  // Use configured cache directory
+  const cacheConfig = CacheConfigService.getInstance()
+  await cacheConfig.initialize()
+  const cacheDir = cacheConfig.getCacheDirectory()
+
+  const cacheManager = new DistrictCacheManager(cacheDir)
   const analyticsEngine = new AnalyticsEngine(cacheManager)
 
   console.log('='.repeat(80))

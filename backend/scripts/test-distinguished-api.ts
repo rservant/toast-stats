@@ -5,6 +5,7 @@
 
 import { DistrictCacheManager } from '../src/services/DistrictCacheManager'
 import { AnalyticsEngine } from '../src/services/AnalyticsEngine'
+import { CacheConfigService } from '../src/services/CacheConfigService'
 
 async function testDistinguishedAPI() {
   console.log('='.repeat(80))
@@ -12,7 +13,12 @@ async function testDistinguishedAPI() {
   console.log('='.repeat(80))
   console.log()
 
-  const cacheManager = new DistrictCacheManager('./backend/cache')
+  // Use configured cache directory
+  const cacheConfig = CacheConfigService.getInstance()
+  await cacheConfig.initialize()
+  const cacheDir = cacheConfig.getCacheDirectory()
+
+  const cacheManager = new DistrictCacheManager(cacheDir)
   const analyticsEngine = new AnalyticsEngine(cacheManager)
 
   const districtId = '61'

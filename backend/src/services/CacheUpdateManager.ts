@@ -7,6 +7,7 @@
 
 import { logger } from '../utils/logger.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
+import { CacheConfigService } from './CacheConfigService.js'
 import type {
   DistrictStatistics,
   DistrictCacheEntry,
@@ -33,7 +34,13 @@ export class CacheUpdateManager {
   private backupSuffix = '-backup'
 
   constructor(cacheManager?: DistrictCacheManager) {
-    this.cacheManager = cacheManager || new DistrictCacheManager()
+    if (cacheManager) {
+      this.cacheManager = cacheManager
+    } else {
+      const cacheConfig = CacheConfigService.getInstance()
+      const cacheDir = cacheConfig.getCacheDirectory()
+      this.cacheManager = new DistrictCacheManager(cacheDir)
+    }
   }
 
   /**

@@ -6,23 +6,29 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.js'
-import { DistrictBackfillService } from '../DistrictBackfillService.js'
-import { ReconciliationScheduler } from '../ReconciliationScheduler.js'
-import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
-import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
-import { ToastmastersScraper } from '../ToastmastersScraper.js'
-import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
-import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
+import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.ts'
+import { DistrictBackfillService } from '../DistrictBackfillService.ts'
+import { ReconciliationScheduler } from '../ReconciliationScheduler.ts'
+import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
+import { ToastmastersScraper } from '../ToastmastersScraper.ts'
+import { ChangeDetectionEngine } from '../ChangeDetectionEngine.ts'
+import { ReconciliationConfigService } from '../ReconciliationConfigService.ts'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+  type TestCacheConfig,
+} from '../../utils/test-cache-helper.ts'
 
-import type { DistrictStatistics } from '../../types/districts.js'
+import type { DistrictStatistics } from '../../types/districts.ts'
 import type {
   ReconciliationJob,
   ReconciliationConfig,
-} from '../../types/reconciliation.js'
+} from '../../types/reconciliation.ts'
 
 describe('End-to-End Reconciliation Workflow Integration', () => {
+  let testCacheConfig: TestCacheConfig
   let orchestrator: ReconciliationOrchestrator
   let backfillService: DistrictBackfillService
   let scheduler: ReconciliationScheduler
@@ -78,12 +84,18 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
   }
 
   beforeEach(async () => {
-    // Initialize test storage with unique paths
-    const testCachePath = `./cache/test-reconciliation-workflow-${Math.random().toString(36).substring(2, 8)}`
-    storageManager = new ReconciliationStorageOptimizer(testCachePath)
+    // Initialize test cache configuration
+    testCacheConfig = await createTestCacheConfig(
+      'reconciliation-workflow-integration'
+    )
+
+    // Initialize test storage
+    storageManager = new ReconciliationStorageOptimizer(
+      testCacheConfig.cacheDir
+    )
     await storageManager.init()
 
-    cacheManager = new DistrictCacheManager(testCachePath)
+    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     // DistrictCacheManager doesn't have an init() method
 
     // Mock scraper to return controlled test data
@@ -127,13 +139,8 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       scheduler.stop()
     }
 
-    // Cleanup test data
-    try {
-      await storageManager.clearAll()
-      // DistrictCacheManager doesn't have a clearCache method, but cleanup happens automatically
-    } catch {
-      // Ignore cleanup errors
-    }
+    // Cleanup test cache configuration
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   describe('Complete Reconciliation Cycle', () => {

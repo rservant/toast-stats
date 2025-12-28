@@ -6,13 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { ReconciliationMetricsService } from '../ReconciliationMetricsService.js'
-import { AlertManager } from '../../utils/AlertManager.js'
-import type { ReconciliationJob } from '../../types/reconciliation.js'
-import { createTestReconciliationJob } from '../../utils/test-helpers.js'
+import { ReconciliationMetricsService } from '../ReconciliationMetricsService.ts'
+import { AlertManager } from '../../utils/AlertManager.ts'
+import type { ReconciliationJob } from '../../types/reconciliation.ts'
+import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
 
 // Mock AlertManager
-vi.mock('../../utils/AlertManager.js', () => ({
+vi.mock('../../utils/AlertManager.ts', () => ({
   AlertManager: {
     getInstance: vi.fn(() => ({
       sendAlert: vi.fn(),
@@ -72,7 +72,7 @@ function createTestJob(
 }
 
 // Mock logger
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.ts', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

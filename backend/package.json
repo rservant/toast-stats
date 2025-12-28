@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .ts",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "test:cleanup": "./scripts/cleanup-test-dirs.sh",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "typecheck:count": "tsc --noEmit --skipLibCheck 2>&1 | grep -E \"error TS[0-9]+\" | wc -l || echo \"0\"",
     "typecheck:errors": "tsc --noEmit --skipLibCheck 2>&1 | grep -E \"error TS[0-9]+\" || echo \"No TypeScript errors found\"",

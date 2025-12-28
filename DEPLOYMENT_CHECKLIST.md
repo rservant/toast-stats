@@ -64,17 +64,20 @@ Use this checklist to ensure a secure and successful production deployment.
 ### Cache Management
 
 - [ ] **Clean test cache directories** (if deploying after testing):
+
   ```bash
   # Remove test cache directories
   find backend/cache -name "test-*" -type d -exec rm -rf {} +
   ```
 
 - [ ] **Clear rankings cache** if rankings logic has changed:
+
   ```bash
   npm run clear-rankings-cache
   ```
 
 - [ ] **Clean old historical data** (optional - keeps last 30 days):
+
   ```bash
   # Remove district data older than 30 days
   find backend/cache -name "districts_*.json" -mtime +30 -delete
@@ -82,6 +85,7 @@ Use this checklist to ensure a secure and successful production deployment.
   ```
 
 - [ ] **Verify cache directory structure**:
+
   ```bash
   ls -la backend/cache/
   # Should show: districts/, reconciliation/, and current data files

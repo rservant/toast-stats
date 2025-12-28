@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { ReconciliationStorageManager } from '../ReconciliationStorageManager.js'
+import { ReconciliationStorageManager } from '../ReconciliationStorageManager.ts'
 import type {
   ReconciliationJob,
   ReconciliationConfig,
-} from '../../types/reconciliation.js'
-import { createTestReconciliationJob } from '../../utils/test-helpers.js'
+} from '../../types/reconciliation.ts'
+import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
 import fs from 'fs/promises'
 import path from 'path'
 

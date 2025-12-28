@@ -6,11 +6,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ReconciliationSimulator } from '../ReconciliationSimulator.js'
-import type { SimulationScenario } from '../ReconciliationSimulator.js'
+import { ReconciliationSimulator } from '../ReconciliationSimulator.ts'
+import type { SimulationScenario } from '../ReconciliationSimulator.ts'
 
 // Mock logger
-vi.mock('../logger.js', () => ({
+vi.mock('../logger.ts', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

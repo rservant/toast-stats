@@ -34,6 +34,20 @@ cp backend/.env.example backend/.env
 
 2. Update the environment variables in the `.env` files as needed.
 
+#### Cache Configuration
+
+The application uses a unified cache configuration system. Set the `CACHE_DIR` environment variable to configure where cached data is stored:
+
+```bash
+# Development (relative path)
+CACHE_DIR=./cache
+
+# Production (absolute path)
+CACHE_DIR=/var/cache/toastmasters
+```
+
+For detailed cache configuration examples for different deployment scenarios, see [docs/CACHE_CONFIGURATION.md](./docs/CACHE_CONFIGURATION.md).
+
 ### Development
 
 Run both frontend and backend in development mode:

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import fixtures from './fixtures/sampleData.json'
-import { calculateAllGoals } from '../services/assessmentCalculator.js'
+import { calculateAllGoals } from '../services/assessmentCalculator.ts'
 import {
   calculateCumulativeTarget,
   getMonthNumber,
-} from '../services/monthlyTargetService.js'
-import { MonthlyAssessment, DistrictConfig } from '../types/assessment.js'
+} from '../services/monthlyTargetService.ts'
+import { MonthlyAssessment, DistrictConfig } from '../types/assessment.ts'
 
 interface MonthlyData {
   month: string

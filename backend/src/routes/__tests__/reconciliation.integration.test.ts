@@ -6,10 +6,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.js'
-import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.js'
-import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
-import type { ReconciliationJob } from '../../types/reconciliation.js'
+import path from 'path'
+import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.ts'
+import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.ts'
+import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.ts'
+import { CacheConfigService } from '../../services/CacheConfigService.ts'
+import type { ReconciliationJob } from '../../types/reconciliation.ts'
 
 describe('Reconciliation API - New Status Endpoints', () => {
   let app: express.Application
@@ -19,9 +21,12 @@ describe('Reconciliation API - New Status Endpoints', () => {
 
   beforeEach(async () => {
     // Setup test app with shared storage manager
-    storageManager = new ReconciliationStorageOptimizer(
-      './cache/test-reconciliation-api'
+    const cacheConfigService = CacheConfigService.getInstance()
+    const testCacheDir = path.join(
+      cacheConfigService.getCacheDirectory(),
+      'test-reconciliation-api'
     )
+    storageManager = new ReconciliationStorageOptimizer(testCacheDir)
     await storageManager.init()
 
     const changeDetectionEngine = new ChangeDetectionEngine()

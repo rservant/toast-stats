@@ -244,12 +244,9 @@ Configuration is cached after initial load. Changes are detected via file system
 
 ## Environment Variables (Cache)
 
-This module (and the wider backend) reads district-level cache files from the filesystem. By default the service will look for a `cache/` directory relative to the running process. To make the cache location explicit (useful in Docker, CI, or when running from the repository root), set the `DISTRICT_CACHE_DIR` environment variable.
+This module (and the wider backend) reads district-level cache files from the filesystem. By default the service will look for a `cache/` directory relative to the running process. To make the cache location explicit (useful in Docker, CI, or when running from the repository root), set the `CACHE_DIR` environment variable.
 
-- `DISTRICT_CACHE_DIR`: absolute or relative path to the cache directory containing `districts/{districtId}/{YYYY-MM-DD}.json` files. If unset the service will attempt these locations (in order):
-  1. `process.cwd()/cache`
-  2. `process.cwd()/backend/cache`
-  3. `./cache` (relative fallback)
+- `CACHE_DIR`: absolute or relative path to the cache directory containing `districts/{districtId}/{YYYY-MM-DD}.json` files. If unset the service will use `./cache` as the default location.
 
 Examples
 
@@ -261,7 +258,7 @@ services:
     build: ./backend
     environment:
       - NODE_ENV=production
-      - DISTRICT_CACHE_DIR=/data/backend/cache
+      - CACHE_DIR=/data/backend/cache
     volumes:
       - ./backend/cache:/data/backend/cache:ro
     ports:
@@ -271,7 +268,7 @@ services:
 Dockerfile (set at container runtime):
 
 ```dockerfile
-ENV DISTRICT_CACHE_DIR=/app/cache
+ENV CACHE_DIR=/app/cache
 # Ensure cache files are available at /app/cache when the container starts
 VOLUME ["/app/cache"]
 ```
@@ -293,7 +290,7 @@ jobs:
         working-directory: ./backend
       - name: Run tests
         env:
-          DISTRICT_CACHE_DIR: ${{ github.workspace }}/backend/cache
+          CACHE_DIR: ${{ github.workspace }}/backend/cache
         run: npm test --silent
         working-directory: ./backend
 ```

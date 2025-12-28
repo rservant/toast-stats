@@ -35,6 +35,10 @@ COPY --from=builder /app/dist ./dist
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
+# Create cache directory with proper permissions
+RUN mkdir -p /app/cache && \
+    chown -R nodejs:nodejs /app
+
 # Change ownership of app directory
 RUN chown -R nodejs:nodejs /app
 

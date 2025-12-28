@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ReconciliationErrorHandler } from '../ReconciliationErrorHandler.js'
-import { AlertManager } from '../../utils/AlertManager.js'
+import { ReconciliationErrorHandler } from '../ReconciliationErrorHandler.ts'
+import { AlertManager } from '../../utils/AlertManager.ts'
 import {
   CircuitBreakerManager,
   CircuitState,
-} from '../../utils/CircuitBreaker.js'
+} from '../../utils/CircuitBreaker.ts'
 
 // Mock dependencies
-vi.mock('../DistrictBackfillService.js')
-vi.mock('../../utils/AlertManager.js')
-vi.mock('../../utils/CircuitBreaker.js')
+vi.mock('../DistrictBackfillService.ts')
+vi.mock('../../utils/AlertManager.ts')
+vi.mock('../../utils/CircuitBreaker.ts')
 
 // Interface for mock backfill service
 interface MockBackfillService {
