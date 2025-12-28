@@ -6,9 +6,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
+import path from 'path'
 import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.js'
 import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.js'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
+import { CacheConfigService } from '../../services/CacheConfigService.js'
 import type { ReconciliationJob } from '../../types/reconciliation.js'
 
 describe('Reconciliation API - New Status Endpoints', () => {
@@ -19,9 +21,12 @@ describe('Reconciliation API - New Status Endpoints', () => {
 
   beforeEach(async () => {
     // Setup test app with shared storage manager
-    storageManager = new ReconciliationStorageOptimizer(
-      './cache/test-reconciliation-api'
+    const cacheConfigService = CacheConfigService.getInstance()
+    const testCacheDir = path.join(
+      cacheConfigService.getCacheDirectory(),
+      'test-reconciliation-api'
     )
+    storageManager = new ReconciliationStorageOptimizer(testCacheDir)
     await storageManager.init()
 
     const changeDetectionEngine = new ChangeDetectionEngine()

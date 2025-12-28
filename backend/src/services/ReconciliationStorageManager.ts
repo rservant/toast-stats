@@ -6,6 +6,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
+import { CacheConfigService } from './CacheConfigService.js'
 import type {
   ReconciliationJob,
   ReconciliationJobRecord,
@@ -32,13 +33,23 @@ export class ReconciliationStorageManager {
    */
   private static readonly SCHEMA_VERSION = 1
 
-  constructor(storageDir: string = './cache/reconciliation') {
-    this.storageDir = storageDir
-    this.jobsDir = path.join(storageDir, 'jobs')
-    this.timelinesDir = path.join(storageDir, 'timelines')
-    this.configFile = path.join(storageDir, 'config.json')
-    this.indexFile = path.join(storageDir, 'index.json')
-    this.schemaFile = path.join(storageDir, 'schema.json')
+  constructor(storageDir?: string) {
+    // Use provided storageDir or get from cache configuration service
+    if (storageDir) {
+      this.storageDir = storageDir
+    } else {
+      const cacheConfig = CacheConfigService.getInstance()
+      this.storageDir = path.join(
+        cacheConfig.getCacheDirectory(),
+        'reconciliation'
+      )
+    }
+
+    this.jobsDir = path.join(this.storageDir, 'jobs')
+    this.timelinesDir = path.join(this.storageDir, 'timelines')
+    this.configFile = path.join(this.storageDir, 'config.json')
+    this.indexFile = path.join(this.storageDir, 'index.json')
+    this.schemaFile = path.join(this.storageDir, 'schema.json')
   }
 
   /**

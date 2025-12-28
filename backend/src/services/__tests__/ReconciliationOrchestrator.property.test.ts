@@ -11,6 +11,10 @@ import { ChangeDetectionEngine } from '../ChangeDetectionEngine'
 import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer'
 import { ReconciliationConfigService } from '../ReconciliationConfigService'
 import { ReconciliationCacheService } from '../ReconciliationCacheService'
+import {
+  createTestCacheConfig,
+  cleanupTestCacheConfig,
+} from '../../__tests__/test-cache-helper'
 import type {
   ReconciliationTimeline,
   ReconciliationEntry,
@@ -18,6 +22,7 @@ import type {
   DataChanges,
 } from '../../types/reconciliation'
 import type { DistrictStatistics } from '../../types/districts'
+import type { TestCacheConfig } from '../../__tests__/test-cache-helper'
 
 describe('ReconciliationOrchestrator - Property-Based Tests', () => {
   let orchestrator: ReconciliationOrchestrator
@@ -25,11 +30,17 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
   let configService: ReconciliationConfigService
   let cacheService: ReconciliationCacheService
   let changeDetectionEngine: ChangeDetectionEngine
+  let testCacheConfig: TestCacheConfig
 
   beforeEach(async () => {
-    // Use temporary storage for tests
+    // Create isolated test cache configuration
+    testCacheConfig = await createTestCacheConfig(
+      'reconciliation-orchestrator-property'
+    )
+
+    // Use test cache directory for storage
     storageManager = new ReconciliationStorageOptimizer(
-      './cache/test-reconciliation'
+      testCacheConfig.cacheDir
     )
     configService = new ReconciliationConfigService()
     cacheService = new ReconciliationCacheService()
@@ -46,7 +57,12 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
 
   afterEach(async () => {
     // Clean up test data
-    await storageManager.clearAll()
+    if (storageManager) {
+      await storageManager.clearAll()
+    }
+
+    // Clean up test cache configuration
+    await cleanupTestCacheConfig(testCacheConfig)
   })
 
   // Test data generators

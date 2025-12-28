@@ -7,8 +7,10 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
+import path from 'path'
 import { ProgressTracker } from '../ProgressTracker'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
+import { CacheConfigService } from '../CacheConfigService'
 import type {
   ReconciliationJob,
   ReconciliationConfig,
@@ -19,12 +21,20 @@ import type {
 describe('ProgressTracker - Property-Based Tests', () => {
   let storageManager: ReconciliationStorageManager
 
+  // Helper function to create cache directory path
+  const createTestCacheDir = (testId: string): string => {
+    const cacheConfigService = CacheConfigService.getInstance()
+    return path.join(
+      cacheConfigService.getCacheDirectory(),
+      `test-progress-tracker-${testId}`
+    )
+  }
+
   beforeEach(async () => {
     // Use unique temporary storage for each test
     const testId = Math.random().toString(36).substring(7)
-    storageManager = new ReconciliationStorageManager(
-      `./cache/test-progress-tracker-${testId}`
-    )
+    const testCacheDir = createTestCacheDir(testId)
+    storageManager = new ReconciliationStorageManager(testCacheDir)
 
     await storageManager.init()
   })
@@ -231,7 +241,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Create fresh storage manager for this test iteration
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager
@@ -319,7 +329,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
               // Create fresh storage manager for this test iteration
               const testId = Math.random().toString(36).substring(7)
               const freshStorageManager = new ReconciliationStorageManager(
-                `./cache/test-progress-tracker-${testId}`
+                createTestCacheDir(testId)
               )
               const freshProgressTracker = new ProgressTracker(
                 freshStorageManager
@@ -418,7 +428,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Create fresh storage manager for this test iteration
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager
@@ -555,7 +565,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Create fresh storage manager for this test iteration
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager
@@ -638,7 +648,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Create fresh storage manager for this test iteration
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager
@@ -734,7 +744,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Create fresh storage manager for this test iteration
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager
@@ -857,7 +867,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
             // Create fresh storage manager for this test iteration
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager
@@ -981,7 +991,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
 
             const testId = Math.random().toString(36).substring(7)
             const freshStorageManager = new ReconciliationStorageManager(
-              `./cache/test-progress-tracker-${testId}`
+              createTestCacheDir(testId)
             )
             const freshProgressTracker = new ProgressTracker(
               freshStorageManager

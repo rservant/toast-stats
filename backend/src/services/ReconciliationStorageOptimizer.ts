@@ -33,7 +33,7 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   private batchTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
-    storageDir: string = './cache/reconciliation',
+    storageDir?: string,
     config: Partial<StorageOptimizationConfig> = {}
   ) {
     super(storageDir)
