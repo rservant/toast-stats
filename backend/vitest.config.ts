@@ -5,6 +5,13 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/__tests__/vitest.setup.ts'],
+    // Run tests sequentially to avoid race conditions in cache/file operations
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

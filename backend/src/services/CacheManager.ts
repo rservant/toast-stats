@@ -83,11 +83,68 @@ export class CacheManager {
    */
   async init(): Promise<void> {
     try {
+      // Ensure parent directory exists first
+      const parentDir = path.dirname(this.cacheDir)
+      await fs.mkdir(parentDir, { recursive: true })
       await fs.mkdir(this.cacheDir, { recursive: true })
       logger.info('Cache directory initialized', { cacheDir: this.cacheDir })
     } catch (error) {
       logger.error('Failed to initialize cache directory', error)
       throw error
+    }
+  }
+
+  /**
+   * Ensure a directory exists, creating it if necessary
+   */
+  private async ensureDirectoryExists(dirPath: string): Promise<void> {
+    const maxAttempts = 5
+    let attempts = 0
+
+    while (attempts < maxAttempts) {
+      attempts++
+
+      try {
+        await fs.mkdir(dirPath, { recursive: true })
+        return
+      } catch (error) {
+        const err = error as { code?: string }
+
+        // Directory already exists - success
+        if (err.code === 'EEXIST') {
+          return
+        }
+
+        // For any error, retry with exponential backoff
+        if (attempts < maxAttempts) {
+          const delay = Math.min(50 * Math.pow(2, attempts - 1), 500)
+          await new Promise(resolve => setTimeout(resolve, delay))
+
+          // Try to ensure parent directory exists first
+          try {
+            const parentDir = path.dirname(dirPath)
+            if (
+              parentDir !== dirPath &&
+              parentDir !== '.' &&
+              parentDir !== '/'
+            ) {
+              await fs.mkdir(parentDir, { recursive: true })
+            }
+          } catch {
+            // Ignore parent directory creation errors
+          }
+
+          continue
+        }
+
+        // Final attempt failed
+        logger.error('Failed to create directory after multiple attempts', {
+          dirPath,
+          attempts,
+          error: err,
+        })
+        throw error
+      }
     }
   }
 
@@ -228,6 +285,7 @@ export class CacheManager {
     }
 
     try {
+      await this.init() // Ensure directory exists
       const filePath = this.getCacheFilePath(date, type)
       const data = await fs.readFile(filePath, 'utf-8')
       logger.info('Cache hit', { date, type })
@@ -254,7 +312,27 @@ export class CacheManager {
     try {
       await this.init() // Ensure directory exists
       const filePath = this.getCacheFilePath(date, type)
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+
+      // Ensure both the cache directory and parent directory exist with retry logic
+      await this.ensureDirectoryExists(this.cacheDir)
+      const parentDir = path.dirname(filePath)
+      if (parentDir !== this.cacheDir) {
+        await this.ensureDirectoryExists(parentDir)
+      }
+
+      // Write file with retry logic for directory creation race conditions
+      try {
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+      } catch (error) {
+        // If write fails due to directory not existing, try creating directory again
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          await this.ensureDirectoryExists(path.dirname(filePath))
+          await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+        } else {
+          throw error
+        }
+      }
+
       logger.info('Data cached', { date, type, filePath })
 
       // For district rankings, update metadata and index
@@ -306,6 +384,10 @@ export class CacheManager {
 
       // Save metadata to file
       const metadataPath = this.getMetadataFilePath(date)
+
+      // Ensure parent directory exists
+      await this.ensureDirectoryExists(path.dirname(metadataPath))
+
       await fs.writeFile(
         metadataPath,
         JSON.stringify(metadata, null, 2),
@@ -381,6 +463,10 @@ export class CacheManager {
 
       // Save updated index
       const indexPath = this.getIndexFilePath()
+
+      // Ensure parent directory exists
+      await this.ensureDirectoryExists(path.dirname(indexPath))
+
       await fs.writeFile(indexPath, JSON.stringify(indexData, null, 2), 'utf-8')
 
       logger.info('Historical index updated', {
@@ -673,11 +759,19 @@ export class CacheManager {
       // Estimate cache size
       let cacheSize = 0
       try {
+        // Ensure cache directory exists before trying to read it
+        await fs.mkdir(this.cacheDir, { recursive: true })
         const files = await fs.readdir(this.cacheDir)
         for (const file of files) {
-          const filePath = path.join(this.cacheDir, file)
-          const stats = await fs.stat(filePath)
-          cacheSize += stats.size
+          try {
+            const filePath = path.join(this.cacheDir, file)
+            const stats = await fs.stat(filePath)
+            if (stats.isFile()) {
+              cacheSize += stats.size
+            }
+          } catch {
+            // Ignore individual file errors
+          }
         }
       } catch {
         // Ignore size calculation errors

@@ -28,6 +28,10 @@ describe('Reconciliation Status API Integration Tests', () => {
       // Directory might not exist, ignore error
     }
 
+    // Ensure parent directories exist
+    await fs.mkdir(path.dirname(testCacheDir), { recursive: true })
+    await fs.mkdir(testCacheDir, { recursive: true })
+
     // Initialize storage manager with test directory
     storageManager = new ReconciliationStorageManager(testCacheDir)
     await storageManager.init()

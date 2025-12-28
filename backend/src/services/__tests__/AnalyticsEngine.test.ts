@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import fs from 'fs/promises'
 import { AnalyticsEngine } from '../AnalyticsEngine'
 import { DistrictCacheManager } from '../DistrictCacheManager'
 import {
@@ -14,11 +15,17 @@ describe('AnalyticsEngine', () => {
 
   beforeEach(async () => {
     testCacheConfig = await createTestCacheConfig('analytics-engine')
+
+    // Ensure the cache directory exists
+    await fs.mkdir(testCacheConfig.cacheDir, { recursive: true })
+
     cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     analyticsEngine = new AnalyticsEngine(cacheManager)
   })
 
   afterEach(async () => {
+    // Clear analytics engine cache to prevent test interference
+    analyticsEngine.clearCaches()
     await cleanupTestCacheConfig(testCacheConfig)
   })
 
@@ -472,8 +479,11 @@ describe('AnalyticsEngine', () => {
           [],
           clubPerformance
         )
-        const analytics =
-          await analyticsEngine.generateDistrictAnalytics(districtId)
+        const analytics = await analyticsEngine.generateDistrictAnalytics(
+          districtId,
+          date,
+          date
+        )
 
         const dcpGoals = analytics.distinguishedClubAnalytics.dcpGoalAnalysis
         const goal5 =

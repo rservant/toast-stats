@@ -24,9 +24,9 @@ describe('Year-Over-Year Comparison Logic', () => {
     testCacheConfig = await createTestCacheConfig('year-over-year')
     await initializeTestCache(testCacheConfig)
 
-    // Use configured cache directory
-    const testCacheDir = getTestCacheDirectory()
-    cacheManager = new DistrictCacheManager(testCacheDir)
+    // Use the CacheConfigService to get the configured cache directory
+    cacheManager = new DistrictCacheManager()
+    await cacheManager.init()
     analyticsEngine = new AnalyticsEngine(cacheManager)
   })
 
@@ -366,6 +366,40 @@ describe('Year-Over-Year Comparison Logic', () => {
         '42',
         currentDate
       )
+
+      // Add debugging if result is null
+      if (!result) {
+        console.error(
+          'YearOverYear result is null for distinguished clubs test'
+        )
+        console.error('Current date:', currentDate)
+        console.error('Previous date:', previousDate)
+
+        // Check if data was cached properly
+        const currentData = await cacheManager.getDistrictData(
+          '42',
+          currentDate
+        )
+        const previousData = await cacheManager.getDistrictData(
+          '42',
+          previousDate
+        )
+        console.error('Current data exists:', !!currentData)
+        console.error('Previous data exists:', !!previousData)
+
+        if (currentData) {
+          console.error(
+            'Current club count:',
+            currentData.clubPerformance.length
+          )
+        }
+        if (previousData) {
+          console.error(
+            'Previous club count:',
+            previousData.clubPerformance.length
+          )
+        }
+      }
 
       expect(result).not.toBeNull()
       expect(result!.dataAvailable).toBe(true)

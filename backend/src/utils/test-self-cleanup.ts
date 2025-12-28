@@ -278,9 +278,29 @@ export function createUniqueTestDir(
   baseName: string,
   baseDir: string = './test-dir'
 ): string {
-  const timestamp = Date.now()
-  const random = Math.random().toString(36).substring(2, 8)
-  const uniqueDir = path.resolve(baseDir, `${baseName}-${timestamp}-${random}`)
+  // Sanitize baseName to prevent path traversal and make it readable
+  const sanitizedBaseName = baseName.replace(/[^a-zA-Z0-9-_]/g, '-')
+
+  // Use a shorter, more readable unique suffix
+  const processId = process.pid.toString(36)
+  const counter = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, '0')
+
+  // Create a readable directory name: baseName-pid-counter
+  const uniqueSuffix = `${processId}-${counter}`
+
+  // Ensure baseDir is resolved relative to current working directory
+  const resolvedBaseDir = path.resolve(process.cwd(), baseDir)
+  const uniqueDir = path.resolve(
+    resolvedBaseDir,
+    `${sanitizedBaseName}-${uniqueSuffix}`
+  )
+
+  // Verify the directory is within the expected base directory
+  if (!uniqueDir.startsWith(resolvedBaseDir)) {
+    throw new Error(`Test directory path traversal detected: ${uniqueDir}`)
+  }
 
   cleanup.trackDirectory(uniqueDir)
   return uniqueDir

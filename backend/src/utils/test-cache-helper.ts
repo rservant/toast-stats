@@ -34,8 +34,9 @@ export async function createTestCacheConfig(
   const testBaseDir = path.resolve('./test-dir')
   const cacheDir = path.resolve(testBaseDir, `test-cache-${testId}`)
 
-  // Ensure test base directory exists
+  // Ensure test base directory and cache directory exist
   await fs.mkdir(testBaseDir, { recursive: true })
+  await fs.mkdir(cacheDir, { recursive: true })
 
   // Store original CACHE_DIR
   const originalCacheDir = process.env.CACHE_DIR
@@ -113,6 +114,9 @@ export async function initializeTestCache(
   // Set environment variable
   process.env.CACHE_DIR = config.cacheDir
 
+  // Ensure the cache directory exists
+  await fs.mkdir(config.cacheDir, { recursive: true })
+
   // Reset and initialize cache config service
   CacheConfigService.resetInstance()
   const cacheConfigService = CacheConfigService.getInstance()
@@ -152,6 +156,48 @@ export async function verifyTestCacheIsolation(
       await fs.access(config.cacheDir)
     } catch {
       throw new Error(`Test cache directory does not exist: ${config.cacheDir}`)
+    }
+  }
+}
+
+/**
+ * Ensures parent directories exist for a given file path
+ */
+export async function ensureParentDirectoryExists(
+  filePath: string
+): Promise<void> {
+  const parentDir = path.dirname(filePath)
+  await fs.mkdir(parentDir, { recursive: true })
+}
+
+/**
+ * Creates a test file with proper directory structure
+ */
+export async function createTestFile(
+  filePath: string,
+  content: string = ''
+): Promise<void> {
+  await ensureParentDirectoryExists(filePath)
+  await fs.writeFile(filePath, content)
+}
+
+/**
+ * Ensures a directory exists, creating it and all parent directories if necessary
+ */
+export async function ensureDirectoryExists(dirPath: string): Promise<void> {
+  await fs.mkdir(dirPath, { recursive: true })
+}
+
+/**
+ * Safely removes a file, ignoring errors if the file doesn't exist
+ */
+export async function safeRemoveFile(filePath: string): Promise<void> {
+  try {
+    await fs.unlink(filePath)
+  } catch (error) {
+    // Ignore ENOENT errors (file doesn't exist)
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error
     }
   }
 }

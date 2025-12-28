@@ -199,15 +199,15 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
         mapKey.startsWith('timeline-')
       )
 
-      // Process jobs in parallel
+      // Process jobs sequentially to avoid race conditions in index updates
       if (jobOperations.length > 0) {
-        await Promise.all(
-          jobOperations.map(([_mapKey, op]) =>
-            op.type === 'save'
-              ? super.saveJob(op.data as ReconciliationJob)
-              : super.deleteJob(op.key)
-          )
-        )
+        for (const [, op] of jobOperations) {
+          if (op.type === 'save') {
+            await super.saveJob(op.data as ReconciliationJob)
+          } else {
+            await super.deleteJob(op.key)
+          }
+        }
       }
 
       // Process timelines in parallel

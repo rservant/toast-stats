@@ -3,6 +3,8 @@
  * This ensures environment variables are set before any modules are loaded
  */
 
+import { setupGlobalTestCleanup } from '../utils/global-test-cleanup'
+
 // Force mock data for all tests
 process.env.USE_MOCK_DATA = 'true'
 
@@ -13,6 +15,9 @@ process.env.NODE_ENV = 'test'
 if (!process.env.CACHE_DIR) {
   process.env.CACHE_DIR = './test-dir/test-cache-default'
 }
+
+// Setup global cleanup for test directories
+setupGlobalTestCleanup(false) // Set to true for verbose cleanup logging
 
 // Suppress unhandled promise rejection warnings in tests
 // This is specifically for the RetryManager test which intentionally creates rejected promises

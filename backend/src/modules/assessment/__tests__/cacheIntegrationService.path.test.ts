@@ -23,7 +23,7 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
   })
 
   it('uses CACHE_DIR configuration when creating cache manager', () => {
-    process.env.CACHE_DIR = '/tmp/some-cache'
+    process.env.CACHE_DIR = './test-dir/some-cache'
     CacheConfigService.resetInstance()
 
     // Create service instance
@@ -32,7 +32,7 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
     // Verify that CacheConfigService was used with correct configuration
     const configService = CacheConfigService.getInstance()
     expect(configService.getCacheDirectory()).toBe(
-      path.resolve('/tmp/some-cache')
+      path.resolve('./test-dir/some-cache')
     )
 
     // Verify the service was created successfully (integration test)
@@ -57,7 +57,7 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
   })
 
   it('uses CACHE_DIR configuration consistently across multiple service instances', () => {
-    process.env.CACHE_DIR = '/tmp/unified-cache'
+    process.env.CACHE_DIR = './test-dir/unified-cache'
     CacheConfigService.resetInstance()
 
     // Create multiple instances
@@ -67,7 +67,7 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
 
     // Verify all instances use the same configured path through CacheConfigService
     const configService = CacheConfigService.getInstance()
-    const expectedPath = path.resolve('/tmp/unified-cache')
+    const expectedPath = path.resolve('./test-dir/unified-cache')
     expect(configService.getCacheDirectory()).toBe(expectedPath)
 
     // Verify all services were created successfully
@@ -92,11 +92,13 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
   })
 
   it('respects explicit cache manager parameter over configuration', () => {
-    process.env.CACHE_DIR = '/tmp/configured-cache'
+    process.env.CACHE_DIR = './test-dir/configured-cache'
     CacheConfigService.resetInstance()
 
     // Create explicit cache manager with different path
-    const explicitCacheManager = new DistrictCacheManager('/tmp/explicit-cache')
+    const explicitCacheManager = new DistrictCacheManager(
+      './test-dir/explicit-cache'
+    )
 
     // Create service with explicit cache manager
     const service = new CacheIntegrationService(explicitCacheManager)
@@ -107,12 +109,12 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
     // The CacheConfigService should still have the configured path, but service uses explicit manager
     const configService = CacheConfigService.getInstance()
     expect(configService.getCacheDirectory()).toBe(
-      path.resolve('/tmp/configured-cache')
+      path.resolve('./test-dir/configured-cache')
     )
   })
 
   it('integrates with CacheConfigService for cache directory resolution', () => {
-    process.env.CACHE_DIR = '/tmp/integration-test'
+    process.env.CACHE_DIR = './test-dir/integration-test'
     CacheConfigService.resetInstance()
 
     // Create service instance
@@ -122,7 +124,9 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
     const configService = CacheConfigService.getInstance()
     const config = configService.getConfiguration()
 
-    expect(config.baseDirectory).toBe(path.resolve('/tmp/integration-test'))
+    expect(config.baseDirectory).toBe(
+      path.resolve('./test-dir/integration-test')
+    )
     expect(config.source).toBe('environment')
     expect(config.isConfigured).toBe(true)
 
@@ -133,8 +137,8 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
 
   it('does not use DISTRICT_CACHE_DIR environment variable', () => {
     // Set both environment variables to different values
-    process.env.CACHE_DIR = '/tmp/unified-cache'
-    process.env.DISTRICT_CACHE_DIR = '/tmp/old-cache'
+    process.env.CACHE_DIR = './test-dir/unified-cache'
+    process.env.DISTRICT_CACHE_DIR = './test-dir/old-cache'
     CacheConfigService.resetInstance()
 
     // Create service instance
@@ -144,8 +148,8 @@ describe('CacheIntegrationService Cache Path Configuration', () => {
     const configService = CacheConfigService.getInstance()
     const actualPath = configService.getCacheDirectory()
 
-    expect(actualPath).toBe(path.resolve('/tmp/unified-cache'))
-    expect(actualPath).not.toBe(path.resolve('/tmp/old-cache'))
+    expect(actualPath).toBe(path.resolve('./test-dir/unified-cache'))
+    expect(actualPath).not.toBe(path.resolve('./test-dir/old-cache'))
 
     // Verify service was created successfully
     expect(service).toBeDefined()

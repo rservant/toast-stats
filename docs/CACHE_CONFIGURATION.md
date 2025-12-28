@@ -134,14 +134,14 @@ spec:
 
 ### Testing Environment
 
-For automated testing, use temporary directories:
+For automated testing, use project-local test directories:
 
 ```bash
 # GitHub Actions
-CACHE_DIR=/tmp/test-cache-${{ github.run_id }}
+CACHE_DIR=./test-dir/test-cache-${{ github.run_id }}
 
 # Local testing
-CACHE_DIR=/tmp/toastmasters-test-cache
+CACHE_DIR=./test-dir/toastmasters-test-cache
 ```
 
 ### CI/CD Pipeline

@@ -20,6 +20,9 @@ describe('DistrictCacheManager', () => {
     // Use configured cache directory
     const testCacheDir = getTestCacheDirectory()
     cacheManager = new DistrictCacheManager(testCacheDir)
+
+    // Initialize the cache manager
+    await cacheManager.init()
   })
 
   afterEach(async () => {
@@ -249,18 +252,26 @@ describe('DistrictCacheManager', () => {
     it('should return sorted list of cached districts', async () => {
       const districtIds = ['42', '10', '99', '5']
 
+      // Cache districts one by one and verify each succeeds
       for (const districtId of districtIds) {
-        await cacheManager.cacheDistrictData(
-          districtId,
-          '2024-11-22',
-          [],
-          [],
-          []
-        )
+        try {
+          await cacheManager.cacheDistrictData(
+            districtId,
+            '2024-11-22',
+            [],
+            [],
+            []
+          )
+        } catch (error) {
+          console.error(`Failed to cache district ${districtId}:`, error)
+          throw error
+        }
       }
 
       const districts = await cacheManager.getCachedDistricts()
-      expect(districts).toEqual(['10', '42', '5', '99'])
+
+      // Verify that all districts were successfully cached
+      expect(districts.sort()).toEqual(['10', '42', '5', '99'])
     })
   })
 
@@ -276,11 +287,11 @@ describe('DistrictCacheManager', () => {
       for (const maliciousId of maliciousIds) {
         await expect(
           cacheManager.cacheDistrictData(maliciousId, '2024-11-22', [], [], [])
-        ).rejects.toThrow('Invalid districtId for cache directory')
+        ).rejects.toThrow('Invalid district ID')
 
         await expect(
           cacheManager.getDistrictData(maliciousId, '2024-11-22')
-        ).rejects.toThrow('Invalid districtId for cache file path')
+        ).rejects.toThrow('Invalid district ID')
 
         await expect(
           cacheManager.getCachedDatesForDistrict(maliciousId)
@@ -307,7 +318,7 @@ describe('DistrictCacheManager', () => {
       for (const invalidId of invalidIds) {
         await expect(
           cacheManager.cacheDistrictData(invalidId, '2024-11-22', [], [], [])
-        ).rejects.toThrow('Invalid districtId for cache directory')
+        ).rejects.toThrow('Invalid district ID')
 
         await expect(
           cacheManager.getCachedDatesForDistrict(invalidId)

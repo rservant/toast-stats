@@ -39,10 +39,10 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
     fc.oneof(
       fc.constant('./cache'),
       fc.constant('./test-dir/test-cache'),
-      fc.constant('/tmp/cache'),
+      fc.constant('./test-dir/cache'),
       fc.constant('./backend/cache'),
-      fc.string({ minLength: 5, maxLength: 50 }).map(_s => `./cache-${_s}`),
-      safeString(3, 20).map(_s => `/tmp/test-cache-${_s}`)
+      safeString(5, 50).map(_s => `./cache-${_s}`),
+      safeString(3, 20).map(_s => `./test-dir/test-cache-${_s}`)
     )
 
   /**

@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { promises as fs } from 'fs'
+import path from 'path'
 import { CacheManager } from '../CacheManager'
 import {
   createTestCacheConfig,
@@ -19,6 +21,11 @@ describe('CacheManager - Historical Data Aggregation', () => {
 
     // Use configured cache directory
     const testCacheDir = getTestCacheDirectory()
+
+    // Ensure the directory and its parent exist before creating CacheManager
+    await fs.mkdir(path.dirname(testCacheDir), { recursive: true })
+    await fs.mkdir(testCacheDir, { recursive: true })
+
     cacheManager = new CacheManager(testCacheDir)
     await cacheManager.init()
   })
@@ -390,6 +397,9 @@ describe('CacheManager - Historical Data Aggregation', () => {
 
         const testData = { rankings, date }
         await cacheManager.setCache(date, testData, 'districts')
+
+        // Ensure the cache operation is fully complete
+        await new Promise(resolve => setTimeout(resolve, 10))
       }
 
       const stats = await cacheManager.getCacheStatistics()

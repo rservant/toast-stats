@@ -76,6 +76,13 @@ export class AnalyticsEngine {
   }
 
   /**
+   * Clear internal caches (for testing purposes)
+   */
+  public clearCaches(): void {
+    this.cachedDatesCache.clear()
+  }
+
+  /**
    * Load cached data for a district within a date range
    */
   private async loadDistrictData(

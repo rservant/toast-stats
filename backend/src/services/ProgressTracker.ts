@@ -46,8 +46,20 @@ export class ProgressTracker {
       // Get job details first
       const job = await this.storageManager.getJob(jobId)
       if (!job) {
-        throw new Error(`Reconciliation job not found: ${jobId}`)
+        // Try to flush and get job again in case it's a timing issue
+        await this.storageManager.flush()
+        const jobAfterFlush = await this.storageManager.getJob(jobId)
+        if (!jobAfterFlush) {
+          // Add a small delay and try one more time
+          await new Promise(resolve => setTimeout(resolve, 10))
+          const jobAfterDelay = await this.storageManager.getJob(jobId)
+          if (!jobAfterDelay) {
+            throw new Error(`Reconciliation job not found: ${jobId}`)
+          }
+        }
       }
+
+      const actualJob = job || (await this.storageManager.getJob(jobId))!
 
       // Get existing timeline or create new one
       let timeline = await this.storageManager.getTimeline(jobId)
@@ -55,8 +67,8 @@ export class ProgressTracker {
       if (!timeline) {
         timeline = {
           jobId,
-          districtId: job.districtId,
-          targetMonth: job.targetMonth,
+          districtId: actualJob.districtId,
+          targetMonth: actualJob.targetMonth,
           entries: [],
           status: {
             phase: 'monitoring',
@@ -69,7 +81,7 @@ export class ProgressTracker {
 
       const isSignificant = this.isSignificantChange(
         changes,
-        job.config.significantChangeThresholds
+        actualJob.config.significantChangeThresholds
       )
 
       // Create new timeline entry
@@ -91,10 +103,13 @@ export class ProgressTracker {
       timeline.entries.sort((a, b) => a.date.getTime() - b.date.getTime())
 
       // Update timeline status
-      timeline.status = this.calculateTimelineStatus(timeline, job)
+      timeline.status = this.calculateTimelineStatus(timeline, actualJob)
 
       // Estimate completion if possible
-      const estimatedCompletion = await this.estimateCompletion(timeline, job)
+      const estimatedCompletion = await this.estimateCompletion(
+        timeline,
+        actualJob
+      )
       timeline.estimatedCompletion = estimatedCompletion || undefined
 
       // Save updated timeline
@@ -130,17 +145,24 @@ export class ProgressTracker {
         // If no timeline exists, create an empty one
         const job = await this.storageManager.getJob(jobId)
         if (!job) {
-          throw new Error(`Reconciliation job not found: ${jobId}`)
+          // Try to wait a bit and retry once in case of timing issues
+          await new Promise(resolve => setTimeout(resolve, 50))
+          const retryJob = await this.storageManager.getJob(jobId)
+          if (!retryJob) {
+            throw new Error(`Reconciliation job not found: ${jobId}`)
+          }
         }
+
+        const jobData = job || (await this.storageManager.getJob(jobId))
 
         const emptyTimeline: ReconciliationTimeline = {
           jobId,
-          districtId: job.districtId,
-          targetMonth: job.targetMonth,
+          districtId: jobData!.districtId,
+          targetMonth: jobData!.targetMonth,
           entries: [],
           status: {
             phase: 'monitoring',
-            daysActive: this.calculateDaysActive(job),
+            daysActive: this.calculateDaysActive(jobData!),
             daysStable: 0,
             message: 'No timeline entries yet',
           },

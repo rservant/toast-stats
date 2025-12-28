@@ -45,7 +45,7 @@ export class CacheDirectoryValidator {
           isAccessible: false,
           isSecure: false,
           errorMessage:
-            'Path contains unsafe patterns or points to system root',
+            'Cache directory path contains unsafe patterns or points to system root',
         }
       }
 
@@ -67,33 +67,61 @@ export class CacheDirectoryValidator {
           isValid: false,
           isAccessible: false,
           isSecure: false,
-          errorMessage: 'Path points to sensitive system directory',
+          errorMessage:
+            'Cache directory path is unsafe: points to sensitive system directory',
         }
       }
 
       // Try to create directory if it doesn't exist
       try {
+        // Ensure parent directory exists first
+        const parentDir = path.dirname(normalizedPath)
+        if (parentDir !== normalizedPath) {
+          await fs.mkdir(parentDir, { recursive: true })
+        }
         await fs.mkdir(normalizedPath, { recursive: true })
       } catch (error) {
-        return {
-          isValid: true,
-          isAccessible: false,
-          isSecure: true,
-          errorMessage: `Cannot create directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        const err = error as { code?: string }
+        // Ignore EEXIST errors (directory already exists)
+        if (err.code !== 'EEXIST') {
+          return {
+            isValid: true,
+            isAccessible: false,
+            isSecure: true,
+            errorMessage: `Cannot create directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }
         }
       }
 
-      // Test write permissions
-      try {
-        const testFile = path.join(normalizedPath, '.cache-test-write')
-        await fs.writeFile(testFile, 'test', 'utf-8')
-        await fs.unlink(testFile)
-      } catch (error) {
+      // Test write permissions with retry logic for race conditions
+      let writeTestPassed = false
+      let lastError: Error | null = null
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const testFile = path.join(
+            normalizedPath,
+            `.cache-test-write-${Date.now()}-${attempt}`
+          )
+          await fs.writeFile(testFile, 'test', 'utf-8')
+          await fs.unlink(testFile)
+          writeTestPassed = true
+          break
+        } catch (error) {
+          lastError = error as Error
+          // Wait a bit before retrying to handle race conditions
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
+        }
+      }
+
+      if (!writeTestPassed) {
         return {
           isValid: true,
           isAccessible: false,
           isSecure: true,
-          errorMessage: `Directory is not writable: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          errorMessage: `Directory is not writable: ${lastError?.message || 'Unknown error'}`,
         }
       }
 
@@ -133,7 +161,7 @@ export interface CacheConfiguration {
 
 export class CacheConfigService {
   private static instance: CacheConfigService | undefined
-  private readonly cacheDir: string
+  private cacheDir: string
   private readonly configuration: CacheConfiguration
   private initialized: boolean = false
 
@@ -186,6 +214,9 @@ export class CacheConfigService {
       return
     }
 
+    // Refresh configuration from environment variables in case they changed
+    this.refreshConfiguration()
+
     try {
       // Validate the cache directory
       const validation = await CacheDirectoryValidator.validate(this.cacheDir)
@@ -227,10 +258,7 @@ export class CacheConfigService {
             })
 
             // Update internal cache directory
-            Object.defineProperty(this, 'cacheDir', {
-              value: fallbackPath,
-              writable: false,
-            })
+            this.cacheDir = fallbackPath
 
             logger.info('Successfully fell back to default cache directory', {
               fallbackPath,
@@ -314,28 +342,27 @@ export class CacheConfigService {
    * This is useful when environment variables are loaded after the service is instantiated
    */
   refreshConfiguration(): void {
+    const newCacheDir = this.resolveCacheDirectory()
     const envCacheDir = process.env.CACHE_DIR
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
 
-    if (isConfigured) {
-      const newCacheDir = this.resolveCacheDirectory()
+    // Update the cache directory if it changed
+    this.cacheDir = newCacheDir
 
-      // Update the cache directory if it changed
-      if (newCacheDir !== this.cacheDir) {
-        Object.defineProperty(this, 'cacheDir', {
-          value: newCacheDir,
-          writable: false,
-        })
-      }
+    // Update configuration
+    this.configuration.baseDirectory = newCacheDir
+    this.configuration.isConfigured = isConfigured
+    this.configuration.source = isConfigured ? 'environment' : 'default'
 
-      // Update configuration
-      this.configuration.baseDirectory = newCacheDir
-      this.configuration.isConfigured = isConfigured
-      this.configuration.source = 'environment'
-
-      // Reset initialization status so it will re-validate
-      this.initialized = false
+    // Reset validation status
+    this.configuration.validationStatus = {
+      isValid: false,
+      isAccessible: false,
+      isSecure: false,
     }
+
+    // Reset initialization status so it will re-validate
+    this.initialized = false
   }
 
   /**

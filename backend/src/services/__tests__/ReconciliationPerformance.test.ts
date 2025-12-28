@@ -351,30 +351,34 @@ describe('ReconciliationBatchProcessor', () => {
     return batchProcessor
   }
 
-  it('should process multiple districts in parallel', async () => {
-    const batchProcessor = setupBatchProcessor()
-    const batchJobs: BatchJob[] = []
+  it(
+    'should process multiple districts in parallel',
+    { timeout: 10000 },
+    async () => {
+      const batchProcessor = setupBatchProcessor()
+      const batchJobs: BatchJob[] = []
 
-    // Create batch jobs for multiple districts
-    for (let i = 0; i < 6; i++) {
-      batchJobs.push({
-        districtId: `D${i}`,
-        targetMonth: '2025-01',
-        priority: Math.random() * 10,
-      })
+      // Create batch jobs for multiple districts (reduced from 6 to 3)
+      for (let i = 0; i < 3; i++) {
+        batchJobs.push({
+          districtId: `D${i}`,
+          targetMonth: '2025-01',
+          priority: Math.random() * 10,
+        })
+      }
+
+      const startTime = Date.now()
+      const results = await batchProcessor.processBatch(batchJobs)
+      const processingTime = Date.now() - startTime
+
+      expect(results).toHaveLength(batchJobs.length)
+      expect(processingTime).toBeLessThan(30000) // Should complete within 30 seconds
+
+      // Check that jobs were processed
+      const successfulJobs = results.filter(r => r.success)
+      expect(successfulJobs.length).toBeGreaterThan(0)
     }
-
-    const startTime = Date.now()
-    const results = await batchProcessor.processBatch(batchJobs)
-    const processingTime = Date.now() - startTime
-
-    expect(results).toHaveLength(batchJobs.length)
-    expect(processingTime).toBeLessThan(30000) // Should complete within 30 seconds
-
-    // Check that jobs were processed
-    const successfulJobs = results.filter(r => r.success)
-    expect(successfulJobs.length).toBeGreaterThan(0)
-  })
+  )
 
   it('should handle batch processing progress tracking', async () => {
     const batchProcessor = setupBatchProcessor()

@@ -1,6 +1,10 @@
 import { render, cleanup } from '@testing-library/react'
 import { DataStatusIndicator } from '../DataStatusIndicator'
 import fc from 'fast-check'
+import {
+  safeString,
+  safeClassName,
+} from '../../__tests__/test-string-generators'
 
 /**
  * Property test for DataStatusIndicator component
@@ -37,7 +41,7 @@ const reconciliationStatusArb = fc.record({
       .map(ms => new Date(ms)),
     { nil: undefined }
   ),
-  message: fc.option(fc.string({ minLength: 1, maxLength: 100 }), {
+  message: fc.option(safeString(1, 100), {
     nil: undefined,
   }),
 })
@@ -220,7 +224,7 @@ describe('DataStatusIndicator Property Tests', () => {
       fc.property(
         dataStatusArb,
         fc.boolean(),
-        fc.string(),
+        safeClassName(),
         (dataStatus, showDetails, className) => {
           expect(() => {
             render(

@@ -430,6 +430,6 @@ volumeMounts:
 ### Testing Environment
 
 ```bash
-# Use temporary directory for tests
-CACHE_DIR=/tmp/test-cache-${TEST_ID}
+# Use project-local test directory for tests
+CACHE_DIR=./test-dir/test-cache-${TEST_ID}
 ```
