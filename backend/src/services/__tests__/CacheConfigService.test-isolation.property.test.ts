@@ -451,13 +451,15 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
               await cacheConfigService.initialize()
 
               // Verify correct cache directory (accounting for security validation)
-              const hasUnsafePatterns = testCacheDir.includes('..') || 
-                                      testCacheDir.includes('~') ||
-                                      path.resolve(testCacheDir).includes('..') ||
-                                      path.resolve(testCacheDir) === '/' ||
-                                      path.resolve(testCacheDir) === path.parse(path.resolve(testCacheDir)).root
-              
-              const expectedDir = hasUnsafePatterns 
+              const hasUnsafePatterns =
+                testCacheDir.includes('..') ||
+                testCacheDir.includes('~') ||
+                path.resolve(testCacheDir).includes('..') ||
+                path.resolve(testCacheDir) === '/' ||
+                path.resolve(testCacheDir) ===
+                  path.parse(path.resolve(testCacheDir)).root
+
+              const expectedDir = hasUnsafePatterns
                 ? path.resolve('./cache')
                 : testCacheDir
               expect(cacheConfigService.getCacheDirectory()).toBe(expectedDir)
