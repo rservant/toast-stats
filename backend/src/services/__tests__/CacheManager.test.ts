@@ -5,8 +5,8 @@ import {
   cleanupTestCacheConfig,
   initializeTestCache,
   getTestCacheDirectory,
-} from '../../__tests__/test-cache-helper.js'
-import type { TestCacheConfig } from '../../__tests__/test-cache-helper.js'
+} from '../../utils/test-cache-helper.js'
+import type { TestCacheConfig } from '../../utils/test-cache-helper.js'
 
 describe('CacheManager - Historical Data Aggregation', () => {
   let cacheManager: CacheManager

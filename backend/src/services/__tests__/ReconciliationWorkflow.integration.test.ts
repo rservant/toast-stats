@@ -19,7 +19,7 @@ import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   type TestCacheConfig,
-} from '../../__tests__/test-cache-helper.js'
+} from '../../utils/test-cache-helper.js'
 
 import type { DistrictStatistics } from '../../types/districts.js'
 import type {

@@ -24,8 +24,8 @@ import { CacheUpdateManager } from '../services/CacheUpdateManager.js'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
-} from './test-cache-helper.js'
-import type { TestCacheConfig } from './test-cache-helper.js'
+} from '../utils/test-cache-helper.js'
+import type { TestCacheConfig } from '../utils/test-cache-helper.js'
 import type { ScrapedRecord } from '../types/districts.js'
 
 // Test data interface for isolation tests

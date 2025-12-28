@@ -14,7 +14,7 @@ import { ReconciliationCacheService } from '../ReconciliationCacheService'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
-} from '../../__tests__/test-cache-helper'
+} from '../../utils/test-cache-helper.js'
 import type {
   ReconciliationTimeline,
   ReconciliationEntry,
@@ -22,7 +22,7 @@ import type {
   DataChanges,
 } from '../../types/reconciliation'
 import type { DistrictStatistics } from '../../types/districts'
-import type { TestCacheConfig } from '../../__tests__/test-cache-helper'
+import type { TestCacheConfig } from '../../utils/test-cache-helper.js'
 
 describe('ReconciliationOrchestrator - Property-Based Tests', () => {
   let orchestrator: ReconciliationOrchestrator

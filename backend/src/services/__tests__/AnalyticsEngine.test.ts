@@ -5,7 +5,7 @@ import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   type TestCacheConfig,
-} from '../../__tests__/test-cache-helper.js'
+} from '../../utils/test-cache-helper.js'
 
 describe('AnalyticsEngine', () => {
   let testCacheConfig: TestCacheConfig
