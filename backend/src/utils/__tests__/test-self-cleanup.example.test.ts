@@ -14,7 +14,7 @@ import {
   createUniqueTestFile,
   withSelfCleanup,
   verifyTestDirEmpty,
-} from '../test-self-cleanup.ts'
+} from '../test-self-cleanup'
 
 describe('Self-Cleanup Pattern Examples', () => {
   describe('Basic Self-Cleanup Pattern', () => {

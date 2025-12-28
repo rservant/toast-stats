@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   initializeTestCache,
   getTestCacheDirectory,
-} from '../../utils/test-cache-helper.ts'
-import type { TestCacheConfig } from '../../utils/test-cache-helper.ts'
+} from '../../utils/test-cache-helper'
+import type { TestCacheConfig } from '../../utils/test-cache-helper'
 
 describe('DistrictCacheManager', () => {
   let cacheManager: DistrictCacheManager

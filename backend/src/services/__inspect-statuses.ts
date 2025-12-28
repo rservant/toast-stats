@@ -19,7 +19,7 @@ async function inspectStatuses() {
 
       clubs.forEach((club: Record<string, unknown>) => {
         const status = club['Club Status']
-        if (status) {
+        if (status && typeof status === 'string') {
           allStatuses.add(status.trim())
         }
       })

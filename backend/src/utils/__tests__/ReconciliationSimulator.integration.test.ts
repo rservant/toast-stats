@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ReconciliationSimulator } from '../ReconciliationSimulator.ts'
-import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.ts'
-import type { SimulationResult } from '../ReconciliationSimulator.ts'
+import { ReconciliationSimulator } from '../ReconciliationSimulator'
+import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine'
+import type { SimulationResult } from '../ReconciliationSimulator'
 
 // Mock logger
 vi.mock('../logger.ts', () => ({

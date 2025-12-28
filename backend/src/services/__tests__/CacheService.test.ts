@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { CacheService } from '../CacheService.ts'
+import { CacheService } from '../CacheService'
 
 describe('CacheService', () => {
   let cacheService: CacheService

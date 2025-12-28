@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import assessmentRoutes from '../routes/assessmentRoutes.ts'
-import { deleteMonthlyAssessment } from '../storage/assessmentStore.ts'
+import assessmentRoutes from '../routes/assessmentRoutes'
+import { deleteMonthlyAssessment } from '../storage/assessmentStore'
 
 function createApp() {
   const app = express()

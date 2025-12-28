@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { RealToastmastersAPIService } from '../RealToastmastersAPIService.ts'
-import type { DistrictRanking } from '../../types/districts.ts'
+import { RealToastmastersAPIService } from '../RealToastmastersAPIService'
+import type { DistrictRanking } from '../../types/districts'
 
 // Interface for mock scraper
 interface MockScraper {

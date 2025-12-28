@@ -4,15 +4,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { AnalyticsEngine } from '../AnalyticsEngine.ts'
-import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import { AnalyticsEngine } from '../AnalyticsEngine'
+import { DistrictCacheManager } from '../DistrictCacheManager'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   initializeTestCache,
   getTestCacheDirectory,
-} from '../../utils/test-cache-helper.ts'
-import type { TestCacheConfig } from '../../utils/test-cache-helper.ts'
+} from '../../utils/test-cache-helper'
+import type { TestCacheConfig } from '../../utils/test-cache-helper'
 
 describe('Year-Over-Year Comparison Logic', () => {
   let cacheManager: DistrictCacheManager

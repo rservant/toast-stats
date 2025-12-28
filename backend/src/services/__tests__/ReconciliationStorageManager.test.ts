@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { ReconciliationStorageManager } from '../ReconciliationStorageManager.ts'
+import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
 import type {
   ReconciliationJob,
   ReconciliationConfig,
-} from '../../types/reconciliation.ts'
-import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
+} from '../../types/reconciliation'
+import { createTestReconciliationJob } from '../../utils/test-helpers'
 import {
   createTestSelfCleanup,
   createUniqueTestDir,
-} from '../../utils/test-self-cleanup.ts'
+} from '../../utils/test-self-cleanup'
 import fs from 'fs/promises'
 import path from 'path'
 

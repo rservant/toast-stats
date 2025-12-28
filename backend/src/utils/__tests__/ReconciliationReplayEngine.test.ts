@@ -6,15 +6,15 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.ts'
-import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.ts'
-import { createTestSelfCleanup } from '../test-self-cleanup.ts'
-import type { ReplayOptions } from '../ReconciliationReplayEngine.ts'
+import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine'
+import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine'
+import { createTestSelfCleanup } from '../test-self-cleanup'
+import type { ReplayOptions } from '../ReconciliationReplayEngine'
 import type {
   ReconciliationJob,
   ReconciliationTimeline,
-} from '../../types/reconciliation.ts'
-import type { DistrictStatistics } from '../../types/districts.ts'
+} from '../../types/reconciliation'
+import type { DistrictStatistics } from '../../types/districts'
 
 // Mock logger
 vi.mock('../logger.ts', () => ({
@@ -71,7 +71,7 @@ describe('ReconciliationReplayEngine', () => {
     )
 
     // Register cleanup for the replay engine
-    cleanup(() => {
+    cleanup.addCleanupFunction(async () => {
       // Add any cleanup needed for the replay engine
     })
 

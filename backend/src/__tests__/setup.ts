@@ -5,7 +5,7 @@ import cors from 'cors'
 process.env.USE_MOCK_DATA = 'true'
 process.env.NODE_ENV = 'test'
 
-import districtRoutes from '../routes/districts.ts'
+import districtRoutes from '../routes/districts'
 
 export function createTestApp(): Express {
   // Ensure the environment variable is set

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { RetryManager } from '../RetryManager.ts'
+import { RetryManager } from '../RetryManager'
 
 describe('RetryManager', () => {
   describe('executeWithRetry', () => {

@@ -7,8 +7,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fc from 'fast-check'
-import CacheIntegrationService from '../services/cacheIntegrationService.ts'
-import { CacheConfigService } from '../../../services/CacheConfigService.ts'
+import CacheIntegrationService from '../services/cacheIntegrationService'
+import { CacheConfigService } from '../../../services/CacheConfigService'
 import { safeString } from '../../../utils/test-string-generators'
 import path from 'path'
 

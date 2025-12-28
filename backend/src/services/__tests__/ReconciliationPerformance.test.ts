@@ -4,19 +4,19 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.ts'
-import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
+import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer'
+import { ReconciliationCacheService } from '../ReconciliationCacheService'
 import {
   ReconciliationBatchProcessor,
   type BatchJob,
-} from '../ReconciliationBatchProcessor.ts'
-import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.ts'
-import type { ReconciliationJob } from '../../types/reconciliation.ts'
-import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
+} from '../ReconciliationBatchProcessor'
+import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor'
+import type { ReconciliationJob } from '../../types/reconciliation'
+import { createTestReconciliationJob } from '../../utils/test-helpers'
 import {
   createTestSelfCleanup,
   createUniqueTestDir,
-} from '../../utils/test-self-cleanup.ts'
+} from '../../utils/test-self-cleanup'
 
 // Mock logger
 vi.mock('../../utils/logger.ts', () => ({

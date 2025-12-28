@@ -16,17 +16,17 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
-import { CacheConfigService } from '../services/CacheConfigService.ts'
-import { CacheManager } from '../services/CacheManager.ts'
-import { DistrictCacheManager } from '../services/DistrictCacheManager.ts'
-import { CacheIntegrationService } from '../modules/assessment/services/cacheIntegrationService.ts'
-import { CacheUpdateManager } from '../services/CacheUpdateManager.ts'
+import { CacheConfigService } from '../services/CacheConfigService'
+import { CacheManager } from '../services/CacheManager'
+import { DistrictCacheManager } from '../services/DistrictCacheManager'
+import { CacheIntegrationService } from '../modules/assessment/services/cacheIntegrationService'
+import { CacheUpdateManager } from '../services/CacheUpdateManager'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
-} from '../utils/test-cache-helper.ts'
-import type { TestCacheConfig } from '../utils/test-cache-helper.ts'
-import type { ScrapedRecord } from '../types/districts.ts'
+} from '../utils/test-cache-helper'
+import type { TestCacheConfig } from '../utils/test-cache-helper'
+import type { ScrapedRecord } from '../types/districts'
 
 // Test data interface for isolation tests
 interface TestCacheData {

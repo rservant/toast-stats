@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { DistrictBackfillService } from '../DistrictBackfillService.ts'
-import { DistrictCacheManager } from '../DistrictCacheManager.ts'
-import { ToastmastersScraper } from '../ToastmastersScraper.ts'
-import type { ScrapedRecord } from '../../types/districts.ts'
+import { DistrictBackfillService } from '../DistrictBackfillService'
+import { DistrictCacheManager } from '../DistrictCacheManager'
+import { ToastmastersScraper } from '../ToastmastersScraper'
+import type { ScrapedRecord } from '../../types/districts'
 import {
   createTestSelfCleanup,
   createUniqueTestDir,
-} from '../../utils/test-self-cleanup.ts'
+} from '../../utils/test-self-cleanup'
 
 // Mock interface for ToastmastersScraper
 interface MockToastmastersScraper {

@@ -13,15 +13,15 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import fs from 'fs/promises'
 import path from 'path'
-import { CacheConfigService } from '../CacheConfigService.ts'
-import { DistrictCacheManager } from '../DistrictCacheManager.ts'
-import { CacheManager } from '../CacheManager.ts'
-import type { DistrictCacheEntry } from '../../types/districts.ts'
+import { CacheConfigService } from '../CacheConfigService'
+import { DistrictCacheManager } from '../DistrictCacheManager'
+import { CacheManager } from '../CacheManager'
+import type { DistrictCacheEntry } from '../../types/districts'
 import { safeString } from '../../utils/test-string-generators'
 import {
   createTestSelfCleanup,
   createUniqueTestDir,
-} from '../../utils/test-self-cleanup.ts'
+} from '../../utils/test-self-cleanup'
 
 // Test interfaces
 interface TestHistoricalData {

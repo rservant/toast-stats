@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CspExtractorService } from '../services/cspExtractorService.ts'
+import { CspExtractorService } from '../services/cspExtractorService'
 
 describe('CspExtractorService', () => {
   it('counts CSP clubs when field is "CSP Achieved"', () => {

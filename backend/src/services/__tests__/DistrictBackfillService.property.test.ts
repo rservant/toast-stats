@@ -7,16 +7,16 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fc from 'fast-check'
-import { DistrictBackfillService } from '../DistrictBackfillService.ts'
-import { DistrictCacheManager } from '../DistrictCacheManager.ts'
-import { ToastmastersScraper } from '../ToastmastersScraper.ts'
-import type { DistrictStatistics } from '../../types/districts.ts'
-import type { ScrapedRecord } from '../../types/districts.ts'
+import { DistrictBackfillService } from '../DistrictBackfillService'
+import { DistrictCacheManager } from '../DistrictCacheManager'
+import { ToastmastersScraper } from '../ToastmastersScraper'
+import type { DistrictStatistics } from '../../types/districts'
+import type { ScrapedRecord } from '../../types/districts'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   type TestCacheConfig,
-} from '../../utils/test-cache-helper.ts'
+} from '../../utils/test-cache-helper'
 
 // Mock interface for ToastmastersScraper
 interface MockToastmastersScraper {

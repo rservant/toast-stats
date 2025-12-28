@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { CacheConfigService } from '../../../services/CacheConfigService.ts'
-import CacheIntegrationService from '../services/cacheIntegrationService.ts'
-import { DistrictCacheManager } from '../../../services/DistrictCacheManager.ts'
+import { CacheConfigService } from '../../../services/CacheConfigService'
+import CacheIntegrationService from '../services/cacheIntegrationService'
+import { DistrictCacheManager } from '../../../services/DistrictCacheManager'
 import * as path from 'path'
 
 describe('CacheIntegrationService Cache Path Configuration', () => {

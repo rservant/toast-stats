@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { AlertManager, AlertSeverity, AlertCategory } from '../AlertManager.ts'
-import { createTestSelfCleanup } from '../test-self-cleanup.ts'
+import { AlertManager, AlertSeverity, AlertCategory } from '../AlertManager'
+import { createTestSelfCleanup } from '../test-self-cleanup'
 
 describe('AlertManager', () => {
   // Self-cleanup setup - each test manages its own cleanup
@@ -19,7 +19,7 @@ describe('AlertManager', () => {
     const instance = AlertManager.getInstance()
 
     // Register cleanup for timers
-    cleanup(() => {
+    cleanup.addCleanupFunction(async () => {
       vi.useRealTimers()
     })
 

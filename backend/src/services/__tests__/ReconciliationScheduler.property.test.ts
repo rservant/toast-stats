@@ -6,10 +6,10 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fc from 'fast-check'
-import { ReconciliationScheduler } from '../ReconciliationScheduler.ts'
-import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.ts'
-import { ReconciliationStorageManager } from '../ReconciliationStorageManager.ts'
-import { ReconciliationConfigService } from '../ReconciliationConfigService.ts'
+import { ReconciliationScheduler } from '../ReconciliationScheduler'
+import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator'
+import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
+import { ReconciliationConfigService } from '../ReconciliationConfigService'
 
 describe('ReconciliationScheduler Property Tests', () => {
   let scheduler: ReconciliationScheduler

@@ -13,8 +13,8 @@ import {
   getMonthNumber,
   getMonthName,
   validateMonthlyTargets,
-} from '../services/monthlyTargetService.ts'
-import { DistrictConfig } from '../types/assessment.ts'
+} from '../services/monthlyTargetService'
+import { DistrictConfig } from '../types/assessment'
 
 const mockConfig: DistrictConfig = {
   district_number: 61,

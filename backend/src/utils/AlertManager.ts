@@ -307,7 +307,7 @@ export class AlertManager {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     let cleanedCount = 0
 
-    for (const [alertId, alert] of this.alerts.entries()) {
+    for (const [alertId, alert] of Array.from(this.alerts.entries())) {
       if (
         alert.resolved &&
         alert.resolvedAt &&

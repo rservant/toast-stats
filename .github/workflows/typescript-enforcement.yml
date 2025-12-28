@@ -33,18 +33,18 @@ jobs:
     - name: Check Backend TypeScript Compilation
       id: backend-ts
       run: |
-        echo "Checking backend TypeScript compilation..."
-        ERROR_COUNT=$(npm run typecheck:backend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+        echo "Checking backend TypeScript compilation (including tests)..."
+        ERROR_COUNT=$(npm run typecheck:backend:all 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
         echo "Backend TypeScript errors: $ERROR_COUNT"
         echo "backend_errors=$ERROR_COUNT" >> $GITHUB_OUTPUT
         
         if [ "$ERROR_COUNT" -gt 0 ]; then
           echo "❌ Backend has $ERROR_COUNT TypeScript errors"
           echo "Detailed errors:"
-          npm run typecheck:backend 2>&1 | grep -E "error TS[0-9]+" | head -20
+          npm run typecheck:backend:all 2>&1 | grep -E "error TS[0-9]+" | head -20
           exit 1
         else
-          echo "✅ Backend TypeScript compilation successful"
+          echo "✅ Backend TypeScript compilation successful (including tests)"
         fi
     
     - name: Check Frontend TypeScript Compilation

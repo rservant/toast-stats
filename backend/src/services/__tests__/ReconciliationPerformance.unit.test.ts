@@ -4,15 +4,15 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
-import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.ts'
+import { ReconciliationCacheService } from '../ReconciliationCacheService'
+import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor'
 import type {
   ReconciliationJob,
   ReconciliationTimeline,
   ReconciliationStatus,
-} from '../../types/reconciliation.ts'
-import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
-import { createTestSelfCleanup } from '../../utils/test-self-cleanup.ts'
+} from '../../types/reconciliation'
+import { createTestReconciliationJob } from '../../utils/test-helpers'
+import { createTestSelfCleanup } from '../../utils/test-self-cleanup'
 
 // Mock logger
 vi.mock('../../utils/logger.ts', () => ({

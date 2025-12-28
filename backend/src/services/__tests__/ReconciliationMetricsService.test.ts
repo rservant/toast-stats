@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { ReconciliationMetricsService } from '../ReconciliationMetricsService.ts'
-import { AlertManager } from '../../utils/AlertManager.ts'
-import type { ReconciliationJob } from '../../types/reconciliation.ts'
-import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
+import { ReconciliationMetricsService } from '../ReconciliationMetricsService'
+import { AlertManager } from '../../utils/AlertManager'
+import type { ReconciliationJob } from '../../types/reconciliation'
+import { createTestReconciliationJob } from '../../utils/test-helpers'
 
 // Mock AlertManager
 vi.mock('../../utils/AlertManager.ts', () => ({

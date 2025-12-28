@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ReconciliationSimulator } from '../ReconciliationSimulator.ts'
-import type { SimulationScenario } from '../ReconciliationSimulator.ts'
+import { ReconciliationSimulator } from '../ReconciliationSimulator'
+import type { SimulationScenario } from '../ReconciliationSimulator'
 
 // Mock logger
 vi.mock('../logger.ts', () => ({

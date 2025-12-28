@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.ts'
-import { createTestSelfCleanup } from '../test-self-cleanup.ts'
+import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator'
+import { createTestSelfCleanup } from '../test-self-cleanup'
 
 // Mock logger
 vi.mock('../logger.ts', () => ({
@@ -32,7 +32,7 @@ describe('ReconciliationTestDataGenerator', () => {
     const generator = new ReconciliationTestDataGenerator()
 
     // Register cleanup for the generator if it has cleanup methods
-    cleanup(() => {
+    cleanup.addCleanupFunction(async () => {
       // Add any cleanup needed for the generator
     })
 

@@ -10,8 +10,8 @@ import {
   calculateGoal3,
   calculateAllGoals,
   validateAgainstExcel,
-} from '../services/assessmentCalculator.ts'
-import { MonthlyAssessment, DistrictConfig } from '../types/assessment.ts'
+} from '../services/assessmentCalculator'
+import { MonthlyAssessment, DistrictConfig } from '../types/assessment'
 
 const mockConfig: DistrictConfig = {
   district_number: 61,

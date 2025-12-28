@@ -10,8 +10,8 @@ import {
   invalidateAllCache,
   getCacheStats,
   validateConfig,
-} from '../services/configService.ts'
-import { DistrictConfig } from '../types/assessment.ts'
+} from '../services/configService'
+import { DistrictConfig } from '../types/assessment'
 
 const mockConfig: DistrictConfig = {
   district_number: 61,

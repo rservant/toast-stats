@@ -27,9 +27,9 @@ import path from 'path'
 import {
   CacheConfigService,
   CacheDirectoryValidator,
-} from '../CacheConfigService.ts'
+} from '../CacheConfigService'
 import { safeString } from '../../utils/test-string-generators'
-import { createTestSelfCleanup } from '../../utils/test-self-cleanup.ts'
+import { createTestSelfCleanup } from '../../utils/test-self-cleanup'
 
 describe('CacheConfigService - Property-Based Tests', () => {
   let originalEnv: string | undefined

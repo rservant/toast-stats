@@ -5,8 +5,8 @@
  * on external cleanup scripts. Each test manages its own temporary resources.
  */
 
-import fs from 'fs/promises'
-import path from 'path'
+import * as fs from 'fs/promises'
+import * as path from 'path'
 
 /**
  * Configuration for self-cleanup behavior
@@ -165,7 +165,7 @@ export class TestSelfCleanup {
     }
 
     // Clean up tracked files
-    for (const filePath of this.files) {
+    for (const filePath of Array.from(this.files)) {
       try {
         await fs.unlink(filePath)
         if (this.config.verbose) {
@@ -186,7 +186,7 @@ export class TestSelfCleanup {
     }
 
     // Clean up tracked directories
-    for (const directory of this.directories) {
+    for (const directory of Array.from(this.directories)) {
       try {
         await fs.rm(directory, { recursive: true, force: true })
         if (this.config.verbose) {

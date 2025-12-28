@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ReconciliationErrorHandler } from '../ReconciliationErrorHandler.ts'
-import { AlertManager } from '../../utils/AlertManager.ts'
+import { ReconciliationErrorHandler } from '../ReconciliationErrorHandler'
+import { AlertManager } from '../../utils/AlertManager'
 import {
   CircuitBreakerManager,
   CircuitState,
-} from '../../utils/CircuitBreaker.ts'
+} from '../../utils/CircuitBreaker'
 
 // Mock dependencies
 vi.mock('../DistrictBackfillService.ts')
