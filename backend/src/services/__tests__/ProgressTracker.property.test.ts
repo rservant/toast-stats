@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
 import path from 'path'
+import fs from 'fs/promises'
 import { ProgressTracker } from '../ProgressTracker'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
 import { CacheConfigService } from '../CacheConfigService'
@@ -20,6 +21,7 @@ import type {
 
 describe('ProgressTracker - Property-Based Tests', () => {
   let storageManager: ReconciliationStorageManager
+  let testCacheDir: string
 
   // Helper function to create cache directory path
   const createTestCacheDir = (testId: string): string => {
@@ -33,7 +35,7 @@ describe('ProgressTracker - Property-Based Tests', () => {
   beforeEach(async () => {
     // Use unique temporary storage for each test
     const testId = Math.random().toString(36).substring(7)
-    const testCacheDir = createTestCacheDir(testId)
+    testCacheDir = createTestCacheDir(testId)
     storageManager = new ReconciliationStorageManager(testCacheDir)
 
     await storageManager.init()
@@ -43,6 +45,8 @@ describe('ProgressTracker - Property-Based Tests', () => {
     // Clean up test data
     try {
       await storageManager.clearAll()
+      // Also remove the test directory itself
+      await fs.rm(testCacheDir, { recursive: true, force: true })
     } catch {
       // Ignore cleanup errors
     }

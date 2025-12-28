@@ -17,7 +17,7 @@ async function testAPIDCPGoals() {
   const cacheConfig = CacheConfigService.getInstance()
   await cacheConfig.initialize()
   const cacheDir = cacheConfig.getCacheDirectory()
-  
+
   const cacheManager = new DistrictCacheManager(cacheDir)
   const analyticsEngine = new AnalyticsEngine(cacheManager)
 

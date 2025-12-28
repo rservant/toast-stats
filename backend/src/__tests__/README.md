@@ -1,228 +1,106 @@
-# Test Cache Configuration Guide
+# Test Directory Management
 
-This guide explains how to use configurable cache directories in tests to support test isolation and parallel execution.
+## Issue: Test Directory Cleanup
 
-## Overview
+This project uses property-based testing and isolated cache directories for tests. During test execution, temporary directories are created with names like:
 
-The test cache configuration system provides:
+- `test-cache-*` - Cache-related test directories
+- `test-progress-tracker-*` - Progress tracker test directories
+- `test-*` - General property-based test directories
 
-- **Isolated cache directories** for each test
-- **Parallel test execution** support without conflicts
-- **Automatic cleanup** of test cache directories
-- **Consistent configuration** across all cache services
+## Problem
 
-## Basic Usage
+Previously, these test directories were not being properly cleaned up, leading to thousands of leftover directories in the backend folder. This happened because:
 
-### Single Test Configuration
+1. Some tests only called `storageManager.clearAll()` which clears files but not the directory itself
+2. Property-based tests create many temporary directories during execution
+3. If tests are interrupted or fail, cleanup might not happen
+
+## Solution
+
+### 1. Fixed Test Cleanup
+
+Updated test files to properly remove test directories:
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { CacheManager } from '../CacheManager.js'
-import {
-  createTestCacheConfig,
-  cleanupTestCacheConfig,
-  initializeTestCache,
-  getTestCacheDirectory,
-} from '../../__tests__/test-cache-helper.js'
-import type { TestCacheConfig } from '../../__tests__/test-cache-helper.js'
-
-describe('My Cache Test', () => {
-  let cacheManager: CacheManager
-  let testCacheConfig: TestCacheConfig
-
-  beforeEach(async () => {
-    // Create isolated test cache configuration
-    testCacheConfig = await createTestCacheConfig('my-test')
-    await initializeTestCache(testCacheConfig)
-
-    // Use configured cache directory
-    const testCacheDir = getTestCacheDirectory()
-    cacheManager = new CacheManager(testCacheDir)
-    await cacheManager.init()
-  })
-
-  afterEach(async () => {
-    // Clean up test cache configuration
-    await cleanupTestCacheConfig(testCacheConfig)
-  })
-
-  it('should work with isolated cache', async () => {
-    // Your test code here
-    // Cache operations will use the isolated directory
-  })
+afterEach(async () => {
+  try {
+    await storageManager.clearAll()
+    // Also remove the test directory itself
+    await fs.rm(testCacheDir, { recursive: true, force: true })
+  } catch {
+    // Ignore cleanup errors
+  }
 })
 ```
 
-### Parallel Test Configuration
+### 2. Cleanup Script
 
-For tests that need multiple isolated cache configurations:
+Created `backend/scripts/cleanup-test-dirs.sh` to manually clean up any leftover test directories:
 
-```typescript
-import {
-  createParallelTestCacheConfigs,
-  cleanupParallelTestCacheConfigs,
-  verifyTestCacheIsolation,
-} from '../../__tests__/test-cache-helper.js'
-
-describe('Parallel Cache Tests', () => {
-  let testConfigs: TestCacheConfig[]
-
-  beforeEach(async () => {
-    // Create multiple isolated configurations
-    testConfigs = await createParallelTestCacheConfigs('parallel-test', 3)
-
-    // Verify isolation
-    await verifyTestCacheIsolation(testConfigs)
-  })
-
-  afterEach(async () => {
-    // Clean up all configurations
-    await cleanupParallelTestCacheConfigs(testConfigs)
-  })
-
-  it('should support parallel cache operations', async () => {
-    // Use different cache configurations in parallel
-    const operations = testConfigs.map(async (config, index) => {
-      await initializeTestCache(config)
-      const cacheDir = getTestCacheDirectory()
-      const cacheManager = new CacheManager(cacheDir)
-
-      // Perform cache operations
-      await cacheManager.init()
-      // ... test operations
-    })
-
-    await Promise.all(operations)
-  })
-})
+```bash
+# Run the cleanup script
+npm run test:cleanup
 ```
 
-## API Reference
+### 3. Best Practices
 
-### `createTestCacheConfig(testName: string): Promise<TestCacheConfig>`
+When writing new tests that create temporary directories:
 
-Creates an isolated cache directory configuration for a test.
+1. **Always store the directory path** in a variable so you can clean it up
+2. **Use `afterEach` or `afterAll`** to remove the directory with `fs.rm(dir, { recursive: true, force: true })`
+3. **Use unique directory names** to avoid conflicts between parallel tests
+4. **Wrap cleanup in try-catch** to avoid test failures due to cleanup issues
 
-- **testName**: Unique identifier for the test
-- **Returns**: Configuration object with cache directory and cleanup info
-
-### `cleanupTestCacheConfig(config: TestCacheConfig): Promise<void>`
-
-Cleans up a test cache configuration, removing the cache directory and restoring environment variables.
-
-### `initializeTestCache(config: TestCacheConfig): Promise<void>`
-
-Initializes the cache configuration service with the test cache directory.
-
-### `getTestCacheDirectory(): string`
-
-Gets the currently configured cache directory for the test environment.
-
-### `createParallelTestCacheConfigs(testName: string, count: number): Promise<TestCacheConfig[]>`
-
-Creates multiple isolated cache configurations for parallel testing.
-
-### `cleanupParallelTestCacheConfigs(configs: TestCacheConfig[]): Promise<void>`
-
-Cleans up multiple test cache configurations.
-
-### `verifyTestCacheIsolation(configs: TestCacheConfig[]): Promise<void>`
-
-Verifies that test cache directories are properly isolated and accessible.
-
-## Migration Guide
-
-### From Hardcoded Cache Directories
-
-**Before:**
+### Example Test Pattern
 
 ```typescript
 describe('My Test', () => {
-  const testCacheDir = './test-cache'
-  let cacheManager: CacheManager
+  let testCacheDir: string
+  let storageManager: SomeStorageManager
 
   beforeEach(async () => {
-    cacheManager = new CacheManager(testCacheDir)
-    await cacheManager.init()
+    const testId = Math.random().toString(36).substring(7)
+    testCacheDir = path.join(process.cwd(), `test-my-feature-${testId}`)
+    storageManager = new SomeStorageManager(testCacheDir)
+    await storageManager.init()
   })
 
   afterEach(async () => {
     try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
+      await storageManager.clearAll() // Clear files
+      await fs.rm(testCacheDir, { recursive: true, force: true }) // Remove directory
     } catch {
       // Ignore cleanup errors
     }
   })
+
+  // ... your tests
 })
 ```
 
-**After:**
+## Monitoring
 
-```typescript
-describe('My Test', () => {
-  let cacheManager: CacheManager
-  let testCacheConfig: TestCacheConfig
+To check for leftover test directories:
 
-  beforeEach(async () => {
-    testCacheConfig = await createTestCacheConfig('my-test')
-    await initializeTestCache(testCacheConfig)
+```bash
+# Count temporary test directories
+find . -type d -name "test-cache*" | wc -l
 
-    const testCacheDir = getTestCacheDirectory()
-    cacheManager = new CacheManager(testCacheDir)
-    await cacheManager.init()
-  })
+# List temporary test directories
+find . -type d -name "test-cache*"
 
-  afterEach(async () => {
-    await cleanupTestCacheConfig(testCacheConfig)
-  })
-})
+# Clean up all temporary test directories
+npm run test:cleanup
 ```
 
-## Benefits
+## .gitignore Configuration
 
-1. **Test Isolation**: Each test gets its own cache directory
-2. **Parallel Execution**: Tests can run in parallel without conflicts
-3. **Automatic Cleanup**: Cache directories are automatically cleaned up
-4. **Consistent Configuration**: All cache services use the same configuration
-5. **Environment Variable Support**: Respects `CACHE_DIR` environment variable
-6. **Easy Migration**: Simple pattern to update existing tests
+The .gitignore file has been configured with a simple pattern to ignore all temporary test directories:
 
-## Environment Variables
+```gitignore
+# Test artifacts - temporary directories only
+test-cache*/
+```
 
-- **`CACHE_DIR`**: Base cache directory (defaults to `./test-cache-default` in tests)
-- **`NODE_ENV`**: Should be set to `test` for test environment
-
-## Best Practices
-
-1. **Always use test cache helpers** instead of hardcoded cache directories
-2. **Create unique test names** to avoid conflicts
-3. **Clean up in afterEach** to ensure proper test isolation
-4. **Use parallel configurations** for tests that need multiple cache instances
-5. **Verify isolation** when using parallel configurations
-6. **Handle cleanup errors gracefully** (helpers do this automatically)
-
-## Troubleshooting
-
-### Cache Directory Conflicts
-
-If you see cache directory conflicts, ensure:
-
-- Test names are unique
-- Cleanup is properly called in `afterEach`
-- Tests are not sharing cache configurations
-
-### Permission Issues
-
-If you encounter permission issues:
-
-- Ensure the test cache directory is writable
-- Check that cleanup is removing directories properly
-- Verify environment variables are set correctly
-
-### Parallel Test Issues
-
-For parallel test problems:
-
-- Use `createParallelTestCacheConfigs` for multiple configurations
-- Verify isolation with `verifyTestCacheIsolation`
-- Ensure each test uses a different configuration
+This ensures that any directory starting with `test-cache` is ignored by git, while legitimate test files like `test-cache-helper.ts` and `test-helpers.ts` are preserved.
