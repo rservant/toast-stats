@@ -316,10 +316,10 @@ export class CacheConfigService {
   refreshConfiguration(): void {
     const envCacheDir = process.env.CACHE_DIR
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
-    
+
     if (isConfigured) {
       const newCacheDir = this.resolveCacheDirectory()
-      
+
       // Update the cache directory if it changed
       if (newCacheDir !== this.cacheDir) {
         Object.defineProperty(this, 'cacheDir', {
@@ -327,12 +327,12 @@ export class CacheConfigService {
           writable: false,
         })
       }
-      
+
       // Update configuration
       this.configuration.baseDirectory = newCacheDir
       this.configuration.isConfigured = isConfigured
       this.configuration.source = 'environment'
-      
+
       // Reset initialization status so it will re-validate
       this.initialized = false
     }

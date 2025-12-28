@@ -38,7 +38,7 @@ app.get('/health', async (_req, res) => {
   try {
     const cacheConfig = CacheConfigService.getInstance()
     const config = cacheConfig.getConfiguration()
-    
+
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -120,14 +120,14 @@ const server = app.listen(PORT, async () => {
   // Initialize and log cache configuration
   try {
     const cacheConfig = CacheConfigService.getInstance()
-    
+
     // Refresh configuration in case environment variables were loaded after instantiation
     cacheConfig.refreshConfiguration()
-    
+
     await cacheConfig.initialize()
-    
+
     const config = cacheConfig.getConfiguration()
-    
+
     logger.info('Cache configuration initialized', {
       cacheDirectory: config.baseDirectory,
       source: config.source,
@@ -144,10 +144,14 @@ const server = app.listen(PORT, async () => {
         resolvedPath: config.baseDirectory,
       })
     } else {
-      logger.warn('⚠️  CACHE_DIR not configured, using default cache directory', {
-        defaultPath: config.baseDirectory,
-        recommendation: 'Set CACHE_DIR environment variable for production use',
-      })
+      logger.warn(
+        '⚠️  CACHE_DIR not configured, using default cache directory',
+        {
+          defaultPath: config.baseDirectory,
+          recommendation:
+            'Set CACHE_DIR environment variable for production use',
+        }
+      )
     }
   } catch (error) {
     logger.error('❌ Failed to initialize cache configuration', {
