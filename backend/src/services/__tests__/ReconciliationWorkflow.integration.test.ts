@@ -6,26 +6,26 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.js'
-import { DistrictBackfillService } from '../DistrictBackfillService.js'
-import { ReconciliationScheduler } from '../ReconciliationScheduler.js'
-import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
-import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
-import { ToastmastersScraper } from '../ToastmastersScraper.js'
-import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
-import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
+import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.ts'
+import { DistrictBackfillService } from '../DistrictBackfillService.ts'
+import { ReconciliationScheduler } from '../ReconciliationScheduler.ts'
+import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
+import { ToastmastersScraper } from '../ToastmastersScraper.ts'
+import { ChangeDetectionEngine } from '../ChangeDetectionEngine.ts'
+import { ReconciliationConfigService } from '../ReconciliationConfigService.ts'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   type TestCacheConfig,
-} from '../../utils/test-cache-helper.js'
+} from '../../utils/test-cache-helper.ts'
 
-import type { DistrictStatistics } from '../../types/districts.js'
+import type { DistrictStatistics } from '../../types/districts.ts'
 import type {
   ReconciliationJob,
   ReconciliationConfig,
-} from '../../types/reconciliation.js'
+} from '../../types/reconciliation.ts'
 
 describe('End-to-End Reconciliation Workflow Integration', () => {
   let testCacheConfig: TestCacheConfig

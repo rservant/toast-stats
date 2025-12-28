@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { CacheManager } from '../CacheManager.js'
+import { CacheManager } from '../CacheManager.ts'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   initializeTestCache,
   getTestCacheDirectory,
-} from '../../utils/test-cache-helper.js'
-import type { TestCacheConfig } from '../../utils/test-cache-helper.js'
+} from '../../utils/test-cache-helper.ts'
+import type { TestCacheConfig } from '../../utils/test-cache-helper.ts'
 
 describe('CacheManager - Historical Data Aggregation', () => {
   let cacheManager: CacheManager

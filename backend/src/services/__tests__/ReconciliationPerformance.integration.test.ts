@@ -4,21 +4,21 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.js'
-import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.js'
-import { ReconciliationCacheService } from '../ReconciliationCacheService.js'
-import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.js'
-import { ChangeDetectionEngine } from '../ChangeDetectionEngine.js'
-import { ReconciliationConfigService } from '../ReconciliationConfigService.js'
-import { CacheUpdateManager } from '../CacheUpdateManager.js'
+import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator.ts'
+import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer.ts'
+import { ReconciliationCacheService } from '../ReconciliationCacheService.ts'
+import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.ts'
+import { ChangeDetectionEngine } from '../ChangeDetectionEngine.ts'
+import { ReconciliationConfigService } from '../ReconciliationConfigService.ts'
+import { CacheUpdateManager } from '../CacheUpdateManager.ts'
 import type {
   ReconciliationJob,
   DistrictStatistics,
-} from '../../types/reconciliation.js'
-import { createTestReconciliationJob } from '../../utils/test-helpers.js'
+} from '../../types/reconciliation.ts'
+import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
 
 // Mock logger
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger.ts', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('../../utils/logger.js', () => ({
 }))
 
 // Mock external dependencies
-vi.mock('../ChangeDetectionEngine.js', () => {
+vi.mock('../ChangeDetectionEngine.ts', () => {
   class MockChangeDetectionEngine {
     detectChanges() {
       return {
@@ -54,7 +54,7 @@ vi.mock('../ChangeDetectionEngine.js', () => {
   }
 })
 
-vi.mock('../ReconciliationStorageOptimizer.js', () => ({
+vi.mock('../ReconciliationStorageOptimizer.ts', () => ({
   ReconciliationStorageOptimizer: vi.fn().mockImplementation(() => ({
     saveJob: vi.fn().mockResolvedValue(undefined),
     getJob: vi.fn().mockResolvedValue(null),
@@ -63,14 +63,14 @@ vi.mock('../ReconciliationStorageOptimizer.js', () => ({
   })),
 }))
 
-vi.mock('../CacheUpdateManager.js', () => ({
+vi.mock('../CacheUpdateManager.ts', () => ({
   CacheUpdateManager: vi.fn().mockImplementation(() => ({
     updateCache: vi.fn().mockResolvedValue(undefined),
     invalidateCache: vi.fn().mockResolvedValue(undefined),
   })),
 }))
 
-vi.mock('../../utils/AlertManager.js', () => ({
+vi.mock('../../utils/AlertManager.ts', () => ({
   AlertManager: {
     getInstance: vi.fn().mockReturnValue({
       sendAlert: vi.fn().mockResolvedValue('alert-id'),
@@ -91,7 +91,7 @@ vi.mock('../../utils/AlertManager.js', () => ({
   },
 }))
 
-vi.mock('../ReconciliationMetricsService.js', () => ({
+vi.mock('../ReconciliationMetricsService.ts', () => ({
   ReconciliationMetricsService: {
     getInstance: vi.fn().mockReturnValue({
       recordJobStart: vi.fn(),

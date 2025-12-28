@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import CacheIntegrationService from '../services/cacheIntegrationService.js'
-import { CspExtractorService } from '../services/cspExtractorService.js'
-import { DistrictCacheManager } from '../../../services/DistrictCacheManager.js'
+import CacheIntegrationService from '../services/cacheIntegrationService.ts'
+import { CspExtractorService } from '../services/cspExtractorService.ts'
+import { DistrictCacheManager } from '../../../services/DistrictCacheManager.ts'
 import type {
   DistrictDataRange,
   DistrictCacheEntry,
-} from '../../../types/districts.js'
+} from '../../../types/districts.ts'
 
 class MockDistrictCacheManager extends DistrictCacheManager {
   private mockData: unknown

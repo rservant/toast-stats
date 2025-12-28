@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { AnalyticsEngine } from '../AnalyticsEngine.js'
-import { DistrictCacheManager } from '../DistrictCacheManager.js'
+import { AnalyticsEngine } from '../AnalyticsEngine.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager.ts'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   type TestCacheConfig,
-} from '../../utils/test-cache-helper.js'
+} from '../../utils/test-cache-helper.ts'
 
 describe('AnalyticsEngine', () => {
   let testCacheConfig: TestCacheConfig

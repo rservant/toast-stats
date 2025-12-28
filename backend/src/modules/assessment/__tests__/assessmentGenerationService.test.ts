@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import AssessmentGenerationService from '../services/assessmentGenerationService.js'
-import CacheIntegrationService from '../services/cacheIntegrationService.js'
-import type { MonthlyAssessment } from '../types/assessment.js'
-import type { CompleteAssessmentData } from '../services/cacheIntegrationService.js'
+import AssessmentGenerationService from '../services/assessmentGenerationService.ts'
+import CacheIntegrationService from '../services/cacheIntegrationService.ts'
+import type { MonthlyAssessment } from '../types/assessment.ts'
+import type { CompleteAssessmentData } from '../services/cacheIntegrationService.ts'
 
 class MockCacheIntegrationService extends CacheIntegrationService {
   private mockLatestDate: string | null
@@ -46,7 +46,7 @@ describe('AssessmentGenerationService', () => {
     )
 
     // Stub storage functions
-    const mod = await import('../storage/assessmentStore.js')
+    const mod = await import('../storage/assessmentStore.ts')
     const saveSpy = vi
       .spyOn(mod, 'saveMonthlyAssessment')
       .mockImplementation(async () => {})
@@ -73,7 +73,7 @@ describe('AssessmentGenerationService', () => {
 
   it('throws when assessment already exists', async () => {
     const mockCacheSvc = new MockCacheIntegrationService('2024-07-31', null)
-    const mod = await import('../storage/assessmentStore.js')
+    const mod = await import('../storage/assessmentStore.ts')
     const getSpy = vi.spyOn(mod, 'getMonthlyAssessment').mockImplementation(
       async (): Promise<MonthlyAssessment | null> => ({
         district_number: 61,

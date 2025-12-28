@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { AlertManager, AlertSeverity, AlertCategory } from '../AlertManager.js'
+import { AlertManager, AlertSeverity, AlertCategory } from '../AlertManager.ts'
 
 describe('AlertManager', () => {
   let alertManager: AlertManager

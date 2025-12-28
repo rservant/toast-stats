@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.js'
+import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.ts'
 
 // Mock logger
-vi.mock('../logger.js', () => ({
+vi.mock('../logger.ts', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

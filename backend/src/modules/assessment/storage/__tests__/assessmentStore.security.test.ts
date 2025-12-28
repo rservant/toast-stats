@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
-import * as assessmentStore from '../assessmentStore.js'
+import * as assessmentStore from '../assessmentStore.ts'
 
 describe('AssessmentStore Security Tests', () => {
   const testDataDir = path.join(process.cwd(), 'test-assessment-data')

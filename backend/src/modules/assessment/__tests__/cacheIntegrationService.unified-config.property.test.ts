@@ -7,8 +7,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fc from 'fast-check'
-import CacheIntegrationService from '../services/cacheIntegrationService.js'
-import { CacheConfigService } from '../../../services/CacheConfigService.js'
+import CacheIntegrationService from '../services/cacheIntegrationService.ts'
+import { CacheConfigService } from '../../../services/CacheConfigService.ts'
 import path from 'path'
 
 describe('CacheIntegrationService - Property-Based Tests', () => {

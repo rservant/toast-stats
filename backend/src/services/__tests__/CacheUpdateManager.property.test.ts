@@ -14,7 +14,7 @@ import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   type TestCacheConfig,
-} from '../../utils/test-cache-helper.js'
+} from '../../utils/test-cache-helper.ts'
 
 // Test interfaces
 interface CacheUpdateResult {

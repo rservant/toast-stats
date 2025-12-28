@@ -7,11 +7,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import path from 'path'
-import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.js'
-import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.js'
-import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.js'
-import { CacheConfigService } from '../../services/CacheConfigService.js'
-import type { ReconciliationJob } from '../../types/reconciliation.js'
+import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer.ts'
+import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator.ts'
+import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.ts'
+import { CacheConfigService } from '../../services/CacheConfigService.ts'
+import type { ReconciliationJob } from '../../types/reconciliation.ts'
 
 describe('Reconciliation API - New Status Endpoints', () => {
   let app: express.Application

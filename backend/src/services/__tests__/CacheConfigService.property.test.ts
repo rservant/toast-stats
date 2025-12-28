@@ -27,7 +27,7 @@ import path from 'path'
 import {
   CacheConfigService,
   CacheDirectoryValidator,
-} from '../CacheConfigService.js'
+} from '../CacheConfigService.ts'
 
 describe('CacheConfigService - Property-Based Tests', () => {
   let originalEnv: string | undefined

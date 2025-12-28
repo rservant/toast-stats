@@ -13,10 +13,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import fs from 'fs/promises'
 import path from 'path'
-import { CacheConfigService } from '../CacheConfigService.js'
-import { DistrictCacheManager } from '../DistrictCacheManager.js'
-import { CacheManager } from '../CacheManager.js'
-import type { DistrictCacheEntry } from '../../types/districts.js'
+import { CacheConfigService } from '../CacheConfigService.ts'
+import { DistrictCacheManager } from '../DistrictCacheManager.ts'
+import { CacheManager } from '../CacheManager.ts'
+import type { DistrictCacheEntry } from '../../types/districts.ts'
 
 // Test interfaces
 interface TestHistoricalData {
