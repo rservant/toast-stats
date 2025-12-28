@@ -1,6 +1,6 @@
 /**
  * Self-Cleanup Test Utilities
- * 
+ *
  * Provides utilities for tests to clean up after themselves without relying
  * on external cleanup scripts. Each test manages its own temporary resources.
  */
@@ -26,7 +26,7 @@ export interface SelfCleanupConfig {
 export const DEFAULT_SELF_CLEANUP_CONFIG: SelfCleanupConfig = {
   verbose: false,
   failOnCleanupError: false,
-  timeoutMs: 5000
+  timeoutMs: 5000,
 }
 
 /**
@@ -51,10 +51,10 @@ export class TestSelfCleanup {
     if (this.isCleanedUp) {
       throw new Error('Cannot track resources after cleanup has been performed')
     }
-    
+
     const resolvedPath = path.resolve(directory)
     this.directories.add(resolvedPath)
-    
+
     if (this.config.verbose) {
       console.log(`Tracking directory for cleanup: ${resolvedPath}`)
     }
@@ -67,10 +67,10 @@ export class TestSelfCleanup {
     if (this.isCleanedUp) {
       throw new Error('Cannot track resources after cleanup has been performed')
     }
-    
+
     const resolvedPath = path.resolve(filePath)
     this.files.add(resolvedPath)
-    
+
     if (this.config.verbose) {
       console.log(`Tracking file for cleanup: ${resolvedPath}`)
     }
@@ -81,13 +81,17 @@ export class TestSelfCleanup {
    */
   addCleanupFunction(cleanupFn: () => Promise<void>): void {
     if (this.isCleanedUp) {
-      throw new Error('Cannot add cleanup functions after cleanup has been performed')
+      throw new Error(
+        'Cannot add cleanup functions after cleanup has been performed'
+      )
     }
-    
+
     this.cleanupFunctions.push(cleanupFn)
-    
+
     if (this.config.verbose) {
-      console.log(`Added custom cleanup function (total: ${this.cleanupFunctions.length})`)
+      console.log(
+        `Added custom cleanup function (total: ${this.cleanupFunctions.length})`
+      )
     }
   }
 
@@ -104,18 +108,24 @@ export class TestSelfCleanup {
     }
 
     const cleanupPromise = this.performCleanup()
-    
+
     // Apply timeout if configured
     if (this.config.timeoutMs > 0) {
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Cleanup timeout after ${this.config.timeoutMs}ms`)), this.config.timeoutMs)
+        setTimeout(
+          () =>
+            reject(
+              new Error(`Cleanup timeout after ${this.config.timeoutMs}ms`)
+            ),
+          this.config.timeoutMs
+        )
       })
-      
+
       await Promise.race([cleanupPromise, timeoutPromise])
     } else {
       await cleanupPromise
     }
-    
+
     this.isCleanedUp = true
   }
 
@@ -128,7 +138,7 @@ export class TestSelfCleanup {
     this.files.clear()
     this.cleanupFunctions.length = 0
     this.isCleanedUp = false
-    
+
     if (this.config.verbose) {
       console.log('Cleanup state reset')
     }
@@ -145,7 +155,8 @@ export class TestSelfCleanup {
           console.log('Custom cleanup function completed successfully')
         }
       } catch (error) {
-        const cleanupError = error instanceof Error ? error : new Error(String(error))
+        const cleanupError =
+          error instanceof Error ? error : new Error(String(error))
         errors.push(cleanupError)
         if (this.config.verbose) {
           console.warn('Custom cleanup function failed:', cleanupError.message)
@@ -163,7 +174,9 @@ export class TestSelfCleanup {
       } catch (error) {
         // Only log error if file exists (ignore ENOENT)
         if (error instanceof Error && !error.message.includes('ENOENT')) {
-          const cleanupError = new Error(`Failed to cleanup file ${filePath}: ${error.message}`)
+          const cleanupError = new Error(
+            `Failed to cleanup file ${filePath}: ${error.message}`
+          )
           errors.push(cleanupError)
           if (this.config.verbose) {
             console.warn(cleanupError.message)
@@ -180,10 +193,18 @@ export class TestSelfCleanup {
           console.log(`Cleaned up directory: ${directory}`)
         }
       } catch (error) {
-        const cleanupError = error instanceof Error ? error : new Error(String(error))
-        errors.push(new Error(`Failed to cleanup directory ${directory}: ${cleanupError.message}`))
+        const cleanupError =
+          error instanceof Error ? error : new Error(String(error))
+        errors.push(
+          new Error(
+            `Failed to cleanup directory ${directory}: ${cleanupError.message}`
+          )
+        )
         if (this.config.verbose) {
-          console.warn(`Failed to cleanup directory ${directory}:`, cleanupError.message)
+          console.warn(
+            `Failed to cleanup directory ${directory}:`,
+            cleanupError.message
+          )
         }
       }
     }
@@ -191,7 +212,7 @@ export class TestSelfCleanup {
     // Handle cleanup errors based on configuration
     if (errors.length > 0) {
       const errorMessage = `Cleanup failed with ${errors.length} error(s):\n${errors.map(e => e.message).join('\n')}`
-      
+
       if (this.config.failOnCleanupError) {
         throw new Error(errorMessage)
       } else if (this.config.verbose) {
@@ -208,11 +229,15 @@ export class TestSelfCleanup {
   /**
    * Get the number of resources being tracked
    */
-  getTrackedResourceCount(): { directories: number; files: number; functions: number } {
+  getTrackedResourceCount(): {
+    directories: number
+    files: number
+    functions: number
+  } {
     return {
       directories: this.directories.size,
       files: this.files.size,
-      functions: this.cleanupFunctions.length
+      functions: this.cleanupFunctions.length,
     }
   }
 
@@ -228,18 +253,20 @@ export class TestSelfCleanup {
  * Create a self-cleanup manager for a test
  * Returns both the cleanup manager and a cleanup function for afterEach
  */
-export function createTestSelfCleanup(config: Partial<SelfCleanupConfig> = {}): {
+export function createTestSelfCleanup(
+  config: Partial<SelfCleanupConfig> = {}
+): {
   cleanup: TestSelfCleanup
   afterEach: () => Promise<void>
 } {
   const cleanup = new TestSelfCleanup(config)
-  
+
   return {
     cleanup,
     afterEach: async () => {
       await cleanup.cleanup()
       cleanup.reset() // Reset for next test
-    }
+    },
   }
 }
 
@@ -254,7 +281,7 @@ export function createUniqueTestDir(
   const timestamp = Date.now()
   const random = Math.random().toString(36).substring(2, 8)
   const uniqueDir = path.resolve(baseDir, `${baseName}-${timestamp}-${random}`)
-  
+
   cleanup.trackDirectory(uniqueDir)
   return uniqueDir
 }
@@ -270,8 +297,11 @@ export function createUniqueTestFile(
 ): string {
   const timestamp = Date.now()
   const random = Math.random().toString(36).substring(2, 8)
-  const uniqueFile = path.resolve(baseDir, `${baseName}-${timestamp}-${random}${extension}`)
-  
+  const uniqueFile = path.resolve(
+    baseDir,
+    `${baseName}-${timestamp}-${random}${extension}`
+  )
+
   cleanup.trackFile(uniqueFile)
   return uniqueFile
 }
@@ -285,7 +315,7 @@ export async function withSelfCleanup<T>(
   config: Partial<SelfCleanupConfig> = {}
 ): Promise<T> {
   const cleanup = new TestSelfCleanup(config)
-  
+
   try {
     return await testFn(cleanup)
   } finally {
@@ -303,7 +333,7 @@ export async function verifyTestDirEmpty(
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true })
     const remainingItems = entries.map(entry => entry.name)
-    
+
     if (verbose && remainingItems.length > 0) {
       console.log(`⚠️  ${remainingItems.length} items remain in ${baseDir}:`)
       remainingItems.slice(0, 10).forEach(item => console.log(`  - ${item}`))
@@ -311,10 +341,10 @@ export async function verifyTestDirEmpty(
         console.log(`  ... and ${remainingItems.length - 10} more`)
       }
     }
-    
+
     return {
       isEmpty: remainingItems.length === 0,
-      remainingItems
+      remainingItems,
     }
   } catch (error) {
     // Directory doesn't exist - that's empty

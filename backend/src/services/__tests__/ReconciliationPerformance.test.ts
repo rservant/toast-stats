@@ -13,7 +13,10 @@ import {
 import { ReconciliationPerformanceMonitor } from '../ReconciliationPerformanceMonitor.ts'
 import type { ReconciliationJob } from '../../types/reconciliation.ts'
 import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
-import { createTestSelfCleanup, createUniqueTestDir } from '../../utils/test-self-cleanup.ts'
+import {
+  createTestSelfCleanup,
+  createUniqueTestDir,
+} from '../../utils/test-self-cleanup.ts'
 
 // Mock logger
 vi.mock('../../utils/logger.ts', () => ({
@@ -27,30 +30,35 @@ vi.mock('../../utils/logger.ts', () => ({
 
 describe('ReconciliationStorageOptimizer', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
-  
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
+
   // Each test cleans up after itself
   afterEach(performCleanup)
 
   function setupOptimizer() {
-    const testStorageDir = createUniqueTestDir(cleanup, 'test-cache-reconciliation-optimizer')
+    const testStorageDir = createUniqueTestDir(
+      cleanup,
+      'test-cache-reconciliation-optimizer'
+    )
     const optimizer = new ReconciliationStorageOptimizer(testStorageDir, {
       enableInMemoryCache: true,
       cacheMaxSize: 100,
       batchSize: 5,
     })
-    
+
     // Register cleanup for the optimizer
     cleanup.addCleanupFunction(async () => {
       await optimizer.cleanup()
     })
-    
+
     return optimizer
   }
 
   it('should cache jobs in memory for faster retrieval', async () => {
     const optimizer = setupOptimizer()
-    
+
     const job: ReconciliationJob = createTestReconciliationJob({
       id: 'test-job-1',
       districtId: 'D1',
@@ -159,8 +167,10 @@ describe('ReconciliationStorageOptimizer', () => {
 
 describe('ReconciliationCacheService', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
-  
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
+
   // Each test cleans up after itself
   afterEach(performCleanup)
 
@@ -170,18 +180,18 @@ describe('ReconciliationCacheService', () => {
       ttlMs: 60000, // 1 minute
       enablePrefetch: true,
     })
-    
+
     // Register cleanup for the cache service
     cleanup.addCleanupFunction(async () => {
       cacheService.shutdown()
     })
-    
+
     return cacheService
   }
 
   it('should provide fast cache hits for frequently accessed jobs', async () => {
     const cacheService = setupCacheService()
-    
+
     const job: ReconciliationJob = createTestReconciliationJob({
       id: 'cache-test-job',
       districtId: 'D1',
@@ -313,8 +323,10 @@ describe('ReconciliationCacheService', () => {
 
 describe('ReconciliationBatchProcessor', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
-  
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
+
   // Each test cleans up after itself
   afterEach(performCleanup)
 
@@ -330,12 +342,12 @@ describe('ReconciliationBatchProcessor', () => {
         timeoutMs: 10000,
       }
     )
-    
+
     // Register cleanup for the batch processor
     cleanup.addCleanupFunction(async () => {
       await batchProcessor.cleanup()
     })
-    
+
     return batchProcessor
   }
 
@@ -416,19 +428,21 @@ describe('ReconciliationBatchProcessor', () => {
 
 describe('ReconciliationPerformanceMonitor', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
-  
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
+
   // Each test cleans up after itself
   afterEach(performCleanup)
 
   function setupMonitor() {
     const monitor = new ReconciliationPerformanceMonitor()
-    
+
     // Register cleanup for the monitor
     cleanup.addCleanupFunction(async () => {
       monitor.shutdown()
     })
-    
+
     return monitor
   }
 
@@ -470,7 +484,7 @@ describe('ReconciliationPerformanceMonitor', () => {
 
   it('should identify performance bottlenecks', async () => {
     const monitor = setupMonitor()
-    
+
     // Record metrics for slow operation
     monitor.recordMetric('slow-operation', 15000, true) // 15 seconds
     monitor.recordMetric('slow-operation', 20000, true) // 20 seconds
@@ -491,7 +505,7 @@ describe('ReconciliationPerformanceMonitor', () => {
 
   it('should generate comprehensive performance reports', async () => {
     const monitor = setupMonitor()
-    
+
     // Record various metrics
     monitor.recordMetric('operation-1', 1000, true)
     monitor.recordMetric('operation-1', 1200, true)

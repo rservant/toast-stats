@@ -3,7 +3,10 @@ import { DistrictBackfillService } from '../DistrictBackfillService.ts'
 import { DistrictCacheManager } from '../DistrictCacheManager.ts'
 import { ToastmastersScraper } from '../ToastmastersScraper.ts'
 import type { ScrapedRecord } from '../../types/districts.ts'
-import { createTestSelfCleanup, createUniqueTestDir } from '../../utils/test-self-cleanup.ts'
+import {
+  createTestSelfCleanup,
+  createUniqueTestDir,
+} from '../../utils/test-self-cleanup.ts'
 
 // Mock interface for ToastmastersScraper
 interface MockToastmastersScraper {
@@ -32,8 +35,10 @@ interface MockToastmastersScraper {
 
 describe('DistrictBackfillService', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
-  
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
+
   // Each test cleans up after itself
   afterEach(performCleanup)
 
@@ -42,7 +47,7 @@ describe('DistrictBackfillService', () => {
     const cacheManager = new DistrictCacheManager(cacheDir)
     const scraper = new ToastmastersScraper()
     const backfillService = new DistrictBackfillService(cacheManager, scraper)
-    
+
     return { cacheManager, scraper, backfillService }
   }
 
@@ -211,7 +216,7 @@ describe('DistrictBackfillService', () => {
   describe('error handling', () => {
     it('should handle scraper errors gracefully', async () => {
       const { cacheManager } = setupBackfillService()
-      
+
       // Mock scraper to throw errors
       const errorScraper: MockToastmastersScraper = {
         config: { baseUrl: 'test', headless: true, timeout: 30000 },
@@ -256,7 +261,7 @@ describe('DistrictBackfillService', () => {
 
     it('should continue processing after individual date failures', async () => {
       const { cacheManager } = setupBackfillService()
-      
+
       // Mock scraper to fail on first date, succeed on second
       let callCount = 0
       const mixedScraper: MockToastmastersScraper = {

@@ -1,15 +1,15 @@
 /**
  * @deprecated Use test-self-cleanup.ts instead
- * 
+ *
  * Comprehensive Test Cleanup Utilities
- * 
+ *
  * ⚠️  DEPRECATED: This utility is for external cleanup scripts.
  * For new tests, use `test-self-cleanup.ts` which provides utilities
  * for tests to clean up after themselves in afterEach hooks.
- * 
+ *
  * Provides utilities for cleaning up test directories and ensuring
  * tests don't leave behind temporary files and directories.
- * 
+ *
  * @see test-self-cleanup.ts for the recommended self-cleanup approach
  */
 
@@ -37,9 +37,9 @@ export const DEFAULT_CLEANUP_CONFIG: TestCleanupConfig = {
     'test-cache*',
     'test-reconciliation*',
     'test-assessment*',
-    'test-*'
+    'test-*',
   ],
-  verbose: false
+  verbose: false,
 }
 
 /**
@@ -63,7 +63,7 @@ export async function cleanupTestDirectories(
     totalFound: 0,
     totalCleaned: 0,
     totalFailed: 0,
-    patterns: {}
+    patterns: {},
   }
 
   // Check if base directory exists
@@ -71,14 +71,20 @@ export async function cleanupTestDirectories(
     await fs.access(finalConfig.baseDir)
   } catch {
     if (finalConfig.verbose) {
-      console.log(`Base directory ${finalConfig.baseDir} does not exist - nothing to clean`)
+      console.log(
+        `Base directory ${finalConfig.baseDir} does not exist - nothing to clean`
+      )
     }
     return stats
   }
 
   // Process each pattern
   for (const pattern of finalConfig.patterns) {
-    const patternStats = await cleanupPattern(finalConfig.baseDir, pattern, finalConfig.verbose)
+    const patternStats = await cleanupPattern(
+      finalConfig.baseDir,
+      pattern,
+      finalConfig.verbose
+    )
     stats.patterns[pattern] = patternStats
     stats.totalFound += patternStats.found
     stats.totalCleaned += patternStats.cleaned
@@ -86,7 +92,9 @@ export async function cleanupTestDirectories(
   }
 
   if (finalConfig.verbose) {
-    console.log(`Cleanup complete: ${stats.totalCleaned}/${stats.totalFound} directories cleaned`)
+    console.log(
+      `Cleanup complete: ${stats.totalCleaned}/${stats.totalFound} directories cleaned`
+    )
   }
 
   return stats
@@ -104,14 +112,16 @@ async function cleanupPattern(
 
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true })
-    const matchingDirs = entries.filter(entry => 
-      entry.isDirectory() && matchesPattern(entry.name, pattern)
+    const matchingDirs = entries.filter(
+      entry => entry.isDirectory() && matchesPattern(entry.name, pattern)
     )
 
     stats.found = matchingDirs.length
 
     if (verbose && stats.found > 0) {
-      console.log(`Found ${stats.found} directories matching pattern: ${pattern}`)
+      console.log(
+        `Found ${stats.found} directories matching pattern: ${pattern}`
+      )
     }
 
     // Clean up each matching directory
@@ -145,12 +155,12 @@ async function cleanupPattern(
 function matchesPattern(name: string, pattern: string): boolean {
   if (pattern === '*') return true
   if (!pattern.includes('*')) return name === pattern
-  
+
   // Convert pattern to regex
   const regexPattern = pattern
     .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
     .replace(/\\\*/g, '.*') // Convert * to .*
-  
+
   const regex = new RegExp(`^${regexPattern}$`)
   return regex.test(name)
 }
@@ -207,7 +217,7 @@ export class TestDirectoryTracker {
       totalFound: this.directories.size,
       totalCleaned: 0,
       totalFailed: 0,
-      patterns: {}
+      patterns: {},
     }
 
     for (const dir of this.directories) {
@@ -253,7 +263,7 @@ export async function ensureTestDirEmpty(
   try {
     const entries = await fs.readdir(baseDir, { withFileTypes: true })
     const directories = entries.filter(entry => entry.isDirectory())
-    
+
     if (directories.length === 0) {
       if (verbose) {
         console.log(`✅ ${baseDir} is clean`)

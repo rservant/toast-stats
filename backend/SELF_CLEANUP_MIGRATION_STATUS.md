@@ -10,46 +10,46 @@ This document tracks the progress of migrating test files from traditional `befo
 
 The following test files have been successfully migrated to use self cleanup:
 
-1. **frontend/src/utils/__tests__/csvExport.test.ts**
+1. **frontend/src/utils/**tests**/csvExport.test.ts**
    - Migrated from global beforeEach/afterEach to per-test timer management
    - Each test now manages its own fake timers
 
-2. **backend/src/utils/__tests__/RetryManager.test.ts**
+2. **backend/src/utils/**tests**/RetryManager.test.ts**
    - Migrated from global timer setup to per-test timer management
    - Each test that needs timers sets them up and cleans them up individually
 
-3. **backend/src/utils/__tests__/AlertManager.test.ts**
+3. **backend/src/utils/**tests**/AlertManager.test.ts**
    - Migrated to use `createTestSelfCleanup` with `setupAlertManager()` helper
    - Each test manages its own AlertManager instance and timer cleanup
 
-4. **backend/src/utils/__tests__/ReconciliationTestDataGenerator.test.ts**
+4. **backend/src/utils/**tests**/ReconciliationTestDataGenerator.test.ts**
    - Migrated to use `createTestSelfCleanup` with `createGenerator()` helper
    - Each test creates its own generator instance
 
-5. **backend/src/utils/__tests__/ReconciliationReplayEngine.test.ts**
+5. **backend/src/utils/**tests**/ReconciliationReplayEngine.test.ts**
    - Migrated to use `createTestSelfCleanup` with `createReplayEngine()` helper
    - Complex test with multiple setup functions for different test scenarios
 
-6. **backend/src/services/__tests__/CacheConfigService.test-isolation.property.test.ts**
+6. **backend/src/services/**tests**/CacheConfigService.test-isolation.property.test.ts**
    - Already using self cleanup (was previously migrated)
 
-7. **backend/src/services/__tests__/CacheConfigService.property.test.ts**
+7. **backend/src/services/**tests**/CacheConfigService.property.test.ts**
    - Already using self cleanup (was previously migrated)
 
-8. **backend/src/services/__tests__/ReconciliationStorageManager.test.ts**
+8. **backend/src/services/**tests**/ReconciliationStorageManager.test.ts**
    - Already using self cleanup (was previously migrated)
 
-9. **backend/src/services/__tests__/ReconciliationPerformance.unit.test.ts** ✨ **NEW**
+9. **backend/src/services/**tests**/ReconciliationPerformance.unit.test.ts** ✨ **NEW**
    - Migrated to use `createTestSelfCleanup` with helper functions
    - Each test manages its own ReconciliationCacheService and ReconciliationPerformanceMonitor instances
    - Replaced global beforeEach/afterEach with per-test setup and cleanup
 
-10. **backend/src/services/__tests__/ReconciliationPerformance.test.ts** ✨ **NEW**
+10. **backend/src/services/**tests**/ReconciliationPerformance.test.ts** ✨ **NEW**
     - Migrated to use `createTestSelfCleanup` with `createUniqueTestDir` for storage paths
     - Each test manages its own ReconciliationStorageOptimizer, CacheService, BatchProcessor, and PerformanceMonitor instances
     - Replaced hardcoded test directories with unique test directories
 
-11. **backend/src/services/__tests__/DistrictBackfillService.test.ts** ✨ **NEW**
+11. **backend/src/services/**tests**/DistrictBackfillService.test.ts** ✨ **NEW**
     - Migrated to use `createTestSelfCleanup` with `createUniqueTestDir` for cache directories
     - Each test creates its own DistrictCacheManager and DistrictBackfillService instances
     - Replaced test-cache-helper with self-cleanup pattern
@@ -59,20 +59,24 @@ The following test files have been successfully migrated to use self cleanup:
 The following test files still need to be migrated:
 
 #### High Priority (Core Services)
+
 - `backend/src/__tests__/cache-configuration.e2e.test.ts`
 - `backend/src/utils/__tests__/ReconciliationSimulator.integration.test.ts`
 
 #### Medium Priority (Integration Tests)
+
 - `backend/src/routes/__tests__/reconciliation.integration.test.ts`
 - `backend/src/services/__tests__/ReconciliationWorkflow.integration.test.ts`
 - `backend/src/services/__tests__/ReconciliationPerformance.integration.test.ts`
 
 #### Lower Priority (Unit Tests)
+
 - Various other service and utility test files
 
 ## Migration Patterns
 
 ### Pattern 1: Simple Timer Management
+
 For tests that only need timer mocking:
 
 ```typescript
@@ -80,9 +84,9 @@ describe('MyService', () => {
   describe('method', () => {
     it('should do something', () => {
       vi.useFakeTimers()
-      
+
       // Test logic here
-      
+
       vi.useRealTimers()
     })
   })
@@ -90,6 +94,7 @@ describe('MyService', () => {
 ```
 
 ### Pattern 2: Self Cleanup with Helper Functions
+
 For tests that need resource management:
 
 ```typescript
@@ -97,19 +102,21 @@ import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 
 describe('MyService', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
 
   // Each test cleans up after itself
   afterEach(performCleanup)
 
   function setupService() {
     const service = new MyService()
-    
+
     // Register cleanup for the service
     cleanup(() => {
       service.shutdown()
     })
-    
+
     return service
   }
 
@@ -121,25 +128,28 @@ describe('MyService', () => {
 ```
 
 ### Pattern 3: Complex Setup with Multiple Resources
+
 For tests with complex setup requirements:
 
 ```typescript
 import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 
 describe('ComplexService', () => {
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
   afterEach(performCleanup)
 
   function setupComplexTest() {
     const mockDependency = createMockDependency()
     const service = new ComplexService(mockDependency)
-    
+
     // Register cleanup for all resources
     cleanup(() => {
       service.shutdown()
       mockDependency.cleanup()
     })
-    
+
     return { service, mockDependency }
   }
 
@@ -155,6 +165,7 @@ describe('ComplexService', () => {
 ### Step-by-Step Migration Process
 
 1. **Import self cleanup utilities**:
+
    ```typescript
    import { createTestSelfCleanup } from '../test-self-cleanup.ts'
    ```
@@ -179,6 +190,7 @@ describe('ComplexService', () => {
 ### Common Patterns to Replace
 
 #### Before (Traditional Pattern):
+
 ```typescript
 describe('MyService', () => {
   let service: MyService
@@ -198,9 +210,12 @@ describe('MyService', () => {
 ```
 
 #### After (Self Cleanup Pattern):
+
 ```typescript
 describe('MyService', () => {
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
   afterEach(performCleanup)
 
   function createService() {
@@ -234,6 +249,7 @@ describe('MyService', () => {
 ## Validation
 
 After migration, verify:
+
 - [ ] All tests still pass
 - [ ] No resource leaks (check for hanging processes, open files, etc.)
 - [ ] Test isolation is maintained

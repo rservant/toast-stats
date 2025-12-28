@@ -33,9 +33,11 @@ import { createTestSelfCleanup } from '../../utils/test-self-cleanup.ts'
 
 describe('CacheConfigService - Property-Based Tests', () => {
   let originalEnv: string | undefined
-  
+
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
 
   beforeEach(() => {
     // Reset singleton instance before each test

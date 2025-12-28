@@ -3,7 +3,6 @@ import { generateFilename } from '../csvExport'
 
 describe('csvExport', () => {
   describe('generateFilename', () => {
-
     it('should generate filename with data type, district ID, and date', () => {
       // Mock Date to return consistent value
       vi.useFakeTimers()

@@ -21,19 +21,21 @@ vi.mock('../logger.ts', () => ({
 
 describe('ReconciliationTestDataGenerator', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
 
   // Each test cleans up after itself
   afterEach(performCleanup)
 
   function createGenerator() {
     const generator = new ReconciliationTestDataGenerator()
-    
+
     // Register cleanup for the generator if it has cleanup methods
     cleanup(() => {
       // Add any cleanup needed for the generator
     })
-    
+
     return generator
   }
 

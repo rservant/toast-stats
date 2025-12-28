@@ -5,21 +5,26 @@ import type {
   ReconciliationConfig,
 } from '../../types/reconciliation.ts'
 import { createTestReconciliationJob } from '../../utils/test-helpers.ts'
-import { createTestSelfCleanup, createUniqueTestDir } from '../../utils/test-self-cleanup.ts'
+import {
+  createTestSelfCleanup,
+  createUniqueTestDir,
+} from '../../utils/test-self-cleanup.ts'
 import fs from 'fs/promises'
 import path from 'path'
 
 describe('ReconciliationStorageManager', () => {
   let storageManager: ReconciliationStorageManager
   let testStorageDir: string
-  
+
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
 
   beforeEach(async () => {
     // Create unique test directory for this test run
     testStorageDir = createUniqueTestDir(cleanup, 'reconciliation-storage')
-    
+
     storageManager = new ReconciliationStorageManager(testStorageDir)
     await storageManager.init()
   })

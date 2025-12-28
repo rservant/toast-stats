@@ -18,7 +18,10 @@ import { DistrictCacheManager } from '../DistrictCacheManager.ts'
 import { CacheManager } from '../CacheManager.ts'
 import type { DistrictCacheEntry } from '../../types/districts.ts'
 import { safeString } from '../../utils/test-string-generators'
-import { createTestSelfCleanup, createUniqueTestDir } from '../../utils/test-self-cleanup.ts'
+import {
+  createTestSelfCleanup,
+  createUniqueTestDir,
+} from '../../utils/test-self-cleanup.ts'
 
 // Test interfaces
 interface TestHistoricalData {
@@ -38,9 +41,11 @@ interface TestHistoricalData {
 
 describe('CacheConfigService - Test Environment Isolation Property Tests', () => {
   let originalCacheDir: string | undefined
-  
+
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({ verbose: false })
+  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+    verbose: false,
+  })
 
   beforeEach(() => {
     // Store original CACHE_DIR
@@ -60,7 +65,7 @@ describe('CacheConfigService - Test Environment Isolation Property Tests', () =>
 
     // Reset singleton after cleanup
     CacheConfigService.resetInstance()
-    
+
     // Perform self-cleanup of all tracked resources
     await performCleanup()
   })
