@@ -5,7 +5,7 @@
  * property-based testing support, and edge case generation.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { ReconciliationTestDataGenerator } from '../ReconciliationTestDataGenerator.ts'
 import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 

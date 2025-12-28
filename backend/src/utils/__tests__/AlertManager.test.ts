@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { AlertManager, AlertSeverity, AlertCategory } from '../AlertManager.ts'
 import { createTestSelfCleanup } from '../test-self-cleanup.ts'
 
@@ -16,19 +16,19 @@ describe('AlertManager', () => {
     // Reset singleton instance for testing
     ;(AlertManager as unknown as { instance?: AlertManager }).instance =
       undefined
-    const alertManager = AlertManager.getInstance()
+    const instance = AlertManager.getInstance()
 
     // Register cleanup for timers
     cleanup(() => {
       vi.useRealTimers()
     })
 
-    return alertManager
+    return instance
   }
 
   describe('singleton behavior', () => {
     it('should return the same instance', () => {
-      const alertManager = setupAlertManager()
+      setupAlertManager()
 
       const instance1 = AlertManager.getInstance()
       const instance2 = AlertManager.getInstance()

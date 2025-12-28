@@ -35,7 +35,7 @@ describe('CacheConfigService - Property-Based Tests', () => {
   let originalEnv: string | undefined
 
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+  const { afterEach: performCleanup } = createTestSelfCleanup({
     verbose: false,
   })
 

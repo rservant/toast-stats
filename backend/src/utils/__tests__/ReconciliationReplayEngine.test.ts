@@ -5,14 +5,11 @@
  * step-by-step execution, and comparison with original timelines.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { ReconciliationReplayEngine } from '../ReconciliationReplayEngine.ts'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine.ts'
 import { createTestSelfCleanup } from '../test-self-cleanup.ts'
-import type {
-  ReplaySession,
-  ReplayOptions,
-} from '../ReconciliationReplayEngine.ts'
+import type { ReplayOptions } from '../ReconciliationReplayEngine.ts'
 import type {
   ReconciliationJob,
   ReconciliationTimeline,

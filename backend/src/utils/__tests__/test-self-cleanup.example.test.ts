@@ -59,12 +59,10 @@ describe('Self-Cleanup Pattern Examples', () => {
     })
 
     it('should handle custom cleanup functions', async () => {
-      let customCleanupCalled = false
-
       // Add custom cleanup function
       cleanup.addCleanupFunction(async () => {
-        customCleanupCalled = true
         // Custom cleanup logic here
+        console.log('Custom cleanup executed')
       })
 
       // Create some test resources
@@ -78,7 +76,7 @@ describe('Self-Cleanup Pattern Examples', () => {
       // Custom cleanup function will be called automatically in afterEach
       // along with directory cleanup
 
-      // Note: We can't verify customCleanupCalled here because afterEach hasn't run yet
+      // Note: We can't verify the cleanup was called here because afterEach hasn't run yet
       // In a real test, you would verify the effects of the cleanup, not the cleanup itself
     })
   })
