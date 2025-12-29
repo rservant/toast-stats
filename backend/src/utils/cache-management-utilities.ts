@@ -9,6 +9,11 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { logger } from './logger.js'
 
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+}
+
 /**
  * Cache initialization validation result
  */
@@ -78,7 +83,7 @@ export async function validateCacheInitialization(
         return result
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as ErrnoException).code === 'ENOENT') {
         result.errorMessage = `Cache directory does not exist: ${cachePath}`
         return result
       }
@@ -251,7 +256,7 @@ export async function cleanupCacheDirectory(
               directoriesRemoved++
             } catch (error) {
               if (
-                (error as NodeJS.ErrnoException).code === 'ENOTEMPTY' &&
+                (error as ErrnoException).code === 'ENOTEMPTY' &&
                 !recursive
               ) {
                 logger.warn('Directory not empty, skipping removal', {
@@ -337,7 +342,7 @@ export async function getCacheDirectoryStats(cachePath: string): Promise<{
 
     await countEntries(cachePath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if ((error as ErrnoException).code !== 'ENOENT') {
       throw new CacheManagementError(
         `Failed to get cache directory statistics: ${(error as Error).message}`,
         'get_stats',
@@ -387,7 +392,7 @@ export function createTestCacheCleanup(baseCachePath: string) {
         try {
           await fs.unlink(filePath)
         } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          if ((error as ErrnoException).code !== 'ENOENT') {
             logger.warn('Failed to clean up test file', { filePath, error })
           }
         }

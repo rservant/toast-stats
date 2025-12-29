@@ -5,7 +5,7 @@
  * **Validates: Requirements 4.1, 4.4**
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
 import path from 'path'
 import { promises as fs } from 'fs'

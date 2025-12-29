@@ -24,6 +24,11 @@ import type {
   DistinguishedClubAnalytics,
   LeadershipInsights,
 } from './analytics.js'
+import type {
+  CircuitBreakerOptions,
+  CircuitBreaker,
+  CircuitBreakerStats,
+} from '../utils/CircuitBreaker.js'
 
 /**
  * Logger interface for dependency injection
@@ -33,6 +38,19 @@ export interface ILogger {
   warn(message: string, data?: unknown): void
   error(message: string, error?: Error | unknown): void
   debug(message: string, data?: unknown): void
+}
+
+/**
+ * Circuit Breaker Manager Interface
+ */
+export interface ICircuitBreakerManager {
+  getCircuitBreaker(
+    name: string,
+    options?: Partial<CircuitBreakerOptions>
+  ): CircuitBreaker
+  getAllStats(): Record<string, CircuitBreakerStats>
+  resetAll(): void
+  dispose(): Promise<void>
 }
 
 /**

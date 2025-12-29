@@ -19,11 +19,14 @@ import {
 } from '../types/serviceContainer.js'
 
 export class DefaultServiceContainer implements ServiceContainer {
-  private registrations = new Map<string, ServiceRegistration<any>>()
-  private instances = new Map<string, ServiceInstance<any>>()
-  private interfaceRegistrations = new Map<string, ServiceRegistration<any>>()
-  private interfaceInstances = new Map<string, ServiceInstance<any>>()
-  private mockRegistrations = new Map<string, any>()
+  private registrations = new Map<string, ServiceRegistration<unknown>>()
+  private instances = new Map<string, ServiceInstance<unknown>>()
+  private interfaceRegistrations = new Map<
+    string,
+    ServiceRegistration<unknown>
+  >()
+  private interfaceInstances = new Map<string, ServiceInstance<unknown>>()
+  private mockRegistrations = new Map<string, unknown>()
   private resolutionStack: string[] = []
   private disposedCount = 0
 
@@ -58,7 +61,7 @@ export class DefaultServiceContainer implements ServiceContainer {
   resolve<T>(token: ServiceToken<T>): T {
     // Check for mock first
     if (this.mockRegistrations.has(token.name)) {
-      return this.mockRegistrations.get(token.name)
+      return this.mockRegistrations.get(token.name) as T
     }
 
     // Check for circular dependencies
@@ -77,7 +80,7 @@ export class DefaultServiceContainer implements ServiceContainer {
     if (registration.lifecycle === 'singleton') {
       const existingInstance = this.instances.get(token.name)
       if (existingInstance && !existingInstance.disposed) {
-        return existingInstance.instance
+        return existingInstance.instance as T
       }
     }
 
@@ -85,7 +88,7 @@ export class DefaultServiceContainer implements ServiceContainer {
     if (registration.lifecycle === 'scoped') {
       const existingInstance = this.instances.get(token.name)
       if (existingInstance && !existingInstance.disposed) {
-        return existingInstance.instance
+        return existingInstance.instance as T
       }
     }
 
@@ -96,7 +99,7 @@ export class DefaultServiceContainer implements ServiceContainer {
       const instance = registration.factory.create(this)
 
       const serviceInstance: ServiceInstance<T> = {
-        instance,
+        instance: instance as T,
         created: new Date(),
         disposed: false,
         dependencies: [],
@@ -110,7 +113,7 @@ export class DefaultServiceContainer implements ServiceContainer {
         this.instances.set(token.name, serviceInstance)
       }
 
-      return instance
+      return instance as T
     } finally {
       this.resolutionStack.pop()
     }
@@ -250,7 +253,7 @@ export class DefaultServiceContainer implements ServiceContainer {
   resolveInterface<T>(interfaceName: string): T {
     // Check for mock first
     if (this.mockRegistrations.has(interfaceName)) {
-      return this.mockRegistrations.get(interfaceName)
+      return this.mockRegistrations.get(interfaceName) as T
     }
 
     // Check for circular dependencies
@@ -269,7 +272,7 @@ export class DefaultServiceContainer implements ServiceContainer {
     if (registration.lifecycle === 'singleton') {
       const existingInstance = this.interfaceInstances.get(interfaceName)
       if (existingInstance && !existingInstance.disposed) {
-        return existingInstance.instance
+        return existingInstance.instance as T
       }
     }
 
@@ -277,7 +280,7 @@ export class DefaultServiceContainer implements ServiceContainer {
     if (registration.lifecycle === 'scoped') {
       const existingInstance = this.interfaceInstances.get(interfaceName)
       if (existingInstance && !existingInstance.disposed) {
-        return existingInstance.instance
+        return existingInstance.instance as T
       }
     }
 
@@ -288,7 +291,7 @@ export class DefaultServiceContainer implements ServiceContainer {
       const instance = registration.factory.create(this)
 
       const serviceInstance: ServiceInstance<T> = {
-        instance,
+        instance: instance as T,
         created: new Date(),
         disposed: false,
         dependencies: [],
@@ -302,7 +305,7 @@ export class DefaultServiceContainer implements ServiceContainer {
         this.interfaceInstances.set(interfaceName, serviceInstance)
       }
 
-      return instance
+      return instance as T
     } finally {
       this.resolutionStack.pop()
     }
@@ -349,14 +352,17 @@ export class DefaultServiceContainer implements ServiceContainer {
 
 /**
  * Utility function to create service tokens
+ * Note: Using type assertion for constructor compatibility - this is safe because
+ * the service container handles the actual instantiation with proper arguments
  */
 export function createServiceToken<T>(
   name: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type: new (...args: any[]) => T
 ): ServiceToken<T> {
   return {
     name,
-    type,
+    type: type as new (...args: unknown[]) => T,
   }
 }
 

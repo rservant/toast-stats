@@ -415,8 +415,14 @@ export function isFilesystemSafe(str: string): boolean {
   if (!str || str.length === 0) return false
 
   // Check for invalid characters
-  const invalidChars = /[<>:"/\\|?*\x00-\x1f]/
+  const invalidChars = /[<>:"/\\|?*]/
   if (invalidChars.test(str)) return false
+
+  // Check for control characters separately
+  for (let i = 0; i < str.length; i++) {
+    const charCode = str.charCodeAt(i)
+    if (charCode >= 0 && charCode <= 31) return false
+  }
 
   // Check for reserved names (Windows)
   const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i

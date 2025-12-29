@@ -11,9 +11,13 @@ import fs from 'fs/promises'
 import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer'
 import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine'
-import { CacheConfigService } from '../../services/CacheConfigService'
 import { getTestServiceFactory } from '../../services/TestServiceFactory'
 import type { ReconciliationJob } from '../../types/reconciliation'
+
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+}
 
 describe('Reconciliation API - New Status Endpoints', () => {
   let app: express.Application
@@ -37,7 +41,7 @@ describe('Reconciliation API - New Status Endpoints', () => {
       await fs.mkdir(testCacheDir, { recursive: true })
     } catch (error) {
       // Directory might already exist, which is fine
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      if ((error as ErrnoException).code !== 'EEXIST') {
         throw error
       }
     }

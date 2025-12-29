@@ -15,6 +15,7 @@ import {
   IAnalyticsEngine,
   IDistrictCacheManager,
   ILogger,
+  ICircuitBreakerManager,
 } from '../types/serviceInterfaces.js'
 import {
   DefaultServiceContainer,
@@ -25,6 +26,8 @@ import {
 import { CacheConfigService } from './CacheConfigService.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
+import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
+import path from 'path'
 
 /**
  * Test-specific configuration provider
@@ -33,11 +36,23 @@ export class TestConfigurationProvider implements ConfigurationProvider {
   private config: ServiceConfiguration
 
   constructor(overrides: Partial<ServiceConfiguration> = {}) {
-    this.config = {
+    const baseConfig = {
       cacheDirectory: '/tmp/test-cache',
-      environment: 'test',
-      logLevel: 'error',
-      ...overrides,
+      environment: 'test' as const,
+      logLevel: 'error' as const,
+    }
+
+    // Resolve cache directory path if provided in overrides
+    const resolvedOverrides = { ...overrides }
+    if (resolvedOverrides.cacheDirectory) {
+      resolvedOverrides.cacheDirectory = path.resolve(
+        resolvedOverrides.cacheDirectory
+      )
+    }
+
+    this.config = {
+      ...baseConfig,
+      ...resolvedOverrides,
     }
   }
 
@@ -113,6 +128,11 @@ export interface TestServiceFactory {
   ): IDistrictCacheManager
 
   /**
+   * Create CircuitBreakerManager instance
+   */
+  createCircuitBreakerManager(): ICircuitBreakerManager
+
+  /**
    * Create a fully configured service container with all services registered
    */
   createConfiguredContainer(
@@ -147,7 +167,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   private containers: ServiceContainer[] = []
   private configurations: TestConfigurationProvider[] = []
   private services: Array<{ dispose: () => Promise<void> }> = []
-  private mockRegistrations = new Map<string, any>()
+  private mockRegistrations = new Map<string, unknown>()
 
   /**
    * Create a test container with isolated services
@@ -207,6 +227,15 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     const cacheDir = config.getCacheDirectory()
     const service = new DistrictCacheManager(cacheDir)
     // DistrictCacheManager doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
+   * Create CircuitBreakerManager instance
+   */
+  createCircuitBreakerManager(): ICircuitBreakerManager {
+    const service = new CircuitBreakerManager()
+    this.services.push(service)
     return service
   }
 
@@ -277,6 +306,17 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
+    // Register CircuitBreakerManager
+    container.register(
+      ServiceTokens.CircuitBreakerManager,
+      createServiceFactory(
+        () => new CircuitBreakerManager(),
+        async (instance: CircuitBreakerManager) => {
+          await instance.dispose()
+        }
+      )
+    )
+
     return container
   }
 
@@ -286,7 +326,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   createServiceByInterface<T>(interfaceName: string): T {
     // Check for mock first
     if (this.mockRegistrations.has(interfaceName)) {
-      return this.mockRegistrations.get(interfaceName)
+      return this.mockRegistrations.get(interfaceName) as T
     }
 
     // Create a temporary container with interface registrations
@@ -344,6 +384,15 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         }
       )
     )
+
+    // Register ICircuitBreakerManager
+    container.registerInterface(
+      'ICircuitBreakerManager',
+      createServiceFactory(
+        () => this.createCircuitBreakerManager(),
+        async instance => await instance.dispose()
+      )
+    )
   }
 
   /**
@@ -386,6 +435,10 @@ export const ServiceTokens = {
     'DistrictCacheManager',
     DistrictCacheManager
   ),
+  CircuitBreakerManager: createServiceToken(
+    'CircuitBreakerManager',
+    CircuitBreakerManager
+  ),
   Logger: createServiceToken('Logger', TestLogger),
 }
 
@@ -399,6 +452,9 @@ export const InterfaceTokens = {
   IAnalyticsEngine: createInterfaceToken<IAnalyticsEngine>('IAnalyticsEngine'),
   IDistrictCacheManager: createInterfaceToken<IDistrictCacheManager>(
     'IDistrictCacheManager'
+  ),
+  ICircuitBreakerManager: createInterfaceToken<ICircuitBreakerManager>(
+    'ICircuitBreakerManager'
   ),
   ILogger: createInterfaceToken<ILogger>('ILogger'),
 }

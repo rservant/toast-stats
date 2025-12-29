@@ -27,7 +27,7 @@ import { CacheManager } from '../src/services/CacheManager.js'
 import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
 async function clearRankingsCache() {
-  let container: any = null
+  let container: unknown = null
 
   try {
     console.log('🧹 Clearing district rankings cache...')

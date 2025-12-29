@@ -7,18 +7,17 @@
  * Tests that property-based test generators are deterministic and perform within acceptable limits.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
 import {
   PropertyTestRunner,
   DeterministicGenerators,
   PropertyTestUtils,
-  type PropertyTestConfig,
 } from '../PropertyTestInfrastructure.js'
 import { createTestSelfCleanup } from '../test-self-cleanup.js'
 
 describe('PropertyTestInfrastructure - Deterministic Generators Property Tests', () => {
-  const { cleanup, afterEach: cleanupAfterEach } = createTestSelfCleanup()
+  const { afterEach: cleanupAfterEach } = createTestSelfCleanup()
 
   afterEach(cleanupAfterEach)
 
@@ -205,7 +204,7 @@ describe('PropertyTestInfrastructure - Deterministic Generators Property Tests',
           fc.constantFrom('ci', 'local', 'test'), // environment
           fc.integer({ min: 1, max: 1000 }), // seed
           async (environment, seed) => {
-            const config = PropertyTestUtils.createEnvironmentConfig()
+            PropertyTestUtils.createEnvironmentConfig()
             const runner = new PropertyTestRunner(environment)
 
             // Create a simple test property using deterministic values

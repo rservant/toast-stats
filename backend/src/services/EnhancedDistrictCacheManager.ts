@@ -94,7 +94,7 @@ export class EnhancedDistrictCacheManager extends DistrictCacheManager {
    * Get the cache directory (expose protected method)
    */
   getCacheDirectory(): string {
-    return (this as any).cacheDir
+    return (this as unknown as { cacheDir: string }).cacheDir
   }
 
   /**

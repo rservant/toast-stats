@@ -10,13 +10,8 @@ import fc from 'fast-check'
 import {
   DefaultTestReliabilityMonitor,
   TestResult,
-  TestReliabilityMetrics,
-  FailureCategory,
 } from '../TestReliabilityMonitor.js'
-import {
-  PropertyTestRunner,
-  DeterministicGenerators,
-} from '../PropertyTestInfrastructure.js'
+import { PropertyTestRunner } from '../PropertyTestInfrastructure.js'
 
 describe('Test Reliability Metrics - Property Tests', () => {
   let monitor: DefaultTestReliabilityMonitor

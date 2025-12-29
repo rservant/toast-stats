@@ -5,15 +5,11 @@
  * **Validates: Requirements 4.5**
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
 import { DistrictCacheManager } from '../DistrictCacheManager.js'
 import { CacheManager } from '../CacheManager.js'
-import {
-  CacheConfigService,
-  CacheDirectoryValidator,
-  ILogger,
-} from '../CacheConfigService.js'
+import { CacheConfigService, ILogger } from '../CacheConfigService.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
 import { createTestSelfCleanup } from '../../utils/test-self-cleanup.js'
 import path from 'path'
@@ -330,7 +326,11 @@ describe('Cache Error Handling Properties', () => {
               .string({ minLength: 1, maxLength: 10 })
               .filter(s => /^[a-zA-Z0-9_-]+$/.test(s)),
           }),
-          async ({ readOnlyPath, nonExistentPath, pathSuffix }) => {
+          async ({
+            readOnlyPath: _readOnlyPath,
+            nonExistentPath,
+            pathSuffix,
+          }) => {
             // Property: Cache manager initialization failures should be handled gracefully
             let testPath: string
 
@@ -409,7 +409,7 @@ describe('Cache Error Handling Properties', () => {
               'permission_denied'
             ),
           }),
-          async ({ operationType, errorScenario }) => {
+          async ({ operationType: _operationType, errorScenario }) => {
             // Property: Cache operation failures should provide recovery options
             const testCacheDir = path.resolve('./test-dir/cache-recovery-test')
             cleanup.trackDirectory(testCacheDir)
@@ -431,10 +431,9 @@ describe('Cache Error Handling Properties', () => {
 
             // Test different error scenarios and recovery options
             switch (errorScenario) {
-              case 'invalid_input':
+              case 'invalid_input': {
                 // Invalid inputs should fail gracefully without corrupting state
                 const invalidDistrictId = '../invalid'
-                const invalidDate = 'invalid-date'
 
                 // Operations should fail but not crash the manager
                 await expect(
@@ -459,8 +458,9 @@ describe('Cache Error Handling Properties', () => {
                 ).resolves.not.toThrow()
 
                 break
+              }
 
-              case 'missing_file':
+              case 'missing_file': {
                 // Missing files should return null/empty results, not throw errors
                 const result = await districtCacheManager.getDistrictData(
                   'nonexistent',
@@ -481,6 +481,7 @@ describe('Cache Error Handling Properties', () => {
                 expect(hasData).toBe(false)
 
                 break
+              }
 
               case 'permission_denied':
                 // Permission errors should be handled gracefully

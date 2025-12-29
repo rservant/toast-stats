@@ -16,7 +16,6 @@ async function testDistinguishedAPI() {
   const container = factory.createProductionContainer()
 
   const cacheConfig = container.resolve('CacheConfigService')
-  const cacheManager = container.resolve('DistrictCacheManager')
   const analyticsEngine = container.resolve('AnalyticsEngine')
 
   // Initialize cache configuration

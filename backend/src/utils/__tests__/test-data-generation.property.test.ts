@@ -8,14 +8,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import {
   safeString,
-  alphanumericString,
   safeDirName,
-  safeTestId,
   deterministicSafeString,
-  safeCachePath,
   serviceConfigurationArbitrary,
-  reconciliationJobArbitrary,
-  districtCacheEntryArbitrary,
   createTestFixtureFactory,
   createTestFixtures,
   createDeterministicTestFixture,

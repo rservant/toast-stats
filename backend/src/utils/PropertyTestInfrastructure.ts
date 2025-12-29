@@ -64,7 +64,10 @@ export class PropertyTestRunner {
    * Run a property test with enhanced error reporting and timeout handling
    */
   async runProperty<T>(
-    property: any, // fc.AsyncProperty or fc.Property
+    property:
+      | fc.IAsyncProperty<T>
+      | fc.IProperty<T>
+      | fc.IRawProperty<T, boolean>,
     config?: Partial<PropertyTestConfig>
   ): Promise<PropertyTestResult<T>> {
     const finalConfig = { ...this.defaultConfig, ...config }

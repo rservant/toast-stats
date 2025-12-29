@@ -12,18 +12,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import {
   DefaultServiceContainer,
-  createInterfaceToken,
   createServiceFactory,
 } from '../ServiceContainer.js'
-import {
-  DefaultTestServiceFactory,
-  InterfaceTokens,
-} from '../TestServiceFactory.js'
+import { DefaultTestServiceFactory } from '../TestServiceFactory.js'
 import {
   ICacheConfigService,
   IAnalyticsEngine,
   IDistrictCacheManager,
-  ILogger,
 } from '../../types/serviceInterfaces.js'
 import { ServiceConfiguration } from '../../types/serviceContainer.js'
 
@@ -70,9 +65,9 @@ describe('Interface-Based Dependency Injection Properties', () => {
         async ({
           interfaceName,
           mockValue,
-          cacheDirectory,
-          environment,
-          logLevel,
+          cacheDirectory: _cacheDirectory,
+          environment: _environment,
+          logLevel: _logLevel,
         }) => {
           // Create a fresh container for this test run
           const testContainer = new DefaultServiceContainer()
@@ -97,10 +92,14 @@ describe('Interface-Based Dependency Injection Properties', () => {
 
           const resolvedService = testContainer.resolveInterface(
             interfaceName
-          ) as any
+          ) as unknown
           expect(resolvedService).toBeDefined()
-          expect(resolvedService.testProperty).toBe(mockValue.testProperty)
-          expect(resolvedService.testMethod()).toBe('mock-result')
+          expect(
+            (resolvedService as { testProperty: string }).testProperty
+          ).toBe(mockValue.testProperty)
+          expect(
+            (resolvedService as { testMethod: () => string }).testMethod()
+          ).toBe('mock-result')
 
           // Test mock substitution (Requirement 6.5)
           const alternativeMock = {
@@ -113,16 +112,22 @@ describe('Interface-Based Dependency Injection Properties', () => {
 
           const mockedService = testContainer.resolveInterface(
             interfaceName
-          ) as any
-          expect(mockedService.testProperty).toBe('alternative-value')
-          expect(mockedService.testMethod()).toBe('alternative-result')
+          ) as unknown
+          expect((mockedService as { testProperty: string }).testProperty).toBe(
+            'alternative-value'
+          )
+          expect(
+            (mockedService as { testMethod: () => string }).testMethod()
+          ).toBe('alternative-result')
 
           // Clear mocks should restore original behavior
           testContainer.clearMocks()
           const restoredService = testContainer.resolveInterface(
             interfaceName
-          ) as any
-          expect(restoredService.testProperty).toBe(mockValue.testProperty)
+          ) as unknown
+          expect(
+            (restoredService as { testProperty: string }).testProperty
+          ).toBe(mockValue.testProperty)
 
           // Cleanup
           await testContainer.dispose()
@@ -149,7 +154,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
             logLevel: fc.constantFrom('debug', 'info', 'warn', 'error'),
           }),
         }),
-        async ({ interfaceName, configOverrides }) => {
+        async ({ interfaceName, configOverrides: _configOverrides }) => {
           try {
             // Test factory-based interface creation
             const service = testFactory.createServiceByInterface(interfaceName)
@@ -166,15 +171,19 @@ describe('Interface-Based Dependency Injection Properties', () => {
 
             const mockedService = testFactory.createServiceByInterface(
               interfaceName
-            ) as any
-            expect(mockedService.testProperty).toBe('factory-mock')
-            expect(mockedService.testMethod()).toBe('factory-mock-result')
+            ) as unknown
+            expect(
+              (mockedService as { testProperty: string }).testProperty
+            ).toBe('factory-mock')
+            expect(
+              (mockedService as { testMethod: () => string }).testMethod()
+            ).toBe('factory-mock-result')
 
             // Clear mocks should work
             testFactory.clearMocks()
             const clearedService = testFactory.createServiceByInterface(
               interfaceName
-            ) as any
+            ) as unknown
             expect(clearedService).toBeDefined()
             // Should be a real service instance, not the mock
             expect(clearedService.testProperty).toBeUndefined()
@@ -354,8 +363,12 @@ describe('Interface-Based Dependency Injection Properties', () => {
           )
 
           // Multiple resolutions should return the same instance
-          const instance1 = testContainer.resolveInterface(interfaceName) as any
-          const instance2 = testContainer.resolveInterface(interfaceName) as any
+          const instance1 = testContainer.resolveInterface(
+            interfaceName
+          ) as unknown
+          const instance2 = testContainer.resolveInterface(
+            interfaceName
+          ) as unknown
 
           expect(instance1).toBe(instance2)
           expect(instance1.id).toBe(instanceId)
@@ -395,8 +408,12 @@ describe('Interface-Based Dependency Injection Properties', () => {
           )
 
           // Multiple resolutions should return different instances
-          const instance1 = testContainer.resolveInterface(interfaceName) as any
-          const instance2 = testContainer.resolveInterface(interfaceName) as any
+          const instance1 = testContainer.resolveInterface(
+            interfaceName
+          ) as unknown
+          const instance2 = testContainer.resolveInterface(
+            interfaceName
+          ) as unknown
 
           expect(instance1).not.toBe(instance2)
           expect(instance1.id).not.toBe(instance2.id)

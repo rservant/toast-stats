@@ -130,7 +130,7 @@ describe('Property Test Configuration - Property Tests', () => {
       fc.record({
         testComplexity: fc.constantFrom('simple', 'medium'),
       }),
-      async ({ testComplexity }) => {
+      async ({ _testComplexity }) => {
         // Create CI-optimized runner
         const runner = new PropertyTestRunner('ci')
         const ciConfig = PropertyTestUtils.createCIConfig()
@@ -217,7 +217,7 @@ describe('Property Test Configuration - Property Tests', () => {
           // This validates graceful handling of file operations
           expect(contentMatches).toBe(true)
           return true
-        } catch (error) {
+        } catch {
           // Handle file operation errors gracefully
           // This is the key requirement - timing issues should not cause test failures
           return true
@@ -286,12 +286,12 @@ describe('Property Test Configuration - Property Tests', () => {
         iterations: fc.integer({ min: 3, max: 5 }),
         generatorType: fc.constantFrom('string', 'integer', 'boolean'),
       }),
-      async ({ seed, iterations, generatorType }) => {
+      async ({ seed, iterations: _iterations, generatorType }) => {
         const generators = new DeterministicGenerators(seed)
 
         // Test deterministic generation based on type
         switch (generatorType) {
-          case 'string':
+          case 'string': {
             const str1 = generators.deterministicSafeString(5, 10)
             const str2 = generators.deterministicSafeString(5, 10)
             // Same seed should produce same result
@@ -299,19 +299,22 @@ describe('Property Test Configuration - Property Tests', () => {
             expect(str1.length).toBeGreaterThanOrEqual(5)
             expect(str1.length).toBeLessThanOrEqual(10)
             break
-          case 'integer':
+          }
+          case 'integer': {
             const num1 = generators.deterministicInteger(10, 100)
             const num2 = generators.deterministicInteger(10, 100)
             expect(num1).toBe(num2)
             expect(num1).toBeGreaterThanOrEqual(10)
             expect(num1).toBeLessThanOrEqual(100)
             break
-          case 'boolean':
+          }
+          case 'boolean': {
             const bool1 = generators.deterministicBoolean(0.7)
             const bool2 = generators.deterministicBoolean(0.7)
             expect(bool1).toBe(bool2)
             expect(typeof bool1).toBe('boolean')
             break
+          }
         }
 
         // Verify seed consistency

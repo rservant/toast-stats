@@ -10,7 +10,6 @@ import fc from 'fast-check'
 import {
   DefaultTestReliabilityMonitor,
   TestResult,
-  FlakyTestDetection,
 } from '../TestReliabilityMonitor.js'
 import { PropertyTestRunner } from '../PropertyTestInfrastructure.js'
 

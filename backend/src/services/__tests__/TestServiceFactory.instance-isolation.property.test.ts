@@ -8,9 +8,8 @@
  * with each other and can be independently configured and disposed.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
-import fs from 'fs/promises'
 import {
   DefaultTestServiceFactory,
   TestConfigurationProvider,
@@ -22,7 +21,7 @@ import { createTestSelfCleanup } from '../../utils/test-self-cleanup.js'
 
 describe('TestServiceFactory - Instance Isolation Property Tests', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+  const { afterEach: performCleanup } = createTestSelfCleanup({
     verbose: false,
   })
 
@@ -69,8 +68,8 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
           }),
           async ({ containerCount, configurations }) => {
             const factory = new DefaultTestServiceFactory()
-            const containers: any[] = []
-            const configProviders: any[] = []
+            const containers: unknown[] = []
+            const configProviders: unknown[] = []
 
             try {
               // Property: Factory should create multiple isolated containers
@@ -121,7 +120,6 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
 
               // Property: Modifying one configuration should not affect others
               if (configProviders.length > 1) {
-                const originalConfig = configProviders[0].getConfiguration()
                 const newCacheDir = `/tmp/modified-${Date.now()}`
 
                 configProviders[0].updateConfiguration({
@@ -225,8 +223,8 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
           }),
           async ({ instanceCount, config }) => {
             const factory = new DefaultTestServiceFactory()
-            const containers: any[] = []
-            const configProviders: any[] = []
+            const containers: unknown[] = []
+            const configProviders: unknown[] = []
 
             try {
               // Property: Factory should track all created instances

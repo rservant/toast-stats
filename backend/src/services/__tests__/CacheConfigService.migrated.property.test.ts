@@ -77,7 +77,7 @@ describe('CacheConfigService - Migrated Property-Based Tests', () => {
       fc.asyncProperty(
         fc.integer({ min: 2, max: 5 }),
         fc.integer({ min: 1, max: 1000000 }),
-        async (instanceCount: number, seed: number) => {
+        async (instanceCount: number, _seed: number) => {
           // Create multiple independent service instances
           const services = []
           const testDirs = []
@@ -127,7 +127,7 @@ describe('CacheConfigService - Migrated Property-Based Tests', () => {
       fc.asyncProperty(
         fc.integer({ min: 2, max: 6 }),
         fc.integer({ min: 1, max: 1000000 }),
-        async (concurrentCount: number, seed: number) => {
+        async (concurrentCount: number, _seed: number) => {
           // Create concurrent service instances
           const servicePromises = Array.from(
             { length: concurrentCount },
@@ -185,7 +185,7 @@ describe('CacheConfigService - Migrated Property-Based Tests', () => {
       fc.asyncProperty(
         generateValidCachePath(),
         fc.integer({ min: 1, max: 1000000 }),
-        async (relativeCachePath: string, seed: number) => {
+        async (relativeCachePath: string, _seed: number) => {
           const testDir = await isolationManager.createIsolatedDirectory()
           const cacheDirectory = path.join(testDir, relativeCachePath)
 
@@ -217,7 +217,7 @@ describe('CacheConfigService - Migrated Property-Based Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1, max: 1000000 }),
-        async (seed: number) => {
+        async (_seed: number) => {
           const testDir = await isolationManager.createIsolatedDirectory()
           const cacheDirectory = path.join(testDir, 'container-cache')
 

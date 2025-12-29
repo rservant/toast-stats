@@ -13,7 +13,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 describe('Vitest Configuration', () => {
-  let vitestConfig: any
+  let vitestConfig: unknown
 
   beforeEach(() => {
     // Read and parse the vitest config file
@@ -149,8 +149,8 @@ describe('Vitest Configuration', () => {
  * Simple parser for vitest config - extracts key configuration values
  * This is a simplified approach for testing purposes
  */
-function parseVitestConfig(configContent: string): any {
-  const config: any = {
+function parseVitestConfig(configContent: string): unknown {
+  const config: Record<string, unknown> = {
     test: {
       coverage: {},
     },

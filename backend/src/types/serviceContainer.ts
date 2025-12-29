@@ -17,7 +17,7 @@ export type ServiceLifecycle = 'singleton' | 'transient' | 'scoped'
  */
 export interface ServiceToken<T> {
   readonly name: string
-  readonly type?: new (...args: any[]) => T
+  readonly type?: new (...args: unknown[]) => T
   readonly interfaceType?: string // For interface-based injection
 }
 
@@ -36,7 +36,7 @@ export interface ServiceRegistration<T> {
   token: ServiceToken<T>
   factory: ServiceFactory<T>
   lifecycle: ServiceLifecycle
-  dependencies: ServiceToken<any>[]
+  dependencies: ServiceToken<unknown>[]
 }
 
 /**
@@ -46,7 +46,7 @@ export interface ServiceInstance<T> {
   instance: T
   created: Date
   disposed: boolean
-  dependencies: ServiceInstance<any>[]
+  dependencies: ServiceInstance<unknown>[]
 }
 
 /**
@@ -150,7 +150,7 @@ export interface ConfigurationProvider {
 export class ServiceContainerError extends Error {
   constructor(
     message: string,
-    public readonly token?: ServiceToken<any>
+    public readonly token?: ServiceToken<unknown>
   ) {
     super(message)
     this.name = 'ServiceContainerError'
@@ -165,7 +165,7 @@ export class CircularDependencyError extends ServiceContainerError {
 }
 
 export class ServiceNotFoundError extends ServiceContainerError {
-  constructor(token: ServiceToken<any>) {
+  constructor(token: ServiceToken<unknown>) {
     super(`Service not found: ${token.name}`)
     this.name = 'ServiceNotFoundError'
   }

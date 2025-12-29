@@ -42,6 +42,11 @@ class TestLogger implements ILogger {
   }
 }
 
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+}
+
 describe('CacheConfigService - Edge Cases Unit Tests', () => {
   let originalEnv: string | undefined
 
@@ -320,8 +325,8 @@ describe('CacheConfigService - Edge Cases Unit Tests', () => {
         // On some systems, symlinks might not be supported or might fail
         // In that case, we'll skip this test
         if (
-          (error as NodeJS.ErrnoException).code === 'EPERM' ||
-          (error as NodeJS.ErrnoException).code === 'ENOENT'
+          (error as ErrnoException).code === 'EPERM' ||
+          (error as ErrnoException).code === 'ENOENT'
         ) {
           console.warn('Skipping symlink test due to system limitations')
           return
@@ -410,7 +415,6 @@ describe('CacheConfigService - Edge Cases Unit Tests', () => {
     })
 
     it('should handle validator errors gracefully', async () => {
-      const logger = new TestLogger()
       const problematicPath = '/nonexistent/deeply/nested/invalid/path'
 
       // Test the validator directly

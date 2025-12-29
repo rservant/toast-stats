@@ -191,6 +191,11 @@ export async function ensureDirectoryExists(dirPath: string): Promise<void> {
   await fs.mkdir(dirPath, { recursive: true })
 }
 
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+}
+
 /**
  * Safely removes a file, ignoring errors if the file doesn't exist
  */
@@ -199,7 +204,7 @@ export async function safeRemoveFile(filePath: string): Promise<void> {
     await fs.unlink(filePath)
   } catch (error) {
     // Ignore ENOENT errors (file doesn't exist)
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if ((error as ErrnoException).code !== 'ENOENT') {
       throw error
     }
   }

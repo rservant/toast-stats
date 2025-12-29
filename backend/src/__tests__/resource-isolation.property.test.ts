@@ -2,11 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
 import { DefaultTestServiceFactory } from '../services/TestServiceFactory'
 import { DefaultTestIsolationManager } from '../utils/TestIsolationManager'
-import { CacheConfigService } from '../services/CacheConfigService'
-import { AnalyticsEngine } from '../services/AnalyticsEngine'
 import path from 'path'
 import fs from 'fs/promises'
-import { createDeterministicServiceConfiguration } from '../utils/test-data-factories'
 
 /**
  * Property-Based Test for Resource Isolation

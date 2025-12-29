@@ -5,6 +5,8 @@
  */
 
 import { setupGlobalTestCleanup } from '../utils/global-test-cleanup'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 // Force mock data for all tests
 process.env.USE_MOCK_DATA = 'true'
@@ -16,6 +18,19 @@ process.env.NODE_ENV = 'test'
 if (!process.env.CACHE_DIR) {
   process.env.CACHE_DIR = './test-dir/test-cache-default'
 }
+
+// Ensure the test cache directory exists
+const ensureTestCacheDirectory = async () => {
+  try {
+    const cacheDir = path.resolve(process.env.CACHE_DIR!)
+    await fs.mkdir(cacheDir, { recursive: true })
+  } catch (error) {
+    console.warn('Failed to create test cache directory:', error)
+  }
+}
+
+// Create the test cache directory synchronously during setup
+ensureTestCacheDirectory().catch(console.warn)
 
 // Configure test environment isolation
 process.env.TEST_ISOLATION = 'true'

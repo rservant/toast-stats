@@ -1,4 +1,6 @@
 import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
+import type { DistrictCacheManager } from '../src/services/DistrictCacheManager.js'
+import type { AnalyticsEngine } from '../src/services/AnalyticsEngine.js'
 
 /**
  * Validation script for DCP goal counting fix
@@ -6,7 +8,7 @@ import { getProductionServiceFactory } from '../src/services/ProductionServiceFa
  */
 
 async function validateDCPGoals() {
-  let container: any = null
+  let container: unknown = null
 
   try {
     // Create production services using dependency injection

@@ -13,6 +13,11 @@ import type {
   CacheStatistics,
 } from '../types/districts.js'
 
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+}
+
 export class CacheManager {
   private cacheDir: string
   private metadataCache: Map<string, CacheMetadata> = new Map()
@@ -332,7 +337,7 @@ export class CacheManager {
         await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
       } catch (error) {
         // If write fails due to directory not existing, try creating directory again
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as ErrnoException).code === 'ENOENT') {
           await this.ensureDirectoryExists(path.dirname(filePath))
           await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
         } else {

@@ -16,9 +16,10 @@ import {
   createServiceFactory,
 } from './ServiceContainer.js'
 import { CacheConfigService } from './CacheConfigService.js'
-import { ILogger } from '../types/serviceInterfaces.js'
+import { ILogger, ICircuitBreakerManager } from '../types/serviceInterfaces.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
+import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 
 /**
@@ -104,6 +105,11 @@ export interface ProductionServiceFactory {
   createDistrictCacheManager(
     cacheConfig?: CacheConfigService
   ): DistrictCacheManager
+
+  /**
+   * Create CircuitBreakerManager instance
+   */
+  createCircuitBreakerManager(): ICircuitBreakerManager
 
   /**
    * Cleanup all resources
@@ -195,6 +201,17 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
+    // Register CircuitBreakerManager
+    container.register(
+      ServiceTokens.CircuitBreakerManager,
+      createServiceFactory(
+        () => new CircuitBreakerManager(),
+        async (instance: CircuitBreakerManager) => {
+          await instance.dispose()
+        }
+      )
+    )
+
     this.containers.push(container)
     return container
   }
@@ -250,6 +267,15 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
+   * Create CircuitBreakerManager instance
+   */
+  createCircuitBreakerManager(): ICircuitBreakerManager {
+    const service = new CircuitBreakerManager()
+    this.services.push(service)
+    return service
+  }
+
+  /**
    * Cleanup all resources
    */
   async cleanup(): Promise<void> {
@@ -288,6 +314,10 @@ export const ServiceTokens = {
   DistrictCacheManager: createServiceToken(
     'DistrictCacheManager',
     DistrictCacheManager
+  ),
+  CircuitBreakerManager: createServiceToken(
+    'CircuitBreakerManager',
+    CircuitBreakerManager
   ),
   Logger: createServiceToken('Logger', ProductionLogger),
 }

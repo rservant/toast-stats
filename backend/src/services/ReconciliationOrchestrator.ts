@@ -10,6 +10,7 @@ import { RetryManager } from '../utils/RetryManager.js'
 import {
   CircuitBreaker,
   CircuitBreakerManager,
+  ICircuitBreakerManager,
 } from '../utils/CircuitBreaker.js'
 import {
   AlertManager,
@@ -49,7 +50,7 @@ export class ReconciliationOrchestrator {
     cacheUpdateManager?: CacheUpdateManager,
     alertManager?: AlertManager,
     metricsService?: ReconciliationMetricsService,
-    circuitBreakerManager?: CircuitBreakerManager
+    circuitBreakerManager?: ICircuitBreakerManager
   ) {
     this.changeDetectionEngine =
       changeDetectionEngine || new ChangeDetectionEngine()
@@ -62,8 +63,7 @@ export class ReconciliationOrchestrator {
       metricsService || new ReconciliationMetricsService(this.alertManager)
 
     // Initialize circuit breaker for storage operations
-    const circuitManager =
-      circuitBreakerManager || CircuitBreakerManager.getInstance()
+    const circuitManager = circuitBreakerManager || new CircuitBreakerManager()
     this.storageCircuitBreaker = circuitManager.getCircuitBreaker(
       'reconciliation-storage',
       {

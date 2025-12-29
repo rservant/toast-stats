@@ -34,6 +34,7 @@ import { RetryManager } from '../utils/RetryManager.js'
 import {
   CircuitBreaker,
   CircuitBreakerManager,
+  ICircuitBreakerManager,
 } from '../utils/CircuitBreaker.js'
 import {
   AlertManager,
@@ -100,15 +101,14 @@ export class DistrictBackfillService {
     cacheManager: DistrictCacheManager,
     scraper: ToastmastersScraper,
     alertManager?: AlertManager,
-    circuitBreakerManager?: CircuitBreakerManager
+    circuitBreakerManager?: ICircuitBreakerManager
   ) {
     this.cacheManager = cacheManager
     this.scraper = scraper
     this.alertManager = alertManager || new AlertManager()
 
     // Initialize circuit breakers
-    const circuitManager =
-      circuitBreakerManager || CircuitBreakerManager.getInstance()
+    const circuitManager = circuitBreakerManager || new CircuitBreakerManager()
     this.dashboardCircuitBreaker = circuitManager.getCircuitBreaker(
       'dashboard-api',
       {

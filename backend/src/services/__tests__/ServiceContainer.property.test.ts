@@ -31,7 +31,7 @@ describe('ServiceContainer - Property-Based Tests', () => {
   let container: ServiceContainer
 
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+  const { afterEach: performCleanup } = createTestSelfCleanup({
     verbose: false,
   })
 
@@ -53,8 +53,8 @@ describe('ServiceContainer - Property-Based Tests', () => {
   // Test data generators
   const generateServiceName = (): fc.Arbitrary<string> =>
     safeString(3, 20).map(
-      (s, index) =>
-        `Service_${s}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+      (_s, _index) =>
+        `Service_${_s}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
     )
 
   const generateUniqueServiceNames = (count: number): string[] =>
@@ -78,7 +78,7 @@ describe('ServiceContainer - Property-Based Tests', () => {
 
     constructor(
       public name: string,
-      public dependencies: any[] = []
+      public dependencies: unknown[] = []
     ) {}
 
     async dispose(): Promise<void> {
@@ -91,7 +91,7 @@ describe('ServiceContainer - Property-Based Tests', () => {
 
   const createMockServiceFactory = (
     name: string,
-    dependencies: ServiceToken<any>[] = []
+    dependencies: ServiceToken<unknown>[] = []
   ): ServiceFactory<MockService> =>
     createServiceFactory(
       (container: ServiceContainer) => {

@@ -26,7 +26,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
     try {
       await initializeTestCache(testCacheConfig)
-    } catch (error) {
+    } catch {
       // If initialization fails, ensure directory exists and retry
       await fs.mkdir(testCacheConfig.cacheDir, { recursive: true })
       await initializeTestCache(testCacheConfig)

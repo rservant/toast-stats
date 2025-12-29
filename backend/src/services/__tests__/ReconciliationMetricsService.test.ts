@@ -13,12 +13,10 @@ import { createTestReconciliationJob } from '../../utils/test-helpers'
 
 // Mock AlertManager
 vi.mock('../../utils/AlertManager.ts', () => ({
-  AlertManager: {
-    getInstance: vi.fn(() => ({
-      sendAlert: vi.fn(),
-      sendReconciliationFailureAlert: vi.fn(),
-    })),
-  },
+  AlertManager: vi.fn().mockImplementation(() => ({
+    sendAlert: vi.fn(),
+    sendReconciliationFailureAlert: vi.fn(),
+  })),
   AlertSeverity: {
     LOW: 'LOW',
     MEDIUM: 'MEDIUM',

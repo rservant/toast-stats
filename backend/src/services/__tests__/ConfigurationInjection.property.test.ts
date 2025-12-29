@@ -345,7 +345,7 @@ describe('Configuration Injection Property Tests', () => {
             const nonTestServices = services.filter(
               ({ config }) => config.environment !== 'test'
             )
-            nonTestServices.forEach(({ service, config }) => {
+            nonTestServices.forEach(({ service, config: _config }) => {
               const actualDir = service.getCacheDirectory()
               const serviceConfig = service.getConfiguration()
 
@@ -428,7 +428,6 @@ describe('Configuration Injection Property Tests', () => {
             expect(updatedService.isReady()).toBe(true)
 
             // Property: Configuration changes should not affect existing instances
-            const initialDir = initialService.getCacheDirectory()
             const updatedDir = updatedService.getCacheDirectory()
 
             // Dispose one service

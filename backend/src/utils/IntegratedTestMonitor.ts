@@ -279,7 +279,7 @@ export class DefaultIntegratedTestMonitor implements IntegratedTestMonitor {
     suiteName: string
     message: string
     severity: 'info' | 'warning' | 'error'
-    data: any
+    data: unknown
   }): void {
     logger.warn('Test monitoring alert', {
       type: alert.type,

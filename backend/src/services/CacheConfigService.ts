@@ -306,7 +306,7 @@ export class CacheConfigService implements ICacheConfigService {
           source: this.configuration.source,
           isConfigured: this.configuration.isConfigured,
         })
-      } catch (loggerError) {
+      } catch {
         // Ignore logger errors to prevent them from breaking the service
       }
     } catch (error) {
@@ -315,7 +315,7 @@ export class CacheConfigService implements ICacheConfigService {
           cacheDirectory: this.cacheDir,
           error,
         })
-      } catch (loggerError) {
+      } catch {
         // Ignore logger errors to prevent them from breaking the service
       }
       throw error
@@ -428,7 +428,7 @@ export class CacheConfigService implements ICacheConfigService {
 
     try {
       this.logger.debug('CacheConfigService disposed')
-    } catch (loggerError) {
+    } catch {
       // Ignore logger errors to prevent them from breaking the service
     }
   }

@@ -11,6 +11,7 @@ import { RetryManager, RetryOptions } from '../utils/RetryManager.js'
 import {
   CircuitBreaker,
   CircuitBreakerManager,
+  ICircuitBreakerManager,
   CircuitState,
   CircuitBreakerStats,
 } from '../utils/CircuitBreaker.js'
@@ -42,7 +43,7 @@ export interface ReconciliationErrorContext {
 
 export class ReconciliationErrorHandler {
   private alertManager: AlertManager
-  private circuitManager: CircuitBreakerManager
+  private circuitManager: ICircuitBreakerManager
   private dashboardCircuitBreaker: CircuitBreaker
   private cacheCircuitBreaker: CircuitBreaker
   private config: ErrorHandlingConfig
@@ -52,7 +53,7 @@ export class ReconciliationErrorHandler {
   constructor(
     config: Partial<ErrorHandlingConfig> = {},
     alertManager?: AlertManager,
-    circuitBreakerManager?: CircuitBreakerManager
+    circuitBreakerManager?: ICircuitBreakerManager
   ) {
     this.config = {
       dashboardRetry: RetryManager.getDashboardRetryOptions(),
@@ -65,8 +66,7 @@ export class ReconciliationErrorHandler {
     }
 
     this.alertManager = alertManager || new AlertManager()
-    this.circuitManager =
-      circuitBreakerManager || CircuitBreakerManager.getInstance()
+    this.circuitManager = circuitBreakerManager || new CircuitBreakerManager()
 
     // Initialize circuit breakers
     this.dashboardCircuitBreaker = this.circuitManager.getCircuitBreaker(

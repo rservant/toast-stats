@@ -8,7 +8,7 @@
  * directories, environment variables, and other test artifacts.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
 import fs from 'fs/promises'
 import { existsSync } from 'fs'
@@ -17,12 +17,12 @@ import {
   getTestIsolationManager,
   resetTestIsolationManager,
 } from '../TestIsolationManager.js'
-import { safeString } from '../test-string-generators.js'
+
 import { createTestSelfCleanup } from '../test-self-cleanup.js'
 
 describe('TestIsolationManager - Resource Cleanup Property Tests', () => {
   // Self-cleanup setup - each test manages its own cleanup
-  const { cleanup, afterEach: performCleanup } = createTestSelfCleanup({
+  const { afterEach: performCleanup } = createTestSelfCleanup({
     verbose: false,
   })
 
@@ -35,15 +35,6 @@ describe('TestIsolationManager - Resource Cleanup Property Tests', () => {
   // Test data generators
   const generateDirectoryCount = (): fc.Arbitrary<number> =>
     fc.integer({ min: 1, max: 5 })
-
-  const generateEnvironmentVariable = (): fc.Arbitrary<{
-    name: string
-    value: string
-  }> =>
-    fc.record({
-      name: safeString(5, 15).map(s => `TEST_VAR_${s.toUpperCase()}`),
-      value: safeString(3, 20),
-    })
 
   /**
    * Property 10: Test Resource Cleanup
@@ -177,7 +168,7 @@ describe('TestIsolationManager - Resource Cleanup Property Tests', () => {
                 }
               )
 
-              const managerDirectories = await Promise.all(creationPromises)
+              await Promise.all(creationPromises)
 
               // Property: All directories should be created and unique
               expect(allDirectories.length).toBe(

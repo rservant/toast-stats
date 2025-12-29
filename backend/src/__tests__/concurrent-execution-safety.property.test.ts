@@ -2,12 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
 import { DefaultTestServiceFactory } from '../services/TestServiceFactory'
 import { DefaultTestIsolationManager } from '../utils/TestIsolationManager'
-import { CacheConfigService } from '../services/CacheConfigService'
-import { AnalyticsEngine } from '../services/AnalyticsEngine'
-import { EnhancedDistrictCacheManager } from '../services/EnhancedDistrictCacheManager'
 import path from 'path'
 import fs from 'fs/promises'
-import { createDeterministicServiceConfiguration } from '../utils/test-data-factories'
 
 /**
  * Property-Based Test for Concurrent Test Execution Safety
@@ -57,10 +53,7 @@ describe('Property 4: Concurrent Test Execution Safety', () => {
               const cacheConfigService = testFactory.createCacheConfigService({
                 cacheDirectory,
               })
-              const cacheManager =
-                testFactory.createDistrictCacheManager(cacheConfigService)
-              const analyticsEngine =
-                testFactory.createAnalyticsEngine(cacheManager)
+              testFactory.createDistrictCacheManager(cacheConfigService)
 
               // Initialize services
               await cacheConfigService.initialize()
@@ -241,10 +234,7 @@ describe('Property 4: Concurrent Test Execution Safety', () => {
               })
               await cacheConfigService.initialize()
 
-              const cacheManager =
-                testFactory.createDistrictCacheManager(cacheConfigService)
-              const analyticsEngine =
-                testFactory.createAnalyticsEngine(cacheManager)
+              testFactory.createDistrictCacheManager(cacheConfigService)
 
               // Verify service state
               expect(cacheConfigService.isReady()).toBe(true)

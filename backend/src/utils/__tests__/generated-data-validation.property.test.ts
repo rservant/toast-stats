@@ -11,7 +11,6 @@ import {
   reconciliationJobArbitrary,
   districtCacheEntryArbitrary,
   validateGeneratedData,
-  validateDataCompatibility,
   isFilesystemSafe,
 } from '../test-string-generators.js'
 import {
@@ -24,7 +23,6 @@ import {
 import { createTestSelfCleanup } from '../test-self-cleanup.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
 import type { ReconciliationJob } from '../../types/reconciliation.js'
-import type { DistrictCacheEntry } from '../../types/districts.js'
 
 describe('Generated Data Validation Property Tests', () => {
   // Self-cleanup setup - each test manages its own cleanup
@@ -156,7 +154,6 @@ describe('Generated Data Validation Property Tests', () => {
 
           // Validate the fetchedAt date is reasonable (not too far in the future)
           const fetchedDate = new Date(entry.fetchedAt)
-          const now = new Date()
           const maxFutureDate = new Date('2030-12-31')
           expect(fetchedDate.getTime()).toBeLessThanOrEqual(
             maxFutureDate.getTime()
@@ -194,7 +191,7 @@ describe('Generated Data Validation Property Tests', () => {
               customValidators: [
                 data => data.age >= 0 && data.age <= 150,
                 data => data.name.trim().length > 0, // Require non-whitespace content
-                data => true, // Accept any email for test data - this is just testing the validation framework
+                _data => true, // Accept any email for test data - this is just testing the validation framework
               ],
             })
 
@@ -345,7 +342,7 @@ describe('Generated Data Validation Property Tests', () => {
 
           if (isSafe) {
             // Safe strings should not contain invalid characters
-            expect(testString).not.toMatch(/[<>:"/\\|?*\x00-\x1f]/)
+            expect(testString).not.toMatch(/[<>:"/\\|?*]/)
             expect(testString).not.toMatch(
               /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
             )

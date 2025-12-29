@@ -98,7 +98,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       // Also ensure the parent directory exists for any subdirectories the storage manager might create
       const parentDir = path.dirname(testCacheConfig.cacheDir)
       await fs.mkdir(parentDir, { recursive: true })
-    } catch (error) {
+    } catch {
       // If directory creation fails, ensure parent directories exist first
       const resolvedPath = path.resolve(testCacheConfig.cacheDir)
       const parentDir = path.dirname(resolvedPath)
@@ -113,7 +113,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
     try {
       await storageManager.init()
-    } catch (error) {
+    } catch {
       // If initialization fails, try creating the directory again and retry
       await fs.mkdir(testCacheConfig.cacheDir, { recursive: true })
       await storageManager.init()
