@@ -1127,7 +1127,16 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     // Analyze each club for risk factors and status
     for (const clubTrend of clubMap.values()) {
       this.assessClubHealth(clubTrend)
-      this.identifyDistinguishedLevel(clubTrend)
+
+      // Find the latest club data for this club to calculate net growth
+      const latestClubData = latestEntry.clubPerformance.find(club => {
+        const clubId = this.ensureString(
+          club['Club Number'] || club['Club ID'] || club['ClubID']
+        )
+        return clubId === clubTrend.clubId
+      })
+
+      this.identifyDistinguishedLevel(clubTrend, latestClubData)
     }
 
     return Array.from(clubMap.values())
@@ -1184,20 +1193,91 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
+   * Determine the distinguished level for a club based on DCP goals, membership, and net growth
+   * @param dcpGoals Number of DCP goals achieved
+   * @param membership Current membership count
+   * @param netGrowth Net membership growth (current - base)
+   * @returns Distinguished level string or 'None' if no level achieved
+   */
+  private determineDistinguishedLevel(
+    dcpGoals: number,
+    membership: number,
+    netGrowth: number
+  ): string {
+    // Smedley Distinguished: 10 goals + 25 members
+    if (dcpGoals >= 10 && membership >= 25) {
+      return 'Smedley'
+    }
+    // President's Distinguished: 9 goals + 20 members
+    else if (dcpGoals >= 9 && membership >= 20) {
+      return 'Presidents'
+    }
+    // Select Distinguished: 7 goals + (20 members OR net growth of 5)
+    else if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
+      return 'Select'
+    }
+    // Distinguished: 5 goals + (20 members OR net growth of 3)
+    else if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
+      return 'Distinguished'
+    }
+
+    return 'None'
+  }
+
+  /**
    * Identify distinguished level for a club
    */
-  private identifyDistinguishedLevel(clubTrend: ClubTrend): void {
+  private identifyDistinguishedLevel(
+    clubTrend: ClubTrend,
+    latestClubData?: ScrapedRecord
+  ): void {
     const currentDcpGoals =
       clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
         ?.goalsAchieved || 0
 
-    if (currentDcpGoals >= 9) {
+    const currentMembership =
+      clubTrend.membershipTrend[clubTrend.membershipTrend.length - 1]?.count ||
+      0
+
+    // Calculate net growth if we have the raw club data
+    let netGrowth = 0
+    if (latestClubData) {
+      netGrowth = this.calculateNetGrowth(latestClubData)
+    }
+
+    // Use the shared distinguished level determination logic
+    const distinguishedLevel = this.determineDistinguishedLevel(
+      currentDcpGoals,
+      currentMembership,
+      netGrowth
+    )
+
+    // Map the level to the appropriate property name for ClubTrend
+    if (distinguishedLevel === 'Smedley') {
+      clubTrend.distinguishedLevel = 'Smedley'
+    } else if (distinguishedLevel === 'Presidents') {
       clubTrend.distinguishedLevel = 'President'
-    } else if (currentDcpGoals >= 7) {
+    } else if (distinguishedLevel === 'Select') {
       clubTrend.distinguishedLevel = 'Select'
-    } else if (currentDcpGoals >= 5) {
+    } else if (distinguishedLevel === 'Distinguished') {
       clubTrend.distinguishedLevel = 'Distinguished'
     }
+    // If level is 'None', don't set distinguishedLevel (leave undefined)
+  }
+
+  /**
+   * Calculate net growth for a club using available membership data
+   * Net growth = Active Members - Mem. Base
+   * Handles missing, null, or invalid "Mem. Base" values by treating as 0
+   */
+  private calculateNetGrowth(club: ScrapedRecord): number {
+    const currentMembers = this.parseIntSafe(
+      club['Active Members'] || club['Active Membership'] || club['Membership']
+    )
+
+    const membershipBase = this.parseIntSafe(club['Mem. Base'])
+
+    return currentMembers - membershipBase
   }
 
   /**
@@ -1237,22 +1317,37 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           club['Active Membership'] ||
           club['Membership']
       )
+      const netGrowth = this.calculateNetGrowth(club)
 
-      // Smedley Distinguished: 10 goals + 25 members
-      if (dcpGoals >= 10 && membership >= 25) {
+      // Use the shared distinguished level determination logic
+      const distinguishedLevel = this.determineDistinguishedLevel(
+        dcpGoals,
+        membership,
+        netGrowth
+      )
+
+      // Count clubs by distinguished level
+      if (distinguishedLevel === 'Smedley') {
         smedley++
-      }
-      // President's Distinguished: 9 goals + 20 members
-      else if (dcpGoals >= 9 && membership >= 20) {
+      } else if (distinguishedLevel === 'Presidents') {
         presidents++
-      }
-      // Select Distinguished: 7 goals + 20 members (simplified - net growth check would require historical data)
-      else if (dcpGoals >= 7 && membership >= 20) {
+      } else if (distinguishedLevel === 'Select') {
         select++
-      }
-      // Distinguished: 5 goals + 20 members (simplified - net growth check would require historical data)
-      else if (dcpGoals >= 5 && membership >= 20) {
+      } else if (distinguishedLevel === 'Distinguished') {
         distinguished++
+      }
+
+      // Debug logging with club details (only when in development environment)
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('Distinguished status calculation', {
+          clubId: club['Club Number'],
+          clubName: club['Club Name'],
+          dcpGoals,
+          membership,
+          membershipBase: this.parseIntSafe(club['Mem. Base']),
+          netGrowth,
+          distinguishedLevel,
+        })
       }
     }
 
