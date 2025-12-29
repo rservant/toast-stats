@@ -10,7 +10,6 @@ import { DistrictCacheManager } from '../DistrictCacheManager'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
-  initializeTestCache,
 } from '../../utils/test-cache-helper'
 import type { TestCacheConfig } from '../../utils/test-cache-helper'
 
@@ -24,16 +23,13 @@ describe('Year-Over-Year Comparison Logic', () => {
     const testName = `year-over-year`
     testCacheConfig = await createTestCacheConfig(testName)
 
-    try {
-      await initializeTestCache(testCacheConfig)
-    } catch {
-      // If initialization fails, ensure directory exists and retry
-      await fs.mkdir(testCacheConfig.cacheDir, { recursive: true })
-      await initializeTestCache(testCacheConfig)
-    }
+    // Ensure the cache directory and subdirectories exist
+    const path = await import('path')
+    const districtsDir = path.resolve(testCacheConfig.cacheDir, 'districts')
+    await fs.mkdir(districtsDir, { recursive: true })
 
-    // Use the CacheConfigService to get the configured cache directory
-    cacheManager = new DistrictCacheManager()
+    // Use the test cache directory
+    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     await cacheManager.init()
     analyticsEngine = new AnalyticsEngine(cacheManager)
 

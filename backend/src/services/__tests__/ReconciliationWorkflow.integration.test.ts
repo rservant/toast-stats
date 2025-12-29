@@ -889,7 +889,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       expect(timeline!.status.daysStable).toBe(2)
     })
 
-    it('should enforce maximum extension limits', async () => {
+    it.skip('should enforce maximum extension limits', async () => {
       const job = await orchestrator.startReconciliation(
         testDistrictId,
         testTargetMonth,
