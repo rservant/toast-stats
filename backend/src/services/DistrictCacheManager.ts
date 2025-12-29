@@ -26,8 +26,6 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import { getTestServiceFactory } from './TestServiceFactory.js'
-import { getProductionServiceFactory } from './ProductionServiceFactory.js'
 import type {
   DistrictCacheEntry,
   DistrictDataRange,
@@ -67,25 +65,10 @@ export class DistrictCacheManager {
   /**
    * Creates a new DistrictCacheManager instance
    *
-   * @param cacheDir - Base directory for cache storage (uses configured cache directory if not provided)
+   * @param cacheDir - Base directory for cache storage (defaults to './cache' if not provided)
    */
   constructor(cacheDir?: string) {
-    if (cacheDir) {
-      this.cacheDir = cacheDir
-    } else {
-      // Use dependency injection instead of singleton
-      const isTestEnvironment = process.env.NODE_ENV === 'test'
-
-      if (isTestEnvironment) {
-        const testFactory = getTestServiceFactory()
-        const cacheConfig = testFactory.createCacheConfigService()
-        this.cacheDir = cacheConfig.getCacheDirectory()
-      } else {
-        const productionFactory = getProductionServiceFactory()
-        const cacheConfig = productionFactory.createCacheConfigService()
-        this.cacheDir = cacheConfig.getCacheDirectory()
-      }
-    }
+    this.cacheDir = cacheDir || process.env.CACHE_DIR || './cache'
     // Normalize and fix the root directory for all district cache files
     this.districtRoot = path.resolve(this.cacheDir, 'districts')
   }
