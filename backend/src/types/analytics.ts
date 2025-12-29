@@ -289,9 +289,9 @@ export interface DistrictAnalytics {
 
   // Club health
   allClubs: ClubTrend[]
-  atRiskClubs: ClubTrend[]
-  healthyClubs: number
-  criticalClubs: number
+  atRiskClubs: ClubTrend[] // Contains only at-risk clubs (not critical)
+  healthyClubs: ClubTrend[]
+  criticalClubs: ClubTrend[]
 
   // Distinguished status
   distinguishedClubs: {

@@ -43,9 +43,9 @@ export interface DistrictAnalytics {
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
   allClubs: ClubTrend[]
-  atRiskClubs: ClubTrend[]
-  healthyClubs: number
-  criticalClubs: number
+  atRiskClubs: ClubTrend[] // Contains only at-risk clubs (not critical)
+  healthyClubs: ClubTrend[]
+  criticalClubs: ClubTrend[]
   distinguishedClubs: {
     smedley: number
     presidents: number

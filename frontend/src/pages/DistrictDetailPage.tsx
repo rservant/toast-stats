@@ -14,6 +14,7 @@ import {
 } from '../utils/programYear'
 import { DistrictOverview } from '../components/DistrictOverview'
 import { AtRiskClubsPanel } from '../components/AtRiskClubsPanel'
+import { CriticalClubsPanel } from '../components/CriticalClubsPanel'
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
 import { ClubDetailModal } from '../components/ClubDetailModal'
@@ -131,6 +132,15 @@ const DistrictDetailPage: React.FC = () => {
 
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || []
+
+  // Separate critical and at-risk clubs - now they come as separate arrays
+  const criticalClubs = React.useMemo(() => {
+    return analytics?.criticalClubs || []
+  }, [analytics?.criticalClubs])
+
+  const atRiskClubs = React.useMemo(() => {
+    return analytics?.atRiskClubs || []
+  }, [analytics?.atRiskClubs])
 
   // Get available dates sorted in descending order (filtered by program year)
   const availableDates = cachedDatesInProgramYear.sort((a, b) =>
@@ -361,10 +371,18 @@ const DistrictDetailPage: React.FC = () => {
                   programYearStartDate={selectedProgramYear.startDate}
                 />
 
+                {/* Critical Clubs Panel */}
+                {analytics && (
+                  <CriticalClubsPanel
+                    clubs={criticalClubs}
+                    isLoading={isLoadingAnalytics}
+                  />
+                )}
+
                 {/* At-Risk Clubs Panel */}
                 {analytics && (
                   <AtRiskClubsPanel
-                    clubs={analytics.atRiskClubs}
+                    clubs={atRiskClubs}
                     isLoading={isLoadingAnalytics}
                   />
                 )}
@@ -442,7 +460,7 @@ const DistrictDetailPage: React.FC = () => {
                       currentYear={{
                         totalMembership: analytics.totalMembership,
                         distinguishedClubs: analytics.distinguishedClubs.total,
-                        healthyClubs: analytics.healthyClubs,
+                        healthyClubs: analytics.healthyClubs.length,
                         totalClubs: analytics.allClubs.length,
                       }}
                       isLoading={isLoadingAnalytics}

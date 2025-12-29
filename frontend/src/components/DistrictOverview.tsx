@@ -38,6 +38,15 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     currentMonth
   )
 
+  // Get club counts from the new separate arrays
+  const criticalClubsCount = React.useMemo(() => {
+    return analytics?.criticalClubs?.length || 0
+  }, [analytics?.criticalClubs])
+
+  const atRiskClubsCount = React.useMemo(() => {
+    return analytics?.atRiskClubs?.length || 0
+  }, [analytics?.atRiskClubs])
+
   const isLoading = isLoadingAnalytics
 
   // Format date for display
@@ -173,16 +182,16 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
-                {analytics.healthyClubs} Healthy
+                {analytics.healthyClubs.length} Healthy
               </span>
-              {analytics.atRiskClubs.length > 0 && (
+              {atRiskClubsCount > 0 && (
                 <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                  {analytics.atRiskClubs.length} At-Risk
+                  {atRiskClubsCount} At-Risk
                 </span>
               )}
-              {analytics.criticalClubs > 0 && (
+              {criticalClubsCount > 0 && (
                 <span className="text-xs text-red-700 bg-red-100 px-2 py-1 rounded">
-                  {analytics.criticalClubs} Critical
+                  {criticalClubsCount} Critical
                 </span>
               )}
             </div>
