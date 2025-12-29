@@ -1084,11 +1084,13 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         clubId,
         clubName,
         divisionId: this.ensureString(club['Division']),
-        divisionName: this.ensureString(
-          this.ensureString(club['Division Name'])
-        ),
+        divisionName:
+          this.ensureString(club['Division Name']) ||
+          this.ensureString(club['Division']),
         areaId: this.ensureString(club['Area']),
-        areaName: this.ensureString(this.ensureString(club['Area Name'])),
+        areaName:
+          this.ensureString(club['Area Name']) ||
+          this.ensureString(club['Area']),
         membershipTrend: [],
         dcpGoalsTrend: [],
         currentStatus: 'healthy',
