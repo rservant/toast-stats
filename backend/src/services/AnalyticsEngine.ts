@@ -174,10 +174,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       const atRiskClubs = clubTrends.filter(c => c.currentStatus === 'at-risk')
       const criticalClubs = clubTrends.filter(
         c => c.currentStatus === 'critical'
-      ).length
-      const healthyClubs = clubTrends.filter(
-        c => c.currentStatus === 'healthy'
-      ).length
+      )
+      const healthyClubs = clubTrends.filter(c => c.currentStatus === 'healthy')
 
       // Calculate distinguished clubs
       const distinguishedClubs = this.calculateDistinguishedClubs(latestEntry)
@@ -244,7 +242,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
             // Calculate club health change (percentage of healthy clubs)
             const currentHealthyPercent =
-              (healthyClubs / clubTrends.length) * 100
+              (healthyClubs.length / clubTrends.length) * 100
             const previousClubTrends = await this.analyzeClubTrends(
               districtId,
               [previousEntry]
@@ -304,6 +302,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         dateRange,
         totalClubs: clubTrends.length,
         atRiskClubs: atRiskClubs.length,
+        criticalClubs: criticalClubs.length,
+        healthyClubs: healthyClubs.length,
       })
 
       return analytics
@@ -366,7 +366,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
 
-      return clubTrends.filter(c => c.currentStatus !== 'healthy')
+      // Return only at-risk clubs (not critical clubs)
+      return clubTrends.filter(c => c.currentStatus === 'at-risk')
     } catch (error) {
       logger.error('Failed to identify at-risk clubs', { districtId, error })
       throw error

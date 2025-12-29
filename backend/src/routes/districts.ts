@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express'
 import { cacheMiddleware } from '../middleware/cache.js'
 import { generateDistrictCacheKey } from '../utils/cacheKeys.js'
+import { logger } from '../utils/logger.js'
 import { RealToastmastersAPIService } from '../services/RealToastmastersAPIService.js'
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
 import { BackfillService } from '../services/BackfillService.js'
@@ -1758,17 +1759,34 @@ router.get(
       // Identify at-risk clubs
       const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId)
 
+      // Get critical clubs separately - only if we have at-risk clubs data
+      let criticalClubsCount = 0
+      let allClubs: any[] = [...atRiskClubs]
+
+      if (atRiskClubs.length > 0) {
+        try {
+          const analytics =
+            await analyticsEngine.generateDistrictAnalytics(districtId)
+          criticalClubsCount = analytics.criticalClubs.length
+          allClubs = [...atRiskClubs, ...analytics.criticalClubs]
+        } catch (error) {
+          // If analytics fails, just use at-risk clubs
+          logger.warn('Failed to get critical clubs, using at-risk only', {
+            districtId,
+            error,
+          })
+        }
+      }
+
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json({
         districtId,
         totalAtRiskClubs: atRiskClubs.length,
-        criticalClubs: atRiskClubs.filter(c => c.currentStatus === 'critical')
-          .length,
-        atRiskClubs: atRiskClubs.filter(c => c.currentStatus === 'at-risk')
-          .length,
-        clubs: atRiskClubs,
+        criticalClubs: criticalClubsCount,
+        atRiskClubs: atRiskClubs.length,
+        clubs: allClubs,
       })
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
