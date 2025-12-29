@@ -6,6 +6,20 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
+    setupFiles: './src/__tests__/setup.ts',
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      // Skip test directory artifacts
+      '**/test-dir/**',
+    ],
+    coverage: {
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        // Skip test directory artifacts from coverage
+        '**/test-dir/**',
+      ],
+    },
   },
 })

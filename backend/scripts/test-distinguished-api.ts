@@ -3,9 +3,7 @@
  * This verifies that DCP goals 5 and 6 are returned correctly
  */
 
-import { DistrictCacheManager } from '../src/services/DistrictCacheManager'
-import { AnalyticsEngine } from '../src/services/AnalyticsEngine'
-import { CacheConfigService } from '../src/services/CacheConfigService'
+import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
 async function testDistinguishedAPI() {
   console.log('='.repeat(80))
@@ -13,13 +11,15 @@ async function testDistinguishedAPI() {
   console.log('='.repeat(80))
   console.log()
 
-  // Use configured cache directory
-  const cacheConfig = CacheConfigService.getInstance()
-  await cacheConfig.initialize()
-  const cacheDir = cacheConfig.getCacheDirectory()
+  // Create production services using dependency injection
+  const factory = getProductionServiceFactory()
+  const container = factory.createProductionContainer()
 
-  const cacheManager = new DistrictCacheManager(cacheDir)
-  const analyticsEngine = new AnalyticsEngine(cacheManager)
+  const cacheConfig = container.resolve('CacheConfigService')
+  const analyticsEngine = container.resolve('AnalyticsEngine')
+
+  // Initialize cache configuration
+  await cacheConfig.initialize()
 
   const districtId = '61'
   const startDate = '2025-11-22'
@@ -104,6 +104,9 @@ async function testDistinguishedAPI() {
     }
   } catch (error) {
     console.error('❌ Error:', error)
+  } finally {
+    // Cleanup resources
+    await container.dispose()
   }
 
   console.log()

@@ -26,7 +26,6 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import { CacheConfigService } from './CacheConfigService.js'
 import type {
   DistrictCacheEntry,
   DistrictDataRange,
@@ -66,18 +65,89 @@ export class DistrictCacheManager {
   /**
    * Creates a new DistrictCacheManager instance
    *
-   * @param cacheDir - Base directory for cache storage (uses configured cache directory if not provided)
+   * @param cacheDir - Base directory for cache storage (defaults to './cache' if not provided)
    */
   constructor(cacheDir?: string) {
-    if (cacheDir) {
-      this.cacheDir = cacheDir
-    } else {
-      // Use configured cache directory as default
-      const cacheConfig = CacheConfigService.getInstance()
-      this.cacheDir = cacheConfig.getCacheDirectory()
-    }
+    this.cacheDir = cacheDir || process.env.CACHE_DIR || './cache'
     // Normalize and fix the root directory for all district cache files
     this.districtRoot = path.resolve(this.cacheDir, 'districts')
+  }
+
+  /**
+   * Initialize the cache manager by ensuring base directories exist
+   */
+  async init(): Promise<void> {
+    try {
+      // Create the full directory structure in one call
+      await fs.mkdir(this.districtRoot, { recursive: true })
+
+      logger.debug('DistrictCacheManager initialized', {
+        cacheDir: this.cacheDir,
+        districtRoot: this.districtRoot,
+      })
+    } catch (error) {
+      logger.error('Failed to initialize cache directories', {
+        cacheDir: this.cacheDir,
+        districtRoot: this.districtRoot,
+        error,
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Ensure a directory exists, creating it if necessary
+   */
+  private async ensureDirectoryExists(dirPath: string): Promise<void> {
+    const maxAttempts = 5
+    let attempts = 0
+
+    while (attempts < maxAttempts) {
+      attempts++
+
+      try {
+        // Use recursive: true to create all parent directories
+        await fs.mkdir(dirPath, { recursive: true })
+        return
+      } catch (error) {
+        const err = error as { code?: string }
+
+        // Directory already exists - success
+        if (err.code === 'EEXIST') {
+          return
+        }
+
+        // For ENOENT errors or other failures, retry with exponential backoff
+        if (attempts < maxAttempts) {
+          const delay = Math.min(50 * Math.pow(2, attempts - 1), 500)
+          await new Promise(resolve => setTimeout(resolve, delay))
+
+          // Try to ensure parent directory exists first
+          try {
+            const parentDir = path.dirname(dirPath)
+            if (
+              parentDir !== dirPath &&
+              parentDir !== '.' &&
+              parentDir !== '/'
+            ) {
+              await fs.mkdir(parentDir, { recursive: true })
+            }
+          } catch {
+            // Ignore parent directory creation errors
+          }
+
+          continue
+        }
+
+        // Final attempt failed
+        logger.error('Failed to create directory after multiple attempts', {
+          dirPath,
+          attempts,
+          error: err,
+        })
+        throw error
+      }
+    }
   }
 
   /**
@@ -85,23 +155,22 @@ export class DistrictCacheManager {
    */
   private async initDistrictDir(districtId: string): Promise<void> {
     try {
-      // Validate districtId to avoid path traversal or unexpected characters
-      if (!/^[A-Za-z0-9_-]+$/.test(districtId)) {
-        throw new Error(`Invalid districtId for cache directory: ${districtId}`)
-      }
+      // Validate districtId before using it
+      const sanitizedDistrictId = sanitizeDistrictId(districtId)
 
-      const districtDir = path.resolve(this.districtRoot, districtId)
+      const districtDir = path.resolve(this.districtRoot, sanitizedDistrictId)
 
       // Ensure the resolved district directory is still under the districtRoot
       if (!districtDir.startsWith(this.districtRoot + path.sep)) {
-        throw new Error(
-          `Resolved district cache directory escapes root: ${districtDir}`
-        )
+        throw new Error(`Invalid districtId for cache directory: ${districtId}`)
       }
 
-      await fs.mkdir(districtDir, { recursive: true })
+      // Create the district directory (this will also create parent directories)
+      await this.ensureDirectoryExists(districtDir)
+
       logger.debug('District cache directory initialized', {
-        districtId,
+        districtId: sanitizedDistrictId,
+        originalDistrictId: districtId,
         districtDir,
       })
     } catch (error) {
@@ -117,10 +186,8 @@ export class DistrictCacheManager {
    * Get cache file path for a district and date
    */
   private getDistrictCacheFilePath(districtId: string, date: string): string {
-    // Validate identifiers to ensure they cannot contain path separators
-    if (!/^[A-Za-z0-9_-]+$/.test(districtId)) {
-      throw new Error(`Invalid districtId for cache file path: ${districtId}`)
-    }
+    // Validate districtId before using it
+    const sanitizedDistrictId = sanitizeDistrictId(districtId)
 
     // Basic YYYY-MM-DD format check; also prevents '/' or '\' in date
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -145,7 +212,7 @@ export class DistrictCacheManager {
 
     const resolvedPath = path.resolve(
       this.districtRoot,
-      districtId,
+      sanitizedDistrictId,
       `${date}.json`
     )
 
@@ -192,7 +259,13 @@ export class DistrictCacheManager {
     clubPerformance: ScrapedRecord[]
   ): Promise<void> {
     try {
-      // Ensure directory exists
+      // Validate district ID first before any operations
+      sanitizeDistrictId(districtId)
+
+      // Ensure base directories exist first
+      await this.init()
+
+      // Ensure district-specific directory exists
       await this.initDistrictDir(districtId)
 
       // Create cache entry with all three report types
@@ -207,10 +280,10 @@ export class DistrictCacheManager {
 
       // Write atomically to file
       const filePath = this.getDistrictCacheFilePath(districtId, date)
-      // Ensure directory exists for temp file
-      await fs.mkdir(path.dirname(filePath), { recursive: true })
-
       const tempFilePath = `${filePath}.tmp`
+
+      // Ensure parent directory exists before any file operations
+      await this.ensureDirectoryExists(path.dirname(filePath))
 
       // Write to temp file first
       await fs.writeFile(
@@ -219,8 +292,26 @@ export class DistrictCacheManager {
         'utf-8'
       )
 
-      // Rename to final location (atomic operation)
-      await fs.rename(tempFilePath, filePath)
+      // Rename to final location (atomic operation) with retry logic
+      try {
+        await fs.rename(tempFilePath, filePath)
+      } catch {
+        // If rename fails, try to clean up temp file and write directly
+        try {
+          await fs.unlink(tempFilePath)
+        } catch {
+          // Ignore cleanup errors
+        }
+
+        // Ensure directory still exists before fallback write
+        await this.ensureDirectoryExists(path.dirname(filePath))
+
+        await fs.writeFile(
+          filePath,
+          JSON.stringify(cacheEntry, null, 2),
+          'utf-8'
+        )
+      }
 
       logger.info('District data cached', {
         districtId,
@@ -514,5 +605,88 @@ export class DistrictCacheManager {
       logger.error('Failed to get cached districts', error)
       return []
     }
+  }
+
+  /**
+   * Save district data (alias for cacheDistrictData to match interface)
+   */
+  async saveDistrictData(
+    districtId: string,
+    date: string,
+    data: DistrictCacheEntry
+  ): Promise<void> {
+    await this.cacheDistrictData(
+      districtId,
+      date,
+      data.districtPerformance,
+      data.divisionPerformance,
+      data.clubPerformance
+    )
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getCacheStats(): Promise<{
+    totalEntries: number
+    totalSize: number
+    oldestEntry?: string
+    newestEntry?: string
+  }> {
+    try {
+      const districts = await this.getCachedDistricts()
+      let totalEntries = 0
+      let totalSize = 0
+      let oldestEntry: string | undefined
+      let newestEntry: string | undefined
+
+      for (const districtId of districts) {
+        const dates = await this.getCachedDatesForDistrict(districtId)
+        totalEntries += dates.length
+
+        for (const date of dates) {
+          try {
+            const filePath = this.getDistrictCacheFilePath(districtId, date)
+            const stats = await fs.stat(filePath)
+            totalSize += stats.size
+
+            if (!oldestEntry || date < oldestEntry) {
+              oldestEntry = date
+            }
+            if (!newestEntry || date > newestEntry) {
+              newestEntry = date
+            }
+          } catch (error) {
+            // Skip files that can't be accessed
+            logger.debug('Could not stat cache file', {
+              districtId,
+              date,
+              error,
+            })
+          }
+        }
+      }
+
+      return {
+        totalEntries,
+        totalSize,
+        oldestEntry,
+        newestEntry,
+      }
+    } catch (error) {
+      logger.error('Failed to get cache stats', { error })
+      return {
+        totalEntries: 0,
+        totalSize: 0,
+      }
+    }
+  }
+
+  /**
+   * Dispose of resources (no-op for file-based cache)
+   */
+  async dispose(): Promise<void> {
+    // No resources to dispose for file-based cache
+    logger.debug('DistrictCacheManager disposed')
   }
 }

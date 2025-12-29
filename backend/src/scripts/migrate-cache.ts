@@ -12,7 +12,7 @@
  */
 
 import { CacheManager } from '../services/CacheManager.js'
-import { CacheConfigService } from '../services/CacheConfigService.js'
+import { getProductionServiceFactory } from '../services/ProductionServiceFactory.js'
 import { logger } from '../utils/logger.js'
 
 async function main() {
@@ -23,7 +23,8 @@ async function main() {
 
   try {
     // Use configured cache directory
-    const cacheConfig = CacheConfigService.getInstance()
+    const productionFactory = getProductionServiceFactory()
+    const cacheConfig = productionFactory.createCacheConfigService()
     await cacheConfig.initialize()
     const cacheDir = cacheConfig.getCacheDirectory()
 

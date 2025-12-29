@@ -71,12 +71,12 @@ vi.mock('../CacheUpdateManager.ts', () => ({
 }))
 
 vi.mock('../../utils/AlertManager.ts', () => ({
-  AlertManager: {
-    getInstance: vi.fn().mockReturnValue({
+  AlertManager: vi.fn().mockImplementation(function () {
+    return {
       sendAlert: vi.fn().mockResolvedValue('alert-id'),
       sendReconciliationFailureAlert: vi.fn().mockResolvedValue('alert-id'),
-    }),
-  },
+    }
+  }),
   AlertSeverity: {
     LOW: 'low',
     MEDIUM: 'medium',
@@ -92,14 +92,14 @@ vi.mock('../../utils/AlertManager.ts', () => ({
 }))
 
 vi.mock('../ReconciliationMetricsService.ts', () => ({
-  ReconciliationMetricsService: {
-    getInstance: vi.fn().mockReturnValue({
+  ReconciliationMetricsService: vi.fn().mockImplementation(function () {
+    return {
       recordJobStart: vi.fn(),
       recordJobCompletion: vi.fn(),
       recordJobFailure: vi.fn(),
       recordJobExtension: vi.fn(),
-    }),
-  },
+    }
+  }),
 }))
 
 describe('Reconciliation Performance Integration', () => {

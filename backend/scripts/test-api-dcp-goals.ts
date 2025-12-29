@@ -3,9 +3,7 @@
  * This simulates what the frontend would receive
  */
 
-import { DistrictCacheManager } from '../src/services/DistrictCacheManager'
-import { AnalyticsEngine } from '../src/services/AnalyticsEngine'
-import { CacheConfigService } from '../src/services/CacheConfigService'
+import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
 async function testAPIDCPGoals() {
   console.log('='.repeat(80))
@@ -13,13 +11,16 @@ async function testAPIDCPGoals() {
   console.log('='.repeat(80))
   console.log()
 
-  // Use configured cache directory
-  const cacheConfig = CacheConfigService.getInstance()
-  await cacheConfig.initialize()
-  const cacheDir = cacheConfig.getCacheDirectory()
+  // Create production services using dependency injection
+  const factory = getProductionServiceFactory()
+  const container = factory.createProductionContainer()
 
-  const cacheManager = new DistrictCacheManager(cacheDir)
-  const analyticsEngine = new AnalyticsEngine(cacheManager)
+  const cacheConfig = container.resolve('CacheConfigService')
+  const cacheManager = container.resolve('DistrictCacheManager')
+  const analyticsEngine = container.resolve('AnalyticsEngine')
+
+  // Initialize cache configuration
+  await cacheConfig.initialize()
 
   // Test with 2024-2025 program year data (November 2025)
   const districtId = '61'
@@ -109,6 +110,9 @@ async function testAPIDCPGoals() {
     }
   } catch (error) {
     console.error('❌ Error:', error)
+  } finally {
+    // Cleanup resources
+    await container.dispose()
   }
 
   console.log()

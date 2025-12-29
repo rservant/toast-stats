@@ -24,15 +24,20 @@
  */
 
 import { CacheManager } from '../src/services/CacheManager.js'
-import { CacheConfigService } from '../src/services/CacheConfigService.js'
+import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
 async function clearRankingsCache() {
+  let container: unknown = null
+
   try {
     console.log('🧹 Clearing district rankings cache...')
     console.log('')
 
-    // Use configured cache directory
-    const cacheConfig = CacheConfigService.getInstance()
+    // Create production services using dependency injection
+    const factory = getProductionServiceFactory()
+    container = factory.createProductionContainer()
+
+    const cacheConfig = container.resolve('CacheConfigService')
     await cacheConfig.initialize()
     const cacheDir = cacheConfig.getCacheDirectory()
 
@@ -89,6 +94,11 @@ async function clearRankingsCache() {
   } catch (error) {
     console.error('❌ Failed to clear rankings cache:', error)
     process.exit(1)
+  } finally {
+    // Cleanup resources
+    if (container) {
+      await container.dispose()
+    }
   }
 }
 

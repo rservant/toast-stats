@@ -7,11 +7,17 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import path from 'path'
+import fs from 'fs/promises'
 import { ReconciliationStorageOptimizer } from '../../services/ReconciliationStorageOptimizer'
 import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine'
-import { CacheConfigService } from '../../services/CacheConfigService'
+import { getTestServiceFactory } from '../../services/TestServiceFactory'
 import type { ReconciliationJob } from '../../types/reconciliation'
+
+interface ErrnoException extends Error {
+  code?: string
+  errno?: number
+}
 
 describe('Reconciliation API - New Status Endpoints', () => {
   let app: express.Application
@@ -20,12 +26,26 @@ describe('Reconciliation API - New Status Endpoints', () => {
   let testJob: ReconciliationJob
 
   beforeEach(async () => {
+    // Use dependency injection instead of singleton
+    const testFactory = getTestServiceFactory()
+    const cacheConfigService = testFactory.createCacheConfigService()
+    await cacheConfigService.initialize()
+
     // Setup test app with shared storage manager
-    const cacheConfigService = CacheConfigService.getInstance()
-    const testCacheDir = path.join(
-      cacheConfigService.getCacheDirectory(),
-      'test-reconciliation-api'
-    )
+    const baseCacheDir = cacheConfigService.getCacheDirectory()
+    const testCacheDir = path.join(baseCacheDir, 'test-reconciliation-api')
+
+    // Ensure the base cache directory and test cache directory exist
+    try {
+      await fs.mkdir(baseCacheDir, { recursive: true })
+      await fs.mkdir(testCacheDir, { recursive: true })
+    } catch (error) {
+      // Directory might already exist, which is fine
+      if ((error as ErrnoException).code !== 'EEXIST') {
+        throw error
+      }
+    }
+
     storageManager = new ReconciliationStorageOptimizer(testCacheDir)
     await storageManager.init()
 

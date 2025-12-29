@@ -35,6 +35,27 @@ export default [
     },
   },
   {
+    files: ['**/__tests__/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2020,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+    },
+  },
+  {
     files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx'],
     languageOptions: {
       parser: tsparser,
@@ -44,6 +65,7 @@ export default [
       },
       globals: {
         ...globals.browser,
+        ...globals.node,
         ...globals.es2020,
         describe: 'readonly',
         it: 'readonly',

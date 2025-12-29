@@ -11,6 +11,7 @@ import { RetryManager, RetryOptions } from '../utils/RetryManager.js'
 import {
   CircuitBreaker,
   CircuitBreakerManager,
+  ICircuitBreakerManager,
   CircuitState,
   CircuitBreakerStats,
 } from '../utils/CircuitBreaker.js'
@@ -41,16 +42,19 @@ export interface ReconciliationErrorContext {
 }
 
 export class ReconciliationErrorHandler {
-  private static instance: ReconciliationErrorHandler
   private alertManager: AlertManager
-  private circuitManager: CircuitBreakerManager
+  private circuitManager: ICircuitBreakerManager
   private dashboardCircuitBreaker: CircuitBreaker
   private cacheCircuitBreaker: CircuitBreaker
   private config: ErrorHandlingConfig
   private failureTracker: Map<string, { count: number; lastFailure: Date }> =
     new Map()
 
-  private constructor(config: Partial<ErrorHandlingConfig> = {}) {
+  constructor(
+    config: Partial<ErrorHandlingConfig> = {},
+    alertManager?: AlertManager,
+    circuitBreakerManager?: ICircuitBreakerManager
+  ) {
     this.config = {
       dashboardRetry: RetryManager.getDashboardRetryOptions(),
       cacheRetry: RetryManager.getCacheRetryOptions(),
@@ -61,8 +65,8 @@ export class ReconciliationErrorHandler {
       ...config,
     }
 
-    this.alertManager = AlertManager.getInstance()
-    this.circuitManager = CircuitBreakerManager.getInstance()
+    this.alertManager = alertManager || new AlertManager()
+    this.circuitManager = circuitBreakerManager || new CircuitBreakerManager()
 
     // Initialize circuit breakers
     this.dashboardCircuitBreaker = this.circuitManager.getCircuitBreaker(
@@ -86,17 +90,6 @@ export class ReconciliationErrorHandler {
     logger.info('ReconciliationErrorHandler initialized', {
       config: this.config,
     })
-  }
-
-  static getInstance(
-    config?: Partial<ErrorHandlingConfig>
-  ): ReconciliationErrorHandler {
-    if (!ReconciliationErrorHandler.instance) {
-      ReconciliationErrorHandler.instance = new ReconciliationErrorHandler(
-        config
-      )
-    }
-    return ReconciliationErrorHandler.instance
   }
 
   /**

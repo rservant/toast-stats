@@ -7,6 +7,55 @@
 
 import { logger } from './logger.js'
 
+export interface IAlertManager {
+  sendAlert(
+    severity: AlertSeverity,
+    category: AlertCategory,
+    title: string,
+    message: string,
+    context?: Record<string, unknown>
+  ): Promise<string | null>
+  sendReconciliationFailureAlert(
+    districtId: string,
+    targetMonth: string,
+    error: string,
+    jobId?: string
+  ): Promise<string | null>
+  sendCircuitBreakerAlert(
+    circuitName: string,
+    state: string,
+    failureCount: number,
+    nextRetryTime?: Date
+  ): Promise<string | null>
+  sendDashboardUnavailableAlert(
+    duration: number,
+    lastError: string,
+    affectedOperations: string[]
+  ): Promise<string | null>
+  sendDataQualityAlert(
+    districtId: string,
+    date: string,
+    issue: string,
+    details: Record<string, unknown>
+  ): Promise<string | null>
+  sendReconciliationTimeoutAlert(
+    districtId: string,
+    targetMonth: string,
+    daysActive: number,
+    maxDays: number
+  ): Promise<string | null>
+  resolveAlert(alertId: string, resolvedBy?: string): Promise<boolean>
+  getActiveAlerts(category?: AlertCategory): Alert[]
+  getAlertStats(): {
+    total: number
+    active: number
+    resolved: number
+    bySeverity: Record<AlertSeverity, number>
+    byCategory: Record<AlertCategory, number>
+  }
+  cleanupOldAlerts(): Promise<number>
+}
+
 export enum AlertSeverity {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
@@ -45,21 +94,13 @@ export interface AlertRule {
   description: string
 }
 
-export class AlertManager {
-  private static instance: AlertManager
+export class AlertManager implements IAlertManager {
   private alerts: Map<string, Alert> = new Map()
   private alertRules: Map<string, AlertRule> = new Map()
   private throttleTracker: Map<string, Date> = new Map()
 
-  private constructor() {
+  constructor() {
     this.initializeDefaultRules()
-  }
-
-  static getInstance(): AlertManager {
-    if (!AlertManager.instance) {
-      AlertManager.instance = new AlertManager()
-    }
-    return AlertManager.instance
   }
 
   /**

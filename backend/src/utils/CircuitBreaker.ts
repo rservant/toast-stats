@@ -309,21 +309,22 @@ export class CircuitBreaker {
   }
 }
 
+export interface ICircuitBreakerManager {
+  getCircuitBreaker(
+    name: string,
+    options?: Partial<CircuitBreakerOptions>
+  ): CircuitBreaker
+  getAllStats(): Record<string, CircuitBreakerStats>
+  resetAll(): void
+}
+
 /**
  * Circuit Breaker Manager for managing multiple circuit breakers
  */
-export class CircuitBreakerManager {
-  private static instance: CircuitBreakerManager
+export class CircuitBreakerManager implements ICircuitBreakerManager {
   private circuitBreakers: Map<string, CircuitBreaker> = new Map()
 
-  private constructor() {}
-
-  static getInstance(): CircuitBreakerManager {
-    if (!CircuitBreakerManager.instance) {
-      CircuitBreakerManager.instance = new CircuitBreakerManager()
-    }
-    return CircuitBreakerManager.instance
-  }
+  constructor() {}
 
   /**
    * Get or create a circuit breaker
@@ -360,5 +361,18 @@ export class CircuitBreakerManager {
     for (const breaker of this.circuitBreakers.values()) {
       breaker.reset()
     }
+  }
+
+  /**
+   * Dispose of the manager and clean up resources
+   */
+  async dispose(): Promise<void> {
+    // Reset all circuit breakers before disposal
+    this.resetAll()
+
+    // Clear the circuit breakers map
+    this.circuitBreakers.clear()
+
+    logger.debug('CircuitBreakerManager disposed')
   }
 }

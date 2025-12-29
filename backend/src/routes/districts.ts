@@ -7,7 +7,7 @@ import { BackfillService } from '../services/BackfillService.js'
 import { CacheManager } from '../services/CacheManager.js'
 import { DistrictBackfillService } from '../services/DistrictBackfillService.js'
 import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
-import { CacheConfigService } from '../services/CacheConfigService.js'
+import { getProductionServiceFactory } from '../services/ProductionServiceFactory.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
 import {
   DistrictAnalytics,
@@ -48,7 +48,8 @@ const toastmastersAPI = useMockData
   : new RealToastmastersAPIService()
 
 // Initialize cache configuration service and get cache directory
-const cacheConfig = CacheConfigService.getInstance()
+const productionFactory = getProductionServiceFactory()
+const cacheConfig = productionFactory.createCacheConfigService()
 const cacheDirectory = cacheConfig.getCacheDirectory()
 
 // Initialize services with configured cache directory
@@ -65,7 +66,7 @@ const districtBackfillService = new DistrictBackfillService(
 const analyticsEngine = new AnalyticsEngine(districtCacheManager)
 
 // Initialize cache configuration asynchronously (validation happens lazily)
-cacheConfig.initialize().catch(error => {
+cacheConfig.initialize().catch((error: unknown) => {
   console.error('Failed to initialize cache configuration:', error)
   // Services will still work with the resolved cache directory path
 })

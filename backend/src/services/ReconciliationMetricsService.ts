@@ -13,6 +13,26 @@ import {
 } from '../utils/AlertManager.js'
 import type { ReconciliationJob } from '../types/reconciliation.js'
 
+export interface IReconciliationMetricsService {
+  recordJobStart(job: ReconciliationJob): void
+  recordJobCompletion(job: ReconciliationJob, stabilityDays: number): void
+  recordJobExtension(jobId: string, extensionDays: number): void
+  recordJobFailure(job: ReconciliationJob, error: string): Promise<void>
+  getMetrics(): ReconciliationMetrics
+  getJobDurationMetrics(): JobDurationMetrics[]
+  getPerformancePatterns(): PerformancePattern[]
+  getDistrictMetrics(districtId: string): ReconciliationMetrics
+  cleanupOldMetrics(): Promise<number>
+  resetMetrics(): void
+  getHealthStatus(): {
+    isHealthy: boolean
+    lastCleanup: string
+    totalJobs: number
+    activeJobs: number
+    performancePatterns: number
+  }
+}
+
 export interface ReconciliationMetrics {
   totalJobs: number
   successfulJobs: number
@@ -51,23 +71,15 @@ export interface PerformancePattern {
   recommendation: string
 }
 
-export class ReconciliationMetricsService {
-  private static instance: ReconciliationMetricsService
+export class ReconciliationMetricsService implements IReconciliationMetricsService {
   private alertManager: AlertManager
   private jobMetrics: Map<string, JobDurationMetrics> = new Map()
   private performanceHistory: PerformancePattern[] = []
   private lastCleanup: Date = new Date()
 
-  private constructor() {
-    this.alertManager = AlertManager.getInstance()
+  constructor(alertManager: AlertManager) {
+    this.alertManager = alertManager
     logger.info('ReconciliationMetricsService initialized')
-  }
-
-  static getInstance(): ReconciliationMetricsService {
-    if (!ReconciliationMetricsService.instance) {
-      ReconciliationMetricsService.instance = new ReconciliationMetricsService()
-    }
-    return ReconciliationMetricsService.instance
   }
   /**
    * Record job start metrics

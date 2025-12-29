@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ReconciliationErrorHandler } from '../ReconciliationErrorHandler'
 import { AlertManager } from '../../utils/AlertManager'
-import { CircuitBreakerManager, CircuitState } from '../../utils/CircuitBreaker'
+import {
+  CircuitState,
+  ICircuitBreakerManager,
+} from '../../utils/CircuitBreaker'
 
 // Mock dependencies
 vi.mock('../DistrictBackfillService.ts')
@@ -33,6 +36,7 @@ interface MockCircuitManager {
   getCircuitBreaker: ReturnType<typeof vi.fn>
   getAllStats: ReturnType<typeof vi.fn>
   resetAll: ReturnType<typeof vi.fn>
+  dispose: ReturnType<typeof vi.fn>
 }
 
 // Interface for reconciliation data
@@ -45,17 +49,11 @@ describe('ReconciliationErrorHandler', () => {
   let errorHandler: ReconciliationErrorHandler
   let mockBackfillService: MockBackfillService
   let mockAlertManager: MockAlertManager
+  let mockCircuitBreaker: MockCircuitBreaker
+  let mockCircuitManager: MockCircuitManager
 
   beforeEach(() => {
     vi.useFakeTimers()
-
-    // Reset singleton instances
-    ;(
-      ReconciliationErrorHandler as unknown as { instance: undefined }
-    ).instance = undefined
-    ;(AlertManager as unknown as { instance: undefined }).instance = undefined
-    ;(CircuitBreakerManager as unknown as { instance: undefined }).instance =
-      undefined
 
     // Create mocks
     mockBackfillService = {
@@ -70,13 +68,8 @@ describe('ReconciliationErrorHandler', () => {
       sendDataQualityAlert: vi.fn().mockResolvedValue('alert-id'),
     }
 
-    // Mock AlertManager.getInstance
-    vi.mocked(AlertManager.getInstance).mockReturnValue(
-      mockAlertManager as unknown as AlertManager
-    )
-
-    // Mock CircuitBreakerManager
-    const mockCircuitBreaker: MockCircuitBreaker = {
+    // Create mock circuit breaker
+    mockCircuitBreaker = {
       execute: vi.fn(),
       getStats: vi.fn().mockReturnValue({
         state: CircuitState.CLOSED,
@@ -85,33 +78,47 @@ describe('ReconciliationErrorHandler', () => {
       }),
     }
 
-    const mockCircuitManager: MockCircuitManager = {
+    // Create mock circuit manager
+    mockCircuitManager = {
       getCircuitBreaker: vi.fn().mockReturnValue(mockCircuitBreaker),
       getAllStats: vi.fn().mockReturnValue({}),
       resetAll: vi.fn(),
+      dispose: vi.fn().mockResolvedValue(undefined),
     }
 
-    vi.mocked(CircuitBreakerManager.getInstance).mockReturnValue(
-      mockCircuitManager as unknown as CircuitBreakerManager
+    // Create error handler with dependency injection
+    errorHandler = new ReconciliationErrorHandler(
+      {
+        circuitBreakerEnabled: true,
+        alertingEnabled: true,
+        maxConsecutiveFailures: 3,
+      },
+      mockAlertManager as unknown as AlertManager,
+      mockCircuitManager as unknown as ICircuitBreakerManager
     )
-
-    errorHandler = ReconciliationErrorHandler.getInstance({
-      circuitBreakerEnabled: true,
-      alertingEnabled: true,
-      maxConsecutiveFailures: 3,
-    })
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  describe('singleton behavior', () => {
-    it('should return the same instance', () => {
-      const instance1 = ReconciliationErrorHandler.getInstance()
-      const instance2 = ReconciliationErrorHandler.getInstance()
+  describe('dependency injection behavior', () => {
+    it('should work with injected dependencies', () => {
+      const customAlertManager = {
+        sendAlert: vi.fn(),
+        sendReconciliationFailureAlert: vi.fn(),
+        sendReconciliationTimeoutAlert: vi.fn(),
+        sendDashboardUnavailableAlert: vi.fn(),
+        sendDataQualityAlert: vi.fn(),
+      } as unknown as AlertManager
 
-      expect(instance1).toBe(instance2)
+      const customErrorHandler = new ReconciliationErrorHandler(
+        { alertingEnabled: true },
+        customAlertManager,
+        mockCircuitManager as unknown as ICircuitBreakerManager
+      )
+
+      expect(customErrorHandler).toBeDefined()
     })
   })
 
@@ -127,15 +134,9 @@ describe('ReconciliationErrorHandler', () => {
       mockBackfillService.fetchReconciliationData.mockResolvedValue(mockResult)
 
       // Mock circuit breaker to execute operation directly
-      const mockCircuitManager = vi.mocked(CircuitBreakerManager.getInstance)()
-      const mockCircuitBreaker = mockCircuitManager.getCircuitBreaker(
-        'reconciliation-dashboard'
-      )
-      vi.mocked(mockCircuitBreaker.execute).mockImplementation(
-        async operation => {
-          return await operation()
-        }
-      )
+      mockCircuitBreaker.execute.mockImplementation(async operation => {
+        return await operation()
+      })
 
       const result = await errorHandler.executeDashboardFetch(
         mockBackfillService as unknown as Parameters<
@@ -158,11 +159,7 @@ describe('ReconciliationErrorHandler', () => {
       mockBackfillService.fetchReconciliationData.mockRejectedValue(mockError)
 
       // Mock circuit breaker to throw error
-      const mockCircuitManager = vi.mocked(CircuitBreakerManager.getInstance)()
-      const mockCircuitBreaker = mockCircuitManager.getCircuitBreaker(
-        'reconciliation-dashboard'
-      )
-      vi.mocked(mockCircuitBreaker.execute).mockRejectedValue(mockError)
+      mockCircuitBreaker.execute.mockRejectedValue(mockError)
 
       const result = await errorHandler.executeDashboardFetch(
         mockBackfillService as unknown as Parameters<
@@ -179,13 +176,14 @@ describe('ReconciliationErrorHandler', () => {
 
     it('should work without circuit breaker when disabled', async () => {
       // Create error handler with circuit breaker disabled
-      ;(
-        ReconciliationErrorHandler as unknown as { instance: undefined }
-      ).instance = undefined
-      const errorHandlerNoCircuit = ReconciliationErrorHandler.getInstance({
-        circuitBreakerEnabled: false,
-        alertingEnabled: true,
-      })
+      const errorHandlerNoCircuit = new ReconciliationErrorHandler(
+        {
+          circuitBreakerEnabled: false,
+          alertingEnabled: true,
+        },
+        mockAlertManager as unknown as AlertManager,
+        mockCircuitManager as unknown as ICircuitBreakerManager
+      )
 
       const mockResult = {
         success: true,
@@ -214,15 +212,9 @@ describe('ReconciliationErrorHandler', () => {
       const mockOperation = vi.fn().mockResolvedValue('cache-result')
 
       // Mock circuit breaker to execute operation directly
-      const mockCircuitManager = vi.mocked(CircuitBreakerManager.getInstance)()
-      const mockCircuitBreaker = mockCircuitManager.getCircuitBreaker(
-        'reconciliation-cache'
-      )
-      vi.mocked(mockCircuitBreaker.execute).mockImplementation(
-        async operation => {
-          return await operation()
-        }
-      )
+      mockCircuitBreaker.execute.mockImplementation(async operation => {
+        return await operation()
+      })
 
       const result = await errorHandler.executeCacheOperation(mockOperation, {
         districtId: 'D123',
@@ -240,11 +232,7 @@ describe('ReconciliationErrorHandler', () => {
         .mockRejectedValue(new Error('Cache write failed'))
 
       // Mock circuit breaker to throw error
-      const mockCircuitManager = vi.mocked(CircuitBreakerManager.getInstance)()
-      const mockCircuitBreaker = mockCircuitManager.getCircuitBreaker(
-        'reconciliation-cache'
-      )
-      vi.mocked(mockCircuitBreaker.execute).mockRejectedValue(
+      mockCircuitBreaker.execute.mockRejectedValue(
         new Error('Cache write failed')
       )
 
@@ -297,11 +285,7 @@ describe('ReconciliationErrorHandler', () => {
         .mockRejectedValue(new Error('Persistent failure'))
 
       // Mock circuit breaker to always fail
-      const mockCircuitManager = vi.mocked(CircuitBreakerManager.getInstance)()
-      const mockCircuitBreaker = mockCircuitManager.getCircuitBreaker(
-        'reconciliation-cache'
-      )
-      vi.mocked(mockCircuitBreaker.execute).mockRejectedValue(
+      mockCircuitBreaker.execute.mockRejectedValue(
         new Error('Persistent failure')
       )
 
@@ -351,7 +335,6 @@ describe('ReconciliationErrorHandler', () => {
     it('should reset error state', async () => {
       await errorHandler.resetErrorState()
 
-      const mockCircuitManager = vi.mocked(CircuitBreakerManager.getInstance)()
       expect(mockCircuitManager.resetAll).toHaveBeenCalled()
 
       expect(mockAlertManager.sendAlert).toHaveBeenCalledWith(
@@ -369,12 +352,13 @@ describe('ReconciliationErrorHandler', () => {
   describe('alerting configuration', () => {
     it('should not send alerts when alerting is disabled', async () => {
       // Create error handler with alerting disabled
-      ;(
-        ReconciliationErrorHandler as unknown as { instance: undefined }
-      ).instance = undefined
-      const errorHandlerNoAlerts = ReconciliationErrorHandler.getInstance({
-        alertingEnabled: false,
-      })
+      const errorHandlerNoAlerts = new ReconciliationErrorHandler(
+        {
+          alertingEnabled: false,
+        },
+        mockAlertManager as unknown as AlertManager,
+        mockCircuitManager as unknown as ICircuitBreakerManager
+      )
 
       await errorHandlerNoAlerts.handleReconciliationJobFailure(
         'job-123',

@@ -14,7 +14,8 @@
 
 import fs from 'fs/promises'
 import path from 'path'
-import { logger } from '../utils/logger.js'
+import { ServiceConfiguration } from '../types/serviceContainer.js'
+import { ICacheConfigService, ILogger } from '../types/serviceInterfaces.js'
 
 export interface CacheDirectoryValidation {
   isValid: boolean
@@ -27,7 +28,10 @@ export class CacheDirectoryValidator {
   /**
    * Validate cache directory path for security and accessibility
    */
-  static async validate(cacheDir: string): Promise<CacheDirectoryValidation> {
+  static async validate(
+    cacheDir: string,
+    environment: 'test' | 'development' | 'production' = 'production'
+  ): Promise<CacheDirectoryValidation> {
     try {
       // Check for path traversal attempts
       const normalizedPath = path.resolve(cacheDir)
@@ -45,55 +49,90 @@ export class CacheDirectoryValidator {
           isAccessible: false,
           isSecure: false,
           errorMessage:
-            'Path contains unsafe patterns or points to system root',
+            'Cache directory path contains unsafe patterns or points to system root',
         }
       }
 
       // Check if path is secure (not pointing to sensitive system directories)
-      const sensitiveDirectories = [
-        '/etc',
-        '/usr',
-        '/var',
-        '/sys',
-        '/proc',
-        '/boot',
-      ]
+      const sensitiveDirectories = ['/etc', '/usr', '/sys', '/proc', '/boot']
+
+      // In test environment, allow /var directories (for temporary directories)
+      if (environment !== 'test') {
+        sensitiveDirectories.push('/var')
+      }
+
       const isSystemPath = sensitiveDirectories.some(dir =>
         normalizedPath.startsWith(dir)
       )
 
-      if (isSystemPath) {
+      // Additional check for test environment: allow temporary directories
+      const isTempDirectory =
+        environment === 'test' &&
+        (normalizedPath.startsWith('/tmp') ||
+          normalizedPath.startsWith('/var/folders') || // macOS temp dirs
+          normalizedPath.includes('/tmp/') ||
+          normalizedPath.includes('test-'))
+
+      if (isSystemPath && !isTempDirectory) {
         return {
           isValid: false,
           isAccessible: false,
           isSecure: false,
-          errorMessage: 'Path points to sensitive system directory',
+          errorMessage:
+            'Cache directory path is unsafe: points to sensitive system directory',
         }
       }
 
       // Try to create directory if it doesn't exist
       try {
+        // Ensure parent directory exists first
+        const parentDir = path.dirname(normalizedPath)
+        if (parentDir !== normalizedPath) {
+          await fs.mkdir(parentDir, { recursive: true })
+        }
         await fs.mkdir(normalizedPath, { recursive: true })
       } catch (error) {
-        return {
-          isValid: true,
-          isAccessible: false,
-          isSecure: true,
-          errorMessage: `Cannot create directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        const err = error as { code?: string }
+        // Ignore EEXIST errors (directory already exists)
+        if (err.code !== 'EEXIST') {
+          return {
+            isValid: true,
+            isAccessible: false,
+            isSecure: true,
+            errorMessage: `Cannot create directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }
         }
       }
 
-      // Test write permissions
-      try {
-        const testFile = path.join(normalizedPath, '.cache-test-write')
-        await fs.writeFile(testFile, 'test', 'utf-8')
-        await fs.unlink(testFile)
-      } catch (error) {
+      // Test write permissions with retry logic for race conditions
+      let writeTestPassed = false
+      let lastError: Error | null = null
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const testFile = path.join(
+            normalizedPath,
+            `.cache-test-write-${Date.now()}-${attempt}`
+          )
+          await fs.writeFile(testFile, 'test', 'utf-8')
+          await fs.unlink(testFile)
+          writeTestPassed = true
+          break
+        } catch (error) {
+          lastError = error as Error
+          // Wait a bit before retrying to handle race conditions
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
+        }
+      }
+
+      if (!writeTestPassed) {
         return {
           isValid: true,
           isAccessible: false,
           isSecure: true,
-          errorMessage: `Directory is not writable: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          errorMessage: `Directory is not writable: ${lastError?.message || 'Unknown error'}`,
         }
       }
 
@@ -127,41 +166,43 @@ export class CacheConfigurationError extends Error {
 export interface CacheConfiguration {
   baseDirectory: string
   isConfigured: boolean
-  source: 'environment' | 'default'
+  source: 'environment' | 'default' | 'test'
   validationStatus: CacheDirectoryValidation
 }
 
-export class CacheConfigService {
-  private static instance: CacheConfigService | undefined
-  private readonly cacheDir: string
+export class CacheConfigService implements ICacheConfigService {
+  private cacheDir: string
   private readonly configuration: CacheConfiguration
   private initialized: boolean = false
 
-  private constructor() {
+  constructor(
+    private config: ServiceConfiguration,
+    private logger: ILogger
+  ) {
     this.cacheDir = this.resolveCacheDirectory()
     const envCacheDir = process.env.CACHE_DIR
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
 
+    // Determine source based on environment and configuration
+    let source: 'environment' | 'default' | 'test'
+    if (this.config.environment === 'test') {
+      source = 'test'
+    } else if (isConfigured) {
+      source = 'environment'
+    } else {
+      source = 'default'
+    }
+
     this.configuration = {
       baseDirectory: this.cacheDir,
       isConfigured,
-      source: isConfigured ? 'environment' : 'default',
+      source,
       validationStatus: {
         isValid: false,
         isAccessible: false,
         isSecure: false,
       },
     }
-  }
-
-  /**
-   * Get the singleton instance of CacheConfigService
-   */
-  static getInstance(): CacheConfigService {
-    if (!CacheConfigService.instance) {
-      CacheConfigService.instance = new CacheConfigService()
-    }
-    return CacheConfigService.instance
   }
 
   /**
@@ -186,9 +227,15 @@ export class CacheConfigService {
       return
     }
 
+    // Refresh configuration from environment variables in case they changed
+    this.refreshConfiguration()
+
     try {
       // Validate the cache directory
-      const validation = await CacheDirectoryValidator.validate(this.cacheDir)
+      const validation = await CacheDirectoryValidator.validate(
+        this.cacheDir,
+        this.config.environment
+      )
       this.configuration.validationStatus = validation
 
       if (
@@ -201,7 +248,7 @@ export class CacheConfigService {
 
         // If configured path is invalid, try fallback
         if (this.configuration.source === 'environment') {
-          logger.warn(
+          this.logger.warn(
             'Configured cache directory is invalid, falling back to default',
             {
               configuredPath: this.cacheDir,
@@ -211,8 +258,10 @@ export class CacheConfigService {
 
           // Try default fallback
           const fallbackPath = path.resolve('./cache')
-          const fallbackValidation =
-            await CacheDirectoryValidator.validate(fallbackPath)
+          const fallbackValidation = await CacheDirectoryValidator.validate(
+            fallbackPath,
+            this.config.environment
+          )
 
           if (
             fallbackValidation.isValid &&
@@ -227,14 +276,14 @@ export class CacheConfigService {
             })
 
             // Update internal cache directory
-            Object.defineProperty(this, 'cacheDir', {
-              value: fallbackPath,
-              writable: false,
-            })
+            this.cacheDir = fallbackPath
 
-            logger.info('Successfully fell back to default cache directory', {
-              fallbackPath,
-            })
+            this.logger.info(
+              'Successfully fell back to default cache directory',
+              {
+                fallbackPath,
+              }
+            )
           } else {
             throw new CacheConfigurationError(
               `Both configured and fallback cache directories are invalid: ${errorMessage}`,
@@ -251,16 +300,24 @@ export class CacheConfigService {
       }
 
       this.initialized = true
-      logger.info('Cache configuration initialized successfully', {
-        cacheDirectory: this.cacheDir,
-        source: this.configuration.source,
-        isConfigured: this.configuration.isConfigured,
-      })
+      try {
+        this.logger.info('Cache configuration initialized successfully', {
+          cacheDirectory: this.cacheDir,
+          source: this.configuration.source,
+          isConfigured: this.configuration.isConfigured,
+        })
+      } catch {
+        // Ignore logger errors to prevent them from breaking the service
+      }
     } catch (error) {
-      logger.error('Failed to initialize cache configuration', {
-        cacheDirectory: this.cacheDir,
-        error,
-      })
+      try {
+        this.logger.error('Failed to initialize cache configuration', {
+          cacheDirectory: this.cacheDir,
+          error,
+        })
+      } catch {
+        // Ignore logger errors to prevent them from breaking the service
+      }
       throw error
     }
   }
@@ -302,6 +359,14 @@ export class CacheConfigService {
    * Resolve cache directory from environment variable or default
    */
   private resolveCacheDirectory(): string {
+    // For test environment, use the configured cache directory if it's valid
+    if (this.config.environment === 'test') {
+      const configDir = this.config.cacheDirectory
+      if (configDir && configDir.trim()) {
+        return configDir
+      }
+    }
+
     const envCacheDir = process.env.CACHE_DIR
     if (envCacheDir && envCacheDir.trim()) {
       return path.resolve(envCacheDir.trim())
@@ -314,34 +379,57 @@ export class CacheConfigService {
    * This is useful when environment variables are loaded after the service is instantiated
    */
   refreshConfiguration(): void {
+    const newCacheDir = this.resolveCacheDirectory()
     const envCacheDir = process.env.CACHE_DIR
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
 
-    if (isConfigured) {
-      const newCacheDir = this.resolveCacheDirectory()
+    // Update the cache directory if it changed
+    this.cacheDir = newCacheDir
 
-      // Update the cache directory if it changed
-      if (newCacheDir !== this.cacheDir) {
-        Object.defineProperty(this, 'cacheDir', {
-          value: newCacheDir,
-          writable: false,
-        })
-      }
-
-      // Update configuration
-      this.configuration.baseDirectory = newCacheDir
-      this.configuration.isConfigured = isConfigured
-      this.configuration.source = 'environment'
-
-      // Reset initialization status so it will re-validate
-      this.initialized = false
+    // Determine source based on environment and configuration
+    let source: 'environment' | 'default' | 'test'
+    if (this.config.environment === 'test') {
+      source = 'test'
+    } else if (isConfigured) {
+      source = 'environment'
+    } else {
+      source = 'default'
     }
+
+    // Update configuration
+    this.configuration.baseDirectory = newCacheDir
+    this.configuration.isConfigured = isConfigured
+    this.configuration.source = source
+
+    // Reset validation status
+    this.configuration.validationStatus = {
+      isValid: false,
+      isAccessible: false,
+      isSecure: false,
+    }
+
+    // Reset initialization status so it will re-validate
+    this.initialized = false
   }
 
   /**
-   * Reset the singleton instance (for testing purposes)
+   * Dispose of the service and clean up resources
    */
-  static resetInstance(): void {
-    CacheConfigService.instance = undefined
+  async dispose(): Promise<void> {
+    // Reset initialization status
+    this.initialized = false
+
+    // Reset validation status
+    this.configuration.validationStatus = {
+      isValid: false,
+      isAccessible: false,
+      isSecure: false,
+    }
+
+    try {
+      this.logger.debug('CacheConfigService disposed')
+    } catch {
+      // Ignore logger errors to prevent them from breaking the service
+    }
   }
 }

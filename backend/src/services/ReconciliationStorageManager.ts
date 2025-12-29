@@ -6,7 +6,8 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import { CacheConfigService } from './CacheConfigService.js'
+import { getTestServiceFactory } from './TestServiceFactory.js'
+import { getProductionServiceFactory } from './ProductionServiceFactory.js'
 import type {
   ReconciliationJob,
   ReconciliationJobRecord,
@@ -26,6 +27,7 @@ export class ReconciliationStorageManager {
   private indexFile: string
   private schemaFile: string
   protected indexCache: ReconciliationIndex | null = null
+  private indexUpdateLock: Promise<void> = Promise.resolve()
 
   /**
    * Current schema version for reconciliation data
@@ -38,11 +40,24 @@ export class ReconciliationStorageManager {
     if (storageDir) {
       this.storageDir = storageDir
     } else {
-      const cacheConfig = CacheConfigService.getInstance()
-      this.storageDir = path.join(
-        cacheConfig.getCacheDirectory(),
-        'reconciliation'
-      )
+      // Use dependency injection instead of singleton
+      const isTestEnvironment = process.env.NODE_ENV === 'test'
+
+      if (isTestEnvironment) {
+        const testFactory = getTestServiceFactory()
+        const cacheConfig = testFactory.createCacheConfigService()
+        this.storageDir = path.join(
+          cacheConfig.getCacheDirectory(),
+          'reconciliation'
+        )
+      } else {
+        const productionFactory = getProductionServiceFactory()
+        const cacheConfig = productionFactory.createCacheConfigService()
+        this.storageDir = path.join(
+          cacheConfig.getCacheDirectory(),
+          'reconciliation'
+        )
+      }
     }
 
     this.jobsDir = path.join(this.storageDir, 'jobs')
@@ -104,24 +119,60 @@ export class ReconciliationStorageManager {
    * Ensure directory exists with proper error handling for concurrent access
    */
   private async ensureDirectoryExists(dirPath: string): Promise<void> {
-    try {
-      await fs.mkdir(dirPath, { recursive: true })
-    } catch (error) {
-      const err = error as { code?: string }
-      // Ignore EEXIST errors (directory already exists)
-      // For ENOENT errors, try once more in case of race condition
-      if (err.code === 'ENOENT') {
-        try {
-          // Try again - might be a race condition where parent was created
-          await fs.mkdir(dirPath, { recursive: true })
-        } catch (retryError) {
-          // If it still fails, ignore if it's because directory now exists
-          const retryErr = retryError as { code?: string }
-          if (retryErr.code !== 'EEXIST') {
-            throw retryError
+    const maxAttempts = 5
+    let attempts = 0
+
+    while (attempts < maxAttempts) {
+      attempts++
+
+      try {
+        // Use recursive: true to create all parent directories atomically
+        await fs.mkdir(dirPath, { recursive: true })
+
+        // Verify the directory was created successfully
+        await fs.access(dirPath)
+        return
+      } catch (error) {
+        const err = error as { code?: string }
+
+        // Directory already exists - success
+        if (err.code === 'EEXIST') {
+          try {
+            await fs.access(dirPath)
+            return
+          } catch {
+            // Directory exists but is not accessible, continue to retry
           }
         }
-      } else if (err.code !== 'EEXIST') {
+
+        // For any error, retry with exponential backoff
+        if (attempts < maxAttempts) {
+          const delay = Math.min(25 * Math.pow(2, attempts - 1), 250)
+          await new Promise(resolve => setTimeout(resolve, delay))
+
+          // Try to ensure parent directory exists first
+          try {
+            const parentDir = path.dirname(dirPath)
+            if (
+              parentDir !== dirPath &&
+              parentDir !== '.' &&
+              parentDir !== '/'
+            ) {
+              await fs.mkdir(parentDir, { recursive: true })
+            }
+          } catch {
+            // Ignore parent directory creation errors
+          }
+
+          continue
+        }
+
+        // Final attempt failed
+        logger.error('Failed to create directory after multiple attempts', {
+          dirPath,
+          attempts,
+          error: err,
+        })
         throw error
       }
     }
@@ -150,6 +201,22 @@ export class ReconciliationStorageManager {
         version: ReconciliationStorageManager.SCHEMA_VERSION,
         appliedAt: new Date().toISOString(),
         description: 'Initial reconciliation schema',
+      }
+
+      // Ensure parent directory exists
+      const schemaDir = path.dirname(this.schemaFile)
+      await this.ensureDirectoryExists(schemaDir)
+
+      // Double-check that the directory exists before writing
+      try {
+        await fs.access(schemaDir)
+      } catch (error) {
+        logger.error('Schema directory does not exist after creation', {
+          schemaDir,
+          error,
+        })
+        // Try to create it again
+        await fs.mkdir(schemaDir, { recursive: true })
       }
 
       await fs.writeFile(
@@ -191,12 +258,44 @@ export class ReconciliationStorageManager {
         lastUpdated: new Date().toISOString(),
       }
 
-      await fs.writeFile(
-        this.indexFile,
-        JSON.stringify(emptyIndex, null, 2),
-        'utf-8'
-      )
-      logger.info('Reconciliation index initialized')
+      // Ensure directory exists with proper error handling and race condition protection
+      const indexDir = path.dirname(this.indexFile)
+      await this.ensureDirectoryExists(indexDir)
+
+      // Use atomic write with temporary file to prevent race conditions
+      const tempFile = `${this.indexFile}.tmp.${Date.now()}.${Math.random()
+        .toString(36)
+        .substring(2)}`
+
+      try {
+        await fs.writeFile(
+          tempFile,
+          JSON.stringify(emptyIndex, null, 2),
+          'utf-8'
+        )
+
+        // Atomic move to final location
+        await fs.rename(tempFile, this.indexFile)
+        logger.info('Reconciliation index initialized')
+      } catch (error) {
+        // Clean up temp file if it exists
+        try {
+          await fs.unlink(tempFile)
+        } catch {
+          // Ignore cleanup errors
+        }
+
+        // Check if another process created the file while we were working
+        try {
+          await fs.access(this.indexFile)
+          logger.info(
+            'Reconciliation index already exists (created by another process)'
+          )
+        } catch {
+          // Re-throw original error if file still doesn't exist
+          throw error
+        }
+      }
     }
   }
 
@@ -218,6 +317,22 @@ export class ReconciliationStorageManager {
         },
         autoExtensionEnabled: true,
         maxExtensionDays: 5,
+      }
+
+      // Ensure directory exists before writing config file
+      const configDir = path.dirname(this.configFile)
+      await this.ensureDirectoryExists(configDir)
+
+      // Double-check that the directory exists before writing
+      try {
+        await fs.access(configDir)
+      } catch (error) {
+        logger.error('Config directory does not exist after creation', {
+          configDir,
+          error,
+        })
+        // Try to create it again
+        await fs.mkdir(configDir, { recursive: true })
       }
 
       await fs.writeFile(
@@ -331,11 +446,54 @@ export class ReconciliationStorageManager {
   private async saveIndex(index: ReconciliationIndex): Promise<void> {
     try {
       index.lastUpdated = new Date().toISOString()
-      await fs.writeFile(
-        this.indexFile,
-        JSON.stringify(index, null, 2),
-        'utf-8'
-      )
+
+      // Ensure parent directory exists with retry logic
+      const indexDir = path.dirname(this.indexFile)
+      await this.ensureDirectoryExists(indexDir)
+
+      // Write with retry logic for directory creation race conditions
+      let writeAttempts = 0
+      const maxAttempts = 3
+
+      while (writeAttempts < maxAttempts) {
+        try {
+          await fs.writeFile(
+            this.indexFile,
+            JSON.stringify(index, null, 2),
+            'utf-8'
+          )
+          break // Success, exit loop
+        } catch (error) {
+          writeAttempts++
+          const err = error as { code?: string }
+
+          // If directory was removed or doesn't exist, recreate it and try again
+          if (err.code === 'ENOENT') {
+            await this.ensureDirectoryExists(indexDir)
+
+            if (writeAttempts < maxAttempts) {
+              await new Promise(resolve =>
+                setTimeout(resolve, writeAttempts * 10)
+              )
+              continue // Retry
+            }
+          }
+
+          // If this is the last attempt or a different error, throw
+          if (writeAttempts >= maxAttempts) {
+            logger.error(
+              'Failed to save reconciliation index after multiple attempts',
+              {
+                indexFile: this.indexFile,
+                attempts: writeAttempts,
+                error: err,
+              }
+            )
+            throw error
+          }
+        }
+      }
+
       this.indexCache = index
     } catch (error) {
       logger.error('Failed to save reconciliation index', error)
@@ -392,18 +550,32 @@ export class ReconciliationStorageManager {
    * Ensures the jobId does not lead to path traversal outside baseDir.
    */
   private getSafeJobScopedFilePath(baseDir: string, jobId: string): string {
-    // Allow only simple identifier characters in job IDs to prevent path traversal
-    const JOB_ID_PATTERN = /^[A-Za-z0-9_-]+$/
-    if (!JOB_ID_PATTERN.test(jobId)) {
-      throw new Error('Invalid job ID format')
+    // Sanitize job ID to ensure it's filesystem-safe
+    // Replace any characters that aren't alphanumeric, underscore, or hyphen
+    const sanitizedJobId = jobId.replace(/[^A-Za-z0-9_-]/g, 'x')
+
+    // Ensure the sanitized ID is not empty and not too long
+    if (!sanitizedJobId || sanitizedJobId.length === 0) {
+      throw new Error(
+        'Invalid job ID: results in empty filename after sanitization'
+      )
     }
 
-    const fileName = `${jobId}.json`
-    const resolvedPath = path.resolve(baseDir, fileName)
+    // Limit filename length to prevent filesystem issues
+    const maxLength = 200
+    const finalJobId =
+      sanitizedJobId.length > maxLength
+        ? sanitizedJobId.substring(0, maxLength)
+        : sanitizedJobId
+
+    const fileName = `${finalJobId}.json`
+
+    // Ensure base directory exists before resolving path
+    const normalizedBase = path.resolve(baseDir)
+    const resolvedPath = path.resolve(normalizedBase, fileName)
 
     // Ensure the resolved path is still within the base directory
-    const normalizedBase = path.resolve(baseDir) + path.sep
-    if (!resolvedPath.startsWith(normalizedBase)) {
+    if (!resolvedPath.startsWith(normalizedBase + path.sep)) {
       throw new Error('Resolved path is outside of the storage directory')
     }
 
@@ -435,70 +607,110 @@ export class ReconciliationStorageManager {
       const filePath = this.getJobFilePath(job.id)
 
       // Ensure directory exists before writing file (handle concurrent access)
-      try {
-        await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
-      } catch (error) {
-        // If directory was removed, recreate it and try again
-        if ((error as { code?: string }).code === 'ENOENT') {
-          await fs.mkdir(this.jobsDir, { recursive: true })
+      let writeAttempts = 0
+      const maxAttempts = 5
+
+      while (writeAttempts < maxAttempts) {
+        try {
+          // Ensure directory exists before each write attempt
+          await this.ensureDirectoryExists(this.jobsDir)
+
           await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
-        } else {
-          throw error
-        }
-      }
+          break // Success, exit loop
+        } catch (error) {
+          writeAttempts++
+          const err = error as { code?: string }
 
-      // Update index
-      const index = await this.loadIndex()
+          // If directory was removed or doesn't exist, recreate it and try again
+          if (err.code === 'ENOENT') {
+            await this.ensureDirectoryExists(this.jobsDir)
 
-      index.jobs[job.id] = {
-        id: job.id,
-        districtId: job.districtId,
-        targetMonth: job.targetMonth,
-        status: job.status,
-        startDate: job.startDate.toISOString(),
-        endDate: job.endDate?.toISOString(),
-        progress: job.progress,
-        triggeredBy: job.triggeredBy,
-      }
+            // Add a small delay before retry
+            if (writeAttempts < maxAttempts) {
+              await new Promise(resolve =>
+                setTimeout(resolve, writeAttempts * 10)
+              )
+              continue // Retry
+            }
+          }
 
-      // Update district index
-      if (!index.districts[job.districtId]) {
-        index.districts[job.districtId] = []
-      }
-      if (!index.districts[job.districtId].includes(job.id)) {
-        index.districts[job.districtId].push(job.id)
-      }
-
-      // Update month index
-      if (!index.months[job.targetMonth]) {
-        index.months[job.targetMonth] = []
-      }
-      if (!index.months[job.targetMonth].includes(job.id)) {
-        index.months[job.targetMonth].push(job.id)
-      }
-
-      // Update status index
-      if (!index.byStatus) {
-        index.byStatus = {}
-      }
-      if (!index.byStatus[job.status]) {
-        index.byStatus[job.status] = []
-      }
-      if (!index.byStatus[job.status].includes(job.id)) {
-        index.byStatus[job.status].push(job.id)
-      }
-
-      // Remove from old status if it changed
-      for (const [status, jobIds] of Object.entries(index.byStatus)) {
-        if (status !== job.status) {
-          const jobIndex = (jobIds as string[]).indexOf(job.id)
-          if (jobIndex > -1) {
-            ;(jobIds as string[]).splice(jobIndex, 1)
+          // If this is the last attempt or a different error, throw
+          if (writeAttempts >= maxAttempts) {
+            logger.error('Failed to save job after multiple attempts', {
+              jobId: job.id,
+              filePath,
+              attempts: writeAttempts,
+              error: err,
+            })
+            throw error
           }
         }
       }
 
-      await this.saveIndex(index)
+      // Serialize index updates to prevent race conditions
+      this.indexUpdateLock = this.indexUpdateLock.then(async () => {
+        // Clear cache to ensure we load fresh index
+        this.indexCache = null
+
+        // Update index
+        const index = await this.loadIndex()
+
+        index.jobs[job.id] = {
+          id: job.id,
+          districtId: job.districtId,
+          targetMonth: job.targetMonth,
+          status: job.status,
+          startDate: job.startDate.toISOString(),
+          endDate: job.endDate?.toISOString(),
+          progress: job.progress,
+          triggeredBy: job.triggeredBy,
+        }
+
+        // Update district index
+        if (!index.districts[job.districtId]) {
+          index.districts[job.districtId] = []
+        }
+        if (!index.districts[job.districtId].includes(job.id)) {
+          index.districts[job.districtId].push(job.id)
+        }
+
+        // Update month index
+        if (!index.months[job.targetMonth]) {
+          index.months[job.targetMonth] = []
+        }
+        if (!index.months[job.targetMonth].includes(job.id)) {
+          index.months[job.targetMonth].push(job.id)
+        }
+
+        // Update status index
+        if (!index.byStatus) {
+          index.byStatus = {}
+        }
+        if (!index.byStatus[job.status]) {
+          index.byStatus[job.status] = []
+        }
+        if (!index.byStatus[job.status].includes(job.id)) {
+          index.byStatus[job.status].push(job.id)
+        }
+
+        // Remove from old status if it changed
+        for (const [status, jobIds] of Object.entries(index.byStatus)) {
+          if (status !== job.status) {
+            const jobIndex = (jobIds as string[]).indexOf(job.id)
+            if (jobIndex > -1) {
+              ;(jobIds as string[]).splice(jobIndex, 1)
+            }
+          }
+        }
+
+        await this.saveIndex(index)
+
+        // Clear cache after saving to ensure next load gets fresh data
+        this.indexCache = null
+      })
+
+      // Wait for the index update to complete
+      await this.indexUpdateLock
 
       logger.info('Reconciliation job saved', {
         jobId: job.id,
@@ -754,13 +966,16 @@ export class ReconciliationStorageManager {
 
       const filePath = this.getTimelineFilePath(timeline.jobId)
 
-      // Ensure directory exists before writing file (handle concurrent access)
+      // Ensure directory exists before writing file
+      await this.ensureDirectoryExists(this.timelinesDir)
+
+      // Write the timeline file
       try {
         await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
       } catch (error) {
-        // If directory was removed, recreate it and try again
+        // If directory was removed after creation, recreate it and try again
         if ((error as { code?: string }).code === 'ENOENT') {
-          await fs.mkdir(this.timelinesDir, { recursive: true })
+          await this.ensureDirectoryExists(this.timelinesDir)
           await fs.writeFile(filePath, JSON.stringify(record, null, 2), 'utf-8')
         } else {
           throw error

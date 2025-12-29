@@ -5,7 +5,8 @@
 
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { CacheManager } from './CacheManager.js'
-import { CacheConfigService } from './CacheConfigService.js'
+import { getTestServiceFactory } from './TestServiceFactory.js'
+import { getProductionServiceFactory } from './ProductionServiceFactory.js'
 import { logger } from '../utils/logger.js'
 import type {
   ScrapedRecord,
@@ -16,7 +17,7 @@ export class RealToastmastersAPIService {
   private scraper: ToastmastersScraper
   private cacheManager: CacheManager
 
-  constructor(allowInTest = false) {
+  constructor(allowInTest = false, cacheManager?: CacheManager) {
     // Prevent accidental use in test environment unless explicitly allowed
     if (process.env.NODE_ENV === 'test' && !allowInTest) {
       throw new Error(
@@ -26,10 +27,24 @@ export class RealToastmastersAPIService {
 
     this.scraper = new ToastmastersScraper()
 
-    // Use configured cache directory
-    const cacheConfig = CacheConfigService.getInstance()
-    const cacheDir = cacheConfig.getCacheDirectory()
-    this.cacheManager = new CacheManager(cacheDir)
+    if (cacheManager) {
+      this.cacheManager = cacheManager
+    } else {
+      // Use dependency injection instead of singleton
+      const isTestEnvironment = process.env.NODE_ENV === 'test'
+
+      if (isTestEnvironment) {
+        const testFactory = getTestServiceFactory()
+        const cacheConfig = testFactory.createCacheConfigService()
+        const cacheDir = cacheConfig.getCacheDirectory()
+        this.cacheManager = new CacheManager(cacheDir)
+      } else {
+        const productionFactory = getProductionServiceFactory()
+        const cacheConfig = productionFactory.createCacheConfigService()
+        const cacheDir = cacheConfig.getCacheDirectory()
+        this.cacheManager = new CacheManager(cacheDir)
+      }
+    }
   }
 
   /**

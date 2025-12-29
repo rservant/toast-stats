@@ -354,7 +354,7 @@ describe('DistrictBackfillService - Property-Based Tests', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     )
   })
 

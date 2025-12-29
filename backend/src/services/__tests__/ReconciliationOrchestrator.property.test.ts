@@ -42,6 +42,7 @@ describe('ReconciliationOrchestrator - Property-Based Tests', () => {
     storageManager = new ReconciliationStorageOptimizer(
       testCacheConfig.cacheDir
     )
+    await storageManager.init() // Initialize the storage manager
     configService = new ReconciliationConfigService()
     cacheService = new ReconciliationCacheService()
     changeDetectionEngine = new ChangeDetectionEngine()

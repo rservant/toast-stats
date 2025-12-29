@@ -317,3 +317,81 @@ export interface DistrictAnalytics {
     clubHealthChange: number
   }
 }
+
+/**
+ * Interface for AnalyticsEngine service
+ * Defines the contract for analytics operations with dependency injection support
+ */
+export interface IAnalyticsEngine {
+  /**
+   * Generate comprehensive district analytics
+   */
+  generateDistrictAnalytics(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<DistrictAnalytics>
+
+  /**
+   * Get club-specific trends
+   */
+  getClubTrends(districtId: string, clubId: string): Promise<ClubTrend | null>
+
+  /**
+   * Identify at-risk clubs
+   */
+  identifyAtRiskClubs(districtId: string): Promise<ClubTrend[]>
+
+  /**
+   * Compare divisions
+   */
+  compareDivisions(
+    districtId: string,
+    date: string
+  ): Promise<DivisionAnalytics[]>
+
+  /**
+   * Calculate year-over-year metrics
+   */
+  calculateYearOverYear(
+    districtId: string,
+    currentDate: string
+  ): Promise<YearOverYearComparison | null>
+
+  /**
+   * Generate comprehensive membership analytics
+   */
+  generateMembershipAnalytics(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<MembershipAnalytics>
+
+  /**
+   * Generate comprehensive distinguished club analytics
+   */
+  generateDistinguishedClubAnalytics(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<DistinguishedClubAnalytics>
+
+  /**
+   * Generate comprehensive leadership effectiveness analytics
+   */
+  generateLeadershipInsights(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<LeadershipInsights>
+
+  /**
+   * Clear internal caches (for testing purposes)
+   */
+  clearCaches(): void
+
+  /**
+   * Dispose of resources and cleanup
+   */
+  dispose(): Promise<void>
+}

@@ -13,10 +13,8 @@ describe('AlertManager', () => {
 
   function setupAlertManager() {
     vi.useFakeTimers()
-    // Reset singleton instance for testing
-    ;(AlertManager as unknown as { instance?: AlertManager }).instance =
-      undefined
-    const instance = AlertManager.getInstance()
+    // Create new instance for testing (no singleton pattern)
+    const instance = new AlertManager()
 
     // Register cleanup for timers
     cleanup.addCleanupFunction(async () => {
@@ -26,14 +24,14 @@ describe('AlertManager', () => {
     return instance
   }
 
-  describe('singleton behavior', () => {
-    it('should return the same instance', () => {
-      setupAlertManager()
+  describe('instance creation', () => {
+    it('should create new instances independently', () => {
+      const instance1 = new AlertManager()
+      const instance2 = new AlertManager()
 
-      const instance1 = AlertManager.getInstance()
-      const instance2 = AlertManager.getInstance()
-
-      expect(instance1).toBe(instance2)
+      expect(instance1).not.toBe(instance2)
+      expect(instance1).toBeInstanceOf(AlertManager)
+      expect(instance2).toBeInstanceOf(AlertManager)
     })
   })
 

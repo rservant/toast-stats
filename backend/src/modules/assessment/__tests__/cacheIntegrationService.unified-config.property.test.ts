@@ -8,29 +8,31 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fc from 'fast-check'
 import CacheIntegrationService from '../services/cacheIntegrationService'
-import { CacheConfigService } from '../../../services/CacheConfigService'
+import {
+  getTestServiceFactory,
+  resetTestServiceFactory,
+} from '../../../services/TestServiceFactory'
 import { safeString } from '../../../utils/test-string-generators'
 import path from 'path'
 
 describe('CacheIntegrationService - Property-Based Tests', () => {
   let originalEnv: string | undefined
+  let testFactory: ReturnType<typeof getTestServiceFactory>
 
   beforeEach(() => {
     // Store original environment
     originalEnv = process.env.CACHE_DIR
-    // Reset singleton instance for clean testing
-    CacheConfigService.resetInstance()
+    testFactory = getTestServiceFactory()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     // Restore original environment
     if (originalEnv !== undefined) {
       process.env.CACHE_DIR = originalEnv
     } else {
       delete process.env.CACHE_DIR
     }
-    // Reset singleton instance
-    CacheConfigService.resetInstance()
+    await resetTestServiceFactory()
     vi.restoreAllMocks()
   })
 
@@ -39,10 +41,10 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
     fc.oneof(
       fc.constant('./cache'),
       fc.constant('./test-dir/test-cache'),
-      fc.constant('/tmp/cache'),
+      fc.constant('./test-dir/cache'),
       fc.constant('./backend/cache'),
-      fc.string({ minLength: 5, maxLength: 50 }).map(_s => `./cache-${_s}`),
-      safeString(3, 20).map(_s => `/tmp/test-cache-${_s}`)
+      safeString(5, 50).map(_s => `./cache-${_s}`),
+      safeString(3, 20).map(_s => `./test-dir/test-cache-${_s}`)
     )
 
   /**
@@ -58,23 +60,24 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
           // Set CACHE_DIR environment variable
           process.env.CACHE_DIR = cachePath
 
-          // Reset singleton to pick up new environment
-          CacheConfigService.resetInstance()
-
-          // Create CacheIntegrationService without explicit cache manager
-          new CacheIntegrationService()
+          // Create CacheIntegrationService with test factory
+          const cacheConfig = testFactory.createCacheConfigService({
+            cacheDirectory: cachePath,
+          })
+          const cacheManager =
+            testFactory.createDistrictCacheManager(cacheConfig)
+          new CacheIntegrationService(cacheManager)
 
           // Property: Service should use the configured cache directory
-          const configService = CacheConfigService.getInstance()
           const expectedPath = path.resolve(cachePath)
-          const actualPath = configService.getCacheDirectory()
+          const actualPath = cacheConfig.getCacheDirectory()
 
           expect(actualPath).toBe(expectedPath)
 
-          // Property: Configuration should be marked as environment-sourced
-          const config = configService.getConfiguration()
-          expect(config.source).toBe('environment')
-          expect(config.isConfigured).toBe(true)
+          // Property: Configuration should be marked as test-sourced (test factory behavior)
+          const config = cacheConfig.getConfiguration()
+          expect(config.source).toBe('test')
+          expect(config.isConfigured).toBe(true) // Environment variable is set
         }),
         { numRuns: 100 }
       )
@@ -87,22 +90,21 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
           // Ensure CACHE_DIR is not set
           delete process.env.CACHE_DIR
 
-          // Reset singleton to pick up environment change
-          CacheConfigService.resetInstance()
+          // Create CacheIntegrationService with test factory using defaults
+          const cacheConfig = testFactory.createCacheConfigService()
+          const cacheManager =
+            testFactory.createDistrictCacheManager(cacheConfig)
+          new CacheIntegrationService(cacheManager)
 
-          // Create CacheIntegrationService without explicit cache manager
-          new CacheIntegrationService()
-
-          // Property: Service should use default cache directory
-          const configService = CacheConfigService.getInstance()
-          const expectedPath = path.resolve('./cache')
-          const actualPath = configService.getCacheDirectory()
+          // Property: Service should use default cache directory (test factory default)
+          const expectedPath = '/tmp/test-cache'
+          const actualPath = cacheConfig.getCacheDirectory()
 
           expect(actualPath).toBe(expectedPath)
 
-          // Property: Configuration should be marked as default-sourced
-          const config = configService.getConfiguration()
-          expect(config.source).toBe('default')
+          // Property: Configuration should be marked as test-sourced
+          const config = cacheConfig.getConfiguration()
+          expect(config.source).toBe('test')
           expect(config.isConfigured).toBe(false)
         }),
         { numRuns: 50 }
@@ -116,25 +118,28 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
           // Set CACHE_DIR environment variable
           process.env.CACHE_DIR = cachePath
 
-          // Reset singleton to pick up new environment
-          CacheConfigService.resetInstance()
+          // Create shared cache configuration
+          const cacheConfig = testFactory.createCacheConfigService({
+            cacheDirectory: cachePath,
+          })
+          const cacheManager =
+            testFactory.createDistrictCacheManager(cacheConfig)
 
-          // Create multiple CacheIntegrationService instances
-          new CacheIntegrationService()
-          new CacheIntegrationService()
-          new CacheIntegrationService()
+          // Create multiple CacheIntegrationService instances using same cache manager
+          new CacheIntegrationService(cacheManager)
+          new CacheIntegrationService(cacheManager)
+          new CacheIntegrationService(cacheManager)
 
           // Property: All services should use the same cache directory
-          const configService = CacheConfigService.getInstance()
           const expectedPath = path.resolve(cachePath)
-          const actualPath = configService.getCacheDirectory()
+          const actualPath = cacheConfig.getCacheDirectory()
 
           expect(actualPath).toBe(expectedPath)
 
           // Property: Configuration should be consistent across all instances
-          const config = configService.getConfiguration()
-          expect(config.source).toBe('environment')
-          expect(config.isConfigured).toBe(true)
+          const config = cacheConfig.getConfiguration()
+          expect(config.source).toBe('test')
+          expect(config.isConfigured).toBe(true) // Environment variable is set
           expect(config.baseDirectory).toBe(expectedPath)
         }),
         { numRuns: 50 }
@@ -156,22 +161,21 @@ describe('CacheIntegrationService - Property-Based Tests', () => {
           // Set invalid CACHE_DIR environment variable
           process.env.CACHE_DIR = invalidCacheDir
 
-          // Reset singleton to pick up new environment
-          CacheConfigService.resetInstance()
-
-          // Create CacheIntegrationService without explicit cache manager
-          new CacheIntegrationService()
+          // Create CacheIntegrationService with test factory using defaults
+          const cacheConfig = testFactory.createCacheConfigService()
+          const cacheManager =
+            testFactory.createDistrictCacheManager(cacheConfig)
+          new CacheIntegrationService(cacheManager)
 
           // Property: Service should fall back to default when CACHE_DIR is empty/whitespace
-          const configService = CacheConfigService.getInstance()
-          const expectedPath = path.resolve('./cache')
-          const actualPath = configService.getCacheDirectory()
+          const expectedPath = '/tmp/test-cache' // Test factory default
+          const actualPath = cacheConfig.getCacheDirectory()
 
           expect(actualPath).toBe(expectedPath)
 
-          // Property: Configuration should be marked as default-sourced
-          const config = configService.getConfiguration()
-          expect(config.source).toBe('default')
+          // Property: Configuration should be marked as test-sourced
+          const config = cacheConfig.getConfiguration()
+          expect(config.source).toBe('test')
           expect(config.isConfigured).toBe(false)
         }),
         { numRuns: 25 }

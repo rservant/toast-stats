@@ -3,7 +3,10 @@
  * Processes cached district data to generate insights and analytics
  */
 
-import { DistrictCacheManager } from './DistrictCacheManager.js'
+import {
+  IDistrictCacheManager,
+  IAnalyticsEngine,
+} from '../types/serviceInterfaces.js'
 import { logger } from '../utils/logger.js'
 import type {
   ClubTrend,
@@ -24,15 +27,15 @@ import type {
 } from '../types/analytics.js'
 import type { DistrictCacheEntry, ScrapedRecord } from '../types/districts.js'
 
-export class AnalyticsEngine {
-  private cacheManager: DistrictCacheManager
+export class AnalyticsEngine implements IAnalyticsEngine {
+  private cacheManager: IDistrictCacheManager
   private cachedDatesCache: Map<
     string,
     { dates: string[]; timestamp: number }
   > = new Map()
   private readonly CACHE_TTL = 5000 // 5 seconds
 
-  constructor(cacheManager: DistrictCacheManager) {
+  constructor(cacheManager: IDistrictCacheManager) {
     this.cacheManager = cacheManager
   }
 
@@ -73,6 +76,13 @@ export class AnalyticsEngine {
     this.cachedDatesCache.set(districtId, { dates, timestamp: now })
 
     return dates
+  }
+
+  /**
+   * Clear internal caches (for testing purposes)
+   */
+  public clearCaches(): void {
+    this.cachedDatesCache.clear()
   }
 
   /**
@@ -2727,5 +2737,18 @@ export class AnalyticsEngine {
       averageLeadershipScore,
       totalBestPracticeDivisions: bestPracticeDivisions.length,
     }
+  }
+
+  /**
+   * Dispose of resources and cleanup
+   * Implements proper disposal for test isolation and resource management
+   */
+  async dispose(): Promise<void> {
+    // Clear internal caches
+    this.clearCaches()
+
+    // No other resources to dispose of currently
+    // This method provides a clean disposal interface for dependency injection
+    logger.debug('AnalyticsEngine disposed successfully')
   }
 }

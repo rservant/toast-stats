@@ -13,12 +13,10 @@ import { createTestReconciliationJob } from '../../utils/test-helpers'
 
 // Mock AlertManager
 vi.mock('../../utils/AlertManager.ts', () => ({
-  AlertManager: {
-    getInstance: vi.fn(() => ({
-      sendAlert: vi.fn(),
-      sendReconciliationFailureAlert: vi.fn(),
-    })),
-  },
+  AlertManager: vi.fn().mockImplementation(() => ({
+    sendAlert: vi.fn(),
+    sendReconciliationFailureAlert: vi.fn(),
+  })),
   AlertSeverity: {
     LOW: 'LOW',
     MEDIUM: 'MEDIUM',
@@ -112,11 +110,6 @@ describe('ReconciliationMetricsService', () => {
   let mockAlertManager: MockAlertManager
 
   beforeEach(() => {
-    // Reset singleton instance
-    ;(
-      ReconciliationMetricsService as unknown as { instance: undefined }
-    ).instance = undefined
-
     mockAlertManager = {
       alerts: new Map(),
       alertRules: new Map(),
@@ -142,23 +135,28 @@ describe('ReconciliationMetricsService', () => {
       sendFileSystemAlert: vi.fn(),
     }
 
-    vi.mocked(AlertManager.getInstance).mockReturnValue(
+    // Create metrics service with dependency injection
+    metricsService = new ReconciliationMetricsService(
       mockAlertManager as unknown as AlertManager
     )
-
-    metricsService = ReconciliationMetricsService.getInstance()
   })
 
   afterEach(() => {
     vi.clearAllMocks()
     metricsService.resetMetrics()
   })
-  describe('getInstance', () => {
-    it('should return singleton instance', () => {
-      const instance1 = ReconciliationMetricsService.getInstance()
-      const instance2 = ReconciliationMetricsService.getInstance()
+  describe('dependency injection', () => {
+    it('should work with injected AlertManager', () => {
+      const customAlertManager = {
+        sendAlert: vi.fn(),
+        sendReconciliationFailureAlert: vi.fn(),
+      } as unknown as AlertManager
 
-      expect(instance1).toBe(instance2)
+      const customMetricsService = new ReconciliationMetricsService(
+        customAlertManager
+      )
+
+      expect(customMetricsService).toBeDefined()
     })
   })
 

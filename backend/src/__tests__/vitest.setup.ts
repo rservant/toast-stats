@@ -1,7 +1,12 @@
 /**
  * Vitest setup file - runs before all tests
  * This ensures environment variables are set before any modules are loaded
+ * Updated for test infrastructure stabilization with dependency injection
  */
+
+import { setupGlobalTestCleanup } from '../utils/global-test-cleanup'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 // Force mock data for all tests
 process.env.USE_MOCK_DATA = 'true'
@@ -13,6 +18,29 @@ process.env.NODE_ENV = 'test'
 if (!process.env.CACHE_DIR) {
   process.env.CACHE_DIR = './test-dir/test-cache-default'
 }
+
+// Ensure the test cache directory exists
+const ensureTestCacheDirectory = async () => {
+  try {
+    const cacheDir = path.resolve(process.env.CACHE_DIR!)
+    await fs.mkdir(cacheDir, { recursive: true })
+  } catch (error) {
+    console.warn('Failed to create test cache directory:', error)
+  }
+}
+
+// Create the test cache directory synchronously during setup
+ensureTestCacheDirectory().catch(console.warn)
+
+// Configure test environment isolation
+process.env.TEST_ISOLATION = 'true'
+
+// Set property test configuration for test environment
+process.env.PROPERTY_TEST_ITERATIONS = '3'
+process.env.PROPERTY_TEST_TIMEOUT = '5000'
+
+// Setup global cleanup for test directories
+setupGlobalTestCleanup(false) // Set to true for verbose cleanup logging
 
 // Suppress unhandled promise rejection warnings in tests
 // This is specifically for the RetryManager test which intentionally creates rejected promises
@@ -47,4 +75,24 @@ process.on('warning', warning => {
   }
   // Let other warnings through
   console.warn(warning)
+})
+
+// Test environment validation
+if (process.env.NODE_ENV !== 'test') {
+  throw new Error('Test setup file should only run in test environment')
+}
+
+// Validate test infrastructure configuration
+if (!process.env.USE_MOCK_DATA) {
+  throw new Error('Mock data must be enabled for tests')
+}
+
+// Log test environment configuration for debugging
+console.debug('Test environment configured:', {
+  nodeEnv: process.env.NODE_ENV,
+  useMockData: process.env.USE_MOCK_DATA,
+  cacheDir: process.env.CACHE_DIR,
+  testIsolation: process.env.TEST_ISOLATION,
+  propertyTestIterations: process.env.PROPERTY_TEST_ITERATIONS,
+  propertyTestTimeout: process.env.PROPERTY_TEST_TIMEOUT,
 })

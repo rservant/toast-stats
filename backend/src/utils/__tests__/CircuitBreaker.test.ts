@@ -208,15 +208,8 @@ describe('CircuitBreaker', () => {
 })
 
 describe('CircuitBreakerManager', () => {
-  it('should be a singleton', () => {
-    const manager1 = CircuitBreakerManager.getInstance()
-    const manager2 = CircuitBreakerManager.getInstance()
-
-    expect(manager1).toBe(manager2)
-  })
-
   it('should create and manage circuit breakers', () => {
-    const manager = CircuitBreakerManager.getInstance()
+    const manager = new CircuitBreakerManager()
 
     const breaker1 = manager.getCircuitBreaker('test1')
     const breaker2 = manager.getCircuitBreaker('test1') // Same name
@@ -227,7 +220,7 @@ describe('CircuitBreakerManager', () => {
   })
 
   it('should get stats for all circuit breakers', async () => {
-    const manager = CircuitBreakerManager.getInstance()
+    const manager = new CircuitBreakerManager()
 
     const breaker1 = manager.getCircuitBreaker('stats-test-1')
     manager.getCircuitBreaker('stats-test-2')
@@ -243,7 +236,7 @@ describe('CircuitBreakerManager', () => {
   })
 
   it('should reset all circuit breakers', async () => {
-    const manager = CircuitBreakerManager.getInstance()
+    const manager = new CircuitBreakerManager()
 
     const breaker = manager.getCircuitBreaker('reset-test', {
       failureThreshold: 1,

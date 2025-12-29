@@ -1,6 +1,6 @@
-import { DistrictCacheManager } from '../src/services/DistrictCacheManager'
-import { AnalyticsEngine } from '../src/services/AnalyticsEngine'
-import { CacheConfigService } from '../src/services/CacheConfigService'
+import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
+import type { DistrictCacheManager } from '../src/services/DistrictCacheManager.js'
+import type { AnalyticsEngine } from '../src/services/AnalyticsEngine.js'
 
 /**
  * Validation script for DCP goal counting fix
@@ -8,58 +8,70 @@ import { CacheConfigService } from '../src/services/CacheConfigService'
  */
 
 async function validateDCPGoals() {
-  // Use configured cache directory
-  const cacheConfig = CacheConfigService.getInstance()
-  await cacheConfig.initialize()
-  const cacheDir = cacheConfig.getCacheDirectory()
+  let container: unknown = null
 
-  const cacheManager = new DistrictCacheManager(cacheDir)
-  const analyticsEngine = new AnalyticsEngine(cacheManager)
+  try {
+    // Create production services using dependency injection
+    const factory = getProductionServiceFactory()
+    container = factory.createProductionContainer()
 
-  console.log('='.repeat(80))
-  console.log('DCP GOAL COUNTING VALIDATION')
-  console.log('='.repeat(80))
-  console.log()
+    const cacheConfig = container.resolve('CacheConfigService')
+    const cacheManager = container.resolve('DistrictCacheManager')
+    const analyticsEngine = container.resolve('AnalyticsEngine')
 
-  // Test 1: 2025 program year data (November 2025)
-  console.log('TEST 1: 2025 Program Year Data')
-  console.log('-'.repeat(80))
-  await testProgramYear(
-    '61',
-    '2025-11-22',
-    '2025+',
-    cacheManager,
-    analyticsEngine
-  )
-  console.log()
+    // Initialize cache configuration
+    await cacheConfig.initialize()
 
-  // Test 2: 2020-2024 program year data (November 2023)
-  console.log('TEST 2: 2020-2024 Program Year Data')
-  console.log('-'.repeat(80))
-  await testProgramYear(
-    '61',
-    '2023-11-22',
-    '2020-2024',
-    cacheManager,
-    analyticsEngine
-  )
-  console.log()
+    console.log('='.repeat(80))
+    console.log('DCP GOAL COUNTING VALIDATION')
+    console.log('='.repeat(80))
+    console.log()
 
-  // Test 3: 2019 program year data (November 2019)
-  console.log('TEST 3: 2019 Program Year Data')
-  console.log('-'.repeat(80))
-  await testProgramYear(
-    '61',
-    '2019-11-22',
-    '2019',
-    cacheManager,
-    analyticsEngine
-  )
-  console.log()
+    // Test 1: 2025 program year data (November 2025)
+    console.log('TEST 1: 2025 Program Year Data')
+    console.log('-'.repeat(80))
+    await testProgramYear(
+      '61',
+      '2025-11-22',
+      '2025+',
+      cacheManager,
+      analyticsEngine
+    )
+    console.log()
 
-  console.log('='.repeat(80))
-  console.log('VALIDATION COMPLETE')
-  console.log('='.repeat(80))
+    // Test 2: 2020-2024 program year data (November 2023)
+    console.log('TEST 2: 2020-2024 Program Year Data')
+    console.log('-'.repeat(80))
+    await testProgramYear(
+      '61',
+      '2023-11-22',
+      '2020-2024',
+      cacheManager,
+      analyticsEngine
+    )
+    console.log()
+
+    // Test 3: 2019 program year data (November 2019)
+    console.log('TEST 3: 2019 Program Year Data')
+    console.log('-'.repeat(80))
+    await testProgramYear(
+      '61',
+      '2019-11-22',
+      '2019',
+      cacheManager,
+      analyticsEngine
+    )
+    console.log()
+
+    console.log('='.repeat(80))
+    console.log('VALIDATION COMPLETE')
+    console.log('='.repeat(80))
+  } finally {
+    // Cleanup resources
+    if (container) {
+      await container.dispose()
+    }
+  }
 }
 
 async function testProgramYear(

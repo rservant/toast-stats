@@ -9,7 +9,7 @@ import districtRoutes from './routes/districts.js'
 import reconciliationRoutes from './routes/reconciliation.js'
 import assessmentRoutes from './modules/assessment/routes/assessmentRoutes.js'
 import { logger } from './utils/logger.js'
-import { CacheConfigService } from './services/CacheConfigService.js'
+import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
 
 const app = express()
 const PORT = process.env.PORT || 5001
@@ -36,7 +36,8 @@ if (process.env.NODE_ENV === 'production') {
 // Health check endpoint
 app.get('/health', async (_req, res) => {
   try {
-    const cacheConfig = CacheConfigService.getInstance()
+    const productionFactory = getProductionServiceFactory()
+    const cacheConfig = productionFactory.createCacheConfigService()
     const config = cacheConfig.getConfiguration()
 
     res.json({
@@ -119,10 +120,8 @@ const server = app.listen(PORT, async () => {
 
   // Initialize and log cache configuration
   try {
-    const cacheConfig = CacheConfigService.getInstance()
-
-    // Refresh configuration in case environment variables were loaded after instantiation
-    cacheConfig.refreshConfiguration()
+    const productionFactory = getProductionServiceFactory()
+    const cacheConfig = productionFactory.createCacheConfigService()
 
     await cacheConfig.initialize()
 

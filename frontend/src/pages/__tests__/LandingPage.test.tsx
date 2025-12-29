@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import LandingPage from '../LandingPage'
 import * as apiModule from '../../services/api'
-import { renderWithProviders } from '../../tests/test-utils'
+import { renderWithProviders } from '../../__tests__/test-utils'
 
 // Mock the API client
 vi.mock('../../services/api', () => ({
