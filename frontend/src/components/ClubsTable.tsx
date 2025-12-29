@@ -159,7 +159,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // Reset pagination to page 1 when filtered results change
   useEffect(() => {
     pagination.goToPage(1)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredClubs.length, pagination.goToPage]) // Intentionally excluding 'pagination' to avoid infinite loop
 
   // Handle sort
