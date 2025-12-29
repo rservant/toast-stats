@@ -82,7 +82,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
-      <div 
+      <div
         className="flex items-center justify-between mb-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -99,13 +99,18 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
             />
           </svg>
           <h3 className="text-xl font-bold text-red-900">Critical Clubs</h3>
-          <svg 
+          <svg
             className={`w-5 h-5 text-red-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none" 
-            stroke="currentColor" 
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </div>
         <div className="flex items-center gap-2">

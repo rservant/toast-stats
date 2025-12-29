@@ -1761,7 +1761,7 @@ router.get(
 
       // Get critical clubs separately - only if we have at-risk clubs data
       let criticalClubsCount = 0
-      let allClubs: any[] = [...atRiskClubs]
+      let allClubs: ClubTrend[] = [...atRiskClubs]
 
       if (atRiskClubs.length > 0) {
         try {

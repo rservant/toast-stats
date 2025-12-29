@@ -22,9 +22,13 @@ describe('CriticalClubsPanel', () => {
 
     expect(screen.getByText('Critical Clubs')).toBeInTheDocument()
     expect(screen.getByText('1 Critical')).toBeInTheDocument()
-    
+
     // Should be collapsed by default - subtitle and clubs should not be visible
-    expect(screen.queryByText('Clubs with membership below 12 members (charter risk)')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Clubs with membership below 12 members (charter risk)'
+      )
+    ).not.toBeInTheDocument()
     expect(screen.queryByText('Test Critical Club')).not.toBeInTheDocument()
   })
 
@@ -35,7 +39,9 @@ describe('CriticalClubsPanel', () => {
     fireEvent.click(screen.getByText('Critical Clubs'))
 
     // Now content should be visible
-    expect(screen.getByText('Clubs with membership below 12 members (charter risk)')).toBeInTheDocument()
+    expect(
+      screen.getByText('Clubs with membership below 12 members (charter risk)')
+    ).toBeInTheDocument()
     expect(screen.getByText('Test Critical Club')).toBeInTheDocument()
   })
 

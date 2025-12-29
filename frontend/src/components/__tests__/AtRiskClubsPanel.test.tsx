@@ -22,9 +22,13 @@ describe('AtRiskClubsPanel', () => {
 
     expect(screen.getByText('At-Risk Clubs')).toBeInTheDocument()
     expect(screen.getByText('1 At-Risk')).toBeInTheDocument()
-    
+
     // Should be collapsed by default - subtitle and clubs should not be visible
-    expect(screen.queryByText('Clubs with declining membership or low DCP goal achievement')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Clubs with declining membership or low DCP goal achievement'
+      )
+    ).not.toBeInTheDocument()
     expect(screen.queryByText('Test At-Risk Club')).not.toBeInTheDocument()
   })
 
@@ -35,7 +39,11 @@ describe('AtRiskClubsPanel', () => {
     fireEvent.click(screen.getByText('At-Risk Clubs'))
 
     // Now content should be visible
-    expect(screen.getByText('Clubs with declining membership or low DCP goal achievement')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Clubs with declining membership or low DCP goal achievement'
+      )
+    ).toBeInTheDocument()
     expect(screen.getByText('Test At-Risk Club')).toBeInTheDocument()
   })
 
