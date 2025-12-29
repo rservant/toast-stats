@@ -43,6 +43,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
   isLoading = false,
 }) => {
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // clubs prop now contains only critical clubs
   const criticalClubs = clubs
@@ -81,7 +82,10 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
-      <div className="flex items-center justify-between mb-4">
+      <div 
+        className="flex items-center justify-between mb-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <div className="flex items-center gap-3">
           <svg
             className="w-6 h-6 text-red-600"
@@ -95,6 +99,14 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
             />
           </svg>
           <h3 className="text-xl font-bold text-red-900">Critical Clubs</h3>
+          <svg 
+            className={`w-5 h-5 text-red-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
@@ -103,77 +115,81 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
         </div>
       </div>
 
-      {/* Subtitle */}
-      <p className="text-sm text-red-700 mb-4">
-        Clubs with membership below 12 members (charter risk)
-      </p>
-
-      {/* Loading State */}
-      {isLoading && <LoadingSkeleton variant="card" count={3} />}
-
-      {/* No Critical Clubs */}
-      {!isLoading && criticalClubs.length === 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <svg
-            className="w-12 h-12 text-green-600 mx-auto mb-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p className="text-green-800 font-medium">No critical clubs!</p>
-          <p className="text-green-700 text-sm mt-1">
-            All clubs have sufficient membership to maintain their charter.
+      {isExpanded && (
+        <>
+          {/* Subtitle */}
+          <p className="text-sm text-red-700 mb-4">
+            Clubs with membership below 12 members (charter risk)
           </p>
-        </div>
-      )}
 
-      {/* Critical Clubs List */}
-      {!isLoading && criticalClubs.length > 0 && (
-        <div className="space-y-3">
-          {criticalClubs.map(club => (
-            <div
-              key={club.clubId}
-              onClick={() => handleClubClick(club)}
-              className="border-2 border-red-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-red-50"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  {getStatusIcon()}
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">
-                      {club.clubName}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {club.areaName} • {club.divisionName}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {club.riskFactors.map((factor, index) => (
-                        <span
-                          key={index}
-                          className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded"
-                        >
-                          {factor}
-                        </span>
-                      ))}
+          {/* Loading State */}
+          {isLoading && <LoadingSkeleton variant="card" count={3} />}
+
+          {/* No Critical Clubs */}
+          {!isLoading && criticalClubs.length === 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <svg
+                className="w-12 h-12 text-green-600 mx-auto mb-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-green-800 font-medium">No critical clubs!</p>
+              <p className="text-green-700 text-sm mt-1">
+                All clubs have sufficient membership to maintain their charter.
+              </p>
+            </div>
+          )}
+
+          {/* Critical Clubs List */}
+          {!isLoading && criticalClubs.length > 0 && (
+            <div className="space-y-3">
+              {criticalClubs.map(club => (
+                <div
+                  key={club.clubId}
+                  onClick={() => handleClubClick(club)}
+                  className="border-2 border-red-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-red-50"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      {getStatusIcon()}
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">
+                          {club.clubName}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {club.areaName} • {club.divisionName}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {club.riskFactors.map((factor, index) => (
+                            <span
+                              key={index}
+                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded"
+                            >
+                              {factor}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge()}`}
+                    >
+                      CRITICAL
+                    </span>
                   </div>
                 </div>
-                <span
-                  className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge()}`}
-                >
-                  CRITICAL
-                </span>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Club Detail Modal */}

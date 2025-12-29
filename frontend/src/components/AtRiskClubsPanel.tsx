@@ -43,6 +43,7 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
   isLoading = false,
 }) => {
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // clubs prop now contains only at-risk clubs (not critical)
   const atRiskClubs = clubs
@@ -107,8 +108,32 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-900">At-Risk Clubs</h3>
+      <div 
+        className="flex items-center justify-between mb-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <svg
+            className="w-6 h-6 text-yellow-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <h3 className="text-xl font-bold text-gray-900">At-Risk Clubs</h3>
+          <svg 
+            className={`w-5 h-5 text-yellow-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
         <div className="flex items-center gap-2">
           {atRiskClubs.length > 0 && (
             <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
@@ -118,79 +143,83 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
         </div>
       </div>
 
-      {/* Subtitle */}
-      <p className="text-sm text-yellow-700 mb-4">
-        Clubs with declining membership or low DCP goal achievement
-      </p>
-
-      {/* Loading State */}
-      {isLoading && <LoadingSkeleton variant="card" count={3} />}
-
-      {/* No At-Risk Clubs */}
-      {!isLoading && atRiskClubs.length === 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <svg
-            className="w-12 h-12 text-green-600 mx-auto mb-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p className="text-green-800 font-medium">No at-risk clubs!</p>
-          <p className="text-green-700 text-sm mt-1">
-            All clubs are performing well with stable membership and DCP
-            progress.
+      {isExpanded && (
+        <>
+          {/* Subtitle */}
+          <p className="text-sm text-yellow-700 mb-4">
+            Clubs with declining membership or low DCP goal achievement
           </p>
-        </div>
-      )}
 
-      {/* At-Risk Clubs List */}
-      {!isLoading && atRiskClubs.length > 0 && (
-        <div className="space-y-3">
-          {/* At-Risk Clubs */}
-          {atRiskClubs.map(club => (
-            <div
-              key={club.clubId}
-              onClick={() => handleClubClick(club)}
-              className="border-2 border-yellow-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-yellow-50"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  {getStatusIcon(club.currentStatus)}
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">
-                      {club.clubName}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {club.areaName} • {club.divisionName}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {club.riskFactors.map((factor, index) => (
-                        <span
-                          key={index}
-                          className="text-xs px-2 py-1 bg-white border border-yellow-300 text-yellow-800 rounded"
-                        >
-                          {factor}
-                        </span>
-                      ))}
+          {/* Loading State */}
+          {isLoading && <LoadingSkeleton variant="card" count={3} />}
+
+          {/* No At-Risk Clubs */}
+          {!isLoading && atRiskClubs.length === 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <svg
+                className="w-12 h-12 text-green-600 mx-auto mb-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-green-800 font-medium">No at-risk clubs!</p>
+              <p className="text-green-700 text-sm mt-1">
+                All clubs are performing well with stable membership and DCP
+                progress.
+              </p>
+            </div>
+          )}
+
+          {/* At-Risk Clubs List */}
+          {!isLoading && atRiskClubs.length > 0 && (
+            <div className="space-y-3">
+              {/* At-Risk Clubs */}
+              {atRiskClubs.map(club => (
+                <div
+                  key={club.clubId}
+                  onClick={() => handleClubClick(club)}
+                  className="border-2 border-yellow-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-yellow-50"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      {getStatusIcon(club.currentStatus)}
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">
+                          {club.clubName}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {club.areaName} • {club.divisionName}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {club.riskFactors.map((factor, index) => (
+                            <span
+                              key={index}
+                              className="text-xs px-2 py-1 bg-white border border-yellow-300 text-yellow-800 rounded"
+                            >
+                              {factor}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
+                    >
+                      {club.currentStatus.toUpperCase()}
+                    </span>
                   </div>
                 </div>
-                <span
-                  className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
-                >
-                  {club.currentStatus.toUpperCase()}
-                </span>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Club Detail Modal */}
