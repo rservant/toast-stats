@@ -12,6 +12,7 @@ import { ReconciliationStorageOptimizer } from '../../services/ReconciliationSto
 import { ReconciliationOrchestrator } from '../../services/ReconciliationOrchestrator'
 import { ChangeDetectionEngine } from '../../services/ChangeDetectionEngine'
 import { CacheConfigService } from '../../services/CacheConfigService'
+import { getTestServiceFactory } from '../../services/TestServiceFactory'
 import type { ReconciliationJob } from '../../types/reconciliation'
 
 describe('Reconciliation API - New Status Endpoints', () => {
@@ -21,9 +22,9 @@ describe('Reconciliation API - New Status Endpoints', () => {
   let testJob: ReconciliationJob
 
   beforeEach(async () => {
-    // Ensure CacheConfigService is initialized first
-    CacheConfigService.resetInstance()
-    const cacheConfigService = CacheConfigService.getInstance()
+    // Use dependency injection instead of singleton
+    const testFactory = getTestServiceFactory()
+    const cacheConfigService = testFactory.createCacheConfigService()
     await cacheConfigService.initialize()
 
     // Setup test app with shared storage manager

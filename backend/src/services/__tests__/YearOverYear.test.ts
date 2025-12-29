@@ -4,13 +4,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { promises as fs } from 'fs'
 import { AnalyticsEngine } from '../AnalyticsEngine'
 import { DistrictCacheManager } from '../DistrictCacheManager'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
   initializeTestCache,
-  getTestCacheDirectory,
 } from '../../utils/test-cache-helper'
 import type { TestCacheConfig } from '../../utils/test-cache-helper'
 
@@ -20,23 +20,40 @@ describe('Year-Over-Year Comparison Logic', () => {
   let testCacheConfig: TestCacheConfig
 
   beforeEach(async () => {
-    // Create isolated test cache configuration
-    testCacheConfig = await createTestCacheConfig('year-over-year')
-    await initializeTestCache(testCacheConfig)
+    // Create isolated test cache configuration with simpler test name
+    const testName = `year-over-year`
+    testCacheConfig = await createTestCacheConfig(testName)
+
+    try {
+      await initializeTestCache(testCacheConfig)
+    } catch (error) {
+      // If initialization fails, ensure directory exists and retry
+      await fs.mkdir(testCacheConfig.cacheDir, { recursive: true })
+      await initializeTestCache(testCacheConfig)
+    }
 
     // Use the CacheConfigService to get the configured cache directory
     cacheManager = new DistrictCacheManager()
     await cacheManager.init()
     analyticsEngine = new AnalyticsEngine(cacheManager)
+
+    // Clear any internal caches
+    analyticsEngine.clearCaches()
   })
 
   afterEach(async () => {
+    // Clear caches before cleanup
+    if (analyticsEngine) {
+      analyticsEngine.clearCaches()
+    }
+
     // Clean up test cache configuration
     await cleanupTestCacheConfig(testCacheConfig)
   })
 
   describe('findPreviousProgramYearDate', () => {
     it('should calculate previous year date correctly (Requirement 9.1)', async () => {
+      const districtId = `test-district-${Date.now()}-5`
       // Cache data for current year
       const currentDate = '2024-11-22'
       const currentClubPerformance = [
@@ -49,7 +66,7 @@ describe('Year-Over-Year Comparison Logic', () => {
       ]
 
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         currentDate,
         [],
         [],
@@ -68,7 +85,7 @@ describe('Year-Over-Year Comparison Logic', () => {
       ]
 
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         previousDate,
         [],
         [],
@@ -77,7 +94,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
       // Calculate year-over-year
       const result = await analyticsEngine.calculateYearOverYear(
-        '42',
+        districtId,
         currentDate
       )
 
@@ -91,6 +108,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('calculatePercentageChanges', () => {
     it('should calculate percentage changes for all key metrics (Requirement 9.2)', async () => {
+      const districtId = `test-district-${Date.now()}-6`
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 
@@ -127,14 +145,14 @@ describe('Year-Over-Year Comparison Logic', () => {
       ]
 
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         currentDate,
         [],
         [],
         currentClubPerformance
       )
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         previousDate,
         [],
         [],
@@ -142,7 +160,7 @@ describe('Year-Over-Year Comparison Logic', () => {
       )
 
       const result = await analyticsEngine.calculateYearOverYear(
-        '42',
+        districtId,
         currentDate
       )
 
@@ -169,6 +187,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('handleMissingData', () => {
     it('should handle missing previous year data gracefully (Requirement 9.3)', async () => {
+      const districtId = `test-district-${Date.now()}-1`
       const currentDate = '2024-11-22'
 
       // Only cache current year data
@@ -182,7 +201,7 @@ describe('Year-Over-Year Comparison Logic', () => {
       ]
 
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         currentDate,
         [],
         [],
@@ -190,7 +209,7 @@ describe('Year-Over-Year Comparison Logic', () => {
       )
 
       const result = await analyticsEngine.calculateYearOverYear(
-        '42',
+        districtId,
         currentDate
       )
 
@@ -202,11 +221,12 @@ describe('Year-Over-Year Comparison Logic', () => {
     })
 
     it('should handle missing current year data gracefully (Requirement 9.3)', async () => {
+      const districtId = `test-district-${Date.now()}-2`
       const currentDate = '2024-11-22'
 
-      // No data cached at all
+      // No data cached at all for this district
       const result = await analyticsEngine.calculateYearOverYear(
-        '42',
+        districtId,
         currentDate
       )
 
@@ -216,7 +236,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('multiYearTrends', () => {
     it('should support multi-year trends when 3+ years available (Requirement 9.5)', async () => {
-      const districtId = '42'
+      const districtId = `test-district-${Date.now()}-3`
 
       // Cache data for 3 years
       for (let year = 2022; year <= 2024; year++) {
@@ -257,7 +277,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     })
 
     it('should not provide multi-year trends when less than 3 years available', async () => {
-      const districtId = '42'
+      const districtId = `test-district-${Date.now()}-4`
 
       // Cache data for only 2 years
       for (let year = 2023; year <= 2024; year++) {
@@ -294,6 +314,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('distinguishedClubsComparison', () => {
     it('should calculate distinguished clubs year-over-year with breakdown by level', async () => {
+      const districtId = `test-district-${Date.now()}-7`
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 
@@ -348,14 +369,14 @@ describe('Year-Over-Year Comparison Logic', () => {
       ]
 
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         currentDate,
         [],
         [],
         currentClubPerformance
       )
       await cacheManager.cacheDistrictData(
-        '42',
+        districtId,
         previousDate,
         [],
         [],
@@ -363,7 +384,7 @@ describe('Year-Over-Year Comparison Logic', () => {
       )
 
       const result = await analyticsEngine.calculateYearOverYear(
-        '42',
+        districtId,
         currentDate
       )
 
@@ -377,11 +398,11 @@ describe('Year-Over-Year Comparison Logic', () => {
 
         // Check if data was cached properly
         const currentData = await cacheManager.getDistrictData(
-          '42',
+          districtId,
           currentDate
         )
         const previousData = await cacheManager.getDistrictData(
-          '42',
+          districtId,
           previousDate
         )
         console.error('Current data exists:', !!currentData)

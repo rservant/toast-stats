@@ -26,7 +26,8 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import { CacheConfigService } from './CacheConfigService.js'
+import { getTestServiceFactory } from './TestServiceFactory.js'
+import { getProductionServiceFactory } from './ProductionServiceFactory.js'
 import type {
   DistrictCacheEntry,
   DistrictDataRange,
@@ -72,9 +73,18 @@ export class DistrictCacheManager {
     if (cacheDir) {
       this.cacheDir = cacheDir
     } else {
-      // Use configured cache directory as default
-      const cacheConfig = CacheConfigService.getInstance()
-      this.cacheDir = cacheConfig.getCacheDirectory()
+      // Use dependency injection instead of singleton
+      const isTestEnvironment = process.env.NODE_ENV === 'test'
+
+      if (isTestEnvironment) {
+        const testFactory = getTestServiceFactory()
+        const cacheConfig = testFactory.createCacheConfigService()
+        this.cacheDir = cacheConfig.getCacheDirectory()
+      } else {
+        const productionFactory = getProductionServiceFactory()
+        const cacheConfig = productionFactory.createCacheConfigService()
+        this.cacheDir = cacheConfig.getCacheDirectory()
+      }
     }
     // Normalize and fix the root directory for all district cache files
     this.districtRoot = path.resolve(this.cacheDir, 'districts')
@@ -612,5 +622,88 @@ export class DistrictCacheManager {
       logger.error('Failed to get cached districts', error)
       return []
     }
+  }
+
+  /**
+   * Save district data (alias for cacheDistrictData to match interface)
+   */
+  async saveDistrictData(
+    districtId: string,
+    date: string,
+    data: DistrictCacheEntry
+  ): Promise<void> {
+    await this.cacheDistrictData(
+      districtId,
+      date,
+      data.districtPerformance,
+      data.divisionPerformance,
+      data.clubPerformance
+    )
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getCacheStats(): Promise<{
+    totalEntries: number
+    totalSize: number
+    oldestEntry?: string
+    newestEntry?: string
+  }> {
+    try {
+      const districts = await this.getCachedDistricts()
+      let totalEntries = 0
+      let totalSize = 0
+      let oldestEntry: string | undefined
+      let newestEntry: string | undefined
+
+      for (const districtId of districts) {
+        const dates = await this.getCachedDatesForDistrict(districtId)
+        totalEntries += dates.length
+
+        for (const date of dates) {
+          try {
+            const filePath = this.getDistrictCacheFilePath(districtId, date)
+            const stats = await fs.stat(filePath)
+            totalSize += stats.size
+
+            if (!oldestEntry || date < oldestEntry) {
+              oldestEntry = date
+            }
+            if (!newestEntry || date > newestEntry) {
+              newestEntry = date
+            }
+          } catch (error) {
+            // Skip files that can't be accessed
+            logger.debug('Could not stat cache file', {
+              districtId,
+              date,
+              error,
+            })
+          }
+        }
+      }
+
+      return {
+        totalEntries,
+        totalSize,
+        oldestEntry,
+        newestEntry,
+      }
+    } catch (error) {
+      logger.error('Failed to get cache stats', { error })
+      return {
+        totalEntries: 0,
+        totalSize: 0,
+      }
+    }
+  }
+
+  /**
+   * Dispose of resources (no-op for file-based cache)
+   */
+  async dispose(): Promise<void> {
+    // No resources to dispose for file-based cache
+    logger.debug('DistrictCacheManager disposed')
   }
 }

@@ -5,6 +5,7 @@ import { ReconciliationStorageOptimizer } from '../services/ReconciliationStorag
 import { ReconciliationCacheService } from '../services/ReconciliationCacheService.js'
 import { ProgressTracker } from '../services/ProgressTracker.js'
 import { ChangeDetectionEngine } from '../services/ChangeDetectionEngine.js'
+import { ReconciliationMetricsService } from '../services/ReconciliationMetricsService.js'
 import { AlertManager, AlertCategory } from '../utils/AlertManager.js'
 import { transformErrorResponse } from '../utils/transformers.js'
 import { logger } from '../utils/logger.js'
@@ -24,6 +25,10 @@ const orchestrator = new ReconciliationOrchestrator(
   cacheService
 )
 const progressTracker = new ProgressTracker(storageOptimizer)
+
+// Initialize services with dependency injection
+const alertManager = new AlertManager()
+const metricsService = new ReconciliationMetricsService(alertManager)
 
 // Initialize storage on startup
 storageOptimizer.init().catch(error => {
@@ -1030,11 +1035,6 @@ router.get(
 )
 
 export default router
-// Import metrics service
-import { ReconciliationMetricsService } from '../services/ReconciliationMetricsService.js'
-
-// Initialize metrics service
-const metricsService = ReconciliationMetricsService.getInstance()
 
 /**
  * GET /api/reconciliation/metrics
@@ -1210,7 +1210,6 @@ router.get('/monitoring/alerts', async (_req: Request, res: Response) => {
     }
 
     // Get alerts from AlertManager
-    const alertManager = AlertManager.getInstance()
     const activeAlerts = alertManager.getActiveAlerts(
       category as AlertCategory | undefined
     )
@@ -1299,7 +1298,6 @@ router.post(
       }
 
       // Resolve the alert
-      const alertManager = AlertManager.getInstance()
       const resolved = await alertManager.resolveAlert(alertId, resolvedBy)
 
       if (!resolved) {
@@ -1340,7 +1338,6 @@ router.get('/monitoring/health', async (_req: Request, res: Response) => {
   try {
     // Get health status from various components
     const metricsHealth = metricsService.getHealthStatus()
-    const alertManager = AlertManager.getInstance()
     const alertStats = alertManager.getAlertStats()
 
     // Check active jobs status
@@ -1480,7 +1477,6 @@ router.post('/monitoring/cleanup', async (_req: Request, res: Response) => {
     const cleanedMetrics = await metricsService.cleanupOldMetrics()
 
     // Clean up old alerts
-    const alertManager = AlertManager.getInstance()
     const cleanedAlerts = await alertManager.cleanupOldAlerts()
 
     res.json({

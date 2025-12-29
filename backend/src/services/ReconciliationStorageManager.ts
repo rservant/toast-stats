@@ -6,7 +6,8 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import { CacheConfigService } from './CacheConfigService.js'
+import { getTestServiceFactory } from './TestServiceFactory.js'
+import { getProductionServiceFactory } from './ProductionServiceFactory.js'
 import type {
   ReconciliationJob,
   ReconciliationJobRecord,
@@ -39,11 +40,24 @@ export class ReconciliationStorageManager {
     if (storageDir) {
       this.storageDir = storageDir
     } else {
-      const cacheConfig = CacheConfigService.getInstance()
-      this.storageDir = path.join(
-        cacheConfig.getCacheDirectory(),
-        'reconciliation'
-      )
+      // Use dependency injection instead of singleton
+      const isTestEnvironment = process.env.NODE_ENV === 'test'
+
+      if (isTestEnvironment) {
+        const testFactory = getTestServiceFactory()
+        const cacheConfig = testFactory.createCacheConfigService()
+        this.storageDir = path.join(
+          cacheConfig.getCacheDirectory(),
+          'reconciliation'
+        )
+      } else {
+        const productionFactory = getProductionServiceFactory()
+        const cacheConfig = productionFactory.createCacheConfigService()
+        this.storageDir = path.join(
+          cacheConfig.getCacheDirectory(),
+          'reconciliation'
+        )
+      }
     }
 
     this.jobsDir = path.join(this.storageDir, 'jobs')
@@ -114,13 +128,21 @@ export class ReconciliationStorageManager {
       try {
         // Use recursive: true to create all parent directories atomically
         await fs.mkdir(dirPath, { recursive: true })
+
+        // Verify the directory was created successfully
+        await fs.access(dirPath)
         return
       } catch (error) {
         const err = error as { code?: string }
 
         // Directory already exists - success
         if (err.code === 'EEXIST') {
-          return
+          try {
+            await fs.access(dirPath)
+            return
+          } catch {
+            // Directory exists but is not accessible, continue to retry
+          }
         }
 
         // For any error, retry with exponential backoff
@@ -236,28 +258,44 @@ export class ReconciliationStorageManager {
         lastUpdated: new Date().toISOString(),
       }
 
-      // Ensure directory exists with proper error handling
+      // Ensure directory exists with proper error handling and race condition protection
       const indexDir = path.dirname(this.indexFile)
       await this.ensureDirectoryExists(indexDir)
 
-      // Double-check that the directory exists before writing
-      try {
-        await fs.access(indexDir)
-      } catch (error) {
-        logger.error('Index directory does not exist after creation', {
-          indexDir,
-          error,
-        })
-        // Try to create it again
-        await fs.mkdir(indexDir, { recursive: true })
-      }
+      // Use atomic write with temporary file to prevent race conditions
+      const tempFile = `${this.indexFile}.tmp.${Date.now()}.${Math.random()
+        .toString(36)
+        .substring(2)}`
 
-      await fs.writeFile(
-        this.indexFile,
-        JSON.stringify(emptyIndex, null, 2),
-        'utf-8'
-      )
-      logger.info('Reconciliation index initialized')
+      try {
+        await fs.writeFile(
+          tempFile,
+          JSON.stringify(emptyIndex, null, 2),
+          'utf-8'
+        )
+
+        // Atomic move to final location
+        await fs.rename(tempFile, this.indexFile)
+        logger.info('Reconciliation index initialized')
+      } catch (error) {
+        // Clean up temp file if it exists
+        try {
+          await fs.unlink(tempFile)
+        } catch {
+          // Ignore cleanup errors
+        }
+
+        // Check if another process created the file while we were working
+        try {
+          await fs.access(this.indexFile)
+          logger.info(
+            'Reconciliation index already exists (created by another process)'
+          )
+        } catch {
+          // Re-throw original error if file still doesn't exist
+          throw error
+        }
+      }
     }
   }
 

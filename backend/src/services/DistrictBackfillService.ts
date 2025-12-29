@@ -98,14 +98,17 @@ export class DistrictBackfillService {
 
   constructor(
     cacheManager: DistrictCacheManager,
-    scraper: ToastmastersScraper
+    scraper: ToastmastersScraper,
+    alertManager?: AlertManager,
+    circuitBreakerManager?: CircuitBreakerManager
   ) {
     this.cacheManager = cacheManager
     this.scraper = scraper
-    this.alertManager = AlertManager.getInstance()
+    this.alertManager = alertManager || new AlertManager()
 
     // Initialize circuit breakers
-    const circuitManager = CircuitBreakerManager.getInstance()
+    const circuitManager =
+      circuitBreakerManager || CircuitBreakerManager.getInstance()
     this.dashboardCircuitBreaker = circuitManager.getCircuitBreaker(
       'dashboard-api',
       {

@@ -8,7 +8,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { deterministicSafeString } from './test-string-generators'
-import { CacheConfigService } from '../services/CacheConfigService.js'
+import { getTestServiceFactory } from '../services/TestServiceFactory.js'
 
 export interface TestCacheConfig {
   testId: string
@@ -44,8 +44,7 @@ export async function createTestCacheConfig(
   // Set test cache directory
   process.env.CACHE_DIR = cacheDir
 
-  // Reset singleton to pick up new environment
-  CacheConfigService.resetInstance()
+  // No need to reset singleton - using dependency injection
 
   return {
     testId,
@@ -68,8 +67,7 @@ export async function cleanupTestCacheConfig(
       delete process.env.CACHE_DIR
     }
 
-    // Reset singleton
-    CacheConfigService.resetInstance()
+    // No need to reset singleton - using dependency injection
 
     // Clean up test cache directory
     await fs.rm(config.cacheDir, { recursive: true, force: true })
@@ -117,9 +115,13 @@ export async function initializeTestCache(
   // Ensure the cache directory exists
   await fs.mkdir(config.cacheDir, { recursive: true })
 
-  // Reset and initialize cache config service
-  CacheConfigService.resetInstance()
-  const cacheConfigService = CacheConfigService.getInstance()
+  // Create and initialize cache config service using dependency injection
+  const testFactory = getTestServiceFactory()
+  const cacheConfigService = testFactory.createCacheConfigService({
+    cacheDirectory: config.cacheDir,
+    environment: 'test',
+    logLevel: 'error',
+  })
   await cacheConfigService.initialize()
 
   // Verify configuration
@@ -132,7 +134,8 @@ export async function initializeTestCache(
  * Gets a configured cache directory for the current test environment
  */
 export function getTestCacheDirectory(): string {
-  const cacheConfigService = CacheConfigService.getInstance()
+  const testFactory = getTestServiceFactory()
+  const cacheConfigService = testFactory.createCacheConfigService()
   return cacheConfigService.getCacheDirectory()
 }
 

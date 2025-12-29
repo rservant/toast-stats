@@ -49,14 +49,6 @@ describe('ReconciliationErrorHandler', () => {
   beforeEach(() => {
     vi.useFakeTimers()
 
-    // Reset singleton instances
-    ;(
-      ReconciliationErrorHandler as unknown as { instance: undefined }
-    ).instance = undefined
-    ;(AlertManager as unknown as { instance: undefined }).instance = undefined
-    ;(CircuitBreakerManager as unknown as { instance: undefined }).instance =
-      undefined
-
     // Create mocks
     mockBackfillService = {
       fetchReconciliationData: vi.fn(),
@@ -69,11 +61,6 @@ describe('ReconciliationErrorHandler', () => {
       sendDashboardUnavailableAlert: vi.fn().mockResolvedValue('alert-id'),
       sendDataQualityAlert: vi.fn().mockResolvedValue('alert-id'),
     }
-
-    // Mock AlertManager.getInstance
-    vi.mocked(AlertManager.getInstance).mockReturnValue(
-      mockAlertManager as unknown as AlertManager
-    )
 
     // Mock CircuitBreakerManager
     const mockCircuitBreaker: MockCircuitBreaker = {
@@ -95,23 +82,38 @@ describe('ReconciliationErrorHandler', () => {
       mockCircuitManager as unknown as CircuitBreakerManager
     )
 
-    errorHandler = ReconciliationErrorHandler.getInstance({
-      circuitBreakerEnabled: true,
-      alertingEnabled: true,
-      maxConsecutiveFailures: 3,
-    })
+    // Create error handler with dependency injection
+    errorHandler = new ReconciliationErrorHandler(
+      {
+        circuitBreakerEnabled: true,
+        alertingEnabled: true,
+        maxConsecutiveFailures: 3,
+      },
+      mockAlertManager as unknown as AlertManager,
+      mockCircuitManager as unknown as CircuitBreakerManager
+    )
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  describe('singleton behavior', () => {
-    it('should return the same instance', () => {
-      const instance1 = ReconciliationErrorHandler.getInstance()
-      const instance2 = ReconciliationErrorHandler.getInstance()
+  describe('dependency injection behavior', () => {
+    it('should work with injected dependencies', () => {
+      const customAlertManager = {
+        sendAlert: vi.fn(),
+        sendReconciliationFailureAlert: vi.fn(),
+        sendReconciliationTimeoutAlert: vi.fn(),
+        sendDashboardUnavailableAlert: vi.fn(),
+        sendDataQualityAlert: vi.fn(),
+      } as unknown as AlertManager
 
-      expect(instance1).toBe(instance2)
+      const customErrorHandler = new ReconciliationErrorHandler(
+        { alertingEnabled: true },
+        customAlertManager
+      )
+
+      expect(customErrorHandler).toBeDefined()
     })
   })
 
@@ -179,10 +181,7 @@ describe('ReconciliationErrorHandler', () => {
 
     it('should work without circuit breaker when disabled', async () => {
       // Create error handler with circuit breaker disabled
-      ;(
-        ReconciliationErrorHandler as unknown as { instance: undefined }
-      ).instance = undefined
-      const errorHandlerNoCircuit = ReconciliationErrorHandler.getInstance({
+      const errorHandlerNoCircuit = new ReconciliationErrorHandler({
         circuitBreakerEnabled: false,
         alertingEnabled: true,
       })
@@ -369,10 +368,7 @@ describe('ReconciliationErrorHandler', () => {
   describe('alerting configuration', () => {
     it('should not send alerts when alerting is disabled', async () => {
       // Create error handler with alerting disabled
-      ;(
-        ReconciliationErrorHandler as unknown as { instance: undefined }
-      ).instance = undefined
-      const errorHandlerNoAlerts = ReconciliationErrorHandler.getInstance({
+      const errorHandlerNoAlerts = new ReconciliationErrorHandler({
         alertingEnabled: false,
       })
 

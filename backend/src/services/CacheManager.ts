@@ -34,6 +34,13 @@ export class CacheManager {
   }
 
   /**
+   * Get cache directory path (protected for subclasses)
+   */
+  protected getCacheDirectory(): string {
+    return this.cacheDir
+  }
+
+  /**
    * Validate that a cache key date is in YYYY-MM-DD format.
    * This constrains the value used in file paths to a simple, safe filename suffix.
    */

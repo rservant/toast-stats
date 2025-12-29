@@ -1,6 +1,7 @@
-import { DistrictCacheManager } from '../../../services/DistrictCacheManager.js'
-import { CacheConfigService } from '../../../services/CacheConfigService.js'
+import { IDistrictCacheManager } from '../../../types/serviceInterfaces.js'
 import { CspExtractorService } from './cspExtractorService.js'
+import { getTestServiceFactory } from '../../../services/TestServiceFactory.js'
+import { getProductionServiceFactory } from '../../../services/ProductionServiceFactory.js'
 
 export interface CompleteAssessmentData {
   membership_payments_ytd: number
@@ -12,20 +13,29 @@ export interface CompleteAssessmentData {
 }
 
 export class CacheIntegrationService {
-  private cacheManager: DistrictCacheManager
+  private cacheManager: IDistrictCacheManager
   private cspExtractor: CspExtractorService
 
   constructor(
-    cacheManager?: DistrictCacheManager,
+    cacheManager?: IDistrictCacheManager,
     cspExtractor?: CspExtractorService
   ) {
     if (cacheManager) {
       this.cacheManager = cacheManager
     } else {
-      // Use the unified cache configuration service
-      const cacheConfig = CacheConfigService.getInstance()
-      const cachePath = cacheConfig.getCacheDirectory()
-      this.cacheManager = new DistrictCacheManager(cachePath)
+      // Use dependency injection instead of singleton
+      const isTestEnvironment = process.env.NODE_ENV === 'test'
+
+      if (isTestEnvironment) {
+        const testFactory = getTestServiceFactory()
+        const cacheConfig = testFactory.createCacheConfigService()
+        this.cacheManager = testFactory.createDistrictCacheManager(cacheConfig)
+      } else {
+        const productionFactory = getProductionServiceFactory()
+        const cacheConfig = productionFactory.createCacheConfigService()
+        this.cacheManager =
+          productionFactory.createDistrictCacheManager(cacheConfig)
+      }
     }
     this.cspExtractor = cspExtractor ?? new CspExtractorService()
   }

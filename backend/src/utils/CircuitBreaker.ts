@@ -309,15 +309,27 @@ export class CircuitBreaker {
   }
 }
 
+export interface ICircuitBreakerManager {
+  getCircuitBreaker(
+    name: string,
+    options?: Partial<CircuitBreakerOptions>
+  ): CircuitBreaker
+  getAllStats(): Record<string, CircuitBreakerStats>
+  resetAll(): void
+}
+
 /**
  * Circuit Breaker Manager for managing multiple circuit breakers
  */
-export class CircuitBreakerManager {
+export class CircuitBreakerManager implements ICircuitBreakerManager {
   private static instance: CircuitBreakerManager
   private circuitBreakers: Map<string, CircuitBreaker> = new Map()
 
   private constructor() {}
 
+  /**
+   * Get the singleton instance of CircuitBreakerManager
+   */
   static getInstance(): CircuitBreakerManager {
     if (!CircuitBreakerManager.instance) {
       CircuitBreakerManager.instance = new CircuitBreakerManager()

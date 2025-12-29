@@ -6,8 +6,9 @@
  */
 
 import { logger } from '../utils/logger.js'
-import { DistrictCacheManager } from './DistrictCacheManager.js'
-import { CacheConfigService } from './CacheConfigService.js'
+import { IDistrictCacheManager } from '../types/serviceInterfaces.js'
+import { getTestServiceFactory } from './TestServiceFactory.js'
+import { getProductionServiceFactory } from './ProductionServiceFactory.js'
 import type {
   DistrictStatistics,
   DistrictCacheEntry,
@@ -30,16 +31,26 @@ export interface CacheConsistencyCheck {
 }
 
 export class CacheUpdateManager {
-  private cacheManager: DistrictCacheManager
+  private cacheManager: IDistrictCacheManager
   private backupSuffix = '-backup'
 
-  constructor(cacheManager?: DistrictCacheManager) {
+  constructor(cacheManager?: IDistrictCacheManager) {
     if (cacheManager) {
       this.cacheManager = cacheManager
     } else {
-      const cacheConfig = CacheConfigService.getInstance()
-      const cacheDir = cacheConfig.getCacheDirectory()
-      this.cacheManager = new DistrictCacheManager(cacheDir)
+      // Use dependency injection instead of singleton
+      const isTestEnvironment = process.env.NODE_ENV === 'test'
+
+      if (isTestEnvironment) {
+        const testFactory = getTestServiceFactory()
+        const cacheConfig = testFactory.createCacheConfigService()
+        this.cacheManager = testFactory.createDistrictCacheManager(cacheConfig)
+      } else {
+        const productionFactory = getProductionServiceFactory()
+        const cacheConfig = productionFactory.createCacheConfigService()
+        this.cacheManager =
+          productionFactory.createDistrictCacheManager(cacheConfig)
+      }
     }
   }
 

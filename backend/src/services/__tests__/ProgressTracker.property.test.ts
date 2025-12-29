@@ -11,7 +11,9 @@ import path from 'path'
 import fs from 'fs/promises'
 import { ProgressTracker } from '../ProgressTracker'
 import { ReconciliationStorageManager } from '../ReconciliationStorageManager'
-import { CacheConfigService } from '../CacheConfigService'
+import { DefaultTestServiceFactory } from '../TestServiceFactory'
+import { DefaultTestServiceFactory } from '../TestServiceFactory'
+import { DefaultTestIsolationManager } from '../../utils/TestIsolationManager'
 import { deterministicSafeString } from '../../utils/test-string-generators'
 import type {
   ReconciliationJob,
@@ -22,23 +24,26 @@ import type {
 
 describe('ProgressTracker - Property-Based Tests', () => {
   let storageManager: ReconciliationStorageManager
+  let testFactory: DefaultTestServiceFactory
+  let isolationManager: DefaultTestIsolationManager
   let testCacheDir: string
 
-  // Helper function to create cache directory path
+  // Helper function to create cache directory path using new infrastructure
   const createTestCacheDir = async (testId: string): Promise<string> => {
-    const cacheConfigService = CacheConfigService.getInstance()
-    const baseDir = cacheConfigService.getCacheDirectory()
-    const dir = path.join(baseDir, `test-progress-tracker-${testId}`)
+    const testDir = await isolationManager.createIsolatedDirectory()
+    const dir = path.join(testDir, `test-progress-tracker-${testId}`)
 
-    // Ensure the base cache directory exists first
-    await fs.mkdir(baseDir, { recursive: true })
-
-    // Then ensure the test directory exists
+    // Ensure the test directory exists
     await fs.mkdir(dir, { recursive: true })
     return dir
   }
 
   beforeEach(async () => {
+    // Initialize new test infrastructure
+    testFactory = new DefaultTestServiceFactory()
+    isolationManager = new DefaultTestIsolationManager()
+    await isolationManager.setupTestEnvironment()
+
     // Use deterministic temporary storage for each test
     const testId = deterministicSafeString(Date.now(), 7)
     testCacheDir = await createTestCacheDir(testId)
@@ -48,11 +53,11 @@ describe('ProgressTracker - Property-Based Tests', () => {
   })
 
   afterEach(async () => {
-    // Clean up test data
+    // Clean up test data using new infrastructure
     try {
       await storageManager.clearAll()
-      // Also remove the test directory itself
-      await fs.rm(testCacheDir, { recursive: true, force: true })
+      await testFactory.cleanup()
+      await isolationManager.cleanupTestEnvironment()
     } catch {
       // Ignore cleanup errors
     }
