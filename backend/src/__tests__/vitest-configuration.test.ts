@@ -12,8 +12,31 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+interface VitestConfig {
+  test: {
+    pool?: string
+    singleFork?: boolean
+    isolate?: boolean
+    clearMocks?: boolean
+    restoreMocks?: boolean
+    testTimeout?: number
+    hookTimeout?: number
+    teardownTimeout?: number
+    slowTestThreshold?: number
+    environment?: string
+    globals?: boolean
+    setupFiles?: string[]
+    exclude?: string[]
+    coverage?: {
+      provider?: string
+      reporter?: string[]
+      exclude?: string[]
+    }
+  }
+}
+
 describe('Vitest Configuration', () => {
-  let vitestConfig: unknown
+  let vitestConfig: VitestConfig
 
   beforeEach(() => {
     // Read and parse the vitest config file
@@ -128,19 +151,19 @@ describe('Vitest Configuration', () => {
 
   describe('Coverage Configuration', () => {
     it('should use v8 coverage provider', () => {
-      expect(vitestConfig.test.coverage.provider).toBe('v8')
+      expect(vitestConfig.test.coverage?.provider).toBe('v8')
     })
 
     it('should configure coverage reporters', () => {
-      expect(vitestConfig.test.coverage.reporter).toContain('text')
-      expect(vitestConfig.test.coverage.reporter).toContain('json')
-      expect(vitestConfig.test.coverage.reporter).toContain('html')
+      expect(vitestConfig.test.coverage?.reporter).toContain('text')
+      expect(vitestConfig.test.coverage?.reporter).toContain('json')
+      expect(vitestConfig.test.coverage?.reporter).toContain('html')
     })
 
     it('should exclude appropriate directories from coverage', () => {
-      expect(vitestConfig.test.coverage.exclude).toContain('**/node_modules/**')
-      expect(vitestConfig.test.coverage.exclude).toContain('**/dist/**')
-      expect(vitestConfig.test.coverage.exclude).toContain('**/test-dir/**')
+      expect(vitestConfig.test.coverage?.exclude).toContain('**/node_modules/**')
+      expect(vitestConfig.test.coverage?.exclude).toContain('**/dist/**')
+      expect(vitestConfig.test.coverage?.exclude).toContain('**/test-dir/**')
     })
   })
 })
@@ -149,8 +172,8 @@ describe('Vitest Configuration', () => {
  * Simple parser for vitest config - extracts key configuration values
  * This is a simplified approach for testing purposes
  */
-function parseVitestConfig(configContent: string): unknown {
-  const config: Record<string, unknown> = {
+function parseVitestConfig(configContent: string): VitestConfig {
+  const config: VitestConfig = {
     test: {
       coverage: {},
     },
@@ -235,11 +258,13 @@ function parseVitestConfig(configContent: string): unknown {
 
   // Extract coverage configuration
   if (configContent.includes("provider: 'v8'")) {
+    if (!config.test.coverage) config.test.coverage = {}
     config.test.coverage.provider = 'v8'
   }
 
   const reporterMatch = configContent.match(/reporter:\s*\[(.*?)\]/)
   if (reporterMatch) {
+    if (!config.test.coverage) config.test.coverage = {}
     config.test.coverage.reporter = reporterMatch[1]
       .split(',')
       .map(reporter => reporter.trim().replace(/['"]/g, ''))
@@ -250,6 +275,7 @@ function parseVitestConfig(configContent: string): unknown {
     /coverage:\s*{[\s\S]*?exclude:\s*\[([\s\S]*?)\]/
   )
   if (coverageExcludeMatch) {
+    if (!config.test.coverage) config.test.coverage = {}
     config.test.coverage.exclude = coverageExcludeMatch[1]
       .split('\n')
       .map(line => line.trim())
