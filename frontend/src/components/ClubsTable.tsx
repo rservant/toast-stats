@@ -159,7 +159,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // Reset pagination to page 1 when filtered results change
   useEffect(() => {
     pagination.goToPage(1)
-  }, [filteredClubs.length, pagination])
+  }, [filteredClubs.length, pagination.goToPage])
 
   // Handle sort
   const handleSort = (field: SortField) => {
