@@ -36,6 +36,7 @@ interface MockCircuitManager {
   getCircuitBreaker: ReturnType<typeof vi.fn>
   getAllStats: ReturnType<typeof vi.fn>
   resetAll: ReturnType<typeof vi.fn>
+  dispose: ReturnType<typeof vi.fn>
 }
 
 // Interface for reconciliation data

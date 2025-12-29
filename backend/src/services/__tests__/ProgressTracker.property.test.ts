@@ -1139,27 +1139,21 @@ describe('ProgressTracker - Property-Based Tests', () => {
                 // Ensure finalizedDate is reasonable if it exists
                 // It should be null for active jobs or a date after the job started
                 if (job.finalizedDate) {
-                  if (
-                    job.status === 'completed' ||
-                    job.status === 'finalized'
-                  ) {
+                  if (job.status === 'completed') {
                     // For completed jobs, finalized date should be after start date
                     job.finalizedDate = new Date(
                       job.startDate.getTime() + 24 * 60 * 60 * 1000
                     )
                   } else {
                     // For active jobs, no finalized date
-                    job.finalizedDate = null
+                    job.finalizedDate = undefined
                   }
                 }
 
                 // Ensure job status is consistent with dates
                 if (job.finalizedDate) {
                   job.status = 'completed'
-                } else if (
-                  job.status === 'completed' ||
-                  job.status === 'finalized'
-                ) {
+                } else if (job.status === 'completed') {
                   // If status is completed but no finalized date, set it
                   job.finalizedDate = new Date(
                     job.startDate.getTime() + 24 * 60 * 60 * 1000

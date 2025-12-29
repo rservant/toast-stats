@@ -140,7 +140,7 @@ describe('PropertyTestInfrastructure - Error Reporting Property Tests', () => {
             const runner = new PropertyTestRunner('test')
 
             // Create a property that will fail with specific data types
-            let failingProperty: fc.AsyncProperty<unknown>
+            let failingProperty: ReturnType<typeof fc.asyncProperty>
 
             switch (dataType) {
               case 'string':

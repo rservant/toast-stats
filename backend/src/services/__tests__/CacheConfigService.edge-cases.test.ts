@@ -12,8 +12,8 @@ import {
   CacheConfigService,
   CacheDirectoryValidator,
   CacheConfigurationError,
-  ILogger,
 } from '../CacheConfigService'
+import { ILogger } from '../../types/serviceInterfaces'
 import { ServiceConfiguration } from '../../types/serviceContainer'
 import { createTestSelfCleanup } from '../../utils/test-self-cleanup'
 

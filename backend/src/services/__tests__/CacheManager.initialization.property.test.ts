@@ -14,8 +14,8 @@ import { CacheManager } from '../CacheManager.js'
 import {
   CacheConfigService,
   CacheDirectoryValidator,
-  ILogger,
 } from '../CacheConfigService.js'
+import { ILogger } from '../../types/serviceInterfaces.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
 import { createTestSelfCleanup } from '../../utils/test-self-cleanup.js'
 

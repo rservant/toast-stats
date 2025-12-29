@@ -53,8 +53,8 @@ describe('ServiceContainer - Property-Based Tests', () => {
   // Test data generators
   const generateServiceName = (): fc.Arbitrary<string> =>
     safeString(3, 20).map(
-      (_s, _index) =>
-        `Service_${_s}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+      s =>
+        `Service_${s}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
     )
 
   const generateUniqueServiceNames = (count: number): string[] =>
@@ -245,7 +245,9 @@ describe('ServiceContainer - Property-Based Tests', () => {
             expect(dependentInstance.dependencies[0]).toBeInstanceOf(
               MockService
             )
-            expect(dependentInstance.dependencies[0].name).toBe(baseServiceName)
+            expect(
+              (dependentInstance.dependencies[0] as MockService).name
+            ).toBe(baseServiceName)
 
             // Property: Base service should also be resolvable independently
             const baseInstance = container.resolve(baseToken)
@@ -548,12 +550,12 @@ describe('ServiceContainer - Property-Based Tests', () => {
             expect(topInstance.name).toBe(topService)
             expect(topInstance.dependencies).toHaveLength(1)
 
-            const middleInstance = topInstance.dependencies[0]
+            const middleInstance = topInstance.dependencies[0] as MockService
             expect(middleInstance).toBeInstanceOf(MockService)
             expect(middleInstance.name).toBe(middleService)
             expect(middleInstance.dependencies).toHaveLength(1)
 
-            const baseInstance = middleInstance.dependencies[0]
+            const baseInstance = middleInstance.dependencies[0] as MockService
             expect(baseInstance).toBeInstanceOf(MockService)
             expect(baseInstance.name).toBe(baseService)
             expect(baseInstance.dependencies).toHaveLength(0)

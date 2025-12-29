@@ -161,7 +161,9 @@ describe('Vitest Configuration', () => {
     })
 
     it('should exclude appropriate directories from coverage', () => {
-      expect(vitestConfig.test.coverage?.exclude).toContain('**/node_modules/**')
+      expect(vitestConfig.test.coverage?.exclude).toContain(
+        '**/node_modules/**'
+      )
       expect(vitestConfig.test.coverage?.exclude).toContain('**/dist/**')
       expect(vitestConfig.test.coverage?.exclude).toContain('**/test-dir/**')
     })

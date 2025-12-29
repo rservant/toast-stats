@@ -40,8 +40,8 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
 
   const generateConfiguration = (): fc.Arbitrary<{
     cacheDirectory: string
-    environment: string
-    logLevel: string
+    environment: 'test' | 'development' | 'production'
+    logLevel: 'error' | 'warn' | 'info' | 'debug'
   }> =>
     fc.record({
       cacheDirectory: generateCacheDirectory(),
@@ -68,8 +68,8 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
           }),
           async ({ containerCount, configurations }) => {
             const factory = new DefaultTestServiceFactory()
-            const containers: unknown[] = []
-            const configProviders: unknown[] = []
+            const containers: Array<unknown> = []
+            const configProviders: Array<unknown> = []
 
             try {
               // Property: Factory should create multiple isolated containers
@@ -84,9 +84,15 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
 
                 // Property: Each container should be a distinct instance
                 expect(container).toBeDefined()
-                expect(typeof container.register).toBe('function')
-                expect(typeof container.resolve).toBe('function')
-                expect(typeof container.dispose).toBe('function')
+                expect(
+                  typeof (container as { register: unknown }).register
+                ).toBe('function')
+                expect(typeof (container as { resolve: unknown }).resolve).toBe(
+                  'function'
+                )
+                expect(typeof (container as { dispose: unknown }).dispose).toBe(
+                  'function'
+                )
               }
 
               // Property: Containers should be independent instances
@@ -105,8 +111,16 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
                     expect(configProviders[i]).not.toBe(configProviders[j])
 
                     // Configurations should be independent
-                    const config1 = configProviders[i].getConfiguration()
-                    const config2 = configProviders[j].getConfiguration()
+                    const config1 = (
+                      configProviders[i] as {
+                        getConfiguration: () => { cacheDirectory: string }
+                      }
+                    ).getConfiguration()
+                    const config2 = (
+                      configProviders[j] as {
+                        getConfiguration: () => { cacheDirectory: string }
+                      }
+                    ).getConfiguration()
 
                     // If they have different cache directories, they should remain different
                     if (config1.cacheDirectory !== config2.cacheDirectory) {
@@ -122,12 +136,26 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
               if (configProviders.length > 1) {
                 const newCacheDir = `/tmp/modified-${Date.now()}`
 
-                configProviders[0].updateConfiguration({
+                ;(
+                  configProviders[0] as {
+                    updateConfiguration: (config: {
+                      cacheDirectory: string
+                    }) => void
+                  }
+                ).updateConfiguration({
                   cacheDirectory: newCacheDir,
                 })
 
-                const modifiedConfig = configProviders[0].getConfiguration()
-                const otherConfig = configProviders[1].getConfiguration()
+                const modifiedConfig = (
+                  configProviders[0] as {
+                    getConfiguration: () => { cacheDirectory: string }
+                  }
+                ).getConfiguration()
+                const otherConfig = (
+                  configProviders[1] as {
+                    getConfiguration: () => { cacheDirectory: string }
+                  }
+                ).getConfiguration()
 
                 expect(modifiedConfig.cacheDirectory).toBe(newCacheDir)
                 expect(otherConfig.cacheDirectory).not.toBe(newCacheDir)
@@ -223,8 +251,8 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
           }),
           async ({ instanceCount, config }) => {
             const factory = new DefaultTestServiceFactory()
-            const containers: unknown[] = []
-            const configProviders: unknown[] = []
+            const containers: Array<unknown> = []
+            const configProviders: Array<unknown> = []
 
             try {
               // Property: Factory should track all created instances
@@ -239,14 +267,23 @@ describe('TestServiceFactory - Instance Isolation Property Tests', () => {
               // Property: All instances should be functional before cleanup
               for (const container of containers) {
                 expect(container).toBeDefined()
-                expect(typeof container.dispose).toBe('function')
+                expect(typeof (container as { dispose: unknown }).dispose).toBe(
+                  'function'
+                )
               }
 
               for (const provider of configProviders) {
                 expect(provider).toBeDefined()
-                expect(typeof provider.getConfiguration).toBe('function')
+                expect(
+                  typeof (provider as { getConfiguration: unknown })
+                    .getConfiguration
+                ).toBe('function')
 
-                const configuration = provider.getConfiguration()
+                const configuration = (
+                  provider as {
+                    getConfiguration: () => { cacheDirectory: string }
+                  }
+                ).getConfiguration()
                 expect(configuration).toBeDefined()
                 expect(configuration.cacheDirectory).toBe(config.cacheDirectory)
               }

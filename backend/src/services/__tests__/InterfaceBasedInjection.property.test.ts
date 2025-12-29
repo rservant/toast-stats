@@ -183,7 +183,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
             testFactory.clearMocks()
             const clearedService = testFactory.createServiceByInterface(
               interfaceName
-            ) as unknown
+            ) as { testProperty?: string }
             expect(clearedService).toBeDefined()
             // Should be a real service instance, not the mock
             expect(clearedService.testProperty).toBeUndefined()
@@ -363,12 +363,16 @@ describe('Interface-Based Dependency Injection Properties', () => {
           )
 
           // Multiple resolutions should return the same instance
-          const instance1 = testContainer.resolveInterface(
-            interfaceName
-          ) as unknown
-          const instance2 = testContainer.resolveInterface(
-            interfaceName
-          ) as unknown
+          const instance1 = testContainer.resolveInterface(interfaceName) as {
+            id: string
+            callCount: number
+            increment: () => void
+          }
+          const instance2 = testContainer.resolveInterface(interfaceName) as {
+            id: string
+            callCount: number
+            increment: () => void
+          }
 
           expect(instance1).toBe(instance2)
           expect(instance1.id).toBe(instanceId)
@@ -408,12 +412,14 @@ describe('Interface-Based Dependency Injection Properties', () => {
           )
 
           // Multiple resolutions should return different instances
-          const instance1 = testContainer.resolveInterface(
-            interfaceName
-          ) as unknown
-          const instance2 = testContainer.resolveInterface(
-            interfaceName
-          ) as unknown
+          const instance1 = testContainer.resolveInterface(interfaceName) as {
+            id: number
+            baseValue: number
+          }
+          const instance2 = testContainer.resolveInterface(interfaceName) as {
+            id: number
+            baseValue: number
+          }
 
           expect(instance1).not.toBe(instance2)
           expect(instance1.id).not.toBe(instance2.id)

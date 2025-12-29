@@ -130,7 +130,7 @@ describe('Property Test Configuration - Property Tests', () => {
       fc.record({
         testComplexity: fc.constantFrom('simple', 'medium'),
       }),
-      async ({ _testComplexity }) => {
+      async ({ testComplexity: _testComplexity }) => {
         // Create CI-optimized runner
         const runner = new PropertyTestRunner('ci')
         const ciConfig = PropertyTestUtils.createCIConfig()
