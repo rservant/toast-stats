@@ -165,7 +165,8 @@ export const ERROR_RECOVERY_DEFAULTS = {
 
 // Development mode settings
 export const DEV_MODE_SETTINGS = {
-  enableValidation: process.env.NODE_ENV === 'development',
+  enableValidation:
+    typeof window !== 'undefined' && window.location.hostname === 'localhost',
   enableAutoFix: false,
   reportingLevel: 'error' as const,
   logValidationErrors: true,

@@ -1,9 +1,9 @@
-import { ReactNode } from 'react'
+import React, { ReactNode } from 'react'
 
 export interface TypographyProps {
   children: ReactNode
   className?: string
-  as?: keyof JSX.IntrinsicElements
+  as?: keyof React.JSX.IntrinsicElements
 }
 
 export interface HeadingProps extends TypographyProps {

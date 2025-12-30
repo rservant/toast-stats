@@ -10,6 +10,7 @@ export const Card: React.FC<CardProps> = ({
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
   tabIndex,
+  role,
 }) => {
   const baseClasses = 'tm-card tm-brand-compliant'
 
@@ -41,7 +42,7 @@ export const Card: React.FC<CardProps> = ({
     'aria-label': ariaLabel,
     'aria-describedby': ariaDescribedBy,
     tabIndex: onClick ? (tabIndex ?? 0) : tabIndex,
-    role: onClick ? 'button' : undefined,
+    role: role || (onClick ? 'button' : undefined),
   }
 
   return <div {...cardProps}>{children}</div>

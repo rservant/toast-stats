@@ -19,7 +19,8 @@ import {
  */
 export const AccessibilityChecker: React.FC<AccessibilityCheckerProps> = ({
   children,
-  enableRuntimeChecks = process.env.NODE_ENV === 'development',
+  enableRuntimeChecks = typeof window !== 'undefined' &&
+    window.location.hostname === 'localhost',
   checkContrast = true,
   checkTouchTargets = true,
   onAccessibilityViolation,

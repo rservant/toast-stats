@@ -195,7 +195,8 @@ const defaultValidationRules: ValidationRule[] = [
  */
 export const BrandValidator: React.FC<BrandValidatorProps> = ({
   children,
-  enableValidation = process.env.NODE_ENV === 'development',
+  enableValidation = typeof window !== 'undefined' &&
+    window.location.hostname === 'localhost',
   validationRules = defaultValidationRules,
   onValidationError,
 }) => {

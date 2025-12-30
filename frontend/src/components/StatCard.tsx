@@ -43,6 +43,7 @@ const StatCard: React.FC<StatCardProps> = ({
     return (
       <Card
         className="animate-pulse"
+        role="status"
         aria-busy="true"
         aria-label="Loading statistics"
       >

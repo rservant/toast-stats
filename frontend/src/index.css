@@ -1,3 +1,4 @@
+/* All @import statements must come first */
 /* Import Toastmasters Brand Design System - Design Tokens */
 @import './styles/tokens/colors.css';
 @import './styles/tokens/typography.css';
@@ -17,6 +18,7 @@
 /* Import responsive design system */
 @import './styles/responsive.css';
 
+/* Tailwind CSS directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -127,11 +129,6 @@
 .tm-focus-visible:focus-visible {
   outline: 2px solid var(--tm-loyal-blue);
   outline-offset: 2px;
-}
-
-/* Brand Compliance Validation Classes */
-.tm-brand-compliant {
-  /* Marker class for brand-compliant components */
 }
 
 /* Minimum Requirements Enforcement */

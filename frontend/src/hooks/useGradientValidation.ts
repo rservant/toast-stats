@@ -7,7 +7,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5 - Gradient and Visual Effects
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { calculateContrastRatio } from '../utils/contrastCalculator'
 
 export interface GradientValidationResult {

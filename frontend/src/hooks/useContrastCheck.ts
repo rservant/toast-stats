@@ -7,7 +7,7 @@
  * Requirements: 3.1, 3.4 - Accessibility Compliance and Focus Indicators
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   calculateContrastRatio,
   validateContrastRatio,
@@ -36,12 +36,7 @@ export interface FocusIndicatorResult {
  * Hook for checking and validating color contrast ratios
  */
 export function useContrastCheck(options: ContrastCheckOptions = {}) {
-  const {
-    checkOnMount = true,
-    checkOnResize = false,
-    autoFix = false,
-    onViolation,
-  } = options
+  const { checkOnMount = true, checkOnResize = false, onViolation } = options
 
   const [violations, setViolations] = useState<ContrastValidationResult[]>([])
   const [isChecking, setIsChecking] = useState(false)
@@ -85,9 +80,7 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
             onViolation(result)
           }
 
-          if (autoFix) {
-            fixContrastViolation(element, result)
-          }
+          // Auto-fix will be handled separately to avoid circular dependencies
         }
       })
 
@@ -96,7 +89,7 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
 
       return results
     },
-    [onViolation, autoFix]
+    [onViolation]
   )
 
   /**

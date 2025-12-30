@@ -12,7 +12,7 @@ export const Heading: React.FC<HeadingProps> = ({
   as,
 }) => {
   // Determine the HTML element to use
-  const Component = as || (`h${level}` as keyof JSX.IntrinsicElements)
+  const Component = as || (`h${level}` as keyof React.JSX.IntrinsicElements)
 
   // Map heading levels to brand-compliant classes
   const getHeadingClass = (level: number): string => {

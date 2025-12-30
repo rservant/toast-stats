@@ -5,7 +5,21 @@
  * Includes 16 validation rules: CV001-CV004, TV001-TV005, AV001-AV004, CPV001-CPV004
  */
 
-import { BRAND_COLORS, BRAND_GRADIENTS } from './brandConstants'
+// Define brand constants inline to avoid import issues
+const BRAND_COLORS = {
+  loyalBlue: '#004165',
+  trueMaroon: '#772432',
+  coolGray: '#A9B2B1',
+  happyYellow: '#F2DF74',
+  black: '#000000',
+  white: '#FFFFFF',
+} as const
+
+const BRAND_GRADIENTS = {
+  loyalBlue: 'linear-gradient(135deg, #004165 0%, #006094 100%)',
+  trueMaroon: 'linear-gradient(135deg, #3B0104 0%, #781327 100%)',
+  coolGray: 'linear-gradient(135deg, #A9B2B1 0%, #F5F5F5 100%)',
+} as const
 
 export interface ValidationError {
   type:
@@ -91,8 +105,8 @@ export function calculateContrastRatio(
     const rgb = hexToRgb(color)
     if (!rgb) return 0
 
-    const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(c => {
-      c = c / 255
+    const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((colorValue: number) => {
+      const c = colorValue / 255
       return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
     })
 
@@ -183,9 +197,9 @@ export function countGradientsInView(): number {
 }
 
 export function isValidBrandGradient(gradientValue: string): boolean {
-  const brandGradientValues = Object.values(BRAND_GRADIENTS)
+  const brandGradientValues = Object.values(BRAND_GRADIENTS) as string[]
   return brandGradientValues.some(
-    brandGradient =>
+    (brandGradient: string) =>
       gradientValue.includes(brandGradient) ||
       brandGradient.includes(gradientValue)
   )
@@ -545,7 +559,7 @@ export function rgbToHex(rgb: string): string | null {
   const g = parseInt(result[1])
   const b = parseInt(result[2])
 
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`
 }
 
 // All validation rules combined

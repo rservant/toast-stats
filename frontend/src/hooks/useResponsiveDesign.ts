@@ -7,7 +7,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { BREAKPOINTS } from '../components/brand/types'
 import { useTouchTarget } from './useTouchTarget'
 import { useContrastCheck } from './useContrastCheck'
@@ -107,7 +107,9 @@ export function useResponsiveDesign(options: ResponsiveDesignOptions = {}) {
     },
   })
 
-  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  )
 
   /**
    * Get current responsive state based on viewport

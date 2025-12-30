@@ -85,7 +85,8 @@ const brandTokens: BrandTokens = {
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
-  enableValidation = process.env.NODE_ENV === 'development',
+  enableValidation = typeof window !== 'undefined' &&
+    window.location.hostname === 'localhost',
   contrastMode = 'normal',
 }) => {
   const contextValue = useMemo<ThemeContextType>(() => {

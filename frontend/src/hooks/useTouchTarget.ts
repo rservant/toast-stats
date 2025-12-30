@@ -7,7 +7,7 @@
  * Requirements: 3.2 - Touch Target Accessibility
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface TouchTargetResult {
   width: number

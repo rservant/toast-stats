@@ -164,21 +164,21 @@ describe('DataStatusIndicator Property Tests', () => {
 
         if (dataStatus.isFinal) {
           expect(statusBadge).toHaveClass(
-            'text-green-700',
-            'bg-green-100',
-            'border-green-200'
+            'tm-text-loyal-blue',
+            'tm-bg-loyal-blue-10',
+            'border-tm-loyal-blue'
           )
         } else if (dataStatus.isPreliminary) {
           expect(statusBadge).toHaveClass(
-            'text-amber-700',
-            'bg-amber-100',
-            'border-amber-200'
+            'tm-text-true-maroon',
+            'tm-bg-true-maroon-10',
+            'border-tm-true-maroon'
           )
         } else {
           expect(statusBadge).toHaveClass(
-            'text-gray-700',
-            'bg-gray-100',
-            'border-gray-200'
+            'tm-text-cool-gray',
+            'tm-bg-cool-gray-20',
+            'border-tm-cool-gray'
           )
         }
 

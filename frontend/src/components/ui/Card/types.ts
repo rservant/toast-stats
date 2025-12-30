@@ -9,6 +9,7 @@ export interface CardProps {
   'aria-label'?: string
   'aria-describedby'?: string
   tabIndex?: number
+  role?: string
 }
 
 export interface PanelProps {

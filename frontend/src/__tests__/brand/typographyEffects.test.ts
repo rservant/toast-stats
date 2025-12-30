@@ -33,7 +33,10 @@ const createMockElement = (
 
 // Mock getComputedStyle
 const mockGetComputedStyle = (element: HTMLElement) => {
-  const styles = (element as any).style || {}
+  const elementWithStyles = element as HTMLElement & {
+    style: Record<string, string>
+  }
+  const styles = elementWithStyles.style || {}
   return {
     textShadow: styles.textShadow || 'none',
     filter: styles.filter || 'none',

@@ -1,0 +1,69 @@
+{
+  "monitoring": {
+    "enabled": true,
+    "environment": "development",
+    "reportingInterval": 60000,
+    "performanceTracking": true,
+    "autoReporting": true,
+    "dataRetentionDays": 30
+  },
+  "alertThresholds": {
+    "compliance": {
+      "minOverallScore": 85,
+      "minColorCompliance": 90,
+      "minTypographyCompliance": 90,
+      "minAccessibilityScore": 90,
+      "maxViolations": 10,
+      "maxGradientViolations": 1
+    },
+    "performance": {
+      "maxFontLoadTime": 3000,
+      "maxCSSBundleSize": 500000,
+      "maxValidationTime": 100,
+      "maxMemoryUsage": 90,
+      "maxPageLoadTime": 5000
+    }
+  },
+  "notifications": {
+    "console": true,
+    "localStorage": true,
+    "api": {
+      "enabled": false,
+      "endpoint": "/api/monitoring",
+      "timeout": 5000
+    },
+    "webhook": {
+      "enabled": false,
+      "url": "",
+      "timeout": 10000
+    }
+  },
+  "reporting": {
+    "realtime": {
+      "enabled": true,
+      "interval": 60000
+    },
+    "weekly": {
+      "enabled": true,
+      "day": 1,
+      "hour": 9
+    },
+    "monthly": {
+      "enabled": true,
+      "day": 1,
+      "hour": 9
+    }
+  },
+  "validation": {
+    "enableAutoFix": true,
+    "logValidationErrors": true,
+    "reportingLevel": "error",
+    "rules": {
+      "color": true,
+      "typography": true,
+      "accessibility": true,
+      "component": true,
+      "gradient": true
+    }
+  }
+}

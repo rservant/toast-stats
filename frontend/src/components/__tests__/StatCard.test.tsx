@@ -17,7 +17,7 @@ describe('StatCard', () => {
     expect(screen.queryByText('Total Members')).not.toBeInTheDocument()
   })
 
-  it('should display positive trend with green color', () => {
+  it('should display positive trend with brand-compliant color', () => {
     render(
       <StatCard
         name="Total Members"
@@ -31,10 +31,10 @@ describe('StatCard', () => {
     const trendElement = screen.getByRole('status')
     expect(trendElement).toHaveTextContent('+50')
     expect(trendElement).toHaveTextContent('(+4.2%)')
-    expect(trendElement).toHaveClass('text-green-600')
+    expect(trendElement).toHaveClass('tm-text-loyal-blue')
   })
 
-  it('should display negative trend with red color', () => {
+  it('should display negative trend with brand-compliant color', () => {
     render(
       <StatCard
         name="Total Members"
@@ -48,10 +48,10 @@ describe('StatCard', () => {
     const trendElement = screen.getByRole('status')
     expect(trendElement).toHaveTextContent('-50')
     expect(trendElement).toHaveTextContent('(-4.0%)')
-    expect(trendElement).toHaveClass('text-red-600')
+    expect(trendElement).toHaveClass('tm-text-true-maroon')
   })
 
-  it('should display neutral trend', () => {
+  it('should display neutral trend with brand-compliant color', () => {
     render(
       <StatCard
         name="Total Members"
@@ -64,7 +64,7 @@ describe('StatCard', () => {
 
     const trendElement = screen.getByRole('status')
     expect(trendElement).toHaveTextContent('0')
-    expect(trendElement).toHaveClass('text-gray-600')
+    expect(trendElement).toHaveClass('tm-text-cool-gray')
   })
 
   it('should render footer content when provided', () => {
