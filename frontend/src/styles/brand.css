@@ -11,6 +11,10 @@
 @import './components/navigation.css';
 @import './components/headers.css';
 @import './components/buttons.css';
+@import './components/forms.css';
+@import './components/cards.css';
+@import './components/status-indicators.css';
+@import './components/alerts.css';
 
 /* Base Typography Classes */
 .tm-headline {

@@ -18,6 +18,7 @@ export * from './Header'
 
 // UI Components
 export * from './ui/Button'
+export * from './ui/Form'
 
 // Existing components
 export { DataStatusIndicator } from './DataStatusIndicator'

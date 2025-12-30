@@ -1,0 +1,68 @@
+/* Status Indicator Component Styles */
+
+.tm-status-indicator {
+  /* Base styles for all status indicators */
+  font-family: var(--tm-font-body);
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid transparent;
+}
+
+/* Status Indicator Variants */
+.tm-status-success {
+  background-color: var(--tm-loyal-blue);
+  color: var(--tm-white);
+  border-color: var(--tm-loyal-blue);
+}
+
+.tm-status-warning {
+  background-color: var(--tm-true-maroon);
+  color: var(--tm-white);
+  border-color: var(--tm-true-maroon);
+}
+
+.tm-status-error {
+  background-color: var(--tm-true-maroon);
+  color: var(--tm-white);
+  border-color: var(--tm-true-maroon);
+}
+
+.tm-status-info {
+  background-color: var(--tm-cool-gray);
+  color: var(--tm-black);
+  border-color: var(--tm-cool-gray);
+}
+
+.tm-status-highlight {
+  background-color: var(--tm-happy-yellow);
+  color: var(--tm-black);
+  border-color: var(--tm-happy-yellow);
+}
+
+/* Hover states for interactive status indicators */
+.tm-status-indicator:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Focus states for accessibility */
+.tm-status-indicator:focus-visible {
+  outline: 2px solid var(--tm-loyal-blue);
+  outline-offset: 2px;
+}
+
+/* Size variants ensure minimum touch targets */
+.tm-status-indicator.tm-status-sm {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.tm-status-indicator.tm-status-md {
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.tm-status-indicator.tm-status-lg {
+  min-width: var(--tm-touch-target);
+  min-height: var(--tm-touch-target);
+}

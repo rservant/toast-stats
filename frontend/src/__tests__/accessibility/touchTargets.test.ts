@@ -247,7 +247,10 @@ describe('Touch Target Accessibility - Property Tests', () => {
 
   describe('Interactive element detection', () => {
     it('should detect all standard interactive elements', () => {
-      const interactiveElements: Array<{ tag: string; attrs: Record<string, string> }> = [
+      const interactiveElements: Array<{
+        tag: string
+        attrs: Record<string, string>
+      }> = [
         { tag: 'button', attrs: {} },
         { tag: 'a', attrs: { href: '#' } },
         { tag: 'input', attrs: { type: 'text' } },
