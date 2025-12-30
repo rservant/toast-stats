@@ -73,15 +73,15 @@ jobs:
 
 ### Category Results
 ${Object.entries(report.summary.categories).map(([cat, status]) => 
-  `- ${status === 'pass' ? '✅' : '❌'} ${cat}: ${status.toUpperCase()}`
-).join('\n')}
+  \`- ${status === 'pass' ? '✅' : '❌'} ${cat}: ${status.toUpperCase()}\`
+).join('\\n')}
 
-${report.recommendations.length > 0 ? `
+${report.recommendations.length > 0 ? \`
 ### Top Recommendations
 ${report.recommendations.slice(0, 3).map((rec, i) => 
-  `${i + 1}. **[${rec.priority.toUpperCase()}]** ${rec.message}`
-).join('\n')}
-` : ''}
+  \`${i + 1}. **[${rec.priority.toUpperCase()}]** ${rec.message}\`
+).join('\\n')}
+\` : ''}
 
 <details>
 <summary>View Full Report Details</summary>
@@ -93,15 +93,15 @@ ${report.recommendations.slice(0, 3).map((rec, i) =>
 #### Detailed Results
 ${Object.entries(report.results).map(([category, result]) => {
   if (result.success) {
-    return `- ✅ **${category}**: All checks passed`;
+    return \`- ✅ **${category}**: All checks passed\`;
   } else {
     const details = [];
-    if (result.errors) details.push(`${result.errors} errors`);
-    if (result.warnings) details.push(`${result.warnings} warnings`);
-    if (result.numFailedTests) details.push(`${result.numFailedTests} failed tests`);
-    return `- ❌ **${category}**: ${details.join(', ') || 'Failed'}`;
+    if (result.errors) details.push(\`${result.errors} errors\`);
+    if (result.warnings) details.push(\`${result.warnings} warnings\`);
+    if (result.numFailedTests) details.push(\`${result.numFailedTests} failed tests\`);
+    return \`- ❌ **${category}**: ${details.join(', ') || 'Failed'}\`;
   }
-}).join('\n')}
+}).join('\\n')}
 
 </details>
               `;
