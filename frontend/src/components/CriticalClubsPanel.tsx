@@ -98,7 +98,9 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
               clipRule="evenodd"
             />
           </svg>
-          <h3 className="text-xl font-bold text-red-900">Critical Clubs</h3>
+          <h3 className="text-xl font-bold text-red-900 font-tm-headline">
+            Critical Clubs
+          </h3>
           <svg
             className={`w-5 h-5 text-red-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
@@ -123,7 +125,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
       {isExpanded && (
         <>
           {/* Subtitle */}
-          <p className="text-sm text-red-700 mb-4">
+          <p className="text-sm text-red-700 mb-4 font-tm-body">
             Clubs with membership below 12 members (charter risk)
           </p>
 
@@ -146,8 +148,10 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="text-green-800 font-medium">No critical clubs!</p>
-              <p className="text-green-700 text-sm mt-1">
+              <p className="text-green-800 font-medium font-tm-headline">
+                No critical clubs!
+              </p>
+              <p className="text-green-700 text-sm mt-1 font-tm-body">
                 All clubs have sufficient membership to maintain their charter.
               </p>
             </div>
@@ -166,17 +170,17 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                     <div className="flex items-start gap-3 flex-1">
                       {getStatusIcon()}
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">
+                        <h4 className="font-semibold text-gray-900 font-tm-headline">
                           {club.clubName}
                         </h4>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 font-tm-body">
                           {club.areaName} • {club.divisionName}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {club.riskFactors.map((factor, index) => (
                             <span
                               key={index}
-                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded"
+                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded font-tm-body"
                             >
                               {factor}
                             </span>
@@ -210,10 +214,10 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900">
+                  <h3 className="text-2xl font-bold text-gray-900 font-tm-headline">
                     {selectedClub.clubName}
                   </h3>
-                  <p className="text-gray-600 mt-1">
+                  <p className="text-gray-600 mt-1 font-tm-body">
                     {selectedClub.areaName} • {selectedClub.divisionName}
                   </p>
                 </div>
@@ -249,7 +253,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
 
               {/* Risk Factors */}
               <div className="mb-6">
-                <h4 className="font-semibold text-gray-900 mb-2">
+                <h4 className="font-semibold text-gray-900 mb-2 font-tm-headline">
                   Risk Factors
                 </h4>
                 <div className="space-y-2">
@@ -266,7 +270,9 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                           clipRule="evenodd"
                         />
                       </svg>
-                      <span className="text-gray-700">{factor}</span>
+                      <span className="text-gray-700 font-tm-body">
+                        {factor}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -275,12 +281,12 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
               {/* Membership Trend */}
               {selectedClub.membershipTrend.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-2">
+                  <h4 className="font-semibold text-gray-900 mb-2 font-tm-headline">
                     Membership Trend
                   </h4>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 font-tm-body">
                         Latest:{' '}
                         {selectedClub.membershipTrend[
                           selectedClub.membershipTrend.length - 1
@@ -288,7 +294,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                         members
                       </span>
                       {selectedClub.membershipTrend.length > 1 && (
-                        <span className="text-gray-600">
+                        <span className="text-gray-600 font-tm-body">
                           Change:{' '}
                           {selectedClub.membershipTrend[
                             selectedClub.membershipTrend.length - 1
@@ -305,12 +311,12 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
               {/* DCP Goals */}
               {selectedClub.dcpGoalsTrend.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-2">
+                  <h4 className="font-semibold text-gray-900 mb-2 font-tm-headline">
                     DCP Goals Progress
                   </h4>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 font-tm-body">
                         Current:{' '}
                         {selectedClub.dcpGoalsTrend[
                           selectedClub.dcpGoalsTrend.length - 1
@@ -325,10 +331,10 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
               {/* Distinguished Status */}
               {selectedClub.distinguishedLevel && (
                 <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-2">
+                  <h4 className="font-semibold text-gray-900 mb-2 font-tm-headline">
                     Distinguished Status
                   </h4>
-                  <span className="px-4 py-2 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
+                  <span className="px-4 py-2 bg-tm-happy-yellow-20 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body">
                     {selectedClub.distinguishedLevel}
                   </span>
                 </div>
@@ -338,7 +344,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={handleCloseModal}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-tm-body"
                 >
                   Close
                 </button>

@@ -177,7 +177,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {/* Header with Export and Results Count */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">All Clubs</h3>
+          <h3 className="text-xl font-bold text-gray-900 font-tm-headline">
+            All Clubs
+          </h3>
           <ExportButton
             onExport={() =>
               exportClubPerformance(
@@ -212,7 +214,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="ml-4 px-3 py-1 text-xs text-blue-600 hover:text-blue-700 font-medium border border-blue-300 rounded hover:bg-blue-50"
+              className="ml-4 px-3 py-1 text-xs text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium border border-tm-loyal-blue-30 rounded hover:bg-tm-loyal-blue-10 font-tm-body"
             >
               Clear All Filters ({activeFilterCount})
             </button>
@@ -310,7 +312,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {club.distinguishedLevel ? (
-                      <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                      <span className="px-2 py-1 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded font-tm-body">
                         {club.distinguishedLevel}
                       </span>
                     ) : (

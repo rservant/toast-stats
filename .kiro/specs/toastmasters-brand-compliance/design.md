@@ -335,6 +335,10 @@ _For any_ viewport size, the brand guidelines should be maintained including min
 _For any_ text element, it should not use prohibited effects such as drop-shadow, word-art, distort, outline, or glow
 **Validates: Requirements 2.5**
 
+**Property 9: Page-Level Brand Compliance**
+_For any_ page in the application, all visual elements should use only official brand colors and typography, with no non-brand colors (purple, violet, custom blues) present
+**Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5**
+
 ## Implementation Details
 
 ### CSS Custom Properties Setup

@@ -36,7 +36,7 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
     <div className={`flex flex-col gap-2 ${className}`}>
       <label
         htmlFor="program-year-selector"
-        className="text-xs sm:text-sm font-medium text-gray-700"
+        className="text-xs sm:text-sm font-tm-body font-medium text-gray-700"
       >
         Program Year
       </label>
@@ -45,7 +45,7 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
           id="program-year-selector"
           value={selectedProgramYear.year}
           onChange={handleChange}
-          className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 text-sm appearance-none pr-10"
+          className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent bg-white text-gray-900 text-sm appearance-none pr-10 font-tm-body"
           style={{ color: '#111827' }}
         >
           {availableProgramYears.map(programYear => (
@@ -72,13 +72,13 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
       {/* Progress Bar */}
       {showProgress && progress !== null && progress < 100 && (
         <div className="mt-1">
-          <div className="flex justify-between text-xs text-gray-600 mb-1">
+          <div className="flex justify-between text-xs font-tm-body text-gray-600 mb-1">
             <span>Program Year Progress</span>
             <span>{progress}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-tm-loyal-blue h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -86,7 +86,7 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
       )}
 
       {/* Date Range Display */}
-      <div className="text-xs text-gray-500">
+      <div className="text-xs font-tm-body text-gray-500">
         {new Date(selectedProgramYear.startDate).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',

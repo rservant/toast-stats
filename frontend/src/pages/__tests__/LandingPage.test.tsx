@@ -256,9 +256,9 @@ describe('LandingPage - Table Cell Rendering', () => {
     const clubsRank = await screen.findByText('Rank #5')
     const paymentsRank = await screen.findByText('Rank #3')
     expect(clubsRank).toBeInTheDocument()
-    expect(clubsRank).toHaveClass('text-blue-600')
+    expect(clubsRank).toHaveClass('text-tm-loyal-blue')
     expect(paymentsRank).toBeInTheDocument()
-    expect(paymentsRank).toHaveClass('text-blue-600')
+    expect(paymentsRank).toHaveClass('text-tm-loyal-blue')
   })
 
   it('should display percentage with correct color', async () => {
@@ -415,7 +415,7 @@ describe('LandingPage - Table Cell Rendering', () => {
     // Check that rank elements exist and are styled correctly
     expect(rankElements.length).toBeGreaterThan(0)
     rankElements.forEach(rankElement => {
-      expect(rankElement).toHaveClass('text-blue-600')
+      expect(rankElement).toHaveClass('text-tm-loyal-blue')
     })
   })
 })

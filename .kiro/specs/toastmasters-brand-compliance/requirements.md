@@ -98,3 +98,15 @@ This specification defines the requirements for updating the application's visua
 3. WHEN avoiding inappropriate content, THE System SHALL NOT display landscapes-only, animals, children, food, or architecture-only images
 4. WHEN implementing image overlays, THE System SHALL use solid panels or overlays to ensure proper contrast
 5. WHEN using decorative imagery, THE System SHALL ensure it supports rather than distracts from the primary content
+
+### Requirement 8: Page-Level Brand Compliance
+
+**User Story:** As a user visiting any page in the application, I want all visual elements to consistently follow Toastmasters brand guidelines, so that the entire application feels cohesive and professional.
+
+#### Acceptance Criteria
+
+1. WHEN viewing any page in the application, THE System SHALL eliminate all non-brand colors (purple, violet, custom blues) and replace them with official brand colors
+2. WHEN displaying interactive tabs or navigation elements, THE System SHALL use TM Loyal Blue (#004165) for active states and hover effects
+3. WHEN rendering progress bars, charts, or data visualizations, THE System SHALL use only brand palette colors for all visual elements
+4. WHEN styling buttons across all pages, THE System SHALL ensure primary buttons use TM Loyal Blue background with white text
+5. WHEN displaying any page content, THE System SHALL apply brand typography (Montserrat for headings, Source Sans 3 for body text) consistently throughout

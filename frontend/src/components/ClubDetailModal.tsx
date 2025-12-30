@@ -108,10 +108,10 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
           {/* Header */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-gray-900">
+              <h3 className="text-2xl font-bold text-gray-900 font-tm-headline">
                 {club.clubName}
               </h3>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 mt-1 font-tm-body">
                 {club.areaName} • {club.divisionName}
               </p>
             </div>
@@ -145,7 +145,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
             </span>
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-tm-loyal-blue text-white rounded-lg hover:bg-tm-loyal-blue-80 transition-colors font-tm-body"
             >
               <svg
                 className="w-5 h-5"
@@ -167,7 +167,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
+              <h4 className="font-semibold text-red-900 mb-3 flex items-center gap-2 font-tm-headline">
                 <svg
                   className="w-5 h-5"
                   fill="currentColor"
@@ -195,7 +195,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span className="text-red-900">{factor}</span>
+                    <span className="text-red-900 font-tm-body">{factor}</span>
                   </div>
                 ))}
               </div>
@@ -204,8 +204,8 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
 
           {/* Distinguished Status */}
           {club.distinguishedLevel && (
-            <div className="mb-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+            <div className="mb-6 bg-tm-happy-yellow-20 border border-tm-happy-yellow-40 rounded-lg p-4">
+              <h4 className="font-semibold text-tm-true-maroon mb-2 flex items-center gap-2 font-tm-headline">
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -221,7 +221,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 </svg>
                 Distinguished Status
               </h4>
-              <span className="inline-block px-4 py-2 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
+              <span className="inline-block px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body">
                 {club.distinguishedLevel}
               </span>
             </div>
@@ -230,9 +230,9 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
           {/* Membership Trend Chart */}
           {club.membershipTrend.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 font-tm-headline">
                 <svg
-                  className="w-5 h-5 text-blue-600"
+                  className="w-5 h-5 text-tm-loyal-blue"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -250,15 +250,17 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 {/* Stats */}
                 <div className="flex items-center justify-between mb-4 text-sm">
                   <div>
-                    <span className="text-gray-600">Current: </span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="text-gray-600 font-tm-body">
+                      Current:{' '}
+                    </span>
+                    <span className="font-semibold text-gray-900 font-tm-body">
                       {latestMembership} members
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Change: </span>
+                    <span className="text-gray-600 font-tm-body">Change: </span>
                     <span
-                      className={`font-semibold ${membershipChange >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                      className={`font-semibold font-tm-body ${membershipChange >= 0 ? 'text-green-600' : 'text-red-600'}`}
                     >
                       {membershipChange >= 0 ? '+' : ''}
                       {membershipChange} members
@@ -318,7 +320,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                     {/* Line path */}
                     <polyline
                       fill="none"
-                      stroke="#2563eb"
+                      stroke="#004165" // TM Loyal Blue
                       strokeWidth="2"
                       points={club.membershipTrend
                         .map((point, index) => {
@@ -346,7 +348,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                           cx={x}
                           cy={y}
                           r="4"
-                          fill="#2563eb"
+                          fill="#004165" // TM Loyal Blue
                         />
                       )
                     })}
@@ -354,7 +356,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 </div>
 
                 {/* Date range */}
-                <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-600 font-tm-body">
                   <span>{formatDate(club.membershipTrend[0].date)}</span>
                   <span>
                     {formatDate(
@@ -369,7 +371,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
           {/* DCP Goals Progress */}
           {club.dcpGoalsTrend.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 font-tm-headline">
                 <svg
                   className="w-5 h-5 text-green-600"
                   fill="none"
@@ -389,8 +391,10 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 {/* Current Progress */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-gray-600">Current Progress</span>
-                    <span className="font-semibold text-gray-900">
+                    <span className="text-gray-600 font-tm-body">
+                      Current Progress
+                    </span>
+                    <span className="font-semibold text-gray-900 font-tm-body">
                       {latestDcpGoals} / 10 goals
                     </span>
                   </div>
@@ -412,18 +416,18 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                         key={index}
                         className="flex items-center gap-3 text-sm"
                       >
-                        <span className="text-gray-600 w-24">
+                        <span className="text-gray-600 w-24 font-tm-body">
                           {formatDate(point.date)}
                         </span>
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
-                            className="bg-blue-500 h-2 rounded-full"
+                            className="bg-tm-loyal-blue h-2 rounded-full"
                             style={{
                               width: `${(point.goalsAchieved / 10) * 100}%`,
                             }}
                           ></div>
                         </div>
-                        <span className="text-gray-900 w-16 text-right">
+                        <span className="text-gray-900 w-16 text-right font-tm-body">
                           {point.goalsAchieved} / 10
                         </span>
                       </div>
@@ -437,7 +441,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium font-tm-body"
             >
               Close
             </button>

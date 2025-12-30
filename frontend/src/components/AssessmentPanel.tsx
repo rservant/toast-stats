@@ -294,7 +294,7 @@ const AssessmentPanel: React.FC<Props> = ({
         <div className="sm:col-span-2 flex items-end gap-2 flex-wrap">
           <button
             onClick={handleCompute}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md"
+            className="px-4 py-2 bg-tm-loyal-blue text-white rounded-md font-tm-body"
             disabled={isComputing || !month}
           >
             {isComputing ? 'Refreshing...' : 'Load Persisted Assessment'}

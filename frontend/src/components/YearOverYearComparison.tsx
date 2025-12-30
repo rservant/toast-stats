@@ -446,12 +446,12 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
               />
               <Bar
                 dataKey="Previous Year"
-                fill="#9ca3af"
+                fill="#A9B2B1" // TM Cool Gray
                 radius={[8, 8, 0, 0]}
               />
               <Bar
                 dataKey="Current Year"
-                fill="#3b82f6"
+                fill="#004165" // TM Loyal Blue
                 radius={[8, 8, 0, 0]}
               />
             </BarChart>
@@ -460,11 +460,11 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
       </div>
 
       {/* Key Insights */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="text-sm font-semibold text-blue-900 mb-2">
+      <div className="mt-6 p-4 bg-tm-loyal-blue-10 border border-tm-loyal-blue-20 rounded-lg">
+        <h3 className="text-sm font-semibold text-tm-loyal-blue mb-2 font-tm-headline">
           📊 Key Insights
         </h3>
-        <ul className="space-y-1 text-sm text-blue-800">
+        <ul className="space-y-1 text-sm text-tm-loyal-blue-80 font-tm-body">
           {comparisonData.map((item, index) => {
             if (Math.abs(parseFloat(item.percentChange as string)) >= 5) {
               const isSignificant =

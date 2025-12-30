@@ -76,7 +76,7 @@ const DISTRICT_COLORS = [
   '#ef4444', // red
   '#10b981', // green
   '#f59e0b', // amber
-  '#8b5cf6', // purple
+  '#772432', // TM True Maroon
   '#ec4899', // pink
   '#14b8a6', // teal
   '#f97316', // orange
@@ -231,9 +231,9 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </span>
           <button
             onClick={() => setSelectedMetric('aggregate')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
               selectedMetric === 'aggregate'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
             aria-pressed={selectedMetric === 'aggregate'}
@@ -242,9 +242,9 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </button>
           <button
             onClick={() => setSelectedMetric('clubs')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
               selectedMetric === 'clubs'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
             aria-pressed={selectedMetric === 'clubs'}
@@ -253,9 +253,9 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </button>
           <button
             onClick={() => setSelectedMetric('payments')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
               selectedMetric === 'payments'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
             aria-pressed={selectedMetric === 'payments'}
@@ -264,9 +264,9 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
           </button>
           <button
             onClick={() => setSelectedMetric('distinguished')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
               selectedMetric === 'distinguished'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
             aria-pressed={selectedMetric === 'distinguished'}

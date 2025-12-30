@@ -83,12 +83,12 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
       {
         name: 'Distinguished',
         count: distribution.distinguished || 0,
-        color: '#3b82f6',
+        color: '#004165', // TM Loyal Blue
       },
       {
         name: "President's",
         count: distribution.president || 0,
-        color: '#8b5cf6',
+        color: '#772432', // TM True Maroon
       },
     ].filter(item => item.count > 0)
   }, [clubs])
@@ -106,14 +106,16 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">
+      <h2 className="text-xl font-bold text-gray-900 mb-4 font-tm-headline">
         Club Status Distribution
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Status Distribution Chart */}
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">By Status</h3>
+          <h3 className="text-sm font-medium text-gray-700 mb-3 font-tm-body">
+            By Status
+          </h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={statusData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -145,7 +147,7 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
 
         {/* Distinguished Distribution Chart */}
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-3">
+          <h3 className="text-sm font-medium text-gray-700 mb-3 font-tm-body">
             By Distinguished Status
           </h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -185,37 +187,41 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
             <div className="text-2xl font-bold text-green-600">
               {statusData.find(s => s.name === 'Active')?.count || 0}
             </div>
-            <div className="text-sm text-gray-600">Active</div>
+            <div className="text-sm text-gray-600 font-tm-body">Active</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-amber-600">
               {statusData.find(s => s.name === 'Low')?.count || 0}
             </div>
-            <div className="text-sm text-gray-600">Low</div>
+            <div className="text-sm text-gray-600 font-tm-body">Low</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600">
               {statusData.find(s => s.name === 'Suspended')?.count || 0}
             </div>
-            <div className="text-sm text-gray-600">Suspended</div>
+            <div className="text-sm text-gray-600 font-tm-body">Suspended</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-600">
               {statusData.find(s => s.name === 'Ineligible')?.count || 0}
             </div>
-            <div className="text-sm text-gray-600">Ineligible</div>
+            <div className="text-sm text-gray-600 font-tm-body">Ineligible</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-tm-loyal-blue">
               {clubs.filter(c => c.distinguished).length}
             </div>
-            <div className="text-sm text-gray-600">Distinguished</div>
+            <div className="text-sm text-gray-600 font-tm-body">
+              Distinguished
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
+            <div className="text-2xl font-bold text-tm-true-maroon">
               {clubs.filter(c => c.distinguishedLevel === 'president').length}
             </div>
-            <div className="text-sm text-gray-600">President's</div>
+            <div className="text-sm text-gray-600 font-tm-body">
+              President's
+            </div>
           </div>
         </div>
       </div>

@@ -149,7 +149,7 @@ export function DistrictBackfillButton({
       <button
         onClick={() => setShowModal(true)}
         data-district-backfill="true"
-        className={`px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors ${className}`}
+        className={`px-4 py-2 bg-tm-loyal-blue text-tm-white rounded-lg hover:bg-tm-loyal-blue-90 transition-colors font-tm-headline font-medium ${className}`}
         aria-label="Backfill district historical data"
       >
         <span className="flex items-center gap-2">
@@ -186,14 +186,14 @@ export function DistrictBackfillButton({
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <h2
               id="district-backfill-title"
-              className="text-2xl font-bold mb-4"
+              className="text-2xl font-tm-headline font-bold mb-4"
             >
               Backfill District Historical Data
             </h2>
 
             {!backfillId ? (
               <>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm font-tm-body text-gray-600 mb-4">
                   This will fetch district, division, and club performance data
                   for dates that aren't already cached. Only missing dates will
                   be downloaded.
@@ -203,7 +203,7 @@ export function DistrictBackfillButton({
                   <div>
                     <label
                       htmlFor="district-backfill-start-date"
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="block text-sm font-tm-body font-medium text-gray-700 mb-1"
                     >
                       Start Date (optional, defaults to program year start)
                     </label>
@@ -212,14 +212,14 @@ export function DistrictBackfillButton({
                       type="date"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="district-backfill-end-date"
-                      className="block text-sm font-medium text-gray-700 mb-1"
+                      className="block text-sm font-tm-body font-medium text-gray-700 mb-1"
                     >
                       End Date (optional, defaults to today)
                     </label>
@@ -228,14 +228,14 @@ export function DistrictBackfillButton({
                       type="date"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
                     />
                   </div>
                 </div>
 
                 {(initiateMutation.isError || isStatusError) && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-800">
+                    <p className="text-sm font-tm-body text-red-800">
                       Error:{' '}
                       {(
                         initiateMutation.error as Error & {
@@ -251,7 +251,7 @@ export function DistrictBackfillButton({
                   <button
                     onClick={handleInitiateBackfill}
                     disabled={initiateMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 px-4 py-2 bg-tm-loyal-blue text-tm-white rounded-md hover:bg-tm-loyal-blue-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-tm-headline font-medium"
                   >
                     {initiateMutation.isPending
                       ? 'Starting...'
@@ -260,7 +260,7 @@ export function DistrictBackfillButton({
                   <button
                     onClick={() => setShowModal(false)}
                     disabled={initiateMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors font-tm-body"
                   >
                     Cancel
                   </button>
@@ -271,13 +271,13 @@ export function DistrictBackfillButton({
                 {backfillStatus?.status === 'processing' && (
                   <div className="space-y-4 mb-6">
                     <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <div className="flex justify-between text-sm font-tm-body text-gray-600 mb-2">
                         <span>Progress</span>
                         <span>{progressPercentage}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
-                          className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
+                          className="bg-tm-loyal-blue h-2.5 rounded-full transition-all duration-300"
                           style={{ width: `${progressPercentage}%` }}
                           role="progressbar"
                           aria-valuenow={progressPercentage}
@@ -287,7 +287,7 @@ export function DistrictBackfillButton({
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm font-tm-body text-gray-600">
                       <p>
                         Processing: {backfillStatus.progress.completed} of{' '}
                         {backfillStatus.progress.total} dates

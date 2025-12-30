@@ -102,7 +102,7 @@ const LoginPage: React.FC = () => {
               id="username"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body ${
                 validationErrors.username ? 'border-red-500' : 'border-gray-300'
               }`}
               disabled={isLoading}
@@ -135,7 +135,7 @@ const LoginPage: React.FC = () => {
               id="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body ${
                 validationErrors.password ? 'border-red-500' : 'border-gray-300'
               }`}
               disabled={isLoading}
@@ -159,10 +159,10 @@ const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-2 px-4 rounded-lg font-medium text-white transition-colors ${
+            className={`w-full py-2 px-4 rounded-lg font-medium text-white transition-colors font-tm-body ${
               isLoading
-                ? 'bg-blue-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-tm-loyal-blue-50 cursor-not-allowed'
+                : 'bg-tm-loyal-blue hover:bg-tm-loyal-blue-80'
             }`}
           >
             {isLoading ? (

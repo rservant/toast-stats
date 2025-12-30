@@ -111,9 +111,9 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
     if (!club.distinguished) return null
 
     const levelColors = {
-      select: 'bg-yellow-100 text-yellow-800',
-      distinguished: 'bg-blue-100 text-blue-800',
-      president: 'bg-purple-100 text-purple-800',
+      select: 'bg-tm-happy-yellow-30 text-tm-true-maroon',
+      distinguished: 'bg-tm-loyal-blue-20 text-tm-loyal-blue',
+      president: 'bg-tm-true-maroon-20 text-tm-true-maroon',
     }
 
     const levelText = {
@@ -124,7 +124,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
 
     const color = club.distinguishedLevel
       ? levelColors[club.distinguishedLevel]
-      : 'bg-blue-100 text-blue-800'
+      : 'bg-tm-loyal-blue-20 text-tm-loyal-blue'
     const text = club.distinguishedLevel
       ? levelText[club.distinguishedLevel]
       : 'Distinguished'

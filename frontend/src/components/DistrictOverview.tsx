@@ -244,24 +244,24 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
           </div>
 
           {/* Distinguished Clubs */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+          <div className="bg-tm-loyal-blue-10 rounded-lg p-4 border border-tm-loyal-blue-20">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-purple-700">
+                  <p className="text-sm font-tm-body font-medium text-tm-loyal-blue">
                     Distinguished Clubs
                   </p>
                   <Tooltip content="Clubs achieving DCP goals + membership requirements (valid from April 1 onwards): Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)">
                     <InfoIcon />
                   </Tooltip>
                 </div>
-                <p className="text-3xl font-bold text-purple-900 mt-1">
+                <p className="text-3xl font-tm-headline font-bold text-tm-loyal-blue mt-1">
                   {analytics.distinguishedClubs.total}
                 </p>
               </div>
-              <div className="bg-purple-200 rounded-full p-3">
+              <div className="bg-tm-loyal-blue-20 rounded-full p-3">
                 <svg
-                  className="w-6 h-6 text-purple-700"
+                  className="w-6 h-6 text-tm-loyal-blue"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -277,22 +277,22 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {analytics.distinguishedClubs.smedley > 0 && (
-                <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded font-semibold">
+                <span className="text-xs font-tm-body text-tm-happy-yellow bg-tm-happy-yellow-20 px-2 py-1 rounded font-semibold">
                   {analytics.distinguishedClubs.smedley} Smedley
                 </span>
               )}
               {analytics.distinguishedClubs.presidents > 0 && (
-                <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                <span className="text-xs font-tm-body text-tm-loyal-blue bg-tm-loyal-blue-20 px-2 py-1 rounded">
                   {analytics.distinguishedClubs.presidents} President's
                 </span>
               )}
               {analytics.distinguishedClubs.select > 0 && (
-                <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                <span className="text-xs font-tm-body text-tm-true-maroon bg-tm-true-maroon-20 px-2 py-1 rounded">
                   {analytics.distinguishedClubs.select} Select
                 </span>
               )}
               {analytics.distinguishedClubs.distinguished > 0 && (
-                <span className="text-xs text-purple-700 bg-purple-100 px-2 py-1 rounded">
+                <span className="text-xs font-tm-body text-tm-cool-gray bg-tm-cool-gray-20 px-2 py-1 rounded">
                   {analytics.distinguishedClubs.distinguished} Distinguished
                 </span>
               )}

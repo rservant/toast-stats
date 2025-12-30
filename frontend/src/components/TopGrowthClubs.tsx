@@ -41,15 +41,15 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
     if (!level) return null
 
     const colors = {
-      Smedley: 'bg-yellow-100 text-yellow-800',
-      President: 'bg-purple-100 text-purple-800',
-      Select: 'bg-blue-100 text-blue-800',
+      Smedley: 'bg-tm-happy-yellow-30 text-tm-true-maroon',
+      President: 'bg-tm-true-maroon-20 text-tm-true-maroon',
+      Select: 'bg-tm-loyal-blue-20 text-tm-loyal-blue',
       Distinguished: 'bg-green-100 text-green-800',
     }
 
     return (
       <span
-        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[level]}`}
+        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-tm-body ${colors[level]}`}
       >
         {level}
       </span>
@@ -125,16 +125,16 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
               d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
             />
           </svg>
-          <h3 className="text-xl font-semibold text-gray-900">
+          <h3 className="text-xl font-semibold text-gray-900 font-tm-headline">
             Top Growth Clubs
           </h3>
         </div>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 mb-4 font-tm-body">
           Clubs with the highest membership growth over the analyzed period
         </p>
 
         {topGrowthClubs.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-gray-500 text-center py-8 font-tm-body">
             No growth data available
           </p>
         ) : (
@@ -155,19 +155,23 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 truncate">
+                    <h4 className="font-semibold text-gray-900 truncate font-tm-headline">
                       {club.clubName}
                     </h4>
-                    <p className="text-sm text-gray-600">Club #{club.clubId}</p>
+                    <p className="text-sm text-gray-600 font-tm-body">
+                      Club #{club.clubId}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   {getGrowthIcon(club.growth)}
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-2xl font-bold text-green-600 font-tm-headline">
                       +{club.growth}
                     </p>
-                    <p className="text-xs text-gray-600">members</p>
+                    <p className="text-xs text-gray-600 font-tm-body">
+                      members
+                    </p>
                   </div>
                 </div>
               </div>
@@ -193,11 +197,11 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                 d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
               />
             </svg>
-            <h3 className="text-xl font-semibold text-gray-900">
+            <h3 className="text-xl font-semibold text-gray-900 font-tm-headline">
               Top DCP Goal Achievement
             </h3>
           </div>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 mb-4 font-tm-body">
             Clubs with the highest DCP goal achievement
           </p>
 
@@ -219,23 +223,27 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-gray-900 truncate">
+                      <h4 className="font-semibold text-gray-900 truncate font-tm-headline">
                         {club.clubName}
                       </h4>
                       {getDistinguishedBadge(club.distinguishedLevel)}
                     </div>
-                    <p className="text-sm text-gray-600">Club #{club.clubId}</p>
+                    <p className="text-sm text-gray-600 font-tm-body">
+                      Club #{club.clubId}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-tm-loyal-blue font-tm-headline">
                     {club.goalsAchieved}
                   </p>
-                  <p className="text-xs text-gray-600">of 10 goals</p>
+                  <p className="text-xs text-gray-600 font-tm-body">
+                    of 10 goals
+                  </p>
                   <div className="mt-1">
                     <div className="w-24 bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-blue-600 h-2 rounded-full"
+                        className="bg-tm-loyal-blue h-2 rounded-full"
                         style={{ width: `${(club.goalsAchieved / 10) * 100}%` }}
                       ></div>
                     </div>
@@ -248,8 +256,8 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
       )}
 
       {/* Achievement Summary */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">
+      <div className="bg-gradient-to-r from-tm-loyal-blue-10 to-tm-cool-gray-20 rounded-lg shadow-md p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 font-tm-headline">
           Achievement Highlights
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,12 +274,14 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                   clipRule="evenodd"
                 />
               </svg>
-              <h4 className="font-semibold text-gray-900">Total Growth</h4>
+              <h4 className="font-semibold text-gray-900 font-tm-headline">
+                Total Growth
+              </h4>
             </div>
-            <p className="text-3xl font-bold text-green-600">
+            <p className="text-3xl font-bold text-green-600 font-tm-headline">
               +{topGrowthClubs.reduce((sum, club) => sum + club.growth, 0)}
             </p>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-600 mt-1 font-tm-body">
               members across top {topGrowthClubs.length} clubs
             </p>
           </div>
@@ -280,17 +290,17 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
             <div className="bg-white rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <svg
-                  className="w-5 h-5 text-blue-600"
+                  className="w-5 h-5 text-tm-loyal-blue"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
-                <h4 className="font-semibold text-gray-900">
+                <h4 className="font-semibold text-gray-900 font-tm-headline">
                   Average DCP Goals
                 </h4>
               </div>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-3xl font-bold text-tm-loyal-blue font-tm-headline">
                 {(
                   topDCPClubs.reduce(
                     (sum, club) => sum + club.goalsAchieved,
@@ -298,7 +308,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
                   ) / topDCPClubs.length
                 ).toFixed(1)}
               </p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 mt-1 font-tm-body">
                 across top {topDCPClubs.length} clubs
               </p>
             </div>

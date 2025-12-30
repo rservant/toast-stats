@@ -99,7 +99,8 @@ export const ReconciliationStatus: React.FC<ReconciliationStatusProps> = ({
         return {
           label: 'Finalizing',
           description: 'Preparing to mark data as final',
-          color: 'text-purple-700 bg-purple-100 border-purple-200',
+          color:
+            'text-tm-true-maroon bg-tm-true-maroon-10 border-tm-true-maroon-20',
           icon: (
             <svg
               className="w-5 h-5"

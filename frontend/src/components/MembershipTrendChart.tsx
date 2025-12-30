@@ -200,19 +200,21 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
       aria-label="District membership trend chart"
     >
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl font-semibold text-gray-900 font-tm-headline">
           District Membership Trend
         </h2>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-gray-600 mt-1 font-tm-body">
           Total membership over time with program year milestones
         </p>
       </div>
 
       {/* Statistics Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-          <p className="text-xs text-blue-700 font-medium">Current</p>
-          <p className="text-2xl font-bold text-blue-900">
+        <div className="bg-tm-loyal-blue-10 rounded-lg p-3 border border-tm-loyal-blue-20">
+          <p className="text-xs text-tm-loyal-blue font-medium font-tm-body">
+            Current
+          </p>
+          <p className="text-2xl font-bold text-tm-loyal-blue font-tm-headline">
             {endMembership.toLocaleString()}
           </p>
         </div>
@@ -224,14 +226,14 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
           }`}
         >
           <p
-            className={`text-xs font-medium ${
+            className={`text-xs font-medium font-tm-body ${
               netChange >= 0 ? 'text-green-700' : 'text-red-700'
             }`}
           >
             Net Change
           </p>
           <p
-            className={`text-2xl font-bold ${
+            className={`text-2xl font-bold font-tm-headline ${
               netChange >= 0 ? 'text-green-900' : 'text-red-900'
             }`}
           >
@@ -240,14 +242,14 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
           </p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <p className="text-xs text-gray-700 font-medium">Peak</p>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-xs text-gray-700 font-medium font-tm-body">Peak</p>
+          <p className="text-2xl font-bold text-gray-900 font-tm-headline">
             {maxMembership.toLocaleString()}
           </p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-          <p className="text-xs text-gray-700 font-medium">Low</p>
-          <p className="text-2xl font-bold text-gray-900">
+          <p className="text-xs text-gray-700 font-medium font-tm-body">Low</p>
+          <p className="text-2xl font-bold text-gray-900 font-tm-headline">
             {minMembership.toLocaleString()}
           </p>
         </div>
@@ -255,11 +257,11 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
 
       {/* Insights */}
       {(periods.length > 0 || seasonalMonths.length > 0) && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">
+        <div className="mb-6 p-4 bg-tm-loyal-blue-10 border border-tm-loyal-blue-20 rounded-lg">
+          <h3 className="text-sm font-semibold text-tm-loyal-blue mb-2 font-tm-headline">
             📊 Insights
           </h3>
-          <ul className="space-y-1 text-sm text-blue-800">
+          <ul className="space-y-1 text-sm text-tm-loyal-blue-80 font-tm-body">
             {periods.filter(p => p.type === 'growth').length > 0 && (
               <li>
                 • {periods.filter(p => p.type === 'growth').length} sustained
@@ -329,12 +331,12 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 <ReferenceLine
                   key={index}
                   x={milestone.date}
-                  stroke="#9333ea"
+                  stroke="#772432" // TM True Maroon
                   strokeDasharray="5 5"
                   label={{
                     value: milestone.label,
                     position: 'top',
-                    fill: '#9333ea',
+                    fill: '#772432',
                     fontSize: 10,
                   }}
                 />
@@ -344,9 +346,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#3b82f6"
+                stroke="#004165" // TM Loyal Blue
                 strokeWidth={3}
-                dot={{ fill: '#3b82f6', r: 4 }}
+                dot={{ fill: '#004165', r: 4 }}
                 activeDot={{ r: 6 }}
                 name="Total Membership"
               />
@@ -410,21 +412,21 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
           <div className="flex items-center gap-2">
             <div
-              className="w-4 h-0.5 bg-purple-600"
+              className="w-4 h-0.5 bg-tm-true-maroon"
               style={{ borderTop: '2px dashed' }}
             ></div>
-            <span>Program Year Start</span>
+            <span className="font-tm-body">Program Year Start</span>
           </div>
           {periods.some(p => p.type === 'growth') && (
             <div className="flex items-center gap-2">
               <div className="w-4 h-0.5 bg-green-500"></div>
-              <span>Growth Period</span>
+              <span className="font-tm-body">Growth Period</span>
             </div>
           )}
           {periods.some(p => p.type === 'decline') && (
             <div className="flex items-center gap-2">
               <div className="w-4 h-0.5 bg-red-500"></div>
-              <span>Decline Period</span>
+              <span className="font-tm-body">Decline Period</span>
             </div>
           )}
         </div>

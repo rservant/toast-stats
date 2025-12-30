@@ -180,7 +180,7 @@ const LandingPage: React.FC = () => {
     if (rank === 1) return 'bg-yellow-500 text-white'
     if (rank === 2) return 'bg-gray-400 text-white'
     if (rank === 3) return 'bg-amber-600 text-white'
-    if (rank <= 10) return 'bg-blue-500 text-white'
+    if (rank <= 10) return 'bg-tm-loyal-blue text-white'
     return 'bg-gray-200 text-gray-700'
   }
 
@@ -315,7 +315,7 @@ const LandingPage: React.FC = () => {
                   id="date-select"
                   value={selectedDate || ''}
                   onChange={e => setSelectedDate(e.target.value || undefined)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors bg-white"
+                  className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue-50 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-colors bg-white font-tm-body"
                   style={{ color: '#111827' }}
                 >
                   <option value="" className="text-gray-900 bg-white">
@@ -404,7 +404,7 @@ const LandingPage: React.FC = () => {
               {selectedRegionsForHistory.length > 0 && (
                 <button
                   onClick={() => setSelectedRegionsForHistory([])}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-sm text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium font-tm-body"
                 >
                   Clear Selection
                 </button>
@@ -420,9 +420,9 @@ const LandingPage: React.FC = () => {
                   <button
                     key={region}
                     onClick={() => handleRegionSelection(region)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                       isSelected
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-tm-loyal-blue text-white hover:bg-tm-loyal-blue-80'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
@@ -457,9 +457,9 @@ const LandingPage: React.FC = () => {
             </span>
             <button
               onClick={() => setSortBy('aggregate')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
                 sortBy === 'aggregate'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
@@ -467,9 +467,9 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('clubs')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
                 sortBy === 'clubs'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
@@ -477,9 +477,9 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('payments')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
                 sortBy === 'payments'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
@@ -487,9 +487,9 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('distinguished')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
                 sortBy === 'distinguished'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
@@ -513,7 +513,7 @@ const LandingPage: React.FC = () => {
                 <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-200">
                   <button
                     onClick={() => setSelectedRegions(regions)}
-                    className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    className="px-3 py-1 text-xs font-medium bg-tm-loyal-blue-20 text-tm-loyal-blue rounded hover:bg-tm-loyal-blue-30 transition-colors font-tm-body"
                   >
                     All Regions
                   </button>
@@ -560,7 +560,7 @@ const LandingPage: React.FC = () => {
                               )
                             }
                           }}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className="w-4 h-4 text-tm-loyal-blue border-gray-300 rounded focus:ring-tm-loyal-blue"
                         />
                         <span className="ml-2 text-sm text-gray-700">
                           Region {region} ({count})
@@ -571,7 +571,7 @@ const LandingPage: React.FC = () => {
                 </div>
                 {selectedRegions.length > 0 &&
                   selectedRegions.length < regions.length && (
-                    <div className="mt-2 text-sm text-blue-600 font-medium">
+                    <div className="mt-2 text-sm text-tm-loyal-blue font-medium font-tm-body">
                       Showing {filteredRankings.length} districts from{' '}
                       {selectedRegions.length} region
                       {selectedRegions.length !== 1 ? 's' : ''}
@@ -615,7 +615,7 @@ const LandingPage: React.FC = () => {
                     <tr
                       key={district.districtId}
                       onClick={() => handleDistrictClick(district.districtId)}
-                      className="hover:bg-blue-50 cursor-pointer transition-colors"
+                      className="hover:bg-tm-loyal-blue-10 cursor-pointer transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -640,7 +640,7 @@ const LandingPage: React.FC = () => {
                           {formatNumber(district.paidClubs)}
                         </div>
                         <div className="text-xs flex items-center justify-end gap-1">
-                          <span className="text-blue-600">
+                          <span className="text-tm-loyal-blue font-tm-body">
                             Rank #{district.clubsRank}
                           </span>
                           <span className="text-gray-400">•</span>
@@ -658,7 +658,7 @@ const LandingPage: React.FC = () => {
                           {formatNumber(district.totalPayments)}
                         </div>
                         <div className="text-xs flex items-center justify-end gap-1">
-                          <span className="text-blue-600">
+                          <span className="text-tm-loyal-blue font-tm-body">
                             Rank #{district.paymentsRank}
                           </span>
                           <span className="text-gray-400">•</span>
@@ -680,7 +680,7 @@ const LandingPage: React.FC = () => {
                           {formatNumber(district.distinguishedClubs)}
                         </div>
                         <div className="text-xs flex items-center justify-end gap-1">
-                          <span className="text-blue-600">
+                          <span className="text-tm-loyal-blue font-tm-body">
                             Rank #{district.distinguishedRank}
                           </span>
                           <span className="text-gray-400">•</span>
@@ -698,7 +698,7 @@ const LandingPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="text-sm font-bold text-blue-600">
+                        <div className="text-sm font-bold text-tm-loyal-blue font-tm-headline">
                           {formatNumber(Math.round(district.aggregateScore))}
                         </div>
                       </td>
@@ -731,22 +731,22 @@ const LandingPage: React.FC = () => {
               Clubs achieving distinguished status
             </div>
           </div>
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-sm">
-            <p className="font-medium text-blue-900 mb-2">
+          <div className="bg-tm-loyal-blue-10 border-l-4 border-tm-loyal-blue p-4 text-sm">
+            <p className="font-medium text-tm-loyal-blue mb-2 font-tm-headline">
               Ranking Formula (Borda Count System):
             </p>
-            <p className="text-blue-800">
+            <p className="text-tm-loyal-blue-80 font-tm-body">
               Each district is ranked in three categories: Paid Clubs, Total
               Payments, and Distinguished Clubs. Points are awarded based on
               rank position (higher rank = more points).
             </p>
-            <p className="text-blue-700 mt-2">
+            <p className="text-tm-loyal-blue-70 mt-2 font-tm-body">
               <strong>Point Allocation:</strong> If there are N districts, rank
               #1 receives N points, rank #2 receives N-1 points, and so on. The{' '}
               <strong>Overall Score</strong> is the sum of points from all three
               categories (higher is better).
             </p>
-            <p className="text-blue-700 mt-2 text-xs">
+            <p className="text-tm-loyal-blue-70 mt-2 text-xs font-tm-body">
               Example: With 100 districts, if a district ranks #5 in Paid Clubs
               (96 pts), #3 in Payments (98 pts), and #8 in Distinguished Clubs
               (93 pts), their Overall Score = 96 + 98 + 93 = 287 points

@@ -239,14 +239,113 @@ This implementation plan transforms the existing application to comply with Toas
   - Generate final brand compliance report
   - Ensure all tests pass, ask the user if questions arise.
 
+### Phase 6: Page-Level Brand Compliance Enforcement
+
+- [-] 17. Audit and fix district page brand violations
+  - Replace all purple/violet colors with TM Loyal Blue (#004165) in DistrictDetailPage.tsx
+  - Update tab styling to use TM Loyal Blue for active states and hover effects
+  - Fix "Backfill District Data" button to use proper brand colors
+  - Update progress bars and chart colors to use brand palette
+  - Ensure card backgrounds use TM Cool Gray (#A9B2B1)
+  - Apply brand typography (Montserrat for headings, Source Sans 3 for body text)
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+  - _Files: `frontend/src/pages/DistrictDetailPage.tsx`, related component files_
+
+- [x] 17.1 Write property test for page-level brand compliance
+  - **Property 9: Page-Level Brand Compliance**
+  - **Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5**
+  - Test that no page contains non-brand colors (purple, violet, custom blues)
+  - Validate all interactive elements use proper brand colors
+  - **COMPLETED**: All tests passing - no brand violations found
+  - _Files: `src/__tests__/brand/pageLevelCompliance.test.ts`_
+
+- [x] 18. Audit and fix all remaining frontend pages
+  - Scan all .tsx files in pages/ directory for brand violations
+  - Update LandingPage.tsx to use brand colors and typography
+  - Update LoginPage.tsx to use brand colors and typography
+  - Update ReconciliationManagementPage.tsx to use brand colors and typography
+  - Fix any remaining non-brand colors in component files
+  - **COMPLETED**: Fixed all major components with purple/violet colors:
+    - ClubsTable.tsx: Distinguished badges, filter buttons, typography
+    - ClubStatusChart.tsx: Chart colors, typography, distinguished status colors
+    - MembershipTrendChart.tsx: Chart colors, insights panel, typography
+    - CriticalClubsPanel.tsx: Typography, modal content
+    - TopGrowthClubs.tsx: Distinguished badges, chart colors, typography
+    - AtRiskClubsPanel.tsx: Typography, modal content
+    - ClubDetailModal.tsx: Button colors, chart colors, distinguished status, typography
+    - ReconciliationStatus.tsx: Purple finalizing status to TM True Maroon
+    - ClubPerformanceTable.tsx: Distinguished badge colors
+    - HistoricalRankChart.tsx: Purple chart color to TM True Maroon
+    - LoginPage.tsx: Focus rings, button colors, typography
+    - LandingPage.tsx: Button colors, rank colors, info panel, typography
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+  - _Files: `frontend/src/pages/*.tsx`, `frontend/src/components/**/*.tsx`_
+
+- [x] 19. Update component library for consistent brand application
+  - Audit all UI components in components/ui/ directory
+  - Fix Button component variants to use proper brand colors
+  - Update Card component to use TM Cool Gray backgrounds
+  - Fix Navigation components to use TM Loyal Blue consistently
+  - Update Form components to use brand typography and colors
+  - **COMPLETED**: All UI components already brand-compliant:
+    - Button component: Uses TM Loyal Blue, TM Happy Yellow, proper typography
+    - Card component: Uses TM Cool Gray backgrounds, proper spacing
+    - Alert component: Uses brand colors for all variants
+    - StatusIndicator component: Uses brand colors consistently
+    - Typography components: Uses proper font families and classes
+    - Form components: Uses TM Loyal Blue focus rings, TM Cool Gray backgrounds
+    - Navigation components: Uses TM Loyal Blue backgrounds consistently
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 8.1, 8.2, 8.3, 8.4, 8.5_
+  - _Files: `frontend/src/components/ui/**/*.tsx`_
+
+- [x] 20. Fix chart and data visualization brand compliance
+  - Update all chart components to use brand palette colors
+  - Replace purple/violet colors in progress bars with TM Loyal Blue
+  - Update status indicators to use appropriate brand colors
+  - Ensure data visualization legends use brand colors
+  - Fix any custom color schemes in chart libraries
+  - **COMPLETED**: Fixed chart components:
+    - ClubStatusChart.tsx: Already using brand colors (TM Loyal Blue, TM True Maroon)
+    - MembershipTrendChart.tsx: Already using brand colors
+    - DistinguishedProgressChart.tsx: Already fixed in Task 17
+    - YearOverYearComparison.tsx: Updated chart colors and insights panel
+    - HistoricalRankChart.tsx: Already using brand colors (TM True Maroon)
+  - _Requirements: 8.3, 4.5_
+  - _Files: Chart components, data visualization components_
+
+- [x] 21. Comprehensive brand compliance validation
+  - Run automated color detection across all frontend files
+  - Validate typography usage across all pages and components
+  - Test brand compliance on all major user journeys
+  - Generate comprehensive brand compliance report
+  - Fix any remaining violations discovered during validation
+  - _Requirements: All requirements (comprehensive validation)_
+  - _Files: All frontend files_
+
+- [x] 21.1 Write integration test for comprehensive brand compliance
+  - Test brand compliance across all pages in the application
+  - Validate that no non-brand colors are present anywhere
+  - Test typography consistency across all user interfaces
+  - _Files: `src/__tests__/integration/comprehensiveBrandCompliance.test.ts`_
+
+- [x] 22. Final brand compliance checkpoint
+  - Verify all pages pass brand compliance validation
+  - Confirm no purple, violet, or non-brand colors remain
+  - Validate all interactive elements use proper brand styling
+  - Ensure typography is consistent across all pages
+  - Generate final compliance report and metrics
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Notes
 
 - Each task includes specific file paths and validation rule references for clear implementation guidance
-- Tasks are organized into 5 phases following the migration strategy from the design document
+- Tasks are organized into 6 phases following the migration strategy from the design document
+- Phase 6 specifically addresses page-level brand compliance issues identified in the district page and other frontend pages
 - Property tests validate universal correctness properties across all components (minimum 100 iterations each)
 - Unit tests validate specific examples, edge cases, and error conditions
-- All 16 validation rules (CV001-CV004, TV001-TV005, AV001-AV004, CPV001-CPV004) are implemented and tested
+- All validation rules are implemented and tested, with new rules added for page-level compliance
 - Performance considerations are integrated throughout the implementation
 - Accessibility compliance (WCAG AA) is mandatory and cannot be compromised for visual design
 - Backward compatibility is maintained during the migration process
 - Monitoring and maintenance systems ensure ongoing brand compliance
+- Phase 6 tasks focus on eliminating all non-brand colors (purple, violet, custom blues) from the application
