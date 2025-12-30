@@ -1,0 +1,56 @@
+/* Toastmasters Brand Colors - Design Tokens */
+
+:root {
+  /* Primary Brand Colors */
+  --tm-loyal-blue: #004165;
+  --tm-true-maroon: #772432;
+  --tm-cool-gray: #A9B2B1;
+  
+  /* Accent Colors */
+  --tm-happy-yellow: #F2DF74;
+  
+  /* Neutral Colors */
+  --tm-black: #000000;
+  --tm-white: #FFFFFF;
+  
+  /* Color Opacity Variations (10% increments) */
+  --tm-loyal-blue-90: rgba(0, 65, 101, 0.9);
+  --tm-loyal-blue-80: rgba(0, 65, 101, 0.8);
+  --tm-loyal-blue-70: rgba(0, 65, 101, 0.7);
+  --tm-loyal-blue-60: rgba(0, 65, 101, 0.6);
+  --tm-loyal-blue-50: rgba(0, 65, 101, 0.5);
+  --tm-loyal-blue-40: rgba(0, 65, 101, 0.4);
+  --tm-loyal-blue-30: rgba(0, 65, 101, 0.3);
+  --tm-loyal-blue-20: rgba(0, 65, 101, 0.2);
+  --tm-loyal-blue-10: rgba(0, 65, 101, 0.1);
+  
+  --tm-true-maroon-90: rgba(119, 36, 50, 0.9);
+  --tm-true-maroon-80: rgba(119, 36, 50, 0.8);
+  --tm-true-maroon-70: rgba(119, 36, 50, 0.7);
+  --tm-true-maroon-60: rgba(119, 36, 50, 0.6);
+  --tm-true-maroon-50: rgba(119, 36, 50, 0.5);
+  --tm-true-maroon-40: rgba(119, 36, 50, 0.4);
+  --tm-true-maroon-30: rgba(119, 36, 50, 0.3);
+  --tm-true-maroon-20: rgba(119, 36, 50, 0.2);
+  --tm-true-maroon-10: rgba(119, 36, 50, 0.1);
+  
+  --tm-cool-gray-90: rgba(169, 178, 177, 0.9);
+  --tm-cool-gray-80: rgba(169, 178, 177, 0.8);
+  --tm-cool-gray-70: rgba(169, 178, 177, 0.7);
+  --tm-cool-gray-60: rgba(169, 178, 177, 0.6);
+  --tm-cool-gray-50: rgba(169, 178, 177, 0.5);
+  --tm-cool-gray-40: rgba(169, 178, 177, 0.4);
+  --tm-cool-gray-30: rgba(169, 178, 177, 0.3);
+  --tm-cool-gray-20: rgba(169, 178, 177, 0.2);
+  --tm-cool-gray-10: rgba(169, 178, 177, 0.1);
+  
+  --tm-happy-yellow-90: rgba(242, 223, 116, 0.9);
+  --tm-happy-yellow-80: rgba(242, 223, 116, 0.8);
+  --tm-happy-yellow-70: rgba(242, 223, 116, 0.7);
+  --tm-happy-yellow-60: rgba(242, 223, 116, 0.6);
+  --tm-happy-yellow-50: rgba(242, 223, 116, 0.5);
+  --tm-happy-yellow-40: rgba(242, 223, 116, 0.4);
+  --tm-happy-yellow-30: rgba(242, 223, 116, 0.3);
+  --tm-happy-yellow-20: rgba(242, 223, 116, 0.2);
+  --tm-happy-yellow-10: rgba(242, 223, 116, 0.1);
+}

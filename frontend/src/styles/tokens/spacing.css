@@ -1,0 +1,82 @@
+/* Toastmasters Spacing System - Design Tokens */
+
+:root {
+  /* Base Spacing Scale */
+  --tm-space-0: 0px;
+  --tm-space-px: 1px;
+  --tm-space-0-5: 2px;
+  --tm-space-1: 4px;
+  --tm-space-1-5: 6px;
+  --tm-space-2: 8px;
+  --tm-space-2-5: 10px;
+  --tm-space-3: 12px;
+  --tm-space-3-5: 14px;
+  --tm-space-4: 16px;
+  --tm-space-5: 20px;
+  --tm-space-6: 24px;
+  --tm-space-7: 28px;
+  --tm-space-8: 32px;
+  --tm-space-9: 36px;
+  --tm-space-10: 40px;
+  --tm-space-11: 44px;
+  --tm-space-12: 48px;
+  --tm-space-14: 56px;
+  --tm-space-16: 64px;
+  --tm-space-20: 80px;
+  --tm-space-24: 96px;
+  --tm-space-28: 112px;
+  --tm-space-32: 128px;
+  --tm-space-36: 144px;
+  --tm-space-40: 160px;
+  --tm-space-44: 176px;
+  --tm-space-48: 192px;
+  --tm-space-52: 208px;
+  --tm-space-56: 224px;
+  --tm-space-60: 240px;
+  --tm-space-64: 256px;
+  --tm-space-72: 288px;
+  --tm-space-80: 320px;
+  --tm-space-96: 384px;
+  
+  /* Semantic Spacing */
+  --tm-space-xs: var(--tm-space-1); /* 4px */
+  --tm-space-sm: var(--tm-space-2); /* 8px */
+  --tm-space-md: var(--tm-space-4); /* 16px */
+  --tm-space-lg: var(--tm-space-6); /* 24px */
+  --tm-space-xl: var(--tm-space-8); /* 32px */
+  --tm-space-2xl: var(--tm-space-12); /* 48px */
+  --tm-space-3xl: var(--tm-space-16); /* 64px */
+  
+  /* Touch Target Requirements */
+  --tm-touch-target: 44px;
+  --tm-touch-target-min: var(--tm-space-11); /* 44px */
+  
+  /* Component Spacing */
+  --tm-component-padding-xs: var(--tm-space-2); /* 8px */
+  --tm-component-padding-sm: var(--tm-space-3); /* 12px */
+  --tm-component-padding-md: var(--tm-space-4); /* 16px */
+  --tm-component-padding-lg: var(--tm-space-6); /* 24px */
+  --tm-component-padding-xl: var(--tm-space-8); /* 32px */
+  
+  --tm-component-margin-xs: var(--tm-space-2); /* 8px */
+  --tm-component-margin-sm: var(--tm-space-4); /* 16px */
+  --tm-component-margin-md: var(--tm-space-6); /* 24px */
+  --tm-component-margin-lg: var(--tm-space-8); /* 32px */
+  --tm-component-margin-xl: var(--tm-space-12); /* 48px */
+  
+  /* Border Radius */
+  --tm-radius-none: 0px;
+  --tm-radius-sm: 4px;
+  --tm-radius-md: 8px;
+  --tm-radius-lg: 12px;
+  --tm-radius-xl: 16px;
+  --tm-radius-2xl: 24px;
+  --tm-radius-full: 9999px;
+  
+  /* Border Widths */
+  --tm-border-0: 0px;
+  --tm-border: 1px;
+  --tm-border-2: 2px;
+  --tm-border-4: 4px;
+  --tm-border-8: 8px;
+}

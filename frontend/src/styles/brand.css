@@ -1,0 +1,124 @@
+/* Toastmasters Brand Design System - Main Import */
+
+/* Import all design tokens */
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/gradients.css';
+
+/* Base Typography Classes */
+.tm-headline {
+  font-family: var(--tm-font-headline);
+}
+
+.tm-body {
+  font-family: var(--tm-font-body);
+}
+
+/* Heading Styles */
+.tm-h1 {
+  font-family: var(--tm-font-headline);
+  font-size: var(--tm-h1-font-size);
+  line-height: var(--tm-h1-line-height);
+  font-weight: var(--tm-h1-font-weight);
+}
+
+.tm-h2 {
+  font-family: var(--tm-font-headline);
+  font-size: var(--tm-h2-font-size);
+  line-height: var(--tm-h2-line-height);
+  font-weight: var(--tm-h2-font-weight);
+}
+
+.tm-h3 {
+  font-family: var(--tm-font-headline);
+  font-size: var(--tm-h3-font-size);
+  line-height: var(--tm-h3-line-height);
+  font-weight: var(--tm-h3-font-weight);
+}
+
+.tm-nav {
+  font-family: var(--tm-font-headline);
+  font-size: var(--tm-nav-font-size);
+  line-height: var(--tm-nav-line-height);
+  font-weight: var(--tm-nav-font-weight);
+}
+
+/* Body Text Styles */
+.tm-body-large {
+  font-family: var(--tm-font-body);
+  font-size: var(--tm-body-large-font-size);
+  line-height: var(--tm-body-large-line-height);
+  font-weight: var(--tm-body-large-font-weight);
+}
+
+.tm-body-medium {
+  font-family: var(--tm-font-body);
+  font-size: var(--tm-body-medium-font-size);
+  line-height: var(--tm-body-medium-line-height);
+  font-weight: var(--tm-body-medium-font-weight);
+}
+
+.tm-body-small {
+  font-family: var(--tm-font-body);
+  font-size: var(--tm-body-small-font-size);
+  line-height: var(--tm-body-small-line-height);
+  font-weight: var(--tm-body-small-font-weight);
+}
+
+.tm-caption {
+  font-family: var(--tm-font-body);
+  font-size: var(--tm-caption-font-size);
+  line-height: var(--tm-caption-line-height);
+  font-weight: var(--tm-caption-font-weight);
+}
+
+/* Color Utility Classes */
+.tm-text-loyal-blue { color: var(--tm-loyal-blue); }
+.tm-text-true-maroon { color: var(--tm-true-maroon); }
+.tm-text-cool-gray { color: var(--tm-cool-gray); }
+.tm-text-happy-yellow { color: var(--tm-happy-yellow); }
+.tm-text-black { color: var(--tm-black); }
+.tm-text-white { color: var(--tm-white); }
+
+.tm-bg-loyal-blue { background-color: var(--tm-loyal-blue); }
+.tm-bg-true-maroon { background-color: var(--tm-true-maroon); }
+.tm-bg-cool-gray { background-color: var(--tm-cool-gray); }
+.tm-bg-happy-yellow { background-color: var(--tm-happy-yellow); }
+.tm-bg-black { background-color: var(--tm-black); }
+.tm-bg-white { background-color: var(--tm-white); }
+
+/* Touch Target Utilities */
+.tm-touch-target {
+  min-width: var(--tm-touch-target);
+  min-height: var(--tm-touch-target);
+}
+
+/* Spacing Utilities */
+.tm-space-xs { gap: var(--tm-space-xs); }
+.tm-space-sm { gap: var(--tm-space-sm); }
+.tm-space-md { gap: var(--tm-space-md); }
+.tm-space-lg { gap: var(--tm-space-lg); }
+.tm-space-xl { gap: var(--tm-space-xl); }
+
+/* Border Radius Utilities */
+.tm-rounded-sm { border-radius: var(--tm-radius-sm); }
+.tm-rounded-md { border-radius: var(--tm-radius-md); }
+.tm-rounded-lg { border-radius: var(--tm-radius-lg); }
+
+/* Accessibility Utilities */
+.tm-focus-visible:focus-visible {
+  outline: 2px solid var(--tm-loyal-blue);
+  outline-offset: 2px;
+}
+
+/* Brand Compliance Validation Classes */
+.tm-brand-compliant {
+  /* Marker class for brand-compliant components */
+}
+
+/* Minimum Requirements Enforcement */
+body {
+  font-size: max(var(--tm-font-size-min-body), 14px);
+  line-height: max(var(--tm-line-height-min), 1.4);
+}
