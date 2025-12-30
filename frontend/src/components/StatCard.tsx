@@ -1,4 +1,5 @@
 import React from 'react'
+import { Card } from './ui/Card'
 
 export interface StatCardProps {
   name: string | React.ReactNode
@@ -19,17 +20,17 @@ const StatCard: React.FC<StatCardProps> = ({
   isLoading = false,
   footer,
 }) => {
-  // Determine trend color
+  // Determine trend color using brand colors
   const getTrendColor = () => {
-    if (trend === 'positive') return 'text-green-600'
-    if (trend === 'negative') return 'text-red-600'
-    return 'text-gray-600'
+    if (trend === 'positive') return 'tm-text-loyal-blue'
+    if (trend === 'negative') return 'tm-text-true-maroon'
+    return 'tm-text-cool-gray'
   }
 
   const getTrendBgColor = () => {
-    if (trend === 'positive') return 'bg-green-50'
-    if (trend === 'negative') return 'bg-red-50'
-    return 'bg-gray-50'
+    if (trend === 'positive') return 'tm-bg-loyal-blue-10'
+    if (trend === 'negative') return 'tm-bg-true-maroon-10'
+    return 'tm-bg-cool-gray-20'
   }
 
   const getTrendIcon = () => {
@@ -40,15 +41,15 @@ const StatCard: React.FC<StatCardProps> = ({
 
   if (isLoading) {
     return (
-      <article
-        className="bg-white rounded-lg shadow-md p-6 animate-pulse"
+      <Card
+        className="animate-pulse"
         aria-busy="true"
         aria-label="Loading statistics"
       >
-        <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-        <div className="h-8 bg-gray-200 rounded w-3/4 mb-3"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-      </article>
+        <div className="h-4 tm-bg-cool-gray tm-rounded-sm w-1/2 mb-4"></div>
+        <div className="h-8 tm-bg-cool-gray tm-rounded-sm w-3/4 mb-3"></div>
+        <div className="h-4 tm-bg-cool-gray tm-rounded-sm w-1/3"></div>
+      </Card>
     )
   }
 
@@ -62,23 +63,20 @@ const StatCard: React.FC<StatCardProps> = ({
   const nameText = typeof name === 'string' ? name : 'Statistic'
 
   return (
-    <article
-      className="bg-white rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200"
+    <Card
+      className="hover:shadow-lg transition-shadow duration-200"
       aria-label={`${nameText}: ${value}${changePercent !== undefined ? `, ${trendDescription} by ${Math.abs(changePercent).toFixed(1)}%` : ''}`}
     >
-      <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-2">
+      <h3 className="tm-body-small font-medium tm-text-cool-gray mb-2">
         {name}
       </h3>
-      <p
-        className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words"
-        aria-live="polite"
-      >
+      <p className="tm-h2 tm-text-black mb-2 break-words" aria-live="polite">
         {value}
       </p>
 
       {(change !== undefined || changePercent !== undefined) && (
         <div
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-medium ${getTrendBgColor()} ${getTrendColor()}`}
+          className={`inline-flex items-center px-2.5 py-0.5 tm-rounded-lg tm-body-small font-medium ${getTrendBgColor()} ${getTrendColor()}`}
           role="status"
           aria-label={`Trend: ${trendDescription}${change !== undefined ? ` by ${Math.abs(change)} units` : ''}${changePercent !== undefined ? ` (${Math.abs(changePercent).toFixed(1)}%)` : ''}`}
         >
@@ -103,7 +101,7 @@ const StatCard: React.FC<StatCardProps> = ({
       )}
 
       {footer && <div className="mt-3">{footer}</div>}
-    </article>
+    </Card>
   )
 }
 

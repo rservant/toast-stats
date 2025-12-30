@@ -16,6 +16,9 @@
 @import './components/status-indicators.css';
 @import './components/alerts.css';
 
+/* Import responsive design system */
+@import './responsive.css';
+
 /* Base Typography Classes */
 .tm-headline {
   font-family: var(--tm-font-headline);

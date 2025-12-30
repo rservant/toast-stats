@@ -1,4 +1,5 @@
 import React from 'react'
+import { Button } from './ui/Button'
 
 interface PaginationProps {
   currentPage: number
@@ -63,9 +64,9 @@ export const Pagination: React.FC<PaginationProps> = ({
   }
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white">
+    <div className="flex items-center justify-between px-6 py-4 border-t border-tm-cool-gray tm-bg-white">
       {/* Results info */}
-      <div className="text-sm text-gray-700">
+      <div className="tm-body-small tm-text-cool-gray">
         Showing <span className="font-medium">{startIndex}</span> to{' '}
         <span className="font-medium">{endIndex}</span> of{' '}
         <span className="font-medium">{totalItems}</span> results
@@ -74,17 +75,11 @@ export const Pagination: React.FC<PaginationProps> = ({
       {/* Pagination controls */}
       <div className="flex items-center gap-2">
         {/* Previous button */}
-        <button
+        <Button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!canGoPrevious}
-          className={`
-            px-3 py-2 rounded-lg text-sm font-medium transition-colors
-            ${
-              canGoPrevious
-                ? 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                : 'text-gray-400 cursor-not-allowed'
-            }
-          `}
+          variant="ghost"
+          size="sm"
           aria-label="Previous page"
         >
           <svg
@@ -100,7 +95,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               d="M15 19l-7-7 7-7"
             />
           </svg>
-        </button>
+        </Button>
 
         {/* Page numbers */}
         <div className="flex items-center gap-1">
@@ -109,7 +104,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               return (
                 <span
                   key={`ellipsis-${index}`}
-                  className="px-3 py-2 text-gray-500"
+                  className="px-3 py-2 tm-text-cool-gray"
                 >
                   ...
                 </span>
@@ -120,38 +115,26 @@ export const Pagination: React.FC<PaginationProps> = ({
             const isActive = pageNumber === currentPage
 
             return (
-              <button
+              <Button
                 key={pageNumber}
                 onClick={() => onPageChange(pageNumber)}
-                className={`
-                  px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                  }
-                `}
+                variant={isActive ? 'primary' : 'ghost'}
+                size="sm"
                 aria-label={`Page ${pageNumber}`}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {pageNumber}
-              </button>
+              </Button>
             )
           })}
         </div>
 
         {/* Next button */}
-        <button
+        <Button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!canGoNext}
-          className={`
-            px-3 py-2 rounded-lg text-sm font-medium transition-colors
-            ${
-              canGoNext
-                ? 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                : 'text-gray-400 cursor-not-allowed'
-            }
-          `}
+          variant="ghost"
+          size="sm"
           aria-label="Next page"
         >
           <svg
@@ -167,7 +150,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               d="M9 5l7 7-7 7"
             />
           </svg>
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -27,10 +27,10 @@ export const DataStatusIndicator: React.FC<DataStatusIndicatorProps> = ({
 
   const getStatusColor = () => {
     if (dataStatus.isFinal)
-      return 'text-green-700 bg-green-100 border-green-200'
+      return 'tm-text-loyal-blue tm-bg-loyal-blue-10 border-tm-loyal-blue'
     if (dataStatus.isPreliminary)
-      return 'text-amber-700 bg-amber-100 border-amber-200'
-    return 'text-gray-700 bg-gray-100 border-gray-200'
+      return 'tm-text-true-maroon tm-bg-true-maroon-10 border-tm-true-maroon'
+    return 'tm-text-cool-gray tm-bg-cool-gray-20 border-tm-cool-gray'
   }
 
   const getStatusIcon = () => {
@@ -114,7 +114,7 @@ export const DataStatusIndicator: React.FC<DataStatusIndicatorProps> = ({
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {/* Status Badge */}
       <div
-        className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-sm font-medium ${getStatusColor()}`}
+        className={`inline-flex items-center gap-1 px-2 py-1 tm-rounded-md border tm-body-small font-medium ${getStatusColor()}`}
       >
         {getStatusIcon()}
         <span>{getStatusText()}</span>
@@ -125,7 +125,7 @@ export const DataStatusIndicator: React.FC<DataStatusIndicatorProps> = ({
 
       {/* Data Collection Date */}
       {showDetails && (
-        <span className="text-sm text-gray-600">
+        <span className="tm-body-small tm-text-cool-gray">
           Data as of {formatDate(dataStatus.dataCollectionDate)}
         </span>
       )}
@@ -134,7 +134,7 @@ export const DataStatusIndicator: React.FC<DataStatusIndicatorProps> = ({
       {showDetails &&
         dataStatus.reconciliationStatus &&
         !dataStatus.isFinal && (
-          <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+          <span className="tm-caption tm-text-cool-gray tm-bg-cool-gray-20 px-2 py-1 tm-rounded-sm">
             {dataStatus.reconciliationStatus.phase === 'monitoring' &&
               'Monitoring Changes'}
             {dataStatus.reconciliationStatus.phase === 'stabilizing' &&
