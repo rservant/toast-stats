@@ -6,6 +6,12 @@
 @import './tokens/spacing.css';
 @import './tokens/gradients.css';
 
+/* Import component styles */
+@import './components/typography.css';
+@import './components/navigation.css';
+@import './components/headers.css';
+@import './components/buttons.css';
+
 /* Base Typography Classes */
 .tm-headline {
   font-family: var(--tm-font-headline);

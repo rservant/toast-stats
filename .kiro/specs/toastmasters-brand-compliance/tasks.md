@@ -41,7 +41,7 @@ This implementation plan transforms the existing application to comply with Toas
 
 ### Phase 2: Core Components
 
-- [ ] 2. Implement core typography system
+- [x] 2. Implement core typography system
   - Create typography utility classes for headlines (Montserrat) and body text (Source Sans 3)
   - Update all heading components (h1, h2, h3) with proper font families and weights
   - Ensure minimum 14px font size and 1.4 line-height ratio across all text elements
@@ -50,20 +50,20 @@ This implementation plan transforms the existing application to comply with Toas
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
   - _Files: `src/styles/components/typography.css`, `src/components/ui/Typography/`_
 
-- [ ] 2.1 Write property test for typography system compliance
+- [x] 2.1 Write property test for typography system compliance
   - **Property 2: Typography System Compliance**
   - **Validates: Requirements 2.1, 2.2, 2.3**
   - Test font family usage across all text elements
   - Validate minimum font sizes and line heights
   - _Files: `src/__tests__/brand/typographyCompliance.test.ts`_
 
-- [ ] 2.2 Write property test for typography effects prohibition
+- [x] 2.2 Write property test for typography effects prohibition
   - **Property 8: Typography Effects Prohibition**
   - **Validates: Requirements 2.5**
   - Test that no text elements use prohibited CSS effects
   - _Files: `src/__tests__/brand/typographyEffects.test.ts`_
 
-- [ ] 3. Create brand component library foundation
+- [x] 3. Create brand component library foundation
   - Implement `ThemeProvider` component with brand context
   - Create `BrandValidator` utility component for development-time validation
   - Implement `AccessibilityChecker` component for runtime accessibility validation
@@ -71,7 +71,7 @@ This implementation plan transforms the existing application to comply with Toas
   - _Requirements: All requirements (foundation)_
   - _Files: `src/components/brand/ThemeProvider.tsx`, `src/components/brand/BrandValidator.tsx`, `src/components/brand/AccessibilityChecker.tsx`_
 
-- [ ] 4. Update navigation and header components
+- [x] 4. Update navigation and header components
   - Apply TM Loyal Blue (#004165) to navigation bars and headers
   - Ensure white or high-contrast text on TM Loyal Blue backgrounds (validate 9.8:1 contrast ratio)
   - Update primary action buttons to use TM Loyal Blue with proper hover states
@@ -80,7 +80,7 @@ This implementation plan transforms the existing application to comply with Toas
   - _Requirements: 1.1, 4.4, 3.4, 3.5_
   - _Files: `src/components/Navigation/`, `src/components/Header/`_
 
-- [ ] 5. Implement accessibility compliance utilities
+- [x] 5. Implement accessibility compliance utilities
   - Create contrast validation utility functions for WCAG AA compliance (4.5:1 ratio)
   - Implement touch target validation (minimum 44px width and height)
   - Create focus indicator utilities with proper contrast ratios
@@ -89,14 +89,14 @@ This implementation plan transforms the existing application to comply with Toas
   - _Requirements: 3.1, 3.2, 3.4, 3.5_
   - _Files: `src/utils/contrastCalculator.ts`, `src/hooks/useTouchTarget.ts`, `src/hooks/useContrastCheck.ts`_
 
-- [ ] 5.1 Write property test for accessibility contrast requirements
+- [x] 5.1 Write property test for accessibility contrast requirements
   - **Property 3: Accessibility Contrast Requirements**
   - **Validates: Requirements 3.1**
   - Test contrast ratios for all text/background combinations
   - Validate WCAG AA compliance across all components
   - _Files: `src/__tests__/accessibility/contrastRequirements.test.ts`_
 
-- [ ] 5.2 Write property test for touch target accessibility
+- [x] 5.2 Write property test for touch target accessibility
   - **Property 4: Touch Target Accessibility**
   - **Validates: Requirements 3.2**
   - Test that all interactive elements meet 44px minimum size

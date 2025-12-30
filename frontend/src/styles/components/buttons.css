@@ -1,0 +1,176 @@
+/* Button Component Styles */
+
+/* Button Base */
+.tm-button {
+  font-family: var(--tm-font-headline);
+  font-weight: 600;
+  min-height: var(--tm-touch-target);
+  min-width: var(--tm-touch-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--tm-radius-md);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button Variants */
+.tm-button-primary {
+  background-color: var(--tm-loyal-blue);
+  color: var(--tm-white);
+}
+
+.tm-button-primary:hover:not(:disabled) {
+  background-color: var(--tm-loyal-blue-90);
+}
+
+.tm-button-primary:active:not(:disabled) {
+  background-color: var(--tm-loyal-blue-80);
+}
+
+.tm-button-primary:focus-visible {
+  outline: 2px solid var(--tm-white);
+  outline-offset: 2px;
+}
+
+.tm-button-secondary {
+  background-color: transparent;
+  color: var(--tm-loyal-blue);
+  border: 2px solid var(--tm-loyal-blue);
+}
+
+.tm-button-secondary:hover:not(:disabled) {
+  background-color: var(--tm-loyal-blue);
+  color: var(--tm-white);
+}
+
+.tm-button-secondary:focus-visible {
+  outline: 2px solid var(--tm-loyal-blue);
+  outline-offset: 2px;
+}
+
+.tm-button-accent {
+  background-color: var(--tm-happy-yellow);
+  color: var(--tm-black);
+}
+
+.tm-button-accent:hover:not(:disabled) {
+  background-color: var(--tm-happy-yellow-90);
+}
+
+.tm-button-accent:active:not(:disabled) {
+  background-color: var(--tm-happy-yellow-80);
+}
+
+.tm-button-accent:focus-visible {
+  outline: 2px solid var(--tm-black);
+  outline-offset: 2px;
+}
+
+.tm-button-ghost {
+  background-color: transparent;
+  color: var(--tm-loyal-blue);
+}
+
+.tm-button-ghost:hover:not(:disabled) {
+  background-color: var(--tm-loyal-blue-10);
+}
+
+.tm-button-ghost:focus-visible {
+  outline: 2px solid var(--tm-loyal-blue);
+  outline-offset: 2px;
+}
+
+/* Button Sizes */
+.tm-button-sm {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  min-height: var(--tm-touch-target);
+}
+
+.tm-button-md {
+  padding: 12px 16px;
+  font-size: 1rem;
+  min-height: var(--tm-touch-target);
+}
+
+.tm-button-lg {
+  padding: 16px 24px;
+  font-size: 1.125rem;
+  min-height: var(--tm-touch-target);
+}
+
+/* Button States */
+.tm-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tm-button:disabled:hover {
+  /* Prevent hover effects on disabled buttons */
+}
+
+.tm-button[aria-busy="true"] {
+  cursor: wait;
+}
+
+/* Loading Spinner */
+.tm-button .tm-spinner {
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Button Groups */
+.tm-button-group {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.tm-button-group .tm-button {
+  flex: 1;
+}
+
+/* Responsive Buttons */
+@media (max-width: 768px) {
+  .tm-button-group {
+    flex-direction: column;
+  }
+  
+  .tm-button-group .tm-button {
+    width: 100%;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .tm-button-primary {
+    border: 2px solid var(--tm-white);
+  }
+  
+  .tm-button-secondary {
+    border-width: 3px;
+  }
+  
+  .tm-button-accent {
+    border: 2px solid var(--tm-black);
+  }
+  
+  .tm-button-ghost {
+    border: 2px solid var(--tm-loyal-blue);
+  }
+}
