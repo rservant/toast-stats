@@ -54,11 +54,9 @@ interface AxeResults {
 }
 
 // Extend Jest matchers for axe
-declare global {
-  namespace Vi {
-    interface Assertion {
-      toHaveNoViolations(): void
-    }
+declare module 'vitest' {
+  interface Assertion {
+    toHaveNoViolations(): void
   }
 }
 
@@ -103,11 +101,11 @@ const localStorageMock = {
     if (key === 'programYear') return '2024-2025'
     return null
   },
-  setItem: (_key: string, _value: string) => {},
-  removeItem: (_key: string) => {},
+  setItem: () => {},
+  removeItem: () => {},
   clear: () => {},
   length: 0,
-  key: (_index: number) => null,
+  key: () => null,
 }
 
 // Mock fetch for API calls
@@ -156,7 +154,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
 
     // Mock getComputedStyle for JSDOM compatibility
     Object.defineProperty(window, 'getComputedStyle', {
-      value: (_element: Element) => ({
+      value: () => ({
         backgroundColor: 'rgba(0, 0, 0, 0)',
         color: 'rgb(0, 0, 0)',
         fontSize: '16px',
@@ -271,7 +269,8 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
         try {
           const { container } = render(
             <TestWrapper>
-              <Component {...(props as any)} />
+              {/* @ts-expect-error - Test component with mock props */}
+              <Component {...(props || {})} />
             </TestWrapper>
           )
 
@@ -451,10 +450,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
         await new Promise(resolve => setTimeout(resolve, 200))
 
         // Generate basic metrics for this page
-        const metrics = await generateBasicBrandComplianceMetrics(
-          container,
-          name
-        )
+        const metrics = await generateBasicBrandComplianceMetrics(container)
         overallMetrics[name] = metrics
 
         // Validate metrics structure
@@ -557,8 +553,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
 // Helper functions
 
 async function generateBasicBrandComplianceMetrics(
-  container: HTMLElement,
-  _pageName: string
+  container: HTMLElement
 ): Promise<BrandComplianceMetrics> {
   const allElements = container.querySelectorAll('*')
   const totalElements = allElements.length

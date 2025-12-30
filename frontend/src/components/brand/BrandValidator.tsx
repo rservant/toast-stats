@@ -15,7 +15,6 @@ import {
   meetsMinimumFontSize,
   meetsMinimumLineHeight,
   getFontFamily,
-  debounce,
 } from './utils'
 
 /**
@@ -248,21 +247,18 @@ export const BrandValidator: React.FC<BrandValidatorProps> = ({
     [enableValidation, validationRules, onValidationError]
   )
 
-  const validateAllElements = useCallback(
-    debounce(() => {
-      if (!containerRef.current || !enableValidation) return
+  const validateAllElements = useCallback(() => {
+    if (!containerRef.current || !enableValidation) return
 
-      // Get all elements within the container
-      const elements = containerRef.current.querySelectorAll('*')
+    // Get all elements within the container
+    const elements = containerRef.current.querySelectorAll('*')
 
-      elements.forEach(element => {
-        if (element instanceof HTMLElement) {
-          validateElement(element)
-        }
-      })
-    }, 100),
-    [validateElement, enableValidation]
-  )
+    elements.forEach(element => {
+      if (element instanceof HTMLElement) {
+        validateElement(element)
+      }
+    })
+  }, [validateElement, enableValidation])
 
   useEffect(() => {
     if (!enableValidation) return
@@ -314,6 +310,7 @@ export const BrandValidator: React.FC<BrandValidatorProps> = ({
 /**
  * Higher-order component to wrap components with brand validation
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const withBrandValidation = <P extends object>(
   Component: React.ComponentType<P>
 ): React.FC<P & Partial<BrandValidatorProps>> => {

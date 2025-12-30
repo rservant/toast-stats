@@ -9,9 +9,16 @@ import { brandMonitoringService } from '../brandMonitoring'
 import { performanceMonitoringService } from '../performanceMonitoring'
 
 // Load monitoring configuration
-let monitoringConfig: any = {}
+let monitoringConfig: Record<string, unknown> = {}
 try {
-  monitoringConfig = require('../../config/monitoring.json')
+  // Use dynamic import instead of require for ES modules
+  import('../../config/monitoring.json')
+    .then(config => {
+      monitoringConfig = config.default || config
+    })
+    .catch(error => {
+      console.warn('Failed to load monitoring config, using defaults:', error)
+    })
 } catch (error) {
   console.warn('Failed to load monitoring config, using defaults:', error)
 }
@@ -21,7 +28,10 @@ export function initializeMonitoring(): void {
   console.log('🔍 Initializing brand compliance monitoring...')
 
   // Start monitoring services
-  if (monitoringConfig.monitoring?.enabled !== false) {
+  const monitoring = monitoringConfig.monitoring as
+    | { enabled?: boolean }
+    | undefined
+  if (monitoring?.enabled !== false) {
     // Monitoring is initialized automatically via service constructors
     console.log('✅ Brand monitoring service started')
     console.log('✅ Performance monitoring service started')
@@ -43,7 +53,7 @@ export function initializeMonitoring(): void {
 }
 
 // Auto-initialize in production
-if (process.env.NODE_ENV === 'production') {
+if (import.meta.env.PROD) {
   initializeMonitoring()
 }
 

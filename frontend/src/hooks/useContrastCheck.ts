@@ -93,39 +93,6 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
   )
 
   /**
-   * Check focus indicators for all interactive elements
-   */
-  const validateFocusIndicators = useCallback(
-    (container: HTMLElement = document.body): FocusIndicatorResult[] => {
-      const interactiveElements = container.querySelectorAll(
-        'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"]'
-      )
-
-      const results: FocusIndicatorResult[] = []
-
-      interactiveElements.forEach(element => {
-        const htmlElement = element as HTMLElement
-        const result = checkFocusIndicator(htmlElement)
-        results.push(result)
-
-        if (!result.passes && onViolation) {
-          onViolation({
-            ratio: result.contrastRatio,
-            passes: result.passes,
-            level: result.passes ? 'AA' : 'fail',
-            foreground: result.focusColor,
-            background: result.backgroundColor,
-            recommendation: result.recommendation,
-          })
-        }
-      })
-
-      return results
-    },
-    [onViolation]
-  )
-
-  /**
    * Check focus indicator for a specific element
    */
   const checkFocusIndicator = useCallback(
@@ -189,6 +156,39 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
       }
     },
     []
+  )
+
+  /**
+   * Check focus indicators for all interactive elements
+   */
+  const validateFocusIndicators = useCallback(
+    (container: HTMLElement = document.body): FocusIndicatorResult[] => {
+      const interactiveElements = container.querySelectorAll(
+        'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"], [role="link"]'
+      )
+
+      const results: FocusIndicatorResult[] = []
+
+      interactiveElements.forEach(element => {
+        const htmlElement = element as HTMLElement
+        const result = checkFocusIndicator(htmlElement)
+        results.push(result)
+
+        if (!result.passes && onViolation) {
+          onViolation({
+            ratio: result.contrastRatio,
+            passes: result.passes,
+            level: result.passes ? 'AA' : 'fail',
+            foreground: result.focusColor,
+            background: result.backgroundColor,
+            recommendation: result.recommendation,
+          })
+        }
+      })
+
+      return results
+    },
+    [onViolation, checkFocusIndicator]
   )
 
   /**
@@ -262,7 +262,11 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
   // Auto-check on mount if enabled
   useEffect(() => {
     if (checkOnMount) {
-      validateAllContrasts()
+      // Use setTimeout to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        validateAllContrasts()
+      }, 0)
+      return () => clearTimeout(timeoutId)
     }
   }, [checkOnMount, validateAllContrasts])
 

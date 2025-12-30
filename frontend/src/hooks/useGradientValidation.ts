@@ -442,7 +442,11 @@ export function useGradientValidation(options: GradientValidationOptions = {}) {
   // Auto-validate on mount if enabled
   useEffect(() => {
     if (checkOnMount) {
-      validateAllGradients()
+      // Use setTimeout to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        validateAllGradients()
+      }, 0)
+      return () => clearTimeout(timeoutId)
     }
   }, [checkOnMount, validateAllGradients])
 

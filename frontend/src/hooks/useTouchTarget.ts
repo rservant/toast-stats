@@ -297,9 +297,12 @@ export function useAutoTouchTargetValidation(
   useEffect(() => {
     if (!containerRef.current) return
 
-    setIsValidating(true)
-    touchTarget.validateAllTouchTargets(containerRef.current)
-    setIsValidating(false)
+    // Use setTimeout to avoid synchronous setState in effect
+    const timeoutId = setTimeout(() => {
+      setIsValidating(true)
+      touchTarget.validateAllTouchTargets(containerRef.current!)
+      setIsValidating(false)
+    }, 0)
 
     // Register all interactive elements for monitoring
     const interactiveElements = containerRef.current.querySelectorAll(
@@ -311,6 +314,7 @@ export function useAutoTouchTargetValidation(
     })
 
     return () => {
+      clearTimeout(timeoutId)
       interactiveElements.forEach(element => {
         touchTarget.unregisterElement(element as HTMLElement)
       })

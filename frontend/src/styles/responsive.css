@@ -550,13 +550,25 @@ a[href],
   left: 6px;
   background: var(--tm-loyal-blue);
   color: var(--tm-white);
-  padding: 8px;
+  padding: 12px 24px;
   text-decoration: none;
   border-radius: var(--tm-radius-sm);
   z-index: 1000;
+  font-family: var(--tm-font-headline);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: var(--tm-touch-target);
+  display: flex;
+  align-items: center;
+  transition: top 0.2s ease;
   
   &:focus {
     top: 6px;
+  }
+  
+  &:hover {
+    background: var(--tm-loyal-blue-90);
   }
 }
 

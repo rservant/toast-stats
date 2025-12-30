@@ -29,7 +29,7 @@ function AppContent() {
       ))}
 
       <BrowserRouter>
-        <a href="#main-content" className="skip-link">
+        <a href="#main-content" className="tm-skip-link">
           Skip to main content
         </a>
         <Routes>

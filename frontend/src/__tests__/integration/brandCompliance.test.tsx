@@ -31,11 +31,9 @@ interface AxeResults {
 }
 
 // Extend Jest matchers for axe
-declare global {
-  namespace Vi {
-    interface Assertion {
-      toHaveNoViolations(): void
-    }
+declare module 'vitest' {
+  interface Assertion {
+    toHaveNoViolations(): void
   }
 }
 

@@ -11,7 +11,6 @@ import {
   validateContrast,
   checkTouchTarget,
   getFontSizeInPixels,
-  debounce,
 } from './utils'
 
 /**
@@ -299,21 +298,18 @@ export const AccessibilityChecker: React.FC<AccessibilityCheckerProps> = ({
     ]
   )
 
-  const validateAllElements = useCallback(
-    debounce(() => {
-      if (!containerRef.current || !enableRuntimeChecks) return
+  const validateAllElements = useCallback(() => {
+    if (!containerRef.current || !enableRuntimeChecks) return
 
-      // Get all elements within the container
-      const elements = containerRef.current.querySelectorAll('*')
+    // Get all elements within the container
+    const elements = containerRef.current.querySelectorAll('*')
 
-      elements.forEach(element => {
-        if (element instanceof HTMLElement) {
-          validateElement(element)
-        }
-      })
-    }, 200),
-    [validateElement, enableRuntimeChecks]
-  )
+    elements.forEach(element => {
+      if (element instanceof HTMLElement) {
+        validateElement(element)
+      }
+    })
+  }, [validateElement, enableRuntimeChecks])
 
   useEffect(() => {
     if (!enableRuntimeChecks) return
@@ -375,6 +371,7 @@ export const AccessibilityChecker: React.FC<AccessibilityCheckerProps> = ({
 /**
  * Higher-order component to wrap components with accessibility checking
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const withAccessibilityChecking = <P extends object>(
   Component: React.ComponentType<P>
 ): React.FC<P & Partial<AccessibilityCheckerProps>> => {

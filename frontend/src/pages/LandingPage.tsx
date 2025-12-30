@@ -222,7 +222,7 @@ const LandingPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gray-100" id="main-content">
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white rounded-lg shadow-md p-8">
             <div className="animate-pulse space-y-4">
@@ -242,7 +242,7 @@ const LandingPage: React.FC = () => {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gray-100" id="main-content">
         <div className="container mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <h2 className="text-xl font-bold text-red-800 mb-2">
@@ -258,7 +258,7 @@ const LandingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100" id="main-content">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">

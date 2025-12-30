@@ -12,18 +12,19 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import React from 'react'
 import DistrictDetailPage from '../../pages/DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { BackfillProvider } from '../../contexts/BackfillContext'
 
 // Mock localStorage for tests
 const localStorageMock = {
-  getItem: (_key: string) => null,
-  setItem: (_key: string, _value: string) => {},
-  removeItem: (_key: string) => {},
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
   clear: () => {},
   length: 0,
-  key: (_index: number) => null,
+  key: () => null,
 }
 
 // Set up localStorage mock

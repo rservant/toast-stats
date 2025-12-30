@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+/* global console, process */
+
 /**
  * Comprehensive Brand Compliance Report Generator
  *

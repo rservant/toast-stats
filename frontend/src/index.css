@@ -179,21 +179,29 @@ body {
   outline-offset: 2px;
 }
 
-/* Skip navigation link */
+/* Skip navigation link - DEPRECATED: Use .tm-skip-link instead */
 .skip-link {
   position: absolute;
   top: -40px;
   left: 0;
-  background: #2563eb;
-  color: white;
-  padding: 8px 16px;
+  background: var(--tm-loyal-blue);
+  color: var(--tm-white);
+  padding: 12px 24px;
   text-decoration: none;
-  z-index: 100;
-  border-radius: 0 0 4px 0;
+  z-index: 1000;
+  border-radius: var(--tm-radius-sm);
+  font-family: var(--tm-font-headline);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: var(--tm-touch-target);
+  display: flex;
+  align-items: center;
+  transition: top 0.2s ease;
 }
 
 .skip-link:focus {
-  top: 0;
+  top: 6px;
 }
 
 /* Ensure sufficient color contrast for text */

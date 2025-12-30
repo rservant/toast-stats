@@ -87,7 +87,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   children,
   enableValidation = typeof window !== 'undefined' &&
     window.location.hostname === 'localhost',
-  contrastMode = 'normal',
 }) => {
   const contextValue = useMemo<ThemeContextType>(() => {
     return {
@@ -116,7 +115,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         return result.passes
       },
     }
-  }, [enableValidation, contrastMode])
+  }, [enableValidation])
 
   return (
     <ThemeContext.Provider value={contextValue}>
@@ -128,6 +127,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 /**
  * Hook to access the theme context
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext)
 
@@ -141,6 +141,7 @@ export const useTheme = (): ThemeContextType => {
 /**
  * Hook to access brand tokens directly
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useBrandTokens = (): BrandTokens => {
   const { tokens } = useTheme()
   return tokens
@@ -149,6 +150,7 @@ export const useBrandTokens = (): BrandTokens => {
 /**
  * Hook to access brand colors
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useBrandColors = () => {
   const { tokens } = useTheme()
   return tokens.colors
@@ -157,6 +159,7 @@ export const useBrandColors = () => {
 /**
  * Hook to access typography tokens
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTypography = () => {
   const { tokens } = useTheme()
   return tokens.typography
@@ -165,6 +168,7 @@ export const useTypography = () => {
 /**
  * Hook to access spacing tokens
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSpacing = () => {
   const { tokens } = useTheme()
   return tokens.spacing
@@ -173,6 +177,7 @@ export const useSpacing = () => {
 /**
  * Hook to access validation functions
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useValidation = () => {
   const { validateContrast, checkTouchTarget } = useTheme()
   return { validateContrast, checkTouchTarget }
@@ -181,6 +186,7 @@ export const useValidation = () => {
 /**
  * Higher-order component to wrap components with theme provider
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const withTheme = <P extends object>(
   Component: React.ComponentType<P>
 ): React.FC<P & Partial<ThemeProviderProps>> => {
