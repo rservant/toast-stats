@@ -14,6 +14,19 @@ import { testPerformanceMonitor } from './performanceMonitor'
 import { runQuickAccessibilityCheck } from './accessibilityTestUtils'
 import { runQuickBrandCheck } from './brandComplianceTestUtils'
 
+// Type-safe helper for checking test environment (following lint-compliance-guide patterns)
+interface ExpectWithState {
+  getState?: () => { currentTestName?: string }
+}
+
+function isInsideTest(): boolean {
+  return (
+    typeof expect !== 'undefined' &&
+    typeof (expect as unknown as ExpectWithState).getState === 'function' &&
+    Boolean((expect as unknown as ExpectWithState).getState?.()?.currentTestName)
+  )
+}
+
 // Enhanced provider configuration interface
 export interface RenderWithProvidersOptions extends Omit<
   RenderOptions,
@@ -245,10 +258,7 @@ export const testComponentVariants = <
   } = options
 
   // Check if we're inside a test (vitest sets expect.getState when inside a test)
-  const isInsideTest =
-    typeof expect !== 'undefined' &&
-    typeof (expect as any).getState === 'function' &&
-    (expect as any).getState()?.currentTestName
+  const isInsideTestEnv = isInsideTest()
 
   const executeVariantTest = ({
     name,
@@ -374,7 +384,7 @@ export const testComponentVariants = <
     }
   }
 
-  if (isInsideTest) {
+  if (isInsideTestEnv) {
     // If we're inside a test, just execute the variants directly (for property tests)
     variants.forEach(executeVariantTest)
   } else {
@@ -448,10 +458,7 @@ export const testLoadingStates = <
   options: { enablePerformanceMonitoring?: boolean } = {}
 ) => {
   // Check if we're inside a test
-  const isInsideTest =
-    typeof expect !== 'undefined' &&
-    typeof (expect as any).getState === 'function' &&
-    (expect as any).getState()?.currentTestName
+  const isInsideTestEnv = isInsideTest()
 
   const executeLoadingTest = () => {
     const testName = `${Component.displayName || Component.name}-loading`
@@ -471,7 +478,7 @@ export const testLoadingStates = <
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
   }
 
-  if (isInsideTest) {
+  if (isInsideTestEnv) {
     // Execute directly for property tests
     executeLoadingTest()
     executeLoadedTest()
@@ -495,10 +502,7 @@ export const testErrorStates = <
   options: { enablePerformanceMonitoring?: boolean } = {}
 ) => {
   // Check if we're inside a test
-  const isInsideTest =
-    typeof expect !== 'undefined' &&
-    typeof (expect as any).getState === 'function' &&
-    (expect as any).getState()?.currentTestName
+  const isInsideTestEnv = isInsideTest()
 
   const executeErrorTest = () => {
     const testName = `${Component.displayName || Component.name}-error`
@@ -523,7 +527,7 @@ export const testErrorStates = <
     }
   }
 
-  if (isInsideTest) {
+  if (isInsideTestEnv) {
     // Execute directly for property tests
     executeErrorTest()
   } else {
@@ -544,10 +548,7 @@ export const testResponsiveVariants = <
   viewports: Array<{ name: string; width: number; height: number }>
 ) => {
   // Check if we're inside a test
-  const isInsideTest =
-    typeof expect !== 'undefined' &&
-    typeof (expect as any).getState === 'function' &&
-    (expect as any).getState()?.currentTestName
+  const isInsideTestEnv = isInsideTest()
 
   const executeResponsiveTest = ({
     name,
@@ -558,6 +559,8 @@ export const testResponsiveVariants = <
     width: number
     height: number
   }) => {
+    const testName = `${Component.displayName || Component.name}-responsive-${name}`
+    
     // Mock viewport size
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
@@ -573,13 +576,15 @@ export const testResponsiveVariants = <
     // Trigger resize event
     window.dispatchEvent(new Event('resize'))
 
-    renderWithProviders(<Component {...props} />)
+    renderWithProviders(<Component {...props} />, {
+      testName,
+    })
 
     // Component should render without crashing
     expect(document.body).toBeInTheDocument()
   }
 
-  if (isInsideTest) {
+  if (isInsideTestEnv) {
     // Execute directly for property tests
     viewports.forEach(executeResponsiveTest)
   } else {

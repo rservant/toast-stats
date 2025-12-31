@@ -962,13 +962,14 @@ describe('Cross-Component Compatibility Property Tests', () => {
 
             // Verify pattern-specific rendering
             switch (renderPattern) {
-              case 'conditional':
+              case 'conditional': {
                 // Use getAllByText to handle multiple elements with same text
                 const conditionElements = screen.getAllByText(
                   condition ? 'Condition True' : 'Condition False'
                 )
                 expect(conditionElements.length).toBeGreaterThan(0)
                 break
+              }
 
               case 'list':
                 for (let i = 0; i < itemCount; i++) {
