@@ -1,0 +1,52 @@
+---
+# yamllint configuration for GitHub Actions workflows
+extends: default
+
+ignore: |
+  node_modules/
+  */node_modules/
+  .git/
+  */dist/
+  */build/
+
+rules:
+  # Allow longer lines for GitHub Actions (common for long commands)
+  line-length:
+    max: 120
+    level: warning
+
+  # Allow truthy values like 'on' in GitHub Actions
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+    check-keys: false
+
+  # Be more lenient with indentation for GitHub Actions
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Allow document start to be optional
+  document-start:
+    present: false
+
+  # Allow brackets with spaces (common in GitHub Actions)
+  brackets:
+    max-spaces-inside: 1
+    max-spaces-inside-empty: 0
+
+  # Enforce trailing spaces removal
+  trailing-spaces: enable
+
+  # Enforce newline at end of file
+  new-line-at-end-of-file: enable
+
+  # Allow comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Allow empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
