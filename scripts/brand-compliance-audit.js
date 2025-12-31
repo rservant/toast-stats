@@ -11,9 +11,45 @@ const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
 
+// Determine the root directory (where package.json with workspaces is located)
+function findRootDirectory() {
+  let currentDir = process.cwd()
+
+  // If we're already in the root (has workspaces in package.json)
+  const currentPackageJson = path.join(currentDir, 'package.json')
+  if (fs.existsSync(currentPackageJson)) {
+    const pkg = JSON.parse(fs.readFileSync(currentPackageJson, 'utf8'))
+    if (pkg.workspaces) {
+      return currentDir
+    }
+  }
+
+  // Look for parent directory with workspaces
+  while (currentDir !== path.dirname(currentDir)) {
+    const parentDir = path.dirname(currentDir)
+    const packageJsonPath = path.join(parentDir, 'package.json')
+
+    if (fs.existsSync(packageJsonPath)) {
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+      if (pkg.workspaces) {
+        return parentDir
+      }
+    }
+
+    currentDir = parentDir
+  }
+
+  // Fallback to current directory
+  return process.cwd()
+}
+
+const ROOT_DIR = findRootDirectory()
+const FRONTEND_DIR = path.join(ROOT_DIR, 'frontend')
+const BACKEND_DIR = path.join(ROOT_DIR, 'backend')
+
 // Configuration
 const CONFIG = {
-  outputDir: './compliance-reports',
+  outputDir: path.join(ROOT_DIR, 'compliance-reports'),
   reportFormat: 'json', // 'json' | 'html' | 'markdown'
   includeScreenshots: false,
   testUrls: [
@@ -43,12 +79,14 @@ async function runComplianceTests() {
   console.log('🔍 Running brand compliance tests...')
 
   try {
-    // Run Vitest tests for brand compliance
+    // Run Vitest tests for brand compliance from frontend directory
     const testOutput = execSync(
       'npx vitest --reporter=json --run src/__tests__/brand/',
       {
         encoding: 'utf8',
         stdio: 'pipe',
+        cwd: FRONTEND_DIR,
+        shell: true,
       }
     )
 
@@ -76,12 +114,14 @@ async function runAccessibilityAudit() {
   console.log('♿ Running accessibility audit...')
 
   try {
-    // Run accessibility tests
+    // Run accessibility tests from frontend directory
     const testOutput = execSync(
       'npx vitest --reporter=json --run src/__tests__/accessibility/',
       {
         encoding: 'utf8',
         stdio: 'pipe',
+        cwd: FRONTEND_DIR,
+        shell: true,
       }
     )
 
@@ -109,10 +149,19 @@ async function analyzeBundleSize() {
   console.log('📦 Analyzing bundle size...')
 
   try {
-    // Build the project to get bundle size
-    execSync('npm run build', { stdio: 'pipe' })
+    // Build the frontend project to get bundle size
+    execSync('npm run build', {
+      stdio: 'pipe',
+      cwd: FRONTEND_DIR,
+      shell: true,
+    })
 
-    const distPath = path.join(process.cwd(), 'frontend/dist')
+    const distPath = path.join(FRONTEND_DIR, 'dist')
+
+    if (!fs.existsSync(distPath)) {
+      throw new Error(`Build directory not found: ${distPath}`)
+    }
+
     const cssFiles = fs
       .readdirSync(distPath)
       .filter(file => file.endsWith('.css'))
@@ -151,8 +200,19 @@ async function checkTypeScriptCompliance() {
   console.log('📝 Checking TypeScript compliance...')
 
   try {
-    // Run TypeScript compiler check
-    execSync('npx tsc --noEmit --skipLibCheck', { stdio: 'pipe' })
+    // Check frontend TypeScript
+    execSync('npx tsc --noEmit --skipLibCheck', {
+      stdio: 'pipe',
+      shell: true,
+      cwd: FRONTEND_DIR,
+    })
+
+    // Check backend TypeScript
+    execSync('npx tsc --noEmit --skipLibCheck', {
+      stdio: 'pipe',
+      shell: true,
+      cwd: BACKEND_DIR,
+    })
 
     return {
       success: true,
@@ -183,18 +243,33 @@ async function checkLintCompliance() {
   console.log('🔧 Checking lint compliance...')
 
   try {
-    // Run ESLint
-    const lintOutput = execSync('npm run lint -- --format=json', {
+    // Run ESLint directly on frontend and backend
+    const frontendLintOutput = execSync(
+      'npx eslint . --ext ts,tsx --format=json',
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: FRONTEND_DIR,
+        shell: true,
+      }
+    )
+
+    const backendLintOutput = execSync('npx eslint . --ext .ts --format=json', {
       encoding: 'utf8',
       stdio: 'pipe',
+      cwd: BACKEND_DIR,
+      shell: true,
     })
 
-    const lintResults = JSON.parse(lintOutput)
-    const totalErrors = lintResults.reduce(
+    const frontendResults = JSON.parse(frontendLintOutput)
+    const backendResults = JSON.parse(backendLintOutput)
+    const allResults = [...frontendResults, ...backendResults]
+
+    const totalErrors = allResults.reduce(
       (sum, result) => sum + result.errorCount,
       0
     )
-    const totalWarnings = lintResults.reduce(
+    const totalWarnings = allResults.reduce(
       (sum, result) => sum + result.warningCount,
       0
     )
@@ -204,7 +279,7 @@ async function checkLintCompliance() {
       errors: totalErrors,
       warnings: totalWarnings,
       message: `Found ${totalErrors} errors and ${totalWarnings} warnings`,
-      results: lintResults,
+      results: allResults,
     }
   } catch (error) {
     console.error('❌ Lint check failed:', error.message)
