@@ -9,40 +9,6 @@
 import { ReactElement } from 'react'
 import { renderWithProviders } from './componentTestUtils'
 
-// Axe-core synchronization to prevent concurrent runs
-let axeRunning = false
-const axeQueue: Array<() => Promise<void>> = []
-
-const runAxeSynchronized = async (fn: () => Promise<void>): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    const wrappedFn = async () => {
-      try {
-        await fn()
-        resolve()
-      } catch (error) {
-        reject(error)
-      } finally {
-        axeRunning = false
-        // Process next item in queue
-        const next = axeQueue.shift()
-        if (next) {
-          axeRunning = true
-          next()
-        }
-      }
-    }
-
-    if (axeRunning) {
-      // Add to queue
-      axeQueue.push(wrappedFn)
-    } else {
-      // Run immediately
-      axeRunning = true
-      wrappedFn()
-    }
-  })
-}
-
 // Accessibility violation types for detailed reporting
 interface AccessibilityViolation {
   type:

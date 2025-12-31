@@ -416,7 +416,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     })
 
     it('should not provide multi-year trends when less than 3 years available', async () => {
-      const districtId = `test-district-${Date.now()}-4`
+      const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
 
       // Cache data for only 2 years
       for (let year = 2023; year <= 2024; year++) {
@@ -438,6 +438,19 @@ describe('Year-Over-Year Comparison Logic', () => {
           clubPerformance
         )
       }
+
+      // Verify data was cached correctly
+      const currentData = await cacheManager.getDistrictData(
+        districtId,
+        '2024-11-22'
+      )
+      const previousData = await cacheManager.getDistrictData(
+        districtId,
+        '2023-11-22'
+      )
+
+      expect(currentData).not.toBeNull()
+      expect(previousData).not.toBeNull()
 
       const result = await analyticsEngine.calculateYearOverYear(
         districtId,

@@ -18,7 +18,6 @@ import {
   testComponentVariants,
   expectBasicRendering,
   testLoadingStates,
-  testErrorStates,
   cleanupAllResources,
   ComponentVariant,
 } from '../utils/componentTestUtils'
@@ -550,7 +549,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
 
               // Look for the error message in the rendered content
               // Use getAllByText to handle multiple elements and check that at least one exists
-              const errorElements = screen.getAllByText((content, element) => {
+              const errorElements = screen.getAllByText((_content, element) => {
                 return element?.textContent?.includes(errorMessage) ?? false
               })
               expect(errorElements.length).toBeGreaterThan(0)
