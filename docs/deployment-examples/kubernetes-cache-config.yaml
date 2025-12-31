@@ -64,79 +64,79 @@ spec:
         app: toastmasters-backend
     spec:
       containers:
-      - name: backend
-        image: toastmasters-backend:latest
-        ports:
-        - containerPort: 5001
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: PORT
-          value: "5001"
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: toastmasters-secrets
-              key: jwt-secret
-        - name: TOASTMASTERS_DASHBOARD_URL
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: dashboard-url
-        - name: CORS_ORIGIN
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: cors-origin
-        # Cache configuration from ConfigMap
-        - name: CACHE_DIR
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: cache-dir
-        - name: CACHE_TTL
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: cache-ttl
-        - name: RATE_LIMIT_WINDOW_MS
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: rate-limit-window-ms
-        - name: RATE_LIMIT_MAX_REQUESTS
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: rate-limit-max-requests
-        # Volume mount for cache directory
-        volumeMounts:
-        - name: cache-volume
-          mountPath: /var/cache/toastmasters
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5001
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5001
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: backend
+          image: toastmasters-backend:latest
+          ports:
+            - containerPort: 5001
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "5001"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: toastmasters-secrets
+                  key: jwt-secret
+            - name: TOASTMASTERS_DASHBOARD_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: dashboard-url
+            - name: CORS_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: cors-origin
+            # Cache configuration from ConfigMap
+            - name: CACHE_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: cache-dir
+            - name: CACHE_TTL
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: cache-ttl
+            - name: RATE_LIMIT_WINDOW_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: rate-limit-window-ms
+            - name: RATE_LIMIT_MAX_REQUESTS
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: rate-limit-max-requests
+          # Volume mount for cache directory
+          volumeMounts:
+            - name: cache-volume
+              mountPath: /var/cache/toastmasters
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 10
       # Volume definition
       volumes:
-      - name: cache-volume
-        persistentVolumeClaim:
-          claimName: toastmasters-cache-pvc
+        - name: cache-volume
+          persistentVolumeClaim:
+            claimName: toastmasters-cache-pvc
 
 ---
 # Service for backend
@@ -149,9 +149,9 @@ spec:
   selector:
     app: toastmasters-backend
   ports:
-  - protocol: TCP
-    port: 5001
-    targetPort: 5001
+    - protocol: TCP
+      port: 5001
+      targetPort: 5001
   type: ClusterIP
 
 ---
@@ -174,32 +174,32 @@ spec:
         app: toastmasters-frontend
     spec:
       containers:
-      - name: frontend
-        image: toastmasters-frontend:latest
-        ports:
-        - containerPort: 80
-        env:
-        - name: BACKEND_URL
-          value: "http://toastmasters-backend:5001"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: frontend
+          image: toastmasters-frontend:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: BACKEND_URL
+              value: "http://toastmasters-backend:5001"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
 
 ---
 # Service for frontend
@@ -212,9 +212,9 @@ spec:
   selector:
     app: toastmasters-frontend
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 80
+    - protocol: TCP
+      port: 80
+      targetPort: 80
   type: LoadBalancer
 
 ---
@@ -229,24 +229,24 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   tls:
-  - hosts:
-    - yourdomain.com
-    secretName: toastmasters-tls
+    - hosts:
+        - yourdomain.com
+      secretName: toastmasters-tls
   rules:
-  - host: yourdomain.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: toastmasters-frontend
-            port:
-              number: 80
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: toastmasters-backend
-            port:
-              number: 5001
+    - host: yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: toastmasters-frontend
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: toastmasters-backend
+                port:
+                  number: 5001

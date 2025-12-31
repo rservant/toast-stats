@@ -56,9 +56,12 @@ jobs:
           echo "## TypeScript Compilation Results" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Error Count | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend | $BACKEND_ERRORS | $([ $BACKEND_ERRORS -eq 0 ] && echo '✅ Pass' || echo '❌ Fail') |" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend | $FRONTEND_ERRORS | $([ $FRONTEND_ERRORS -eq 0 ] && echo '✅ Pass' || echo '❌ Fail') |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Total** | **$TOTAL_ERRORS** | $([ $TOTAL_ERRORS -eq 0 ] && echo '✅ **PASS**' || echo '❌ **FAIL**') |" >> $GITHUB_STEP_SUMMARY
+          BACKEND_STATUS=$([ $BACKEND_ERRORS -eq 0 ] && echo '✅ Pass' || echo '❌ Fail')
+          FRONTEND_STATUS=$([ $FRONTEND_ERRORS -eq 0 ] && echo '✅ Pass' || echo '❌ Fail')
+          TOTAL_STATUS=$([ $TOTAL_ERRORS -eq 0 ] && echo '✅ **PASS**' || echo '❌ **FAIL**')
+          echo "| Backend | $BACKEND_ERRORS | $BACKEND_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | $FRONTEND_ERRORS | $FRONTEND_STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **$TOTAL_ERRORS** | $TOTAL_STATUS |" >> $GITHUB_STEP_SUMMARY
 
           if [ "$TOTAL_ERRORS" -gt 0 ]; then
             echo "❌ POLICY VIOLATION: TypeScript errors are not permitted"

@@ -15,60 +15,60 @@ spec:
         app: toastmasters-backend
     spec:
       containers:
-      - name: backend
-        image: toastmasters-backend:latest
-        ports:
-        - containerPort: 5001
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: PORT
-          value: "5001"
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: toastmasters-secrets
-              key: jwt-secret
-        - name: TOASTMASTERS_DASHBOARD_URL
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: dashboard-url
-        - name: CORS_ORIGIN
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: cors-origin
-        - name: CACHE_DIR
-          valueFrom:
-            configMapKeyRef:
-              name: toastmasters-config
-              key: cache-dir
-        - name: CACHE_TTL
-          value: "900"
-        - name: RATE_LIMIT_WINDOW_MS
-          value: "900000"
-        - name: RATE_LIMIT_MAX_REQUESTS
-          value: "100"
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 5001
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 5001
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: backend
+          image: toastmasters-backend:latest
+          ports:
+            - containerPort: 5001
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "5001"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: toastmasters-secrets
+                  key: jwt-secret
+            - name: TOASTMASTERS_DASHBOARD_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: dashboard-url
+            - name: CORS_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: cors-origin
+            - name: CACHE_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: toastmasters-config
+                  key: cache-dir
+            - name: CACHE_TTL
+              value: "900"
+            - name: RATE_LIMIT_WINDOW_MS
+              value: "900000"
+            - name: RATE_LIMIT_MAX_REQUESTS
+              value: "100"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -78,7 +78,7 @@ spec:
   selector:
     app: toastmasters-backend
   ports:
-  - protocol: TCP
-    port: 5001
-    targetPort: 5001
+    - protocol: TCP
+      port: 5001
+      targetPort: 5001
   type: ClusterIP
