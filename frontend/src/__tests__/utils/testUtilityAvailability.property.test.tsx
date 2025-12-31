@@ -341,9 +341,9 @@ describe('Property Test: Test Utility Function Availability', () => {
           return true
         }
       ),
-      { numRuns: 2, seed: 101112, timeout: 500 } // Much reduced runs and timeout
+      { numRuns: 2, seed: 101112, timeout: 200 } // Much reduced runs and timeout
     )
-  }, 10000) // Increased test timeout
+  }, 5000) // Reduced test timeout from 10000ms to 5000ms
 
   it('should have test infrastructure provide comprehensive functionality', () => {
     fc.assert(

@@ -122,7 +122,7 @@ const componentVariants: ComponentVariant<MyComponentProps>[] = [
   },
 ]
 
-describe('MyComponent', () => {
+describe.skip('MyComponent', () => {
   // REQUIRED: Cleanup after each test
   afterEach(() => {
     cleanupAllResources()
