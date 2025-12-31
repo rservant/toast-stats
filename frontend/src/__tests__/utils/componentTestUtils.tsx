@@ -23,7 +23,9 @@ function isInsideTest(): boolean {
   return (
     typeof expect !== 'undefined' &&
     typeof (expect as unknown as ExpectWithState).getState === 'function' &&
-    Boolean((expect as unknown as ExpectWithState).getState?.()?.currentTestName)
+    Boolean(
+      (expect as unknown as ExpectWithState).getState?.()?.currentTestName
+    )
   )
 }
 
@@ -560,7 +562,7 @@ export const testResponsiveVariants = <
     height: number
   }) => {
     const testName = `${Component.displayName || Component.name}-responsive-${name}`
-    
+
     // Mock viewport size
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
