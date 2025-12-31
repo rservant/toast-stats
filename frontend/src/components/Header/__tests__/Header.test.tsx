@@ -1,58 +1,72 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import React from 'react'
+import { describe, it, expect, afterEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import Header from '../Header'
+import {
+  testComponentVariants,
+  renderWithProviders,
+  cleanupAllResources,
+  ComponentVariant,
+} from '../../../__tests__/utils/componentTestUtils'
+
+interface HeaderProps {
+  children: React.ReactNode
+  variant?: 'primary' | 'secondary'
+  className?: string
+}
 
 describe('Header Component', () => {
-  it('renders with proper semantic markup', () => {
-    render(
-      <Header>
-        <div>Header content</div>
-      </Header>
-    )
-
-    const header = screen.getByRole('banner')
-    expect(header).toBeInTheDocument()
-    expect(header.tagName).toBe('HEADER')
+  afterEach(() => {
+    cleanupAllResources()
   })
 
-  it('applies primary variant styling by default', () => {
-    render(
-      <Header>
-        <div>Header content</div>
-      </Header>
-    )
+  // Test header variants
+  const headerVariants: ComponentVariant<HeaderProps>[] = [
+    {
+      name: 'primary variant (default)',
+      props: { children: <div>Header content</div> },
+      customAssertion: () => {
+        const header = screen.getByRole('banner')
+        expect(header).toBeInTheDocument()
+        expect(header.tagName).toBe('HEADER')
+        expect(header).toHaveClass('tm-bg-loyal-blue')
+        expect(header).toHaveClass('tm-text-white')
+      },
+    },
+    {
+      name: 'secondary variant',
+      props: {
+        children: <div>Header content</div>,
+        variant: 'secondary',
+      },
+      customAssertion: () => {
+        const header = screen.getByRole('banner')
+        expect(header).toHaveClass('tm-bg-cool-gray')
+        expect(header).toHaveClass('tm-text-black')
+      },
+    },
+    {
+      name: 'with custom className',
+      props: {
+        children: <div>Header content</div>,
+        className: 'custom-header',
+      },
+      customAssertion: () => {
+        const header = screen.getByRole('banner')
+        expect(header).toHaveClass('custom-header')
+        expect(header).toHaveClass('tm-bg-loyal-blue') // Preserves default variant
+      },
+    },
+  ]
 
-    const header = screen.getByRole('banner')
-    expect(header).toHaveClass('tm-bg-loyal-blue')
-    expect(header).toHaveClass('tm-text-white')
-  })
+  testComponentVariants(
+    Header as unknown as React.ComponentType<Record<string, unknown>>,
+    headerVariants as unknown as ComponentVariant<Record<string, unknown>>[]
+  )
 
-  it('applies secondary variant styling when specified', () => {
-    render(
-      <Header variant="secondary">
-        <div>Header content</div>
-      </Header>
-    )
-
-    const header = screen.getByRole('banner')
-    expect(header).toHaveClass('tm-bg-cool-gray')
-    expect(header).toHaveClass('tm-text-black')
-  })
-
-  it('accepts custom className', () => {
-    render(
-      <Header className="custom-header">
-        <div>Header content</div>
-      </Header>
-    )
-
-    const header = screen.getByRole('banner')
-    expect(header).toHaveClass('custom-header')
-    expect(header).toHaveClass('tm-bg-loyal-blue') // Should still have default variant
-  })
-
-  it('renders children content', () => {
-    render(
+  // Test content and layout
+  it('renders children content and has proper layout', () => {
+    renderWithProviders(
       <Header>
         <div data-testid="header-content">Header content</div>
       </Header>
@@ -60,29 +74,12 @@ describe('Header Component', () => {
 
     expect(screen.getByTestId('header-content')).toBeInTheDocument()
     expect(screen.getByText('Header content')).toBeInTheDocument()
-  })
-
-  it('has proper responsive padding classes', () => {
-    render(
-      <Header>
-        <div>Header content</div>
-      </Header>
-    )
 
     const header = screen.getByRole('banner')
     expect(header).toHaveClass('py-4')
     expect(header).toHaveClass('px-4')
     expect(header).toHaveClass('sm:px-6')
-  })
 
-  it('contains flexbox layout for content arrangement', () => {
-    render(
-      <Header>
-        <div>Header content</div>
-      </Header>
-    )
-
-    const header = screen.getByRole('banner')
     const contentContainer = header.querySelector(
       '.flex.items-center.justify-between'
     )

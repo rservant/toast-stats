@@ -1,74 +1,109 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import React from 'react'
+import { describe, it, expect, afterEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import StatCard from '../StatCard'
+import {
+  testComponentVariants,
+  renderWithProviders,
+  cleanupAllResources,
+  ComponentVariant,
+} from '../../__tests__/utils/componentTestUtils'
+import { StatCardProps } from '../StatCard'
 
 describe('StatCard', () => {
-  it('should render stat name and value', () => {
-    render(<StatCard name="Total Members" value={1250} />)
-
-    expect(screen.getByText('Total Members')).toBeInTheDocument()
-    expect(screen.getByText('1250')).toBeInTheDocument()
+  afterEach(() => {
+    cleanupAllResources()
   })
 
-  it('should display loading state', () => {
-    render(<StatCard name="Total Members" value={1250} isLoading={true} />)
+  // Test basic rendering variants
+  const basicVariants: ComponentVariant<StatCardProps>[] = [
+    {
+      name: 'with name and value',
+      props: { name: 'Total Members', value: 1250 },
+      expectedText: 'Total Members',
+      customAssertion: () => {
+        expect(screen.getByText('1250')).toBeInTheDocument()
+      },
+    },
+    {
+      name: 'with string value',
+      props: { name: 'Status', value: 'Active' },
+      expectedText: 'Active',
+    },
+    {
+      name: 'with loading state',
+      props: { name: 'Total Members', value: 1250, isLoading: true },
+      customAssertion: () => {
+        expect(screen.getByLabelText('Loading statistics')).toBeInTheDocument()
+        expect(screen.queryByText('Total Members')).not.toBeInTheDocument()
+      },
+    },
+  ]
 
-    expect(screen.getByLabelText('Loading statistics')).toBeInTheDocument()
-    expect(screen.queryByText('Total Members')).not.toBeInTheDocument()
-  })
+  testComponentVariants(
+    StatCard as unknown as React.ComponentType<Record<string, unknown>>,
+    basicVariants as unknown as ComponentVariant<Record<string, unknown>>[]
+  )
 
-  it('should display positive trend with brand-compliant color', () => {
-    render(
-      <StatCard
-        name="Total Members"
-        value={1250}
-        change={50}
-        changePercent={4.2}
-        trend="positive"
-      />
-    )
+  // Test trend variants with brand-compliant colors
+  const trendVariants: ComponentVariant<StatCardProps>[] = [
+    {
+      name: 'positive trend',
+      props: {
+        name: 'Total Members',
+        value: 1250,
+        change: 50,
+        changePercent: 4.2,
+        trend: 'positive',
+      },
+      customAssertion: () => {
+        const trendElement = screen.getByRole('status')
+        expect(trendElement).toHaveTextContent('+50')
+        expect(trendElement).toHaveTextContent('(+4.2%)')
+        expect(trendElement).toHaveClass('tm-text-loyal-blue')
+      },
+    },
+    {
+      name: 'negative trend',
+      props: {
+        name: 'Total Members',
+        value: 1200,
+        change: -50,
+        changePercent: -4.0,
+        trend: 'negative',
+      },
+      customAssertion: () => {
+        const trendElement = screen.getByRole('status')
+        expect(trendElement).toHaveTextContent('-50')
+        expect(trendElement).toHaveTextContent('(-4.0%)')
+        expect(trendElement).toHaveClass('tm-text-true-maroon')
+      },
+    },
+    {
+      name: 'neutral trend',
+      props: {
+        name: 'Total Members',
+        value: 1250,
+        change: 0,
+        changePercent: 0,
+        trend: 'neutral',
+      },
+      customAssertion: () => {
+        const trendElement = screen.getByRole('status')
+        expect(trendElement).toHaveTextContent('0')
+        expect(trendElement).toHaveClass('tm-text-cool-gray')
+      },
+    },
+  ]
 
-    const trendElement = screen.getByRole('status')
-    expect(trendElement).toHaveTextContent('+50')
-    expect(trendElement).toHaveTextContent('(+4.2%)')
-    expect(trendElement).toHaveClass('tm-text-loyal-blue')
-  })
+  testComponentVariants(
+    StatCard as unknown as React.ComponentType<Record<string, unknown>>,
+    trendVariants as unknown as ComponentVariant<Record<string, unknown>>[]
+  )
 
-  it('should display negative trend with brand-compliant color', () => {
-    render(
-      <StatCard
-        name="Total Members"
-        value={1200}
-        change={-50}
-        changePercent={-4.0}
-        trend="negative"
-      />
-    )
-
-    const trendElement = screen.getByRole('status')
-    expect(trendElement).toHaveTextContent('-50')
-    expect(trendElement).toHaveTextContent('(-4.0%)')
-    expect(trendElement).toHaveClass('tm-text-true-maroon')
-  })
-
-  it('should display neutral trend with brand-compliant color', () => {
-    render(
-      <StatCard
-        name="Total Members"
-        value={1250}
-        change={0}
-        changePercent={0}
-        trend="neutral"
-      />
-    )
-
-    const trendElement = screen.getByRole('status')
-    expect(trendElement).toHaveTextContent('0')
-    expect(trendElement).toHaveClass('tm-text-cool-gray')
-  })
-
-  it('should render footer content when provided', () => {
-    render(
+  // Test footer content
+  it('renders footer content when provided', () => {
+    renderWithProviders(
       <StatCard
         name="Total Members"
         value={1250}
@@ -77,11 +112,5 @@ describe('StatCard', () => {
     )
 
     expect(screen.getByText('Last updated: Today')).toBeInTheDocument()
-  })
-
-  it('should handle string values', () => {
-    render(<StatCard name="Status" value="Active" />)
-
-    expect(screen.getByText('Active')).toBeInTheDocument()
   })
 })

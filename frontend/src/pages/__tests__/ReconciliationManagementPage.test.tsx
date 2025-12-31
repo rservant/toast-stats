@@ -1,5 +1,10 @@
-import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import {
+  testComponentVariants,
+  runQuickBrandCheck,
+  runQuickAccessibilityCheck,
+} from '../../__tests__/utils'
 import ReconciliationManagementPage from '../ReconciliationManagementPage'
 
 // Mock the ReconciliationManagement component
@@ -12,34 +17,62 @@ vi.mock('../../components/ReconciliationManagement', () => ({
 }))
 
 describe('ReconciliationManagementPage', () => {
-  it('should render the page with correct title and description', () => {
-    render(<ReconciliationManagementPage />)
+  // Migrate to shared utilities for consistent testing patterns
+  testComponentVariants(ReconciliationManagementPage, [
+    {
+      name: 'default page layout',
+      props: {},
+      expectedText: 'Reconciliation Management',
+      customAssertion: container => {
+        // Check for page title and description
+        expect(
+          screen.getByText('Reconciliation Management')
+        ).toBeInTheDocument()
+        expect(
+          screen.getByText(
+            'Manage month-end data reconciliation jobs and system configuration'
+          )
+        ).toBeInTheDocument()
 
-    expect(screen.getByText('Reconciliation Management')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'Manage month-end data reconciliation jobs and system configuration'
-      )
-    ).toBeInTheDocument()
+        // Check for ReconciliationManagement component
+        const managementComponent = screen.getByTestId(
+          'reconciliation-management'
+        )
+        expect(managementComponent).toBeInTheDocument()
+        expect(managementComponent).toHaveTextContent(
+          'Admin Management Interface'
+        )
+
+        // Check for proper page layout and styling
+        const mainContainer = container.querySelector(
+          '.min-h-screen.bg-gray-50'
+        )
+        expect(mainContainer).toBeInTheDocument()
+
+        const contentWrapper = container.querySelector('.max-w-7xl.mx-auto')
+        expect(contentWrapper).toBeInTheDocument()
+      },
+    },
+  ])
+
+  // Add comprehensive compliance testing
+  it('should meet brand compliance standards', () => {
+    const { passed, criticalViolations } = runQuickBrandCheck(
+      <ReconciliationManagementPage />
+    )
+    if (!passed) {
+      const errorMessage = `Critical brand violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
+      throw new Error(errorMessage)
+    }
   })
 
-  it('should render the ReconciliationManagement component with admin access', () => {
-    render(<ReconciliationManagementPage />)
-
-    const managementComponent = screen.getByTestId('reconciliation-management')
-    expect(managementComponent).toBeInTheDocument()
-    expect(managementComponent).toHaveTextContent('Admin Management Interface')
-  })
-
-  it('should have proper page layout and styling', () => {
-    const { container } = render(<ReconciliationManagementPage />)
-
-    // Check for main container classes
-    const mainContainer = container.querySelector('.min-h-screen.bg-gray-50')
-    expect(mainContainer).toBeInTheDocument()
-
-    // Check for content wrapper
-    const contentWrapper = container.querySelector('.max-w-7xl.mx-auto')
-    expect(contentWrapper).toBeInTheDocument()
+  it('should meet accessibility standards', () => {
+    const { passed, criticalViolations } = runQuickAccessibilityCheck(
+      <ReconciliationManagementPage />
+    )
+    if (!passed) {
+      const errorMessage = `Critical accessibility violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
+      throw new Error(errorMessage)
+    }
   })
 })

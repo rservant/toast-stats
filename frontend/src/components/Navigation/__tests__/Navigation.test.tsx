@@ -1,58 +1,72 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import React from 'react'
+import { describe, it, expect, afterEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import Navigation from '../Navigation'
+import {
+  testComponentVariants,
+  renderWithProviders,
+  cleanupAllResources,
+  ComponentVariant,
+} from '../../../__tests__/utils/componentTestUtils'
+
+interface NavigationProps {
+  children: React.ReactNode
+  className?: string
+  'aria-label'?: string
+}
 
 describe('Navigation Component', () => {
-  it('renders with proper semantic markup', () => {
-    render(
-      <Navigation aria-label="Test navigation">
-        <div>Navigation content</div>
-      </Navigation>
-    )
-
-    const nav = screen.getByRole('navigation', { name: 'Test navigation' })
-    expect(nav).toBeInTheDocument()
-    expect(nav).toHaveAttribute('aria-label', 'Test navigation')
+  afterEach(() => {
+    cleanupAllResources()
   })
 
-  it('applies brand-compliant styling classes', () => {
-    render(
-      <Navigation>
-        <div>Navigation content</div>
-      </Navigation>
-    )
+  // Test navigation variants
+  const navigationVariants: ComponentVariant<NavigationProps>[] = [
+    {
+      name: 'with default aria-label',
+      props: { children: <div>Navigation content</div> },
+      customAssertion: () => {
+        const nav = screen.getByRole('navigation', { name: 'Main navigation' })
+        expect(nav).toBeInTheDocument()
+        expect(nav).toHaveClass('tm-bg-loyal-blue')
+        expect(nav).toHaveClass('tm-text-white')
+      },
+    },
+    {
+      name: 'with custom aria-label',
+      props: {
+        children: <div>Navigation content</div>,
+        'aria-label': 'Test navigation',
+      },
+      customAssertion: () => {
+        const nav = screen.getByRole('navigation', { name: 'Test navigation' })
+        expect(nav).toBeInTheDocument()
+        expect(nav).toHaveAttribute('aria-label', 'Test navigation')
+      },
+    },
+    {
+      name: 'with custom className',
+      props: {
+        children: <div>Navigation content</div>,
+        className: 'custom-class',
+      },
+      customAssertion: () => {
+        const nav = screen.getByRole('navigation')
+        expect(nav).toHaveClass('custom-class')
+        expect(nav).toHaveClass('tm-bg-loyal-blue') // Preserves brand classes
+        expect(nav).toHaveClass('tm-text-white')
+      },
+    },
+  ]
 
-    const nav = screen.getByRole('navigation')
-    expect(nav).toHaveClass('tm-bg-loyal-blue')
-    expect(nav).toHaveClass('tm-text-white')
-  })
+  testComponentVariants(
+    Navigation as unknown as React.ComponentType<Record<string, unknown>>,
+    navigationVariants as unknown as ComponentVariant<Record<string, unknown>>[]
+  )
 
-  it('uses default aria-label when not provided', () => {
-    render(
-      <Navigation>
-        <div>Navigation content</div>
-      </Navigation>
-    )
-
-    const nav = screen.getByRole('navigation', { name: 'Main navigation' })
-    expect(nav).toBeInTheDocument()
-  })
-
-  it('accepts custom className', () => {
-    render(
-      <Navigation className="custom-class">
-        <div>Navigation content</div>
-      </Navigation>
-    )
-
-    const nav = screen.getByRole('navigation')
-    expect(nav).toHaveClass('custom-class')
-    expect(nav).toHaveClass('tm-bg-loyal-blue')
-    expect(nav).toHaveClass('tm-text-white')
-  })
-
+  // Test content rendering
   it('renders children content', () => {
-    render(
+    renderWithProviders(
       <Navigation>
         <div data-testid="nav-content">Navigation content</div>
       </Navigation>
