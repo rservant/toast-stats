@@ -40,23 +40,23 @@ function Layout() {
 const router = createBrowserRouter(
   [
     {
-      path: "/",
+      path: '/',
       element: <Layout />,
       children: [
         {
           index: true,
-          element: <LandingPage />
+          element: <LandingPage />,
         },
         {
-          path: "district/:districtId",
-          element: <DistrictDetailPage />
+          path: 'district/:districtId',
+          element: <DistrictDetailPage />,
         },
         {
-          path: "admin/reconciliation",
-          element: <ReconciliationManagementPage />
-        }
-      ]
-    }
+          path: 'admin/reconciliation',
+          element: <ReconciliationManagementPage />,
+        },
+      ],
+    },
   ]
   // Future flags will be added when React Router v7 is available:
   // {

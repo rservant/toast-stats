@@ -49,7 +49,7 @@ export const renderWithProviders = (
   const router = createMemoryRouter(
     [
       {
-        path: "*",
+        path: '*',
         element: ui,
       },
     ],

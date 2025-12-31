@@ -240,11 +240,14 @@ describe.skip('Component Integration Tests', () => {
       await user.type(input, 'test value')
 
       // Verify parent receives updates with shorter timeout
-      await waitFor(() => {
-        expect(screen.getByTestId('parent-value')).toHaveTextContent(
-          'Related Value: test value'
-        )
-      }, { timeout: 1000 }) // Reduce timeout from default 5000ms to 1000ms
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('parent-value')).toHaveTextContent(
+            'Related Value: test value'
+          )
+        },
+        { timeout: 1000 }
+      ) // Reduce timeout from default 5000ms to 1000ms
 
       // Verify related component shows output
       expect(screen.getByTestId('related-output')).toHaveTextContent(
@@ -279,9 +282,12 @@ describe.skip('Component Integration Tests', () => {
       )
 
       // Step 5: Verify action history with shorter timeout
-      await waitFor(() => {
-        expect(screen.getByTestId('action-0')).toBeInTheDocument()
-      }, { timeout: 1000 }) // Reduce timeout from default 5000ms to 1000ms
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('action-0')).toBeInTheDocument()
+        },
+        { timeout: 1000 }
+      ) // Reduce timeout from default 5000ms to 1000ms
 
       const actionHistory = screen.getByTestId('action-0')
       expect(actionHistory).toHaveTextContent('Action 1: 2 items at')
@@ -319,15 +325,18 @@ describe.skip('Component Integration Tests', () => {
       await Promise.all(promises)
 
       // Verify final state is consistent with shorter timeout
-      await waitFor(() => {
-        expect(screen.getByTestId('item-count')).toHaveTextContent('Items: 2')
-        expect(screen.getByTestId('parent-value')).toHaveTextContent(
-          'Related Value: concurrent'
-        )
-        expect(screen.getByTestId('connection')).toHaveTextContent(
-          'Connection: Connected'
-        )
-      }, { timeout: 1000 }) // Reduce timeout from default 5000ms to 1000ms
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('item-count')).toHaveTextContent('Items: 2')
+          expect(screen.getByTestId('parent-value')).toHaveTextContent(
+            'Related Value: concurrent'
+          )
+          expect(screen.getByTestId('connection')).toHaveTextContent(
+            'Connection: Connected'
+          )
+        },
+        { timeout: 1000 }
+      ) // Reduce timeout from default 5000ms to 1000ms
     }, 3000) // Add 3 second timeout
   })
 
@@ -377,9 +386,12 @@ describe.skip('Component Integration Tests', () => {
       expect(screen.getByTestId('item-count')).toHaveTextContent('Items: 0')
 
       // Wait for external data update with shorter timeout
-      await waitFor(() => {
-        expect(screen.getByTestId('item-count')).toHaveTextContent('Items: 1')
-      }, { timeout: 500 }) // Reduce timeout from default 5000ms to 500ms
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('item-count')).toHaveTextContent('Items: 1')
+        },
+        { timeout: 500 }
+      ) // Reduce timeout from default 5000ms to 500ms
     }, 1000) // Add 1 second timeout
 
     it('should propagate data changes through component hierarchy', async () => {
@@ -394,10 +406,13 @@ describe.skip('Component Integration Tests', () => {
       await user.click(screen.getByText('Execute Action'))
 
       // Verify action history in parent reflects child data with shorter timeout
-      await waitFor(() => {
-        const actionHistory = screen.getByTestId('action-0')
-        expect(actionHistory).toHaveTextContent('2 items')
-      }, { timeout: 1000 }) // Reduce timeout from default 5000ms to 1000ms
+      await waitFor(
+        () => {
+          const actionHistory = screen.getByTestId('action-0')
+          expect(actionHistory).toHaveTextContent('2 items')
+        },
+        { timeout: 1000 }
+      ) // Reduce timeout from default 5000ms to 1000ms
     }, 2000) // Add 2 second timeout
   })
 
@@ -544,7 +559,8 @@ describe.skip('Component Integration Tests', () => {
       const start = performance.now()
 
       // Reduced rapid item additions for faster test
-      for (let i = 0; i < 5; i++) { // Reduced from 20 to 5 iterations
+      for (let i = 0; i < 5; i++) {
+        // Reduced from 20 to 5 iterations
         await user.click(screen.getByText('Add Item'))
       }
 

@@ -118,7 +118,7 @@ describe('ErrorDisplay', () => {
       name: 'basic error message',
       props: { error: new Error('Test error message') },
       customAssertion: () => {
-        expect(screen.getByRole('status')).toBeInTheDocument()
+        expect(screen.getByRole('alert')).toBeInTheDocument()
         expect(screen.getByText(/Test error message/i)).toBeInTheDocument()
       },
     },

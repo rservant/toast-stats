@@ -95,7 +95,7 @@ const createProvidersWrapper = (options: RenderWithProvidersOptions = {}) => {
       const router = createMemoryRouter(
         [
           {
-            path: "*",
+            path: '*',
             element: wrappedChildren,
           },
         ],
@@ -222,6 +222,10 @@ export interface VariantTestOptions {
 
 /**
  * Enhanced test component with different prop variations including performance benchmarking
+ *
+ * This function can work in two modes:
+ * 1. Legacy mode: When called inside a describe block, it creates test cases directly
+ * 2. New mode: When called from within a test, it returns test functions
  */
 export const testComponentVariants = <
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -240,135 +244,147 @@ export const testComponentVariants = <
     afterEach,
   } = options
 
-  variants.forEach(
-    ({
-      name,
-      props,
-      expectedText,
-      expectedClass,
-      expectedAttribute,
-      customAssertion,
-      performanceBenchmark,
-    }) => {
-      it(`should render ${name} variant correctly`, async () => {
-        // Setup
-        beforeEach?.()
+  // Check if we're inside a test (vitest sets expect.getState when inside a test)
+  const isInsideTest =
+    typeof expect !== 'undefined' &&
+    typeof (expect as any).getState === 'function' &&
+    (expect as any).getState()?.currentTestName
 
-        const testName = `${Component.displayName || Component.name}-${name}`
+  const executeVariantTest = ({
+    name,
+    props,
+    expectedText,
+    expectedClass,
+    expectedAttribute,
+    customAssertion,
+    performanceBenchmark,
+  }: ComponentVariant<T>) => {
+    // Setup
+    beforeEach?.()
 
-        // Render with enhanced options
-        const renderResult = renderWithProviders(<Component {...props} />, {
-          enablePerformanceMonitoring,
-          testName,
-          customProviders,
-          skipRouter,
-        })
+    const testName = `${Component.displayName || Component.name}-${name}`
 
-        const { container } = renderResult
+    // Render with enhanced options
+    const renderResult = renderWithProviders(<Component {...props} />, {
+      enablePerformanceMonitoring,
+      testName,
+      customProviders,
+      skipRouter,
+    })
 
-        try {
-          // Basic rendering assertions
-          if (expectedText) {
-            expect(screen.getByText(expectedText)).toBeInTheDocument()
+    const { container } = renderResult
+
+    try {
+      // Basic rendering assertions
+      if (expectedText) {
+        expect(screen.getByText(expectedText)).toBeInTheDocument()
+      }
+
+      if (expectedClass) {
+        // Try multiple selectors to find element with expected class
+        const selectors = ['button', '[role="button"]', 'div', 'span', '*']
+        let elementFound = false
+
+        for (const selector of selectors) {
+          const elements = container.querySelectorAll(selector)
+          const elementWithClass = Array.from(elements).find(el =>
+            el.classList.contains(expectedClass)
+          )
+          if (elementWithClass) {
+            expect(elementWithClass).toHaveClass(expectedClass)
+            elementFound = true
+            break
           }
-
-          if (expectedClass) {
-            // Try multiple selectors to find element with expected class
-            const selectors = ['button', '[role="button"]', 'div', 'span', '*']
-            let elementFound = false
-
-            for (const selector of selectors) {
-              const elements = container.querySelectorAll(selector)
-              const elementWithClass = Array.from(elements).find(el =>
-                el.classList.contains(expectedClass)
-              )
-              if (elementWithClass) {
-                expect(elementWithClass).toHaveClass(expectedClass)
-                elementFound = true
-                break
-              }
-            }
-
-            if (!elementFound) {
-              // Fallback: check if any element has the class
-              const elementWithClass = container.querySelector(
-                `.${expectedClass}`
-              )
-              expect(elementWithClass).toBeInTheDocument()
-            }
-          }
-
-          if (expectedAttribute) {
-            const elementWithAttribute = container.querySelector(
-              `[${expectedAttribute.name}="${expectedAttribute.value}"]`
-            )
-            expect(elementWithAttribute).toBeInTheDocument()
-          }
-
-          // Custom assertions
-          if (customAssertion) {
-            customAssertion(container)
-          }
-
-          // Performance benchmarking
-          if (performanceBenchmark && enablePerformanceMonitoring) {
-            const allMetrics = testPerformanceMonitor.getAllMetrics()
-            const metrics = allMetrics.get(testName)
-
-            if (metrics) {
-              if (performanceBenchmark.maxRenderTime) {
-                expect(metrics.renderTime).toBeLessThanOrEqual(
-                  performanceBenchmark.maxRenderTime
-                )
-              }
-
-              if (performanceBenchmark.maxMemoryUsage) {
-                expect(metrics.memoryUsage).toBeLessThanOrEqual(
-                  performanceBenchmark.maxMemoryUsage
-                )
-              }
-            }
-          }
-
-          // Accessibility check (unless skipped)
-          if (!skipAccessibilityCheck) {
-            try {
-              const { passed, criticalViolations } = runQuickAccessibilityCheck(
-                <Component {...props} />
-              )
-              if (!passed) {
-                const errorMessage = `Accessibility violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
-                console.warn(errorMessage) // Log but don't fail the test
-              }
-            } catch (error) {
-              console.warn('Accessibility check failed:', error)
-            }
-          }
-
-          // Brand compliance check (unless skipped)
-          if (!skipBrandComplianceCheck) {
-            try {
-              const { passed, criticalViolations } = runQuickBrandCheck(
-                <Component {...props} />
-              )
-              if (!passed) {
-                const errorMessage = `Brand compliance violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
-                console.warn(errorMessage) // Log but don't fail the test
-              }
-            } catch (error) {
-              console.warn('Brand compliance check failed:', error)
-            }
-          }
-        } finally {
-          // Cleanup
-          if ('cleanup' in renderResult) {
-            renderResult.cleanup()
-          }
-          afterEach?.()
         }
-      })
+
+        if (!elementFound) {
+          // Fallback: check if any element has the class
+          const elementWithClass = container.querySelector(`.${expectedClass}`)
+          expect(elementWithClass).toBeInTheDocument()
+        }
+      }
+
+      if (expectedAttribute) {
+        const elementWithAttribute = container.querySelector(
+          `[${expectedAttribute.name}="${expectedAttribute.value}"]`
+        )
+        expect(elementWithAttribute).toBeInTheDocument()
+      }
+
+      // Custom assertions
+      if (customAssertion) {
+        customAssertion(container)
+      }
+
+      // Performance benchmarking
+      if (performanceBenchmark && enablePerformanceMonitoring) {
+        const allMetrics = testPerformanceMonitor.getAllMetrics()
+        const metrics = allMetrics.get(testName)
+
+        if (metrics) {
+          if (performanceBenchmark.maxRenderTime) {
+            expect(metrics.renderTime).toBeLessThanOrEqual(
+              performanceBenchmark.maxRenderTime
+            )
+          }
+
+          if (performanceBenchmark.maxMemoryUsage) {
+            expect(metrics.memoryUsage).toBeLessThanOrEqual(
+              performanceBenchmark.maxMemoryUsage
+            )
+          }
+        }
+      }
+
+      // Accessibility check (unless skipped)
+      if (!skipAccessibilityCheck) {
+        try {
+          const { passed, criticalViolations } = runQuickAccessibilityCheck(
+            <Component {...props} />
+          )
+          if (!passed) {
+            const errorMessage = `Accessibility violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
+            console.warn(errorMessage) // Log but don't fail the test
+          }
+        } catch (error) {
+          console.warn('Accessibility check failed:', error)
+        }
+      }
+
+      // Brand compliance check (unless skipped)
+      if (!skipBrandComplianceCheck) {
+        try {
+          const { passed, criticalViolations } = runQuickBrandCheck(
+            <Component {...props} />
+          )
+          if (!passed) {
+            const errorMessage = `Brand compliance violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
+            console.warn(errorMessage) // Log but don't fail the test
+          }
+        } catch (error) {
+          console.warn('Brand compliance check failed:', error)
+        }
+      }
+    } finally {
+      // Cleanup
+      if ('cleanup' in renderResult) {
+        renderResult.cleanup()
+      }
+      afterEach?.()
     }
-  )
+  }
+
+  if (isInsideTest) {
+    // If we're inside a test, just execute the variants directly (for property tests)
+    variants.forEach(executeVariantTest)
+  } else {
+    // If we're in a describe block, create individual test cases
+    variants.forEach(variant => {
+      it(`should render ${variant.name} variant correctly`, () => {
+        executeVariantTest(variant)
+      })
+    })
+  }
 }
 
 /**
@@ -421,6 +437,7 @@ export const expectAccessibility = async (component: ReactElement) => {
 
 /**
  * Enhanced test component with loading states including performance monitoring
+ * Works in both legacy mode (creates tests) and new mode (executes directly)
  */
 export const testLoadingStates = <
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -430,27 +447,44 @@ export const testLoadingStates = <
   loadedProps: T,
   options: { enablePerformanceMonitoring?: boolean } = {}
 ) => {
-  it('should show loading state', () => {
+  // Check if we're inside a test
+  const isInsideTest =
+    typeof expect !== 'undefined' &&
+    typeof (expect as any).getState === 'function' &&
+    (expect as any).getState()?.currentTestName
+
+  const executeLoadingTest = () => {
     const testName = `${Component.displayName || Component.name}-loading`
     renderWithProviders(<Component {...loadingProps} />, {
       enablePerformanceMonitoring: options.enablePerformanceMonitoring,
       testName,
     })
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
-  })
+  }
 
-  it('should show loaded state', () => {
+  const executeLoadedTest = () => {
     const testName = `${Component.displayName || Component.name}-loaded`
     renderWithProviders(<Component {...loadedProps} />, {
       enablePerformanceMonitoring: options.enablePerformanceMonitoring,
       testName,
     })
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument()
-  })
+  }
+
+  if (isInsideTest) {
+    // Execute directly for property tests
+    executeLoadingTest()
+    executeLoadedTest()
+  } else {
+    // Create individual test cases
+    it('should show loading state', executeLoadingTest)
+    it('should show loaded state', executeLoadedTest)
+  }
 }
 
 /**
  * Enhanced test component error states with better error handling
+ * Works in both legacy mode (creates tests) and new mode (executes directly)
  */
 export const testErrorStates = <
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -460,7 +494,13 @@ export const testErrorStates = <
   expectedErrorMessage: string | RegExp,
   options: { enablePerformanceMonitoring?: boolean } = {}
 ) => {
-  it('should display error message', () => {
+  // Check if we're inside a test
+  const isInsideTest =
+    typeof expect !== 'undefined' &&
+    typeof (expect as any).getState === 'function' &&
+    (expect as any).getState()?.currentTestName
+
+  const executeErrorTest = () => {
     const testName = `${Component.displayName || Component.name}-error`
 
     // Suppress console.error for this test to avoid noise
@@ -481,11 +521,20 @@ export const testErrorStates = <
     } finally {
       console.error = originalError
     }
-  })
+  }
+
+  if (isInsideTest) {
+    // Execute directly for property tests
+    executeErrorTest()
+  } else {
+    // Create individual test case
+    it('should display error message', executeErrorTest)
+  }
 }
 
 /**
  * Test component with different viewport sizes (responsive testing)
+ * Works in both legacy mode (creates tests) and new mode (executes directly)
  */
 export const testResponsiveVariants = <
   T extends Record<string, unknown> = Record<string, unknown>,
@@ -494,29 +543,53 @@ export const testResponsiveVariants = <
   props: T,
   viewports: Array<{ name: string; width: number; height: number }>
 ) => {
-  viewports.forEach(({ name, width, height }) => {
-    it(`should render correctly on ${name} viewport`, () => {
-      // Mock viewport size
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: width,
-      })
-      Object.defineProperty(window, 'innerHeight', {
-        writable: true,
-        configurable: true,
-        value: height,
-      })
+  // Check if we're inside a test
+  const isInsideTest =
+    typeof expect !== 'undefined' &&
+    typeof (expect as any).getState === 'function' &&
+    (expect as any).getState()?.currentTestName
 
-      // Trigger resize event
-      window.dispatchEvent(new Event('resize'))
-
-      renderWithProviders(<Component {...props} />)
-
-      // Component should render without crashing
-      expect(document.body).toBeInTheDocument()
+  const executeResponsiveTest = ({
+    name,
+    width,
+    height,
+  }: {
+    name: string
+    width: number
+    height: number
+  }) => {
+    // Mock viewport size
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: width,
     })
-  })
+    Object.defineProperty(window, 'innerHeight', {
+      writable: true,
+      configurable: true,
+      value: height,
+    })
+
+    // Trigger resize event
+    window.dispatchEvent(new Event('resize'))
+
+    renderWithProviders(<Component {...props} />)
+
+    // Component should render without crashing
+    expect(document.body).toBeInTheDocument()
+  }
+
+  if (isInsideTest) {
+    // Execute directly for property tests
+    viewports.forEach(executeResponsiveTest)
+  } else {
+    // Create individual test cases
+    viewports.forEach(({ name, width, height }) => {
+      it(`should render correctly on ${name} viewport`, () => {
+        executeResponsiveTest({ name, width, height })
+      })
+    })
+  }
 }
 
 // Re-export vi for convenience in tests

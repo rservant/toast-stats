@@ -478,13 +478,13 @@ export const runBrandComplianceTestSuite = (
 ): BrandComplianceReport => {
   // For test performance, run only essential checks
   const { passed, criticalViolations } = runQuickBrandCheck(component)
-  
+
   return {
     violations: criticalViolations,
     passed: criticalViolations.length,
     failed: passed ? 0 : criticalViolations.length,
-    score: passed ? 100 : Math.max(0, 100 - (criticalViolations.length * 10)),
-    recommendations: passed ? [] : ['Fix critical brand compliance violations']
+    score: passed ? 100 : Math.max(0, 100 - criticalViolations.length * 10),
+    recommendations: passed ? [] : ['Fix critical brand compliance violations'],
   }
 }
 

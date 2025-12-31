@@ -670,13 +670,13 @@ export const runAccessibilityTestSuite = (
 ): AccessibilityReport => {
   // For test performance, run only quick checks
   const { passed, criticalViolations } = runQuickAccessibilityCheck(component)
-  
+
   return {
     violations: criticalViolations,
     passed: criticalViolations.length,
     failed: passed ? 0 : criticalViolations.length,
-    score: passed ? 100 : Math.max(0, 100 - (criticalViolations.length * 10)),
-    wcagLevel: passed ? 'AA' : 'A'
+    score: passed ? 100 : Math.max(0, 100 - criticalViolations.length * 10),
+    wcagLevel: passed ? 'AA' : 'A',
   }
 }
 
