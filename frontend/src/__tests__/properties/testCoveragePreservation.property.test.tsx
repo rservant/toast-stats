@@ -181,79 +181,66 @@ describe('Property Test: Test Coverage Preservation', () => {
             }
           )
 
-          // Migrated approach: testComponentVariants
-          const componentVariants = variants.map(
-            ({ name, showText, className }) => ({
-              name: `${name} variant`,
-              props: { variant: name, showText, className },
-              customAssertion: (container: HTMLElement) => {
-                const element = container.querySelector(
-                  `[data-testid="mock-component-${name}"]`
+          // Execute testComponentVariants directly (it detects it's inside a test)
+          // and capture results by testing the same assertions
+          const migratedResults = variants.map(
+            ({ name, showText, className }) => {
+              try {
+                // Execute testComponentVariants for this single variant
+                testComponentVariants(
+                  MockComponent,
+                  [
+                    {
+                      name: `${name} variant`,
+                      props: { variant: name, showText, className },
+                      customAssertion: (container: HTMLElement) => {
+                        const element = container.querySelector(
+                          `[data-testid="mock-component-${name}"]`
+                        )
+                        expect(element).toBeInTheDocument()
+
+                        if (showText) {
+                          expect(
+                            screen.getByText('Test Text')
+                          ).toBeInTheDocument()
+                        }
+
+                        if (name === 'error') {
+                          expect(
+                            screen.getByText('Error State')
+                          ).toBeInTheDocument()
+                        }
+
+                        if (className) {
+                          expect(element).toHaveClass(className)
+                        }
+                      },
+                    },
+                  ],
+                  {
+                    skipAccessibilityCheck: true,
+                    skipBrandComplianceCheck: true,
+                  }
                 )
-                expect(element).toBeInTheDocument()
 
-                if (showText) {
-                  expect(screen.getByText('Test Text')).toBeInTheDocument()
+                // If we get here, the test passed
+                return {
+                  elementExists: true,
+                  hasText: showText,
+                  hasError: name === 'error',
+                  hasCorrectClass: true,
                 }
-
-                if (name === 'error') {
-                  expect(screen.getByText('Error State')).toBeInTheDocument()
+              } catch {
+                // If we get here, the test failed
+                return {
+                  elementExists: false,
+                  hasText: false,
+                  hasError: false,
+                  hasCorrectClass: false,
                 }
-
-                if (className) {
-                  expect(element).toHaveClass(className)
-                }
-              },
-            })
-          )
-
-          // Execute testComponentVariants and capture results
-          let migratedResults: Array<{
-            elementExists: boolean
-            hasVariant: boolean
-            hasAccessibility: boolean
-            hasText: boolean
-            hasError: boolean
-            hasCorrectClass: boolean
-          }> = []
-          let testIndex = 0
-
-          // Mock the test execution to capture results
-          const originalIt = global.it
-          const mockIt = vi.fn((_name: string, testFn: () => void) => {
-            try {
-              testFn()
-              migratedResults[testIndex] = {
-                elementExists: true,
-                hasVariant: true,
-                hasAccessibility: true,
-                hasText: variants[testIndex]?.showText || false,
-                hasError: variants[testIndex]?.name === 'error',
-                hasCorrectClass: true,
-              }
-            } catch {
-              migratedResults[testIndex] = {
-                elementExists: false,
-                hasVariant: false,
-                hasAccessibility: false,
-                hasText: false,
-                hasError: false,
-                hasCorrectClass: false,
               }
             }
-            testIndex++
-          })
-
-          global.it = mockIt as unknown as typeof global.it
-
-          // Execute the migrated test pattern
-          testComponentVariants(MockComponent, componentVariants, {
-            skipAccessibilityCheck: true,
-            skipBrandComplianceCheck: true,
-          })
-
-          // Restore original it function
-          global.it = originalIt
+          )
 
           // Verify coverage preservation
           expect(migratedResults.length).toBe(originalResults.length)

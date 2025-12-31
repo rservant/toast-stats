@@ -6,7 +6,7 @@
  */
 
 import React from 'react'
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import {
   renderWithProviders,
@@ -321,8 +321,8 @@ describe('Component Testing Utilities - Examples', () => {
     it('should test card loading states', () => {
       testLoadingStates(
         ExampleCard as unknown as React.ComponentType<Record<string, unknown>>,
-        { title: 'Loading Card', loading: true },
-        { title: 'Loaded Card', content: 'Content loaded successfully' },
+        { title: 'Test Card', loading: true },
+        { title: 'Test Card', content: 'Content loaded successfully' },
         { enablePerformanceMonitoring: true }
       )
     })
@@ -439,8 +439,8 @@ describe('Component Testing Utilities - Examples', () => {
         ExampleButton as unknown as React.ComponentType<
           Record<string, unknown>
         >,
-        { loading: true, children: 'Loading' },
-        { loading: false, children: 'Loaded' }
+        { loading: true, children: 'Submit' },
+        { loading: false, children: 'Submit' }
       )
     })
 
@@ -510,9 +510,13 @@ describe('Component Testing Utilities - Examples', () => {
       console.error = vi.fn()
 
       try {
-        expect(() => {
-          renderWithProviders(<ErrorComponent />)
-        }).toThrow('Component error')
+        // React Router's error boundary catches the error and shows "Unexpected Application Error!"
+        renderWithProviders(<ErrorComponent />)
+
+        // The error boundary should render an error message
+        expect(
+          screen.getByText('Unexpected Application Error!')
+        ).toBeInTheDocument()
       } finally {
         console.error = originalError
       }

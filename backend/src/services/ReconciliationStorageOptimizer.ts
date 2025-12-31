@@ -400,6 +400,21 @@ export class ReconciliationStorageOptimizer extends ReconciliationStorageManager
   }
 
   /**
+   * Override getJobsByDistrict to include optimized caching and batching
+   */
+  async getJobsByDistrict(districtId: string): Promise<ReconciliationJob[]> {
+    // First flush any pending operations to ensure all jobs are persisted
+    await this.flush()
+
+    // Force index cache invalidation to ensure fresh data
+    this.indexCache = null
+    this.indexCacheTimestamp = 0
+
+    // Then get jobs by district from parent (which will use fresh index after flush)
+    return super.getJobsByDistrict(districtId)
+  }
+
+  /**
    * Get cache statistics
    */
   getCacheStats(): {

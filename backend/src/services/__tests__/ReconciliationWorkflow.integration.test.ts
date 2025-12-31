@@ -130,7 +130,18 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
     // Initialize services with test dependencies
     changeDetectionEngine = new ChangeDetectionEngine()
-    configService = new ReconciliationConfigService()
+
+    // Use isolated config file for test to prevent interference from global config
+    const testConfigPath = path.join(
+      testCacheConfig.cacheDir,
+      'test-reconciliation-config.json'
+    )
+    configService = new ReconciliationConfigService({
+      configFilePath: testConfigPath,
+      cacheKey: `test:reconciliation:config:${Date.now()}`,
+      cacheTTL: 60,
+    })
+
     cacheService = new ReconciliationCacheService()
 
     // Clear configuration cache to ensure test isolation
@@ -861,7 +872,15 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         maxExtensionDays: 0,
       }
 
-      const job = await orchestrator.startReconciliation(
+      // Create isolated orchestrator with custom config path
+      const isolatedOrchestrator = new ReconciliationOrchestrator(
+        changeDetectionEngine,
+        storageManager,
+        cacheService,
+        configService
+      )
+
+      const job = await isolatedOrchestrator.startReconciliation(
         testDistrictId,
         testTargetMonth,
         customConfig,
@@ -876,7 +895,7 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
 
       // Process cycles to meet custom stability period
       for (let i = 0; i < 2; i++) {
-        await orchestrator.processReconciliationCycle(
+        await isolatedOrchestrator.processReconciliationCycle(
           job.id,
           mockDistrictData,
           mockDistrictData
@@ -887,6 +906,11 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
       const timeline = await storageManager.getTimeline(job.id)
       expect(timeline!.status.phase).toBe('finalizing')
       expect(timeline!.status.daysStable).toBe(2)
+
+      // Verify job completion with custom config
+      const finalJob = await isolatedOrchestrator.getReconciliationJob(job.id)
+      expect(finalJob?.config.maxReconciliationDays).toBe(10)
+      expect(finalJob?.config.stabilityPeriodDays).toBe(2)
     })
 
     it.skip('should enforce maximum extension limits', async () => {

@@ -49,6 +49,8 @@ const TestFunctionalComponent: React.FC<TestComponentProps> = ({
   error,
   className,
   'data-testid': testId,
+  role,
+  'aria-label': ariaLabel,
 }) => {
   if (error) {
     return (
@@ -77,6 +79,8 @@ const TestFunctionalComponent: React.FC<TestComponentProps> = ({
       className={`btn btn-${variant} btn-${size} ${className || ''}`}
       disabled={disabled}
       data-testid={testId || 'test-component'}
+      role={role}
+      aria-label={ariaLabel}
       style={{
         backgroundColor:
           variant === 'primary'
@@ -254,6 +258,9 @@ describe('Comprehensive Migration Validation', () => {
           /test error message/i
         )
       }).not.toThrow()
+
+      // Clean up before next render to avoid multiple elements
+      cleanupAllResources()
 
       // Verify error state is displayed
       renderWithProviders(
