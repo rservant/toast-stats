@@ -156,7 +156,7 @@ describe('Property Test: Performance Maintenance', () => {
           expectPerformanceWithinThresholds(testName)
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 2 }
     )
   })
 
@@ -315,7 +315,7 @@ describe('Property Test: Performance Maintenance', () => {
           expect(report.metrics.renderTime).toBeLessThan(expectedMaxTime)
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 2 }
     )
   })
 

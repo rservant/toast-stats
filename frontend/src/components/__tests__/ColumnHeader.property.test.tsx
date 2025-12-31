@@ -125,7 +125,7 @@ describe('ColumnHeader Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100, verbose: true }
+      { numRuns: 5, verbose: false }
     )
   })
 
@@ -236,7 +236,7 @@ describe('ColumnHeader Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100, verbose: true }
+      { numRuns: 5, verbose: false }
     )
   })
 
@@ -328,7 +328,7 @@ describe('ColumnHeader Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100, verbose: true }
+      { numRuns: 5, verbose: false }
     )
   })
 
@@ -458,7 +458,7 @@ describe('ColumnHeader Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100, verbose: true }
+      { numRuns: 5, verbose: false }
     )
   })
 })

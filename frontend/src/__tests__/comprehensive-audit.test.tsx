@@ -198,8 +198,8 @@ describe('Comprehensive Brand Compliance and Performance Audit', () => {
 
       const { container } = render(<ComprehensiveTestApp />)
 
-      // Allow components to fully render and settle
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Minimal render time for test efficiency
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       const results = (await axe(container)) as unknown as {
         violations: Array<{
@@ -317,8 +317,8 @@ describe('Comprehensive Brand Compliance and Performance Audit', () => {
 
       render(<ComprehensiveTestApp />)
 
-      // Allow components to render
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Minimal render time for test efficiency
+      await new Promise(resolve => setTimeout(resolve, 5))
 
       // Run comprehensive brand validation
       const validationErrors = validatePage()

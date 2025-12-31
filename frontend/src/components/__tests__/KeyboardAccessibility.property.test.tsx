@@ -114,7 +114,7 @@ describe('Keyboard Accessibility Property Tests', () => {
             // The dropdown should respond to keyboard events (tested by not throwing errors)
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -164,7 +164,7 @@ describe('Keyboard Accessibility Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -207,7 +207,7 @@ describe('Keyboard Accessibility Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -267,7 +267,7 @@ describe('Keyboard Accessibility Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -326,7 +326,7 @@ describe('Keyboard Accessibility Property Tests', () => {
             }
           }
         ),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
   })

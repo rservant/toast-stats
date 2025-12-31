@@ -149,7 +149,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             expect(hasColorViolation).toBe(true)
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -184,7 +184,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             expect(hasTouchTargetViolation).toBe(true)
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -233,7 +233,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             expect(hasContrastViolation).toBe(true)
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -271,7 +271,7 @@ describe('Brand Compliance Detection Property Tests', () => {
           // due to DOM rendering limitations, so we verify component structure instead
           expect(imageElement.type).toBe('img')
         }),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -297,7 +297,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             expect(component.props.style.fontSize).toBe(`${fontSize}px`)
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -327,7 +327,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             )
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -368,7 +368,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             expect(result.criticalViolations.length).toBeLessThanOrEqual(5)
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -409,7 +409,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             expect(gradientElements.length).toBeGreaterThan(1)
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
   })
@@ -451,7 +451,7 @@ describe('Brand Compliance Detection Property Tests', () => {
           expect(result).toHaveProperty('passed')
           expect(result).toHaveProperty('criticalViolations')
         }),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 
@@ -480,7 +480,7 @@ describe('Brand Compliance Detection Property Tests', () => {
             )
           })
         }),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
   })

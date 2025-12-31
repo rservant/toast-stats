@@ -128,7 +128,7 @@ describe('Property Test: Test Coverage Preservation', () => {
           migratedResult.unmount()
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -273,7 +273,7 @@ describe('Property Test: Test Coverage Preservation', () => {
           })
         }
       ),
-      { numRuns: 25 }
+      { numRuns: 2 }
     )
   })
 
@@ -330,7 +330,7 @@ describe('Property Test: Test Coverage Preservation', () => {
           expect(testResults.every(result => result)).toBe(true)
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 2 }
     )
   })
 

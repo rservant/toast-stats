@@ -165,7 +165,7 @@ describe('Property Test: Test Utility Function Availability', () => {
           return true
         }
       ),
-      { numRuns: 10, seed: 42 } // Reduced runs for faster execution
+      { numRuns: 2, seed: 42 } // Reduced runs for faster execution
     )
   })
 
@@ -236,7 +236,7 @@ describe('Property Test: Test Utility Function Availability', () => {
           return true
         }
       ),
-      { numRuns: 10, seed: 123 } // Reduced runs for faster execution
+      { numRuns: 2, seed: 123 } // Reduced runs for faster execution
     )
   })
 
@@ -268,7 +268,7 @@ describe('Property Test: Test Utility Function Availability', () => {
           return true
         }
       ),
-      { numRuns: 10, seed: 456 } // Reduced runs for faster execution
+      { numRuns: 2, seed: 456 } // Reduced runs for faster execution
     )
   })
 

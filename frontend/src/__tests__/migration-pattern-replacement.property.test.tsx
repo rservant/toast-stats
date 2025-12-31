@@ -147,7 +147,7 @@ describe('Pattern Replacement Completeness Property Tests', () => {
         ),
         {
           numRuns: 5, // Test each file once
-          verbose: true,
+          verbose: false,
         }
       )
     })
@@ -218,7 +218,7 @@ describe('Pattern Replacement Completeness Property Tests', () => {
         ),
         {
           numRuns: 5,
-          verbose: true,
+          verbose: false,
         }
       )
     })

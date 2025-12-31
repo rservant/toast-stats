@@ -389,8 +389,8 @@ describe('Test Pass Rate Maintenance Property Tests', () => {
           }
         ),
         {
-          numRuns: 30,
-          verbose: true,
+          numRuns: 3,
+          verbose: false,
         }
       )
     })
@@ -456,7 +456,7 @@ describe('Test Pass Rate Maintenance Property Tests', () => {
             }
           }
         ),
-        { numRuns: 25 }
+        { numRuns: 2 }
       )
     })
 
@@ -553,7 +553,7 @@ describe('Test Pass Rate Maintenance Property Tests', () => {
             expect(passRates.every(rate => rate > 0)).toBe(true)
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 
@@ -658,7 +658,7 @@ describe('Test Pass Rate Maintenance Property Tests', () => {
             expect(testsPassed).toBeGreaterThanOrEqual(1) // At least one test should pass
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 

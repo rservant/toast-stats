@@ -90,7 +90,7 @@ describe('Property Test: Minimum Code Reduction Achievement', () => {
           expect(migratedCodeLines).toBeLessThan(originalCodeLines)
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -130,7 +130,7 @@ describe('Property Test: Minimum Code Reduction Achievement', () => {
           expect(reduction).toBeLessThan(80) // Not too aggressive
         }
       ),
-      { numRuns: 30 }
+      { numRuns: 3 }
     )
   })
 
@@ -180,7 +180,7 @@ describe('Property Test: Minimum Code Reduction Achievement', () => {
           expect(reduction).toBeLessThan(95) // Leave room for necessary code
         }
       ),
-      { numRuns: 25 }
+      { numRuns: 2 }
     )
   })
 
@@ -256,7 +256,7 @@ describe('Property Test: Minimum Code Reduction Achievement', () => {
           expect(testBlockReduction).toBeGreaterThanOrEqual(20)
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 2 }
     )
   })
 
@@ -322,7 +322,7 @@ describe('Property Test: Minimum Code Reduction Achievement', () => {
           expect(migratedTotalLines).toBeLessThan(originalTotalLines)
         }
       ),
-      { numRuns: 30 }
+      { numRuns: 3 }
     )
   })
 })

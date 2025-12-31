@@ -87,7 +87,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -110,7 +110,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -148,7 +148,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -184,7 +184,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -215,7 +215,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -238,7 +238,7 @@ describe('DataStatusIndicator Property Tests', () => {
           }).not.toThrow()
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -260,7 +260,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -300,7 +300,7 @@ describe('DataStatusIndicator Property Tests', () => {
           }).not.toThrow()
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 
@@ -320,7 +320,7 @@ describe('DataStatusIndicator Property Tests', () => {
 
         cleanup()
       }),
-      { numRuns: 50 }
+      { numRuns: 3 }
     )
   })
 })

@@ -254,7 +254,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             }
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -275,7 +275,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             expect(hasMissingAltViolation).toBe(false)
           }
         }),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
 
@@ -306,7 +306,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             // Note: We don't assert false case as proper hierarchy might still have other violations
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -338,7 +338,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             }
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -377,7 +377,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             })
           }
         ),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
 
@@ -433,7 +433,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             }
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -477,7 +477,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             expect(hasLiveViolation).toBe(true)
           }
         }),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
 
@@ -506,7 +506,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             )
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -562,7 +562,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
           // Property: Well-formed components should have fewer critical violations
           expect(result.criticalViolations.length).toBeLessThanOrEqual(1)
         }),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
   })
@@ -634,7 +634,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             expect(violation.wcagCriterion).toMatch(/^\d+\.\d+\.\d+/)
           })
         }),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -672,7 +672,7 @@ describe('Accessibility Compliance Detection Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
   })

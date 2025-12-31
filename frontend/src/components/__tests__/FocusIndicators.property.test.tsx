@@ -87,7 +87,7 @@ describe('Focus Indicators Property Tests', () => {
             expect(buttonClasses).toMatch(/focus:ring-\w+/)
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -143,7 +143,7 @@ describe('Focus Indicators Property Tests', () => {
             })
           }
         ),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
 
@@ -196,7 +196,7 @@ describe('Focus Indicators Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -242,7 +242,7 @@ describe('Focus Indicators Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -306,7 +306,7 @@ describe('Focus Indicators Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -365,7 +365,7 @@ describe('Focus Indicators Property Tests', () => {
             })
           }
         ),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
   })

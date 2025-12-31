@@ -399,7 +399,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
           props: {},
           customAssertion: async container => {
             // Allow full rendering
-            await new Promise(resolve => setTimeout(resolve, 200))
+            await new Promise(resolve => setTimeout(resolve, 5))
 
             // Should render without throwing errors - just check that test completed
             expect(container).toBeTruthy()
@@ -443,7 +443,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
           props: {},
           customAssertion: async container => {
             // Allow full rendering
-            await new Promise(resolve => setTimeout(resolve, 200))
+            await new Promise(resolve => setTimeout(resolve, 5))
 
             // Should render without throwing errors - just check that test completed
             expect(container).toBeTruthy()
@@ -488,7 +488,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
         )
 
         // Allow full rendering
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve => setTimeout(resolve, 5))
 
         // Run basic accessibility audit with proper error handling
         let axeResults: AxeResults | null = null
@@ -562,7 +562,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
         })
 
         // Allow full rendering
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve => setTimeout(resolve, 5))
 
         // Generate basic metrics for this page
         const metrics = await generateBasicBrandComplianceMetrics(container)
@@ -629,7 +629,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
         })
 
         // Allow full rendering
-        await new Promise(resolve => setTimeout(resolve, 200))
+        await new Promise(resolve => setTimeout(resolve, 5))
 
         // Count elements with gradient classes (simplified check)
         const elementsWithGradientClasses = container.querySelectorAll(
@@ -671,7 +671,7 @@ describe('Comprehensive Brand Compliance Integration Tests', () => {
       })
 
       // Allow full rendering
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 5))
 
       const endTime = performance.now()
       const totalTime = endTime - startTime

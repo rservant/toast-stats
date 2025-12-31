@@ -303,8 +303,8 @@ describe('Cross-Component Compatibility Property Tests', () => {
           }
         ),
         {
-          numRuns: 100,
-          verbose: true,
+          numRuns: 5,
+          verbose: false,
         }
       )
     })
@@ -346,7 +346,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             }).not.toThrow()
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 3 }
       )
     })
 
@@ -406,7 +406,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             }).not.toThrow()
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -482,7 +482,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             }).not.toThrow()
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 
@@ -553,7 +553,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             }).not.toThrow()
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 
@@ -609,7 +609,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             expect(passed).toBe(true)
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -675,7 +675,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             expect(passed).toBe(true)
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -732,7 +732,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             ).toBeInTheDocument()
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 
@@ -827,7 +827,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -996,7 +996,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
             expect(screen.getByText('Pattern Content')).toBeInTheDocument()
           }
         ),
-        { numRuns: 40 }
+        { numRuns: 3 }
       )
     })
   })

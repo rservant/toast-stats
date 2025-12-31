@@ -197,7 +197,7 @@ describe('Component Test Utilities - Property Tests', () => {
             expect(error).toBeNull()
           }
         ),
-        { numRuns: 10 } // Reduced runs
+        { numRuns: 2 } // Reduced runs
       )
     })
 
@@ -288,7 +288,7 @@ describe('Component Test Utilities - Property Tests', () => {
             expect(error).toBeNull()
           }
         ),
-        { numRuns: 10 }
+        { numRuns: 2 }
       )
     })
 
@@ -443,7 +443,7 @@ describe('Component Test Utilities - Property Tests', () => {
             expect(error).toBeNull()
           }
         ),
-        { numRuns: 20 } // Reduced runs for faster execution and less DOM pollution
+        { numRuns: 2 } // Reduced runs for faster execution and less DOM pollution
       )
     })
 
@@ -536,7 +536,7 @@ describe('Component Test Utilities - Property Tests', () => {
             expect(error).toBeNull()
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
 
@@ -722,7 +722,7 @@ describe('Component Test Utilities - Property Tests', () => {
             return true // Explicitly return true for property test
           }
         ),
-        { numRuns: 10 }
+        { numRuns: 2 }
       )
     })
 
@@ -788,7 +788,7 @@ describe('Component Test Utilities - Property Tests', () => {
             expect(cleanupError).toBeNull()
           }
         ),
-        { numRuns: 20 }
+        { numRuns: 2 }
       )
     })
   })

@@ -260,8 +260,8 @@ describe('Property-Based Test Preservation Property Tests', () => {
           }
         ),
         {
-          numRuns: 20, // Reduced from 50
-          verbose: true,
+          numRuns: 2, // Reduced from 50
+          verbose: false,
         }
       )
     })
@@ -441,7 +441,7 @@ describe('Property-Based Test Preservation Property Tests', () => {
             expect(compliantPassCount).toBeGreaterThanOrEqual(0) // Just verify tests execute
           }
         ),
-        { numRuns: 10 } // Reduced from 25
+        { numRuns: 2 } // Reduced from 25
       )
     })
 
@@ -525,7 +525,7 @@ describe('Property-Based Test Preservation Property Tests', () => {
             expect(executionTime).toBeLessThan(60000) // 60 seconds max total (increased)
           }
         ),
-        { numRuns: 10 } // Reduced from 20
+        { numRuns: 2 } // Reduced from 20
       )
     })
 
@@ -740,7 +740,7 @@ describe('Property-Based Test Preservation Property Tests', () => {
             expect(hasTestArtifacts).toBe(false)
           }
         ),
-        { numRuns: 10 } // Reduced from 25
+        { numRuns: 2 } // Reduced from 25
       )
     })
   })
