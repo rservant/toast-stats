@@ -1,0 +1,349 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run daily compliance check at 9 AM UTC
+    - cron: '0 9 * * *'
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+
+jobs:
+  # Quality Gates - Must pass before any other jobs
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    outputs:
+      typescript-errors: ${{ steps.typescript.outputs.total_errors }}
+      lint-errors: ${{ steps.lint.outputs.total_errors }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: TypeScript Zero Error Check
+      id: typescript
+      run: |
+        echo "Checking TypeScript compilation..."
+        BACKEND_ERRORS=$(npm run typecheck:backend:all 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+        FRONTEND_ERRORS=$(npm run typecheck:frontend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+        TOTAL_ERRORS=$((BACKEND_ERRORS + FRONTEND_ERRORS))
+        
+        echo "backend_errors=$BACKEND_ERRORS" >> $GITHUB_OUTPUT
+        echo "frontend_errors=$FRONTEND_ERRORS" >> $GITHUB_OUTPUT
+        echo "total_errors=$TOTAL_ERRORS" >> $GITHUB_OUTPUT
+        
+        echo "## TypeScript Compilation Results" >> $GITHUB_STEP_SUMMARY
+        echo "| Component | Error Count | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend | $BACKEND_ERRORS | $([ $BACKEND_ERRORS -eq 0 ] && echo '✅ Pass' || echo '❌ Fail') |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend | $FRONTEND_ERRORS | $([ $FRONTEND_ERRORS -eq 0 ] && echo '✅ Pass' || echo '❌ Fail') |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Total** | **$TOTAL_ERRORS** | $([ $TOTAL_ERRORS -eq 0 ] && echo '✅ **PASS**' || echo '❌ **FAIL**') |" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$TOTAL_ERRORS" -gt 0 ]; then
+          echo "❌ POLICY VIOLATION: TypeScript errors are not permitted"
+          exit 1
+        fi
+    
+    - name: Lint and Format Check
+      id: lint
+      run: |
+        echo "Checking lint compliance..."
+        npm run lint
+        
+        echo "Checking code formatting..."
+        npm run format
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "❌ Code formatting issues detected"
+          echo "total_errors=1" >> $GITHUB_OUTPUT
+          git diff
+          exit 1
+        else
+          echo "total_errors=0" >> $GITHUB_OUTPUT
+          echo "✅ All quality gates passed"
+        fi
+
+  # Security Scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Test Suite
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run backend tests
+      run: npm run test:backend
+    
+    - name: Run frontend tests
+      run: npm run test:frontend
+
+  # Brand Compliance Audit
+  brand-compliance:
+    name: Brand Compliance Audit
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run brand compliance audit
+      run: |
+        cd frontend
+        npm run audit:brand-compliance
+      env:
+        CI: true
+    
+    - name: Upload compliance report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: compliance-report-${{ github.run_id }}
+        path: frontend/compliance-reports/
+        retention-days: 30
+    
+    - name: Comment PR with compliance results
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request' && always()
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          const reportsDir = 'frontend/compliance-reports';
+          if (fs.existsSync(reportsDir)) {
+            const files = fs.readdirSync(reportsDir)
+              .filter(f => f.endsWith('.json'))
+              .sort()
+              .reverse();
+            
+            if (files.length > 0) {
+              const reportPath = path.join(reportsDir, files[0]);
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              
+              const statusIcon = report.summary.overallStatus === 'pass' ? '✅' : '❌';
+              const statusText = report.summary.overallStatus === 'pass' ? 'PASS' : 'FAIL';
+              
+              const comment = `## 🎨 Brand Compliance Report ${statusIcon}
+              
+**Overall Status:** ${statusIcon} ${statusText}
+**Total Issues:** ${report.summary.totalIssues}
+**Critical Issues:** ${report.summary.criticalIssues}
+
+### Category Results
+${Object.entries(report.summary.categories).map(([cat, status]) => 
+  \`- ${status === 'pass' ? '✅' : '❌'} ${cat}: ${status.toUpperCase()}\`
+).join('\\n')}
+
+${report.recommendations.length > 0 ? \`
+### Top Recommendations
+${report.recommendations.slice(0, 3).map((rec, i) => 
+  \`${i + 1}. **[${rec.priority.toUpperCase()}]** ${rec.message}\`
+).join('\\n')}
+\` : ''}
+
+<details>
+<summary>View Full Report Details</summary>
+
+**Report ID:** ${report.id}
+**Generated:** ${new Date(report.timestamp).toLocaleString()}
+
+#### Detailed Results
+${Object.entries(report.results).map(([category, result]) => {
+  if (result.success) {
+    return \`- ✅ **${category}**: All checks passed\`;
+  } else {
+    const details = [];
+    if (result.errors) details.push(\`${result.errors} errors\`);
+    if (result.warnings) details.push(\`${result.warnings} warnings\`);
+    if (result.numFailedTests) details.push(\`${result.numFailedTests} failed tests\`);
+    return \`- ❌ **${category}**: ${details.join(', ') || 'Failed'}\`;
+  }
+}).join('\\n')}
+
+</details>
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+          }
+
+  # Build Applications
+  build:
+    name: Build Applications
+    runs-on: ubuntu-latest
+    needs: [quality-gates, test, brand-compliance]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build backend
+      run: npm run build:backend
+    
+    - name: Build frontend
+      run: npm run build:frontend
+    
+    - name: Analyze bundle size
+      run: |
+        cd frontend/dist
+        echo "## Bundle Size Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+        for file in *.css *.js; do
+          if [ -f "$file" ]; then
+            size=$(du -h "$file" | cut -f1)
+            echo "| $file | $size |" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+
+  # Container Images (only on main branch)
+  build-images:
+    name: Build Container Images
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}
+        tags: |
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./${{ matrix.component }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  # Performance Monitoring (main branch only)
+  performance:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build and analyze performance
+      run: |
+        cd frontend
+        npm run build
+        npm run report:performance
+    
+    - name: Upload performance report
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-report-${{ github.run_id }}
+        path: frontend/performance-reports/
+        retention-days: 30

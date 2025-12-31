@@ -1,10 +1,11 @@
-name: TypeScript Zero Error Enforcement
+name: TypeScript Enforcement (Legacy)
+
+# This workflow is kept for reference but functionality moved to ci-cd.yml
+# Remove this file after confirming ci-cd.yml works correctly
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  # Disabled - functionality moved to ci-cd.yml
+  workflow_dispatch: # Manual trigger only
 
 permissions:
   contents: read
