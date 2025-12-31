@@ -7,7 +7,7 @@
 
 import { render, screen, RenderOptions, cleanup } from '@testing-library/react'
 import React, { ReactElement, ComponentType } from 'react'
-import { BrowserRouter } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, it, vi } from 'vitest'
 import { testPerformanceMonitor } from './performanceMonitor'
@@ -82,7 +82,7 @@ const createProvidersWrapper = (options: RenderWithProvidersOptions = {}) => {
       wrappedChildren = <Provider>{wrappedChildren}</Provider>
     }
 
-    // Apply standard providers - conditionally wrap with BrowserRouter
+    // Apply standard providers - conditionally wrap with router
     if (skipRouter) {
       // Skip router wrapping when explicitly requested
       wrappedChildren = (
@@ -91,10 +91,22 @@ const createProvidersWrapper = (options: RenderWithProvidersOptions = {}) => {
         </QueryClientProvider>
       )
     } else {
-      // Add BrowserRouter for components that need routing
+      // Create memory router for components that need routing
+      const router = createMemoryRouter(
+        [
+          {
+            path: "*",
+            element: wrappedChildren,
+          },
+        ],
+        {
+          initialEntries: ['/'],
+        }
+      )
+
       wrappedChildren = (
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter>{wrappedChildren}</BrowserRouter>
+          <RouterProvider router={router} />
         </QueryClientProvider>
       )
     }

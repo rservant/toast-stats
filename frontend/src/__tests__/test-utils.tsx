@@ -1,7 +1,7 @@
 import React from 'react'
 import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { BackfillProvider } from '../contexts/BackfillContext'
 import { ProgramYearProvider } from '../contexts/ProgramYearContext'
 
@@ -35,20 +35,36 @@ if (
   }
 }
 
-export const renderWithProviders = (ui: React.ReactElement) => {
+export const renderWithProviders = (
+  ui: React.ReactElement,
+  { initialEntries = ['/'] } = {}
+) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   })
 
+  // Create a memory router for testing
+  const router = createMemoryRouter(
+    [
+      {
+        path: "*",
+        element: ui,
+      },
+    ],
+    {
+      initialEntries,
+    }
+  )
+
   return render(
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ProgramYearProvider>
-          <BackfillProvider>{ui}</BackfillProvider>
-        </ProgramYearProvider>
-      </BrowserRouter>
+      <ProgramYearProvider>
+        <BackfillProvider>
+          <RouterProvider router={router} />
+        </BackfillProvider>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }
