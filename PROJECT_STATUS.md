@@ -42,7 +42,7 @@ The Toastmasters District Statistics Visualizer is a complete web application fo
 #### Assessment Worksheet Generator
 
 - **Status**: Complete and production-ready
-- **Location**: `specs/001-assessment-worksheet-generator/`
+- **Location**: `.kiro/specs/001-assessment-worksheet-generator/`
 - **Purpose**: Generates monthly district assessment reports matching Excel workbook format
 - **Maintenance**: Configuration updates for new program years
 
@@ -115,7 +115,7 @@ The following specifications have been moved to `.kiro/specs-archive/` as they r
 
 For technical issues or feature requests:
 
-- Review active specifications in `.kiro/specs/` and `specs/`
+- Review active specifications in `.kiro/specs/`
 - Check archived specifications in `.kiro/specs-archive/` for historical context
 - Refer to individual component README files for detailed documentation
 

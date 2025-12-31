@@ -144,7 +144,7 @@ This project has evolved through multiple phases of development. Completed speci
 - **toastmasters-district-visualizer**: Original project specification (fully implemented)
 - **district-level-data**: District analytics features (fully implemented)
 
-Active specifications for ongoing maintenance are located in `.kiro/specs/` and `specs/`.
+Active specifications for ongoing maintenance are located in `.kiro/specs/`.
 
 ## Deployment
 

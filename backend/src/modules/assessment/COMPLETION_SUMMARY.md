@@ -495,7 +495,7 @@ District Assessment Module
 
 ### Modified Files
 
-22. `specs/001-assessment-worksheet-generator/tasks.md` - Task completion tracking
+22. `.kiro/specs/001-assessment-worksheet-generator/tasks.md` - Task completion tracking
 
 ---
 

@@ -26,13 +26,8 @@ This directory contains specifications that have been completed and are no longe
 
 The following specifications remain active in `.kiro/specs/`:
 
-- `dcp-goal-counting-fix/` - ✅ Complete bug fix (maintained for reference)
-- `district-rankings-improvements/` - ✅ Complete enhancement (maintained for reference)
-- `month-end-data-reconciliation/` - ✅ Production-ready feature (active maintenance)
-
-And in `specs/`:
-
 - `001-assessment-worksheet-generator/` - ✅ Complete feature (active maintenance)
+- `month-end-data-reconciliation/` - ✅ Production-ready feature (active maintenance)
 
 ## Notes
 
