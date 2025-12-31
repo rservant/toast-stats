@@ -4,14 +4,21 @@ This guide covers deploying the Toastmasters District Statistics Visualizer to p
 
 ## Prerequisites
 
-- Docker and Docker Compose installed
+- Node.js 20+ installed
 - Production environment variables configured
 - SSL/TLS certificates (recommended for production)
 - Domain name configured (for production)
+- Process manager (PM2 recommended for production)
 
-## Quick Start with Docker Compose
+## Quick Start with PM2
 
-1. **Copy and configure environment variables:**
+1. **Install PM2 globally:**
+
+```bash
+npm install -g pm2
+```
+
+2. **Copy and configure environment variables:**
 
 ```bash
 cp .env.production.example .env.production
@@ -23,48 +30,59 @@ Edit `.env.production` and set:
 - `CORS_ORIGIN` - Your frontend domain (e.g., https://yourdomain.com)
 - `TOASTMASTERS_DASHBOARD_URL` - Usually https://dashboard.toastmasters.org
 
-2. **Build and start services:**
+3. **Build and start services:**
 
 ```bash
-docker-compose --env-file .env.production up -d
+# Install dependencies
+npm ci
+
+# Build applications
+npm run build:backend
+npm run build:frontend
+
+# Start backend with PM2
+cd backend
+pm2 start dist/index.js --name toastmasters-backend
+
+# Serve frontend with a web server (nginx recommended)
 ```
 
-3. **Verify deployment:**
+4. **Verify deployment:**
 
 ```bash
 # Check backend health
 curl http://localhost:5001/health
 
-# Check frontend health
-curl http://localhost:80/health
-
-# View logs
-docker-compose logs -f
+# Check PM2 status
+pm2 status
 ```
 
 ## Individual Service Deployment
 
 ### Backend Deployment
 
-#### Build Docker Image
+#### Build and Run
 
 ```bash
+# Install dependencies and build
+npm ci
+npm run build:backend
+
+# Start with PM2
 cd backend
-docker build -t toastmasters-backend:latest .
+pm2 start dist/index.js --name toastmasters-backend --env production
 ```
 
-#### Run Container
+#### Environment Configuration
 
-```bash
-docker run -d \
-  --name toastmasters-backend \
-  -p 5001:5001 \
-  -e NODE_ENV=production \
-  -e JWT_SECRET=your-secret-key \
-  -e CORS_ORIGIN=https://yourdomain.com \
-  -e TOASTMASTERS_DASHBOARD_URL=https://dashboard.toastmasters.org \
-  --restart unless-stopped \
-  toastmasters-backend:latest
+Create a `backend/.env` file or use environment variables:
+
+```env
+NODE_ENV=production
+PORT=5001
+JWT_SECRET=your-secret-key
+CORS_ORIGIN=https://yourdomain.com
+TOASTMASTERS_DASHBOARD_URL=https://dashboard.toastmasters.org
 ```
 
 #### Health Check
@@ -82,32 +100,6 @@ Expected response:
   "uptime": 123.456,
   "environment": "production"
 }
-```
-
-### Frontend Deployment
-
-#### Build Docker Image
-
-```bash
-cd frontend
-docker build -t toastmasters-frontend:latest .
-```
-
-#### Run Container
-
-```bash
-docker run -d \
-  --name toastmasters-frontend \
-  -p 80:80 \
-  -e BACKEND_URL=http://backend:5001 \
-  --restart unless-stopped \
-  toastmasters-frontend:latest
-```
-
-#### Health Check
-
-```bash
-curl http://localhost:80/health
 ```
 
 ## Static Hosting (Frontend Only)
@@ -198,14 +190,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ### View Logs
 
 ```bash
-# All services
-docker-compose logs -f
+# PM2 logs
+pm2 logs toastmasters-backend
 
-# Backend only
-docker-compose logs -f backend
-
-# Frontend only
-docker-compose logs -f frontend
+# Or view all PM2 processes
+pm2 logs
 ```
 
 ### Health Monitoring
@@ -235,10 +224,10 @@ For production, consider using:
 
 ### Horizontal Scaling
 
-Run multiple backend instances behind a load balancer:
+Run multiple backend instances with PM2 cluster mode:
 
 ```bash
-docker-compose up -d --scale backend=3
+pm2 start dist/index.js --name toastmasters-backend -i max
 ```
 
 ### Load Balancer Configuration
@@ -263,7 +252,7 @@ server {
 
 ### Backend Won't Start
 
-1. Check logs: `docker-compose logs backend`
+1. Check logs: `pm2 logs toastmasters-backend`
 2. Verify environment variables are set
 3. Ensure port 5001 is not in use
 4. Check JWT_SECRET is configured
@@ -272,8 +261,8 @@ server {
 
 1. Verify CORS_ORIGIN is configured correctly
 2. Check backend is running: `curl http://localhost:5001/health`
-3. Verify network connectivity between containers
-4. Check nginx proxy configuration
+3. Verify network connectivity
+4. Check web server proxy configuration
 
 ### High Memory Usage
 
@@ -292,7 +281,7 @@ Currently, the application doesn't persist data. All data is fetched from the To
 Backup these files:
 
 - `.env.production`
-- `docker-compose.yml`
+- PM2 ecosystem files
 - Any custom nginx configurations
 
 ## Updates and Maintenance
@@ -303,11 +292,13 @@ Backup these files:
 # Pull latest code
 git pull origin main
 
-# Rebuild images
-docker-compose build
+# Install dependencies and rebuild
+npm ci
+npm run build:backend
+npm run build:frontend
 
-# Restart services
-docker-compose --env-file .env.production up -d
+# Restart backend service
+pm2 restart toastmasters-backend
 ```
 
 ### Cache Management for Ranking Updates
@@ -324,9 +315,6 @@ The application uses a cache versioning system to track changes in ranking metho
 Use the provided script for safe cache clearing:
 
 ```bash
-# Docker deployment
-docker exec -it <backend-container> npm run clear-rankings-cache
-
 # Direct deployment
 cd backend && npm run clear-rankings-cache
 ```
@@ -346,29 +334,27 @@ rm -rf backend/cache/historical_index.json
 
 ### Zero-Downtime Updates
 
-1. Build new images with version tags
-2. Update docker-compose.yml with new tags
-3. Use `docker-compose up -d` to rolling update
+1. Build new version
+2. Use PM2 reload for zero-downtime restart: `pm2 reload toastmasters-backend`
 
 ## Cloud Platform Deployment
 
 ### AWS Deployment
 
-- **ECS/Fargate**: Use the Dockerfiles with ECS task definitions
-- **Elastic Beanstalk**: Deploy using docker-compose.yml
-- **EC2**: Install Docker and use docker-compose
+- **EC2**: Install Node.js and PM2, deploy directly
+- **Elastic Beanstalk**: Deploy using Node.js platform
+- **Lambda**: Use serverless framework for API deployment
 
 ### Google Cloud Platform
 
-- **Cloud Run**: Deploy containers directly
-- **GKE**: Use Kubernetes manifests (create from docker-compose)
-- **Compute Engine**: Install Docker and use docker-compose
+- **Compute Engine**: Install Node.js and PM2, deploy directly
+- **App Engine**: Deploy using Node.js runtime
+- **Cloud Functions**: Use serverless deployment
 
 ### Azure
 
-- **Container Instances**: Deploy containers directly
-- **App Service**: Deploy using Docker containers
-- **AKS**: Use Kubernetes manifests
+- **Virtual Machines**: Install Node.js and PM2, deploy directly
+- **App Service**: Deploy using Node.js runtime
 
 ## Performance Optimization
 

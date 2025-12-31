@@ -21,8 +21,7 @@ This directory contains the CI/CD workflows for the Toastmasters District Visual
 3. **Test Suite** - Backend and frontend test execution
 4. **Brand Compliance** - Automated brand compliance auditing
 5. **Build** - Application compilation and bundle analysis
-6. **Container Images** - Docker image building (main branch only)
-7. **Performance** - Performance monitoring and reporting (main branch only)
+6. **Performance** - Performance monitoring and reporting (main branch only)
 
 **Key Features**:
 
@@ -43,7 +42,7 @@ This directory contains the CI/CD workflows for the Toastmasters District Visual
 
 - Pre-deployment quality gates
 - Multi-environment support (staging/production)
-- Container image building and pushing
+- Application building and deployment
 - Environment-specific deployments
 - Post-deployment verification
 - Deployment notifications
@@ -256,7 +255,6 @@ permissions:
 
 - Use caching for dependencies
 - Parallel job execution where possible
-- Optimize Docker builds with layer caching
 - Monitor workflow execution times
 
 ## Support

@@ -100,8 +100,7 @@ The following specifications have been moved to `.kiro/specs-archive/` as they r
 ## Deployment Status
 
 - **Environment**: Production-ready
-- **Docker**: Complete containerization
-- **Kubernetes**: Deployment manifests available
+- **Node.js**: Direct deployment with PM2 process manager
 - **CI/CD**: Automated testing and deployment
 - **Monitoring**: Comprehensive logging and error tracking
 

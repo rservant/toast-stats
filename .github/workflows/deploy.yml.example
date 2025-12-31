@@ -18,11 +18,6 @@ on:
         - staging
         - production
 
-env:
-  REGISTRY: ghcr.io
-  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
-  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
-
 jobs:
   # Ensure all quality gates pass before deployment
   pre-deployment-checks:
@@ -58,88 +53,86 @@ jobs:
         npm run audit:brand-compliance
         echo "✅ Brand compliance verified"
 
-  # Build and push container images
-  build-and-push:
-    name: Build and Push Images
+  # Build applications
+  build:
+    name: Build Applications
     runs-on: ubuntu-latest
     needs: pre-deployment-checks
-    
-    permissions:
-      contents: read
-      packages: write
-    
-    strategy:
-      matrix:
-        component: [backend, frontend]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        node-version: '20'
+        cache: 'npm'
     
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=tag
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+    - name: Install dependencies
+      run: npm ci
     
-    - name: Build and push image
-      uses: docker/build-push-action@v5
+    - name: Build backend
+      run: npm run build:backend
+    
+    - name: Build frontend
+      run: npm run build:frontend
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
       with:
-        context: ./${{ matrix.component }}
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        name: build-artifacts
+        path: |
+          backend/dist/
+          frontend/dist/
+        retention-days: 7
 
   # Deploy to staging
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: build
     if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
     environment: staging
     
     steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+    
     - name: Deploy to staging environment
       run: |
         echo "🚀 Deploying to staging..."
         # Add your staging deployment commands here
         # Examples:
-        # - kubectl apply -f k8s/staging/
-        # - helm upgrade --install app-staging ./helm-chart
-        # - docker-compose -f docker-compose.staging.yml up -d
+        # - rsync -avz backend/dist/ user@staging-server:/app/backend/
+        # - rsync -avz frontend/dist/ user@staging-server:/var/www/html/
+        # - ssh user@staging-server "pm2 restart toastmasters-backend"
         echo "✅ Staging deployment completed"
 
   # Deploy to production (only on tags or manual trigger)
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [build-and-push, deploy-staging]
+    needs: [build, deploy-staging]
     if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.environment == 'production'
     environment: production
     
     steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+    
     - name: Deploy to production environment
       run: |
         echo "🚀 Deploying to production..."
         # Add your production deployment commands here
         # Examples:
-        # - kubectl apply -f k8s/production/
-        # - helm upgrade --install app-production ./helm-chart
-        # - Update load balancer configuration
+        # - rsync -avz backend/dist/ user@prod-server:/app/backend/
+        # - rsync -avz frontend/dist/ user@prod-server:/var/www/html/
+        # - ssh user@prod-server "pm2 restart toastmasters-backend"
         echo "✅ Production deployment completed"
     
     - name: Post-deployment verification
@@ -148,7 +141,7 @@ jobs:
         # Add health checks and verification
         # Examples:
         # - curl -f https://your-app.com/health
-        # - kubectl rollout status deployment/app
+        # - ssh user@prod-server "curl -f http://localhost:5001/health"
         echo "✅ Post-deployment verification completed"
 
   # Notify deployment status

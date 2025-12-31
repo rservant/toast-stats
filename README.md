@@ -152,8 +152,7 @@ For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 Quick deployment options:
 
-- **Docker Compose**: `docker-compose --env-file .env.production up -d`
-- **Kubernetes**: See `k8s/` directory for manifests
+- **Node.js/PM2**: Build and run with process manager
 - **Static Hosting**: Build frontend and deploy to Vercel/Netlify
 
 ### Cache Management

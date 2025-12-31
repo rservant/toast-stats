@@ -13,7 +13,7 @@ Use this checklist to ensure a secure and successful production deployment.
 - [ ] Configure CORS_ORIGIN to your specific domain (not `*`)
 - [ ] Review and update all environment variables in `.env.production`
 - [ ] Ensure no sensitive data is committed to version control
-- [ ] Review `.gitignore` and `.dockerignore` files
+- [ ] Review `.gitignore` files
 
 ### Environment Setup
 
@@ -33,21 +33,23 @@ Use this checklist to ensure a secure and successful production deployment.
 
 ## Deployment
 
-### Docker Deployment
+### Node.js Deployment
 
-- [ ] Docker and Docker Compose installed
-- [ ] Build backend image: `docker build -t toastmasters-backend:latest ./backend`
-- [ ] Build frontend image: `docker build -t toastmasters-frontend:latest ./frontend`
-- [ ] Test images locally before deploying
-- [ ] Push images to container registry (if using one)
-- [ ] Deploy using docker-compose: `docker-compose --env-file .env.production up -d`
+- [ ] Node.js 20+ installed on target server
+- [ ] PM2 process manager installed: `npm install -g pm2`
+- [ ] Build backend: `npm run build:backend`
+- [ ] Build frontend: `npm run build:frontend`
+- [ ] Start backend with PM2: `pm2 start backend/dist/index.js --name toastmasters-backend`
+- [ ] Configure web server (nginx) to serve frontend static files
+- [ ] Set up reverse proxy for backend API
 
 ### Kubernetes Deployment (if applicable)
 
 - [ ] Create namespace: `kubectl create namespace toastmasters`
 - [ ] Create secrets: `kubectl create secret generic toastmasters-secrets --from-literal=jwt-secret=YOUR_SECRET`
 - [ ] Update ConfigMap with production values
-- [ ] Apply manifests: `kubectl apply -f k8s/`
+- [ ] Create custom Kubernetes manifests (requires custom setup)
+- [ ] Apply manifests: `kubectl apply -f custom-k8s/`
 - [ ] Verify pods are running: `kubectl get pods`
 - [ ] Check service endpoints: `kubectl get services`
 
@@ -168,17 +170,18 @@ Use this checklist to ensure a secure and successful production deployment.
 
 In case of issues:
 
-### Docker Compose
+### Node.js/PM2 Deployment
 
 ```bash
 # Stop current deployment
-docker-compose down
+pm2 stop toastmasters-backend
 
 # Revert to previous version
 git checkout <previous-commit>
 
-# Rebuild and deploy
-docker-compose --env-file .env.production up -d
+# Rebuild and restart
+npm run build:backend
+pm2 restart toastmasters-backend
 ```
 
 ### Kubernetes

@@ -15,7 +15,7 @@
     "test:backend": "npm run test --workspace=backend",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
-    "lint:yaml": "yamllint -c .yamllint.yml .github/ k8s/ docs/ docker-compose.yml",
+    "lint:yaml": "yamllint -c .yamllint.yml .github/ docs/",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "typecheck": "npm run typecheck --workspaces",
     "typecheck:all": "npm run typecheck:all --workspace=backend && npm run typecheck --workspace=frontend",
