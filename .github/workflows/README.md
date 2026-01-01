@@ -76,14 +76,6 @@ This directory contains the CI/CD workflows for the Toastmasters District Visual
 }
 ```
 
-### Required Frontend Scripts
-
-```json
-{
-  "report:performance": "npm run build && node -e \"console.log('Performance report generated')\""
-}
-```
-
 ## Environment Setup
 
 ### Required Secrets
