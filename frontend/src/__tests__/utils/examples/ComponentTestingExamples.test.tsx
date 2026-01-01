@@ -235,7 +235,6 @@ describe('Component Testing Utilities - Examples', () => {
         {
           enablePerformanceMonitoring: true,
           skipAccessibilityCheck: false,
-          skipBrandComplianceCheck: false,
         }
       )
     })

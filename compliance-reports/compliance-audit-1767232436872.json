@@ -1,0 +1,368 @@
+{
+  "id": "compliance-audit-1767232436872",
+  "timestamp": "2026-01-01T01:53:56.870Z",
+  "version": "1.0.0",
+  "environment": "development",
+  "results": {
+    "brandCompliance": {
+      "success": false,
+      "error": "Command failed: npx vitest --reporter=json --run src/__tests__/brand/"
+    },
+    "accessibility": {
+      "success": true,
+      "numTotalTests": 22,
+      "numPassedTests": 22,
+      "numFailedTests": 0,
+      "testResults": [
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "Accessibility Contrast Requirements - Property Tests",
+                "Property 3: Contrast ratio validation"
+              ],
+              "fullName": "Accessibility Contrast Requirements - Property Tests Property 3: Contrast ratio validation should validate that brand color combinations meet WCAG AA standards",
+              "status": "passed",
+              "title": "should validate that brand color combinations meet WCAG AA standards",
+              "duration": 5.975791000000072,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Accessibility Contrast Requirements - Property Tests",
+                "Property 3: Contrast ratio validation"
+              ],
+              "fullName": "Accessibility Contrast Requirements - Property Tests Property 3: Contrast ratio validation should ensure contrast ratio is always between 1 and 21",
+              "status": "passed",
+              "title": "should ensure contrast ratio is always between 1 and 21",
+              "duration": 1.3894169999999804,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Accessibility Contrast Requirements - Property Tests",
+                "Brand-specific contrast validation"
+              ],
+              "fullName": "Accessibility Contrast Requirements - Property Tests Brand-specific contrast validation should validate that TM Loyal Blue with white text meets WCAG AA",
+              "status": "passed",
+              "title": "should validate that TM Loyal Blue with white text meets WCAG AA",
+              "duration": 0.09966700000006767,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Accessibility Contrast Requirements - Property Tests",
+                "Brand-specific contrast validation"
+              ],
+              "fullName": "Accessibility Contrast Requirements - Property Tests Brand-specific contrast validation should validate that TM True Maroon with white text meets WCAG AA",
+              "status": "passed",
+              "title": "should validate that TM True Maroon with white text meets WCAG AA",
+              "duration": 0.0844169999999167,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Accessibility Contrast Requirements - Property Tests",
+                "Brand-specific contrast validation"
+              ],
+              "fullName": "Accessibility Contrast Requirements - Property Tests Brand-specific contrast validation should validate that black text on TM Happy Yellow meets WCAG AA",
+              "status": "passed",
+              "title": "should validate that black text on TM Happy Yellow meets WCAG AA",
+              "duration": 0.08699999999998909,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Accessibility Contrast Requirements - Property Tests",
+                "Brand-specific contrast validation"
+              ],
+              "fullName": "Accessibility Contrast Requirements - Property Tests Brand-specific contrast validation should validate that black text on white background meets WCAG AAA",
+              "status": "passed",
+              "title": "should validate that black text on white background meets WCAG AAA",
+              "duration": 0.06462499999997817,
+              "failureMessages": [],
+              "meta": {}
+            }
+          ],
+          "startTime": 1767232420038,
+          "endTime": 1767232420045.3894,
+          "status": "passed",
+          "message": "",
+          "name": "/Users/rservant/code/toast-stats/frontend/src/__tests__/accessibility/contrastRequirements.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": ["Skip Link Accessibility"],
+              "fullName": "Skip Link Accessibility skip link is present and properly configured",
+              "status": "passed",
+              "title": "skip link is present and properly configured",
+              "duration": 16.325249999999983,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": ["Skip Link Accessibility"],
+              "fullName": "Skip Link Accessibility skip link has proper accessibility attributes",
+              "status": "passed",
+              "title": "skip link has proper accessibility attributes",
+              "duration": 2.3328330000000506,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": ["Skip Link Accessibility"],
+              "fullName": "Skip Link Accessibility main content target exists",
+              "status": "passed",
+              "title": "main content target exists",
+              "duration": 1.5667499999999563,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": ["Skip Link Accessibility"],
+              "fullName": "Skip Link Accessibility skip link uses brand-compliant class",
+              "status": "passed",
+              "title": "skip link uses brand-compliant class",
+              "duration": 1.842457999999965,
+              "failureMessages": [],
+              "meta": {}
+            }
+          ],
+          "startTime": 1767232420051,
+          "endTime": 1767232420072.8425,
+          "status": "passed",
+          "message": "",
+          "name": "/Users/rservant/code/toast-stats/frontend/src/__tests__/accessibility/skipLink.test.tsx"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Property 4: Touch target validation"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Property 4: Touch target validation should validate that elements with 44px+ dimensions pass touch target requirements",
+              "status": "passed",
+              "title": "should validate that elements with 44px+ dimensions pass touch target requirements",
+              "duration": 20.86258399999997,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Property 4: Touch target validation"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Property 4: Touch target validation should validate that elements smaller than 44px fail touch target requirements",
+              "status": "passed",
+              "title": "should validate that elements smaller than 44px fail touch target requirements",
+              "duration": 13.040457999999944,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Property 4: Touch target validation"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Property 4: Touch target validation should correctly identify interactive elements",
+              "status": "passed",
+              "title": "should correctly identify interactive elements",
+              "duration": 1.5529579999999896,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Property 4: Touch target validation"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Property 4: Touch target validation should correctly identify elements with interactive roles",
+              "status": "passed",
+              "title": "should correctly identify elements with interactive roles",
+              "duration": 1.029207999999926,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Property 4: Touch target validation"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Property 4: Touch target validation should provide appropriate recommendations for undersized elements",
+              "status": "passed",
+              "title": "should provide appropriate recommendations for undersized elements",
+              "duration": 6.657249999999976,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Interactive element detection"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Interactive element detection should detect all standard interactive elements",
+              "status": "passed",
+              "title": "should detect all standard interactive elements",
+              "duration": 0.6922500000000582,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Interactive element detection"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Interactive element detection should not detect non-interactive elements",
+              "status": "passed",
+              "title": "should not detect non-interactive elements",
+              "duration": 0.5909999999998945,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Interactive element detection"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Interactive element detection should detect elements with tabindex",
+              "status": "passed",
+              "title": "should detect elements with tabindex",
+              "duration": 0.16775000000006912,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Interactive element detection"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Interactive element detection should detect elements with onclick handlers",
+              "status": "passed",
+              "title": "should detect elements with onclick handlers",
+              "duration": 0.32787500000006276,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Touch target validation with margin inclusion"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Touch target validation with margin inclusion should include margins when calculating effective touch target size",
+              "status": "passed",
+              "title": "should include margins when calculating effective touch target size",
+              "duration": 0.4706669999999349,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Touch target validation with margin inclusion"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Touch target validation with margin inclusion should exclude margins when configured to do so",
+              "status": "passed",
+              "title": "should exclude margins when configured to do so",
+              "duration": 0.3354590000000144,
+              "failureMessages": [],
+              "meta": {}
+            },
+            {
+              "ancestorTitles": [
+                "Touch Target Accessibility - Property Tests",
+                "Batch validation"
+              ],
+              "fullName": "Touch Target Accessibility - Property Tests Batch validation should validate all interactive elements in a container",
+              "status": "passed",
+              "title": "should validate all interactive elements in a container",
+              "duration": 5.09279099999992,
+              "failureMessages": [],
+              "meta": {}
+            }
+          ],
+          "startTime": 1767232420092,
+          "endTime": 1767232420143.0928,
+          "status": "passed",
+          "message": "",
+          "name": "/Users/rservant/code/toast-stats/frontend/src/__tests__/accessibility/touchTargets.test.ts"
+        }
+      ]
+    },
+    "bundleSize": {
+      "success": false,
+      "error": "Command failed: npm run build\nnpm error Lifecycle script `build` failed with error:\nnpm error code 2\nnpm error path /Users/rservant/code/toast-stats/frontend\nnpm error workspace frontend@1.0.0\nnpm error location /Users/rservant/code/toast-stats/frontend\nnpm error command failed\nnpm error command sh -c tsc && vite build\n"
+    },
+    "typeScript": {
+      "success": false,
+      "errors": 46,
+      "message": "Found 46 TypeScript errors",
+      "details": [
+        "src/__tests__/brand/chartAccessibilityAndBranding.property.test.ts(185,88): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.",
+        "src/__tests__/brand/chartColorCompliance.property.test.tsx(256,13): error TS2322: Type '{ districtId: string; districtName: string; programYear: { year: number; startDate: \"2023-07-01\"; endDate: \"2024-06-30\"; }; history: { date: string; aggregateScore: number; clubsRank: number; paymentsRank: number; distinguishedRank: number; }[]; }[]' is not assignable to type 'RankHistoryResponse[]'.",
+        "src/__tests__/brand/chartColorCompliance.property.test.tsx(299,13): error TS2322: Type '{ id: string; name: string; status: \"active\" | \"suspended\" | \"ineligible\" | \"low\"; distinguished: boolean; distinguishedLevel: \"select\" | \"distinguished\" | \"president\" | null; }[]' is not assignable to type 'Club[]'.",
+        "src/__tests__/brand/chartColorCompliance.property.test.tsx(458,13): error TS2322: Type '{ districtId: string; districtName: string; programYear: { year: number; startDate: \"2023-07-01\"; endDate: \"2024-06-30\"; }; history: { date: string; aggregateScore: number; clubsRank: number; paymentsRank: number; distinguishedRank: number; }[]; }[]' is not assignable to type 'RankHistoryResponse[]'.",
+        "src/__tests__/brand/componentPatternStandardization.property.test.ts(19,7): error TS6133: 'formElementTypeArbitrary' is declared but its value is never read.",
+        "src/__tests__/brand/componentPatternStandardization.property.test.ts(24,7): error TS6133: 'brandColorArbitrary' is declared but its value is never read.",
+        "src/__tests__/brand/componentPatternStandardization.property.test.ts(34,7): error TS6133: 'brandFontArbitrary' is declared but its value is never read.",
+        "src/__tests__/brand/componentPatternStandardization.property.test.ts(156,11): error TS6133: 'originalGetComputedStyle' is declared but its value is never read.",
+        "src/__tests__/brand/componentPatternStandardization.property.test.ts(218,34): error TS6133: 'uniqueId' is declared but its value is never read.",
+        "src/__tests__/brand/componentPatternStandardization.property.test.ts(258,25): error TS6133: 'uniqueId' is declared but its value is never read."
+      ]
+    },
+    "lint": {
+      "success": false,
+      "error": "Command failed: npx eslint . --ext ts,tsx --format=json"
+    }
+  },
+  "summary": {
+    "overallStatus": "fail",
+    "totalIssues": 49,
+    "criticalIssues": 1,
+    "categories": {
+      "brandCompliance": "fail",
+      "accessibility": "pass",
+      "bundleSize": "fail",
+      "typeScript": "fail",
+      "lint": "fail"
+    }
+  },
+  "recommendations": [
+    {
+      "category": "Brand Compliance",
+      "priority": "high",
+      "message": "Fix brand compliance violations to ensure consistent visual identity",
+      "actions": [
+        "Review failed brand compliance tests",
+        "Update components to use brand colors and typography",
+        "Ensure proper contrast ratios and accessibility standards"
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "priority": "high",
+      "message": "Fix TypeScript errors to ensure type safety",
+      "actions": [
+        "Address TypeScript compilation errors",
+        "Add proper type definitions",
+        "Remove any explicit any types"
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "priority": "medium",
+      "message": "Fix linting errors to maintain code consistency",
+      "actions": [
+        "Address ESLint errors",
+        "Fix code formatting issues",
+        "Remove unused variables and imports"
+      ]
+    }
+  ]
+}

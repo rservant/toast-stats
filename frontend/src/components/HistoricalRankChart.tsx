@@ -72,14 +72,14 @@ const CustomTooltip = ({
 }
 
 const DISTRICT_COLORS = [
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#772432', // TM True Maroon
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
+  'var(--tm-loyal-blue)', // Primary data series - TM Loyal Blue
+  'var(--tm-true-maroon)', // Secondary data series - TM True Maroon
+  'var(--tm-cool-gray)', // Tertiary data series - TM Cool Gray
+  'var(--tm-happy-yellow)', // Accent data series - TM Happy Yellow
+  'var(--tm-loyal-blue-80)', // Additional series with opacity
+  'var(--tm-true-maroon-80)', // Additional series with opacity
+  'var(--tm-cool-gray-80)', // Additional series with opacity
+  'var(--tm-happy-yellow-80)', // Additional series with opacity
 ]
 
 const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
@@ -289,10 +289,13 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
               aria-hidden="true"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--tm-cool-gray-20)"
+              />
               <XAxis
                 dataKey="date"
-                stroke="#6b7280"
+                stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '10px' }}
                 angle={-45}
                 textAnchor="end"
@@ -307,7 +310,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 }}
               />
               <YAxis
-                stroke="#6b7280"
+                stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '10px' }}
                 width={50}
                 reversed={selectedMetric !== 'aggregate'}

@@ -153,7 +153,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-blue-700">
+                  <p className="text-sm font-medium text-tm-loyal-blue">
                     Total Clubs
                   </p>
                   <Tooltip content="Total number of clubs in the district, categorized by health status">
@@ -166,7 +166,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
               </div>
               <div className="bg-blue-200 rounded-full p-3">
                 <svg
-                  className="w-6 h-6 text-blue-700"
+                  className="w-6 h-6 text-tm-loyal-blue"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

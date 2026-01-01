@@ -257,7 +257,7 @@ const DistrictDetailPage: React.FC = () => {
                       value={selectedDate || 'latest'}
                       onChange={handleDateChange}
                       className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent bg-white text-gray-900 text-sm font-tm-body"
-                      style={{ color: '#111827' }}
+                      style={{ color: 'var(--tm-black)' }}
                     >
                       <option value="latest" className="text-gray-900 bg-white">
                         Latest in Program Year

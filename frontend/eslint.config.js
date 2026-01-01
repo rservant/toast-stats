@@ -18,6 +18,8 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.es2020,
+        React: 'readonly',
+        JSX: 'readonly',
       },
     },
     plugins: {
@@ -31,6 +33,28 @@ export default [
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
+      ],
+    },
+  },
+  {
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs', 'src/scripts/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.es2020,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...tseslint.configs.recommended.rules,
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
       ],
     },
   },
@@ -75,6 +99,7 @@ export default [
         beforeAll: 'readonly',
         afterAll: 'readonly',
         vi: 'readonly',
+        NodeListOf: 'readonly',
       },
     },
     plugins: {

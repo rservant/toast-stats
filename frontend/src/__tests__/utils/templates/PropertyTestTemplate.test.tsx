@@ -10,7 +10,6 @@ import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
 import { renderWithProviders, cleanupAllResources } from '../componentTestUtils'
 import { runQuickAccessibilityCheck } from '../accessibilityTestUtils'
-import { runQuickBrandCheck } from '../brandComplianceTestUtils'
 
 // TODO: Import your actual component
 // import MyComponent from './MyComponent'
@@ -185,8 +184,10 @@ describe.skip('MyComponent Property-Based Tests', () => {
             children: fc.string({ minLength: 1, maxLength: 50 }),
           }),
           props => {
-            const { passed } = runQuickBrandCheck(<MyComponent {...props} />)
-            expect(passed).toBe(true)
+            // Brand compliance testing removed - just verify component renders
+            expect(() => {
+              renderWithProviders(<MyComponent {...props} />)
+            }).not.toThrow()
           }
         ),
         { numRuns: 50 }

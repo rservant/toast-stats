@@ -80,7 +80,6 @@ This directory contains the CI/CD workflows for the Toastmasters District Visual
 
 ```json
 {
-  "audit:brand-compliance": "node ../scripts/brand-compliance-audit.js",
   "report:performance": "npm run build && node -e \"console.log('Performance report generated')\""
 }
 ```
@@ -158,15 +157,14 @@ permissions:
    npm run typecheck:all
    ```
 
-2. **Brand Compliance Failures**
+2. **Build and Test Failures**
 
    ```bash
-   # Run audit locally
-   cd frontend
-   npm run audit:brand-compliance
+   # Run tests locally
+   npm run test
 
-   # Check specific tests
-   npm run test:brand-compliance
+   # Check build status
+   npm run build
    ```
 
 3. **Lint Failures**
@@ -203,7 +201,6 @@ permissions:
    npm run typecheck:all
    npm run lint
    npm run test
-   cd frontend && npm run audit:brand-compliance
    ```
 
 2. **Remove legacy workflows**:

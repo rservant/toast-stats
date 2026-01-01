@@ -18,6 +18,80 @@
   overflow: hidden;
 }
 
+/* Brand-Compliant Button Classes (Task 6.1 Requirements) */
+.tm-btn-primary {
+  background-color: var(--tm-loyal-blue);
+  color: var(--tm-white);
+  font-family: var(--tm-font-headline);
+  font-weight: 600;
+  min-height: var(--tm-touch-target);
+  min-width: var(--tm-touch-target);
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-btn-primary:hover:not(:disabled) {
+  background-color: var(--tm-loyal-blue-90);
+}
+
+.tm-btn-primary:active:not(:disabled) {
+  background-color: var(--tm-loyal-blue-80);
+}
+
+.tm-btn-primary:focus-visible {
+  outline: 2px solid var(--tm-white);
+  outline-offset: 2px;
+}
+
+.tm-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tm-btn-secondary {
+  background-color: transparent;
+  color: var(--tm-loyal-blue);
+  border: 2px solid var(--tm-loyal-blue);
+  font-family: var(--tm-font-headline);
+  font-weight: 600;
+  min-height: var(--tm-touch-target);
+  min-width: var(--tm-touch-target);
+  padding: 10px 22px; /* Adjusted for border */
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-btn-secondary:hover:not(:disabled) {
+  background-color: var(--tm-loyal-blue);
+  color: var(--tm-white);
+}
+
+.tm-btn-secondary:active:not(:disabled) {
+  background-color: var(--tm-loyal-blue-90);
+}
+
+.tm-btn-secondary:focus-visible {
+  outline: 2px solid var(--tm-loyal-blue);
+  outline-offset: 2px;
+}
+
+.tm-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Button Variants */
 .tm-button-primary {
   background-color: var(--tm-loyal-blue);

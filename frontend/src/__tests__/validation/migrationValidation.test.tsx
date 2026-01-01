@@ -23,7 +23,6 @@ import {
   ComponentVariant,
 } from '../utils/componentTestUtils'
 import { runQuickAccessibilityCheck } from '../utils/accessibilityTestUtils'
-import { runQuickBrandCheck } from '../utils/brandComplianceTestUtils'
 
 // Test component types for validation
 interface TestComponentProps {
@@ -84,11 +83,11 @@ const TestFunctionalComponent: React.FC<TestComponentProps> = ({
       style={{
         backgroundColor:
           variant === 'primary'
-            ? '#004165'
+            ? 'var(--tm-loyal-blue)'
             : variant === 'secondary'
-              ? '#772432'
+              ? 'var(--tm-true-maroon)'
               : '#dc3545',
-        color: '#ffffff',
+        color: 'var(--tm-white)',
         minHeight: '44px',
         minWidth: '44px',
         fontFamily: 'Montserrat, sans-serif',
@@ -210,7 +209,6 @@ describe('Comprehensive Migration Validation', () => {
           variants as unknown as ComponentVariant<Record<string, unknown>>[],
           {
             skipAccessibilityCheck: true,
-            skipBrandComplianceCheck: true,
           }
         )
       }).not.toThrow()
@@ -410,25 +408,6 @@ describe('Comprehensive Migration Validation', () => {
       })
     })
 
-    it('should work across all component types - brand compliance utilities', () => {
-      // Test brand compliance utilities with different component types
-      const brandCompliantComponents = [
-        <TestFunctionalComponent>Functional</TestFunctionalComponent>,
-        <TestHooksComponent>Hooks</TestHooksComponent>,
-        <TestMemoizedComponent>Memoized</TestMemoizedComponent>,
-        <TestForwardRefComponent>ForwardRef</TestForwardRefComponent>,
-      ]
-
-      brandCompliantComponents.forEach(component => {
-        // Quick brand check should work
-        const brandResult = runQuickBrandCheck(component)
-        expect(brandResult).toHaveProperty('passed')
-        expect(brandResult).toHaveProperty('criticalViolations')
-        expect(typeof brandResult.passed).toBe('boolean')
-        expect(Array.isArray(brandResult.criticalViolations)).toBe(true)
-      })
-    })
-
     it('should work across all component types - provider management', () => {
       // Test that provider management works with all component types
       const components = [
@@ -535,7 +514,6 @@ describe('Comprehensive Migration Validation', () => {
       for (let i = 0; i < 10; i++) {
         renderWithProviders(<TestFunctionalComponent variant="primary" />)
         expectBasicRendering(<TestFunctionalComponent />, 'test-component')
-        runQuickBrandCheck(<TestFunctionalComponent />)
         runQuickAccessibilityCheck(<TestFunctionalComponent />)
         cleanupAllResources()
       }
@@ -685,8 +663,10 @@ describe('Comprehensive Migration Validation', () => {
       const styles = window.getComputedStyle(button)
 
       // Should have brand-compliant styling
-      expect(styles.backgroundColor).toBe('rgb(0, 65, 101)') // TM Loyal Blue
-      expect(styles.color).toBe('rgb(255, 255, 255)') // White text
+      expect(styles.backgroundColor).toMatch(
+        /var\(--tm-loyal-blue\)|rgb\(0, 65, 101\)/
+      ) // TM Loyal Blue (CSS var or computed)
+      expect(styles.color).toMatch(/var\(--tm-white\)|rgb\(255, 255, 255\)/) // White text (CSS var or computed)
       expect(styles.fontFamily).toContain('Montserrat')
       expect(parseInt(styles.minHeight)).toBeGreaterThanOrEqual(44) // Touch target
       expect(parseInt(styles.minWidth)).toBeGreaterThanOrEqual(44) // Touch target

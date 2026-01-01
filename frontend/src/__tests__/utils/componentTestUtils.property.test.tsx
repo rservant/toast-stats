@@ -242,8 +242,18 @@ describe('Component Test Utilities - Property Tests', () => {
             try {
               cleanupAllResources()
 
-              // Ensure we have valid variations to work with
-              if (Object.keys(variations).length === 0) {
+              // Filter out problematic keys like __proto__ and ensure we have valid variations
+              const validVariations = Object.fromEntries(
+                Object.entries(variations).filter(
+                  ([key]) =>
+                    key !== '__proto__' &&
+                    key !== 'constructor' &&
+                    key !== 'prototype' &&
+                    key.length > 0
+                )
+              )
+
+              if (Object.keys(validVariations).length === 0) {
                 return true // Skip empty variations
               }
 
@@ -252,7 +262,7 @@ describe('Component Test Utilities - Property Tests', () => {
                 string,
                 Partial<{ text: string; className: string }>
               > = {}
-              Object.entries(variations).forEach(([key, value]) => {
+              Object.entries(validVariations).forEach(([key, value]) => {
                 properVariations[key] = {
                   text: value.text ?? undefined,
                   className: value.className ?? undefined,
@@ -265,14 +275,14 @@ describe('Component Test Utilities - Property Tests', () => {
                 properVariations
               )
 
-              // Should generate correct number of variants
+              // Should generate correct number of variants (using valid variations count)
               expect(generatedVariants).toHaveLength(
-                Object.keys(variations).length
+                Object.keys(validVariations).length
               )
 
               // Each variant should have correct structure
               generatedVariants.forEach((variant, index) => {
-                const variationKey = Object.keys(variations)[index]
+                const variationKey = Object.keys(validVariations)[index]
                 const variation = properVariations[variationKey]
 
                 expect(variant.name).toBe(variationKey)

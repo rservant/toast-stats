@@ -115,7 +115,7 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
               onClick={() => setViewMode('bar')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'bar'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-white text-tm-loyal-blue shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -140,7 +140,7 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
               onClick={() => setViewMode('heatmap')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'heatmap'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-white text-tm-loyal-blue shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >

@@ -26,19 +26,6 @@ export {
   runQuickAccessibilityCheck,
 } from './accessibilityTestUtils'
 
-// Brand compliance testing utilities
-export {
-  expectBrandColors,
-  expectBrandTypography,
-  expectTouchTargets,
-  expectGradientUsage,
-  expectBrandSpacing,
-  expectBrandAccessibility,
-  runBrandComplianceTestSuite,
-  runQuickBrandCheck,
-  expectToastmastersPatterns,
-} from './brandComplianceTestUtils'
-
 // Enhanced test infrastructure
 export {
   testInfrastructure,

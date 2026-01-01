@@ -219,7 +219,6 @@ describe('Property Test: Test Coverage Preservation', () => {
                   ],
                   {
                     skipAccessibilityCheck: true,
-                    skipBrandComplianceCheck: true,
                   }
                 )
 

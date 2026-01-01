@@ -239,7 +239,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 
     return isAsc ? (
       <svg
-        className="w-4 h-4 text-blue-600"
+        className="w-4 h-4 text-tm-loyal-blue"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -254,7 +254,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
       </svg>
     ) : (
       <svg
-        className="w-4 h-4 text-blue-600"
+        className="w-4 h-4 text-tm-loyal-blue"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -278,7 +278,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 
     return (
       <svg
-        className={`w-4 h-4 transition-colors duration-200 ${hasActiveFilter ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-700'}`}
+        className={`w-4 h-4 transition-colors duration-200 ${hasActiveFilter ? 'text-tm-loyal-blue' : 'text-gray-400 group-hover:text-gray-700'}`}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -343,7 +343,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         ref={buttonRef}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         onKeyDown={handleKeyDown}
-        className="group flex items-center gap-2 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-all duration-200 w-full cursor-pointer"
+        className="group flex items-center gap-2 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer"
         tabIndex={0}
         aria-expanded={isDropdownOpen}
         aria-haspopup="true"
@@ -398,10 +398,10 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className={`px-3 py-1 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                    className={`px-3 py-1 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
                       currentSort.field === field &&
                       currentSort.direction === 'asc'
-                        ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
+                        ? 'bg-tm-loyal-blue-20 text-tm-loyal-blue border-tm-loyal-blue hover:bg-tm-loyal-blue-30'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     tabIndex={0}
@@ -430,10 +430,10 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className={`px-3 py-1 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                    className={`px-3 py-1 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
                       currentSort.field === field &&
                       currentSort.direction === 'desc'
-                        ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
+                        ? 'bg-tm-loyal-blue-20 text-tm-loyal-blue border-tm-loyal-blue hover:bg-tm-loyal-blue-30'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-sm'
                     }`}
                     tabIndex={0}
@@ -459,7 +459,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                    className="px-3 py-1 text-sm bg-tm-loyal-blue text-tm-white rounded hover:bg-tm-loyal-blue-90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200"
                     tabIndex={0}
                     aria-label={`Apply ${label} filter`}
                   >

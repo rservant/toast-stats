@@ -18,8 +18,8 @@ import {
   cleanupAllResources,
   ComponentVariant,
 } from '../componentTestUtils'
+import { runQuickAccessibilityCheck } from '../accessibilityTestUtils'
 import { runAccessibilityTestSuite } from '../accessibilityTestUtils'
-import { runBrandComplianceTestSuite } from '../brandComplianceTestUtils'
 
 // TODO: Import your actual component
 // import MyComponent from './MyComponent'
@@ -181,7 +181,6 @@ describe.skip('MyComponent', () => {
       {
         enablePerformanceMonitoring: false, // Set to true for complex components
         skipAccessibilityCheck: false, // Keep false to ensure accessibility
-        skipBrandComplianceCheck: false, // Keep false to ensure brand compliance
       }
     )
   })
@@ -385,17 +384,16 @@ describe.skip('MyComponent', () => {
     })
   })
 
-  // REQUIRED: Brand compliance testing for UI components
-  describe('Brand Compliance', () => {
-    runBrandComplianceTestSuite(<MyComponent {...mockProps} />)
-
-    // TODO: Add component-specific brand compliance tests
-    it('should use Toastmasters brand colors', () => {
-      renderWithProviders(<MyComponent {...mockProps} variant="primary" />)
-
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('btn-primary')
-      // Brand compliance utility will validate the actual colors
+  // REQUIRED: Accessibility testing for UI components
+  describe('Accessibility', () => {
+    it('should meet accessibility standards', () => {
+      const { passed, criticalViolations } = runQuickAccessibilityCheck(
+        <MyComponent {...mockProps} />
+      )
+      if (!passed) {
+        const errorMessage = `Critical accessibility violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
+        throw new Error(errorMessage)
+      }
     })
 
     it('should meet touch target requirements', () => {

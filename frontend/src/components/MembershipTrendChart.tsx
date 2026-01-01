@@ -56,7 +56,7 @@ const CustomTooltip = ({
         <p className="text-sm font-medium text-gray-900 mb-1">
           {formattedDate}
         </p>
-        <p className="text-sm text-blue-600 font-semibold">
+        <p className="text-sm text-tm-loyal-blue font-semibold">
           Members: {data.count.toLocaleString()}
         </p>
         {period && (
@@ -295,10 +295,13 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               data={sortedData}
               margin={{ top: 5, right: 20, left: 10, bottom: 60 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--tm-cool-gray-20)"
+              />
               <XAxis
                 dataKey="date"
-                stroke="#6b7280"
+                stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '11px' }}
                 angle={-45}
                 textAnchor="end"
@@ -306,7 +309,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 tickFormatter={formatXAxis}
               />
               <YAxis
-                stroke="#6b7280"
+                stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '11px' }}
                 label={{
                   value: 'Total Members',
@@ -331,12 +334,12 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 <ReferenceLine
                   key={index}
                   x={milestone.date}
-                  stroke="#772432" // TM True Maroon
+                  stroke="var(--tm-true-maroon)" // TM True Maroon
                   strokeDasharray="5 5"
                   label={{
                     value: milestone.label,
                     position: 'top',
-                    fill: '#772432',
+                    fill: 'var(--tm-true-maroon)',
                     fontSize: 10,
                   }}
                 />
@@ -346,9 +349,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#004165" // TM Loyal Blue
+                stroke="var(--tm-loyal-blue)" // TM Loyal Blue
                 strokeWidth={3}
-                dot={{ fill: '#004165', r: 4 }}
+                dot={{ fill: 'var(--tm-loyal-blue)', r: 4 }}
                 activeDot={{ r: 6 }}
                 name="Total Membership"
               />
@@ -362,13 +365,13 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                     <React.Fragment key={`growth-${index}`}>
                       <ReferenceLine
                         x={startDate}
-                        stroke="#10b981"
+                        stroke="var(--tm-loyal-blue)"
                         strokeWidth={2}
                         strokeOpacity={0.3}
                       />
                       <ReferenceLine
                         x={endDate}
-                        stroke="#10b981"
+                        stroke="var(--tm-loyal-blue)"
                         strokeWidth={2}
                         strokeOpacity={0.3}
                       />
@@ -387,13 +390,13 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                     <React.Fragment key={`decline-${index}`}>
                       <ReferenceLine
                         x={startDate}
-                        stroke="#ef4444"
+                        stroke="var(--tm-true-maroon)"
                         strokeWidth={2}
                         strokeOpacity={0.3}
                       />
                       <ReferenceLine
                         x={endDate}
-                        stroke="#ef4444"
+                        stroke="var(--tm-true-maroon)"
                         strokeWidth={2}
                         strokeOpacity={0.3}
                       />

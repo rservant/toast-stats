@@ -281,7 +281,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                       y1="0"
                       x2="800"
                       y2="0"
-                      stroke="#e5e7eb"
+                      stroke="var(--tm-cool-gray)"
                       strokeWidth="1"
                     />
                     <line
@@ -289,7 +289,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                       y1="40"
                       x2="800"
                       y2="40"
-                      stroke="#e5e7eb"
+                      stroke="var(--tm-cool-gray)"
                       strokeWidth="1"
                     />
                     <line
@@ -297,7 +297,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                       y1="80"
                       x2="800"
                       y2="80"
-                      stroke="#e5e7eb"
+                      stroke="var(--tm-cool-gray)"
                       strokeWidth="1"
                     />
                     <line
@@ -305,7 +305,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                       y1="120"
                       x2="800"
                       y2="120"
-                      stroke="#e5e7eb"
+                      stroke="var(--tm-cool-gray)"
                       strokeWidth="1"
                     />
                     <line
@@ -313,14 +313,14 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                       y1="160"
                       x2="800"
                       y2="160"
-                      stroke="#e5e7eb"
+                      stroke="var(--tm-cool-gray)"
                       strokeWidth="1"
                     />
 
                     {/* Line path */}
                     <polyline
                       fill="none"
-                      stroke="#004165" // TM Loyal Blue
+                      stroke="var(--tm-loyal-blue)" // TM Loyal Blue
                       strokeWidth="2"
                       points={club.membershipTrend
                         .map((point, index) => {
@@ -348,7 +348,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                           cx={x}
                           cy={y}
                           r="4"
-                          fill="#004165" // TM Loyal Blue
+                          fill="var(--tm-loyal-blue)" // TM Loyal Blue
                         />
                       )
                     })}

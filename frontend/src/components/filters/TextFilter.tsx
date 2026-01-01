@@ -83,7 +83,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
             }}
             className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               operator === 'contains'
-                ? 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200'
+                ? 'bg-blue-100 text-tm-loyal-blue border border-blue-300 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
             }`}
             tabIndex={0}
@@ -103,7 +103,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
             }}
             className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               operator === 'startsWith'
-                ? 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200'
+                ? 'bg-blue-100 text-tm-loyal-blue border border-blue-300 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
             }`}
             tabIndex={0}
@@ -159,7 +159,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition-all duration-200"
+            className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
             tabIndex={0}
             aria-label="Clear text filter"
           >

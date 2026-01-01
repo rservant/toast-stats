@@ -11,7 +11,9 @@ export default {
         'tm-happy-yellow': 'var(--tm-happy-yellow)',
         'tm-black': 'var(--tm-black)',
         'tm-white': 'var(--tm-white)',
-        // Color opacity variations
+
+        // TM Loyal Blue opacity variations
+        'tm-loyal-blue-100': 'var(--tm-loyal-blue-100)',
         'tm-loyal-blue-90': 'var(--tm-loyal-blue-90)',
         'tm-loyal-blue-80': 'var(--tm-loyal-blue-80)',
         'tm-loyal-blue-70': 'var(--tm-loyal-blue-70)',
@@ -21,6 +23,9 @@ export default {
         'tm-loyal-blue-30': 'var(--tm-loyal-blue-30)',
         'tm-loyal-blue-20': 'var(--tm-loyal-blue-20)',
         'tm-loyal-blue-10': 'var(--tm-loyal-blue-10)',
+
+        // TM True Maroon opacity variations
+        'tm-true-maroon-100': 'var(--tm-true-maroon-100)',
         'tm-true-maroon-90': 'var(--tm-true-maroon-90)',
         'tm-true-maroon-80': 'var(--tm-true-maroon-80)',
         'tm-true-maroon-70': 'var(--tm-true-maroon-70)',
@@ -30,6 +35,9 @@ export default {
         'tm-true-maroon-30': 'var(--tm-true-maroon-30)',
         'tm-true-maroon-20': 'var(--tm-true-maroon-20)',
         'tm-true-maroon-10': 'var(--tm-true-maroon-10)',
+
+        // TM Cool Gray opacity variations
+        'tm-cool-gray-100': 'var(--tm-cool-gray-100)',
         'tm-cool-gray-90': 'var(--tm-cool-gray-90)',
         'tm-cool-gray-80': 'var(--tm-cool-gray-80)',
         'tm-cool-gray-70': 'var(--tm-cool-gray-70)',
@@ -39,6 +47,9 @@ export default {
         'tm-cool-gray-30': 'var(--tm-cool-gray-30)',
         'tm-cool-gray-20': 'var(--tm-cool-gray-20)',
         'tm-cool-gray-10': 'var(--tm-cool-gray-10)',
+
+        // TM Happy Yellow opacity variations
+        'tm-happy-yellow-100': 'var(--tm-happy-yellow-100)',
         'tm-happy-yellow-90': 'var(--tm-happy-yellow-90)',
         'tm-happy-yellow-80': 'var(--tm-happy-yellow-80)',
         'tm-happy-yellow-70': 'var(--tm-happy-yellow-70)',
@@ -48,6 +59,30 @@ export default {
         'tm-happy-yellow-30': 'var(--tm-happy-yellow-30)',
         'tm-happy-yellow-20': 'var(--tm-happy-yellow-20)',
         'tm-happy-yellow-10': 'var(--tm-happy-yellow-10)',
+
+        // TM Black opacity variations
+        'tm-black-100': 'var(--tm-black-100)',
+        'tm-black-90': 'var(--tm-black-90)',
+        'tm-black-80': 'var(--tm-black-80)',
+        'tm-black-70': 'var(--tm-black-70)',
+        'tm-black-60': 'var(--tm-black-60)',
+        'tm-black-50': 'var(--tm-black-50)',
+        'tm-black-40': 'var(--tm-black-40)',
+        'tm-black-30': 'var(--tm-black-30)',
+        'tm-black-20': 'var(--tm-black-20)',
+        'tm-black-10': 'var(--tm-black-10)',
+
+        // TM White opacity variations
+        'tm-white-100': 'var(--tm-white-100)',
+        'tm-white-90': 'var(--tm-white-90)',
+        'tm-white-80': 'var(--tm-white-80)',
+        'tm-white-70': 'var(--tm-white-70)',
+        'tm-white-60': 'var(--tm-white-60)',
+        'tm-white-50': 'var(--tm-white-50)',
+        'tm-white-40': 'var(--tm-white-40)',
+        'tm-white-30': 'var(--tm-white-30)',
+        'tm-white-20': 'var(--tm-white-20)',
+        'tm-white-10': 'var(--tm-white-10)',
       },
 
       // Toastmasters Typography

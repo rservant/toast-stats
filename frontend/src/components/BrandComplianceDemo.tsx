@@ -297,19 +297,19 @@ const BrandComplianceDemo: React.FC = () => {
                 </h4>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Requirement 1.1: TM Loyal Blue navigation and headers
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Requirement 4.4: Primary buttons use TM Loyal Blue
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Requirement 3.4: Proper focus indicators implemented
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Requirement 3.5: Semantic markup and ARIA labels
                   </li>
                 </ul>
@@ -321,19 +321,19 @@ const BrandComplianceDemo: React.FC = () => {
                 </h4>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Contrast Ratio: 9.8:1 (TM Loyal Blue/White)
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Touch Targets: 44px minimum (WCAG AA)
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Font Size: 14px minimum maintained
                   </li>
                   <li className="flex items-center">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-tm-loyal-blue rounded-full mr-2"></span>
                     Focus Indicators: 2px outline with offset
                   </li>
                 </ul>

@@ -43,17 +43,17 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
   }
 
   const getPercentageColor = (percentage: number): string => {
-    if (percentage >= 75) return 'bg-green-500'
-    if (percentage >= 50) return 'bg-yellow-500'
-    if (percentage >= 25) return 'bg-orange-500'
-    return 'bg-red-500'
+    if (percentage >= 75) return 'bg-tm-loyal-blue'
+    if (percentage >= 50) return 'bg-tm-happy-yellow'
+    if (percentage >= 25) return 'bg-tm-happy-yellow-80'
+    return 'bg-tm-true-maroon'
   }
 
   const getPercentageTextColor = (percentage: number): string => {
-    if (percentage >= 75) return 'text-green-600'
-    if (percentage >= 50) return 'text-yellow-600'
-    if (percentage >= 25) return 'text-orange-600'
-    return 'text-red-600'
+    if (percentage >= 75) return 'text-tm-loyal-blue'
+    if (percentage >= 50) return 'text-tm-happy-yellow'
+    if (percentage >= 25) return 'text-tm-happy-yellow-80'
+    return 'text-tm-true-maroon'
   }
 
   const dcpGoalNames: { [key: number]: string } = {
@@ -76,7 +76,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-tm-loyal-blue-20 text-tm-loyal-blue font-semibold text-sm">
             {goal.goalNumber}
           </span>
           <div>
@@ -113,7 +113,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg
-              className="w-5 h-5 text-green-600"
+              className="w-5 h-5 text-tm-loyal-blue"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -128,7 +128,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
           <p className="text-2xl font-bold text-gray-900">
             Goal {dcpGoalAnalysis.mostCommonlyAchieved[0]?.goalNumber || 'N/A'}
           </p>
-          <p className="text-sm text-green-600 font-medium mt-1">
+          <p className="text-sm text-tm-loyal-blue font-medium mt-1">
             {dcpGoalAnalysis.mostCommonlyAchieved[0]?.achievementPercentage.toFixed(
               1
             )}
@@ -139,7 +139,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg
-              className="w-5 h-5 text-red-600"
+              className="w-5 h-5 text-tm-true-maroon"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -154,7 +154,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
           <p className="text-2xl font-bold text-gray-900">
             Goal {dcpGoalAnalysis.leastCommonlyAchieved[0]?.goalNumber || 'N/A'}
           </p>
-          <p className="text-sm text-red-600 font-medium mt-1">
+          <p className="text-sm text-tm-true-maroon font-medium mt-1">
             {dcpGoalAnalysis.leastCommonlyAchieved[0]?.achievementPercentage.toFixed(
               1
             )}
@@ -165,7 +165,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg
-              className="w-5 h-5 text-blue-600"
+              className="w-5 h-5 text-tm-loyal-blue"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -311,7 +311,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
       <div className="bg-blue-50 rounded-lg shadow-md p-6 border border-blue-200">
         <div className="flex items-start gap-3">
           <svg
-            className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5"
+            className="w-6 h-6 text-tm-loyal-blue flex-shrink-0 mt-0.5"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -327,28 +327,28 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
             </h4>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
+                <span className="text-tm-loyal-blue mt-0.5">•</span>
                 <span>
                   Focus training and resources on goals with low achievement
                   rates (below 50%)
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
+                <span className="text-tm-loyal-blue mt-0.5">•</span>
                 <span>
                   Share best practices from clubs successfully achieving
                   difficult goals
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
+                <span className="text-tm-loyal-blue mt-0.5">•</span>
                 <span>
                   Provide targeted coaching for clubs struggling with specific
                   goals
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
+                <span className="text-tm-loyal-blue mt-0.5">•</span>
                 <span>
                   Celebrate and recognize clubs achieving high-difficulty goals
                 </span>

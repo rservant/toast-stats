@@ -105,7 +105,6 @@ describe('Accessibility Tests', () => {
     ],
     {
       skipAccessibilityCheck: true, // Skip the built-in accessibility check since we're doing our own
-      skipBrandComplianceCheck: true, // Skip brand checks to prevent additional issues
     }
   )
 })

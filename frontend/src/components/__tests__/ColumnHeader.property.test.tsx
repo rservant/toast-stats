@@ -228,7 +228,7 @@ describe('ColumnHeader Property Tests', () => {
             // Check for filter indicator - should be blue (active) instead of gray (inactive)
             // The filter icon should have blue color class when active
             const filterIcon = headerButton.querySelector(
-              'svg[class*="text-blue-600"]'
+              'svg[class*="text-tm-loyal-blue"]'
             )
             expect(filterIcon).toBeInTheDocument()
           } finally {

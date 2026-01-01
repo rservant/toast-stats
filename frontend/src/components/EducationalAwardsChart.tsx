@@ -16,6 +16,13 @@ import { useEducationalAwards } from '../hooks/useEducationalAwards'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { ExportButton } from './ExportButton'
 import { exportEducationalAwards } from '../utils/csvExport'
+import { ChartContainer } from './ChartLegend'
+import { ChartTooltip, DateTooltip } from './ChartTooltip'
+import {
+  getChartColorPalette,
+  generateChartDescription,
+  CHART_STYLES,
+} from '../utils/chartAccessibility'
 
 interface EducationalAwardsChartProps {
   districtId: string
@@ -24,38 +31,6 @@ interface EducationalAwardsChartProps {
 }
 
 type ChartView = 'byType' | 'byMonth' | 'topClubs'
-
-// Custom tooltip for monthly chart moved outside render
-const MonthlyTooltip = ({
-  active,
-  payload,
-}: {
-  active?: boolean
-  payload?: Array<{
-    payload: { fullDate: string; awards: number; [key: string]: unknown }
-  }>
-}) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload
-    const formattedDate = new Date(data.fullDate).toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric',
-    })
-
-    return (
-      <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
-        <p className="text-sm font-medium text-gray-900 mb-1">
-          {formattedDate}
-        </p>
-        <p className="text-sm text-gray-700">
-          <span className="font-semibold">Awards:</span>{' '}
-          {data.awards.toLocaleString()}
-        </p>
-      </div>
-    )
-  }
-  return null
-}
 
 const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
   districtId,
@@ -142,16 +117,7 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
     totalMembers > 0 ? (data.totalAwards / totalMembers).toFixed(2) : '0.00'
 
   // Color palette for charts
-  const colors = [
-    '#3b82f6',
-    '#8b5cf6',
-    '#ec4899',
-    '#f59e0b',
-    '#10b981',
-    '#06b6d4',
-    '#6366f1',
-    '#f97316',
-  ]
+  const colors = getChartColorPalette(8)
 
   // Format data for by-type chart
   const byTypeData = data.byType.map((item, index) => ({
@@ -175,33 +141,44 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
     color: colors[index % colors.length],
   }))
 
+  // Generate chart descriptions for accessibility
+  const byTypeDescription = generateChartDescription(
+    'bar',
+    byTypeData.length,
+    'Educational Awards by Type',
+    `Shows ${data.totalAwards} total awards distributed across ${byTypeData.length} award types`
+  )
+
+  const byMonthDescription = generateChartDescription(
+    'line',
+    byMonthData.length,
+    'Educational Awards Over Time',
+    `Shows award trends over ${months} months with ${data.totalAwards} total awards`
+  )
+
+  const topClubsDescription = generateChartDescription(
+    'bar',
+    topClubsData.length,
+    'Top Performing Clubs',
+    `Shows top ${topClubsData.length} clubs ranked by educational awards earned`
+  )
+
   return (
-    <section
-      className="bg-white rounded-lg shadow-md p-4 sm:p-6"
-      aria-label="Educational awards chart"
+    <ChartContainer
+      title="Educational Awards"
+      subtitle={`Total Awards: ${data.totalAwards.toLocaleString()} | Avg per Member: ${averageAwardsPerMember}`}
+      isLoading={isLoading}
+      error={
+        isError
+          ? error
+            ? String(error)
+            : 'An unexpected error occurred'
+          : undefined
+      }
+      className="tm-brand-compliant"
     >
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-          <div className="flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-              Educational Awards
-            </h2>
-            <div
-              className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600"
-              role="status"
-              aria-live="polite"
-            >
-              <div>
-                <span className="font-medium">Total Awards:</span>{' '}
-                {data.totalAwards.toLocaleString()}
-              </div>
-              <div>
-                <span className="font-medium">Avg per Member:</span>{' '}
-                {averageAwardsPerMember}
-              </div>
-            </div>
-          </div>
-
           <ExportButton
             onExport={handleExport}
             disabled={!data}
@@ -218,9 +195,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
         >
           <button
             onClick={() => setChartView('byType')}
-            className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+            className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-tm-body font-medium rounded-md transition-colors ${
               chartView === 'byType'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-tm-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             aria-label="View awards by type"
@@ -230,9 +207,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           </button>
           <button
             onClick={() => setChartView('byMonth')}
-            className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+            className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-tm-body font-medium rounded-md transition-colors ${
               chartView === 'byMonth'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-tm-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             aria-label="View awards by month"
@@ -242,9 +219,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
           </button>
           <button
             onClick={() => setChartView('topClubs')}
-            className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors ${
+            className={`min-h-[44px] px-3 py-2 text-xs sm:text-sm font-tm-body font-medium rounded-md transition-colors ${
               chartView === 'topClubs'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-tm-loyal-blue text-tm-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
             aria-label="View top performing clubs"
@@ -259,13 +236,13 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
       <div className="mt-4">
         {chartView === 'byType' && (
           <div>
-            <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3">
+            <h3 className="text-xs sm:text-sm font-tm-headline font-semibold text-tm-black mb-3">
               Awards by Type
             </h3>
             {byTypeData.length > 0 ? (
               <div
                 role="img"
-                aria-label={`Bar chart showing ${data.totalAwards} educational awards distributed across ${byTypeData.length} award types`}
+                aria-label={byTypeDescription}
                 className="w-full overflow-x-auto"
               >
                 <div className="min-w-[320px]">
@@ -275,29 +252,34 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                       margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
                       aria-hidden="true"
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid
+                        strokeDasharray={CHART_STYLES.GRID.strokeDasharray}
+                        stroke={CHART_STYLES.GRID.stroke}
+                      />
                       <XAxis
                         dataKey="type"
-                        stroke="#6b7280"
-                        style={{ fontSize: '10px' }}
+                        stroke={CHART_STYLES.AXIS.stroke}
+                        style={{
+                          fontSize: CHART_STYLES.AXIS.fontSize,
+                          fontFamily: CHART_STYLES.AXIS.fontFamily,
+                        }}
                         angle={-45}
                         textAnchor="end"
                         height={80}
                         interval="preserveStartEnd"
                       />
                       <YAxis
-                        stroke="#6b7280"
-                        style={{ fontSize: '10px' }}
+                        stroke={CHART_STYLES.AXIS.stroke}
+                        style={{
+                          fontSize: CHART_STYLES.AXIS.fontSize,
+                          fontFamily: CHART_STYLES.AXIS.fontFamily,
+                        }}
                         allowDecimals={false}
                         width={40}
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '0.375rem',
-                          fontSize: '12px',
-                        }}
+                        content={<ChartTooltip />}
+                        contentStyle={CHART_STYLES.TOOLTIP}
                       />
                       <Bar dataKey="count" name="Awards" radius={[8, 8, 0, 0]}>
                         {byTypeData.map((entry, index) => (
@@ -310,7 +292,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
               </div>
             ) : (
               <div className="flex items-center justify-center h-80">
-                <p className="text-gray-600">No award type data available</p>
+                <p className="text-tm-cool-gray font-tm-body">
+                  No award type data available
+                </p>
               </div>
             )}
           </div>
@@ -318,13 +302,13 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
 
         {chartView === 'byMonth' && (
           <div>
-            <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3">
+            <h3 className="text-xs sm:text-sm font-tm-headline font-semibold text-tm-black mb-3">
               Awards Over Time ({months} Months)
             </h3>
             {byMonthData.length > 0 ? (
               <div
                 role="img"
-                aria-label={`Line chart showing educational awards earned over ${months} months`}
+                aria-label={byMonthDescription}
                 className="w-full overflow-x-auto"
               >
                 <div className="min-w-[320px]">
@@ -334,26 +318,35 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                       margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
                       aria-hidden="true"
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid
+                        strokeDasharray={CHART_STYLES.GRID.strokeDasharray}
+                        stroke={CHART_STYLES.GRID.stroke}
+                      />
                       <XAxis
                         dataKey="month"
-                        stroke="#6b7280"
-                        style={{ fontSize: '10px' }}
+                        stroke={CHART_STYLES.AXIS.stroke}
+                        style={{
+                          fontSize: CHART_STYLES.AXIS.fontSize,
+                          fontFamily: CHART_STYLES.AXIS.fontFamily,
+                        }}
                         angle={-45}
                         textAnchor="end"
                         height={80}
                         interval="preserveStartEnd"
                       />
                       <YAxis
-                        stroke="#6b7280"
-                        style={{ fontSize: '10px' }}
+                        stroke={CHART_STYLES.AXIS.stroke}
+                        style={{
+                          fontSize: CHART_STYLES.AXIS.fontSize,
+                          fontFamily: CHART_STYLES.AXIS.fontFamily,
+                        }}
                         allowDecimals={false}
                         tickFormatter={value => value.toLocaleString()}
                         width={50}
                       />
-                      <Tooltip content={<MonthlyTooltip />} />
+                      <Tooltip content={<DateTooltip />} />
                       <Legend
-                        wrapperStyle={{ fontSize: '12px' }}
+                        wrapperStyle={CHART_STYLES.LEGEND}
                         iconType="line"
                         verticalAlign="top"
                         height={36}
@@ -361,9 +354,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                       <Line
                         type="monotone"
                         dataKey="awards"
-                        stroke="#8b5cf6"
+                        stroke={colors[0]}
                         strokeWidth={2}
-                        dot={{ fill: '#8b5cf6', r: 3 }}
+                        dot={{ fill: colors[0], r: 3 }}
                         activeDot={{ r: 5 }}
                         name="Awards Earned"
                       />
@@ -373,7 +366,9 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
               </div>
             ) : (
               <div className="flex items-center justify-center h-80">
-                <p className="text-gray-600">No monthly data available</p>
+                <p className="text-tm-cool-gray font-tm-body">
+                  No monthly data available
+                </p>
               </div>
             )}
           </div>
@@ -381,13 +376,13 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
 
         {chartView === 'topClubs' && (
           <div>
-            <h3 className="text-xs sm:text-sm font-medium text-gray-700 mb-3">
+            <h3 className="text-xs sm:text-sm font-tm-headline font-semibold text-tm-black mb-3">
               Top Performing Clubs (by Educational Awards)
             </h3>
             {topClubsData.length > 0 ? (
               <div
                 role="img"
-                aria-label={`Bar chart showing top ${topClubsData.length} clubs ranked by educational awards`}
+                aria-label={topClubsDescription}
                 className="w-full overflow-x-auto"
               >
                 <div className="min-w-[320px]">
@@ -398,29 +393,34 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                       layout="horizontal"
                       aria-hidden="true"
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid
+                        strokeDasharray={CHART_STYLES.GRID.strokeDasharray}
+                        stroke={CHART_STYLES.GRID.stroke}
+                      />
                       <XAxis
                         dataKey="clubName"
-                        stroke="#6b7280"
-                        style={{ fontSize: '9px' }}
+                        stroke={CHART_STYLES.AXIS.stroke}
+                        style={{
+                          fontSize: '9px',
+                          fontFamily: CHART_STYLES.AXIS.fontFamily,
+                        }}
                         angle={-45}
                         textAnchor="end"
                         height={120}
                         interval={0}
                       />
                       <YAxis
-                        stroke="#6b7280"
-                        style={{ fontSize: '10px' }}
+                        stroke={CHART_STYLES.AXIS.stroke}
+                        style={{
+                          fontSize: CHART_STYLES.AXIS.fontSize,
+                          fontFamily: CHART_STYLES.AXIS.fontFamily,
+                        }}
                         allowDecimals={false}
                         width={40}
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '0.375rem',
-                          fontSize: '12px',
-                        }}
+                        content={<ChartTooltip />}
+                        contentStyle={CHART_STYLES.TOOLTIP}
                       />
                       <Bar dataKey="awards" name="Awards" radius={[8, 8, 0, 0]}>
                         {topClubsData.map((entry, index) => (
@@ -433,13 +433,15 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
               </div>
             ) : (
               <div className="flex items-center justify-center h-80">
-                <p className="text-gray-600">No club data available</p>
+                <p className="text-tm-cool-gray font-tm-body">
+                  No club data available
+                </p>
               </div>
             )}
           </div>
         )}
       </div>
-    </section>
+    </ChartContainer>
   )
 }
 

@@ -107,6 +107,22 @@
   min-height: var(--tm-touch-target);
 }
 
+/* Interactive Element Touch Target Enforcement (Task 6.1 Requirements) */
+.tm-btn-primary,
+.tm-btn-secondary,
+.tm-form-input,
+.tm-nav-item,
+button,
+input,
+select,
+textarea,
+a[role="button"],
+[role="button"],
+[tabindex="0"] {
+  min-height: var(--tm-touch-target);
+  min-width: var(--tm-touch-target);
+}
+
 /* Spacing Utilities */
 .tm-space-xs { gap: var(--tm-space-xs); }
 .tm-space-sm { gap: var(--tm-space-sm); }

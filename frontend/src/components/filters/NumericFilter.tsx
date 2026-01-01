@@ -108,7 +108,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition-all duration-200"
+              className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
               tabIndex={0}
               aria-label="Clear numeric filter"
             >

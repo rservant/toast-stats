@@ -56,7 +56,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
         aria-live="polite"
       >
         <div
-          className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"
+          className="animate-spin rounded-full h-5 w-5 border-b-2 border-tm-loyal-blue"
           aria-hidden="true"
         ></div>
         <span className="text-gray-600">Loading districts...</span>
@@ -90,7 +90,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
   }
 
   return (
-    <nav className="space-y-4" aria-label="District selection">
+    <nav className="tm-nav space-y-4" aria-label="District selection">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <label
           htmlFor="district-select"
@@ -103,7 +103,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
             id="district-select"
             value={selectedDistrictId || ''}
             onChange={handleDistrictChange}
-            className="block w-full min-h-[48px] px-4 py-3 pr-10 bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-medium text-gray-900 transition-colors cursor-pointer appearance-none"
+            className="block w-full min-h-[48px] px-4 py-3 pr-10 bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:border-tm-loyal-blue focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue text-base font-medium text-gray-900 transition-colors cursor-pointer appearance-none"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
               backgroundPosition: 'right 0.5rem center',
@@ -133,7 +133,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
       </div>
 
       {selectedDistrictId && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-4">
+        <div className="bg-blue-50 border-l-4 border-tm-loyal-blue rounded-r-lg p-4">
           <p
             id="current-district"
             className="text-sm sm:text-base text-gray-700"
@@ -141,7 +141,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
             aria-live="polite"
           >
             <span className="font-medium text-gray-900">Viewing:</span>{' '}
-            <span className="font-bold text-blue-700">
+            <span className="font-bold text-tm-loyal-blue">
               {getSelectedDistrictName()}
             </span>
           </p>

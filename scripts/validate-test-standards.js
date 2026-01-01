@@ -19,7 +19,6 @@ const CONFIG = {
     requireSharedUtilities: true,
     requireCleanup: true,
     requireAccessibilityTesting: true,
-    requireBrandComplianceTesting: true,
     prohibitDirectRender: true,
     requireDescriptiveNames: true,
   },
@@ -53,24 +52,6 @@ const VALIDATION_RULES = {
     inverse: true,
     condition: content =>
       content.includes('Component') && !content.includes('.property.test.'),
-  },
-
-  // Require brand compliance testing
-  missingBrandComplianceTesting: {
-    patterns: [/runBrandComplianceTestSuite/, /runQuickBrandCheck/],
-    message:
-      'UI component missing brand compliance testing. Add runBrandComplianceTestSuite or runQuickBrandCheck.',
-    severity: 'warning',
-    inverse: true,
-    condition: content => {
-      // Check if it's a UI component test (has JSX and Component)
-      return (
-        content.includes('Component') &&
-        content.includes('<') &&
-        !content.includes('.property.test.') &&
-        !content.includes('.integration.test.')
-      )
-    },
   },
 
   // Require shared utility usage

@@ -13,7 +13,8 @@
   --tm-black: #000000;
   --tm-white: #FFFFFF;
   
-  /* Color Opacity Variations (10% increments) */
+  /* TM Loyal Blue Opacity Variations (10% increments) */
+  --tm-loyal-blue-100: rgba(0, 65, 101, 1.0);
   --tm-loyal-blue-90: rgba(0, 65, 101, 0.9);
   --tm-loyal-blue-80: rgba(0, 65, 101, 0.8);
   --tm-loyal-blue-70: rgba(0, 65, 101, 0.7);
@@ -24,6 +25,8 @@
   --tm-loyal-blue-20: rgba(0, 65, 101, 0.2);
   --tm-loyal-blue-10: rgba(0, 65, 101, 0.1);
   
+  /* TM True Maroon Opacity Variations (10% increments) */
+  --tm-true-maroon-100: rgba(119, 36, 50, 1.0);
   --tm-true-maroon-90: rgba(119, 36, 50, 0.9);
   --tm-true-maroon-80: rgba(119, 36, 50, 0.8);
   --tm-true-maroon-70: rgba(119, 36, 50, 0.7);
@@ -34,6 +37,8 @@
   --tm-true-maroon-20: rgba(119, 36, 50, 0.2);
   --tm-true-maroon-10: rgba(119, 36, 50, 0.1);
   
+  /* TM Cool Gray Opacity Variations (10% increments) */
+  --tm-cool-gray-100: rgba(169, 178, 177, 1.0);
   --tm-cool-gray-90: rgba(169, 178, 177, 0.9);
   --tm-cool-gray-80: rgba(169, 178, 177, 0.8);
   --tm-cool-gray-70: rgba(169, 178, 177, 0.7);
@@ -44,6 +49,8 @@
   --tm-cool-gray-20: rgba(169, 178, 177, 0.2);
   --tm-cool-gray-10: rgba(169, 178, 177, 0.1);
   
+  /* TM Happy Yellow Opacity Variations (10% increments) */
+  --tm-happy-yellow-100: rgba(242, 223, 116, 1.0);
   --tm-happy-yellow-90: rgba(242, 223, 116, 0.9);
   --tm-happy-yellow-80: rgba(242, 223, 116, 0.8);
   --tm-happy-yellow-70: rgba(242, 223, 116, 0.7);
@@ -53,4 +60,28 @@
   --tm-happy-yellow-30: rgba(242, 223, 116, 0.3);
   --tm-happy-yellow-20: rgba(242, 223, 116, 0.2);
   --tm-happy-yellow-10: rgba(242, 223, 116, 0.1);
+  
+  /* TM Black Opacity Variations (10% increments) */
+  --tm-black-100: rgba(0, 0, 0, 1.0);
+  --tm-black-90: rgba(0, 0, 0, 0.9);
+  --tm-black-80: rgba(0, 0, 0, 0.8);
+  --tm-black-70: rgba(0, 0, 0, 0.7);
+  --tm-black-60: rgba(0, 0, 0, 0.6);
+  --tm-black-50: rgba(0, 0, 0, 0.5);
+  --tm-black-40: rgba(0, 0, 0, 0.4);
+  --tm-black-30: rgba(0, 0, 0, 0.3);
+  --tm-black-20: rgba(0, 0, 0, 0.2);
+  --tm-black-10: rgba(0, 0, 0, 0.1);
+  
+  /* TM White Opacity Variations (10% increments) */
+  --tm-white-100: rgba(255, 255, 255, 1.0);
+  --tm-white-90: rgba(255, 255, 255, 0.9);
+  --tm-white-80: rgba(255, 255, 255, 0.8);
+  --tm-white-70: rgba(255, 255, 255, 0.7);
+  --tm-white-60: rgba(255, 255, 255, 0.6);
+  --tm-white-50: rgba(255, 255, 255, 0.5);
+  --tm-white-40: rgba(255, 255, 255, 0.4);
+  --tm-white-30: rgba(255, 255, 255, 0.3);
+  --tm-white-20: rgba(255, 255, 255, 0.2);
+  --tm-white-10: rgba(255, 255, 255, 0.1);
 }

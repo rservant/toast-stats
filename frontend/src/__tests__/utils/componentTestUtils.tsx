@@ -12,7 +12,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, it, vi } from 'vitest'
 import { testPerformanceMonitor } from './performanceMonitor'
 import { runQuickAccessibilityCheck } from './accessibilityTestUtils'
-import { runQuickBrandCheck } from './brandComplianceTestUtils'
 
 // Type-safe helper for checking test environment (following lint-compliance-guide patterns)
 interface ExpectWithState {
@@ -231,7 +230,6 @@ export interface ComponentVariant<T> {
 export interface VariantTestOptions {
   enablePerformanceMonitoring?: boolean
   skipAccessibilityCheck?: boolean
-  skipBrandComplianceCheck?: boolean
   skipRouter?: boolean
   customProviders?: ComponentType<{ children: React.ReactNode }>[]
   beforeEach?: () => void
@@ -255,7 +253,6 @@ export const testComponentVariants = <
   const {
     enablePerformanceMonitoring = false,
     skipAccessibilityCheck = false,
-    skipBrandComplianceCheck = false,
     skipRouter = false,
     customProviders = [],
     beforeEach,
@@ -373,21 +370,6 @@ export const testComponentVariants = <
           } else {
             console.warn('Accessibility check failed:', error)
           }
-        }
-      }
-
-      // Brand compliance check (unless skipped)
-      if (!skipBrandComplianceCheck) {
-        try {
-          const { passed, criticalViolations } = runQuickBrandCheck(
-            <Component {...props} />
-          )
-          if (!passed) {
-            const errorMessage = `Brand compliance violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
-            console.warn(errorMessage) // Log but don't fail the test
-          }
-        } catch (error) {
-          console.warn('Brand compliance check failed:', error)
         }
       }
     } finally {

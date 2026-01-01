@@ -278,7 +278,6 @@ describe('ReconciliationManagement', () => {
       ],
       {
         skipAccessibilityCheck: true, // Skip accessibility checks to prevent axe concurrency issues
-        skipBrandComplianceCheck: true, // Skip brand checks to prevent additional issues
       }
     )
 
@@ -834,7 +833,6 @@ describe('ReconciliationManagement', () => {
       ],
       {
         skipAccessibilityCheck: true, // Skip accessibility checks to prevent axe concurrency issues
-        skipBrandComplianceCheck: true, // Skip brand checks to prevent additional issues
       }
     )
   })

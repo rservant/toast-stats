@@ -3,7 +3,7 @@
  *
  * **Property 1: Test utility function availability**
  * For any test utility module, all required functions (renderWithProviders, testComponentVariants,
- * runBrandComplianceTestSuite, runAccessibilityTestSuite, expectBasicRendering) should be exported and callable
+ * runAccessibilityTestSuite, expectBasicRendering) should be exported and callable
  *
  * **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5**
  *
@@ -19,7 +19,6 @@ import { cleanup } from '@testing-library/react'
 import {
   renderWithProviders,
   testComponentVariants,
-  runBrandComplianceTestSuite,
   runAccessibilityTestSuite,
   expectBasicRendering,
   expectWCAGCompliance,
@@ -27,19 +26,15 @@ import {
   expectColorContrast,
   expectScreenReaderCompatibility,
   expectFocusManagement,
-  expectBrandColors,
-  expectBrandTypography,
-  expectTouchTargets,
-  expectGradientUsage,
-  expectBrandSpacing,
-  expectBrandAccessibility,
-  expectToastmastersPatterns,
   testLoadingStates,
   testErrorStates,
-  expectAccessibility,
   testInfrastructure,
   testPerformanceMonitor,
   testMigrationValidator,
+  withPerformanceMonitoring,
+  expectPerformanceWithinThresholds,
+  validateTestMigration,
+  expectMigrationSuccess,
 } from './index'
 
 // Simple test components for property testing
@@ -105,18 +100,7 @@ describe('Property Test: Test Utility Function Availability', () => {
             expect(typeof fn).toBe('function')
           }).not.toThrow()
 
-          // 3. runBrandComplianceTestSuite should be a function (Requirement 1.3)
-          expect(typeof runBrandComplianceTestSuite).toBe('function')
-
-          // Verify it can be called with a component (but don't run the actual suite)
-          expect(() => {
-            // Just verify the function exists and is callable
-            const fn = runBrandComplianceTestSuite
-            expect(fn).toBeDefined()
-            expect(typeof fn).toBe('function')
-          }).not.toThrow()
-
-          // 4. runAccessibilityTestSuite should be a function (Requirement 1.4)
+          // 3. runAccessibilityTestSuite should be a function (Requirement 1.3)
           expect(typeof runAccessibilityTestSuite).toBe('function')
 
           // Verify it can be called with a component (but don't run the actual suite)
@@ -145,17 +129,13 @@ describe('Property Test: Test Utility Function Availability', () => {
           expect(typeof expectScreenReaderCompatibility).toBe('function')
           expect(typeof expectFocusManagement).toBe('function')
 
-          expect(typeof expectBrandColors).toBe('function')
-          expect(typeof expectBrandTypography).toBe('function')
-          expect(typeof expectTouchTargets).toBe('function')
-          expect(typeof expectGradientUsage).toBe('function')
-          expect(typeof expectBrandSpacing).toBe('function')
-          expect(typeof expectBrandAccessibility).toBe('function')
-          expect(typeof expectToastmastersPatterns).toBe('function')
-
+          // Performance and infrastructure utilities
           expect(typeof testLoadingStates).toBe('function')
           expect(typeof testErrorStates).toBe('function')
-          expect(typeof expectAccessibility).toBe('function')
+          expect(typeof withPerformanceMonitoring).toBe('function')
+          expect(typeof expectPerformanceWithinThresholds).toBe('function')
+          expect(typeof validateTestMigration).toBe('function')
+          expect(typeof expectMigrationSuccess).toBe('function')
 
           // Enhanced infrastructure should be available
           expect(testInfrastructure).toBeDefined()
@@ -205,7 +185,6 @@ describe('Property Test: Test Utility Function Availability', () => {
           // Don't call expectBasicRendering to avoid DOM conflicts
           expect(typeof expectBasicRendering).toBe('function')
           // Don't call suite functions inside property tests
-          expect(typeof runBrandComplianceTestSuite).toBe('function')
           expect(typeof runAccessibilityTestSuite).toBe('function')
 
           // Test with simple component - use unique testId to avoid conflicts
@@ -230,7 +209,6 @@ describe('Property Test: Test Utility Function Availability', () => {
           // Don't call expectBasicRendering to avoid DOM conflicts
           expect(typeof expectBasicRendering).toBe('function')
           // Don't call suite functions inside property tests
-          expect(typeof runBrandComplianceTestSuite).toBe('function')
           expect(typeof runAccessibilityTestSuite).toBe('function')
 
           return true

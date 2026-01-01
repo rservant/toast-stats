@@ -92,7 +92,7 @@ export function BackfillProgressBar({
           <div className="flex-shrink-0">
             {backfillStatus.status === 'processing' && (
               <svg
-                className="w-5 h-5 text-blue-600 animate-spin"
+                className="w-5 h-5 text-tm-loyal-blue animate-spin"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -170,7 +170,7 @@ export function BackfillProgressBar({
               <>
                 <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-tm-loyal-blue h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progressPercentage}%` }}
                   />
                 </div>

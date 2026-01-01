@@ -73,7 +73,7 @@ describe('Focus Indicators Property Tests', () => {
             const buttonClasses = headerButton?.className || ''
             expect(buttonClasses).toContain('focus:outline-none')
             expect(buttonClasses).toContain('focus:ring-2')
-            expect(buttonClasses).toContain('focus:ring-blue-500')
+            expect(buttonClasses).toMatch(/focus:ring-(blue-500|tm-loyal-blue)/) // Accept either generic or brand-specific
 
             // Simulate focus event
             fireEvent.focus(headerButton!)
@@ -282,7 +282,9 @@ describe('Focus Indicators Property Tests', () => {
               const buttonClasses = button.className
               expect(buttonClasses).toContain('focus:outline-none')
               expect(buttonClasses).toContain('focus:ring-2')
-              expect(buttonClasses).toContain('focus:ring-blue-500')
+              expect(buttonClasses).toMatch(
+                /focus:ring-(blue-500|tm-loyal-blue)/
+              ) // Accept either generic or brand-specific
             })
 
             // Check checkbox focus indicators

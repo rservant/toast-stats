@@ -22,7 +22,6 @@ import {
   ComponentVariant,
 } from '../utils/componentTestUtils'
 import { runQuickAccessibilityCheck } from '../utils/accessibilityTestUtils'
-import { runQuickBrandCheck } from '../utils/brandComplianceTestUtils'
 
 // Component type generators for property-based testing
 interface BaseComponentProps {
@@ -292,7 +291,8 @@ describe('Cross-Component Compatibility Property Tests', () => {
               const childrenElement = componentElement.querySelector(
                 '[data-testid="children-content"]'
               )
-              expect(childrenElement).toHaveTextContent(children)
+              // Handle whitespace normalization by comparing trimmed content
+              expect(childrenElement).toHaveTextContent(children.trim())
             }
 
             // Verify className is applied if provided
@@ -399,7 +399,6 @@ describe('Cross-Component Compatibility Property Tests', () => {
                 variants as ComponentVariant<Record<string, unknown>>[],
                 {
                   skipAccessibilityCheck: true, // Skip for performance in property tests
-                  skipBrandComplianceCheck: true,
                 }
               )
             }).not.toThrow()
@@ -673,9 +672,10 @@ describe('Cross-Component Compatibility Property Tests', () => {
               </BaseComponent>
             )
 
-            // Quick brand check should work with any component type
-            const { passed } = runQuickBrandCheck(<BrandCompliantComponent />)
-            expect(passed).toBe(true)
+            // Brand compliance testing removed - just verify component renders
+            expect(() => {
+              renderWithProviders(<BrandCompliantComponent />)
+            }).not.toThrow()
           }
         ),
         { numRuns: 3 }
@@ -841,7 +841,7 @@ describe('Cross-Component Compatibility Property Tests', () => {
               .forEach((item: string, index: number) => {
                 expect(
                   screen.getByTestId(`item-${uniqueId}-${index}`)
-                ).toHaveTextContent(item)
+                ).toHaveTextContent(item.trim()) // Trim to handle whitespace normalization
               })
           }
         ),

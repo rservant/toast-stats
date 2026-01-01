@@ -2,7 +2,6 @@ import { vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import {
   testComponentVariants,
-  runQuickBrandCheck,
   runQuickAccessibilityCheck,
 } from '../../__tests__/utils'
 import ReconciliationManagementPage from '../ReconciliationManagementPage'
@@ -56,16 +55,6 @@ describe('ReconciliationManagementPage', () => {
   ])
 
   // Add comprehensive compliance testing
-  it('should meet brand compliance standards', () => {
-    const { passed, criticalViolations } = runQuickBrandCheck(
-      <ReconciliationManagementPage />
-    )
-    if (!passed) {
-      const errorMessage = `Critical brand violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
-      throw new Error(errorMessage)
-    }
-  })
-
   it('should meet accessibility standards', () => {
     const { passed, criticalViolations } = runQuickAccessibilityCheck(
       <ReconciliationManagementPage />

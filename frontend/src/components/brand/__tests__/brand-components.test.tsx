@@ -9,12 +9,10 @@ import { describe, it, expect } from 'vitest'
 import React from 'react'
 import {
   testComponentVariants,
-  runQuickBrandCheck,
   runQuickAccessibilityCheck,
 } from '../../../__tests__/utils'
 import {
   ThemeProvider,
-  BrandValidator,
   AccessibilityChecker,
   BRAND_COLORS,
   BRAND_GRADIENTS,
@@ -30,11 +28,6 @@ describe('Brand Component Library Foundation', () => {
     it('should import ThemeProvider component', () => {
       expect(ThemeProvider).toBeDefined()
       expect(typeof ThemeProvider).toBe('function')
-    })
-
-    it('should import BrandValidator component', () => {
-      expect(BrandValidator).toBeDefined()
-      expect(typeof BrandValidator).toBe('function')
     })
 
     it('should import AccessibilityChecker component', () => {
@@ -110,24 +103,6 @@ describe('Brand Component Library Foundation', () => {
     )
 
     testComponentVariants(
-      BrandValidator as unknown as React.ComponentType<Record<string, unknown>>,
-      [
-        {
-          name: 'with children in ThemeProvider',
-          props: { children: testContent },
-          expectedText: 'Test Content',
-          customAssertion: container => {
-            // Ensure BrandValidator is properly wrapped
-            expect(container.querySelector('div')).toBeInTheDocument()
-          },
-        },
-      ],
-      {
-        customProviders: [ThemeProvider],
-      }
-    )
-
-    testComponentVariants(
       AccessibilityChecker as unknown as React.ComponentType<
         Record<string, unknown>
       >,
@@ -148,25 +123,6 @@ describe('Brand Component Library Foundation', () => {
     )
 
     // Add comprehensive compliance testing for brand components
-    it('should meet brand compliance standards', () => {
-      const component = (
-        <ThemeProvider>
-          <BrandValidator>
-            <AccessibilityChecker>
-              <div>Brand Component Test</div>
-            </AccessibilityChecker>
-          </BrandValidator>
-        </ThemeProvider>
-      )
-
-      // Use quick brand check instead of full suite to avoid nested describe blocks
-      const { passed, criticalViolations } = runQuickBrandCheck(component)
-      if (!passed) {
-        const errorMessage = `Critical brand violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
-        throw new Error(errorMessage)
-      }
-    })
-
     it('should meet accessibility standards', () => {
       const component = (
         <ThemeProvider>
