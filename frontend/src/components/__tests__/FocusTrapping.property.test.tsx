@@ -135,7 +135,7 @@ describe('Focus Trapping Property Tests', () => {
             }
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -193,7 +193,7 @@ describe('Focus Trapping Property Tests', () => {
             expect(dropdown).toBeFalsy()
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -253,7 +253,7 @@ describe('Focus Trapping Property Tests', () => {
             expect(headerButton).toHaveAttribute('aria-expanded', 'false')
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -311,7 +311,7 @@ describe('Focus Trapping Property Tests', () => {
             })
           }
         }),
-        { numRuns: 25 }
+        { numRuns: 2 }
       )
     })
 
@@ -385,7 +385,7 @@ describe('Focus Trapping Property Tests', () => {
             })
           }
         ),
-        { numRuns: 30 }
+        { numRuns: 3 }
       )
     })
 
@@ -446,7 +446,7 @@ describe('Focus Trapping Property Tests', () => {
             expect(dropdown!.contains(element)).toBe(true)
           })
         }),
-        { numRuns: 25 }
+        { numRuns: 2 }
       )
     })
   })

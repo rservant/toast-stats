@@ -2,20 +2,20 @@
 
 :root {
   /* Primary Brand Gradients */
-  --tm-gradient-loyal-blue: linear-gradient(135deg, #004165 0%, #006094 100%);
-  --tm-gradient-loyal-blue-radial: radial-gradient(circle, #004165 0%, #006094 100%);
-  --tm-gradient-loyal-blue-vertical: linear-gradient(180deg, #004165 0%, #006094 100%);
-  --tm-gradient-loyal-blue-horizontal: linear-gradient(90deg, #004165 0%, #006094 100%);
+  --tm-gradient-loyal-blue: linear-gradient(135deg, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
+  --tm-gradient-loyal-blue-radial: radial-gradient(circle, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
+  --tm-gradient-loyal-blue-vertical: linear-gradient(180deg, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
+  --tm-gradient-loyal-blue-horizontal: linear-gradient(90deg, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
   
-  --tm-gradient-true-maroon: linear-gradient(135deg, #3B0104 0%, #781327 100%);
-  --tm-gradient-true-maroon-radial: radial-gradient(circle, #3B0104 0%, #781327 100%);
-  --tm-gradient-true-maroon-vertical: linear-gradient(180deg, #3B0104 0%, #781327 100%);
-  --tm-gradient-true-maroon-horizontal: linear-gradient(90deg, #3B0104 0%, #781327 100%);
+  --tm-gradient-true-maroon: linear-gradient(135deg, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
+  --tm-gradient-true-maroon-radial: radial-gradient(circle, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
+  --tm-gradient-true-maroon-vertical: linear-gradient(180deg, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
+  --tm-gradient-true-maroon-horizontal: linear-gradient(90deg, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
   
-  --tm-gradient-cool-gray: linear-gradient(135deg, #A9B2B1 0%, #F5F5F5 100%);
-  --tm-gradient-cool-gray-radial: radial-gradient(circle, #A9B2B1 0%, #F5F5F5 100%);
-  --tm-gradient-cool-gray-vertical: linear-gradient(180deg, #A9B2B1 0%, #F5F5F5 100%);
-  --tm-gradient-cool-gray-horizontal: linear-gradient(90deg, #A9B2B1 0%, #F5F5F5 100%);
+  --tm-gradient-cool-gray: linear-gradient(135deg, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
+  --tm-gradient-cool-gray-radial: radial-gradient(circle, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
+  --tm-gradient-cool-gray-vertical: linear-gradient(180deg, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
+  --tm-gradient-cool-gray-horizontal: linear-gradient(90deg, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
   
   /* Gradient Opacity Variations (20% increments as per brand guidelines) */
   --tm-gradient-cool-gray-80: linear-gradient(135deg, rgba(169, 178, 177, 0.8) 0%, rgba(245, 245, 245, 0.8) 100%);

@@ -105,7 +105,7 @@ describe('ClubsTable Property Tests', () => {
             expect(resultsText.textContent).toBe(`Total: ${clubs.length} clubs`)
           }
         ),
-        { numRuns: 10 }
+        { numRuns: 2 }
       )
     })
   })

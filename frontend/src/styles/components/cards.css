@@ -8,6 +8,18 @@
   color: var(--tm-black);
 }
 
+/* Brand-Compliant Card Class (Task 6.1 Requirements) */
+.tm-card {
+  background-color: var(--tm-white);
+  border: var(--tm-border) solid var(--tm-cool-gray);
+  border-radius: var(--tm-radius-md);
+  padding: var(--tm-component-padding-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: var(--tm-font-body);
+  color: var(--tm-black);
+  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
 /* Card Variants */
 .tm-card-default {
   background-color: var(--tm-white);

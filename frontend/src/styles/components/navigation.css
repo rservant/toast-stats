@@ -6,6 +6,15 @@
   color: var(--tm-white);
 }
 
+/* Brand-Compliant Navigation Class (Task 6.1 Requirements) */
+.tm-nav {
+  background-color: var(--tm-loyal-blue);
+  color: var(--tm-white);
+  font-family: var(--tm-font-headline);
+  font-weight: 600;
+  padding: var(--tm-component-padding-sm) var(--tm-component-padding-md);
+}
+
 /* Navigation Item Base */
 .tm-nav-item {
   font-family: var(--tm-font-headline);

@@ -36,7 +36,7 @@ const SortIcon: React.FC<{
   }
   return sortDirection === 'asc' ? (
     <svg
-      className="w-4 h-4 text-blue-600"
+      className="w-4 h-4 text-tm-loyal-blue"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -50,7 +50,7 @@ const SortIcon: React.FC<{
     </svg>
   ) : (
     <svg
-      className="w-4 h-4 text-blue-600"
+      className="w-4 h-4 text-tm-loyal-blue"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -144,7 +144,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
     } else if (rank === 3) {
       return 'bg-orange-100 text-orange-800 border-orange-300'
     }
-    return 'bg-blue-50 text-blue-700 border-blue-200'
+    return 'bg-tm-cool-gray bg-opacity-20 text-tm-loyal-blue border-tm-cool-gray'
   }
 
   // Check if division is "Best Practice" (top 20% with high scores)

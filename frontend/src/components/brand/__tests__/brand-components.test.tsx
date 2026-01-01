@@ -2,13 +2,17 @@
  * Basic tests for brand component library foundation
  *
  * These tests verify that the brand components can be imported and instantiated correctly.
+ * Migrated to use shared test utilities for consistency and reduced redundancy.
  */
 
 import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/react'
+import React from 'react'
+import {
+  testComponentVariants,
+  runQuickAccessibilityCheck,
+} from '../../../__tests__/utils'
 import {
   ThemeProvider,
-  BrandValidator,
   AccessibilityChecker,
   BRAND_COLORS,
   BRAND_GRADIENTS,
@@ -24,11 +28,6 @@ describe('Brand Component Library Foundation', () => {
     it('should import ThemeProvider component', () => {
       expect(ThemeProvider).toBeDefined()
       expect(typeof ThemeProvider).toBe('function')
-    })
-
-    it('should import BrandValidator component', () => {
-      expect(BrandValidator).toBeDefined()
-      expect(typeof BrandValidator).toBe('function')
     })
 
     it('should import AccessibilityChecker component', () => {
@@ -89,35 +88,57 @@ describe('Brand Component Library Foundation', () => {
   })
 
   describe('Component Rendering', () => {
-    it('should render ThemeProvider with children', () => {
-      const { getByText } = render(
-        <ThemeProvider>
-          <div>Test Content</div>
-        </ThemeProvider>
-      )
-      expect(getByText('Test Content')).toBeInTheDocument()
-    })
+    // Migrate to shared utilities for consistent testing patterns
+    const testContent = <div>Test Content</div>
 
-    it('should render BrandValidator with children', () => {
-      const { getByText } = render(
-        <ThemeProvider>
-          <BrandValidator>
-            <div>Test Content</div>
-          </BrandValidator>
-        </ThemeProvider>
-      )
-      expect(getByText('Test Content')).toBeInTheDocument()
-    })
+    testComponentVariants(
+      ThemeProvider as unknown as React.ComponentType<Record<string, unknown>>,
+      [
+        {
+          name: 'with children',
+          props: { children: testContent },
+          expectedText: 'Test Content',
+        },
+      ]
+    )
 
-    it('should render AccessibilityChecker with children', () => {
-      const { getByText } = render(
+    testComponentVariants(
+      AccessibilityChecker as unknown as React.ComponentType<
+        Record<string, unknown>
+      >,
+      [
+        {
+          name: 'with children in ThemeProvider',
+          props: { children: testContent },
+          expectedText: 'Test Content',
+          customAssertion: container => {
+            // Ensure AccessibilityChecker is properly wrapped
+            expect(container.querySelector('div')).toBeInTheDocument()
+          },
+        },
+      ],
+      {
+        customProviders: [ThemeProvider],
+      }
+    )
+
+    // Add comprehensive compliance testing for brand components
+    it('should meet accessibility standards', () => {
+      const component = (
         <ThemeProvider>
           <AccessibilityChecker>
-            <div>Test Content</div>
+            <div>Accessibility Test Content</div>
           </AccessibilityChecker>
         </ThemeProvider>
       )
-      expect(getByText('Test Content')).toBeInTheDocument()
+
+      // Use quick accessibility check instead of full suite to avoid nested describe blocks
+      const { passed, criticalViolations } =
+        runQuickAccessibilityCheck(component)
+      if (!passed) {
+        const errorMessage = `Critical accessibility violations found:\n${criticalViolations.map(v => `- ${v.violation}: ${v.remediation}`).join('\n')}`
+        throw new Error(errorMessage)
+      }
     })
   })
 })

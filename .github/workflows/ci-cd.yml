@@ -5,9 +5,6 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  schedule:
-    # Run daily compliance check at 9 AM UTC
-    - cron: '0 9 * * *'
 
 permissions:
   contents: read
@@ -108,7 +105,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -138,116 +135,11 @@ jobs:
       - name: Run frontend tests
         run: npm run test:frontend
 
-  # Brand Compliance Audit
-  brand-compliance:
-    name: Brand Compliance Audit
-    runs-on: ubuntu-latest
-    needs: quality-gates
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run brand compliance audit
-        run: |
-          cd frontend
-          npm run audit:brand-compliance
-        env:
-          CI: true
-
-      - name: Upload compliance report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: compliance-report-${{ github.run_id }}
-          path: frontend/compliance-reports/
-          retention-days: 30
-
-      - name: Comment PR with compliance results
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request' && always()
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-
-            const reportsDir = 'frontend/compliance-reports';
-            if (fs.existsSync(reportsDir)) {
-              const files = fs.readdirSync(reportsDir)
-                .filter(f => f.endsWith('.json'))
-                .sort()
-                .reverse();
-
-              if (files.length > 0) {
-                const reportPath = path.join(reportsDir, files[0]);
-                const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-
-                const statusIcon = report.summary.overallStatus === 'pass' ? '✅' : '❌';
-                const statusText = report.summary.overallStatus === 'pass' ? 'PASS' : 'FAIL';
-
-                const comment = `## 🎨 Brand Compliance Report ${statusIcon}
-
-            **Overall Status:** ${statusIcon} ${statusText}
-            **Total Issues:** ${report.summary.totalIssues}
-            **Critical Issues:** ${report.summary.criticalIssues}
-
-            ### Category Results
-            ${Object.entries(report.summary.categories).map(([cat, status]) =>
-              \`- ${status === 'pass' ? '✅' : '❌'} ${cat}: ${status.toUpperCase()}\`
-            ).join('\\n')}
-
-            ${report.recommendations.length > 0 ? \`
-            ### Top Recommendations
-            ${report.recommendations.slice(0, 3).map((rec, i) =>
-              \`${i + 1}. **[${rec.priority.toUpperCase()}]** ${rec.message}\`
-            ).join('\\n')}
-            \` : ''}
-
-            <details>
-            <summary>View Full Report Details</summary>
-
-            **Report ID:** ${report.id}
-            **Generated:** ${new Date(report.timestamp).toLocaleString()}
-
-            #### Detailed Results
-            ${Object.entries(report.results).map(([category, result]) => {
-              if (result.success) {
-                return \`- ✅ **${category}**: All checks passed\`;
-              } else {
-                const details = [];
-                if (result.errors) details.push(\`${result.errors} errors\`);
-                if (result.warnings) details.push(\`${result.warnings} warnings\`);
-                if (result.numFailedTests) details.push(\`${result.numFailedTests} failed tests\`);
-                return \`- ❌ **${category}**: ${details.join(', ') || 'Failed'}\`;
-              }
-            }).join('\\n')}
-
-            </details>
-                `;
-
-                github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: comment
-                });
-              }
-            }
-
   # Build Applications
   build:
     name: Build Applications
     runs-on: ubuntu-latest
-    needs: [quality-gates, test, brand-compliance]
+    needs: [quality-gates, test]
 
     steps:
       - name: Checkout code

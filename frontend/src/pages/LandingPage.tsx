@@ -316,7 +316,7 @@ const LandingPage: React.FC = () => {
                   value={selectedDate || ''}
                   onChange={e => setSelectedDate(e.target.value || undefined)}
                   className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue-50 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-colors bg-white font-tm-body"
-                  style={{ color: '#111827' }}
+                  style={{ color: 'var(--tm-black)' }}
                 >
                   <option value="" className="text-gray-900 bg-white">
                     Latest in Program Year ({currentDate})

@@ -306,15 +306,15 @@ a[href],
 /* Reduce gradient complexity on mobile */
 @media (max-width: 767px) {
   .tm-gradient-loyal-blue-mobile {
-    background: linear-gradient(180deg, var(--tm-loyal-blue) 0%, #003a5c 100%);
+    background: linear-gradient(180deg, var(--tm-loyal-blue) 0%, var(--tm-loyal-blue-end) 100%);
   }
   
   .tm-gradient-true-maroon-mobile {
-    background: linear-gradient(180deg, var(--tm-true-maroon) 0%, #5a1c26 100%);
+    background: linear-gradient(180deg, var(--tm-true-maroon) 0%, var(--tm-true-maroon-end) 100%);
   }
   
   .tm-gradient-cool-gray-mobile {
-    background: linear-gradient(180deg, var(--tm-cool-gray) 0%, #d1d5d4 100%);
+    background: linear-gradient(180deg, var(--tm-cool-gray) 0%, var(--tm-cool-gray-end) 100%);
   }
 }
 

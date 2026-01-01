@@ -234,6 +234,9 @@ describe('Cache Manager Initialization and Validation Properties', () => {
             const cacheDirectory = path.resolve('./test-dir/cache-error-test')
             cleanup.trackDirectory(cacheDirectory)
 
+            // Ensure the parent directory exists
+            await fs.mkdir(path.dirname(cacheDirectory), { recursive: true })
+
             const config: ServiceConfiguration = {
               cacheDirectory,
               environment: 'test',

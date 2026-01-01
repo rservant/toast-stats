@@ -51,7 +51,8 @@ export const ReconciliationStatus: React.FC<ReconciliationStatusProps> = ({
           label: 'Monitoring Changes',
           description:
             'Actively checking for data updates from Toastmasters dashboard',
-          color: 'text-blue-700 bg-blue-100 border-blue-200',
+          color:
+            'text-tm-loyal-blue bg-tm-cool-gray bg-opacity-20 border-tm-cool-gray',
           icon: (
             <svg
               className="w-5 h-5"
@@ -263,7 +264,7 @@ export const ReconciliationStatus: React.FC<ReconciliationStatusProps> = ({
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-tm-loyal-blue h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercentage}%` }}
               role="progressbar"
               aria-valuenow={progressPercentage}

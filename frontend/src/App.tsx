@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './config/queryClient'
 import {
@@ -11,7 +11,7 @@ import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
 import ReconciliationManagementPage from './pages/ReconciliationManagementPage'
 
-function AppContent() {
+function Layout() {
   const { activeBackfills, removeBackfill } = useBackfillContext()
 
   return (
@@ -28,32 +28,51 @@ function AppContent() {
         />
       ))}
 
-      <BrowserRouter>
-        <a href="#main-content" className="tm-skip-link">
-          Skip to main content
-        </a>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route
-            path="/district/:districtId"
-            element={<DistrictDetailPage />}
-          />
-          <Route
-            path="/admin/reconciliation"
-            element={<ReconciliationManagementPage />}
-          />
-        </Routes>
-      </BrowserRouter>
+      <a href="#main-content" className="tm-skip-link">
+        Skip to main content
+      </a>
+      <Outlet />
     </>
   )
 }
+
+// Create router configuration (ready for v7 future flags when available)
+const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      element: <Layout />,
+      children: [
+        {
+          index: true,
+          element: <LandingPage />,
+        },
+        {
+          path: 'district/:districtId',
+          element: <DistrictDetailPage />,
+        },
+        {
+          path: 'admin/reconciliation',
+          element: <ReconciliationManagementPage />,
+        },
+      ],
+    },
+  ]
+  // Future flags will be added when React Router v7 is available:
+  // {
+  //   future: {
+  //     v7_startTransition: true,
+  //     v7_relativeSplatPath: true,
+  //   }
+  // }
+)
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ProgramYearProvider>
         <BackfillProvider>
-          <AppContent />
+          <RouterProvider router={router} />
         </BackfillProvider>
       </ProgramYearProvider>
     </QueryClientProvider>

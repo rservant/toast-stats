@@ -144,7 +144,7 @@ body {
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  background-color: var(--tm-black);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -166,7 +166,7 @@ body {
 
 /* Accessibility: Enhanced focus indicators */
 *:focus {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--tm-loyal-blue);
   outline-offset: 2px;
 }
 
@@ -175,7 +175,7 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--tm-loyal-blue);
   outline-offset: 2px;
 }
 
@@ -206,11 +206,11 @@ body {
 
 /* Ensure sufficient color contrast for text */
 .text-gray-600 {
-  color: #4b5563; /* Ensures 4.5:1 contrast on white */
+  color: var(--tm-black); /* Ensures 4.5:1 contrast on white */
 }
 
 .text-gray-700 {
-  color: #374151; /* Ensures better contrast */
+  color: var(--tm-black); /* Ensures better contrast */
 }
 
 /* High contrast mode support */

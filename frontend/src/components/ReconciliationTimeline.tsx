@@ -69,7 +69,7 @@ export const ReconciliationTimeline: React.FC<ReconciliationTimelineProps> = ({
     }
     if (entry.hasChanges) {
       return (
-        <div className="w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-sm" />
+        <div className="w-3 h-3 bg-tm-loyal-blue rounded-full border-2 border-white shadow-sm" />
       )
     }
     return (
@@ -82,7 +82,7 @@ export const ReconciliationTimeline: React.FC<ReconciliationTimelineProps> = ({
       return 'text-orange-700 bg-orange-50 border-orange-200'
     }
     if (entry.hasChanges) {
-      return 'text-blue-700 bg-blue-50 border-blue-200'
+      return 'text-tm-loyal-blue bg-tm-cool-gray bg-opacity-20 border-tm-cool-gray'
     }
     return 'text-gray-600 bg-gray-50 border-gray-200'
   }
@@ -228,7 +228,7 @@ export const ReconciliationTimeline: React.FC<ReconciliationTimelineProps> = ({
             <span>Significant changes</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full" />
+            <div className="w-3 h-3 bg-tm-loyal-blue rounded-full" />
             <span>Minor changes</span>
           </div>
           <div className="flex items-center gap-2">

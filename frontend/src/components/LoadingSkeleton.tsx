@@ -124,7 +124,7 @@ export const Spinner: React.FC<{
 
   return (
     <div
-      className={`animate-spin rounded-full border-b-2 border-blue-600 ${sizeClasses[size]} ${className}`}
+      className={`animate-spin rounded-full border-b-2 border-tm-loyal-blue ${sizeClasses[size]} ${className}`}
       role="status"
       aria-label="Loading"
     >

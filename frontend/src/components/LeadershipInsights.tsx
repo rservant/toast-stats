@@ -169,7 +169,7 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
         </div>
         <div className="bg-white rounded-lg shadow-md p-4">
           <p className="text-sm text-gray-600 mb-1">Best Practice Divisions</p>
-          <p className="text-3xl font-bold text-blue-600">
+          <p className="text-3xl font-bold text-tm-loyal-blue">
             {insights.summary.totalBestPracticeDivisions}
           </p>
         </div>
@@ -286,7 +286,7 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
                   <h4 className="font-semibold text-gray-900">
                     {division.divisionName}
                   </h4>
-                  <span className="text-2xl font-bold text-blue-600">
+                  <span className="text-2xl font-bold text-tm-loyal-blue">
                     {division.overallScore}
                   </span>
                 </div>

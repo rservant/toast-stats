@@ -234,15 +234,15 @@ export const ReconciliationManagement: React.FC<
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'text-blue-600 bg-blue-100'
+        return 'text-tm-loyal-blue bg-tm-loyal-blue-20'
       case 'completed':
-        return 'text-green-600 bg-green-100'
+        return 'text-tm-loyal-blue bg-tm-loyal-blue-10'
       case 'failed':
-        return 'text-red-600 bg-red-100'
+        return 'text-tm-true-maroon bg-tm-true-maroon-20'
       case 'cancelled':
-        return 'text-gray-600 bg-gray-100'
+        return 'text-tm-cool-gray bg-tm-cool-gray-20'
       default:
-        return 'text-gray-600 bg-gray-100'
+        return 'text-tm-cool-gray bg-tm-cool-gray-20'
     }
   }
 
@@ -281,7 +281,7 @@ export const ReconciliationManagement: React.FC<
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tm-loyal-blue"></div>
         <span className="ml-2 text-gray-600">Loading jobs...</span>
       </div>
     )
@@ -327,27 +327,24 @@ export const ReconciliationManagement: React.FC<
         <div className="flex space-x-3">
           <button
             onClick={() => setShowStartForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="tm-btn-primary"
           >
             Start Reconciliation
           </button>
           <button
             onClick={() => setShowConfigForm(true)}
-            className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="tm-btn-secondary"
           >
             Configure
           </button>
-          <button
-            onClick={loadData}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
+          <button onClick={loadData} className="tm-btn-primary">
             Refresh
           </button>
         </div>
       </div>
 
       {/* Active Jobs List */}
-      <div className="bg-white shadow rounded-lg">
+      <div className="tm-card">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             Active Reconciliation Jobs
@@ -394,14 +391,14 @@ export const ReconciliationManagement: React.FC<
                       </span>
                       <button
                         onClick={() => handleViewJobDetails(job.id)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-tm-loyal-blue hover:text-tm-loyal-blue-90 text-sm font-medium"
                       >
                         View Details
                       </button>
                       {job.status === 'active' && (
                         <button
                           onClick={() => handleCancelJob(job.id)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          className="text-tm-true-maroon hover:text-tm-true-maroon-90 text-sm font-medium"
                         >
                           Cancel
                         </button>
@@ -448,7 +445,7 @@ export const ReconciliationManagement: React.FC<
                         districtId: e.target.value,
                       })
                     }
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="tm-form-input"
                     placeholder="e.g., D1"
                   />
                 </div>
@@ -469,7 +466,7 @@ export const ReconciliationManagement: React.FC<
                         targetMonth: e.target.value,
                       })
                     }
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    className="tm-form-input"
                   />
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
@@ -479,7 +476,7 @@ export const ReconciliationManagement: React.FC<
                       setShowStartForm(false)
                       setStartFormError(null)
                     }}
-                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    className="tm-btn-secondary"
                     aria-label="Close"
                   >
                     Cancel
@@ -487,7 +484,7 @@ export const ReconciliationManagement: React.FC<
                   <button
                     type="submit"
                     disabled={!isStartFormValid}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="tm-btn-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     Submit
                   </button>
@@ -556,7 +553,7 @@ export const ReconciliationManagement: React.FC<
                               parseInt(e.target.value) || 0,
                           })
                         }
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                         min="1"
                       />
                     </div>
@@ -577,7 +574,7 @@ export const ReconciliationManagement: React.FC<
                             stabilityPeriodDays: parseInt(e.target.value) || 0,
                           })
                         }
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                         min="1"
                       />
                     </div>
@@ -598,7 +595,7 @@ export const ReconciliationManagement: React.FC<
                             checkFrequencyHours: parseInt(e.target.value) || 0,
                           })
                         }
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                         min="1"
                       />
                     </div>
@@ -619,7 +616,7 @@ export const ReconciliationManagement: React.FC<
                             maxExtensionDays: parseInt(e.target.value) || 0,
                           })
                         }
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                         min="0"
                       />
                     </div>
@@ -655,7 +652,7 @@ export const ReconciliationManagement: React.FC<
                               },
                             })
                           }
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                           min="0"
                         />
                       </div>
@@ -683,7 +680,7 @@ export const ReconciliationManagement: React.FC<
                               },
                             })
                           }
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                           min="0"
                         />
                       </div>
@@ -712,7 +709,7 @@ export const ReconciliationManagement: React.FC<
                               },
                             })
                           }
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
                           min="0"
                         />
                       </div>
@@ -730,7 +727,7 @@ export const ReconciliationManagement: React.FC<
                             autoExtensionEnabled: e.target.checked,
                           })
                         }
-                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        className="rounded border-gray-300 text-tm-loyal-blue shadow-sm focus:border-tm-loyal-blue focus:ring focus:ring-tm-loyal-blue-20 focus:ring-opacity-50"
                       />
                       <span className="ml-2 text-sm text-gray-700">
                         Enable automatic extension of reconciliation periods
@@ -746,14 +743,11 @@ export const ReconciliationManagement: React.FC<
                         setConfigError(null)
                         setConfigFormData(config ? { ...config } : null)
                       }}
-                      className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      className="tm-btn-secondary"
                     >
                       Cancel
                     </button>
-                    <button
-                      type="submit"
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
+                    <button type="submit" className="tm-btn-primary">
                       Update Configuration
                     </button>
                   </div>
@@ -765,7 +759,7 @@ export const ReconciliationManagement: React.FC<
 
       {/* Configuration Display */}
       {config && (
-        <div className="bg-white shadow rounded-lg">
+        <div className="tm-card">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               Current Configuration

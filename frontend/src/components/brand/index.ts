@@ -17,10 +17,6 @@ export {
   withTheme,
 } from './ThemeProvider'
 export {
-  default as BrandValidator,
-  withBrandValidation,
-} from './BrandValidator'
-export {
   default as AccessibilityChecker,
   withAccessibilityChecking,
 } from './AccessibilityChecker'
@@ -42,7 +38,6 @@ export type {
   ValidationRule,
   ValidationConfig,
   ValidationError,
-  BrandValidatorProps,
   AccessibilityCheckerProps,
   ContrastCheckResult,
   TouchTargetCheckResult,

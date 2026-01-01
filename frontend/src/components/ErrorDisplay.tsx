@@ -104,7 +104,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
         {onRetry && (
           <button
             onClick={onRetry}
-            className="ml-2 text-blue-600 hover:text-blue-700 underline font-medium"
+            className="ml-2 tm-btn-secondary text-sm"
             aria-label="Retry loading data"
           >
             Retry
@@ -117,12 +117,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   if (variant === 'full') {
     return (
       <div
-        className={`min-h-screen bg-gray-100 flex items-center justify-center px-4 ${className}`}
+        className={`tm-card min-h-screen bg-gray-100 flex items-center justify-center px-4 ${className}`}
       >
-        <div
-          className="bg-white rounded-lg shadow-md p-8 max-w-md w-full"
-          role="alert"
-        >
+        <div className="tm-card max-w-md w-full" role="alert">
           <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
             <div className="text-red-600">{getErrorIcon()}</div>
           </div>
@@ -146,7 +143,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              className="tm-btn-primary w-full"
               aria-label="Retry loading data"
             >
               Try Again
@@ -159,10 +156,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   // card variant (default)
   return (
-    <div
-      className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}
-      role="alert"
-    >
+    <div className={`tm-card ${className}`} role="alert">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 text-red-600 mt-0.5">
           {getErrorIcon()}
@@ -187,7 +181,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="text-sm font-medium text-red-700 hover:text-red-900 underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded"
+              className="tm-btn-secondary text-sm"
               aria-label="Retry loading data"
             >
               Try Again
@@ -273,18 +267,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   }
 
   return (
-    <div
-      className={`bg-white rounded-lg shadow-md p-12 text-center ${className}`}
-      role="status"
-    >
+    <div className={`tm-card text-center ${className}`} role="status">
       <div className="flex justify-center mb-4">{getIcon()}</div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600 mb-6 max-w-md mx-auto">{message}</p>
       {action && (
-        <button
-          onClick={action.onClick}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
-        >
+        <button onClick={action.onClick} className="tm-btn-primary">
           {action.label}
         </button>
       )}

@@ -417,17 +417,20 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
               data={chartData}
               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--tm-cool-gray-20)"
+              />
               <XAxis
                 dataKey="metric"
-                stroke="#6b7280"
+                stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '11px' }}
                 angle={-15}
                 textAnchor="end"
                 height={80}
               />
               <YAxis
-                stroke="#6b7280"
+                stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '11px' }}
                 label={{
                   value: 'Value',
@@ -446,12 +449,12 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
               />
               <Bar
                 dataKey="Previous Year"
-                fill="#A9B2B1" // TM Cool Gray
+                fill="var(--tm-cool-gray)" // TM Cool Gray
                 radius={[8, 8, 0, 0]}
               />
               <Bar
                 dataKey="Current Year"
-                fill="#004165" // TM Loyal Blue
+                fill="var(--tm-loyal-blue)" // TM Loyal Blue
                 radius={[8, 8, 0, 0]}
               />
             </BarChart>

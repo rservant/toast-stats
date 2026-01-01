@@ -376,7 +376,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                                 </div>
                               )}
                               {club.recentChanges!.recentAwards > 0 && (
-                                <div className="text-blue-600">
+                                <div className="text-tm-loyal-blue">
                                   {club.recentChanges!.recentAwards} awards
                                 </div>
                               )}

@@ -78,7 +78,7 @@ export const ReconciliationProgress: React.FC<ReconciliationProgressProps> = ({
         : 'text-red-700 bg-red-50 border-red-200'
     }
     return change.percentageChange >= 0
-      ? 'text-blue-700 bg-blue-50 border-blue-200'
+      ? 'text-tm-loyal-blue bg-blue-50 border-blue-200'
       : 'text-orange-700 bg-orange-50 border-orange-200'
   }
 
@@ -216,7 +216,7 @@ export const ReconciliationProgress: React.FC<ReconciliationProgressProps> = ({
           <div className="text-sm text-gray-600">Significant</div>
         </div>
         <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="text-2xl font-bold text-blue-700">
+          <div className="text-2xl font-bold text-tm-loyal-blue">
             {minorChanges.length}
           </div>
           <div className="text-sm text-gray-600">Minor</div>
@@ -309,7 +309,7 @@ export const ReconciliationProgress: React.FC<ReconciliationProgressProps> = ({
             <span>Significant changes</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full" />
+            <div className="w-3 h-3 bg-tm-loyal-blue rounded-full" />
             <span>Minor changes</span>
           </div>
           <div className="flex items-center gap-2">

@@ -55,6 +55,40 @@
   min-height: var(--tm-touch-target); /* 44px minimum */
 }
 
+/* Brand-Compliant Form Input Class (Task 6.1 Requirements) */
+.tm-form-input {
+  font-family: var(--tm-font-body);
+  font-size: max(var(--tm-body-medium-font-size), 14px);
+  font-weight: var(--tm-body-medium-font-weight);
+  line-height: max(var(--tm-body-medium-line-height), 1.4);
+  color: var(--tm-black);
+  background-color: var(--tm-white);
+  border: var(--tm-border-2) solid var(--tm-cool-gray);
+  border-radius: var(--tm-radius-md);
+  padding: var(--tm-component-padding-sm) var(--tm-component-padding-md);
+  transition: all 0.2s ease-in-out;
+  width: 100%;
+  min-height: var(--tm-touch-target);
+}
+
+.tm-form-input:focus {
+  outline: none;
+  border-color: var(--tm-loyal-blue);
+  box-shadow: 0 0 0 2px var(--tm-loyal-blue-20);
+  background-color: var(--tm-white);
+}
+
+.tm-form-input:hover:not(:disabled) {
+  border-color: var(--tm-loyal-blue-50);
+}
+
+.tm-form-input:disabled {
+  background-color: var(--tm-cool-gray-30);
+  border-color: var(--tm-cool-gray-50);
+  color: var(--tm-cool-gray);
+  cursor: not-allowed;
+}
+
 .tm-form-input:focus,
 .tm-form-textarea:focus,
 .tm-form-select:focus {

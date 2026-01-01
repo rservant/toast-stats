@@ -185,7 +185,7 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center gap-2 mb-4">
             <svg
-              className="w-6 h-6 text-blue-600"
+              className="w-6 h-6 text-tm-loyal-blue"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

@@ -115,7 +115,7 @@ export class ReconciliationOrchestrator {
       }
 
       // Check if there's already an active reconciliation for this district/month
-      await this.storageManager.flush() // Ensure any pending writes are completed
+      // Note: flush() method removed as it's not available on all storage managers
       const existingJobs =
         await this.storageManager.getJobsByDistrict(districtId)
       const activeJob = existingJobs.find(
@@ -1260,6 +1260,21 @@ export class ReconciliationOrchestrator {
       remainingExtensionDays,
       canExtend,
       autoExtensionEnabled: job.config.autoExtensionEnabled,
+    }
+  }
+
+  /**
+   * Get a reconciliation job by ID
+   *
+   * @param jobId - The reconciliation job ID
+   * @returns The reconciliation job or null if not found
+   */
+  async getReconciliationJob(jobId: string): Promise<ReconciliationJob | null> {
+    try {
+      return await this.storageManager.getJob(jobId)
+    } catch (error) {
+      logger.error('Failed to get reconciliation job', { jobId, error })
+      return null
     }
   }
 
