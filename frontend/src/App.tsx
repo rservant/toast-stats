@@ -10,6 +10,7 @@ import { BackfillProgressBar } from './components/BackfillProgressBar'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
 import ReconciliationManagementPage from './pages/ReconciliationManagementPage'
+import ClubHealthDashboardPage from './pages/ClubHealthDashboardPage'
 
 function Layout() {
   const { activeBackfills, removeBackfill } = useBackfillContext()
@@ -50,6 +51,18 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId',
           element: <DistrictDetailPage />,
+        },
+        {
+          path: 'club-health',
+          element: <ClubHealthDashboardPage />,
+        },
+        {
+          path: 'club-health/:clubName',
+          element: <ClubHealthDashboardPage />,
+        },
+        {
+          path: 'districts/:districtId/club-health',
+          element: <ClubHealthDashboardPage />,
         },
         {
           path: 'admin/reconciliation',

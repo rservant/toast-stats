@@ -8,8 +8,10 @@ import cors from 'cors'
 import districtRoutes from './routes/districts.js'
 import reconciliationRoutes from './routes/reconciliation.js'
 import assessmentRoutes from './modules/assessment/routes/assessmentRoutes.js'
+import clubHealthRoutes from './routes/clubHealthRoutes.js'
 import { logger } from './utils/logger.js'
 import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
+import { ClubHealthServiceImpl } from './services/ClubHealthService.js'
 
 const app = express()
 const PORT = process.env.PORT || 5001
@@ -40,6 +42,10 @@ app.get('/health', async (_req, res) => {
     const cacheConfig = productionFactory.createCacheConfigService()
     const config = cacheConfig.getConfiguration()
 
+    // Initialize club health service for health check
+    const clubHealthService = new ClubHealthServiceImpl()
+    const clubHealthStats = clubHealthService.getCacheStats()
+
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -56,6 +62,12 @@ app.get('/health', async (_req, res) => {
           isSecure: config.validationStatus.isSecure,
         },
       },
+      services: {
+        clubHealth: {
+          status: 'ok',
+          cacheStats: clubHealthStats,
+        },
+      },
     })
   } catch (error) {
     res.status(500).json({
@@ -63,13 +75,19 @@ app.get('/health', async (_req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
-      error: 'Cache configuration error',
+      error: 'Service configuration error',
       cache: {
         directory: process.env.CACHE_DIR || './cache (default)',
         source: process.env.CACHE_DIR ? 'environment' : 'default',
         isConfigured: !!process.env.CACHE_DIR,
         isReady: false,
         error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      services: {
+        clubHealth: {
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
       },
     })
   }
@@ -88,6 +106,9 @@ app.use('/api/reconciliation', reconciliationRoutes)
 
 // Assessment routes
 app.use('/api/assessment', assessmentRoutes)
+
+// Club health routes
+app.use('/api/club-health', clubHealthRoutes)
 
 // Error handling middleware
 app.use(

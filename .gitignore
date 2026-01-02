@@ -16,6 +16,14 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+.env.staging
+
+# Deployment secrets (keep templates)
+backend/.env.production
+frontend/.env.production
+backend/.env.staging
+frontend/.env.staging
 
 # Logs
 npm-debug.log*
@@ -41,6 +49,14 @@ lerna-debug.log*
 # Cache
 cache/
 downloads/
+backend/cache/
+backend/data/
+backend/logs/
+
+# Runtime data and generated files
+backend/data/club_health/
+backend/cache/club_health/
+backend/cache/reconciliation/
 
 # Test artifacts - temporary directories only
 test-cache*/
@@ -58,3 +74,15 @@ debug_*.js
 *.tmp
 *.temp
 backend/reconciliation-config.json
+
+# Docker and deployment
+.docker/
+docker-compose.override.yml
+k8s/secrets/
+monitoring/grafana/data/
+monitoring/prometheus/data/
+
+# Backup files
+*.bak
+*.backup
+deployment-backup-*/

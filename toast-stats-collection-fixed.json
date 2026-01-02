@@ -1,0 +1,260 @@
+{
+  "info": {
+    "_postman_id": "952dd341-a6dc-4511-b064-045f057c8551",
+    "name": "Toast Stats API Fixed",
+    "description": "Fixed API testing for Toast Stats API with correct endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has status ok', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql('ok');",
+              "});",
+              "",
+              "pm.test('Response has cache info', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.cache).to.be.an('object');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "API Root",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api",
+          "host": ["{{base_url}}"],
+          "path": ["api"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has message', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include('Toastmasters');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Districts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/districts",
+          "host": ["{{base_url}}"],
+          "path": ["api", "districts"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has districts array', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.districts).to.be.an('array');",
+              "    pm.expect(jsonData.districts.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "pm.test('Districts have id and name', function () {",
+              "    const jsonData = pm.response.json();",
+              "    const firstDistrict = jsonData.districts[0];",
+              "    pm.expect(firstDistrict).to.have.property('id');",
+              "    pm.expect(firstDistrict).to.have.property('name');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Reconciliation Jobs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/reconciliation/jobs",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reconciliation", "jobs"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has jobs array', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.jobs).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Response has total count', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.total).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Reconciliation Config",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/reconciliation/config",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reconciliation", "config"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has config object', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.config).to.be.an('object');",
+              "});",
+              "",
+              "pm.test('Config has required fields', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.config).to.have.property('maxReconciliationDays');",
+              "    pm.expect(jsonData.config).to.have.property('stabilityPeriodDays');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Assessment Available Dates (District 01)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/assessment/available-dates/01",
+          "host": ["{{base_url}}"],
+          "path": ["api", "assessment", "available-dates", "01"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has available dates', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('object');",
+              "    pm.expect(jsonData.data.available_dates).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health Classify (Not Implemented)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"club_name\": \"Test Club\",\n  \"current_members\": 25,\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"October\",\n  \"dcp_goals_achieved_ytd\": 3,\n  \"csp_submitted\": true,\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"Vulnerable\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/club-health/classify",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "classify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Endpoint returns 404 (expected - not implemented)', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test('Error response is well-formed', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('error');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5001"
+    }
+  ]
+}

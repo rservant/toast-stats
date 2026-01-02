@@ -20,6 +20,12 @@ export * from './Header'
 export * from './ui/Button'
 export * from './ui/Form'
 
+// Club Health Components
+export { default as HealthMatrixDashboard } from './HealthMatrixDashboard'
+export { default as HealthMatrixFiltersComponent } from './HealthMatrixFilters'
+export { default as ClubHealthDashboard } from './ClubHealthDashboard'
+export { ClubHealthDetailModal } from './ClubHealthDetailModal'
+
 // Existing components
 export { DataStatusIndicator } from './DataStatusIndicator'
 export { Tooltip, InfoIcon } from './Tooltip'

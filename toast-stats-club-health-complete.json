@@ -1,0 +1,526 @@
+{
+  "info": {
+    "_postman_id": "220b03db-37ef-4c6b-88df-ab61cc5c12ef",
+    "name": "Toast Stats API - Club Health Complete",
+    "description": "Comprehensive testing for Club Health Classification API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has status ok', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql('ok');",
+              "});",
+              "",
+              "pm.test('Club health service is available', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.services.clubHealth.status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Single Classification (Valid)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"club_name\": \"Test Club\",\n  \"current_members\": 25,\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"October\",\n  \"dcp_goals_achieved_ytd\": 3,\n  \"csp_submitted\": true,\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"Vulnerable\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/club-health/classify",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "classify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success true', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has classification data', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('object');",
+              "    pm.expect(jsonData.data.club_name).to.eql('Test Club');",
+              "    pm.expect(jsonData.data.health_status).to.be.a('string');",
+              "    pm.expect(jsonData.data.trajectory).to.be.a('string');",
+              "    pm.expect(jsonData.data.composite_key).to.be.a('string');",
+              "    pm.expect(jsonData.data.composite_label).to.be.a('string');",
+              "});",
+              "",
+              "pm.test('Response has metadata', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.metadata).to.be.an('object');",
+              "    pm.expect(jsonData.metadata.timestamp).to.be.a('string');",
+              "    pm.expect(jsonData.metadata.api_processing_time_ms).to.be.a('number');",
+              "});",
+              "",
+              "pm.test('Classification result is valid', function () {",
+              "    const jsonData = pm.response.json();",
+              "    const validHealthStatuses = ['Thriving', 'Vulnerable', 'Intervention Required'];",
+              "    const validTrajectories = ['Improving', 'Stable', 'Declining', 'Recovering'];",
+              "    ",
+              "    pm.expect(validHealthStatuses).to.include(jsonData.data.health_status);",
+              "    pm.expect(validTrajectories).to.include(jsonData.data.trajectory);",
+              "    pm.expect(jsonData.data.reasons).to.be.an('array');",
+              "    pm.expect(jsonData.data.trajectory_reasons).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Batch Classification (Valid)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"club_name\": \"Batch Club 1\",\n    \"current_members\": 15,\n    \"member_growth_since_july\": 2,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 2,\n    \"csp_submitted\": false,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": false,\n    \"previous_month_members\": 13,\n    \"previous_month_dcp_goals_achieved_ytd\": 1,\n    \"previous_month_health_status\": \"Vulnerable\"\n  },\n  {\n    \"club_name\": \"Batch Club 2\",\n    \"current_members\": 30,\n    \"member_growth_since_july\": 8,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 5,\n    \"csp_submitted\": true,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": true,\n    \"previous_month_members\": 28,\n    \"previous_month_dcp_goals_achieved_ytd\": 4,\n    \"previous_month_health_status\": \"Thriving\"\n  }\n]"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/club-health/batch",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "batch"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success true', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has batch results', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('array');",
+              "    pm.expect(jsonData.data).to.have.lengthOf(2);",
+              "});",
+              "",
+              "pm.test('Batch metadata is correct', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.metadata.total_clubs).to.eql(2);",
+              "    pm.expect(jsonData.metadata.successful_classifications).to.eql(2);",
+              "    pm.expect(jsonData.metadata.api_processing_time_ms).to.be.a('number');",
+              "});",
+              "",
+              "pm.test('Each result has required fields', function () {",
+              "    const jsonData = pm.response.json();",
+              "    jsonData.data.forEach((result, index) => {",
+              "        pm.expect(result.club_name).to.include('Batch Club');",
+              "        pm.expect(result.health_status).to.be.a('string');",
+              "        pm.expect(result.trajectory).to.be.a('string');",
+              "        pm.expect(result.composite_key).to.be.a('string');",
+              "        pm.expect(result.reasons).to.be.an('array');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Get History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/club-health/Test Club/history?months=6",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "Test Club", "history"],
+          "query": [
+            {
+              "key": "months",
+              "value": "6"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success true', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has history data', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('object');",
+              "    pm.expect(jsonData.data.club_name).to.eql('Test Club');",
+              "    pm.expect(jsonData.data.months_requested).to.eql(6);",
+              "    pm.expect(jsonData.data.history).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Metadata includes record count', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.metadata.record_count).to.be.a('number');",
+              "    pm.expect(jsonData.metadata.record_count).to.be.at.least(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - District Summary",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/club-health/districts/D123/health-summary",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "districts", "D123", "health-summary"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success true', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has district summary data', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.be.an('object');",
+              "    pm.expect(jsonData.data.district_id).to.eql('D123');",
+              "    pm.expect(jsonData.data.total_clubs).to.be.a('number');",
+              "    pm.expect(jsonData.data.health_distribution).to.be.an('object');",
+              "    pm.expect(jsonData.data.trajectory_distribution).to.be.an('object');",
+              "    pm.expect(jsonData.data.clubs_needing_attention).to.be.an('array');",
+              "    pm.expect(jsonData.data.evaluation_date).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Validation Error (Missing Fields)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"club_name\": \"Incomplete Club\",\n  \"current_members\": 25\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/club-health/classify",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "classify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Response has success false', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "});",
+              "",
+              "pm.test('Response has validation error', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.error).to.be.an('object');",
+              "    pm.expect(jsonData.error.code).to.eql('VALIDATION_ERROR');",
+              "    pm.expect(jsonData.error.message).to.be.a('string');",
+              "    pm.expect(jsonData.error.details).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Error details include missing fields', function () {",
+              "    const jsonData = pm.response.json();",
+              "    const details = jsonData.error.details;",
+              "    const missingFields = details.filter(d => d.code === 'MISSING_REQUIRED_FIELD');",
+              "    pm.expect(missingFields.length).to.be.greaterThan(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Validation Error (Invalid Types)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"club_name\": \"Invalid Club\",\n  \"current_members\": \"not_a_number\",\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"InvalidMonth\",\n  \"dcp_goals_achieved_ytd\": -1,\n  \"csp_submitted\": \"yes\",\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"InvalidStatus\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/club-health/classify",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "classify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Response has validation errors for invalid types', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error.code).to.eql('VALIDATION_ERROR');",
+              "    pm.expect(jsonData.error.details).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Error details include type and value errors', function () {",
+              "    const jsonData = pm.response.json();",
+              "    const details = jsonData.error.details;",
+              "    const typeErrors = details.filter(d => d.code === 'INVALID_FIELD_TYPE');",
+              "    const valueErrors = details.filter(d => d.code === 'INVALID_FIELD_VALUE');",
+              "    const monthErrors = details.filter(d => d.code === 'INVALID_MONTH');",
+              "    const statusErrors = details.filter(d => d.code === 'INVALID_HEALTH_STATUS');",
+              "    ",
+              "    pm.expect(typeErrors.length).to.be.greaterThan(0);",
+              "    pm.expect(valueErrors.length).to.be.greaterThan(0);",
+              "    pm.expect(monthErrors.length).to.be.greaterThan(0);",
+              "    pm.expect(statusErrors.length).to.be.greaterThan(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Batch Validation Error (Empty Array)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[]"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/club-health/batch",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "batch"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Response has empty array error', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error.code).to.eql('EMPTY_INPUT_ARRAY');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Invalid District ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/club-health/districts/invalid@id/health-summary",
+          "host": ["{{base_url}}"],
+          "path": [
+            "api",
+            "club-health",
+            "districts",
+            "invalid@id",
+            "health-summary"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Response has invalid district ID error', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error.code).to.eql('INVALID_DISTRICT_ID');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Invalid Club Name",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/club-health/ /history",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", " ", "history"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Response has invalid club name error', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error.code).to.eql('INVALID_CLUB_NAME');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Health - Invalid Months Parameter",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/club-health/Test Club/history?months=invalid",
+          "host": ["{{base_url}}"],
+          "path": ["api", "club-health", "Test Club", "history"],
+          "query": [
+            {
+              "key": "months",
+              "value": "invalid"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Response has invalid months parameter error', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.false;",
+              "    pm.expect(jsonData.error.code).to.eql('INVALID_MONTHS_PARAMETER');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5001"
+    }
+  ]
+}

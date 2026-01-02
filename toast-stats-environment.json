@@ -1,0 +1,18 @@
+{
+  "id": "48091dcc-c865-464a-88c4-04823b2ae71e",
+  "name": "Toast Stats Local",
+  "values": [
+    {
+      "enabled": true,
+      "key": "base_url",
+      "value": "http://localhost:5001",
+      "type": "default"
+    },
+    {
+      "enabled": true,
+      "key": "api_version",
+      "value": "v1",
+      "type": "default"
+    }
+  ]
+}

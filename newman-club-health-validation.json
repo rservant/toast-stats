@@ -1,0 +1,3163 @@
+{
+  "collection": {
+    "_": {
+      "postman_id": "220b03db-37ef-4c6b-88df-ab61cc5c12ef"
+    },
+    "item": [
+      {
+        "id": "656a061a-2745-44e5-a525-a84ac032a500",
+        "name": "Health Check",
+        "request": {
+          "url": {
+            "path": ["health"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "4e2a7f30-03e7-4fe8-bcba-3d75bcdf2d83",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Response has status ok', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.status).to.eql('ok');",
+                "});",
+                "",
+                "pm.test('Club health service is available', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.services.clubHealth.status).to.eql('ok');",
+                "});"
+              ],
+              "_lastExecutionId": "0c47da0f-ec93-4504-8c68-57e50484d01e"
+            }
+          }
+        ]
+      },
+      {
+        "id": "7ce9c889-ab23-461f-86e8-6714c8fe2c87",
+        "name": "Club Health - Single Classification (Valid)",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "classify"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"club_name\": \"Test Club\",\n  \"current_members\": 25,\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"October\",\n  \"dcp_goals_achieved_ytd\": 3,\n  \"csp_submitted\": true,\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"Vulnerable\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "9e4df9d4-6eef-4a20-8def-44513972d63b",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Response has success true', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.true;",
+                "});",
+                "",
+                "pm.test('Response has classification data', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.data).to.be.an('object');",
+                "    pm.expect(jsonData.data.club_name).to.eql('Test Club');",
+                "    pm.expect(jsonData.data.health_status).to.be.a('string');",
+                "    pm.expect(jsonData.data.trajectory).to.be.a('string');",
+                "    pm.expect(jsonData.data.composite_key).to.be.a('string');",
+                "    pm.expect(jsonData.data.composite_label).to.be.a('string');",
+                "});",
+                "",
+                "pm.test('Response has metadata', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.metadata).to.be.an('object');",
+                "    pm.expect(jsonData.metadata.timestamp).to.be.a('string');",
+                "    pm.expect(jsonData.metadata.api_processing_time_ms).to.be.a('number');",
+                "});",
+                "",
+                "pm.test('Classification result is valid', function () {",
+                "    const jsonData = pm.response.json();",
+                "    const validHealthStatuses = ['Thriving', 'Vulnerable', 'Intervention Required'];",
+                "    const validTrajectories = ['Improving', 'Stable', 'Declining', 'Recovering'];",
+                "    ",
+                "    pm.expect(validHealthStatuses).to.include(jsonData.data.health_status);",
+                "    pm.expect(validTrajectories).to.include(jsonData.data.trajectory);",
+                "    pm.expect(jsonData.data.reasons).to.be.an('array');",
+                "    pm.expect(jsonData.data.trajectory_reasons).to.be.an('array');",
+                "});"
+              ],
+              "_lastExecutionId": "be6fdcf5-e52a-4546-bb5e-433c8d0badc3"
+            }
+          }
+        ]
+      },
+      {
+        "id": "adc11a0f-270f-42cb-9909-bcb7d64ada4b",
+        "name": "Club Health - Batch Classification (Valid)",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "batch"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "[\n  {\n    \"club_name\": \"Batch Club 1\",\n    \"current_members\": 15,\n    \"member_growth_since_july\": 2,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 2,\n    \"csp_submitted\": false,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": false,\n    \"previous_month_members\": 13,\n    \"previous_month_dcp_goals_achieved_ytd\": 1,\n    \"previous_month_health_status\": \"Vulnerable\"\n  },\n  {\n    \"club_name\": \"Batch Club 2\",\n    \"current_members\": 30,\n    \"member_growth_since_july\": 8,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 5,\n    \"csp_submitted\": true,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": true,\n    \"previous_month_members\": 28,\n    \"previous_month_dcp_goals_achieved_ytd\": 4,\n    \"previous_month_health_status\": \"Thriving\"\n  }\n]"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "1947eebb-b4a8-4eac-9c5c-843da533428a",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Response has success true', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.true;",
+                "});",
+                "",
+                "pm.test('Response has batch results', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.data).to.be.an('array');",
+                "    pm.expect(jsonData.data).to.have.lengthOf(2);",
+                "});",
+                "",
+                "pm.test('Batch metadata is correct', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.metadata.total_clubs).to.eql(2);",
+                "    pm.expect(jsonData.metadata.successful_classifications).to.eql(2);",
+                "    pm.expect(jsonData.metadata.api_processing_time_ms).to.be.a('number');",
+                "});",
+                "",
+                "pm.test('Each result has required fields', function () {",
+                "    const jsonData = pm.response.json();",
+                "    jsonData.data.forEach((result, index) => {",
+                "        pm.expect(result.club_name).to.include('Batch Club');",
+                "        pm.expect(result.health_status).to.be.a('string');",
+                "        pm.expect(result.trajectory).to.be.a('string');",
+                "        pm.expect(result.composite_key).to.be.a('string');",
+                "        pm.expect(result.reasons).to.be.an('array');",
+                "    });",
+                "});"
+              ],
+              "_lastExecutionId": "42582ccd-c6ae-4e5f-a458-1218631246a2"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ba3d898b-875b-4701-8316-ed725d3cdc1a",
+        "name": "Club Health - Get History",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "Test Club", "history"],
+            "host": ["{{base_url}}"],
+            "query": [
+              {
+                "key": "months",
+                "value": "6"
+              }
+            ],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "9cc1f897-743c-4226-8802-58af4efde0cf",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Response has success true', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.true;",
+                "});",
+                "",
+                "pm.test('Response has history data', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.data).to.be.an('object');",
+                "    pm.expect(jsonData.data.club_name).to.eql('Test Club');",
+                "    pm.expect(jsonData.data.months_requested).to.eql(6);",
+                "    pm.expect(jsonData.data.history).to.be.an('array');",
+                "});",
+                "",
+                "pm.test('Metadata includes record count', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.metadata.record_count).to.be.a('number');",
+                "    pm.expect(jsonData.metadata.record_count).to.be.at.least(0);",
+                "});"
+              ],
+              "_lastExecutionId": "83a74fd5-cd0d-4c5f-a178-97073770eb16"
+            }
+          }
+        ]
+      },
+      {
+        "id": "73aa6e24-3c13-4c4d-b670-dd351c4232d1",
+        "name": "Club Health - District Summary",
+        "request": {
+          "url": {
+            "path": [
+              "api",
+              "club-health",
+              "districts",
+              "D123",
+              "health-summary"
+            ],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "33683cb5-1e82-4436-9e2a-62f883624be8",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 200', function () {",
+                "    pm.response.to.have.status(200);",
+                "});",
+                "",
+                "pm.test('Response has success true', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.true;",
+                "});",
+                "",
+                "pm.test('Response has district summary data', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.data).to.be.an('object');",
+                "    pm.expect(jsonData.data.district_id).to.eql('D123');",
+                "    pm.expect(jsonData.data.total_clubs).to.be.a('number');",
+                "    pm.expect(jsonData.data.health_distribution).to.be.an('object');",
+                "    pm.expect(jsonData.data.trajectory_distribution).to.be.an('object');",
+                "    pm.expect(jsonData.data.clubs_needing_attention).to.be.an('array');",
+                "    pm.expect(jsonData.data.evaluation_date).to.be.a('string');",
+                "});"
+              ],
+              "_lastExecutionId": "42d5afee-6446-4252-8411-c01e1471d35b"
+            }
+          }
+        ]
+      },
+      {
+        "id": "bf4c750d-280a-4893-92a5-12d75e2ef4de",
+        "name": "Club Health - Validation Error (Missing Fields)",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "classify"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"club_name\": \"Incomplete Club\",\n  \"current_members\": 25\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "b5537c93-6ad0-4439-ab61-bd85683d7eb5",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Response has success false', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.false;",
+                "});",
+                "",
+                "pm.test('Response has validation error', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.error).to.be.an('object');",
+                "    pm.expect(jsonData.error.code).to.eql('VALIDATION_ERROR');",
+                "    pm.expect(jsonData.error.message).to.be.a('string');",
+                "    pm.expect(jsonData.error.details).to.be.an('array');",
+                "});",
+                "",
+                "pm.test('Error details include missing fields', function () {",
+                "    const jsonData = pm.response.json();",
+                "    const details = jsonData.error.details;",
+                "    const missingFields = details.filter(d => d.code === 'MISSING_REQUIRED_FIELD');",
+                "    pm.expect(missingFields.length).to.be.greaterThan(0);",
+                "});"
+              ],
+              "_lastExecutionId": "22867ffd-9ad1-49be-a384-0f09b4347cef"
+            }
+          }
+        ]
+      },
+      {
+        "id": "d5df02ba-d98a-4d23-beb7-d0528b837c78",
+        "name": "Club Health - Validation Error (Invalid Types)",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "classify"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"club_name\": \"Invalid Club\",\n  \"current_members\": \"not_a_number\",\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"InvalidMonth\",\n  \"dcp_goals_achieved_ytd\": -1,\n  \"csp_submitted\": \"yes\",\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"InvalidStatus\"\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "09d35ed3-f202-4aa9-963a-350fb7d83c6b",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Response has validation errors for invalid types', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.false;",
+                "    pm.expect(jsonData.error.code).to.eql('VALIDATION_ERROR');",
+                "    pm.expect(jsonData.error.details).to.be.an('array');",
+                "});",
+                "",
+                "pm.test('Error details include type and value errors', function () {",
+                "    const jsonData = pm.response.json();",
+                "    const details = jsonData.error.details;",
+                "    const typeErrors = details.filter(d => d.code === 'INVALID_FIELD_TYPE');",
+                "    const valueErrors = details.filter(d => d.code === 'INVALID_FIELD_VALUE');",
+                "    const monthErrors = details.filter(d => d.code === 'INVALID_MONTH');",
+                "    const statusErrors = details.filter(d => d.code === 'INVALID_HEALTH_STATUS');",
+                "    ",
+                "    pm.expect(typeErrors.length).to.be.greaterThan(0);",
+                "    pm.expect(valueErrors.length).to.be.greaterThan(0);",
+                "    pm.expect(monthErrors.length).to.be.greaterThan(0);",
+                "    pm.expect(statusErrors.length).to.be.greaterThan(0);",
+                "});"
+              ],
+              "_lastExecutionId": "bb805d12-d78c-479e-a281-61bce3364f66"
+            }
+          }
+        ]
+      },
+      {
+        "id": "b009e213-966b-4d3a-9a60-86447ee00be1",
+        "name": "Club Health - Batch Validation Error (Empty Array)",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "batch"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "[]"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "8ad1b857-3349-4294-b4cd-6f4a0ef9074f",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Response has empty array error', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.false;",
+                "    pm.expect(jsonData.error.code).to.eql('EMPTY_INPUT_ARRAY');",
+                "});"
+              ],
+              "_lastExecutionId": "dcd69153-71d1-4d3e-ae71-14edde2cc03c"
+            }
+          }
+        ]
+      },
+      {
+        "id": "73e378bb-63bc-4ce1-95ad-c40918c2f247",
+        "name": "Club Health - Invalid District ID",
+        "request": {
+          "url": {
+            "path": [
+              "api",
+              "club-health",
+              "districts",
+              "invalid@id",
+              "health-summary"
+            ],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "00b1ac77-1a24-4d98-86bb-fbb6cf6295e1",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Response has invalid district ID error', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.false;",
+                "    pm.expect(jsonData.error.code).to.eql('INVALID_DISTRICT_ID');",
+                "});"
+              ],
+              "_lastExecutionId": "d4649a00-0f8c-4d56-9ee4-f054ab357b34"
+            }
+          }
+        ]
+      },
+      {
+        "id": "f3d27d38-1c25-4174-86bc-5945058e3294",
+        "name": "Club Health - Invalid Club Name",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", " ", "history"],
+            "host": ["{{base_url}}"],
+            "query": [],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "139e387b-4faf-4d87-bb4c-a8c702be786d",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Response has invalid club name error', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.false;",
+                "    pm.expect(jsonData.error.code).to.eql('INVALID_CLUB_NAME');",
+                "});"
+              ],
+              "_lastExecutionId": "700f076b-82ed-467c-a373-e56ac7e731b4"
+            }
+          }
+        ]
+      },
+      {
+        "id": "396a9e5c-1dc3-4570-8275-1557416912cb",
+        "name": "Club Health - Invalid Months Parameter",
+        "request": {
+          "url": {
+            "path": ["api", "club-health", "Test Club", "history"],
+            "host": ["{{base_url}}"],
+            "query": [
+              {
+                "key": "months",
+                "value": "invalid"
+              }
+            ],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "0d8654a5-e22d-4358-8da8-95a21b4af5f8",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Status code is 400', function () {",
+                "    pm.response.to.have.status(400);",
+                "});",
+                "",
+                "pm.test('Response has invalid months parameter error', function () {",
+                "    const jsonData = pm.response.json();",
+                "    pm.expect(jsonData.success).to.be.false;",
+                "    pm.expect(jsonData.error.code).to.eql('INVALID_MONTHS_PARAMETER');",
+                "});"
+              ],
+              "_lastExecutionId": "f2b73d97-f568-4a6f-8799-a89dd502cffe"
+            }
+          }
+        ]
+      }
+    ],
+    "event": [],
+    "variable": [
+      {
+        "type": "any",
+        "value": "http://localhost:5001",
+        "key": "base_url"
+      }
+    ],
+    "info": {
+      "_postman_id": "220b03db-37ef-4c6b-88df-ab61cc5c12ef",
+      "name": "Toast Stats API - Club Health Complete",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Comprehensive testing for Club Health Classification API endpoints",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "id": "48091dcc-c865-464a-88c4-04823b2ae71e",
+    "name": "Toast Stats Local",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://localhost:5001",
+        "key": "base_url"
+      },
+      {
+        "type": "any",
+        "value": "v1",
+        "key": "api_version"
+      }
+    ]
+  },
+  "globals": {
+    "id": "86e001a9-e749-4246-9aa0-f1d34a302d18",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 11,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 11,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 11,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 11,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 11,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 35,
+        "pending": 0,
+        "failed": 0
+      },
+      "testScripts": {
+        "total": 11,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 4.090909090909091,
+      "responseMin": 2,
+      "responseMax": 20,
+      "responseSd": 5.107117056432051,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1767318796906,
+      "completed": 1767318797122
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 11,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "ef6cb6e4-660f-438f-ba2b-3bda7eca6b7e",
+          "httpRequestId": "4b65e27e-8791-4bfd-8805-b3d2107115b5"
+        },
+        "item": {
+          "id": "656a061a-2745-44e5-a525-a84ac032a500",
+          "name": "Health Check",
+          "request": {
+            "url": {
+              "path": ["health"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "4e2a7f30-03e7-4fe8-bcba-3d75bcdf2d83",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has status ok', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ok');",
+                  "});",
+                  "",
+                  "pm.test('Club health service is available', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.services.clubHealth.status).to.eql('ok');",
+                  "});"
+                ],
+                "_lastExecutionId": "0c47da0f-ec93-4504-8c68-57e50484d01e"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["health"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "11fe907a-e34d-415a-8821-daa9dbdca5af",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "812e3fd7-6a34-45c1-8a11-8db0d75e06ad",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "409"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"199-rFGshPEkr2Z7Ara3rIfjW+7krOo\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:16 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 116, 97, 116, 117, 115, 34, 58, 34, 111, 107, 34,
+              44, 34, 116, 105, 109, 101, 115, 116, 97, 109, 112, 34, 58, 34,
+              50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51,
+              58, 49, 54, 46, 57, 51, 55, 90, 34, 44, 34, 117, 112, 116, 105,
+              109, 101, 34, 58, 49, 49, 52, 57, 55, 46, 52, 49, 53, 55, 50, 48,
+              53, 52, 50, 44, 34, 101, 110, 118, 105, 114, 111, 110, 109, 101,
+              110, 116, 34, 58, 34, 100, 101, 118, 101, 108, 111, 112, 109, 101,
+              110, 116, 34, 44, 34, 99, 97, 99, 104, 101, 34, 58, 123, 34, 100,
+              105, 114, 101, 99, 116, 111, 114, 121, 34, 58, 34, 47, 85, 115,
+              101, 114, 115, 47, 114, 115, 101, 114, 118, 97, 110, 116, 47, 99,
+              111, 100, 101, 47, 116, 111, 97, 115, 116, 45, 115, 116, 97, 116,
+              115, 47, 98, 97, 99, 107, 101, 110, 100, 47, 99, 97, 99, 104, 101,
+              34, 44, 34, 115, 111, 117, 114, 99, 101, 34, 58, 34, 100, 101,
+              102, 97, 117, 108, 116, 34, 44, 34, 105, 115, 67, 111, 110, 102,
+              105, 103, 117, 114, 101, 100, 34, 58, 102, 97, 108, 115, 101, 44,
+              34, 105, 115, 82, 101, 97, 100, 121, 34, 58, 102, 97, 108, 115,
+              101, 44, 34, 118, 97, 108, 105, 100, 97, 116, 105, 111, 110, 34,
+              58, 123, 34, 105, 115, 86, 97, 108, 105, 100, 34, 58, 102, 97,
+              108, 115, 101, 44, 34, 105, 115, 65, 99, 99, 101, 115, 115, 105,
+              98, 108, 101, 34, 58, 102, 97, 108, 115, 101, 44, 34, 105, 115,
+              83, 101, 99, 117, 114, 101, 34, 58, 102, 97, 108, 115, 101, 125,
+              125, 44, 34, 115, 101, 114, 118, 105, 99, 101, 115, 34, 58, 123,
+              34, 99, 108, 117, 98, 72, 101, 97, 108, 116, 104, 34, 58, 123, 34,
+              115, 116, 97, 116, 117, 115, 34, 58, 34, 111, 107, 34, 44, 34, 99,
+              97, 99, 104, 101, 83, 116, 97, 116, 115, 34, 58, 123, 34, 104,
+              105, 116, 115, 34, 58, 48, 44, 34, 109, 105, 115, 115, 101, 115,
+              34, 58, 48, 44, 34, 107, 101, 121, 115, 34, 58, 48, 44, 34, 107,
+              115, 105, 122, 101, 34, 58, 48, 44, 34, 118, 115, 105, 122, 101,
+              34, 58, 48, 125, 125, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 20,
+          "responseSize": 409
+        },
+        "id": "656a061a-2745-44e5-a525-a84ac032a500",
+        "assertions": [
+          {
+            "assertion": "Status code is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has status ok",
+            "skipped": false
+          },
+          {
+            "assertion": "Club health service is available",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "fba47ca5-ce01-4a9d-88bd-fa3a6ac2e3c7",
+          "length": 11,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "a32eaad3-ed74-4e3a-9bee-9963447c7b10"
+        },
+        "item": {
+          "id": "7ce9c889-ab23-461f-86e8-6714c8fe2c87",
+          "name": "Club Health - Single Classification (Valid)",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "classify"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_name\": \"Test Club\",\n  \"current_members\": 25,\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"October\",\n  \"dcp_goals_achieved_ytd\": 3,\n  \"csp_submitted\": true,\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"Vulnerable\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "9e4df9d4-6eef-4a20-8def-44513972d63b",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success true', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has classification data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.club_name).to.eql('Test Club');",
+                  "    pm.expect(jsonData.data.health_status).to.be.a('string');",
+                  "    pm.expect(jsonData.data.trajectory).to.be.a('string');",
+                  "    pm.expect(jsonData.data.composite_key).to.be.a('string');",
+                  "    pm.expect(jsonData.data.composite_label).to.be.a('string');",
+                  "});",
+                  "",
+                  "pm.test('Response has metadata', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.metadata).to.be.an('object');",
+                  "    pm.expect(jsonData.metadata.timestamp).to.be.a('string');",
+                  "    pm.expect(jsonData.metadata.api_processing_time_ms).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Classification result is valid', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const validHealthStatuses = ['Thriving', 'Vulnerable', 'Intervention Required'];",
+                  "    const validTrajectories = ['Improving', 'Stable', 'Declining', 'Recovering'];",
+                  "    ",
+                  "    pm.expect(validHealthStatuses).to.include(jsonData.data.health_status);",
+                  "    pm.expect(validTrajectories).to.include(jsonData.data.trajectory);",
+                  "    pm.expect(jsonData.data.reasons).to.be.an('array');",
+                  "    pm.expect(jsonData.data.trajectory_reasons).to.be.an('array');",
+                  "});"
+                ],
+                "_lastExecutionId": "be6fdcf5-e52a-4546-bb5e-433c8d0badc3"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "classify"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "ffdee389-2236-4767-8cb2-229cee4c6c81",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "362",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"club_name\": \"Test Club\",\n  \"current_members\": 25,\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"October\",\n  \"dcp_goals_achieved_ytd\": 3,\n  \"csp_submitted\": true,\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"Vulnerable\"\n}"
+          }
+        },
+        "response": {
+          "id": "b8fb0925-1e76-4e71-ae25-98abe1ad606b",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "718"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"2ce-dcgZAR68+7IZ/JjQPWSIxsbFhaY\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:16 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 116, 114, 117,
+              101, 44, 34, 100, 97, 116, 97, 34, 58, 123, 34, 99, 108, 117, 98,
+              95, 110, 97, 109, 101, 34, 58, 34, 84, 101, 115, 116, 32, 67, 108,
+              117, 98, 34, 44, 34, 104, 101, 97, 108, 116, 104, 95, 115, 116,
+              97, 116, 117, 115, 34, 58, 34, 84, 104, 114, 105, 118, 105, 110,
+              103, 34, 44, 34, 114, 101, 97, 115, 111, 110, 115, 34, 58, 91, 34,
+              77, 101, 109, 98, 101, 114, 115, 104, 105, 112, 32, 114, 101, 113,
+              117, 105, 114, 101, 109, 101, 110, 116, 32, 109, 101, 116, 58, 32,
+              50, 53, 32, 109, 101, 109, 98, 101, 114, 115, 32, 40, 226, 137,
+              165, 50, 48, 32, 114, 101, 113, 117, 105, 114, 101, 100, 41, 34,
+              44, 34, 68, 67, 80, 32, 114, 101, 113, 117, 105, 114, 101, 109,
+              101, 110, 116, 32, 109, 101, 116, 58, 32, 51, 32, 103, 111, 97,
+              108, 115, 32, 97, 99, 104, 105, 101, 118, 101, 100, 32, 40, 226,
+              137, 165, 50, 32, 114, 101, 113, 117, 105, 114, 101, 100, 32, 102,
+              111, 114, 32, 79, 99, 116, 111, 98, 101, 114, 41, 34, 44, 34, 67,
+              83, 80, 32, 114, 101, 113, 117, 105, 114, 101, 109, 101, 110, 116,
+              32, 109, 101, 116, 58, 32, 67, 108, 117, 98, 32, 83, 117, 99, 99,
+              101, 115, 115, 32, 80, 108, 97, 110, 32, 115, 117, 98, 109, 105,
+              116, 116, 101, 100, 34, 44, 34, 65, 108, 108, 32, 114, 101, 113,
+              117, 105, 114, 101, 109, 101, 110, 116, 115, 32, 109, 101, 116,
+              58, 32, 109, 101, 109, 98, 101, 114, 115, 104, 105, 112, 44, 32,
+              68, 67, 80, 44, 32, 97, 110, 100, 32, 67, 83, 80, 34, 93, 44, 34,
+              116, 114, 97, 106, 101, 99, 116, 111, 114, 121, 34, 58, 34, 82,
+              101, 99, 111, 118, 101, 114, 105, 110, 103, 34, 44, 34, 116, 114,
+              97, 106, 101, 99, 116, 111, 114, 121, 95, 114, 101, 97, 115, 111,
+              110, 115, 34, 58, 91, 34, 72, 101, 97, 108, 116, 104, 32, 115,
+              116, 97, 116, 117, 115, 32, 105, 109, 112, 114, 111, 118, 101,
+              100, 58, 32, 86, 117, 108, 110, 101, 114, 97, 98, 108, 101, 32,
+              226, 134, 146, 32, 84, 104, 114, 105, 118, 105, 110, 103, 34, 93,
+              44, 34, 99, 111, 109, 112, 111, 115, 105, 116, 101, 95, 107, 101,
+              121, 34, 58, 34, 84, 104, 114, 105, 118, 105, 110, 103, 95, 95,
+              82, 101, 99, 111, 118, 101, 114, 105, 110, 103, 34, 44, 34, 99,
+              111, 109, 112, 111, 115, 105, 116, 101, 95, 108, 97, 98, 101, 108,
+              34, 58, 34, 84, 104, 114, 105, 118, 105, 110, 103, 32, 194, 183,
+              32, 82, 101, 99, 111, 118, 101, 114, 105, 110, 103, 34, 44, 34,
+              109, 101, 109, 98, 101, 114, 115, 95, 100, 101, 108, 116, 97, 95,
+              109, 111, 109, 34, 58, 50, 44, 34, 100, 99, 112, 95, 100, 101,
+              108, 116, 97, 95, 109, 111, 109, 34, 58, 49, 44, 34, 109, 101,
+              116, 97, 100, 97, 116, 97, 34, 58, 123, 34, 101, 118, 97, 108,
+              117, 97, 116, 105, 111, 110, 95, 100, 97, 116, 101, 34, 58, 34,
+              50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 50, 48,
+              58, 53, 56, 46, 50, 55, 55, 90, 34, 44, 34, 112, 114, 111, 99,
+              101, 115, 115, 105, 110, 103, 95, 116, 105, 109, 101, 95, 109,
+              115, 34, 58, 48, 44, 34, 114, 117, 108, 101, 95, 118, 101, 114,
+              115, 105, 111, 110, 34, 58, 34, 49, 46, 48, 46, 48, 34, 125, 125,
+              44, 34, 109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123, 34, 116,
+              105, 109, 101, 115, 116, 97, 109, 112, 34, 58, 34, 50, 48, 50, 54,
+              45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51, 58, 49, 54, 46,
+              57, 54, 57, 90, 34, 44, 34, 97, 112, 105, 95, 112, 114, 111, 99,
+              101, 115, 115, 105, 110, 103, 95, 116, 105, 109, 101, 95, 109,
+              115, 34, 58, 50, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 5,
+          "responseSize": 718
+        },
+        "id": "7ce9c889-ab23-461f-86e8-6714c8fe2c87",
+        "assertions": [
+          {
+            "assertion": "Status code is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has success true",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has classification data",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has metadata",
+            "skipped": false
+          },
+          {
+            "assertion": "Classification result is valid",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "ab1270be-415b-429b-94c7-5f721eff5cdf",
+          "length": 11,
+          "cycles": 1,
+          "position": 2,
+          "iteration": 0,
+          "httpRequestId": "f9483f7d-590b-434c-a3bc-96ccfd6e9a49"
+        },
+        "item": {
+          "id": "adc11a0f-270f-42cb-9909-bcb7d64ada4b",
+          "name": "Club Health - Batch Classification (Valid)",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "batch"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"club_name\": \"Batch Club 1\",\n    \"current_members\": 15,\n    \"member_growth_since_july\": 2,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 2,\n    \"csp_submitted\": false,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": false,\n    \"previous_month_members\": 13,\n    \"previous_month_dcp_goals_achieved_ytd\": 1,\n    \"previous_month_health_status\": \"Vulnerable\"\n  },\n  {\n    \"club_name\": \"Batch Club 2\",\n    \"current_members\": 30,\n    \"member_growth_since_july\": 8,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 5,\n    \"csp_submitted\": true,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": true,\n    \"previous_month_members\": 28,\n    \"previous_month_dcp_goals_achieved_ytd\": 4,\n    \"previous_month_health_status\": \"Thriving\"\n  }\n]"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "1947eebb-b4a8-4eac-9c5c-843da533428a",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success true', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has batch results', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    pm.expect(jsonData.data).to.have.lengthOf(2);",
+                  "});",
+                  "",
+                  "pm.test('Batch metadata is correct', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.metadata.total_clubs).to.eql(2);",
+                  "    pm.expect(jsonData.metadata.successful_classifications).to.eql(2);",
+                  "    pm.expect(jsonData.metadata.api_processing_time_ms).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Each result has required fields', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    jsonData.data.forEach((result, index) => {",
+                  "        pm.expect(result.club_name).to.include('Batch Club');",
+                  "        pm.expect(result.health_status).to.be.a('string');",
+                  "        pm.expect(result.trajectory).to.be.a('string');",
+                  "        pm.expect(result.composite_key).to.be.a('string');",
+                  "        pm.expect(result.reasons).to.be.an('array');",
+                  "    });",
+                  "});"
+                ],
+                "_lastExecutionId": "42582ccd-c6ae-4e5f-a458-1218631246a2"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "batch"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "f297a89d-5679-4b01-a625-22808349bd3f",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "788",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "[\n  {\n    \"club_name\": \"Batch Club 1\",\n    \"current_members\": 15,\n    \"member_growth_since_july\": 2,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 2,\n    \"csp_submitted\": false,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": false,\n    \"previous_month_members\": 13,\n    \"previous_month_dcp_goals_achieved_ytd\": 1,\n    \"previous_month_health_status\": \"Vulnerable\"\n  },\n  {\n    \"club_name\": \"Batch Club 2\",\n    \"current_members\": 30,\n    \"member_growth_since_july\": 8,\n    \"current_month\": \"October\",\n    \"dcp_goals_achieved_ytd\": 5,\n    \"csp_submitted\": true,\n    \"officer_list_submitted\": true,\n    \"officers_trained\": true,\n    \"previous_month_members\": 28,\n    \"previous_month_dcp_goals_achieved_ytd\": 4,\n    \"previous_month_health_status\": \"Thriving\"\n  }\n]"
+          }
+        },
+        "response": {
+          "id": "fb1810a6-a0a9-4dd0-b7c9-23d64aa2de7f",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "1497"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"5d9-ZJqfPTA9HXibCFeME1uSEOChrJ8\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:16 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 116, 114, 117,
+              101, 44, 34, 100, 97, 116, 97, 34, 58, 91, 123, 34, 99, 108, 117,
+              98, 95, 110, 97, 109, 101, 34, 58, 34, 66, 97, 116, 99, 104, 32,
+              67, 108, 117, 98, 32, 49, 34, 44, 34, 104, 101, 97, 108, 116, 104,
+              95, 115, 116, 97, 116, 117, 115, 34, 58, 34, 86, 117, 108, 110,
+              101, 114, 97, 98, 108, 101, 34, 44, 34, 114, 101, 97, 115, 111,
+              110, 115, 34, 58, 91, 34, 77, 101, 109, 98, 101, 114, 115, 104,
+              105, 112, 32, 114, 101, 113, 117, 105, 114, 101, 109, 101, 110,
+              116, 32, 110, 111, 116, 32, 109, 101, 116, 58, 32, 49, 53, 32,
+              109, 101, 109, 98, 101, 114, 115, 32, 40, 60, 50, 48, 41, 32, 97,
+              110, 100, 32, 50, 32, 103, 114, 111, 119, 116, 104, 32, 40, 60,
+              51, 41, 34, 44, 34, 68, 67, 80, 32, 114, 101, 113, 117, 105, 114,
+              101, 109, 101, 110, 116, 32, 109, 101, 116, 58, 32, 50, 32, 103,
+              111, 97, 108, 115, 32, 97, 99, 104, 105, 101, 118, 101, 100, 32,
+              40, 226, 137, 165, 50, 32, 114, 101, 113, 117, 105, 114, 101, 100,
+              32, 102, 111, 114, 32, 78, 111, 118, 101, 109, 98, 101, 114, 41,
+              34, 44, 34, 67, 83, 80, 32, 114, 101, 113, 117, 105, 114, 101,
+              109, 101, 110, 116, 32, 110, 111, 116, 32, 109, 101, 116, 58, 32,
+              67, 108, 117, 98, 32, 83, 117, 99, 99, 101, 115, 115, 32, 80, 108,
+              97, 110, 32, 110, 111, 116, 32, 115, 117, 98, 109, 105, 116, 116,
+              101, 100, 34, 44, 34, 80, 97, 114, 116, 105, 97, 108, 32, 114,
+              101, 113, 117, 105, 114, 101, 109, 101, 110, 116, 115, 32, 109,
+              101, 116, 58, 32, 49, 32, 111, 102, 32, 51, 32, 114, 101, 113,
+              117, 105, 114, 101, 109, 101, 110, 116, 115, 32, 115, 97, 116,
+              105, 115, 102, 105, 101, 100, 34, 93, 44, 34, 116, 114, 97, 106,
+              101, 99, 116, 111, 114, 121, 34, 58, 34, 83, 116, 97, 98, 108,
+              101, 34, 44, 34, 116, 114, 97, 106, 101, 99, 116, 111, 114, 121,
+              95, 114, 101, 97, 115, 111, 110, 115, 34, 58, 91, 34, 72, 101, 97,
+              108, 116, 104, 32, 115, 116, 97, 116, 117, 115, 32, 117, 110, 99,
+              104, 97, 110, 103, 101, 100, 58, 32, 86, 117, 108, 110, 101, 114,
+              97, 98, 108, 101, 34, 44, 34, 83, 116, 97, 98, 108, 101, 32, 109,
+              111, 109, 101, 110, 116, 117, 109, 58, 32, 43, 49, 32, 109, 101,
+              109, 98, 101, 114, 115, 44, 32, 43, 49, 32, 68, 67, 80, 32, 103,
+              111, 97, 108, 115, 32, 109, 111, 110, 116, 104, 45, 111, 118, 101,
+              114, 45, 109, 111, 110, 116, 104, 34, 93, 44, 34, 99, 111, 109,
+              112, 111, 115, 105, 116, 101, 95, 107, 101, 121, 34, 58, 34, 86,
+              117, 108, 110, 101, 114, 97, 98, 108, 101, 95, 95, 83, 116, 97,
+              98, 108, 101, 34, 44, 34, 99, 111, 109, 112, 111, 115, 105, 116,
+              101, 95, 108, 97, 98, 101, 108, 34, 58, 34, 86, 117, 108, 110,
+              101, 114, 97, 98, 108, 101, 32, 194, 183, 32, 83, 116, 97, 98,
+              108, 101, 34, 44, 34, 109, 101, 109, 98, 101, 114, 115, 95, 100,
+              101, 108, 116, 97, 95, 109, 111, 109, 34, 58, 49, 44, 34, 100, 99,
+              112, 95, 100, 101, 108, 116, 97, 95, 109, 111, 109, 34, 58, 49,
+              44, 34, 109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123, 34, 101,
+              118, 97, 108, 117, 97, 116, 105, 111, 110, 95, 100, 97, 116, 101,
+              34, 58, 34, 50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49,
+              58, 50, 48, 58, 53, 56, 46, 52, 57, 57, 90, 34, 44, 34, 112, 114,
+              111, 99, 101, 115, 115, 105, 110, 103, 95, 116, 105, 109, 101, 95,
+              109, 115, 34, 58, 48, 44, 34, 114, 117, 108, 101, 95, 118, 101,
+              114, 115, 105, 111, 110, 34, 58, 34, 49, 46, 48, 46, 48, 34, 125,
+              125, 44, 123, 34, 99, 108, 117, 98, 95, 110, 97, 109, 101, 34, 58,
+              34, 66, 97, 116, 99, 104, 32, 67, 108, 117, 98, 32, 50, 34, 44,
+              34, 104, 101, 97, 108, 116, 104, 95, 115, 116, 97, 116, 117, 115,
+              34, 58, 34, 84, 104, 114, 105, 118, 105, 110, 103, 34, 44, 34,
+              114, 101, 97, 115, 111, 110, 115, 34, 58, 91, 34, 77, 101, 109,
+              98, 101, 114, 115, 104, 105, 112, 32, 114, 101, 113, 117, 105,
+              114, 101, 109, 101, 110, 116, 32, 109, 101, 116, 58, 32, 51, 48,
+              32, 109, 101, 109, 98, 101, 114, 115, 32, 40, 226, 137, 165, 50,
+              48, 32, 114, 101, 113, 117, 105, 114, 101, 100, 41, 34, 44, 34,
+              68, 67, 80, 32, 114, 101, 113, 117, 105, 114, 101, 109, 101, 110,
+              116, 32, 109, 101, 116, 58, 32, 51, 32, 103, 111, 97, 108, 115,
+              32, 97, 99, 104, 105, 101, 118, 101, 100, 32, 40, 226, 137, 165,
+              50, 32, 114, 101, 113, 117, 105, 114, 101, 100, 32, 102, 111, 114,
+              32, 78, 111, 118, 101, 109, 98, 101, 114, 41, 34, 44, 34, 67, 83,
+              80, 32, 114, 101, 113, 117, 105, 114, 101, 109, 101, 110, 116, 32,
+              109, 101, 116, 58, 32, 67, 108, 117, 98, 32, 83, 117, 99, 99, 101,
+              115, 115, 32, 80, 108, 97, 110, 32, 115, 117, 98, 109, 105, 116,
+              116, 101, 100, 34, 44, 34, 65, 108, 108, 32, 114, 101, 113, 117,
+              105, 114, 101, 109, 101, 110, 116, 115, 32, 109, 101, 116, 58, 32,
+              109, 101, 109, 98, 101, 114, 115, 104, 105, 112, 44, 32, 68, 67,
+              80, 44, 32, 97, 110, 100, 32, 67, 83, 80, 34, 93, 44, 34, 116,
+              114, 97, 106, 101, 99, 116, 111, 114, 121, 34, 58, 34, 83, 116,
+              97, 98, 108, 101, 34, 44, 34, 116, 114, 97, 106, 101, 99, 116,
+              111, 114, 121, 95, 114, 101, 97, 115, 111, 110, 115, 34, 58, 91,
+              34, 72, 101, 97, 108, 116, 104, 32, 115, 116, 97, 116, 117, 115,
+              32, 117, 110, 99, 104, 97, 110, 103, 101, 100, 58, 32, 84, 104,
+              114, 105, 118, 105, 110, 103, 34, 44, 34, 83, 116, 97, 98, 108,
+              101, 32, 109, 111, 109, 101, 110, 116, 117, 109, 58, 32, 43, 50,
+              32, 109, 101, 109, 98, 101, 114, 115, 44, 32, 43, 49, 32, 68, 67,
+              80, 32, 103, 111, 97, 108, 115, 32, 109, 111, 110, 116, 104, 45,
+              111, 118, 101, 114, 45, 109, 111, 110, 116, 104, 34, 93, 44, 34,
+              99, 111, 109, 112, 111, 115, 105, 116, 101, 95, 107, 101, 121, 34,
+              58, 34, 84, 104, 114, 105, 118, 105, 110, 103, 95, 95, 83, 116,
+              97, 98, 108, 101, 34, 44, 34, 99, 111, 109, 112, 111, 115, 105,
+              116, 101, 95, 108, 97, 98, 101, 108, 34, 58, 34, 84, 104, 114,
+              105, 118, 105, 110, 103, 32, 194, 183, 32, 83, 116, 97, 98, 108,
+              101, 34, 44, 34, 109, 101, 109, 98, 101, 114, 115, 95, 100, 101,
+              108, 116, 97, 95, 109, 111, 109, 34, 58, 50, 44, 34, 100, 99, 112,
+              95, 100, 101, 108, 116, 97, 95, 109, 111, 109, 34, 58, 49, 44, 34,
+              109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123, 34, 101, 118,
+              97, 108, 117, 97, 116, 105, 111, 110, 95, 100, 97, 116, 101, 34,
+              58, 34, 50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58,
+              50, 48, 58, 53, 56, 46, 52, 57, 57, 90, 34, 44, 34, 112, 114, 111,
+              99, 101, 115, 115, 105, 110, 103, 95, 116, 105, 109, 101, 95, 109,
+              115, 34, 58, 48, 44, 34, 114, 117, 108, 101, 95, 118, 101, 114,
+              115, 105, 111, 110, 34, 58, 34, 49, 46, 48, 46, 48, 34, 125, 125,
+              93, 44, 34, 109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123, 34,
+              116, 105, 109, 101, 115, 116, 97, 109, 112, 34, 58, 34, 50, 48,
+              50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51, 58, 49,
+              54, 46, 57, 56, 55, 90, 34, 44, 34, 116, 111, 116, 97, 108, 95,
+              99, 108, 117, 98, 115, 34, 58, 50, 44, 34, 115, 117, 99, 99, 101,
+              115, 115, 102, 117, 108, 95, 99, 108, 97, 115, 115, 105, 102, 105,
+              99, 97, 116, 105, 111, 110, 115, 34, 58, 50, 44, 34, 97, 112, 105,
+              95, 112, 114, 111, 99, 101, 115, 115, 105, 110, 103, 95, 116, 105,
+              109, 101, 95, 109, 115, 34, 58, 49, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 3,
+          "responseSize": 1497
+        },
+        "id": "adc11a0f-270f-42cb-9909-bcb7d64ada4b",
+        "assertions": [
+          {
+            "assertion": "Status code is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has success true",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has batch results",
+            "skipped": false
+          },
+          {
+            "assertion": "Batch metadata is correct",
+            "skipped": false
+          },
+          {
+            "assertion": "Each result has required fields",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "872be81b-f8b3-4144-9b90-037ff5301602",
+          "length": 11,
+          "cycles": 1,
+          "position": 3,
+          "iteration": 0,
+          "httpRequestId": "33256393-7ee8-46ac-950f-eae461967196"
+        },
+        "item": {
+          "id": "ba3d898b-875b-4701-8316-ed725d3cdc1a",
+          "name": "Club Health - Get History",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "Test Club", "history"],
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "6"
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "9cc1f897-743c-4226-8802-58af4efde0cf",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success true', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has history data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.club_name).to.eql('Test Club');",
+                  "    pm.expect(jsonData.data.months_requested).to.eql(6);",
+                  "    pm.expect(jsonData.data.history).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Metadata includes record count', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.metadata.record_count).to.be.a('number');",
+                  "    pm.expect(jsonData.metadata.record_count).to.be.at.least(0);",
+                  "});"
+                ],
+                "_lastExecutionId": "83a74fd5-cd0d-4c5f-a178-97073770eb16"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "Test%20Club", "history"],
+            "host": ["localhost"],
+            "query": [
+              {
+                "key": "months",
+                "value": "6"
+              }
+            ],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "5a3661fb-c2f6-410b-ac61-08f3df900e80",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "ad10134e-ab9f-49da-8b08-92a6ff5a0997",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "152"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"98-u0eDX958xwyOf9VX1MNRrEIq3hk\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 116, 114, 117,
+              101, 44, 34, 100, 97, 116, 97, 34, 58, 123, 34, 99, 108, 117, 98,
+              95, 110, 97, 109, 101, 34, 58, 34, 84, 101, 115, 116, 32, 67, 108,
+              117, 98, 34, 44, 34, 109, 111, 110, 116, 104, 115, 95, 114, 101,
+              113, 117, 101, 115, 116, 101, 100, 34, 58, 54, 44, 34, 104, 105,
+              115, 116, 111, 114, 121, 34, 58, 91, 93, 125, 44, 34, 109, 101,
+              116, 97, 100, 97, 116, 97, 34, 58, 123, 34, 116, 105, 109, 101,
+              115, 116, 97, 109, 112, 34, 58, 34, 50, 48, 50, 54, 45, 48, 49,
+              45, 48, 50, 84, 48, 49, 58, 53, 51, 58, 49, 55, 46, 48, 48, 49,
+              90, 34, 44, 34, 114, 101, 99, 111, 114, 100, 95, 99, 111, 117,
+              110, 116, 34, 58, 48, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 152
+        },
+        "id": "ba3d898b-875b-4701-8316-ed725d3cdc1a",
+        "assertions": [
+          {
+            "assertion": "Status code is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has success true",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has history data",
+            "skipped": false
+          },
+          {
+            "assertion": "Metadata includes record count",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "2cc6d5e1-4683-4ef2-bb65-85620e9c8cc9",
+          "length": 11,
+          "cycles": 1,
+          "position": 4,
+          "iteration": 0,
+          "httpRequestId": "11d42690-ccec-457e-9e9b-191bb0672753"
+        },
+        "item": {
+          "id": "73aa6e24-3c13-4c4d-b670-dd351c4232d1",
+          "name": "Club Health - District Summary",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "club-health",
+                "districts",
+                "D123",
+                "health-summary"
+              ],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "33683cb5-1e82-4436-9e2a-62f883624be8",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success true', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has district summary data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.district_id).to.eql('D123');",
+                  "    pm.expect(jsonData.data.total_clubs).to.be.a('number');",
+                  "    pm.expect(jsonData.data.health_distribution).to.be.an('object');",
+                  "    pm.expect(jsonData.data.trajectory_distribution).to.be.an('object');",
+                  "    pm.expect(jsonData.data.clubs_needing_attention).to.be.an('array');",
+                  "    pm.expect(jsonData.data.evaluation_date).to.be.a('string');",
+                  "});"
+                ],
+                "_lastExecutionId": "42d5afee-6446-4252-8411-c01e1471d35b"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": [
+              "api",
+              "club-health",
+              "districts",
+              "D123",
+              "health-summary"
+            ],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "fca34cef-1046-4a3d-bb0b-dc2a780c014e",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "873c6d93-6965-49f4-9964-6fd14ab20011",
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "334"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"14e-JK1wwGbeX+nZryhIQ6EHAdbSXJo\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 116, 114, 117,
+              101, 44, 34, 100, 97, 116, 97, 34, 58, 123, 34, 100, 105, 115,
+              116, 114, 105, 99, 116, 95, 105, 100, 34, 58, 34, 68, 49, 50, 51,
+              34, 44, 34, 116, 111, 116, 97, 108, 95, 99, 108, 117, 98, 115, 34,
+              58, 48, 44, 34, 104, 101, 97, 108, 116, 104, 95, 100, 105, 115,
+              116, 114, 105, 98, 117, 116, 105, 111, 110, 34, 58, 123, 34, 84,
+              104, 114, 105, 118, 105, 110, 103, 34, 58, 48, 44, 34, 86, 117,
+              108, 110, 101, 114, 97, 98, 108, 101, 34, 58, 48, 44, 34, 73, 110,
+              116, 101, 114, 118, 101, 110, 116, 105, 111, 110, 32, 82, 101,
+              113, 117, 105, 114, 101, 100, 34, 58, 48, 125, 44, 34, 116, 114,
+              97, 106, 101, 99, 116, 111, 114, 121, 95, 100, 105, 115, 116, 114,
+              105, 98, 117, 116, 105, 111, 110, 34, 58, 123, 34, 82, 101, 99,
+              111, 118, 101, 114, 105, 110, 103, 34, 58, 48, 44, 34, 83, 116,
+              97, 98, 108, 101, 34, 58, 48, 44, 34, 68, 101, 99, 108, 105, 110,
+              105, 110, 103, 34, 58, 48, 125, 44, 34, 99, 108, 117, 98, 115, 95,
+              110, 101, 101, 100, 105, 110, 103, 95, 97, 116, 116, 101, 110,
+              116, 105, 111, 110, 34, 58, 91, 93, 44, 34, 101, 118, 97, 108,
+              117, 97, 116, 105, 111, 110, 95, 100, 97, 116, 101, 34, 58, 34,
+              50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51,
+              58, 49, 55, 46, 48, 49, 55, 90, 34, 125, 44, 34, 109, 101, 116,
+              97, 100, 97, 116, 97, 34, 58, 123, 34, 116, 105, 109, 101, 115,
+              116, 97, 109, 112, 34, 58, 34, 50, 48, 50, 54, 45, 48, 49, 45, 48,
+              50, 84, 48, 49, 58, 53, 51, 58, 49, 55, 46, 48, 49, 55, 90, 34,
+              125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 334
+        },
+        "id": "73aa6e24-3c13-4c4d-b670-dd351c4232d1",
+        "assertions": [
+          {
+            "assertion": "Status code is 200",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has success true",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has district summary data",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "c9eb5ffc-cbed-49a7-a92b-5cae41716da8",
+          "length": 11,
+          "cycles": 1,
+          "position": 5,
+          "iteration": 0,
+          "httpRequestId": "75eab104-3c1d-458d-8d17-57c3f7c3d31c"
+        },
+        "item": {
+          "id": "bf4c750d-280a-4893-92a5-12d75e2ef4de",
+          "name": "Club Health - Validation Error (Missing Fields)",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "classify"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_name\": \"Incomplete Club\",\n  \"current_members\": 25\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "b5537c93-6ad0-4439-ab61-bd85683d7eb5",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response has success false', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test('Response has validation error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.be.an('object');",
+                  "    pm.expect(jsonData.error.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(jsonData.error.message).to.be.a('string');",
+                  "    pm.expect(jsonData.error.details).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Error details include missing fields', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const details = jsonData.error.details;",
+                  "    const missingFields = details.filter(d => d.code === 'MISSING_REQUIRED_FIELD');",
+                  "    pm.expect(missingFields.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "_lastExecutionId": "22867ffd-9ad1-49be-a384-0f09b4347cef"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "classify"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "39783e15-140e-404a-8abe-cdd6842c0570",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "61",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"club_name\": \"Incomplete Club\",\n  \"current_members\": 25\n}"
+          }
+        },
+        "response": {
+          "id": "d0a99997-fd76-426a-93bd-8db4f219a5ad",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "1172"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"494-Z2frEB2XI6X+kPF7QasuXJzjEDk\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 102, 97, 108,
+              115, 101, 44, 34, 101, 114, 114, 111, 114, 34, 58, 123, 34, 99,
+              111, 100, 101, 34, 58, 34, 86, 65, 76, 73, 68, 65, 84, 73, 79, 78,
+              95, 69, 82, 82, 79, 82, 34, 44, 34, 109, 101, 115, 115, 97, 103,
+              101, 34, 58, 34, 73, 110, 118, 97, 108, 105, 100, 32, 105, 110,
+              112, 117, 116, 32, 100, 97, 116, 97, 34, 44, 34, 100, 101, 116,
+              97, 105, 108, 115, 34, 58, 91, 123, 34, 99, 111, 100, 101, 34, 58,
+              34, 77, 73, 83, 83, 73, 78, 71, 95, 82, 69, 81, 85, 73, 82, 69,
+              68, 95, 70, 73, 69, 76, 68, 34, 44, 34, 109, 101, 115, 115, 97,
+              103, 101, 34, 58, 34, 109, 101, 109, 98, 101, 114, 95, 103, 114,
+              111, 119, 116, 104, 95, 115, 105, 110, 99, 101, 95, 106, 117, 108,
+              121, 32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100, 34,
+              44, 34, 102, 105, 101, 108, 100, 34, 58, 34, 109, 101, 109, 98,
+              101, 114, 95, 103, 114, 111, 119, 116, 104, 95, 115, 105, 110, 99,
+              101, 95, 106, 117, 108, 121, 34, 125, 44, 123, 34, 99, 111, 100,
+              101, 34, 58, 34, 77, 73, 83, 83, 73, 78, 71, 95, 82, 69, 81, 85,
+              73, 82, 69, 68, 95, 70, 73, 69, 76, 68, 34, 44, 34, 109, 101, 115,
+              115, 97, 103, 101, 34, 58, 34, 100, 99, 112, 95, 103, 111, 97,
+              108, 115, 95, 97, 99, 104, 105, 101, 118, 101, 100, 95, 121, 116,
+              100, 32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100, 34,
+              44, 34, 102, 105, 101, 108, 100, 34, 58, 34, 100, 99, 112, 95,
+              103, 111, 97, 108, 115, 95, 97, 99, 104, 105, 101, 118, 101, 100,
+              95, 121, 116, 100, 34, 125, 44, 123, 34, 99, 111, 100, 101, 34,
+              58, 34, 77, 73, 83, 83, 73, 78, 71, 95, 82, 69, 81, 85, 73, 82,
+              69, 68, 95, 70, 73, 69, 76, 68, 34, 44, 34, 109, 101, 115, 115,
+              97, 103, 101, 34, 58, 34, 112, 114, 101, 118, 105, 111, 117, 115,
+              95, 109, 111, 110, 116, 104, 95, 109, 101, 109, 98, 101, 114, 115,
+              32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100, 34, 44,
+              34, 102, 105, 101, 108, 100, 34, 58, 34, 112, 114, 101, 118, 105,
+              111, 117, 115, 95, 109, 111, 110, 116, 104, 95, 109, 101, 109, 98,
+              101, 114, 115, 34, 125, 44, 123, 34, 99, 111, 100, 101, 34, 58,
+              34, 77, 73, 83, 83, 73, 78, 71, 95, 82, 69, 81, 85, 73, 82, 69,
+              68, 95, 70, 73, 69, 76, 68, 34, 44, 34, 109, 101, 115, 115, 97,
+              103, 101, 34, 58, 34, 112, 114, 101, 118, 105, 111, 117, 115, 95,
+              109, 111, 110, 116, 104, 95, 100, 99, 112, 95, 103, 111, 97, 108,
+              115, 95, 97, 99, 104, 105, 101, 118, 101, 100, 95, 121, 116, 100,
+              32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100, 34, 44,
+              34, 102, 105, 101, 108, 100, 34, 58, 34, 112, 114, 101, 118, 105,
+              111, 117, 115, 95, 109, 111, 110, 116, 104, 95, 100, 99, 112, 95,
+              103, 111, 97, 108, 115, 95, 97, 99, 104, 105, 101, 118, 101, 100,
+              95, 121, 116, 100, 34, 125, 44, 123, 34, 99, 111, 100, 101, 34,
+              58, 34, 77, 73, 83, 83, 73, 78, 71, 95, 82, 69, 81, 85, 73, 82,
+              69, 68, 95, 70, 73, 69, 76, 68, 34, 44, 34, 109, 101, 115, 115,
+              97, 103, 101, 34, 58, 34, 99, 115, 112, 95, 115, 117, 98, 109,
+              105, 116, 116, 101, 100, 32, 105, 115, 32, 114, 101, 113, 117,
+              105, 114, 101, 100, 34, 44, 34, 102, 105, 101, 108, 100, 34, 58,
+              34, 99, 115, 112, 95, 115, 117, 98, 109, 105, 116, 116, 101, 100,
+              34, 125, 44, 123, 34, 99, 111, 100, 101, 34, 58, 34, 77, 73, 83,
+              83, 73, 78, 71, 95, 82, 69, 81, 85, 73, 82, 69, 68, 95, 70, 73,
+              69, 76, 68, 34, 44, 34, 109, 101, 115, 115, 97, 103, 101, 34, 58,
+              34, 111, 102, 102, 105, 99, 101, 114, 95, 108, 105, 115, 116, 95,
+              115, 117, 98, 109, 105, 116, 116, 101, 100, 32, 105, 115, 32, 114,
+              101, 113, 117, 105, 114, 101, 100, 34, 44, 34, 102, 105, 101, 108,
+              100, 34, 58, 34, 111, 102, 102, 105, 99, 101, 114, 95, 108, 105,
+              115, 116, 95, 115, 117, 98, 109, 105, 116, 116, 101, 100, 34, 125,
+              44, 123, 34, 99, 111, 100, 101, 34, 58, 34, 77, 73, 83, 83, 73,
+              78, 71, 95, 82, 69, 81, 85, 73, 82, 69, 68, 95, 70, 73, 69, 76,
+              68, 34, 44, 34, 109, 101, 115, 115, 97, 103, 101, 34, 58, 34, 111,
+              102, 102, 105, 99, 101, 114, 115, 95, 116, 114, 97, 105, 110, 101,
+              100, 32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100, 34,
+              44, 34, 102, 105, 101, 108, 100, 34, 58, 34, 111, 102, 102, 105,
+              99, 101, 114, 115, 95, 116, 114, 97, 105, 110, 101, 100, 34, 125,
+              44, 123, 34, 99, 111, 100, 101, 34, 58, 34, 77, 73, 83, 83, 73,
+              78, 71, 95, 82, 69, 81, 85, 73, 82, 69, 68, 95, 70, 73, 69, 76,
+              68, 34, 44, 34, 109, 101, 115, 115, 97, 103, 101, 34, 58, 34, 99,
+              117, 114, 114, 101, 110, 116, 95, 109, 111, 110, 116, 104, 32,
+              105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100, 34, 44, 34,
+              102, 105, 101, 108, 100, 34, 58, 34, 99, 117, 114, 114, 101, 110,
+              116, 95, 109, 111, 110, 116, 104, 34, 125, 44, 123, 34, 99, 111,
+              100, 101, 34, 58, 34, 77, 73, 83, 83, 73, 78, 71, 95, 82, 69, 81,
+              85, 73, 82, 69, 68, 95, 70, 73, 69, 76, 68, 34, 44, 34, 109, 101,
+              115, 115, 97, 103, 101, 34, 58, 34, 112, 114, 101, 118, 105, 111,
+              117, 115, 95, 109, 111, 110, 116, 104, 95, 104, 101, 97, 108, 116,
+              104, 95, 115, 116, 97, 116, 117, 115, 32, 105, 115, 32, 114, 101,
+              113, 117, 105, 114, 101, 100, 34, 44, 34, 102, 105, 101, 108, 100,
+              34, 58, 34, 112, 114, 101, 118, 105, 111, 117, 115, 95, 109, 111,
+              110, 116, 104, 95, 104, 101, 97, 108, 116, 104, 95, 115, 116, 97,
+              116, 117, 115, 34, 125, 93, 125, 44, 34, 109, 101, 116, 97, 100,
+              97, 116, 97, 34, 58, 123, 34, 116, 105, 109, 101, 115, 116, 97,
+              109, 112, 34, 58, 34, 50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84,
+              48, 49, 58, 53, 51, 58, 49, 55, 46, 48, 51, 56, 90, 34, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 3,
+          "responseSize": 1172
+        },
+        "id": "bf4c750d-280a-4893-92a5-12d75e2ef4de",
+        "assertions": [
+          {
+            "assertion": "Status code is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has success false",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has validation error",
+            "skipped": false
+          },
+          {
+            "assertion": "Error details include missing fields",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "26f48193-fbaf-4770-9b65-ab7bb4909970",
+          "length": 11,
+          "cycles": 1,
+          "position": 6,
+          "iteration": 0,
+          "httpRequestId": "c5bbace9-0f6a-4873-b5d1-fd72095ef64a"
+        },
+        "item": {
+          "id": "d5df02ba-d98a-4d23-beb7-d0528b837c78",
+          "name": "Club Health - Validation Error (Invalid Types)",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "classify"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_name\": \"Invalid Club\",\n  \"current_members\": \"not_a_number\",\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"InvalidMonth\",\n  \"dcp_goals_achieved_ytd\": -1,\n  \"csp_submitted\": \"yes\",\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"InvalidStatus\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "09d35ed3-f202-4aa9-963a-350fb7d83c6b",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response has validation errors for invalid types', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(jsonData.error.details).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Error details include type and value errors', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const details = jsonData.error.details;",
+                  "    const typeErrors = details.filter(d => d.code === 'INVALID_FIELD_TYPE');",
+                  "    const valueErrors = details.filter(d => d.code === 'INVALID_FIELD_VALUE');",
+                  "    const monthErrors = details.filter(d => d.code === 'INVALID_MONTH');",
+                  "    const statusErrors = details.filter(d => d.code === 'INVALID_HEALTH_STATUS');",
+                  "    ",
+                  "    pm.expect(typeErrors.length).to.be.greaterThan(0);",
+                  "    pm.expect(valueErrors.length).to.be.greaterThan(0);",
+                  "    pm.expect(monthErrors.length).to.be.greaterThan(0);",
+                  "    pm.expect(statusErrors.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "_lastExecutionId": "bb805d12-d78c-479e-a281-61bce3364f66"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "classify"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "f22da54c-fc8d-4149-a31b-83cfc89f0c6d",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "387",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"club_name\": \"Invalid Club\",\n  \"current_members\": \"not_a_number\",\n  \"member_growth_since_july\": 5,\n  \"current_month\": \"InvalidMonth\",\n  \"dcp_goals_achieved_ytd\": -1,\n  \"csp_submitted\": \"yes\",\n  \"officer_list_submitted\": true,\n  \"officers_trained\": true,\n  \"previous_month_members\": 23,\n  \"previous_month_dcp_goals_achieved_ytd\": 2,\n  \"previous_month_health_status\": \"InvalidStatus\"\n}"
+          }
+        },
+        "response": {
+          "id": "a4c286a0-e391-4c12-9eba-2e11f15ea403",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "929"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"3a1-/YEaH3Hd7D1PkaKkWAOJce2Uxts\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 102, 97, 108,
+              115, 101, 44, 34, 101, 114, 114, 111, 114, 34, 58, 123, 34, 99,
+              111, 100, 101, 34, 58, 34, 86, 65, 76, 73, 68, 65, 84, 73, 79, 78,
+              95, 69, 82, 82, 79, 82, 34, 44, 34, 109, 101, 115, 115, 97, 103,
+              101, 34, 58, 34, 73, 110, 118, 97, 108, 105, 100, 32, 105, 110,
+              112, 117, 116, 32, 100, 97, 116, 97, 34, 44, 34, 100, 101, 116,
+              97, 105, 108, 115, 34, 58, 91, 123, 34, 99, 111, 100, 101, 34, 58,
+              34, 73, 78, 86, 65, 76, 73, 68, 95, 70, 73, 69, 76, 68, 95, 84,
+              89, 80, 69, 34, 44, 34, 109, 101, 115, 115, 97, 103, 101, 34, 58,
+              34, 99, 117, 114, 114, 101, 110, 116, 95, 109, 101, 109, 98, 101,
+              114, 115, 32, 109, 117, 115, 116, 32, 98, 101, 32, 97, 32, 118,
+              97, 108, 105, 100, 32, 110, 117, 109, 98, 101, 114, 34, 44, 34,
+              102, 105, 101, 108, 100, 34, 58, 34, 99, 117, 114, 114, 101, 110,
+              116, 95, 109, 101, 109, 98, 101, 114, 115, 34, 44, 34, 118, 97,
+              108, 117, 101, 34, 58, 34, 110, 111, 116, 95, 97, 95, 110, 117,
+              109, 98, 101, 114, 34, 125, 44, 123, 34, 99, 111, 100, 101, 34,
+              58, 34, 73, 78, 86, 65, 76, 73, 68, 95, 70, 73, 69, 76, 68, 95,
+              86, 65, 76, 85, 69, 34, 44, 34, 109, 101, 115, 115, 97, 103, 101,
+              34, 58, 34, 100, 99, 112, 95, 103, 111, 97, 108, 115, 95, 97, 99,
+              104, 105, 101, 118, 101, 100, 95, 121, 116, 100, 32, 109, 117,
+              115, 116, 32, 98, 101, 32, 48, 32, 111, 114, 32, 103, 114, 101,
+              97, 116, 101, 114, 34, 44, 34, 102, 105, 101, 108, 100, 34, 58,
+              34, 100, 99, 112, 95, 103, 111, 97, 108, 115, 95, 97, 99, 104,
+              105, 101, 118, 101, 100, 95, 121, 116, 100, 34, 44, 34, 118, 97,
+              108, 117, 101, 34, 58, 45, 49, 125, 44, 123, 34, 99, 111, 100,
+              101, 34, 58, 34, 73, 78, 86, 65, 76, 73, 68, 95, 70, 73, 69, 76,
+              68, 95, 84, 89, 80, 69, 34, 44, 34, 109, 101, 115, 115, 97, 103,
+              101, 34, 58, 34, 99, 115, 112, 95, 115, 117, 98, 109, 105, 116,
+              116, 101, 100, 32, 109, 117, 115, 116, 32, 98, 101, 32, 97, 32,
+              98, 111, 111, 108, 101, 97, 110, 34, 44, 34, 102, 105, 101, 108,
+              100, 34, 58, 34, 99, 115, 112, 95, 115, 117, 98, 109, 105, 116,
+              116, 101, 100, 34, 44, 34, 118, 97, 108, 117, 101, 34, 58, 34,
+              121, 101, 115, 34, 125, 44, 123, 34, 99, 111, 100, 101, 34, 58,
+              34, 73, 78, 86, 65, 76, 73, 68, 95, 77, 79, 78, 84, 72, 34, 44,
+              34, 109, 101, 115, 115, 97, 103, 101, 34, 58, 34, 99, 117, 114,
+              114, 101, 110, 116, 95, 109, 111, 110, 116, 104, 32, 109, 117,
+              115, 116, 32, 98, 101, 32, 111, 110, 101, 32, 111, 102, 58, 32,
+              74, 117, 108, 121, 44, 32, 65, 117, 103, 117, 115, 116, 44, 32,
+              83, 101, 112, 116, 101, 109, 98, 101, 114, 44, 32, 79, 99, 116,
+              111, 98, 101, 114, 44, 32, 78, 111, 118, 101, 109, 98, 101, 114,
+              44, 32, 68, 101, 99, 101, 109, 98, 101, 114, 44, 32, 74, 97, 110,
+              117, 97, 114, 121, 44, 32, 70, 101, 98, 114, 117, 97, 114, 121,
+              44, 32, 77, 97, 114, 99, 104, 44, 32, 65, 112, 114, 105, 108, 44,
+              32, 77, 97, 121, 44, 32, 74, 117, 110, 101, 34, 44, 34, 102, 105,
+              101, 108, 100, 34, 58, 34, 99, 117, 114, 114, 101, 110, 116, 95,
+              109, 111, 110, 116, 104, 34, 44, 34, 118, 97, 108, 117, 101, 34,
+              58, 34, 73, 110, 118, 97, 108, 105, 100, 77, 111, 110, 116, 104,
+              34, 125, 44, 123, 34, 99, 111, 100, 101, 34, 58, 34, 73, 78, 86,
+              65, 76, 73, 68, 95, 72, 69, 65, 76, 84, 72, 95, 83, 84, 65, 84,
+              85, 83, 34, 44, 34, 109, 101, 115, 115, 97, 103, 101, 34, 58, 34,
+              112, 114, 101, 118, 105, 111, 117, 115, 95, 109, 111, 110, 116,
+              104, 95, 104, 101, 97, 108, 116, 104, 95, 115, 116, 97, 116, 117,
+              115, 32, 109, 117, 115, 116, 32, 98, 101, 32, 111, 110, 101, 32,
+              111, 102, 58, 32, 84, 104, 114, 105, 118, 105, 110, 103, 44, 32,
+              86, 117, 108, 110, 101, 114, 97, 98, 108, 101, 44, 32, 73, 110,
+              116, 101, 114, 118, 101, 110, 116, 105, 111, 110, 32, 82, 101,
+              113, 117, 105, 114, 101, 100, 34, 44, 34, 102, 105, 101, 108, 100,
+              34, 58, 34, 112, 114, 101, 118, 105, 111, 117, 115, 95, 109, 111,
+              110, 116, 104, 95, 104, 101, 97, 108, 116, 104, 95, 115, 116, 97,
+              116, 117, 115, 34, 44, 34, 118, 97, 108, 117, 101, 34, 58, 34, 73,
+              110, 118, 97, 108, 105, 100, 83, 116, 97, 116, 117, 115, 34, 125,
+              93, 125, 44, 34, 109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123,
+              34, 116, 105, 109, 101, 115, 116, 97, 109, 112, 34, 58, 34, 50,
+              48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51, 58,
+              49, 55, 46, 48, 53, 51, 90, 34, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 929
+        },
+        "id": "d5df02ba-d98a-4d23-beb7-d0528b837c78",
+        "assertions": [
+          {
+            "assertion": "Status code is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has validation errors for invalid types",
+            "skipped": false
+          },
+          {
+            "assertion": "Error details include type and value errors",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "a6b0e846-e55c-45f1-b834-580bc7ed3da4",
+          "length": 11,
+          "cycles": 1,
+          "position": 7,
+          "iteration": 0,
+          "httpRequestId": "bffec951-98c6-47ba-9126-b9c8696b7c45"
+        },
+        "item": {
+          "id": "b009e213-966b-4d3a-9a60-86447ee00be1",
+          "name": "Club Health - Batch Validation Error (Empty Array)",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "batch"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "[]"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "8ad1b857-3349-4294-b4cd-6f4a0ef9074f",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response has empty array error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.eql('EMPTY_INPUT_ARRAY');",
+                  "});"
+                ],
+                "_lastExecutionId": "dcd69153-71d1-4d3e-ae71-14edde2cc03c"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "batch"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "30b4a953-2d16-4d93-9032-2b8609c3aa96",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "2",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "[]"
+          }
+        },
+        "response": {
+          "id": "14ffe97d-395e-4f0a-aa01-63d5cccb21c7",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "146"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"92-75I78FeFwCvjQ49jhO2aI9npEwY\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 102, 97, 108,
+              115, 101, 44, 34, 101, 114, 114, 111, 114, 34, 58, 123, 34, 99,
+              111, 100, 101, 34, 58, 34, 69, 77, 80, 84, 89, 95, 73, 78, 80, 85,
+              84, 95, 65, 82, 82, 65, 89, 34, 44, 34, 109, 101, 115, 115, 97,
+              103, 101, 34, 58, 34, 73, 110, 112, 117, 116, 32, 97, 114, 114,
+              97, 121, 32, 99, 97, 110, 110, 111, 116, 32, 98, 101, 32, 101,
+              109, 112, 116, 121, 34, 125, 44, 34, 109, 101, 116, 97, 100, 97,
+              116, 97, 34, 58, 123, 34, 116, 105, 109, 101, 115, 116, 97, 109,
+              112, 34, 58, 34, 50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48,
+              49, 58, 53, 51, 58, 49, 55, 46, 48, 54, 56, 90, 34, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 146
+        },
+        "id": "b009e213-966b-4d3a-9a60-86447ee00be1",
+        "assertions": [
+          {
+            "assertion": "Status code is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has empty array error",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "104ac7ce-98b5-4908-a3bc-909d94934637",
+          "length": 11,
+          "cycles": 1,
+          "position": 8,
+          "iteration": 0,
+          "httpRequestId": "427a8074-ea44-4edd-aec1-e79479f0dc6d"
+        },
+        "item": {
+          "id": "73e378bb-63bc-4ce1-95ad-c40918c2f247",
+          "name": "Club Health - Invalid District ID",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "club-health",
+                "districts",
+                "invalid@id",
+                "health-summary"
+              ],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "00b1ac77-1a24-4d98-86bb-fbb6cf6295e1",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response has invalid district ID error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_DISTRICT_ID');",
+                  "});"
+                ],
+                "_lastExecutionId": "d4649a00-0f8c-4d56-9ee4-f054ab357b34"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": [
+              "api",
+              "club-health",
+              "districts",
+              "invalid@id",
+              "health-summary"
+            ],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "7c5fd17e-e0b6-48bd-9c0a-131e18ecf72f",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "47d708eb-dcb9-40c9-a7e5-11e75d22b2b1",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "182"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"b6-mA0YMJvg8WMhbjDO39xS+rJ72c4\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 102, 97, 108,
+              115, 101, 44, 34, 101, 114, 114, 111, 114, 34, 58, 123, 34, 99,
+              111, 100, 101, 34, 58, 34, 73, 78, 86, 65, 76, 73, 68, 95, 68, 73,
+              83, 84, 82, 73, 67, 84, 95, 73, 68, 34, 44, 34, 109, 101, 115,
+              115, 97, 103, 101, 34, 58, 34, 73, 110, 118, 97, 108, 105, 100,
+              32, 100, 105, 115, 116, 114, 105, 99, 116, 32, 73, 68, 32, 102,
+              111, 114, 109, 97, 116, 46, 32, 68, 105, 115, 116, 114, 105, 99,
+              116, 32, 73, 68, 32, 109, 117, 115, 116, 32, 98, 101, 32, 97, 108,
+              112, 104, 97, 110, 117, 109, 101, 114, 105, 99, 46, 34, 125, 44,
+              34, 109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123, 34, 116,
+              105, 109, 101, 115, 116, 97, 109, 112, 34, 58, 34, 50, 48, 50, 54,
+              45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51, 58, 49, 55, 46,
+              48, 56, 48, 90, 34, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 182
+        },
+        "id": "73e378bb-63bc-4ce1-95ad-c40918c2f247",
+        "assertions": [
+          {
+            "assertion": "Status code is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has invalid district ID error",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "d87d28e6-18d1-44ba-be5d-fbe22842853a",
+          "length": 11,
+          "cycles": 1,
+          "position": 9,
+          "iteration": 0,
+          "httpRequestId": "bdfe8929-ad79-472b-b0f4-5d2ec1df3380"
+        },
+        "item": {
+          "id": "f3d27d38-1c25-4174-86bc-5945058e3294",
+          "name": "Club Health - Invalid Club Name",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", " ", "history"],
+              "host": ["{{base_url}}"],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "139e387b-4faf-4d87-bb4c-a8c702be786d",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response has invalid club name error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_CLUB_NAME');",
+                  "});"
+                ],
+                "_lastExecutionId": "700f076b-82ed-467c-a373-e56ac7e731b4"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "%20", "history"],
+            "host": ["localhost"],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "efce40d5-4792-42ae-a477-a847535f258e",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "61b9be05-c77e-4c81-8321-cac104986eb0",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "155"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"9b-Y80diJSme+4JdN/NEnye3LVxQDM\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 102, 97, 108,
+              115, 101, 44, 34, 101, 114, 114, 111, 114, 34, 58, 123, 34, 99,
+              111, 100, 101, 34, 58, 34, 73, 78, 86, 65, 76, 73, 68, 95, 67, 76,
+              85, 66, 95, 78, 65, 77, 69, 34, 44, 34, 109, 101, 115, 115, 97,
+              103, 101, 34, 58, 34, 67, 108, 117, 98, 32, 110, 97, 109, 101, 32,
+              109, 117, 115, 116, 32, 98, 101, 32, 97, 32, 110, 111, 110, 45,
+              101, 109, 112, 116, 121, 32, 115, 116, 114, 105, 110, 103, 34,
+              125, 44, 34, 109, 101, 116, 97, 100, 97, 116, 97, 34, 58, 123, 34,
+              116, 105, 109, 101, 115, 116, 97, 109, 112, 34, 58, 34, 50, 48,
+              50, 54, 45, 48, 49, 45, 48, 50, 84, 48, 49, 58, 53, 51, 58, 49,
+              55, 46, 48, 57, 51, 90, 34, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 155
+        },
+        "id": "f3d27d38-1c25-4174-86bc-5945058e3294",
+        "assertions": [
+          {
+            "assertion": "Status code is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has invalid club name error",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "ab4c4f4f-7110-41f4-84f1-923e419a4410",
+          "length": 11,
+          "cycles": 1,
+          "position": 10,
+          "iteration": 0,
+          "httpRequestId": "f248c9a6-160b-45c7-a6ca-7ff5ff4d1c5d"
+        },
+        "item": {
+          "id": "396a9e5c-1dc3-4570-8275-1557416912cb",
+          "name": "Club Health - Invalid Months Parameter",
+          "request": {
+            "url": {
+              "path": ["api", "club-health", "Test Club", "history"],
+              "host": ["{{base_url}}"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "invalid"
+                }
+              ],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "0d8654a5-e22d-4358-8da8-95a21b4af5f8",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Response has invalid months parameter error', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.error.code).to.eql('INVALID_MONTHS_PARAMETER');",
+                  "});"
+                ],
+                "_lastExecutionId": "f2b73d97-f568-4a6f-8799-a89dd502cffe"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "5001",
+            "path": ["api", "club-health", "Test%20Club", "history"],
+            "host": ["localhost"],
+            "query": [
+              {
+                "key": "months",
+                "value": "invalid"
+              }
+            ],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "ccb99633-a9df-4fb0-b8a5-c509501f9c18",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:5001",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "response": {
+          "id": "2b39b144-2175-483a-a577-9c3b348e6759",
+          "status": "Bad Request",
+          "code": 400,
+          "header": [
+            {
+              "key": "X-Powered-By",
+              "value": "Express"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "http://localhost:3000"
+            },
+            {
+              "key": "Vary",
+              "value": "Origin"
+            },
+            {
+              "key": "Access-Control-Allow-Credentials",
+              "value": "true"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "176"
+            },
+            {
+              "key": "ETag",
+              "value": "W/\"b0-uWXnT7l98vC3xtRckSytCxBQaW4\""
+            },
+            {
+              "key": "Date",
+              "value": "Fri, 02 Jan 2026 01:53:17 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123, 34, 115, 117, 99, 99, 101, 115, 115, 34, 58, 102, 97, 108,
+              115, 101, 44, 34, 101, 114, 114, 111, 114, 34, 58, 123, 34, 99,
+              111, 100, 101, 34, 58, 34, 73, 78, 86, 65, 76, 73, 68, 95, 77, 79,
+              78, 84, 72, 83, 95, 80, 65, 82, 65, 77, 69, 84, 69, 82, 34, 44,
+              34, 109, 101, 115, 115, 97, 103, 101, 34, 58, 34, 77, 111, 110,
+              116, 104, 115, 32, 112, 97, 114, 97, 109, 101, 116, 101, 114, 32,
+              109, 117, 115, 116, 32, 98, 101, 32, 97, 32, 110, 117, 109, 98,
+              101, 114, 32, 98, 101, 116, 119, 101, 101, 110, 32, 49, 32, 97,
+              110, 100, 32, 50, 52, 34, 125, 44, 34, 109, 101, 116, 97, 100, 97,
+              116, 97, 34, 58, 123, 34, 116, 105, 109, 101, 115, 116, 97, 109,
+              112, 34, 58, 34, 50, 48, 50, 54, 45, 48, 49, 45, 48, 50, 84, 48,
+              49, 58, 53, 51, 58, 49, 55, 46, 49, 49, 53, 90, 34, 125, 125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 2,
+          "responseSize": 176
+        },
+        "id": "396a9e5c-1dc3-4570-8275-1557416912cb",
+        "assertions": [
+          {
+            "assertion": "Status code is 400",
+            "skipped": false
+          },
+          {
+            "assertion": "Response has invalid months parameter error",
+            "skipped": false
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 5870
+    },
+    "failures": [],
+    "error": null
+  }
+}

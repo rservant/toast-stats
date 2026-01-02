@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: club-health-backend
+  namespace: club-health
+  labels:
+    app: club-health-backend
+    component: api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: club-health-backend
+  template:
+    metadata:
+      labels:
+        app: club-health-backend
+        component: api
+    spec:
+      containers:
+      - name: backend
+        image: club-health/backend:latest
+        ports:
+        - containerPort: 5001
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "5001"
+        - name: CACHE_DIR
+          value: "/app/cache"
+        - name: LOG_FILE
+          value: "/app/logs/application.log"
+        envFrom:
+        - configMapRef:
+            name: club-health-config
+        - secretRef:
+            name: club-health-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: cache-volume
+          mountPath: /app/cache
+        - name: logs-volume
+          mountPath: /app/logs
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1001
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: cache-volume
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: logs-volume
+        emptyDir:
+          sizeLimit: 500Mi
+      securityContext:
+        fsGroup: 1001
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: club-health-backend-service
+  namespace: club-health
+  labels:
+    app: club-health-backend
+spec:
+  selector:
+    app: club-health-backend
+  ports:
+  - name: http
+    port: 5001
+    targetPort: 5001
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: club-health-config
+  namespace: club-health
+data:
+  CACHE_TTL: "1800"
+  CLUB_HEALTH_CACHE_TTL: "1800"
+  CLUB_HEALTH_HISTORY_CACHE_TTL: "3600"
+  DISTRICT_SUMMARY_CACHE_TTL: "1200"
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "1000"
+  RATE_LIMIT_CLUB_HEALTH_MAX: "100"
+  RATE_LIMIT_BATCH_MAX: "10"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  COMPRESSION_ENABLED: "true"
+  HEALTH_CHECK_ENABLED: "true"
+  METRICS_ENABLED: "true"
+  CLUB_HEALTH_RULE_VERSION: "1.0.0"
+  CLUB_HEALTH_BATCH_SIZE_LIMIT: "100"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: club-health-secrets
+  namespace: club-health
+type: Opaque
+stringData:
+  JWT_SECRET: "your-production-jwt-secret-change-this"
+  SESSION_SECRET: "your-session-secret-change-this"
+  # Add other sensitive configuration here

@@ -182,6 +182,11 @@ export class ReconciliationOrchestrator {
 
       await this.storageManager.saveTimeline(timeline)
 
+      // Ensure data is flushed to disk for immediate availability
+      if (typeof this.storageManager.flush === 'function') {
+        await this.storageManager.flush()
+      }
+
       logger.info('Reconciliation job created', {
         jobId: job.id,
         districtId,

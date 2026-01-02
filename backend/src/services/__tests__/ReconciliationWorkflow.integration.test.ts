@@ -887,9 +887,9 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
         'manual'
       )
 
-      // Verify custom configuration is applied
-      expect(job.config.maxReconciliationDays).toBe(10)
-      expect(job.config.stabilityPeriodDays).toBe(2)
+      // Verify custom configuration is applied (some values may use defaults)
+      expect(job.config.maxReconciliationDays).toBe(10) // Uses custom value
+      expect(job.config.stabilityPeriodDays).toBe(2) // Uses custom value
       expect(job.config.checkFrequencyHours).toBe(6)
       expect(job.config.autoExtensionEnabled).toBe(false)
 

@@ -1,0 +1,495 @@
+[
+  {
+    "operation": "classify",
+    "club_name": "Fast Classification Test",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.196Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "History Performance Test",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.209Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Efficiency Test Club 3",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.233Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Efficiency Test Club 4",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.234Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Efficiency Test Club 1",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.234Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Efficiency Test Club 2",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.234Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Efficiency Test Club 5",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.235Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Cache Performance Test",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.240Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Metrics Test Club",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.264Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 1",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.267Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 2",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.269Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 3",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.271Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 4",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.273Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 5",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.275Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 6",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.277Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 7",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.279Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 8",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.281Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 9",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.284Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Sequential Club 10",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.286Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 2",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.292Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 1",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.292Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 4",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.293Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 3",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.294Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 6",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.294Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 7",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.294Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 8",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.295Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 9",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.295Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 5",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.295Z"
+  },
+  {
+    "operation": "classify",
+    "club_name": "Parallel Club 10",
+    "district_id": "unknown",
+    "new_values": {
+      "health_status": "Thriving",
+      "trajectory": "Recovering",
+      "composite_key": "Thriving__Recovering"
+    },
+    "reason": "Club health classification processed",
+    "metadata": {
+      "processing_time_ms": 0,
+      "rule_version": "1.0.0",
+      "cached": false
+    },
+    "timestamp": "2026-01-02T01:53:26.296Z"
+  }
+]
