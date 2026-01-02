@@ -428,7 +428,10 @@ export class ClubHealthServiceImpl implements ClubHealthService {
   /**
    * Process club health with caching and persistence
    */
-  async processClubHealth(input: ClubHealthInput): Promise<ClubHealthResult> {
+  async processClubHealth(
+    input: ClubHealthInput,
+    districtId?: string
+  ): Promise<ClubHealthResult> {
     const startTime = Date.now()
 
     try {
@@ -481,7 +484,7 @@ export class ClubHealthServiceImpl implements ClubHealthService {
       )
 
       // Store historical record
-      const record = this.resultToRecord(result, input)
+      const record = this.resultToRecord(result, input, districtId)
       this.storeHistoricalRecord(record)
 
       // Add audit trail entry
@@ -1047,15 +1050,9 @@ export class ClubHealthServiceImpl implements ClubHealthService {
       })
 
       // Process through classification engine
-      const result = await this.processClubHealth(input)
+      const result = await this.processClubHealth(input, targetDistrictId)
 
-      // Update the district ID in the stored record
-      const records = this.historicalData.get(clubName) || []
-      if (records.length > 0) {
-        const latestRecord = records[records.length - 1]
-        latestRecord.district_id = targetDistrictId
-        await this.persistHistoricalData(clubName, records)
-      }
+      // No need to update district ID separately since it's now set correctly during processing
 
       // Add audit trail entry for data refresh
       this.addAuditEntry({
@@ -1200,15 +1197,9 @@ export class ClubHealthServiceImpl implements ClubHealthService {
           }
 
           // Process through classification engine
-          const result = await this.processClubHealth(input)
+          const result = await this.processClubHealth(input, districtId)
 
-          // Update the district ID in the stored record
-          const records = this.historicalData.get(String(clubData.name)) || []
-          if (records.length > 0) {
-            const latestRecord = records[records.length - 1]
-            latestRecord.district_id = districtId
-            await this.persistHistoricalData(String(clubData.name), records)
-          }
+          // No need to update district ID separately since it's now set correctly during processing
 
           results.push(result)
 

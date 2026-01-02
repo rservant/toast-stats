@@ -558,6 +558,13 @@ export const exportClubPerformance = (
     currentStatus: string
     distinguishedLevel?: string
     riskFactors?: string[]
+    // Health data fields
+    healthStatus?: string
+    trajectory?: string
+    healthReasons?: string[]
+    trajectoryReasons?: string[]
+    healthDataAge?: number
+    healthDataTimestamp?: string
   }>,
   districtId: string
 ): void => {
@@ -568,6 +575,12 @@ export const exportClubPerformance = (
     'Area',
     'Current Membership',
     'Current DCP Goals',
+    'Health Status',
+    'Trajectory',
+    'Health Classification Reasons',
+    'Trajectory Reasons',
+    'Health Data Age (hours)',
+    'Health Data Timestamp',
     'Status',
     'Distinguished Level',
     'Risk Factors',
@@ -579,6 +592,8 @@ export const exportClubPerformance = (
     const currentDcpGoals =
       club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved || 0
     const riskFactors = club.riskFactors?.join('; ') || 'None'
+    const healthReasons = club.healthReasons?.join('; ') || 'N/A'
+    const trajectoryReasons = club.trajectoryReasons?.join('; ') || 'N/A'
 
     return [
       club.clubId,
@@ -587,6 +602,12 @@ export const exportClubPerformance = (
       club.areaName || 'N/A',
       currentMembership,
       currentDcpGoals,
+      club.healthStatus || 'Unknown',
+      club.trajectory || 'Unknown',
+      healthReasons,
+      trajectoryReasons,
+      club.healthDataAge?.toFixed(1) || 'N/A',
+      club.healthDataTimestamp || 'N/A',
       club.currentStatus,
       club.distinguishedLevel || 'None',
       riskFactors,
@@ -594,7 +615,7 @@ export const exportClubPerformance = (
   })
 
   const csvData = [
-    [`District ${districtId} - Club Performance`],
+    [`District ${districtId} - Club Performance with Health Data`],
     [`Export Date: ${new Date().toISOString()}`],
     [`Total Clubs: ${clubs.length}`],
     [],
@@ -603,6 +624,6 @@ export const exportClubPerformance = (
   ]
 
   const csvContent = arrayToCSV(csvData)
-  const filename = generateFilename('club_performance', districtId)
+  const filename = generateFilename('club_performance_with_health', districtId)
   downloadCSV(csvContent, filename)
 }

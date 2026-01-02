@@ -75,6 +75,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   onSort,
   onFilter,
   options = [],
+  tooltip,
   className = '',
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -343,11 +344,16 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         ref={buttonRef}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         onKeyDown={handleKeyDown}
-        className="group flex items-center gap-2 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer"
+        className="group flex items-center gap-2 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer min-h-[44px]"
         tabIndex={0}
         aria-expanded={isDropdownOpen}
         aria-haspopup="true"
         aria-label={`${label} column header. ${sortable ? 'Sortable. ' : ''}${filterable ? 'Filterable. ' : ''}${currentSort.field === field ? `Currently sorted ${currentSort.direction}ending. ` : ''}${currentFilter ? 'Has active filter. ' : ''}Press Enter or Space to open options, Arrow Down to open dropdown.`}
+        title={
+          tooltip
+            ? tooltip.replace(/\n/g, ' ')
+            : `${label} column${sortable ? ' - Click to sort' : ''}${filterable ? ' - Click to filter' : ''}`
+        }
       >
         <span className="flex-1">{label}</span>
         <div className="flex items-center gap-1">

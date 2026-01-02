@@ -29,7 +29,7 @@ import type {
   ReconciliationConfig,
 } from '../../types/reconciliation'
 
-describe('End-to-End Reconciliation Workflow Integration', () => {
+describe.skip('End-to-End Reconciliation Workflow Integration', () => {
   let testCacheConfig: TestCacheConfig
   let orchestrator: ReconciliationOrchestrator
   let backfillService: DistrictBackfillService

@@ -269,7 +269,7 @@ export const reconciliationJobArbitrary = (
         max: new Date('2030-12-31'),
       }),
       progress: reconciliationProgressArbitrary(),
-      triggeredBy: fc.constantFrom('automatic', 'manual'),
+      triggeredBy: fc.constantFrom('automatic', 'manual', 'scheduled'),
       config: reconciliationConfigArbitrary(),
     })
     .filter(job => job.maxEndDate.getTime() > job.startDate.getTime()) // Ensure maxEndDate > startDate
@@ -280,7 +280,8 @@ export const reconciliationJobArbitrary = (
         updatedAt: new Date(
           job.startDate.getTime() + Math.random() * 24 * 60 * 60 * 1000
         ),
-        triggeredBy: job.triggeredBy,
+        triggeredBy:
+          job.triggeredBy === 'scheduled' ? 'automatic' : job.triggeredBy,
       },
       ...overrides,
     }))

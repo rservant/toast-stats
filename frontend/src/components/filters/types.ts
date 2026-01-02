@@ -3,6 +3,7 @@
  */
 
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import { HealthStatus, Trajectory } from '../../types/clubHealth'
 
 /**
  * Sortable field types for the clubs table
@@ -11,10 +12,11 @@ export type SortField =
   | 'name'
   | 'membership'
   | 'dcpGoals'
-  | 'status'
   | 'division'
   | 'area'
   | 'distinguished'
+  | 'healthStatus'
+  | 'trajectory'
 
 /**
  * Sort direction types
@@ -59,6 +61,7 @@ export interface ColumnConfig {
   filterType: 'text' | 'numeric' | 'categorical'
   filterOptions?: string[]
   sortCustom?: (a: unknown, b: unknown) => number
+  tooltip?: string
 }
 
 /**
@@ -75,6 +78,7 @@ export interface ColumnHeaderProps {
   onSort: (field: SortField) => void
   onFilter: (field: SortField, filter: ColumnFilter | null) => void
   options?: string[]
+  tooltip?: string
   className?: string
 }
 
@@ -128,6 +132,35 @@ export interface ProcessedClubTrend extends ClubTrend {
 }
 
 /**
+ * Enhanced ClubTrend interface extending ProcessedClubTrend with health data
+ */
+export interface EnhancedClubTrend extends ProcessedClubTrend {
+  // Health classification data
+  healthStatus?: HealthStatus
+  trajectory?: Trajectory
+  healthReasons?: string[]
+  trajectoryReasons?: string[]
+  healthDataAge?: number // Age in hours
+  healthDataTimestamp?: string
+
+  // Computed properties for filtering and sorting
+  healthStatusOrder: number // For sorting: Intervention Required=0, Vulnerable=1, Thriving=2, Unknown=3
+  trajectoryOrder: number // For sorting: Declining=0, Stable=1, Recovering=2, Unknown=3
+}
+
+/**
+ * Health data integration status for tracking data freshness and errors
+ */
+export interface HealthDataStatus {
+  isLoading: boolean
+  isError: boolean
+  isStale: boolean // > 24 hours old
+  isOutdated: boolean // > 7 days old
+  lastUpdated?: string
+  errorMessage?: string
+}
+
+/**
  * Column configurations for the clubs table
  */
 export const COLUMN_CONFIGS: ColumnConfig[] = [
@@ -167,6 +200,50 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     filterType: 'numeric',
   },
   {
+    field: 'healthStatus',
+    label: 'Health Status',
+    sortable: true,
+    filterable: true,
+    filterType: 'categorical',
+    filterOptions: [
+      'Thriving',
+      'Vulnerable',
+      'Intervention Required',
+      'Unknown',
+    ],
+    tooltip:
+      'Club health classification based on membership trends, DCP goal achievement, and CSP submission status.\n\n• Thriving: Strong performance across all metrics, meeting or exceeding goals\n• Vulnerable: Warning signs present, may need support to maintain performance\n• Intervention Required: Critical issues requiring immediate attention and action\n• Unknown: Health data not available or insufficient for classification\n\nClick to sort by priority (most critical first) or filter by specific health status.',
+    sortCustom: (a: unknown, b: unknown) => {
+      // Custom sort order: Intervention Required, Vulnerable, Thriving, Unknown
+      const order = {
+        'Intervention Required': 0,
+        Vulnerable: 1,
+        Thriving: 2,
+        Unknown: 3,
+      }
+      const aValue = a as keyof typeof order
+      const bValue = b as keyof typeof order
+      return (order[aValue] || 999) - (order[bValue] || 999)
+    },
+  },
+  {
+    field: 'trajectory',
+    label: 'Trajectory',
+    sortable: true,
+    filterable: true,
+    filterType: 'categorical',
+    filterOptions: ['Recovering', 'Stable', 'Declining', 'Unknown'],
+    tooltip:
+      'Club trend direction based on month-over-month changes in membership and DCP goals.\n\n• Recovering: Showing positive improvement trends, moving in right direction\n• Stable: Maintaining consistent performance levels, no significant changes\n• Declining: Concerning downward trends, performance deteriorating over time\n• Unknown: Trajectory data not available or insufficient for trend analysis\n\nClick to sort by urgency (declining first) or filter by specific trajectory.',
+    sortCustom: (a: unknown, b: unknown) => {
+      // Custom sort order: Declining, Stable, Recovering, Unknown
+      const order = { Declining: 0, Stable: 1, Recovering: 2, Unknown: 3 }
+      const aValue = a as keyof typeof order
+      const bValue = b as keyof typeof order
+      return (order[aValue] || 999) - (order[bValue] || 999)
+    },
+  },
+  {
     field: 'distinguished',
     label: 'Distinguished',
     sortable: true,
@@ -179,13 +256,5 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
       const bValue = b as keyof typeof order
       return (order[aValue] || 999) - (order[bValue] || 999)
     },
-  },
-  {
-    field: 'status',
-    label: 'Status',
-    sortable: true,
-    filterable: true,
-    filterType: 'categorical',
-    filterOptions: ['healthy', 'at-risk', 'critical'],
   },
 ]

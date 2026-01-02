@@ -56,6 +56,15 @@ const clubTrendGenerator = fc.record({
     fc.constantFrom('Smedley', 'President', 'Select', 'Distinguished'),
     { nil: undefined }
   ),
+  healthStatus: fc.option(
+    fc.constantFrom(
+      'Thriving',
+      'Vulnerable',
+      'Intervention Required',
+      'Unknown'
+    ),
+    { nil: undefined }
+  ),
 }) as fc.Arbitrary<ClubTrend>
 
 // Coordinated generators that ensure some clubs will match the generated filters
@@ -116,10 +125,12 @@ const numericFilterGenerator = (field: 'membership' | 'dcpGoals') =>
     operator: fc.constant('range' as const),
   }) as fc.Arbitrary<ColumnFilter>
 
-const categoricalFilterGenerator = (field: 'status' | 'distinguished') => {
+const categoricalFilterGenerator = (
+  field: 'healthStatus' | 'distinguished'
+) => {
   const options =
-    field === 'status'
-      ? ['healthy', 'at-risk', 'critical']
+    field === 'healthStatus'
+      ? ['Thriving', 'Vulnerable', 'Intervention Required', 'Unknown']
       : ['Smedley', 'President', 'Select', 'Distinguished']
 
   return fc.record({
@@ -350,11 +361,11 @@ describe('useColumnFilters Property Tests', () => {
       )
     })
 
-    it('should filter status columns correctly', () => {
+    it('should filter healthStatus columns correctly', () => {
       fc.assert(
         fc.property(
           fc.array(clubTrendGenerator, { minLength: 5, maxLength: 20 }),
-          categoricalFilterGenerator('status'),
+          categoricalFilterGenerator('healthStatus'),
           (clubs, filter) => {
             const { result } = renderHook(() => useColumnFilters(clubs))
 
@@ -369,9 +380,10 @@ describe('useColumnFilters Property Tests', () => {
             // Verify all results match the filter criteria
             const selectedValues = filter.value as string[]
 
-            return filteredClubs.every(club =>
-              selectedValues.includes(club.currentStatus)
-            )
+            return filteredClubs.every(club => {
+              const healthStatus = club.healthStatus || 'Unknown'
+              return selectedValues.includes(healthStatus)
+            })
           }
         ),
         { numRuns: 5 }
@@ -474,19 +486,20 @@ describe('Property 4: Multiple filter combination (AND logic)', () => {
     fc.assert(
       fc.property(
         coordinatedClubsAndTextFilterGenerator('name'),
-        categoricalFilterGenerator('status'),
-        ([clubs, nameFilter], statusFilter) => {
-          // Ensure some clubs also match the status filter
-          const statusValue = (statusFilter.value as string[])[0]
+        categoricalFilterGenerator('healthStatus'),
+        ([clubs, nameFilter], healthStatusFilter) => {
+          // Ensure some clubs also match the healthStatus filter
+          const healthStatusValue = (healthStatusFilter.value as string[])[0]
           const modifiedClubs = clubs.map((club, index) => {
             if (index < 2) {
               // Modify first 2 clubs to match both filters
               return {
                 ...club,
-                currentStatus: statusValue as
-                  | 'healthy'
-                  | 'at-risk'
-                  | 'critical',
+                healthStatus: healthStatusValue as
+                  | 'Thriving'
+                  | 'Vulnerable'
+                  | 'Intervention Required'
+                  | 'Unknown',
               }
             }
             return club
@@ -499,7 +512,10 @@ describe('Property 4: Multiple filter combination (AND logic)', () => {
             result.current.setFilter(nameFilter.field, nameFilter)
           })
           act(() => {
-            result.current.setFilter(statusFilter.field, statusFilter)
+            result.current.setFilter(
+              healthStatusFilter.field,
+              healthStatusFilter
+            )
           })
 
           // Get filtered results
@@ -507,7 +523,7 @@ describe('Property 4: Multiple filter combination (AND logic)', () => {
 
           // Verify all results match BOTH filter criteria (AND logic)
           const nameSearchTerm = (nameFilter.value as string).toLowerCase()
-          const selectedStatuses = statusFilter.value as string[]
+          const selectedHealthStatuses = healthStatusFilter.value as string[]
 
           return (
             filteredClubs.every(club => {
@@ -518,13 +534,13 @@ describe('Property 4: Multiple filter combination (AND logic)', () => {
                   ? clubName.startsWith(nameSearchTerm)
                   : clubName.includes(nameSearchTerm)
 
-              // Must match status filter
-              const statusMatches = selectedStatuses.includes(
-                club.currentStatus
-              )
+              // Must match healthStatus filter
+              const healthStatus = club.healthStatus || 'Unknown'
+              const healthStatusMatches =
+                selectedHealthStatuses.includes(healthStatus)
 
               // Both conditions must be true (AND logic)
-              return nameMatches && statusMatches
+              return nameMatches && healthStatusMatches
             }) && filteredClubs.length >= 0
           ) // Allow empty results but ensure proper filtering
         }
@@ -710,7 +726,7 @@ describe('Property 4: Multiple filter combination (AND logic)', () => {
     fc.assert(
       fc.property(
         coordinatedClubsAndTextFilterGenerator('name'),
-        categoricalFilterGenerator('status'),
+        categoricalFilterGenerator('healthStatus'),
         ([clubs, nameFilter], statusFilter) => {
           const { result } = renderHook(() => useColumnFilters(clubs))
 
@@ -803,19 +819,20 @@ describe('Property 5: Filter clearing restores state', () => {
     fc.assert(
       fc.property(
         coordinatedClubsAndTextFilterGenerator('name'),
-        categoricalFilterGenerator('status'),
-        ([clubs, nameFilter], statusFilter) => {
-          // Ensure some clubs match the status filter
-          const statusValue = (statusFilter.value as string[])[0]
+        categoricalFilterGenerator('healthStatus'),
+        ([clubs, nameFilter], healthStatusFilter) => {
+          // Ensure some clubs match the healthStatus filter
+          const healthStatusValue = (healthStatusFilter.value as string[])[0]
           const modifiedClubs = clubs.map((club, index) => {
             if (index < 3) {
-              // Modify first 3 clubs to match status filter
+              // Modify first 3 clubs to match healthStatus filter
               return {
                 ...club,
-                currentStatus: statusValue as
-                  | 'healthy'
-                  | 'at-risk'
-                  | 'critical',
+                healthStatus: healthStatusValue as
+                  | 'Thriving'
+                  | 'Vulnerable'
+                  | 'Intervention Required'
+                  | 'Unknown',
               }
             }
             return club
@@ -823,25 +840,28 @@ describe('Property 5: Filter clearing restores state', () => {
 
           const { result } = renderHook(() => useColumnFilters(modifiedClubs))
 
-          // Apply status filter first
+          // Apply healthStatus filter first
           act(() => {
-            result.current.setFilter(statusFilter.field, statusFilter)
+            result.current.setFilter(
+              healthStatusFilter.field,
+              healthStatusFilter
+            )
           })
-          const statusOnlyCount = result.current.filteredClubs.length
+          const healthStatusOnlyCount = result.current.filteredClubs.length
 
           // Apply name filter as well
           act(() => {
             result.current.setFilter(nameFilter.field, nameFilter)
           })
 
-          // Clear name filter (should restore to status filter only)
+          // Clear name filter (should restore to healthStatus filter only)
           act(() => {
             result.current.clearFilter(nameFilter.field)
           })
-          const statusOnlyAgainCount = result.current.filteredClubs.length
+          const healthStatusOnlyAgainCount = result.current.filteredClubs.length
 
-          // Should match the original status-only count
-          return statusOnlyAgainCount === statusOnlyCount
+          // Should match the original healthStatus-only count
+          return healthStatusOnlyAgainCount === healthStatusOnlyCount
         }
       ),
       { numRuns: 5 }
@@ -996,8 +1016,8 @@ describe('Property 5: Filter clearing restores state', () => {
       fc.property(
         coordinatedClubsAndTextFilterGenerator('name'),
         numericFilterGenerator('dcpGoals'),
-        categoricalFilterGenerator('status'), // Use status instead of distinguished for this test
-        ([clubs, nameFilter], dcpGoalsFilter, statusFilter) => {
+        categoricalFilterGenerator('healthStatus'), // Use healthStatus instead of status for this test
+        ([clubs, nameFilter], dcpGoalsFilter, healthStatusFilter) => {
           // Ensure some clubs match all three filters
           const [minDcpGoals, maxDcpGoals] = dcpGoalsFilter.value as [
             number | null,
@@ -1009,7 +1029,7 @@ describe('Property 5: Filter clearing restores state', () => {
               : maxDcpGoals !== null
                 ? maxDcpGoals - 2
                 : 5
-          const statusValue = (statusFilter.value as string[])[0]
+          const healthStatusValue = (healthStatusFilter.value as string[])[0]
 
           const modifiedClubs = clubs.map((club, index) => {
             if (index < 2) {
@@ -1019,10 +1039,11 @@ describe('Property 5: Filter clearing restores state', () => {
                 dcpGoalsTrend: [
                   { date: '2024-01-01', goalsAchieved: targetDcpGoals },
                 ],
-                currentStatus: statusValue as
-                  | 'healthy'
-                  | 'at-risk'
-                  | 'critical',
+                healthStatus: healthStatusValue as
+                  | 'Thriving'
+                  | 'Vulnerable'
+                  | 'Intervention Required'
+                  | 'Unknown',
               }
             }
             return club
@@ -1038,7 +1059,10 @@ describe('Property 5: Filter clearing restores state', () => {
             result.current.setFilter(dcpGoalsFilter.field, dcpGoalsFilter)
           })
           act(() => {
-            result.current.setFilter(statusFilter.field, statusFilter)
+            result.current.setFilter(
+              healthStatusFilter.field,
+              healthStatusFilter
+            )
           })
 
           // Verify all filters are active
@@ -1055,15 +1079,15 @@ describe('Property 5: Filter clearing restores state', () => {
             result.current.getFilter(nameFilter.field) === null
           const dcpGoalsFilterRemains =
             result.current.getFilter(dcpGoalsFilter.field) !== null
-          const statusFilterRemains =
-            result.current.getFilter(statusFilter.field) !== null
+          const healthStatusFilterRemains =
+            result.current.getFilter(healthStatusFilter.field) !== null
 
           return (
             allFiltersActive &&
             twoFiltersRemaining &&
             nameFilterCleared &&
             dcpGoalsFilterRemains &&
-            statusFilterRemains
+            healthStatusFilterRemains
           )
         }
       ),

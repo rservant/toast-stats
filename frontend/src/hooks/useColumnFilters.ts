@@ -4,14 +4,15 @@ import {
   ColumnFilter,
   FilterState,
   SortField,
-  ProcessedClubTrend,
+  EnhancedClubTrend,
 } from '../components/filters/types'
 
 /**
  * Hook for managing individual column filter states
  * Provides filter combination logic (AND operations) and filter clearing functionality
+ * Supports both basic ClubTrend data and enhanced health data
  */
-export const useColumnFilters = (clubs: ClubTrend[]) => {
+export const useColumnFilters = (clubs: ClubTrend[] | EnhancedClubTrend[]) => {
   const [filterState, setFilterState] = useState<FilterState>({})
 
   /**
@@ -33,31 +34,94 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
   /**
    * Get distinguished order for sorting
    */
-  const getDistinguishedOrder = useCallback((club: ClubTrend): number => {
-    const order = { Distinguished: 0, Select: 1, President: 2, Smedley: 3 }
-    return order[club.distinguishedLevel as keyof typeof order] ?? 999
-  }, [])
+  const getDistinguishedOrder = useCallback(
+    (club: ClubTrend | EnhancedClubTrend): number => {
+      const order = { Distinguished: 0, Select: 1, President: 2, Smedley: 3 }
+      return order[club.distinguishedLevel as keyof typeof order] ?? 999
+    },
+    []
+  )
+
+  /**
+   * Get health status order for sorting
+   */
+  const getHealthStatusOrder = useCallback(
+    (club: ClubTrend | EnhancedClubTrend): number => {
+      if ('healthStatus' in club && club.healthStatus) {
+        const order = {
+          'Intervention Required': 0,
+          Vulnerable: 1,
+          Thriving: 2,
+          Unknown: 3,
+        }
+        return order[club.healthStatus] ?? 3 // Default to Unknown order
+      }
+      return 3 // Default to Unknown order for clubs without health data
+    },
+    []
+  )
+
+  /**
+   * Get trajectory order for sorting
+   */
+  const getTrajectoryOrder = useCallback(
+    (club: ClubTrend | EnhancedClubTrend): number => {
+      if ('trajectory' in club && club.trajectory) {
+        const order = { Declining: 0, Stable: 1, Recovering: 2, Unknown: 3 }
+        return order[club.trajectory] ?? 3 // Default to Unknown order
+      }
+      return 3 // Default to Unknown order for clubs without trajectory data
+    },
+    []
+  )
 
   /**
    * Process clubs with computed properties for filtering
    */
-  const processedClubs = useMemo((): ProcessedClubTrend[] => {
-    return clubs.map(club => ({
-      ...club,
-      latestMembership: getLatestMembership(club),
-      latestDcpGoals: getLatestDcpGoals(club),
-      distinguishedOrder: getDistinguishedOrder(club),
-    }))
-  }, [clubs, getLatestMembership, getLatestDcpGoals, getDistinguishedOrder])
+  const processedClubs = useMemo((): EnhancedClubTrend[] => {
+    return clubs.map(club => {
+      const baseProcessed = {
+        ...club,
+        latestMembership: getLatestMembership(club),
+        latestDcpGoals: getLatestDcpGoals(club),
+        distinguishedOrder: getDistinguishedOrder(club),
+      }
+
+      // If club already has health data, preserve it; otherwise add default values
+      if ('healthStatus' in club) {
+        return {
+          ...baseProcessed,
+          healthStatusOrder: getHealthStatusOrder(club),
+          trajectoryOrder: getTrajectoryOrder(club),
+        } as EnhancedClubTrend
+      } else {
+        return {
+          ...baseProcessed,
+          healthStatus: undefined,
+          trajectory: undefined,
+          healthReasons: undefined,
+          trajectoryReasons: undefined,
+          healthDataAge: undefined,
+          healthDataTimestamp: undefined,
+          healthStatusOrder: getHealthStatusOrder(club),
+          trajectoryOrder: getTrajectoryOrder(club),
+        } as EnhancedClubTrend
+      }
+    })
+  }, [
+    clubs,
+    getLatestMembership,
+    getLatestDcpGoals,
+    getDistinguishedOrder,
+    getHealthStatusOrder,
+    getTrajectoryOrder,
+  ])
 
   /**
    * Apply a single filter to the club data
    */
   const applyFilter = useCallback(
-    (
-      clubs: ProcessedClubTrend[],
-      filter: ColumnFilter
-    ): ProcessedClubTrend[] => {
+    (clubs: EnhancedClubTrend[], filter: ColumnFilter): EnhancedClubTrend[] => {
       switch (filter.field) {
         case 'name':
           if (filter.type === 'text' && typeof filter.value === 'string') {
@@ -158,13 +222,25 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
           }
           break
 
-        case 'status':
+        case 'healthStatus':
           if (filter.type === 'categorical' && Array.isArray(filter.value)) {
             const selectedValues = filter.value as string[]
             if (selectedValues.length === 0) return clubs
-            return clubs.filter(club =>
-              selectedValues.includes(club.currentStatus)
-            )
+            return clubs.filter(club => {
+              const healthStatus = club.healthStatus || 'Unknown'
+              return selectedValues.includes(healthStatus)
+            })
+          }
+          break
+
+        case 'trajectory':
+          if (filter.type === 'categorical' && Array.isArray(filter.value)) {
+            const selectedValues = filter.value as string[]
+            if (selectedValues.length === 0) return clubs
+            return clubs.filter(club => {
+              const trajectory = club.trajectory || 'Unknown'
+              return selectedValues.includes(trajectory)
+            })
           }
           break
 
@@ -179,7 +255,7 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
   /**
    * Apply all active filters using AND logic
    */
-  const filteredClubs = useMemo((): ProcessedClubTrend[] => {
+  const filteredClubs = useMemo((): EnhancedClubTrend[] => {
     const activeFilters = Object.values(filterState).filter(
       Boolean
     ) as ColumnFilter[]

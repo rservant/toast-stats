@@ -92,7 +92,9 @@ describe('Generated Data Validation Property Tests', () => {
           )
 
           // Triggered by should be one of valid values
-          expect(['automatic', 'manual']).toContain(job.triggeredBy)
+          expect(['automatic', 'manual', 'scheduled']).toContain(
+            job.triggeredBy
+          )
 
           // Date constraints should be realistic
           expect(job.maxEndDate.getTime()).toBeGreaterThan(

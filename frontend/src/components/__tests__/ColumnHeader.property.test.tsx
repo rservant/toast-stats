@@ -24,7 +24,6 @@ describe('ColumnHeader Property Tests', () => {
           'area',
           'membership',
           'dcpGoals',
-          'status',
           'distinguished'
         ),
         fc.string({ minLength: 1, maxLength: 20 }),
@@ -143,7 +142,6 @@ describe('ColumnHeader Property Tests', () => {
           'area',
           'membership',
           'dcpGoals',
-          'status',
           'distinguished'
         ),
         fc.string({ minLength: 1, maxLength: 20 }),
@@ -254,7 +252,6 @@ describe('ColumnHeader Property Tests', () => {
           'area',
           'membership',
           'dcpGoals',
-          'status',
           'distinguished'
         ),
         fc.string({ minLength: 1, maxLength: 20 }),
@@ -346,7 +343,6 @@ describe('ColumnHeader Property Tests', () => {
           'area',
           'membership',
           'dcpGoals',
-          'status',
           'distinguished'
         ),
         fc.string({ minLength: 1, maxLength: 20 }),

@@ -1,8 +1,9 @@
 import React from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { EnhancedClubTrend } from './filters/types'
 
 interface ClubDetailModalProps {
-  club: ClubTrend | null
+  club: ClubTrend | EnhancedClubTrend | null
   onClose: () => void
 }
 

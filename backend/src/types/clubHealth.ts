@@ -259,7 +259,10 @@ export interface ClubHealthService {
   /**
    * Process club health with caching and persistence
    */
-  processClubHealth(input: ClubHealthInput): Promise<ClubHealthResult>
+  processClubHealth(
+    input: ClubHealthInput,
+    districtId?: string
+  ): Promise<ClubHealthResult>
 
   /**
    * Process multiple clubs with optimization

@@ -104,20 +104,25 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                   e.currentTarget.click()
                 }
               }}
-              className="flex items-center gap-2 text-sm text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
+              className="flex items-center gap-2 text-sm text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200 min-h-[44px] px-2 py-2 w-full"
               tabIndex={0}
               aria-label={
-                allSelected ? 'Deselect all options' : 'Select all options'
+                allSelected
+                  ? 'Deselect all filter options'
+                  : 'Select all filter options'
               }
             >
               <div
-                className={`w-4 h-4 border-2 rounded flex items-center justify-center ${
+                className={`w-5 h-5 border-2 rounded flex items-center justify-center ${
                   allSelected
                     ? 'bg-tm-loyal-blue border-tm-loyal-blue'
                     : localSelected.length > 0
                       ? 'bg-blue-100 border-tm-loyal-blue'
                       : 'border-gray-300'
                 }`}
+                role="checkbox"
+                aria-checked={allSelected}
+                aria-hidden="true"
               >
                 {allSelected && (
                   <svg
@@ -125,6 +130,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -150,7 +156,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
             return (
               <label
                 key={option}
-                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 hover:shadow-sm rounded px-2 py-1 transition-all duration-200 focus-within:bg-gray-50"
+                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 hover:shadow-sm rounded px-2 py-2 min-h-[44px] transition-all duration-200 focus-within:bg-gray-50 focus-within:ring-2 focus-within:ring-tm-loyal-blue"
                 onClick={() => handleToggle(option)}
               >
                 <input
@@ -159,7 +165,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                   onChange={() => handleToggle(option)}
                   className="sr-only"
                   tabIndex={0}
-                  aria-label={`${isSelected ? 'Unselect' : 'Select'} ${option}`}
+                  aria-label={`${isSelected ? 'Unselect' : 'Select'} ${option} filter option`}
                   onKeyDown={e => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
@@ -168,12 +174,15 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                   }}
                 />
                 <div
-                  className={`w-4 h-4 border-2 rounded flex items-center justify-center focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
+                  className={`w-5 h-5 border-2 rounded flex items-center justify-center focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
                     isSelected
                       ? 'bg-tm-loyal-blue border-tm-loyal-blue hover:bg-tm-loyal-blue hover:border-tm-loyal-blue'
                       : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                   }`}
                   tabIndex={-1}
+                  role="checkbox"
+                  aria-checked={isSelected}
+                  aria-hidden="true"
                 >
                   {isSelected && (
                     <svg
@@ -181,6 +190,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"
@@ -191,7 +201,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                     </svg>
                   )}
                 </div>
-                <span className="text-sm text-gray-700 capitalize hover:text-gray-900 transition-colors duration-200">
+                <span className="text-sm text-gray-700 capitalize hover:text-gray-900 transition-colors duration-200 flex-1">
                   {option}
                 </span>
               </label>

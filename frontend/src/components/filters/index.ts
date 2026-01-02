@@ -19,6 +19,8 @@ export type {
   NumericFilterProps,
   CategoricalFilterProps,
   ProcessedClubTrend,
+  EnhancedClubTrend,
+  HealthDataStatus,
 } from './types'
 
 export { COLUMN_CONFIGS } from './types'

@@ -253,7 +253,7 @@ export function validateReconciliationJob(job: ReconciliationJob): boolean {
           typeof metadata === 'object' &&
           metadata.createdAt instanceof Date &&
           metadata.updatedAt instanceof Date &&
-          ['automatic', 'manual'].includes(metadata.triggeredBy)
+          ['automatic', 'manual', 'scheduled'].includes(metadata.triggeredBy)
         )
       },
       // Validate progress structure

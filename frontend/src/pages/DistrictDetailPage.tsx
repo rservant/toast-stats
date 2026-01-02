@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useClubHealthIntegration } from '../hooks/useClubHealthIntegration'
+import { EnhancedClubTrend } from '../components/filters/types'
 import { useLeadershipInsights } from '../hooks/useLeadershipInsights'
 import { useDistinguishedClubAnalytics } from '../hooks/useDistinguishedClubAnalytics'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
@@ -28,6 +30,8 @@ import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
+import { HealthDataErrorDisplay } from '../components/HealthDataErrorDisplay'
+import { DataFreshnessIndicator } from '../components/DataFreshnessIndicator'
 import { DistrictBackfillButton } from '../components/DistrictBackfillButton'
 import { LazyChart } from '../components/LazyChart'
 import { useBackfillContext } from '../contexts/BackfillContext'
@@ -45,7 +49,9 @@ const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
+  const [selectedClub, setSelectedClub] = useState<
+    ClubTrend | EnhancedClubTrend | null
+  >(null)
   const { addBackfill } = useBackfillContext()
 
   // Use program year context
@@ -112,6 +118,21 @@ const DistrictDetailPage: React.FC = () => {
     selectedDate || selectedProgramYear.endDate
   )
 
+  // Fetch integrated club health data for the clubs table
+  const {
+    enhancedClubs,
+    healthDataStatus,
+    refreshHealthData,
+    isRefreshing,
+    isLoading: isLoadingClubHealth,
+    canRetryAnalytics: canRetryClubHealthAnalytics,
+    canRetryHealth: canRetryClubHealthHealth,
+  } = useClubHealthIntegration(
+    districtId || null,
+    selectedProgramYear.startDate,
+    selectedDate || selectedProgramYear.endDate
+  )
+
   // Fetch leadership insights for analytics tab - use program year boundaries
   const { data: leadershipInsights, isLoading: isLoadingLeadership } =
     useLeadershipInsights(
@@ -129,9 +150,6 @@ const DistrictDetailPage: React.FC = () => {
     )
 
   const districtName = selectedDistrict?.name || 'Unknown District'
-
-  // Get all clubs from analytics
-  const allClubs = analytics?.allClubs || []
 
   // Separate critical and at-risk clubs - now they come as separate arrays
   const criticalClubs = React.useMemo(() => {
@@ -158,7 +176,7 @@ const DistrictDetailPage: React.FC = () => {
   ]
 
   // Handle club click
-  const handleClubClick = (club: ClubTrend) => {
+  const handleClubClick = (club: ClubTrend | EnhancedClubTrend) => {
     setSelectedClub(club)
   }
 
@@ -429,11 +447,29 @@ const DistrictDetailPage: React.FC = () => {
 
             {activeTab === 'clubs' && districtId && (
               <>
+                {/* Enhanced Health Data Error Display */}
+                <HealthDataErrorDisplay
+                  healthDataStatus={healthDataStatus}
+                  onRetryHealth={refreshHealthData}
+                  canRetryHealth={canRetryClubHealthHealth}
+                  canRetryAnalytics={canRetryClubHealthAnalytics}
+                  isRefreshing={isRefreshing}
+                />
+
+                {/* Enhanced Data Freshness Indicator */}
+                <DataFreshnessIndicator
+                  healthDataStatus={healthDataStatus}
+                  onRefresh={refreshHealthData}
+                  isRefreshing={isRefreshing}
+                />
+
                 <ClubsTable
-                  clubs={allClubs}
+                  clubs={enhancedClubs}
                   districtId={districtId}
-                  isLoading={isLoadingAnalytics}
+                  isLoading={isLoadingClubHealth}
                   onClubClick={handleClubClick}
+                  healthDataStatus={healthDataStatus}
+                  isRefreshingHealthData={isRefreshing}
                 />
                 <ClubDetailModal
                   club={selectedClub}

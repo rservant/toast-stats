@@ -532,6 +532,24 @@ router.post(
       const results =
         await clubHealthService.refreshDistrictClubData(districtId)
 
+      // Invalidate related caches after successful refresh
+      const cacheKeysToInvalidate = [
+        `district_clubs_health:${districtId}`,
+        `district_health_summary:${districtId}`,
+      ]
+
+      // Import cacheService to invalidate cache
+      const { cacheService } = await import('../services/CacheService.js')
+      const invalidatedCount = cacheService.invalidateMultiple(
+        cacheKeysToInvalidate
+      )
+
+      logger.info('Cache invalidated after district refresh', {
+        districtId,
+        invalidatedKeys: cacheKeysToInvalidate,
+        invalidatedCount,
+      })
+
       logger.info('District club data refresh completed', {
         districtId,
         totalClubs: results.length,

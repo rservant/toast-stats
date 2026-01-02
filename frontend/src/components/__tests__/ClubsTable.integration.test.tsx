@@ -112,7 +112,6 @@ describe('ClubsTable Integration Tests', () => {
       expect(screen.getByText('Members')).toBeInTheDocument()
       expect(screen.getByText('DCP Goals')).toBeInTheDocument()
       expect(screen.getAllByText('Distinguished')).toHaveLength(2) // Header + data cell
-      expect(screen.getByText('Status')).toBeInTheDocument()
 
       // Should show club data
       expect(screen.getByText('Alpha Toastmasters')).toBeInTheDocument()
@@ -150,7 +149,6 @@ describe('ClubsTable Integration Tests', () => {
       const distinguishedHeader = screen.getByRole('button', {
         name: /distinguished/i,
       })
-      const statusHeader = screen.getByRole('button', { name: /status/i })
 
       expect(clubNameHeader).toBeInTheDocument()
       expect(divisionHeader).toBeInTheDocument()
@@ -158,7 +156,6 @@ describe('ClubsTable Integration Tests', () => {
       expect(membersHeader).toBeInTheDocument()
       expect(dcpGoalsHeader).toBeInTheDocument()
       expect(distinguishedHeader).toBeInTheDocument()
-      expect(statusHeader).toBeInTheDocument()
     })
 
     it('should handle sorting by clicking column headers', () => {
