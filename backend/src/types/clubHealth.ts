@@ -282,7 +282,25 @@ export interface ClubHealthService {
   /**
    * Refresh club data from external sources
    */
-  refreshClubData(clubName: string): Promise<ClubHealthResult>
+  refreshClubData(
+    clubName: string,
+    districtId?: string
+  ): Promise<ClubHealthResult>
+
+  /**
+   * Refresh all club data for a district from external sources
+   */
+  refreshDistrictClubData(districtId: string): Promise<ClubHealthResult[]>
+
+  /**
+   * Debug method to check loaded historical data
+   */
+  getDebugInfo(): {
+    dataDirectory: string
+    historicalDataSize: number
+    clubNames: string[]
+    district61Clubs: string[]
+  }
 }
 
 // ============================================================================
@@ -324,6 +342,9 @@ export interface DistrictHealthSummary {
 
   /** Distribution of clubs by trajectory */
   trajectory_distribution: Record<Trajectory, number>
+
+  /** All clubs in the district with their health data */
+  clubs: ClubHealthResult[]
 
   /** List of clubs requiring immediate attention */
   clubs_needing_attention: ClubHealthResult[]

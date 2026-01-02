@@ -67,6 +67,7 @@ export interface DistrictHealthSummary {
   total_clubs: number
   health_distribution: Record<HealthStatus, number>
   trajectory_distribution: Record<Trajectory, number>
+  clubs: ClubHealthResult[]
   clubs_needing_attention: ClubHealthResult[]
   evaluation_date: string
 }

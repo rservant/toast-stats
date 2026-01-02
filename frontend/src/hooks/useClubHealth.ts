@@ -22,11 +22,14 @@ export const useClubHealthClassification = () => {
 
   return useMutation<ClubHealthResult, Error, ClubHealthInput>({
     mutationFn: async (input: ClubHealthInput) => {
-      const response = await apiClient.post<ClubHealthResult>(
-        '/club-health/classify',
-        input
-      )
-      return response.data
+      const response = await apiClient.post<{
+        success: boolean
+        data: ClubHealthResult
+        metadata?: Record<string, unknown>
+      }>('/club-health/classify', input)
+
+      // Extract the data from the API response
+      return response.data.data
     },
     onSuccess: (_, variables) => {
       // Invalidate related queries to ensure fresh data
@@ -55,10 +58,14 @@ export const useDistrictHealthSummary = (districtId: string | null) => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const response = await apiClient.get<DistrictHealthSummary>(
-        `/districts/${districtId}/health-summary`
-      )
-      return response.data
+      const response = await apiClient.get<{
+        success: boolean
+        data: DistrictHealthSummary
+        metadata?: Record<string, unknown>
+      }>(`/club-health/districts/${districtId}/health-summary`)
+
+      // Extract the data from the API response
+      return response.data.data
     },
     enabled: !!districtId,
     staleTime: 10 * 60 * 1000, // 10 minutes - district summaries change less frequently
@@ -99,12 +106,22 @@ export const useClubHealthHistory = (
         params.append('months', months.toString())
       }
 
-      const response = await apiClient.get<ClubHealthHistory[]>(
+      const response = await apiClient.get<{
+        success: boolean
+        data: {
+          club_name: string
+          months_requested: number
+          history: ClubHealthHistory[]
+        }
+        metadata?: Record<string, unknown>
+      }>(
         `/club-health/${encodeURIComponent(clubName)}/history${
           params.toString() ? `?${params.toString()}` : ''
         }`
       )
-      return response.data
+
+      // Extract the history array from the nested data structure
+      return response.data.data.history
     },
     enabled: !!clubName,
     staleTime: 5 * 60 * 1000, // 5 minutes - history data is relatively stable
@@ -136,10 +153,14 @@ export const useDistrictClubsHealth = (districtId: string | null) => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
-      const response = await apiClient.get<ClubHealthResult[]>(
-        `/districts/${districtId}/club-health`
-      )
-      return response.data
+      const response = await apiClient.get<{
+        success: boolean
+        data: ClubHealthResult[]
+        metadata?: Record<string, unknown>
+      }>(`/club-health/districts/${districtId}/club-health`)
+
+      // Extract the data array from the API response
+      return response.data.data
     },
     enabled: !!districtId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -158,6 +179,81 @@ export const useDistrictClubsHealth = (districtId: string | null) => {
       return failureCount < 2
     },
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+  })
+}
+
+/**
+ * Hook for refreshing club data from external sources
+ */
+export const useClubHealthRefresh = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    ClubHealthResult,
+    Error,
+    { clubName: string; districtId?: string }
+  >({
+    mutationFn: async ({ clubName, districtId }) => {
+      const response = await apiClient.post<{
+        success: boolean
+        data: ClubHealthResult
+        metadata?: Record<string, unknown>
+      }>(`/club-health/refresh/${encodeURIComponent(clubName)}`, { districtId })
+
+      // Extract the data from the API response
+      return response.data.data
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate related queries to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: ['clubHealthHistory', variables.clubName],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['districtHealthSummary'],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['districtClubsHealth'],
+      })
+    },
+    onError: error => {
+      console.error('Error refreshing club data:', error)
+    },
+  })
+}
+
+/**
+ * Hook for refreshing all club data for a district from external sources
+ */
+export const useDistrictClubHealthRefresh = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation<ClubHealthResult[], Error, string>({
+    mutationFn: async (districtId: string) => {
+      const response = await apiClient.post<{
+        success: boolean
+        data: ClubHealthResult[]
+        metadata?: Record<string, unknown>
+      }>(`/club-health/refresh/district/${districtId}`)
+
+      // Extract the data from the API response
+      return response.data.data
+    },
+    onSuccess: (_, districtId) => {
+      // Invalidate all related queries for the district
+      queryClient.invalidateQueries({
+        queryKey: ['districtHealthSummary', districtId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['districtClubsHealth', districtId],
+      })
+      // Also invalidate individual club histories
+      queryClient.invalidateQueries({
+        queryKey: ['clubHealthHistory'],
+      })
+    },
+    onError: error => {
+      console.error('Error refreshing district club data:', error)
+    },
   })
 }
 

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi } from 'vitest'
 import { ReactNode } from 'react'
@@ -6,6 +6,8 @@ import {
   useClubHealthClassification,
   useDistrictHealthSummary,
   useClubHealthHistory,
+  useClubHealthRefresh,
+  useDistrictClubHealthRefresh,
 } from '../useClubHealth'
 import { apiClient } from '../../services/api'
 import type {
@@ -92,6 +94,7 @@ const mockDistrictHealthSummary: DistrictHealthSummary = {
     Stable: 30,
     Declining: 5,
   },
+  clubs: [mockClubHealthResult],
   clubs_needing_attention: [mockClubHealthResult],
   evaluation_date: '2025-01-01T00:00:00Z',
 }
@@ -119,7 +122,15 @@ describe('useClubHealthClassification', () => {
   })
 
   it('should classify club successfully', async () => {
-    const mockResponse = { data: mockClubHealthResult }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: mockClubHealthResult,
+        metadata: {
+          timestamp: '2025-01-01T00:00:00Z',
+        },
+      },
+    }
     mockedApiClient.post.mockResolvedValueOnce(mockResponse)
 
     const { result } = renderHook(() => useClubHealthClassification(), {
@@ -169,7 +180,15 @@ describe('useClubHealthClassification', () => {
   })
 
   it('should show loading state during mutation', async () => {
-    const mockResponse = { data: mockClubHealthResult }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: mockClubHealthResult,
+        metadata: {
+          timestamp: '2025-01-01T00:00:00Z',
+        },
+      },
+    }
     mockedApiClient.post.mockImplementation(
       () => new Promise(resolve => setTimeout(() => resolve(mockResponse), 100))
     )
@@ -198,7 +217,15 @@ describe('useDistrictHealthSummary', () => {
   })
 
   it('should fetch district health summary successfully', async () => {
-    const mockResponse = { data: mockDistrictHealthSummary }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: mockDistrictHealthSummary,
+        metadata: {
+          timestamp: '2025-01-01T00:00:00Z',
+        },
+      },
+    }
     mockedApiClient.get.mockResolvedValueOnce(mockResponse)
 
     const { result } = renderHook(() => useDistrictHealthSummary('D123'), {
@@ -211,7 +238,7 @@ describe('useDistrictHealthSummary', () => {
 
     expect(result.current.data).toEqual(mockDistrictHealthSummary)
     expect(mockedApiClient.get).toHaveBeenCalledWith(
-      '/districts/D123/health-summary'
+      '/club-health/districts/D123/health-summary'
     )
   })
 
@@ -254,10 +281,18 @@ describe('useDistrictHealthSummary', () => {
 
   it('should use correct cache key for different districts', async () => {
     const mockResponse1 = {
-      data: { ...mockDistrictHealthSummary, district_id: 'D123' },
+      data: {
+        success: true,
+        data: { ...mockDistrictHealthSummary, district_id: 'D123' },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
     }
     const mockResponse2 = {
-      data: { ...mockDistrictHealthSummary, district_id: 'D456' },
+      data: {
+        success: true,
+        data: { ...mockDistrictHealthSummary, district_id: 'D456' },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
     }
 
     mockedApiClient.get
@@ -297,7 +332,17 @@ describe('useClubHealthHistory', () => {
   })
 
   it('should fetch club health history successfully', async () => {
-    const mockResponse = { data: mockClubHealthHistory }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: {
+          club_name: 'Test Club',
+          months_requested: 12,
+          history: mockClubHealthHistory,
+        },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    }
     mockedApiClient.get.mockResolvedValueOnce(mockResponse)
 
     const { result } = renderHook(() => useClubHealthHistory('Test Club'), {
@@ -315,7 +360,17 @@ describe('useClubHealthHistory', () => {
   })
 
   it('should fetch club health history with months parameter', async () => {
-    const mockResponse = { data: mockClubHealthHistory }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: {
+          club_name: 'Test Club',
+          months_requested: 6,
+          history: mockClubHealthHistory,
+        },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    }
     mockedApiClient.get.mockResolvedValueOnce(mockResponse)
 
     const { result } = renderHook(() => useClubHealthHistory('Test Club', 6), {
@@ -370,7 +425,17 @@ describe('useClubHealthHistory', () => {
   })
 
   it('should properly encode club names with special characters', async () => {
-    const mockResponse = { data: mockClubHealthHistory }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: {
+          club_name: 'Test Club & Associates',
+          months_requested: 12,
+          history: mockClubHealthHistory,
+        },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    }
     mockedApiClient.get.mockResolvedValueOnce(mockResponse)
 
     const clubNameWithSpaces = 'Test Club & Associates'
@@ -391,7 +456,17 @@ describe('useClubHealthHistory', () => {
   })
 
   it('should use correct cache key for different clubs and months', async () => {
-    const mockResponse = { data: mockClubHealthHistory }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: {
+          club_name: 'Test Club',
+          months_requested: 12,
+          history: mockClubHealthHistory,
+        },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    }
     mockedApiClient.get.mockResolvedValue(mockResponse)
 
     // Render hook for different club names and months
@@ -424,7 +499,17 @@ describe('useClubHealthHistory', () => {
   })
 
   it('should handle empty history response', async () => {
-    const mockResponse = { data: [] }
+    const mockResponse = {
+      data: {
+        success: true,
+        data: {
+          club_name: 'New Club',
+          months_requested: 12,
+          history: [],
+        },
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    }
     mockedApiClient.get.mockResolvedValueOnce(mockResponse)
 
     const { result } = renderHook(() => useClubHealthHistory('New Club'), {
@@ -436,5 +521,148 @@ describe('useClubHealthHistory', () => {
     })
 
     expect(result.current.data).toEqual([])
+  })
+})
+
+describe('useClubHealthRefresh', () => {
+  it('should refresh club data successfully', async () => {
+    const mockResult: ClubHealthResult = {
+      club_name: 'Test Club',
+      health_status: 'Thriving',
+      reasons: ['Strong membership'],
+      trajectory: 'Recovering',
+      trajectory_reasons: ['Improving trends'],
+      composite_key: 'Thriving__Recovering',
+      composite_label: 'Thriving · Recovering',
+      members_delta_mom: 2,
+      dcp_delta_mom: 1,
+      metadata: {
+        evaluation_date: '2024-01-01T00:00:00Z',
+        processing_time_ms: 100,
+        rule_version: '1.0.0',
+      },
+    }
+
+    mockedApiClient.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: mockResult,
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    })
+
+    const { result } = renderHook(() => useClubHealthRefresh(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.mutate({ clubName: 'Test Club', districtId: 'D123' })
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    expect(mockedApiClient.post).toHaveBeenCalledWith(
+      '/club-health/refresh/Test%20Club',
+      { districtId: 'D123' }
+    )
+    expect(result.current.data).toEqual(mockResult)
+  })
+
+  it('should handle refresh errors gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockedApiClient.post.mockRejectedValueOnce(new Error('Refresh failed'))
+
+    const { result } = renderHook(() => useClubHealthRefresh(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.mutate({ clubName: 'Test Club' })
+    })
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error refreshing club data:',
+      expect.any(Error)
+    )
+    consoleSpy.mockRestore()
+  })
+})
+
+describe('useDistrictClubHealthRefresh', () => {
+  it('should refresh district club data successfully', async () => {
+    const mockResults: ClubHealthResult[] = [
+      {
+        club_name: 'Club 1',
+        health_status: 'Thriving',
+        reasons: ['Strong membership'],
+        trajectory: 'Recovering',
+        trajectory_reasons: ['Improving trends'],
+        composite_key: 'Thriving__Recovering',
+        composite_label: 'Thriving · Recovering',
+        members_delta_mom: 2,
+        dcp_delta_mom: 1,
+        metadata: {
+          evaluation_date: '2024-01-01T00:00:00Z',
+          processing_time_ms: 100,
+          rule_version: '1.0.0',
+        },
+      },
+    ]
+
+    mockedApiClient.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: mockResults,
+        metadata: { timestamp: '2025-01-01T00:00:00Z' },
+      },
+    })
+
+    const { result } = renderHook(() => useDistrictClubHealthRefresh(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.mutate('D123')
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    expect(mockedApiClient.post).toHaveBeenCalledWith(
+      '/club-health/refresh/district/D123'
+    )
+    expect(result.current.data).toEqual(mockResults)
+  })
+
+  it('should handle district refresh errors gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockedApiClient.post.mockRejectedValueOnce(
+      new Error('District refresh failed')
+    )
+
+    const { result } = renderHook(() => useDistrictClubHealthRefresh(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.mutate('D123')
+    })
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error refreshing district club data:',
+      expect.any(Error)
+    )
+    consoleSpy.mockRestore()
   })
 })

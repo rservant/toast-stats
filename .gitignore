@@ -52,6 +52,7 @@ downloads/
 backend/cache/
 backend/data/
 backend/logs/
+backend/test_data/
 
 # Runtime data and generated files
 backend/data/club_health/

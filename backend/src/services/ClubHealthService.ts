@@ -15,6 +15,7 @@ import {
   HealthStatus,
   Trajectory,
   ClubHealthRecord,
+  Month,
 } from '../types/clubHealth.js'
 import { ClubHealthClassificationEngineImpl } from './ClubHealthClassificationEngine.js'
 import { CacheService } from './CacheService.js'
@@ -220,26 +221,88 @@ export class ClubHealthServiceImpl implements ClubHealthService {
   }
 
   /**
+   * Debug method to check loaded historical data
+   * This method is for debugging purposes only
+   */
+  getDebugInfo(): {
+    dataDirectory: string
+    historicalDataSize: number
+    clubNames: string[]
+    district61Clubs: string[]
+  } {
+    const district61Clubs = Array.from(this.historicalData.entries())
+      .filter(([_, records]) => records.some(r => r.district_id === '61'))
+      .map(([clubName, _]) => clubName)
+
+    return {
+      dataDirectory: this.dataDirectory,
+      historicalDataSize: this.historicalData.size,
+      clubNames: Array.from(this.historicalData.keys()).slice(0, 10), // First 10 for brevity
+      district61Clubs: district61Clubs.slice(0, 10), // First 10 district 61 clubs
+    }
+  }
+
+  /**
+   * Reload historical data from disk
+   * This method is used after bulk data operations to ensure in-memory data is current
+   */
+  async reloadHistoricalData(): Promise<void> {
+    await this.loadHistoricalData()
+  }
+
+  /**
    * Load historical data from disk
    */
   private async loadHistoricalData(): Promise<void> {
     try {
       const files = await fs.readdir(this.dataDirectory)
       const historyFiles = files.filter(f => f.endsWith('_history.json'))
+      let successfulLoads = 0
+      let failedLoads = 0
 
       for (const file of historyFiles) {
-        const clubName = file.replace('_history.json', '')
         const filePath = path.join(this.dataDirectory, file)
 
         try {
           const content = await fs.readFile(filePath, 'utf-8')
-          const records: ClubHealthRecord[] = JSON.parse(content)
-          this.historicalData.set(clubName, records)
+
+          let records: ClubHealthRecord[]
+          try {
+            // Try to parse the content directly first
+            records = JSON.parse(content)
+          } catch (parseError) {
+            // If parsing fails, try basic cleanup and parse again
+            logger.warn('JSON parse failed, attempting repair', {
+              file,
+              error:
+                parseError instanceof Error
+                  ? parseError.message
+                  : String(parseError),
+            })
+
+            // Only do minimal cleanup - remove trailing whitespace and ensure proper closing
+            const cleanedContent = content.trim()
+            records = JSON.parse(cleanedContent)
+          }
+
+          // Use the actual club name from the records, not the sanitized filename
+          if (Array.isArray(records) && records.length > 0) {
+            const clubName = records[0].club_name
+            this.historicalData.set(clubName, records)
+            successfulLoads++
+          } else {
+            logger.warn('Historical data file contains no valid records', {
+              file,
+            })
+            failedLoads++
+          }
         } catch (error) {
-          logger.warn('Failed to load historical data for club', {
-            clubName,
-            error,
+          logger.error('Failed to load historical data for club', {
+            file,
+            error: error instanceof Error ? error.message : String(error),
+            filePath,
           })
+          failedLoads++
         }
       }
 
@@ -249,12 +312,16 @@ export class ClubHealthServiceImpl implements ClubHealthService {
           (sum, records) => sum + records.length,
           0
         ),
+        successfulLoads,
+        failedLoads,
+        totalFiles: historyFiles.length,
       })
     } catch (error) {
       logger.warn('Failed to load historical data directory', error)
     }
   }
 
+  /**
   /**
    * Persist historical data to disk
    */
@@ -264,14 +331,38 @@ export class ClubHealthServiceImpl implements ClubHealthService {
   ): Promise<void> {
     const fileName = `${clubName.replace(/[^a-zA-Z0-9]/g, '_')}_history.json`
     const filePath = path.join(this.dataDirectory, fileName)
+    const tempFilePath = `${filePath}.tmp`
 
     try {
-      await fs.writeFile(filePath, JSON.stringify(records, null, 2), 'utf-8')
+      // Write to temporary file first to ensure atomic operation
+      const jsonContent = JSON.stringify(records, null, 2)
+      await fs.writeFile(tempFilePath, jsonContent, 'utf-8')
+
+      // Verify the written content is valid JSON
+      const verifyContent = await fs.readFile(tempFilePath, 'utf-8')
+      JSON.parse(verifyContent) // This will throw if invalid
+
+      // Atomically move temp file to final location
+      await fs.rename(tempFilePath, filePath)
+
+      logger.debug('Historical data persisted successfully', {
+        clubName,
+        recordCount: records.length,
+        filePath,
+      })
     } catch (error) {
+      // Clean up temp file if it exists
+      try {
+        await fs.unlink(tempFilePath)
+      } catch {
+        // Ignore cleanup errors
+      }
+
       logger.error('Failed to persist historical data', {
         clubName,
         filePath,
-        error,
+        recordCount: records.length,
+        error: error instanceof Error ? error.message : String(error),
       })
       throw error
     }
@@ -658,6 +749,52 @@ export class ClubHealthServiceImpl implements ClubHealthService {
         allRecords.push(...districtRecords)
       }
 
+      // If no historical data exists, try to populate with real data (only in non-test environments)
+      if (allRecords.length === 0 && process.env.NODE_ENV !== 'test') {
+        logger.info(
+          'No historical data found, attempting to populate with real data',
+          { districtId }
+        )
+        try {
+          await this.refreshDistrictClubData(districtId)
+
+          // Re-fetch records after population
+          for (const records of this.historicalData.values()) {
+            const districtRecords = records.filter(
+              r => r.district_id === districtId
+            )
+            allRecords.push(...districtRecords)
+          }
+        } catch (error) {
+          logger.warn(
+            'Failed to populate with real data, returning empty summary',
+            {
+              districtId,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          )
+
+          // Return empty summary if real data fetch fails
+          return {
+            district_id: districtId,
+            total_clubs: 0,
+            health_distribution: {
+              Thriving: 0,
+              Vulnerable: 0,
+              'Intervention Required': 0,
+            },
+            trajectory_distribution: {
+              Recovering: 0,
+              Stable: 0,
+              Declining: 0,
+            },
+            clubs: [],
+            clubs_needing_attention: [],
+            evaluation_date: new Date().toISOString(),
+          }
+        }
+      }
+
       // Get the most recent record for each club
       const latestRecords = new Map<string, ClubHealthRecord>()
       for (const record of allRecords) {
@@ -686,13 +823,35 @@ export class ClubHealthServiceImpl implements ClubHealthService {
         Declining: 0,
       }
 
-      // Identify clubs needing attention
+      // Identify clubs needing attention and convert all records to results
       const clubsNeedingAttention: ClubHealthResult[] = []
+      const allClubs: ClubHealthResult[] = []
 
       for (const record of currentRecords) {
         // Update distributions
         healthDistribution[record.health_status]++
         trajectoryDistribution[record.trajectory]++
+
+        // Convert record to result format
+        const result: ClubHealthResult = {
+          club_name: record.club_name,
+          health_status: record.health_status,
+          reasons: record.reasons,
+          trajectory: record.trajectory,
+          trajectory_reasons: record.trajectory_reasons,
+          composite_key: record.composite_key,
+          composite_label: record.composite_label,
+          members_delta_mom: record.members_delta_mom,
+          dcp_delta_mom: record.dcp_delta_mom,
+          metadata: {
+            evaluation_date: record.evaluation_date,
+            processing_time_ms: record.processing_time_ms,
+            rule_version: record.rule_version,
+          },
+        }
+
+        // Add to all clubs list
+        allClubs.push(result)
 
         // Identify clubs needing attention (Intervention Required or Vulnerable + Declining)
         if (
@@ -700,27 +859,12 @@ export class ClubHealthServiceImpl implements ClubHealthService {
           (record.health_status === 'Vulnerable' &&
             record.trajectory === 'Declining')
         ) {
-          // Convert record back to result format for the summary
-          const result: ClubHealthResult = {
-            club_name: record.club_name,
-            health_status: record.health_status,
-            reasons: record.reasons,
-            trajectory: record.trajectory,
-            trajectory_reasons: record.trajectory_reasons,
-            composite_key: record.composite_key,
-            composite_label: record.composite_label,
-            members_delta_mom: record.members_delta_mom,
-            dcp_delta_mom: record.dcp_delta_mom,
-            metadata: {
-              evaluation_date: record.evaluation_date,
-              processing_time_ms: record.processing_time_ms,
-              rule_version: record.rule_version,
-            },
-          }
-
           clubsNeedingAttention.push(result)
         }
       }
+
+      // Sort all clubs alphabetically
+      allClubs.sort((a, b) => a.club_name.localeCompare(b.club_name))
 
       // Sort clubs needing attention by severity (Intervention Required first, then by trajectory)
       clubsNeedingAttention.sort((a, b) => {
@@ -751,6 +895,7 @@ export class ClubHealthServiceImpl implements ClubHealthService {
         total_clubs: currentRecords.length,
         health_distribution: healthDistribution,
         trajectory_distribution: trajectoryDistribution,
+        clubs: allClubs,
         clubs_needing_attention: clubsNeedingAttention,
         evaluation_date: new Date().toISOString(),
       }
@@ -780,17 +925,410 @@ export class ClubHealthServiceImpl implements ClubHealthService {
   }
 
   /**
-   * Refresh club data from external sources (placeholder implementation)
+   * Refresh club data from external sources and process through classification engine
    */
-  async refreshClubData(clubName: string): Promise<ClubHealthResult> {
-    // This is a placeholder implementation
-    // In a real system, this would fetch fresh data from external sources
-    // and then process it through the classification engine
+  async refreshClubData(
+    clubName: string,
+    districtId?: string
+  ): Promise<ClubHealthResult> {
+    const startTime = Date.now()
 
-    logger.warn('refreshClubData called but not implemented', { clubName })
-    throw new Error(
-      'refreshClubData not yet implemented - requires external data integration'
-    )
+    try {
+      logger.info('Refreshing club data from external sources', {
+        clubName,
+        districtId,
+      })
+
+      // Import RealToastmastersAPIService dynamically to avoid circular dependencies
+      const { RealToastmastersAPIService } =
+        await import('./RealToastmastersAPIService.js')
+      const realDataService = new RealToastmastersAPIService(true) // Allow in any environment for data refresh
+
+      let targetDistrictId = districtId
+
+      // If no district ID provided, try to find it from historical data
+      if (!targetDistrictId) {
+        targetDistrictId =
+          (await this.findDistrictForClub(clubName)) || undefined
+      }
+
+      // If still no district ID, we need to search across districts (expensive operation)
+      if (!targetDistrictId || targetDistrictId === 'unknown') {
+        logger.warn(
+          'No district ID available, cannot refresh club data without district context',
+          { clubName }
+        )
+        throw new Error(
+          `Cannot refresh club data for ${clubName}: district ID required`
+        )
+      }
+
+      // Fetch real club data from the district
+      const clubsResponse = await realDataService.getClubs(targetDistrictId)
+      const clubData = clubsResponse.clubs.find(
+        club =>
+          String(club.name).toLowerCase().trim() ===
+            clubName.toLowerCase().trim() ||
+          String(club.name).toLowerCase().includes(clubName.toLowerCase()) ||
+          clubName.toLowerCase().includes(String(club.name).toLowerCase())
+      )
+
+      if (!clubData) {
+        logger.warn('Club not found in district data', {
+          clubName,
+          districtId: targetDistrictId,
+        })
+        throw new Error(
+          `Club ${clubName} not found in district ${targetDistrictId}`
+        )
+      }
+
+      // Get historical data to calculate previous month values and growth
+      const historicalRecords = this.historicalData.get(clubName) || []
+      const previousRecord =
+        historicalRecords.length > 0
+          ? historicalRecords[historicalRecords.length - 1]
+          : null
+
+      // Calculate member growth since July (program year start)
+      const currentDate = new Date()
+      const programYearStart = new Date(currentDate.getFullYear(), 6, 1) // July 1st
+      if (currentDate < programYearStart) {
+        programYearStart.setFullYear(currentDate.getFullYear() - 1)
+      }
+
+      // For now, use current membership as baseline since we don't have historical membership data
+      // In a full implementation, this would query historical membership data
+      const memberGrowthSinceJuly = previousRecord
+        ? clubData.memberCount - previousRecord.current_members
+        : 0
+
+      // Calculate DCP goals from awards data
+      // DCP goals are typically based on educational awards achieved
+      // This is a simplified calculation - in reality, DCP has 10 specific goals
+      const dcpGoalsAchieved = Math.min(Math.floor(clubData.awards / 2), 10) // Rough approximation
+
+      // Determine current month
+      const currentMonth = this.getCurrentProgramYearMonth()
+
+      // Create ClubHealthInput from real data
+      const input: ClubHealthInput = {
+        club_name: String(clubData.name),
+        current_members: clubData.memberCount,
+        member_growth_since_july: memberGrowthSinceJuly,
+        current_month: currentMonth,
+        dcp_goals_achieved_ytd: dcpGoalsAchieved,
+
+        // These fields require additional data sources that aren't available in the current scraper
+        // For now, use reasonable defaults based on club status
+        csp_submitted: clubData.status === 'active', // Assume active clubs have submitted CSP
+        officer_list_submitted: clubData.status === 'active', // Assume active clubs have officer list
+        officers_trained: clubData.distinguished, // Assume distinguished clubs have trained officers
+
+        // Previous month data from historical records or defaults
+        previous_month_members: previousRecord
+          ? previousRecord.current_members
+          : clubData.memberCount,
+        previous_month_dcp_goals_achieved_ytd: previousRecord
+          ? previousRecord.dcp_goals_achieved_ytd
+          : Math.max(0, dcpGoalsAchieved - 1),
+        previous_month_health_status: previousRecord
+          ? previousRecord.health_status
+          : ('Vulnerable' as HealthStatus),
+      }
+
+      logger.info('Constructed club health input from real data', {
+        clubName: input.club_name,
+        currentMembers: input.current_members,
+        memberGrowth: input.member_growth_since_july,
+        dcpGoals: input.dcp_goals_achieved_ytd,
+        clubStatus: clubData.status,
+        distinguished: clubData.distinguished,
+      })
+
+      // Process through classification engine
+      const result = await this.processClubHealth(input)
+
+      // Update the district ID in the stored record
+      const records = this.historicalData.get(clubName) || []
+      if (records.length > 0) {
+        const latestRecord = records[records.length - 1]
+        latestRecord.district_id = targetDistrictId
+        await this.persistHistoricalData(clubName, records)
+      }
+
+      // Add audit trail entry for data refresh
+      this.addAuditEntry({
+        operation: 'data_update',
+        club_name: clubName,
+        district_id: targetDistrictId,
+        reason: 'Club data refreshed from external sources',
+        metadata: {
+          source: 'RealToastmastersAPIService',
+          processing_time_ms: Date.now() - startTime,
+          real_data: {
+            memberCount: clubData.memberCount,
+            status: clubData.status,
+            distinguished: clubData.distinguished,
+            awards: clubData.awards,
+          },
+        },
+      })
+
+      const processingTime = Date.now() - startTime
+      logger.info('Club data refreshed successfully', {
+        clubName,
+        districtId: targetDistrictId,
+        healthStatus: result.health_status,
+        trajectory: result.trajectory,
+        processingTime: `${processingTime}ms`,
+      })
+
+      // Clean up the real data service
+      await realDataService.cleanup()
+
+      // Reload historical data to ensure in-memory data is current
+      await this.reloadHistoricalData()
+
+      return result
+    } catch (error) {
+      const processingTime = Date.now() - startTime
+
+      // Add audit trail entry for error
+      this.addAuditEntry({
+        operation: 'data_update',
+        club_name: clubName,
+        district_id: districtId,
+        reason: 'Club data refresh failed',
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+          processing_time_ms: processingTime,
+        },
+      })
+
+      logger.error('Failed to refresh club data', {
+        clubName,
+        districtId,
+        processingTime: `${processingTime}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Refresh all club data for a district from external sources
+   */
+  async refreshDistrictClubData(
+    districtId: string
+  ): Promise<ClubHealthResult[]> {
+    const startTime = Date.now()
+
+    try {
+      logger.info('Refreshing district club data from external sources', {
+        districtId,
+      })
+
+      // Import RealToastmastersAPIService dynamically to avoid circular dependencies
+      const { RealToastmastersAPIService } =
+        await import('./RealToastmastersAPIService.js')
+      const realDataService = new RealToastmastersAPIService(true) // Allow in any environment for data refresh
+
+      // Fetch all clubs in the district
+      const clubsResponse = await realDataService.getClubs(districtId)
+      const clubs = clubsResponse.clubs
+
+      if (clubs.length === 0) {
+        logger.warn('No clubs found in district', { districtId })
+        return []
+      }
+
+      logger.info('Found clubs in district, processing health data', {
+        districtId,
+        clubCount: clubs.length,
+      })
+
+      // Process each club
+      const results: ClubHealthResult[] = []
+      const errors: Array<{ clubName: string; error: string }> = []
+
+      for (const clubData of clubs) {
+        try {
+          // Get historical data to calculate previous month values and growth
+          const historicalRecords =
+            this.historicalData.get(String(clubData.name)) || []
+          const previousRecord =
+            historicalRecords.length > 0
+              ? historicalRecords[historicalRecords.length - 1]
+              : null
+
+          // Calculate member growth since July (program year start)
+          const memberGrowthSinceJuly = previousRecord
+            ? clubData.memberCount - previousRecord.current_members
+            : 0
+
+          // Calculate DCP goals from awards data
+          const dcpGoalsAchieved = Math.min(Math.floor(clubData.awards / 2), 10) // Rough approximation
+
+          // Determine current month
+          const currentMonth = this.getCurrentProgramYearMonth()
+
+          // Create ClubHealthInput from real data
+          const input: ClubHealthInput = {
+            club_name: String(clubData.name),
+            current_members: clubData.memberCount,
+            member_growth_since_july: memberGrowthSinceJuly,
+            current_month: currentMonth,
+            dcp_goals_achieved_ytd: dcpGoalsAchieved,
+
+            // These fields require additional data sources that aren't available in the current scraper
+            // For now, use reasonable defaults based on club status
+            csp_submitted: clubData.status === 'active', // Assume active clubs have submitted CSP
+            officer_list_submitted: clubData.status === 'active', // Assume active clubs have officer list
+            officers_trained: clubData.distinguished, // Assume distinguished clubs have trained officers
+
+            // Previous month data from historical records or defaults
+            previous_month_members: previousRecord
+              ? previousRecord.current_members
+              : clubData.memberCount,
+            previous_month_dcp_goals_achieved_ytd: previousRecord
+              ? previousRecord.dcp_goals_achieved_ytd
+              : Math.max(0, dcpGoalsAchieved - 1),
+            previous_month_health_status: previousRecord
+              ? previousRecord.health_status
+              : ('Vulnerable' as HealthStatus),
+          }
+
+          // Process through classification engine
+          const result = await this.processClubHealth(input)
+
+          // Update the district ID in the stored record
+          const records = this.historicalData.get(String(clubData.name)) || []
+          if (records.length > 0) {
+            const latestRecord = records[records.length - 1]
+            latestRecord.district_id = districtId
+            await this.persistHistoricalData(String(clubData.name), records)
+          }
+
+          results.push(result)
+
+          logger.debug('Club health data refreshed', {
+            clubName: String(clubData.name),
+            healthStatus: result.health_status,
+            trajectory: result.trajectory,
+          })
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
+          errors.push({ clubName: String(clubData.name), error: errorMessage })
+          logger.error('Failed to refresh club data', {
+            clubName: String(clubData.name),
+            districtId,
+            error: errorMessage,
+          })
+        }
+      }
+
+      // Add audit trail entry for district refresh
+      this.addAuditEntry({
+        operation: 'data_update',
+        district_id: districtId,
+        reason: 'District club data refreshed from external sources',
+        metadata: {
+          source: 'RealToastmastersAPIService',
+          processing_time_ms: Date.now() - startTime,
+          total_clubs: clubs.length,
+          successful_refreshes: results.length,
+          failed_refreshes: errors.length,
+          errors: errors.length > 0 ? errors : undefined,
+        },
+      })
+
+      const processingTime = Date.now() - startTime
+      logger.info('District club data refresh completed', {
+        districtId,
+        totalClubs: clubs.length,
+        successfulRefreshes: results.length,
+        failedRefreshes: errors.length,
+        processingTime: `${processingTime}ms`,
+      })
+
+      // Clean up the real data service
+      await realDataService.cleanup()
+
+      // Reload historical data from disk to ensure in-memory data is current
+      await this.reloadHistoricalData()
+
+      // Invalidate district cache to ensure fresh data is served
+      await this.invalidateDistrictCache(districtId)
+
+      return results
+    } catch (error) {
+      const processingTime = Date.now() - startTime
+
+      // Add audit trail entry for error
+      this.addAuditEntry({
+        operation: 'data_update',
+        district_id: districtId,
+        reason: 'District club data refresh failed',
+        metadata: {
+          error: error instanceof Error ? error.message : String(error),
+          processing_time_ms: processingTime,
+        },
+      })
+
+      logger.error('Failed to refresh district club data', {
+        districtId,
+        processingTime: `${processingTime}ms`,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Find district ID for a club from historical data
+   */
+  private async findDistrictForClub(clubName: string): Promise<string | null> {
+    // Check historical data first
+    const historicalRecords = this.historicalData.get(clubName) || []
+    if (historicalRecords.length > 0) {
+      const districtId = historicalRecords[0].district_id
+      if (districtId && districtId !== 'unknown') {
+        return districtId
+      }
+    }
+
+    // If not found in historical data, we could search across districts
+    // but this would be expensive, so for now return null
+    logger.warn('Could not determine district for club', { clubName })
+    return null
+  }
+
+  /**
+   * Get current month in program year format
+   */
+  private getCurrentProgramYearMonth(): Month {
+    const now = new Date()
+    const month = now.getMonth() // 0-11
+
+    // Toastmasters program year runs July-June
+    const monthMap: Month[] = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ]
+
+    return monthMap[month]
   }
 
   /**

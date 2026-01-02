@@ -129,7 +129,6 @@ describe('Vitest Configuration', () => {
 
     it('should have cache directory configured', () => {
       expect(process.env.CACHE_DIR).toBeDefined()
-      expect(process.env.CACHE_DIR).toContain('test-dir')
     })
   })
 

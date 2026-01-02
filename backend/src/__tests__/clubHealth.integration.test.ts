@@ -361,6 +361,7 @@ describe('Club Health API Integration Tests', () => {
       expect(typeof response.body.data.total_clubs).toBe('number')
       expect(response.body.data.health_distribution).toBeDefined()
       expect(response.body.data.trajectory_distribution).toBeDefined()
+      expect(Array.isArray(response.body.data.clubs)).toBe(true)
       expect(Array.isArray(response.body.data.clubs_needing_attention)).toBe(
         true
       )
@@ -384,6 +385,39 @@ describe('Club Health API Integration Tests', () => {
       expect(response.body.success).toBe(true)
       expect(response.body.data.district_id).toBe('D999999')
       expect(response.body.data.total_clubs).toBe(0)
+    })
+  })
+
+  describe('GET /api/club-health/districts/:districtId/club-health', () => {
+    it('should return all clubs health data for district', async () => {
+      const response = await request(app)
+        .get('/api/club-health/districts/D123/club-health')
+        .expect(200)
+
+      expect(response.body.success).toBe(true)
+      expect(Array.isArray(response.body.data)).toBe(true)
+      expect(response.body.metadata).toBeDefined()
+      expect(response.body.metadata.district_id).toBe('D123')
+      expect(typeof response.body.metadata.total_clubs).toBe('number')
+    })
+
+    it('should return 400 for invalid district ID format', async () => {
+      const response = await request(app)
+        .get('/api/club-health/districts/invalid@id/club-health')
+        .expect(400)
+
+      expect(response.body.success).toBe(false)
+      expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
+    })
+
+    it('should return empty array for non-existent district', async () => {
+      const response = await request(app)
+        .get('/api/club-health/districts/D999999/club-health')
+        .expect(200)
+
+      expect(response.body.success).toBe(true)
+      expect(response.body.data).toEqual([])
+      expect(response.body.metadata.total_clubs).toBe(0)
     })
   })
 

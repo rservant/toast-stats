@@ -47,6 +47,12 @@ export const HealthMatrixDashboard: React.FC<HealthMatrixDashboardProps> = ({
 
   // Filter clubs based on provided filters
   const filteredClubs = useMemo(() => {
+    // Ensure clubs is an array before filtering
+    if (!Array.isArray(clubs)) {
+      console.warn('HealthMatrixDashboard: clubs prop is not an array:', clubs)
+      return []
+    }
+
     if (!filters) return clubs
 
     return clubs.filter(club => {

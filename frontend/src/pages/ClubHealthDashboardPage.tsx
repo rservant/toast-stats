@@ -1,150 +1,13 @@
-/**
- * Club Health Dashboard Page Component
- *
- * Dedicated page for club health matrix visualization
- * Handles both district-specific and general club health routes
- */
-
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { HealthMatrixDashboard } from '../components/HealthMatrixDashboard'
 import { DistrictAnalyticsDashboard } from '../components/DistrictAnalyticsDashboard'
 import { ClubHealthDetailModal } from '../components/ClubHealthDetailModal'
 import { ClubHealthResult } from '../types/clubHealth'
-import { useDistrictClubsHealth } from '../hooks/useClubHealth'
-
-// Sample data for demonstration
-const sampleClubs: ClubHealthResult[] = [
-  {
-    club_name: 'Sunrise Speakers',
-    health_status: 'Thriving',
-    reasons: [
-      'Membership requirement met (25 members)',
-      'DCP goals on track (3/3)',
-      'CSP submitted',
-    ],
-    trajectory: 'Stable',
-    trajectory_reasons: ['Health status unchanged', 'Consistent performance'],
-    composite_key: 'Thriving__Stable',
-    composite_label: 'Thriving • Stable',
-    members_delta_mom: 2,
-    dcp_delta_mom: 1,
-    metadata: {
-      evaluation_date: '2024-01-01',
-      processing_time_ms: 45,
-      rule_version: '1.0.0',
-    },
-  },
-  {
-    club_name: 'Downtown Toastmasters',
-    health_status: 'Vulnerable',
-    reasons: [
-      'Membership below threshold (18 members)',
-      'DCP goals behind (1/3)',
-      'CSP not submitted',
-    ],
-    trajectory: 'Declining',
-    trajectory_reasons: ['Lost 3 members this month', 'No DCP progress'],
-    composite_key: 'Vulnerable__Declining',
-    composite_label: 'Vulnerable • Declining',
-    members_delta_mom: -3,
-    dcp_delta_mom: 0,
-    metadata: {
-      evaluation_date: '2024-01-01',
-      processing_time_ms: 38,
-      rule_version: '1.0.0',
-    },
-  },
-  {
-    club_name: 'Evening Eloquence',
-    health_status: 'Intervention Required',
-    reasons: [
-      'Membership critically low (8 members)',
-      'No growth since July (-2)',
-      'DCP goals not met (0/3)',
-    ],
-    trajectory: 'Recovering',
-    trajectory_reasons: [
-      'Health status improved from last month',
-      'Recent recruitment efforts',
-    ],
-    composite_key: 'Intervention Required__Recovering',
-    composite_label: 'Intervention Required • Recovering',
-    members_delta_mom: 1,
-    dcp_delta_mom: 0,
-    metadata: {
-      evaluation_date: '2024-01-01',
-      processing_time_ms: 52,
-      rule_version: '1.0.0',
-    },
-  },
-  {
-    club_name: 'Business Leaders Club',
-    health_status: 'Thriving',
-    reasons: [
-      'Strong membership (32 members)',
-      'Excellent DCP progress (5/5)',
-      'CSP submitted early',
-    ],
-    trajectory: 'Recovering',
-    trajectory_reasons: [
-      'Improved from Vulnerable last month',
-      'Strong member recruitment',
-    ],
-    composite_key: 'Thriving__Recovering',
-    composite_label: 'Thriving • Recovering',
-    members_delta_mom: 5,
-    dcp_delta_mom: 2,
-    metadata: {
-      evaluation_date: '2024-01-01',
-      processing_time_ms: 41,
-      rule_version: '1.0.0',
-    },
-  },
-  {
-    club_name: 'Tech Talkers',
-    health_status: 'Vulnerable',
-    reasons: [
-      'Membership adequate (22 members)',
-      'DCP goals behind (2/4)',
-      'CSP submitted',
-    ],
-    trajectory: 'Stable',
-    trajectory_reasons: ['Health status unchanged', 'Steady membership'],
-    composite_key: 'Vulnerable__Stable',
-    composite_label: 'Vulnerable • Stable',
-    members_delta_mom: 0,
-    dcp_delta_mom: 1,
-    metadata: {
-      evaluation_date: '2024-01-01',
-      processing_time_ms: 43,
-      rule_version: '1.0.0',
-    },
-  },
-  {
-    club_name: 'Community Voices',
-    health_status: 'Thriving',
-    reasons: [
-      'Excellent membership (28 members)',
-      'DCP goals exceeded (6/5)',
-      'CSP submitted',
-    ],
-    trajectory: 'Declining',
-    trajectory_reasons: [
-      'Lost 2 members this month',
-      'Previous month was stronger',
-    ],
-    composite_key: 'Thriving__Declining',
-    composite_label: 'Thriving • Declining',
-    members_delta_mom: -2,
-    dcp_delta_mom: 0,
-    metadata: {
-      evaluation_date: '2024-01-01',
-      processing_time_ms: 39,
-      rule_version: '1.0.0',
-    },
-  },
-]
+import {
+  useDistrictClubsHealth,
+  useDistrictClubHealthRefresh,
+} from '../hooks/useClubHealth'
 
 type ViewType = 'matrix' | 'analytics'
 
@@ -159,21 +22,40 @@ export const ClubHealthDashboardPage: React.FC = () => {
   )
   const [currentView, setCurrentView] = useState<ViewType>('matrix')
 
-  // Use the hook for real data (currently will show loading/error states)
-  // Use districtId from URL params if available, otherwise default to '42'
+  // Use the hook for real data
+  // Use districtId from URL params if available, otherwise default to 'D42' (proper format)
   const {
-    data: clubs = [],
+    data: clubsData,
     isLoading: loading,
     error,
-  } = useDistrictClubsHealth(districtId || '42')
+  } = useDistrictClubsHealth(districtId || 'D42')
 
-  // Use sample data for demonstration since backend might not be available
-  const displayClubs = clubs.length > 0 ? clubs : sampleClubs
+  // Ensure clubs is always an array - memoized to prevent useEffect dependency issues
+  const clubs = useMemo(() => {
+    return Array.isArray(clubsData) ? clubsData : []
+  }, [clubsData])
+
+  // Use refresh hooks for populating real data
+  const refreshDistrictMutation = useDistrictClubHealthRefresh()
+
+  // Show loading state when fetching data
+  const isLoadingData = loading
+
+  // Handle refresh of district data
+  const handleRefreshData = async () => {
+    if (districtId) {
+      try {
+        await refreshDistrictMutation.mutateAsync(districtId)
+      } catch (error) {
+        console.error('Failed to refresh district data:', error)
+      }
+    }
+  }
 
   // If clubName is provided in URL, pre-select that club
   React.useEffect(() => {
-    if (clubName && displayClubs.length > 0) {
-      const club = displayClubs.find(
+    if (clubName && clubs.length > 0) {
+      const club = clubs.find(
         (c: ClubHealthResult) =>
           c.club_name.toLowerCase().replace(/\s+/g, '-') ===
           clubName.toLowerCase()
@@ -182,7 +64,7 @@ export const ClubHealthDashboardPage: React.FC = () => {
         setSelectedClub(club)
       }
     }
-  }, [clubName, displayClubs])
+  }, [clubName, clubs])
 
   const handleClubSelect = (club: ClubHealthResult) => {
     setSelectedClub(club)
@@ -259,28 +141,43 @@ export const ClubHealthDashboardPage: React.FC = () => {
               </p>
             </div>
 
-            {/* View Toggle */}
-            <div className="flex items-center gap-2 bg-tm-cool-gray bg-opacity-20 rounded-lg p-1">
-              <button
-                onClick={() => setCurrentView('matrix')}
-                className={`px-4 py-2 rounded-md font-tm-body font-medium transition-colors ${
-                  currentView === 'matrix'
-                    ? 'bg-tm-loyal-blue text-tm-white'
-                    : 'text-tm-cool-gray hover:text-tm-black'
-                }`}
-              >
-                Health Matrix
-              </button>
-              <button
-                onClick={() => setCurrentView('analytics')}
-                className={`px-4 py-2 rounded-md font-tm-body font-medium transition-colors ${
-                  currentView === 'analytics'
-                    ? 'bg-tm-loyal-blue text-tm-white'
-                    : 'text-tm-cool-gray hover:text-tm-black'
-                }`}
-              >
-                Analytics
-              </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Refresh Data Button */}
+              {districtId && (
+                <button
+                  onClick={handleRefreshData}
+                  disabled={refreshDistrictMutation.isPending}
+                  className="px-4 py-2 bg-tm-loyal-blue text-tm-white rounded-md font-tm-body font-medium hover:bg-tm-loyal-blue-80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {refreshDistrictMutation.isPending
+                    ? 'Refreshing...'
+                    : 'Refresh Real Data'}
+                </button>
+              )}
+
+              {/* View Toggle */}
+              <div className="flex items-center gap-2 bg-tm-cool-gray bg-opacity-20 rounded-lg p-1">
+                <button
+                  onClick={() => setCurrentView('matrix')}
+                  className={`px-4 py-2 rounded-md font-tm-body font-medium transition-colors ${
+                    currentView === 'matrix'
+                      ? 'bg-tm-loyal-blue text-tm-white'
+                      : 'text-tm-cool-gray hover:text-tm-black'
+                  }`}
+                >
+                  Health Matrix
+                </button>
+                <button
+                  onClick={() => setCurrentView('analytics')}
+                  className={`px-4 py-2 rounded-md font-tm-body font-medium transition-colors ${
+                    currentView === 'analytics'
+                      ? 'bg-tm-loyal-blue text-tm-white'
+                      : 'text-tm-cool-gray hover:text-tm-black'
+                  }`}
+                >
+                  Analytics
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -290,22 +187,22 @@ export const ClubHealthDashboardPage: React.FC = () => {
           {currentView === 'matrix' ? (
             <div className="p-6">
               <HealthMatrixDashboard
-                clubs={displayClubs}
+                clubs={clubs}
                 districtId={districtId}
                 onClubSelect={handleClubSelect}
-                loading={loading && clubs.length === 0}
+                loading={isLoadingData}
                 error={error?.message || undefined}
               />
             </div>
           ) : (
             <div className="p-6">
               <DistrictAnalyticsDashboard
-                districtId={districtId || '42'}
-                clubs={displayClubs}
+                districtId={districtId || 'D42'}
+                clubs={clubs}
                 onClubSelect={handleClubSelect}
                 onExportData={handleExportData}
                 onNavigateToClub={handleNavigateToClub}
-                loading={loading && clubs.length === 0}
+                loading={isLoadingData}
                 error={error?.message || undefined}
               />
             </div>
