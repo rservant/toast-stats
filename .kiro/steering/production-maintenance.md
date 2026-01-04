@@ -1,304 +1,139 @@
-# Production Maintenance Steering Document
+# Toast-Stats Maintenance Steering Document (Internal / Small Group)
 
-**Status:** Authoritative  
-**Applies to:** All production systems and ongoing maintenance  
-**Audience:** Engineers, Tech Leads, DevOps, Architects  
-**Owner:** Engineering
+## Status
 
----
+Internal reference document describing the intended operation and maintenance posture of the Toast-Stats application during its personal and small-group usage phase.
 
-## 1. Purpose
+## Scope
 
-This document defines **production maintenance standards** for systems that have achieved full compliance and are in active production use.
+This document applies to Toast-Stats while it is used primarily by its maintainer and a small, known group of users.  
+The application is not publicly marketed, externally supported, or subject to uptime guarantees during this phase.
 
-Its goal is to:
+## Purpose
 
-- Maintain production stability and reliability
-- Ensure continued compliance with all quality standards
-- Provide guidance for ongoing feature development
-- Establish monitoring and alerting requirements
-- Define incident response procedures
+Toast-Stats exists to support analysis and decision-making related to Toastmasters district and club data.  
+The application emphasizes correctness, usability, and low operational overhead over scalability or public availability.
 
-This document is **normative**.  
-Where it uses **MUST**, **MUST NOT**, **SHOULD**, and **MAY**, those words are intentional.
+## Operating Context
 
-Kiro should treat this document as the **primary source of truth** for production maintenance decisions.
+- The application is operated by a small number of trusted users.
+- Users are personally known to the maintainer.
+- There is no service-level agreement or on-call expectation.
+- Deployment is typically single-instance.
+- Operational simplicity is prioritized.
 
----
+## Data Sources
 
-## 2. Core Principles
+- Primary data originates from scraped Toastmasters dashboard content.
+- Scraped data is subject to change, latency, and occasional failure.
+- The application treats scraping as an unreliable external dependency.
 
-All production maintenance MUST follow these principles:
+## Data Handling Model
 
-1. **Zero regression tolerance**  
-   New changes must not break existing functionality or compliance.
+- Application data is stored as discrete, time-ordered snapshots.
+- Each snapshot represents a complete, normalized view of the source data at a specific point in time.
+- One snapshot is designated as the current snapshot and represents the latest available successful data.
+- Historical snapshots remain available for inspection and comparison.
+- Snapshots are immutable once created.
+- Each snapshot includes metadata such as:
+  - creation timestamp
+  - source identifier
+  - schema version
+  - calculation or scoring version
+  - success or failure status
+  - error information when applicable
+  
+## Last-Known-Good Data
 
-2. **Continuous compliance monitoring**  
-   All quality gates must remain active and enforced.
+- The application presents the most recent successful snapshot as the default data source.
+- Previously successful snapshots remain available when newer refresh attempts fail.
+- Users are able to see the timestamp associated with the data currently being displayed.
 
-3. **Proactive maintenance over reactive fixes**  
-   Regular maintenance prevents production issues.
+## Refresh Model
 
-4. **Documentation as code**  
-   All changes must be documented and traceable.
+- Data refresh is an explicit operation.
+- Refresh execution is separate from normal read access.
+- Refresh operations may be triggered manually or via scheduled execution.
+- Refresh failures do not invalidate previously successful snapshots.
 
-5. **Performance monitoring is mandatory**  
-   System performance must be continuously monitored and optimized.
+## Read Model
 
----
+- Normal application usage reads data from stored snapshots.
+- The current snapshot is used as the default data source.
+- Users may request data from a specific historical snapshot.
+- Read operations do not initiate scraping or data refresh.
+- Application responsiveness is independent of scraping performance.
 
-## 3. Compliance Maintenance Requirements
+## Historical Data Access
 
-### Zero Error Policy Enforcement
+- Historical snapshots are treated as first-class application data.
+- Users are able to view data as it existed at a specific point in time.
+- Historical views reflect the schema and calculation version associated with the selected snapshot.
+- Historical data is not retroactively recalculated when scoring or computation logic changes.
+- Comparisons across snapshots are possible due to consistent normalization and metadata.
 
-All systems MUST maintain:
+## Computation and Scoring
 
-- **Zero TypeScript errors** across all codebases
-- **Zero lint errors** in all code
-- **Zero formatting violations**
-- **100% test pass rate** for all test suites
-- **Full brand compliance** for all UI components
+- Computation and scoring logic is applied to snapshot data.
+- Each snapshot records the calculation or scoring version used to produce its results.
+- Changes to computation or scoring logic result in new calculation versions.
+- Newly created snapshots use the current calculation version at the time of creation.
+- Historical snapshots retain the calculation version originally applied.
+- Comparisons across snapshots account for calculation version differences through recorded metadata.
+- Historical data reflects the results as computed at the time the snapshot was created.
 
-### Automated Monitoring
+## Terminology
 
-Production systems MUST have:
+- **Snapshot** refers to an immutable, time-specific representation of normalized application data and its derived results.
+- **Current Snapshot** refers to the most recent successful snapshot and represents the latest available data.
+- **Historical Snapshot** refers to any snapshot other than the current snapshot.
+- **Refresh** refers to the process that creates a new snapshot from source data.
+- **Read Operation** refers to retrieval of data from an existing snapshot.
+- **Calculation Version** refers to the specific set of computation or scoring rules applied to a snapshot.
+- **Schema Version** refers to the structural definition of the normalized data contained in a snapshot.
 
-- **Pre-commit hooks** preventing compliance violations
-- **CI/CD pipeline** enforcement of all quality gates
-- **Automated testing** on every deployment
-- **Performance monitoring** with alerting thresholds
-- **Error tracking** and incident response procedures
+## Data Lifecycle
 
----
+Data enters the system through an explicit refresh operation that retrieves source information and normalizes it into a snapshot. The snapshot is created with associated schema and calculation versions and recorded with success or failure status. When successful, the snapshot becomes the current snapshot and is used as the default data source for read operations. Previously created snapshots remain unchanged and available for historical access. Read operations retrieve data from the current or selected historical snapshot without initiating refresh activity. Over time, multiple snapshots accumulate, representing a time-ordered record of application data and derived results.
 
-## 4. Development Workflow for Production Systems
+## Testing Focus
 
-### Before Making Changes
+- Testing concentrates on correctness of key calculations and derived metrics.
+- Golden test cases are used to validate stable outputs for known inputs.
+- Snapshot-based data enables repeatable test scenarios independent of live scraping.
 
-- **MUST** verify all quality gates are passing
-- **MUST** review impact on existing functionality
-- **MUST** ensure adequate test coverage for changes
-- **MUST** validate performance impact
+## Failure Modes
 
-### During Development
+- Scraping failures are expected and tolerated.
+- Application functionality continues using the last successful snapshot when failures occur.
+- Failure information is recorded alongside snapshot metadata.
 
-- **MUST** maintain all existing compliance standards
-- **MUST** add tests for new functionality
-- **MUST** follow established architectural patterns
-- **MUST** document significant changes
+## Monitoring and Visibility
 
-### Before Deployment
+- Refresh activity produces structured logs including timing and outcome.
+- Application health endpoints indicate runtime availability and snapshot presence.
+- Data freshness is visible to users through snapshot metadata.
 
-- **MUST** pass all automated quality checks
-- **MUST** complete manual testing of critical paths
-- **MUST** verify performance benchmarks
-- **MUST** have rollback plan ready
+## Security Posture
 
----
+- The application handles publicly visible Toastmasters data.
+- Administrative actions are restricted to trusted users.
+- Secrets and credentials are stored outside the source repository.
 
-## 5. Monitoring and Alerting Requirements
+## Deployment Characteristics
 
-### System Health Monitoring
+- The application is deployed in a low-complexity environment.
+- Manual deployment and rollback are acceptable.
+- Recovery is achieved by redeploying the application and restoring snapshot data.
 
-Production systems MUST monitor:
+## Change Management
 
-- **Application performance** (response times, throughput)
-- **Error rates** and exception tracking
-- **Resource utilization** (CPU, memory, disk)
-- **Database performance** and query optimization
-- **Cache hit rates** and cache performance
+- Changes to data models, calculations, or refresh logic are documented.
+- Snapshot versioning provides traceability across changes.
+- Historical data remains interpretable within its original context.
 
-### Quality Compliance Monitoring
+## Future Considerations
 
-Continuous monitoring MUST include:
-
-- **TypeScript compilation** status
-- **Lint error** detection and reporting
-- **Test suite** execution and pass rates
-- **Brand compliance** validation
-- **Accessibility** compliance checks
-
-### Alerting Thresholds
-
-Alerts MUST be configured for:
-
-- **Any quality gate failures** (immediate)
-- **Performance degradation** (>20% slowdown)
-- **Error rate increases** (>5% error rate)
-- **Test failures** (any failing tests)
-- **Compliance violations** (any new violations)
-
----
-
-## 6. Incident Response Procedures
-
-### Severity Levels
-
-**Critical (P0)**: System down, data loss, security breach
-
-- Response time: 15 minutes
-- Resolution target: 1 hour
-- Escalation: Immediate to on-call engineer
-
-**High (P1)**: Major functionality broken, compliance violations
-
-- Response time: 1 hour
-- Resolution target: 4 hours
-- Escalation: Within 2 hours if unresolved
-
-**Medium (P2)**: Minor functionality issues, performance degradation
-
-- Response time: 4 hours
-- Resolution target: 24 hours
-- Escalation: Next business day if unresolved
-
-**Low (P3)**: Cosmetic issues, documentation updates
-
-- Response time: 24 hours
-- Resolution target: 1 week
-- Escalation: Weekly review
-
-### Response Actions
-
-For any incident:
-
-1. **Assess impact** and assign severity level
-2. **Implement immediate mitigation** if possible
-3. **Communicate status** to stakeholders
-4. **Investigate root cause** and document findings
-5. **Implement permanent fix** and verify resolution
-6. **Conduct post-incident review** and update procedures
-
----
-
-## 7. Performance Optimization Requirements
-
-### Performance Benchmarks
-
-Production systems MUST maintain:
-
-- **Page load times** <2 seconds for 95th percentile
-- **API response times** <500ms for 95th percentile
-- **Database queries** <100ms for 95th percentile
-- **Cache hit rates** >90% for frequently accessed data
-- **Test suite execution** <30 seconds total
-
-### Optimization Strategies
-
-Regular optimization MUST include:
-
-- **Database query** analysis and optimization
-- **Cache strategy** review and tuning
-- **Bundle size** analysis and reduction
-- **Image optimization** and lazy loading
-- **Code splitting** and performance profiling
-
----
-
-## 8. Security Maintenance
-
-### Security Requirements
-
-Production systems MUST maintain:
-
-- **Dependency updates** within 30 days of security releases
-- **Security scanning** on every deployment
-- **Access control** reviews quarterly
-- **Data encryption** for all sensitive data
-- **Audit logging** for all administrative actions
-
-### Vulnerability Management
-
-Security maintenance MUST include:
-
-- **Automated dependency** scanning and updates
-- **Regular security** assessments and penetration testing
-- **Incident response** procedures for security events
-- **Data backup** and recovery procedures
-- **Compliance auditing** for regulatory requirements
-
----
-
-## 9. Documentation Maintenance
-
-### Required Documentation
-
-Production systems MUST maintain:
-
-- **API documentation** with current endpoints and schemas
-- **Deployment procedures** with step-by-step instructions
-- **Monitoring runbooks** for common issues
-- **Architecture diagrams** showing system components
-- **Change logs** documenting all modifications
-
-### Documentation Standards
-
-All documentation MUST be:
-
-- **Version controlled** alongside code
-- **Automatically generated** where possible
-- **Regularly reviewed** and updated
-- **Accessible** to all team members
-- **Searchable** and well-organized
-
----
-
-## 10. Capacity Planning and Scaling
-
-### Capacity Monitoring
-
-Production systems MUST track:
-
-- **User growth** and usage patterns
-- **Resource utilization** trends over time
-- **Performance metrics** under varying loads
-- **Storage requirements** and growth projections
-- **Network bandwidth** usage and capacity
-
-### Scaling Strategies
-
-Capacity planning MUST include:
-
-- **Horizontal scaling** capabilities for increased load
-- **Vertical scaling** options for resource constraints
-- **Database scaling** strategies for data growth
-- **CDN optimization** for global performance
-- **Cost optimization** for efficient resource usage
-
----
-
-## 11. Continuous Improvement
-
-### Regular Reviews
-
-Production systems MUST have:
-
-- **Weekly** performance and error rate reviews
-- **Monthly** compliance and quality assessments
-- **Quarterly** architecture and security reviews
-- **Annual** technology stack and dependency audits
-- **Post-incident** reviews for all P0/P1 incidents
-
-### Improvement Metrics
-
-Track and improve:
-
-- **Mean time to detection** (MTTD) for issues
-- **Mean time to resolution** (MTTR) for incidents
-- **Deployment frequency** and success rates
-- **Change failure rate** and rollback frequency
-- **Customer satisfaction** and user experience metrics
-
----
-
-## 12. Final Rule
-
-> **Production systems require continuous vigilance and proactive maintenance.**  
-> **Quality standards achieved must be maintained, not just monitored.**  
-> **Every change is an opportunity to improve, not just add features.**
-
-**Enforcement**: Production maintenance standards will be validated through automated monitoring and regular audits.
-
-**Accountability**: All team members are responsible for maintaining production quality and responding to issues promptly.
-
-**Continuous Improvement**: Regular reviews of maintenance procedures to ensure they support system reliability and team productivity.
+- Public availability is a possible future state.
+- Current architecture preserves clear seams for future authentication, scaling, and observability.
+- No public-facing commitments are implied by the current operating model.
