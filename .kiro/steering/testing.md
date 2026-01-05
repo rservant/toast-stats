@@ -63,12 +63,12 @@ All testing decisions MUST follow these principles:
 
 The system SHOULD broadly follow this distribution:
 
-| Layer               | Purpose                          |
-|---------------------|----------------------------------|
-| Unit Tests          | Core logic and rules             |
-| Integration Tests   | Persistence and contracts        |
-| End-to-End Tests    | Critical workflows only          |
-| Exploratory Testing | Discovery and understanding      |
+| Layer               | Purpose                     |
+| ------------------- | --------------------------- |
+| Unit Tests          | Core logic and rules        |
+| Integration Tests   | Persistence and contracts   |
+| End-to-End Tests    | Critical workflows only     |
+| Exploratory Testing | Discovery and understanding |
 
 This is guidance, not enforcement.  
 Kiro SHOULD reason qualitatively, not mechanically.
@@ -130,7 +130,7 @@ Any logic that is:
 MUST be protected by tests that:
 
 - Name the rule being protected
-- Explain *why* the rule exists
+- Explain _why_ the rule exists
 - Cover boundary conditions
 
 ---
@@ -140,6 +140,7 @@ MUST be protected by tests that:
 Refactoring MUST NOT proceed without test protection.
 
 Rule:
+
 > No refactor without tests.  
 > No tests without understanding.
 

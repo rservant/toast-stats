@@ -10,6 +10,12 @@ export const config = {
     'https://dashboard.toastmasters.org',
   cache: {
     ttl: parseInt(process.env.CACHE_TTL || '900', 10),
+    dir: process.env.CACHE_DIR || './cache',
+  },
+  snapshots: {
+    maxSnapshots: parseInt(process.env.SNAPSHOT_MAX_COUNT || '100', 10),
+    maxAgeDays: parseInt(process.env.SNAPSHOT_MAX_AGE_DAYS || '30', 10),
+    enableCompression: process.env.SNAPSHOT_ENABLE_COMPRESSION === 'true',
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),

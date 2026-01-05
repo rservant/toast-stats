@@ -21,6 +21,10 @@ import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
+import { FileSnapshotStore } from './FileSnapshotStore.js'
+import { RefreshService } from './RefreshService.js'
+import { SnapshotStore } from '../types/snapshots.js'
+import { config } from '../config/index.js'
 
 /**
  * Production configuration provider
@@ -110,6 +114,16 @@ export interface ProductionServiceFactory {
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager
+
+  /**
+   * Create SnapshotStore instance
+   */
+  createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore
+
+  /**
+   * Create RefreshService instance
+   */
+  createRefreshService(snapshotStore?: SnapshotStore): RefreshService
 
   /**
    * Cleanup all resources
@@ -212,6 +226,27 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
+    // Register SnapshotStore
+    container.register(
+      ServiceTokens.SnapshotStore,
+      createServiceFactory(
+        (container: ServiceContainer) => {
+          const cacheConfig = container.resolve(
+            ServiceTokens.CacheConfigService
+          )
+          return new FileSnapshotStore({
+            cacheDir: cacheConfig.getCacheDirectory(),
+            maxSnapshots: config.snapshots.maxSnapshots,
+            maxAgeDays: config.snapshots.maxAgeDays,
+            enableCompression: config.snapshots.enableCompression,
+          })
+        },
+        async () => {
+          // FileSnapshotStore doesn't have dispose method
+        }
+      )
+    )
+
     this.containers.push(container)
     return container
   }
@@ -276,6 +311,31 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
+   * Create SnapshotStore instance
+   */
+  createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore {
+    const config = cacheConfig || this.createCacheConfigService()
+    const service = new FileSnapshotStore({
+      cacheDir: config.getCacheDirectory(),
+      maxSnapshots: 100,
+      maxAgeDays: 30,
+      enableCompression: false,
+    })
+    // FileSnapshotStore doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
+   * Create RefreshService instance
+   */
+  createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
+    const store = snapshotStore || this.createSnapshotStore()
+    const service = new RefreshService(store)
+    // RefreshService doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
    * Cleanup all resources
    */
   async cleanup(): Promise<void> {
@@ -320,6 +380,7 @@ export const ServiceTokens = {
     CircuitBreakerManager
   ),
   Logger: createServiceToken('Logger', ProductionLogger),
+  SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
 }
 
 /**

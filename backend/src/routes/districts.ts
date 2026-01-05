@@ -36,6 +36,7 @@ import type {
   DailyReportDetailResponse,
   BackfillRequest,
 } from '../types/districts.js'
+import type { Snapshot } from '../types/snapshots.js'
 
 const router = Router()
 
@@ -52,6 +53,9 @@ const toastmastersAPI = useMockData
 const productionFactory = getProductionServiceFactory()
 const cacheConfig = productionFactory.createCacheConfigService()
 const cacheDirectory = cacheConfig.getCacheDirectory()
+
+// Initialize snapshot store for serving data from snapshots
+const snapshotStore = productionFactory.createSnapshotStore(cacheConfig)
 
 // Initialize services with configured cache directory
 const cacheManager = new CacheManager(cacheDirectory)
@@ -102,68 +106,341 @@ function validateDistrictId(districtId: string): boolean {
 }
 
 /**
+ * Helper function to serve data from snapshots with proper error handling
+ * Returns snapshot data with metadata or sends appropriate error response
+ */
+async function serveFromSnapshot<T>(
+  res: Response,
+  dataExtractor: (snapshot: Snapshot) => T,
+  errorContext: string
+): Promise<T | null> {
+  const startTime = Date.now()
+  const operationId = `read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  logger.info('Starting snapshot read operation', {
+    operation: 'serveFromSnapshot',
+    operation_id: operationId,
+    context: errorContext,
+  })
+
+  try {
+    const snapshot = await snapshotStore.getLatestSuccessful()
+
+    if (!snapshot) {
+      const duration = Date.now() - startTime
+      logger.warn('No successful snapshot available for read operation', {
+        operation: 'serveFromSnapshot',
+        operation_id: operationId,
+        context: errorContext,
+        duration_ms: duration,
+      })
+
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
+        },
+      })
+      return null
+    }
+
+    logger.info('Retrieved snapshot for read operation', {
+      operation: 'serveFromSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      created_at: snapshot.created_at,
+      schema_version: snapshot.schema_version,
+      calculation_version: snapshot.calculation_version,
+      district_count: snapshot.payload.districts.length,
+      context: errorContext,
+    })
+
+    const data = dataExtractor(snapshot)
+
+    // Add snapshot metadata to the response
+    const responseWithMetadata = {
+      ...data,
+      _snapshot_metadata: {
+        snapshot_id: snapshot.snapshot_id,
+        created_at: snapshot.created_at,
+        schema_version: snapshot.schema_version,
+        calculation_version: snapshot.calculation_version,
+        data_as_of: snapshot.payload.metadata.dataAsOfDate,
+      },
+    }
+
+    const duration = Date.now() - startTime
+    logger.info('Snapshot read operation completed successfully', {
+      operation: 'serveFromSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      context: errorContext,
+      duration_ms: duration,
+    })
+
+    return responseWithMetadata as T
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Snapshot read operation failed', {
+      operation: 'serveFromSnapshot',
+      operation_id: operationId,
+      context: errorContext,
+      error: errorMessage,
+      duration_ms: duration,
+    })
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'SNAPSHOT_ERROR',
+        message: `Failed to ${errorContext}`,
+        details: errorResponse.details,
+      },
+    })
+    return null
+  }
+}
+
+/**
+ * Helper function to serve district-specific data from snapshots
+ * Handles district not found cases specifically
+ */
+async function serveDistrictFromSnapshot<T>(
+  res: Response,
+  districtId: string,
+  dataExtractor: (district: DistrictStatistics) => T,
+  errorContext: string
+): Promise<T | null> {
+  const startTime = Date.now()
+  const operationId = `district_read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  logger.info('Starting district-specific snapshot read operation', {
+    operation: 'serveDistrictFromSnapshot',
+    operation_id: operationId,
+    district_id: districtId,
+    context: errorContext,
+  })
+
+  try {
+    const snapshot = await snapshotStore.getLatestSuccessful()
+
+    if (!snapshot) {
+      const duration = Date.now() - startTime
+      logger.warn(
+        'No successful snapshot available for district read operation',
+        {
+          operation: 'serveDistrictFromSnapshot',
+          operation_id: operationId,
+          district_id: districtId,
+          context: errorContext,
+          duration_ms: duration,
+        }
+      )
+
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
+        },
+      })
+      return null
+    }
+
+    logger.info('Retrieved snapshot for district read operation', {
+      operation: 'serveDistrictFromSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+      created_at: snapshot.created_at,
+      schema_version: snapshot.schema_version,
+      calculation_version: snapshot.calculation_version,
+      total_districts: snapshot.payload.districts.length,
+      context: errorContext,
+    })
+
+    // Find the specific district in the snapshot
+    const district = snapshot.payload.districts.find(
+      (d: DistrictStatistics) => d.districtId === districtId
+    )
+
+    if (!district) {
+      const duration = Date.now() - startTime
+      logger.warn('District not found in snapshot', {
+        operation: 'serveDistrictFromSnapshot',
+        operation_id: operationId,
+        snapshot_id: snapshot.snapshot_id,
+        district_id: districtId,
+        available_districts: snapshot.payload.districts
+          .map((d: DistrictStatistics) => d.districtId)
+          .slice(0, 10), // Log first 10 district IDs
+        total_districts: snapshot.payload.districts.length,
+        context: errorContext,
+        duration_ms: duration,
+      })
+
+      res.status(404).json({
+        error: {
+          code: 'DISTRICT_NOT_FOUND',
+          message: 'District not found',
+        },
+      })
+      return null
+    }
+
+    logger.debug('Found district in snapshot', {
+      operation: 'serveDistrictFromSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+      district_name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
+    })
+
+    const data = dataExtractor(district)
+
+    // Add snapshot metadata to the response
+    const responseWithMetadata = {
+      ...data,
+      _snapshot_metadata: {
+        snapshot_id: snapshot.snapshot_id,
+        created_at: snapshot.created_at,
+        schema_version: snapshot.schema_version,
+        calculation_version: snapshot.calculation_version,
+        data_as_of: snapshot.payload.metadata.dataAsOfDate,
+      },
+    }
+
+    const duration = Date.now() - startTime
+    logger.info('District snapshot read operation completed successfully', {
+      operation: 'serveDistrictFromSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+      context: errorContext,
+      duration_ms: duration,
+    })
+
+    return responseWithMetadata as T
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('District snapshot read operation failed', {
+      operation: 'serveDistrictFromSnapshot',
+      operation_id: operationId,
+      district_id: districtId,
+      context: errorContext,
+      error: errorMessage,
+      duration_ms: duration,
+    })
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'SNAPSHOT_ERROR',
+        message: `Failed to ${errorContext}`,
+        details: errorResponse.details,
+      },
+    })
+    return null
+  }
+}
+
+/**
  * GET /api/districts
- * Fetch available districts with caching
+ * Fetch available districts from latest snapshot
  */
 router.get(
   '/',
   cacheMiddleware({
     ttl: 900, // 15 minutes
   }),
-  async (_req: Request, res: Response) => {
-    try {
-      // Fetch districts from Toastmasters API
-      const apiResponse = await toastmastersAPI.getDistricts()
+  async (req: Request, res: Response) => {
+    const requestId = `districts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      // Transform response to internal format
-      const districts = transformDistrictsResponse(
-        apiResponse
-      ) as DistrictsResponse
+    logger.info('Received request for districts list', {
+      operation: 'GET /api/districts',
+      request_id: requestId,
+      user_agent: req.get('user-agent'),
+      ip: req.ip,
+    })
 
-      res.json(districts)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+    const data = await serveFromSnapshot(
+      res,
+      snapshot => {
+        logger.debug('Extracting districts list from snapshot', {
+          operation: 'GET /api/districts',
+          request_id: requestId,
+          snapshot_id: snapshot.snapshot_id,
+          total_districts: snapshot.payload.districts.length,
+        })
 
-      res.status(500).json({
-        error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch districts',
-          details: errorResponse.details,
-        },
+        // Extract districts list from snapshot
+        const districts = snapshot.payload.districts.map(
+          (district: DistrictStatistics) => ({
+            districtId: district.districtId,
+            name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
+            // Add any other district-level fields needed for the districts list
+          })
+        )
+
+        return transformDistrictsResponse({ districts }) as DistrictsResponse
+      },
+      'fetch districts from snapshot'
+    )
+
+    if (data) {
+      logger.info('Successfully served districts list', {
+        operation: 'GET /api/districts',
+        request_id: requestId,
+        snapshot_id: (data as { _snapshot_metadata?: { snapshot_id?: string } })
+          ._snapshot_metadata?.snapshot_id,
+        district_count: Array.isArray(data.districts)
+          ? data.districts.length
+          : 0,
       })
+      res.json(data)
     }
   }
 )
 
 /**
  * GET /api/districts/rankings
- * Fetch all districts with performance rankings
- * Optional query param: date (YYYY-MM-DD)
+ * Fetch all districts with performance rankings from latest snapshot
+ * Optional query param: date (YYYY-MM-DD) - currently ignored as we serve from snapshot
  */
 router.get(
   '/rankings',
   cacheMiddleware({
     ttl: 900, // 15 minutes
   }),
-  async (req: Request, res: Response) => {
-    try {
-      const date = req.query.date as string | undefined
+  async (_req: Request, res: Response) => {
+    const data = await serveFromSnapshot(
+      res,
+      snapshot => {
+        // Extract rankings data from all districts in snapshot
+        const rankings = snapshot.payload.districts.map(
+          (district: DistrictStatistics) => ({
+            districtId: district.districtId,
+            name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
+            rank: null, // DistrictStatistics doesn't have rank field
+            score: null, // DistrictStatistics doesn't have score field
+            // Add other ranking-related fields as needed
+          })
+        )
 
-      // Fetch district rankings (with optional date)
-      const rankings = await toastmastersAPI.getAllDistrictsRankings(date)
+        return { districts: rankings }
+      },
+      'fetch district rankings from snapshot'
+    )
 
-      res.json(rankings)
-    } catch (error) {
-      console.error('Error in rankings endpoint:', error)
-      const errorResponse = transformErrorResponse(error)
-
-      res.status(500).json({
-        error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch district rankings',
-          details: errorResponse.details,
-        },
-      })
+    if (data) {
+      res.json(data)
     }
   }
 )
@@ -365,7 +642,7 @@ router.get('/available-dates', async (_req: Request, res: Response) => {
 
 /**
  * GET /api/districts/:districtId/statistics
- * Fetch district statistics with caching
+ * Fetch district statistics from latest snapshot
  */
 router.get(
   '/:districtId/statistics',
@@ -375,58 +652,68 @@ router.get(
       generateDistrictCacheKey(req.params.districtId, 'statistics'),
   }),
   async (req: Request, res: Response) => {
-    try {
-      const { districtId } = req.params
+    const { districtId } = req.params
+    const requestId = `district_stats_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
+    logger.info('Received request for district statistics', {
+      operation: 'GET /api/districts/:districtId/statistics',
+      request_id: requestId,
+      district_id: districtId,
+      user_agent: req.get('user-agent'),
+      ip: req.ip,
+    })
 
-      // Fetch statistics from Toastmasters API
-      const apiResponse =
-        await toastmastersAPI.getDistrictStatistics(districtId)
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      logger.warn('Invalid district ID format in request', {
+        operation: 'GET /api/districts/:districtId/statistics',
+        request_id: requestId,
+        district_id: districtId,
+      })
 
-      // Transform response to internal format
-      const statistics = transformDistrictStatisticsResponse(
-        apiResponse
-      ) as DistrictStatistics
-
-      res.json(statistics)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check if it's a 404 error (district not found)
-      if (errorResponse.code.includes('404')) {
-        res.status(404).json({
-          error: {
-            code: 'DISTRICT_NOT_FOUND',
-            message: 'District not found',
-          },
-        })
-        return
-      }
-
-      res.status(500).json({
+      res.status(400).json({
         error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch district statistics',
-          details: errorResponse.details,
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
         },
       })
+      return
+    }
+
+    const data = await serveDistrictFromSnapshot(
+      res,
+      districtId,
+      district => {
+        logger.debug('Extracting district statistics from snapshot', {
+          operation: 'GET /api/districts/:districtId/statistics',
+          request_id: requestId,
+          district_id: districtId,
+          district_name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
+        })
+
+        return transformDistrictStatisticsResponse(
+          district
+        ) as DistrictStatistics
+      },
+      'fetch district statistics from snapshot'
+    )
+
+    if (data) {
+      logger.info('Successfully served district statistics', {
+        operation: 'GET /api/districts/:districtId/statistics',
+        request_id: requestId,
+        district_id: districtId,
+        snapshot_id: (data as { _snapshot_metadata?: { snapshot_id?: string } })
+          ._snapshot_metadata?.snapshot_id,
+      })
+      res.json(data)
     }
   }
 )
 
 /**
  * GET /api/districts/:districtId/membership-history
- * Fetch membership history with query parameters
+ * Fetch membership history from latest snapshot
  */
 router.get(
   '/:districtId/membership-history',
@@ -438,73 +725,58 @@ router.get(
       }),
   }),
   async (req: Request, res: Response) => {
-    try {
-      const { districtId } = req.params
-      const { months } = req.query
+    const { districtId } = req.params
+    const { months } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
-
-      // Validate months parameter
-      const monthsNum = months ? parseInt(months as string, 10) : 12
-      if (isNaN(monthsNum) || monthsNum < 1 || monthsNum > 24) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_MONTHS_PARAMETER',
-            message: 'Months parameter must be a number between 1 and 24',
-          },
-        })
-        return
-      }
-
-      // Fetch membership history from Toastmasters API
-      const apiResponse = await toastmastersAPI.getMembershipHistory(
-        districtId,
-        monthsNum
-      )
-
-      // Transform response to internal format
-      const history = transformMembershipHistoryResponse(
-        apiResponse
-      ) as MembershipHistoryResponse
-
-      res.json(history)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check if it's a 404 error (district not found)
-      if (errorResponse.code.includes('404')) {
-        res.status(404).json({
-          error: {
-            code: 'DISTRICT_NOT_FOUND',
-            message: 'District not found',
-          },
-        })
-        return
-      }
-
-      res.status(500).json({
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
         error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch membership history',
-          details: errorResponse.details,
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
         },
       })
+      return
+    }
+
+    // Validate months parameter
+    const monthsNum = months ? parseInt(months as string, 10) : 12
+    if (isNaN(monthsNum) || monthsNum < 1 || monthsNum > 24) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_MONTHS_PARAMETER',
+          message: 'Months parameter must be a number between 1 and 24',
+        },
+      })
+      return
+    }
+
+    const data = await serveDistrictFromSnapshot(
+      res,
+      districtId,
+      district => {
+        // Extract membership history from district data
+        // Note: The months parameter is currently ignored since we serve from snapshot
+        // The snapshot contains the most recent data available
+        const membershipHistory =
+          (district as DistrictStatistics & { membershipHistory?: unknown[] })
+            .membershipHistory || []
+        return transformMembershipHistoryResponse({
+          membershipHistory,
+        }) as MembershipHistoryResponse
+      },
+      'fetch membership history from snapshot'
+    )
+
+    if (data) {
+      res.json(data)
     }
   }
 )
 
 /**
  * GET /api/districts/:districtId/clubs
- * Fetch clubs for a district
+ * Fetch clubs for a district from latest snapshot
  */
 router.get(
   '/:districtId/clubs',
@@ -514,55 +786,38 @@ router.get(
       generateDistrictCacheKey(req.params.districtId, 'clubs'),
   }),
   async (req: Request, res: Response) => {
-    try {
-      const { districtId } = req.params
+    const { districtId } = req.params
 
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
-
-      // Fetch clubs from Toastmasters API
-      const apiResponse = await toastmastersAPI.getClubs(districtId)
-
-      // Transform response to internal format
-      const clubs = transformClubsResponse(apiResponse) as ClubsResponse
-
-      res.json(clubs)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check if it's a 404 error (district not found)
-      if (errorResponse.code.includes('404')) {
-        res.status(404).json({
-          error: {
-            code: 'DISTRICT_NOT_FOUND',
-            message: 'District not found',
-          },
-        })
-        return
-      }
-
-      res.status(500).json({
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
         error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch clubs',
-          details: errorResponse.details,
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
         },
       })
+      return
+    }
+
+    const data = await serveDistrictFromSnapshot(
+      res,
+      districtId,
+      district =>
+        transformClubsResponse({
+          clubs: district.clubs || [],
+        }) as ClubsResponse,
+      'fetch clubs from snapshot'
+    )
+
+    if (data) {
+      res.json(data)
     }
   }
 )
 
 /**
  * GET /api/districts/:districtId/educational-awards
- * Fetch educational awards history with query parameters
+ * Fetch educational awards history from latest snapshot
  */
 router.get(
   '/:districtId/educational-awards',
@@ -574,64 +829,48 @@ router.get(
       }),
   }),
   async (req: Request, res: Response) => {
-    try {
-      const { districtId } = req.params
-      const { months } = req.query
+    const { districtId } = req.params
+    const { months } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
-
-      // Validate months parameter
-      const monthsNum = months ? parseInt(months as string, 10) : 12
-      if (isNaN(monthsNum) || monthsNum < 1 || monthsNum > 24) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_MONTHS_PARAMETER',
-            message: 'Months parameter must be a number between 1 and 24',
-          },
-        })
-        return
-      }
-
-      // Fetch educational awards from Toastmasters API
-      const apiResponse = await toastmastersAPI.getEducationalAwards(
-        districtId,
-        monthsNum
-      )
-
-      // Transform response to internal format
-      const awards = transformEducationalAwardsResponse(apiResponse)
-
-      res.json(awards)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check if it's a 404 error (district not found)
-      if (errorResponse.code.includes('404')) {
-        res.status(404).json({
-          error: {
-            code: 'DISTRICT_NOT_FOUND',
-            message: 'District not found',
-          },
-        })
-        return
-      }
-
-      res.status(500).json({
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
         error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch educational awards',
-          details: errorResponse.details,
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
         },
       })
+      return
+    }
+
+    // Validate months parameter
+    const monthsNum = months ? parseInt(months as string, 10) : 12
+    if (isNaN(monthsNum) || monthsNum < 1 || monthsNum > 24) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_MONTHS_PARAMETER',
+          message: 'Months parameter must be a number between 1 and 24',
+        },
+      })
+      return
+    }
+
+    const data = await serveDistrictFromSnapshot(
+      res,
+      districtId,
+      district => {
+        // Extract educational awards from district data
+        // Note: The months parameter is currently ignored since we serve from snapshot
+        const educationalAwards =
+          (district as DistrictStatistics & { educationalAwards?: unknown[] })
+            .educationalAwards || []
+        return transformEducationalAwardsResponse({ educationalAwards })
+      },
+      'fetch educational awards from snapshot'
+    )
+
+    if (data) {
+      res.json(data)
     }
   }
 )
@@ -651,7 +890,8 @@ function validateDateFormat(date: string): boolean {
 
 /**
  * GET /api/districts/:districtId/daily-reports
- * Fetch daily reports for a date range
+ * Fetch daily reports for a date range from latest snapshot
+ * Note: Date range parameters are currently ignored as we serve from snapshot
  */
 router.get(
   '/:districtId/daily-reports',
@@ -664,217 +904,6 @@ router.get(
       }),
   }),
   async (req: Request, res: Response) => {
-    try {
-      const { districtId } = req.params
-      const { startDate, endDate } = req.query
-
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
-
-      // Validate date parameters
-      if (!startDate || !endDate) {
-        res.status(400).json({
-          error: {
-            code: 'MISSING_DATE_PARAMETERS',
-            message: 'Both startDate and endDate query parameters are required',
-          },
-        })
-        return
-      }
-
-      if (typeof startDate !== 'string' || typeof endDate !== 'string') {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'Date parameters must be strings',
-          },
-        })
-        return
-      }
-
-      if (!validateDateFormat(startDate) || !validateDateFormat(endDate)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'Dates must be in YYYY-MM-DD format',
-          },
-        })
-        return
-      }
-
-      // Validate date range
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-
-      if (start > end) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_RANGE',
-            message: 'startDate must be before or equal to endDate',
-          },
-        })
-        return
-      }
-
-      // Limit date range to prevent excessive data requests (e.g., max 90 days)
-      const daysDiff = Math.ceil(
-        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-      )
-      if (daysDiff > 90) {
-        res.status(400).json({
-          error: {
-            code: 'DATE_RANGE_TOO_LARGE',
-            message: 'Date range cannot exceed 90 days',
-          },
-        })
-        return
-      }
-
-      // Fetch daily reports from Toastmasters API
-      const apiResponse = await toastmastersAPI.getDailyReports(
-        districtId,
-        startDate,
-        endDate
-      )
-
-      // Transform response to internal format
-      const reports = transformDailyReportsResponse(
-        apiResponse
-      ) as DailyReportsResponse
-
-      res.json(reports)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check if it's a 404 error (district not found)
-      if (errorResponse.code.includes('404')) {
-        res.status(404).json({
-          error: {
-            code: 'DISTRICT_NOT_FOUND',
-            message: 'District not found',
-          },
-        })
-        return
-      }
-
-      res.status(500).json({
-        error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch daily reports',
-          details: errorResponse.details,
-        },
-      })
-    }
-  }
-)
-
-/**
- * GET /api/districts/:districtId/daily-reports/:date
- * Fetch detailed daily report for a specific date
- */
-router.get(
-  '/:districtId/daily-reports/:date',
-  cacheMiddleware({
-    ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(
-        req.params.districtId,
-        `daily-reports/${req.params.date}`
-      ),
-  }),
-  async (req: Request, res: Response) => {
-    try {
-      const { districtId, date } = req.params
-
-      // Validate district ID
-      if (!validateDistrictId(districtId)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: 'Invalid district ID format',
-          },
-        })
-        return
-      }
-
-      // Validate date format
-      if (!validateDateFormat(date)) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'Date must be in YYYY-MM-DD format',
-          },
-        })
-        return
-      }
-
-      // Validate date is not in the future
-      const requestedDate = new Date(date)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
-      if (requestedDate > today) {
-        res.status(400).json({
-          error: {
-            code: 'FUTURE_DATE_NOT_ALLOWED',
-            message: 'Cannot fetch reports for future dates',
-          },
-        })
-        return
-      }
-
-      // Fetch daily report detail from Toastmasters API
-      const apiResponse = await toastmastersAPI.getDailyReportDetail(
-        districtId,
-        date
-      )
-
-      // Transform response to internal format
-      const report = transformDailyReportDetailResponse(
-        apiResponse
-      ) as DailyReportDetailResponse
-
-      res.json(report)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check if it's a 404 error (district or report not found)
-      if (errorResponse.code.includes('404')) {
-        res.status(404).json({
-          error: {
-            code: 'REPORT_NOT_FOUND',
-            message: 'Daily report not found for the specified date',
-          },
-        })
-        return
-      }
-
-      res.status(500).json({
-        error: {
-          code: errorResponse.code || 'FETCH_ERROR',
-          message: 'Failed to fetch daily report detail',
-          details: errorResponse.details,
-        },
-      })
-    }
-  }
-)
-
-/**
- * GET /api/districts/:districtId/rank-history
- * Fetch historical rank data for a district
- * Query params: startDate (optional), endDate (optional)
- */
-router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
-  try {
     const { districtId } = req.params
     const { startDate, endDate } = req.query
 
@@ -889,24 +918,203 @@ router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
       return
     }
 
-    // Fetch rank history from Toastmasters API
-    const rankHistory = await toastmastersAPI.getDistrictRankHistory(
+    // Validate date parameters (for backward compatibility)
+    if (!startDate || !endDate) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_DATE_PARAMETERS',
+          message: 'Both startDate and endDate query parameters are required',
+        },
+      })
+      return
+    }
+
+    if (typeof startDate !== 'string' || typeof endDate !== 'string') {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'Date parameters must be strings',
+        },
+      })
+      return
+    }
+
+    if (!validateDateFormat(startDate) || !validateDateFormat(endDate)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'Dates must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Validate date range
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    if (start > end) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_RANGE',
+          message: 'startDate must be before or equal to endDate',
+        },
+      })
+      return
+    }
+
+    // Limit date range to prevent excessive data requests (e.g., max 90 days)
+    const daysDiff = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    )
+    if (daysDiff > 90) {
+      res.status(400).json({
+        error: {
+          code: 'DATE_RANGE_TOO_LARGE',
+          message: 'Date range cannot exceed 90 days',
+        },
+      })
+      return
+    }
+
+    const data = await serveDistrictFromSnapshot(
+      res,
       districtId,
-      startDate as string | undefined,
-      endDate as string | undefined
+      district => {
+        // Extract daily reports from district data
+        // Note: Date range filtering is not applied since we serve from snapshot
+        const dailyReports =
+          (district as DistrictStatistics & { dailyReports?: unknown[] })
+            .dailyReports || []
+        return transformDailyReportsResponse({
+          dailyReports,
+        }) as DailyReportsResponse
+      },
+      'fetch daily reports from snapshot'
     )
 
-    res.json(rankHistory)
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
+    if (data) {
+      res.json(data)
+    }
+  }
+)
 
-    res.status(500).json({
+/**
+ * GET /api/districts/:districtId/daily-reports/:date
+ * Fetch detailed daily report for a specific date from latest snapshot
+ * Note: Specific date parameter is currently ignored as we serve from snapshot
+ */
+router.get(
+  '/:districtId/daily-reports/:date',
+  cacheMiddleware({
+    ttl: 900, // 15 minutes
+    keyGenerator: req =>
+      generateDistrictCacheKey(
+        req.params.districtId,
+        `daily-reports/${req.params.date}`
+      ),
+  }),
+  async (req: Request, res: Response) => {
+    const { districtId, date } = req.params
+
+    // Validate district ID
+    if (!validateDistrictId(districtId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    // Validate date format
+    if (!validateDateFormat(date)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DATE_FORMAT',
+          message: 'Date must be in YYYY-MM-DD format',
+        },
+      })
+      return
+    }
+
+    // Validate date is not in the future
+    const requestedDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (requestedDate > today) {
+      res.status(400).json({
+        error: {
+          code: 'FUTURE_DATE_NOT_ALLOWED',
+          message: 'Cannot fetch reports for future dates',
+        },
+      })
+      return
+    }
+
+    const data = await serveDistrictFromSnapshot(
+      res,
+      districtId,
+      district => {
+        // Extract daily report detail from district data
+        // Note: Specific date filtering is not applied since we serve from snapshot
+        // We return the most recent daily report data available
+        const districtAny = district as DistrictStatistics & {
+          dailyReportDetail?: unknown
+          dailyReports?: unknown[]
+        }
+        const dailyReportDetail =
+          districtAny.dailyReportDetail || districtAny.dailyReports?.[0] || {}
+        return transformDailyReportDetailResponse(
+          dailyReportDetail
+        ) as DailyReportDetailResponse
+      },
+      'fetch daily report detail from snapshot'
+    )
+
+    if (data) {
+      res.json(data)
+    }
+  }
+)
+
+/**
+ * GET /api/districts/:districtId/rank-history
+ * Fetch historical rank data for a district from latest snapshot
+ * Query params: startDate (optional), endDate (optional) - currently ignored
+ */
+router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
+  const { districtId } = req.params
+
+  // Validate district ID
+  if (!validateDistrictId(districtId)) {
+    res.status(400).json({
       error: {
-        code: errorResponse.code || 'FETCH_ERROR',
-        message: 'Failed to fetch district rank history',
-        details: errorResponse.details,
+        code: 'INVALID_DISTRICT_ID',
+        message: 'Invalid district ID format',
       },
     })
+    return
+  }
+
+  const data = await serveDistrictFromSnapshot(
+    res,
+    districtId,
+    district => {
+      // Extract rank history from district data
+      // Note: Date range filtering is not applied since we serve from snapshot
+      const rankHistory =
+        (district as DistrictStatistics & { rankHistory?: unknown[] })
+          .rankHistory || []
+      return { rankHistory }
+    },
+    'fetch district rank history from snapshot'
+  )
+
+  if (data) {
+    res.json(data)
   }
 })
 

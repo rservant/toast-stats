@@ -36,8 +36,8 @@ Classify risk as:
 ## 3. Protection
 
 - What test(s) would fail if this broke?
-- Do the tests fail for the *right reason*?
-- Do test names explain *why* the rule exists?
+- Do the tests fail for the _right reason_?
+- Do test names explain _why_ the rule exists?
 
 If no test exists:
 
@@ -64,7 +64,7 @@ If no test exists:
 
 ## 6. Justified Gaps
 
-- What is intentionally *not* tested?
+- What is intentionally _not_ tested?
 - Why is that acceptable?
 - What would prompt adding tests later?
 

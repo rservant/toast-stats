@@ -8,6 +8,7 @@ import cors from 'cors'
 import districtRoutes from './routes/districts.js'
 import reconciliationRoutes from './routes/reconciliation.js'
 import assessmentRoutes from './modules/assessment/routes/assessmentRoutes.js'
+import adminRoutes from './routes/admin.js'
 import { logger } from './utils/logger.js'
 import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
 
@@ -88,6 +89,9 @@ app.use('/api/reconciliation', reconciliationRoutes)
 
 // Assessment routes
 app.use('/api/assessment', assessmentRoutes)
+
+// Admin routes
+app.use('/api/admin', adminRoutes)
 
 // Error handling middleware
 app.use(

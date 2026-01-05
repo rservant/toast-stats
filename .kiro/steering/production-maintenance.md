@@ -42,7 +42,7 @@ The application emphasizes correctness, usability, and low operational overhead 
   - calculation or scoring version
   - success or failure status
   - error information when applicable
-  
+
 ## Last-Known-Good Data
 
 - The application presents the most recent successful snapshot as the default data source.

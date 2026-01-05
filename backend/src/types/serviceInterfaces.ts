@@ -25,6 +25,11 @@ import type {
   LeadershipInsights,
 } from './analytics.js'
 import type {
+  Snapshot,
+  SnapshotMetadata,
+  SnapshotFilters,
+} from './snapshots.js'
+import type {
   CircuitBreakerOptions,
   CircuitBreaker,
   CircuitBreakerStats,
@@ -316,4 +321,19 @@ export interface ICacheUpdateManager {
   restoreDistrictCache(districtId: string): Promise<void>
   validateCacheIntegrity(districtId: string): Promise<boolean>
   dispose(): Promise<void>
+}
+
+/**
+ * Snapshot Store Interface
+ */
+export interface ISnapshotStore {
+  getLatestSuccessful(): Promise<Snapshot | null>
+  getLatest(): Promise<Snapshot | null>
+  writeSnapshot(snapshot: Snapshot): Promise<void>
+  listSnapshots(
+    limit?: number,
+    filters?: SnapshotFilters
+  ): Promise<SnapshotMetadata[]>
+  getSnapshot(snapshotId: string): Promise<Snapshot | null>
+  isReady(): Promise<boolean>
 }
