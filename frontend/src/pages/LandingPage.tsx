@@ -241,6 +241,83 @@ const LandingPage: React.FC = () => {
   }
 
   if (isError) {
+    // Check if this is a "no snapshots available" error
+    const errorResponse = (error as any)?.response?.data?.error
+    const isNoSnapshotError = errorResponse?.code === 'NO_SNAPSHOT_AVAILABLE'
+
+    if (isNoSnapshotError) {
+      return (
+        <div className="min-h-screen bg-gray-100" id="main-content">
+          <div className="container mx-auto px-4 py-8">
+            <div className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-8 max-w-2xl mx-auto">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-tm-loyal-blue rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-tm-black mb-3">
+                  Welcome to Toast-Stats!
+                </h2>
+                <p className="text-tm-black mb-6 text-lg">
+                  No data snapshots are available yet. To get started, you'll need to fetch data from the Toastmasters dashboard.
+                </p>
+                
+                <div className="bg-white rounded-lg p-6 mb-6 text-left">
+                  <h3 className="font-semibold text-tm-black mb-3">What happens next:</h3>
+                  <ul className="space-y-2 text-tm-black">
+                    <li className="flex items-start">
+                      <span className="text-tm-loyal-blue mr-2">1.</span>
+                      Click "Backfill Data" to fetch current and historical data
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-tm-loyal-blue mr-2">2.</span>
+                      The system will download data from the Toastmasters dashboard
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-tm-loyal-blue mr-2">3.</span>
+                      Once complete, district rankings and analytics will be available
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <BackfillButton 
+                    className="px-6 py-3 text-lg"
+                    onBackfillStart={() => {
+                      // Optionally show a success message or redirect
+                    }}
+                  />
+                  <button
+                    onClick={() => refetch()}
+                    className="px-6 py-3 bg-tm-cool-gray text-tm-black rounded-lg hover:bg-opacity-80 transition-colors"
+                  >
+                    Check Again
+                  </button>
+                </div>
+
+                <p className="text-sm text-tm-cool-gray mt-4">
+                  This is a one-time setup. Future visits will show your data immediately.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Handle other types of errors
     return (
       <div className="min-h-screen bg-gray-100" id="main-content">
         <div className="container mx-auto px-4 py-8">
@@ -251,6 +328,12 @@ const LandingPage: React.FC = () => {
             <p className="text-red-600">
               {(error as Error)?.message || 'Failed to load district rankings'}
             </p>
+            <button
+              onClick={() => refetch()}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       </div>

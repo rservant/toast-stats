@@ -11,6 +11,7 @@ import { RetryManager } from '../utils/RetryManager.js'
 import { CircuitBreaker, CircuitBreakerError } from '../utils/CircuitBreaker.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { DataValidator } from './DataValidator.js'
+import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import type {
   SnapshotStore,
   Snapshot,
@@ -41,7 +42,29 @@ interface RawData {
     durationMs: number
     districtCount: number
     errors: string[]
+    /** Per-district error tracking */
+    districtErrors: Map<string, DistrictError[]>
+    /** Successfully processed districts */
+    successfulDistricts: string[]
+    /** Failed districts */
+    failedDistricts: string[]
   }
+}
+
+/**
+ * Error information for a specific district
+ */
+interface DistrictError {
+  /** District ID that failed */
+  districtId: string
+  /** Type of operation that failed */
+  operation: 'districtPerformance' | 'divisionPerformance' | 'clubPerformance'
+  /** Error message */
+  error: string
+  /** Timestamp when error occurred */
+  timestamp: string
+  /** Whether this district should be retried in next refresh */
+  shouldRetry: boolean
 }
 
 /**
@@ -57,7 +80,7 @@ export interface RefreshResult {
   /** Any errors encountered during refresh */
   errors: string[]
   /** Status of the refresh operation */
-  status: 'success' | 'failed'
+  status: 'success' | 'partial' | 'failed'
   /** Additional metadata about the refresh */
   metadata: {
     /** Number of districts processed */
@@ -80,17 +103,21 @@ export class RefreshService {
   private readonly scraper: ToastmastersScraper
   private readonly validator: DataValidator
   private readonly snapshotStore: SnapshotStore
+  private readonly districtConfigService: DistrictConfigurationService
   private readonly retryOptions = RetryManager.getDashboardRetryOptions()
   private readonly scrapingCircuitBreaker: CircuitBreaker
 
   constructor(
     snapshotStore: SnapshotStore,
     scraper?: ToastmastersScraper,
-    validator?: DataValidator
+    validator?: DataValidator,
+    districtConfigService?: DistrictConfigurationService
   ) {
     this.snapshotStore = snapshotStore
     this.scraper = scraper || new ToastmastersScraper()
     this.validator = validator || new DataValidator()
+    this.districtConfigService =
+      districtConfigService || new DistrictConfigurationService()
 
     // Initialize circuit breaker for scraping operations
     this.scrapingCircuitBreaker =
@@ -120,6 +147,70 @@ export class RefreshService {
     })
 
     try {
+      // Step 0: Validate district configuration before starting refresh
+      logger.info('Validating district configuration', {
+        refreshId,
+        operation: 'executeRefresh',
+        phase: 'configuration_validation',
+      })
+
+      const configValidationResult = await this.validateConfiguration()
+
+      if (!configValidationResult.isValid) {
+        const errorMessage = `Invalid district configuration: ${configValidationResult.warnings.join('; ')}`
+        logger.error('Refresh failed due to invalid configuration', {
+          refreshId,
+          operation: 'executeRefresh',
+          phase: 'configuration_validation',
+          errors: configValidationResult.warnings,
+        })
+
+        // Create failed snapshot with configuration errors
+        const minimalData: NormalizedData = {
+          districts: [],
+          metadata: {
+            source: 'toastmasters-dashboard',
+            fetchedAt: new Date().toISOString(),
+            dataAsOfDate: new Date().toISOString().split('T')[0],
+            districtCount: 0,
+            processingDurationMs: Date.now() - startTime,
+          },
+        }
+
+        const failedSnapshot = await this.createSnapshot(
+          minimalData,
+          'failed',
+          [errorMessage]
+        )
+
+        const duration_ms = Date.now() - startTime
+        const completedAt = new Date().toISOString()
+
+        return {
+          success: false,
+          snapshot_id: failedSnapshot.snapshot_id,
+          duration_ms,
+          errors: [errorMessage],
+          status: 'failed',
+          metadata: {
+            districtCount: 0,
+            startedAt,
+            completedAt,
+            schemaVersion: this.getCurrentSchemaVersion(),
+            calculationVersion: this.getCurrentCalculationVersion(),
+          },
+        }
+      }
+
+      logger.info('District configuration validated successfully', {
+        refreshId,
+        operation: 'executeRefresh',
+        phase: 'configuration_validation',
+        configuredDistricts: configValidationResult.configuredDistricts.length,
+        validDistricts: configValidationResult.validDistricts.length,
+        warnings: configValidationResult.warnings.length,
+      })
+
       // Step 1: Scrape raw data from dashboard
       logger.info('Starting data scraping phase', {
         refreshId,
@@ -227,10 +318,34 @@ export class RefreshService {
         warningCount: validationResult.warnings.length,
       })
 
+      // Determine snapshot status based on scraping results
+      let snapshotStatus: SnapshotStatus = 'success'
+      const allErrors: string[] = [...validationResult.warnings]
+
+      // Check if we had any district failures during scraping
+      if (rawData.scrapingMetadata.failedDistricts.length > 0) {
+        snapshotStatus = 'partial'
+        allErrors.push(
+          `Partial snapshot: ${rawData.scrapingMetadata.failedDistricts.length} districts failed during data collection: ${rawData.scrapingMetadata.failedDistricts.join(', ')}`
+        )
+
+        logger.info('Creating partial snapshot due to district failures', {
+          refreshId,
+          operation: 'executeRefresh',
+          phase: 'snapshot_creation',
+          status: 'partial',
+          successfulDistricts:
+            rawData.scrapingMetadata.successfulDistricts.length,
+          failedDistricts: rawData.scrapingMetadata.failedDistricts.length,
+          failedDistrictIds: rawData.scrapingMetadata.failedDistricts,
+        })
+      }
+
       const successSnapshot = await this.createSnapshot(
         normalizedData,
-        'success',
-        validationResult.warnings // Include warnings but not as errors
+        snapshotStatus,
+        allErrors,
+        rawData.scrapingMetadata // Pass scraping metadata for detailed error tracking
       )
 
       const duration_ms = Date.now() - startTime
@@ -240,21 +355,24 @@ export class RefreshService {
         refreshId,
         snapshot_id: successSnapshot.snapshot_id,
         operation: 'executeRefresh',
-        status: 'success',
+        status: snapshotStatus,
         duration_ms,
         districtCount: normalizedData.districts.length,
         warnings: validationResult.warnings.length,
         completedAt,
         schemaVersion: successSnapshot.schema_version,
         calculationVersion: successSnapshot.calculation_version,
+        successfulDistricts:
+          rawData.scrapingMetadata.successfulDistricts.length,
+        failedDistricts: rawData.scrapingMetadata.failedDistricts.length,
       })
 
       return {
         success: true,
         snapshot_id: successSnapshot.snapshot_id,
         duration_ms,
-        errors: [],
-        status: 'success',
+        errors: allErrors,
+        status: snapshotStatus,
         metadata: {
           districtCount: normalizedData.districts.length,
           startedAt,
@@ -375,11 +493,16 @@ export class RefreshService {
   /**
    * Scrape raw data from Toastmasters dashboard
    * Integrates with existing ToastmastersScraper with retry logic and circuit breaker
+   * Only processes configured districts instead of all districts
+   * Implements resilient processing with detailed error tracking per district
    */
   private async scrapeData(): Promise<RawData> {
     const startTime = Date.now()
     const startTimeIso = new Date().toISOString()
     const errors: string[] = []
+    const districtErrors = new Map<string, DistrictError[]>()
+    const successfulDistricts: string[] = []
+    const failedDistricts: string[] = []
 
     logger.info(
       'Starting data scraping operation with circuit breaker protection'
@@ -417,14 +540,30 @@ export class RefreshService {
         circuitBreakerState: this.scrapingCircuitBreaker.getStats().state,
       })
 
-      // Step 2: Extract district IDs from the summary data
-      const districtIds = this.extractDistrictIds(allDistricts.result)
-      logger.info('Extracted district IDs', {
+      // Step 2: Get configured district IDs instead of extracting all
+      const districtIds = await this.getConfiguredDistrictIds(
+        allDistricts.result
+      )
+      logger.info('Using configured district IDs', {
         count: districtIds.length,
         districtIds,
       })
 
-      // Step 3: Fetch detailed data for each district with circuit breaker and retry
+      // Step 3: Check for previously failed districts that should be retried
+      const previouslyFailedDistricts =
+        await this.getPreviouslyFailedDistricts()
+      const districtsToRetry = previouslyFailedDistricts.filter(
+        d => districtIds.includes(d.districtId) && d.shouldRetry
+      )
+
+      if (districtsToRetry.length > 0) {
+        logger.info('Retrying previously failed districts', {
+          retryCount: districtsToRetry.length,
+          retryDistricts: districtsToRetry.map(d => d.districtId),
+        })
+      }
+
+      // Step 4: Fetch detailed data for each configured district with circuit breaker and retry
       const districtData = new Map<
         string,
         {
@@ -435,113 +574,64 @@ export class RefreshService {
       >()
 
       for (const districtId of districtIds) {
+        const districtStartTime = Date.now()
+        logger.debug('Processing district with resilient error handling', {
+          districtId,
+          isRetry: districtsToRetry.some(d => d.districtId === districtId),
+        })
+
         try {
-          logger.debug(
-            'Fetching district data with circuit breaker protection',
-            { districtId }
-          )
+          // Attempt to fetch all three data types for this district
+          const districtResults =
+            await this.fetchDistrictDataResilient(districtId)
 
-          // Fetch district performance data with circuit breaker
-          const districtPerformanceResult =
-            await this.scrapingCircuitBreaker.execute(
-              async () => {
-                const retryResult = await RetryManager.executeWithRetry(
-                  () => this.scraper.getDistrictPerformance(districtId),
-                  this.retryOptions,
-                  { operation: 'getDistrictPerformance', districtId }
-                )
+          if (districtResults.success) {
+            districtData.set(districtId, {
+              districtPerformance: districtResults.districtPerformance,
+              divisionPerformance: districtResults.divisionPerformance,
+              clubPerformance: districtResults.clubPerformance,
+            })
 
-                if (!retryResult.success) {
-                  throw retryResult.error || new Error('Retry operation failed')
-                }
+            successfulDistricts.push(districtId)
 
-                return retryResult
-              },
-              { operation: 'getDistrictPerformance', districtId }
-            )
+            logger.debug('Successfully fetched district data', {
+              districtId,
+              districtRecords: districtResults.districtPerformance.length,
+              divisionRecords: districtResults.divisionPerformance.length,
+              clubRecords: districtResults.clubPerformance.length,
+              processingTimeMs: Date.now() - districtStartTime,
+              circuitBreakerState: this.scrapingCircuitBreaker.getStats().state,
+            })
+          } else {
+            // District failed - record detailed errors
+            failedDistricts.push(districtId)
+            districtErrors.set(districtId, districtResults.errors)
 
-          // Fetch division performance data with circuit breaker
-          const divisionPerformanceResult =
-            await this.scrapingCircuitBreaker.execute(
-              async () => {
-                const retryResult = await RetryManager.executeWithRetry(
-                  () => this.scraper.getDivisionPerformance(districtId),
-                  this.retryOptions,
-                  { operation: 'getDivisionPerformance', districtId }
-                )
+            // Add summary error message
+            const errorSummary = `District ${districtId} failed: ${districtResults.errors.map(e => e.operation + ' - ' + e.error).join('; ')}`
+            errors.push(errorSummary)
 
-                if (!retryResult.success) {
-                  throw retryResult.error || new Error('Retry operation failed')
-                }
-
-                return retryResult
-              },
-              { operation: 'getDivisionPerformance', districtId }
-            )
-
-          // Fetch club performance data with circuit breaker
-          const clubPerformanceResult =
-            await this.scrapingCircuitBreaker.execute(
-              async () => {
-                const retryResult = await RetryManager.executeWithRetry(
-                  () => this.scraper.getClubPerformance(districtId),
-                  this.retryOptions,
-                  { operation: 'getClubPerformance', districtId }
-                )
-
-                if (!retryResult.success) {
-                  throw retryResult.error || new Error('Retry operation failed')
-                }
-
-                return retryResult
-              },
-              { operation: 'getClubPerformance', districtId }
-            )
-
-          // Check if all operations succeeded
-          if (
-            !districtPerformanceResult.success ||
-            !districtPerformanceResult.result
-          ) {
-            errors.push(
-              `Failed to fetch district performance for ${districtId}: ${districtPerformanceResult.error?.message || 'Unknown error'}`
-            )
-            continue
+            logger.warn('Failed to fetch district data', {
+              districtId,
+              errorCount: districtResults.errors.length,
+              errors: districtResults.errors,
+              processingTimeMs: Date.now() - districtStartTime,
+            })
           }
-
-          if (
-            !divisionPerformanceResult.success ||
-            !divisionPerformanceResult.result
-          ) {
-            errors.push(
-              `Failed to fetch division performance for ${districtId}: ${divisionPerformanceResult.error?.message || 'Unknown error'}`
-            )
-            continue
-          }
-
-          if (!clubPerformanceResult.success || !clubPerformanceResult.result) {
-            errors.push(
-              `Failed to fetch club performance for ${districtId}: ${clubPerformanceResult.error?.message || 'Unknown error'}`
-            )
-            continue
-          }
-
-          districtData.set(districtId, {
-            districtPerformance: districtPerformanceResult.result,
-            divisionPerformance: divisionPerformanceResult.result,
-            clubPerformance: clubPerformanceResult.result,
-          })
-
-          logger.debug('Successfully fetched district data', {
-            districtId,
-            districtRecords: districtPerformanceResult.result.length,
-            divisionRecords: divisionPerformanceResult.result.length,
-            clubRecords: clubPerformanceResult.result.length,
-            circuitBreakerState: this.scrapingCircuitBreaker.getStats().state,
-          })
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
+
+          // Record district-level error
+          failedDistricts.push(districtId)
+          const districtError: DistrictError = {
+            districtId,
+            operation: 'districtPerformance', // Default to first operation
+            error: errorMessage,
+            timestamp: new Date().toISOString(),
+            shouldRetry: !(error instanceof CircuitBreakerError), // Don't retry circuit breaker errors immediately
+          }
+          districtErrors.set(districtId, [districtError])
 
           // Check if this is a circuit breaker error
           if (error instanceof CircuitBreakerError) {
@@ -575,6 +665,7 @@ export class RefreshService {
             logger.warn('Failed to fetch district data', {
               districtId,
               error: errorMessage,
+              processingTimeMs: Date.now() - districtStartTime,
             })
           }
         }
@@ -584,24 +675,30 @@ export class RefreshService {
       const durationMs = endTime - startTime
       const circuitBreakerStats = this.scrapingCircuitBreaker.getStats()
 
-      logger.info('Completed data scraping operation', {
-        totalDistricts: districtIds.length,
-        successfulDistricts: districtData.size,
-        failedDistricts: districtIds.length - districtData.size,
-        errors: errors.length,
-        durationMs,
-        circuitBreakerState: circuitBreakerStats.state,
-        circuitBreakerFailures: circuitBreakerStats.failureCount,
-      })
+      logger.info(
+        'Completed data scraping operation with resilient processing',
+        {
+          totalDistricts: districtIds.length,
+          successfulDistricts: successfulDistricts.length,
+          failedDistricts: failedDistricts.length,
+          errors: errors.length,
+          durationMs,
+          circuitBreakerState: circuitBreakerStats.state,
+          circuitBreakerFailures: circuitBreakerStats.failureCount,
+          successfulDistrictIds: successfulDistricts,
+          failedDistrictIds: failedDistricts,
+        }
+      )
 
-      // If we failed to get data for all districts, throw an error
-      if (districtData.size === 0) {
+      // Create partial snapshot if we have some successful districts
+      // Don't fail completely unless we have zero successful districts
+      if (successfulDistricts.length === 0) {
         const circuitBreakerInfo =
           circuitBreakerStats.state === 'OPEN'
             ? ` Circuit breaker is open (next retry: ${circuitBreakerStats.nextRetryTime?.toISOString()}).`
             : ''
         throw new Error(
-          `Failed to fetch data for any districts.${circuitBreakerInfo} Errors: ${errors.join('; ')}`
+          `Failed to fetch data for any configured districts.${circuitBreakerInfo} Errors: ${errors.join('; ')}`
         )
       }
 
@@ -614,6 +711,9 @@ export class RefreshService {
           durationMs,
           districtCount: districtData.size,
           errors,
+          districtErrors,
+          successfulDistricts,
+          failedDistricts,
         },
       }
     } catch (error) {
@@ -624,6 +724,8 @@ export class RefreshService {
       logger.error('Data scraping failed', {
         error: errorMessage,
         errors,
+        successfulDistricts: successfulDistricts.length,
+        failedDistricts: failedDistricts.length,
         circuitBreakerState: circuitBreakerStats.state,
         circuitBreakerFailures: circuitBreakerStats.failureCount,
       })
@@ -633,7 +735,72 @@ export class RefreshService {
   }
 
   /**
+   * Get configured district IDs and validate them against all districts data
+   * This replaces the old extractDistrictIds method to use configured districts instead of all districts
+   */
+  private async getConfiguredDistrictIds(
+    allDistricts: ScrapedRecord[]
+  ): Promise<string[]> {
+    // Get configured districts from the configuration service
+    const configuredDistricts =
+      await this.districtConfigService.getConfiguredDistricts()
+
+    if (configuredDistricts.length === 0) {
+      throw new Error(
+        'No districts configured for data collection. Please configure at least one district.'
+      )
+    }
+
+    // Extract all available district IDs from the summary data for validation
+    const availableDistrictIds = this.extractDistrictIds(allDistricts)
+
+    // Validate configured districts against available districts
+    const validDistricts: string[] = []
+    const invalidDistricts: string[] = []
+
+    for (const districtId of configuredDistricts) {
+      if (availableDistrictIds.includes(districtId)) {
+        validDistricts.push(districtId)
+      } else {
+        invalidDistricts.push(districtId)
+        logger.warn('Configured district not found in all-districts summary', {
+          districtId,
+          availableDistricts: availableDistrictIds,
+        })
+      }
+    }
+
+    if (invalidDistricts.length > 0) {
+      logger.warn(
+        'Some configured districts were not found in the Toastmasters system',
+        {
+          invalidDistricts,
+          validDistricts,
+          totalConfigured: configuredDistricts.length,
+        }
+      )
+    }
+
+    if (validDistricts.length === 0) {
+      throw new Error(
+        `None of the configured districts were found in the Toastmasters system. Configured: [${configuredDistricts.join(', ')}], Available: [${availableDistrictIds.join(', ')}]`
+      )
+    }
+
+    logger.info('Using configured districts for data collection', {
+      configuredCount: configuredDistricts.length,
+      validCount: validDistricts.length,
+      invalidCount: invalidDistricts.length,
+      validDistricts,
+      invalidDistricts,
+    })
+
+    return validDistricts
+  }
+
+  /**
    * Extract district IDs from all districts summary data
+   * This method is now used internally for validation purposes
    */
   private extractDistrictIds(allDistricts: ScrapedRecord[]): string[] {
     const districtIds = new Set<string>()
@@ -662,11 +829,47 @@ export class RefreshService {
     }
 
     const result = Array.from(districtIds).sort()
-    logger.debug('Extracted district IDs', {
+    logger.debug('Extracted district IDs from all-districts summary', {
       count: result.length,
       ids: result,
     })
     return result
+  }
+
+  /**
+   * Validate district configuration before refresh operations
+   */
+  async validateConfiguration(): Promise<
+    import('./DistrictConfigurationService.js').ConfigurationValidationResult
+  > {
+    logger.debug('Validating district configuration')
+
+    // Check if any districts are configured
+    const hasConfiguredDistricts =
+      await this.districtConfigService.hasConfiguredDistricts()
+    if (!hasConfiguredDistricts) {
+      return {
+        isValid: false,
+        configuredDistricts: [],
+        validDistricts: [],
+        invalidDistricts: [],
+        warnings: [
+          'No districts configured for data collection. Please configure at least one district before running refresh operations.',
+        ],
+        suggestions: [],
+        lastCollectionInfo: [],
+      }
+    }
+
+    // For basic validation, we don't have all-districts data yet
+    // This will be enhanced during the actual refresh process
+    const basicValidation =
+      await this.districtConfigService.validateConfiguration(
+        undefined, // No all-districts validation yet
+        this.snapshotStore
+      )
+
+    return basicValidation
   }
 
   /**
@@ -879,11 +1082,13 @@ export class RefreshService {
 
   /**
    * Create a snapshot with proper versioning and error handling
+   * Supports detailed error tracking per district for resilient processing
    */
   private async createSnapshot(
     data: NormalizedData,
     status: SnapshotStatus,
-    errors: string[] = []
+    errors: string[] = [],
+    scrapingMetadata?: RawData['scrapingMetadata']
   ): Promise<Snapshot> {
     const snapshotId = Date.now().toString()
     const createdAt = new Date().toISOString()
@@ -898,24 +1103,43 @@ export class RefreshService {
       payload: data,
     }
 
-    logger.info('Creating snapshot', {
+    // Add detailed error tracking to snapshot metadata if available
+    if (scrapingMetadata && 'districtErrors' in scrapingMetadata) {
+      // Store district-level error information in the snapshot for future retry logic
+      const detailedErrors = Array.from(
+        scrapingMetadata.districtErrors.entries()
+      ).flatMap(([districtId, districtErrors]) =>
+        districtErrors.map(
+          error => `${districtId}: ${error.operation} - ${error.error}`
+        )
+      )
+
+      snapshot.errors = [...errors, ...detailedErrors]
+    }
+
+    logger.info('Creating snapshot with resilient error tracking', {
       operation: 'createSnapshot',
       snapshot_id: snapshotId,
       status,
       schema_version: snapshot.schema_version,
       calculation_version: snapshot.calculation_version,
       district_count: data.districts.length,
-      error_count: errors.length,
+      error_count: snapshot.errors.length,
       created_at: createdAt,
+      successful_districts: scrapingMetadata?.successfulDistricts?.length || 0,
+      failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
     })
 
     try {
       await this.snapshotStore.writeSnapshot(snapshot)
-      logger.info('Snapshot created successfully', {
+      logger.info('Snapshot created successfully with error tracking', {
         operation: 'createSnapshot',
         snapshot_id: snapshotId,
         status,
         district_count: data.districts.length,
+        successful_districts:
+          scrapingMetadata?.successfulDistricts?.length || 0,
+        failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
       })
       return snapshot
     } catch (error) {
@@ -963,5 +1187,219 @@ export class RefreshService {
   resetCircuitBreaker(): void {
     logger.info('Manually resetting scraping circuit breaker')
     this.scrapingCircuitBreaker.reset()
+  }
+
+  /**
+   * Fetch all data types for a single district with resilient error handling
+   * Returns success/failure status with detailed error information per operation
+   */
+  private async fetchDistrictDataResilient(districtId: string): Promise<{
+    success: boolean
+    districtPerformance: ScrapedRecord[]
+    divisionPerformance: ScrapedRecord[]
+    clubPerformance: ScrapedRecord[]
+    errors: DistrictError[]
+  }> {
+    const errors: DistrictError[] = []
+    let districtPerformance: ScrapedRecord[] = []
+    let divisionPerformance: ScrapedRecord[] = []
+    let clubPerformance: ScrapedRecord[] = []
+
+    // Attempt to fetch district performance data
+    try {
+      const districtPerformanceResult =
+        await this.scrapingCircuitBreaker.execute(
+          async () => {
+            const retryResult = await RetryManager.executeWithRetry(
+              () => this.scraper.getDistrictPerformance(districtId),
+              this.retryOptions,
+              { operation: 'getDistrictPerformance', districtId }
+            )
+
+            if (!retryResult.success) {
+              throw retryResult.error || new Error('Retry operation failed')
+            }
+
+            return retryResult
+          },
+          { operation: 'getDistrictPerformance', districtId }
+        )
+
+      if (
+        districtPerformanceResult.success &&
+        districtPerformanceResult.result
+      ) {
+        districtPerformance = districtPerformanceResult.result
+      } else {
+        errors.push({
+          districtId,
+          operation: 'districtPerformance',
+          error: districtPerformanceResult.error?.message || 'Unknown error',
+          timestamp: new Date().toISOString(),
+          shouldRetry: true,
+        })
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      errors.push({
+        districtId,
+        operation: 'districtPerformance',
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+        shouldRetry: !(error instanceof CircuitBreakerError),
+      })
+    }
+
+    // Attempt to fetch division performance data
+    try {
+      const divisionPerformanceResult =
+        await this.scrapingCircuitBreaker.execute(
+          async () => {
+            const retryResult = await RetryManager.executeWithRetry(
+              () => this.scraper.getDivisionPerformance(districtId),
+              this.retryOptions,
+              { operation: 'getDivisionPerformance', districtId }
+            )
+
+            if (!retryResult.success) {
+              throw retryResult.error || new Error('Retry operation failed')
+            }
+
+            return retryResult
+          },
+          { operation: 'getDivisionPerformance', districtId }
+        )
+
+      if (
+        divisionPerformanceResult.success &&
+        divisionPerformanceResult.result
+      ) {
+        divisionPerformance = divisionPerformanceResult.result
+      } else {
+        errors.push({
+          districtId,
+          operation: 'divisionPerformance',
+          error: divisionPerformanceResult.error?.message || 'Unknown error',
+          timestamp: new Date().toISOString(),
+          shouldRetry: true,
+        })
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      errors.push({
+        districtId,
+        operation: 'divisionPerformance',
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+        shouldRetry: !(error instanceof CircuitBreakerError),
+      })
+    }
+
+    // Attempt to fetch club performance data
+    try {
+      const clubPerformanceResult = await this.scrapingCircuitBreaker.execute(
+        async () => {
+          const retryResult = await RetryManager.executeWithRetry(
+            () => this.scraper.getClubPerformance(districtId),
+            this.retryOptions,
+            { operation: 'getClubPerformance', districtId }
+          )
+
+          if (!retryResult.success) {
+            throw retryResult.error || new Error('Retry operation failed')
+          }
+
+          return retryResult
+        },
+        { operation: 'getClubPerformance', districtId }
+      )
+
+      if (clubPerformanceResult.success && clubPerformanceResult.result) {
+        clubPerformance = clubPerformanceResult.result
+      } else {
+        errors.push({
+          districtId,
+          operation: 'clubPerformance',
+          error: clubPerformanceResult.error?.message || 'Unknown error',
+          timestamp: new Date().toISOString(),
+          shouldRetry: true,
+        })
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      errors.push({
+        districtId,
+        operation: 'clubPerformance',
+        error: errorMessage,
+        timestamp: new Date().toISOString(),
+        shouldRetry: !(error instanceof CircuitBreakerError),
+      })
+    }
+
+    // Consider district successful if we got at least one data type
+    // This allows partial data collection for districts with some failing endpoints
+    const success =
+      districtPerformance.length > 0 ||
+      divisionPerformance.length > 0 ||
+      clubPerformance.length > 0
+
+    return {
+      success,
+      districtPerformance,
+      divisionPerformance,
+      clubPerformance,
+      errors,
+    }
+  }
+
+  /**
+   * Get previously failed districts from the latest snapshot for retry logic
+   */
+  private async getPreviouslyFailedDistricts(): Promise<DistrictError[]> {
+    try {
+      const latestSnapshot = await this.snapshotStore.getLatest()
+      if (!latestSnapshot) {
+        return []
+      }
+
+      // Check if this is a per-district snapshot store with metadata
+      if ('getSnapshotMetadata' in this.snapshotStore) {
+        const perDistrictStore = this.snapshotStore as {
+          getSnapshotMetadata: (id: string) => Promise<{
+            failedDistricts?: string[]
+            createdAt?: string
+          } | null>
+        }
+        const metadata = await perDistrictStore.getSnapshotMetadata(
+          latestSnapshot.snapshot_id
+        )
+
+        if (
+          metadata &&
+          metadata.failedDistricts &&
+          Array.isArray(metadata.failedDistricts) &&
+          metadata.failedDistricts.length > 0
+        ) {
+          // Create retry entries for previously failed districts
+          return metadata.failedDistricts.map((districtId: string) => ({
+            districtId,
+            operation: 'districtPerformance' as const,
+            error: 'Previously failed district',
+            timestamp: metadata.createdAt || new Date().toISOString(),
+            shouldRetry: true,
+          }))
+        }
+      }
+
+      return []
+    } catch (error) {
+      logger.warn('Failed to get previously failed districts for retry', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      return []
+    }
   }
 }

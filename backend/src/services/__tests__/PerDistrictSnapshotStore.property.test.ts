@@ -1,0 +1,509 @@
+/**
+ * Property-based tests for PerDistrictSnapshotStore
+ *
+ * These tests validate universal properties of the per-district snapshot storage system
+ * using property-based testing with fast-check to ensure correctness across all inputs.
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import * as fc from 'fast-check'
+import fs from 'fs/promises'
+import path from 'path'
+import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+
+// Test configuration
+const TEST_ITERATIONS = 100
+const TEST_TIMEOUT = 30000
+
+describe('PerDistrictSnapshotStore Property Tests', () => {
+  let testCacheDir: string
+  let store: PerDistrictFileSnapshotStore
+
+  beforeEach(async () => {
+    // Create unique test cache directory for each test run
+    const timestamp = Date.now()
+    const randomSuffix = Math.random().toString(36).substring(2, 8)
+    testCacheDir = path.join(
+      process.cwd(),
+      'test-cache',
+      `per-district-property-test-${timestamp}-${randomSuffix}`
+    )
+
+    await fs.mkdir(testCacheDir, { recursive: true })
+
+    store = new PerDistrictFileSnapshotStore({
+      cacheDir: testCacheDir,
+      maxSnapshots: 50,
+      maxAgeDays: 7,
+    })
+  })
+
+  afterEach(async () => {
+    // Clean up test cache directory
+    try {
+      await fs.rm(testCacheDir, { recursive: true, force: true })
+    } catch (error) {
+      console.warn(`Failed to clean up test cache directory: ${error}`)
+    }
+  })
+
+  // Generators for property-based testing
+  const districtIdGenerator = fc.oneof(
+    fc.integer({ min: 1, max: 999 }).map(n => n.toString()), // Numeric districts
+    fc.constantFrom('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J') // Alphabetic districts
+  )
+
+  const districtStatisticsGenerator = fc.record({
+    districtId: districtIdGenerator,
+    asOfDate: fc
+      .integer({ min: 1577836800000, max: 1924992000000 })
+      .map(timestamp => new Date(timestamp).toISOString()),
+    membership: fc.record({
+      total: fc.integer({ min: 0, max: 10000 }),
+      change: fc.integer({ min: -1000, max: 1000 }),
+      changePercent: fc.float({ min: -50, max: 50 }),
+      byClub: fc.array(
+        fc.record({
+          clubId: fc.string({ minLength: 1, maxLength: 10 }),
+          clubName: fc.string({ minLength: 5, maxLength: 50 }),
+          memberCount: fc.integer({ min: 0, max: 100 }),
+        }),
+        { maxLength: 20 }
+      ),
+    }),
+    clubs: fc.record({
+      total: fc.integer({ min: 0, max: 500 }),
+      active: fc.integer({ min: 0, max: 500 }),
+      suspended: fc.integer({ min: 0, max: 50 }),
+      ineligible: fc.integer({ min: 0, max: 50 }),
+      low: fc.integer({ min: 0, max: 100 }),
+      distinguished: fc.integer({ min: 0, max: 200 }),
+    }),
+    education: fc.record({
+      totalAwards: fc.integer({ min: 0, max: 5000 }),
+      byType: fc.array(
+        fc.record({
+          type: fc.constantFrom('CC', 'CL', 'AL', 'AC', 'LD', 'DTM'),
+          count: fc.integer({ min: 0, max: 500 }),
+        }),
+        { maxLength: 10 }
+      ),
+      topClubs: fc.array(
+        fc.record({
+          clubId: fc.string({ minLength: 1, maxLength: 10 }),
+          clubName: fc.string({ minLength: 5, maxLength: 50 }),
+          awards: fc.integer({ min: 0, max: 100 }),
+        }),
+        { maxLength: 10 }
+      ),
+    }),
+  })
+
+  const snapshotGenerator = fc.record({
+    snapshot_id: fc
+      .integer({ min: 1000000000000, max: 9999999999999 })
+      .map(n => n.toString()),
+    created_at: fc
+      .integer({ min: 1577836800000, max: 1924992000000 })
+      .map(timestamp => new Date(timestamp).toISOString()),
+    schema_version: fc.constantFrom('1.0.0', '1.1.0', '2.0.0'),
+    calculation_version: fc.constantFrom('1.0.0', '1.1.0', '1.2.0'),
+    status: fc.constantFrom('success', 'partial', 'failed') as fc.Arbitrary<
+      'success' | 'partial' | 'failed'
+    >,
+    errors: fc.array(fc.string({ minLength: 10, maxLength: 100 }), {
+      maxLength: 5,
+    }),
+    payload: fc.record({
+      districts: fc.array(districtStatisticsGenerator, {
+        minLength: 1,
+        maxLength: 10,
+      }),
+      metadata: fc.record({
+        source: fc.constantFrom(
+          'toastmasters-dashboard',
+          'manual-import',
+          'api'
+        ),
+        fetchedAt: fc
+          .integer({ min: 1577836800000, max: 1924992000000 })
+          .map(timestamp => new Date(timestamp).toISOString()),
+        dataAsOfDate: fc
+          .integer({ min: 1577836800000, max: 1924992000000 })
+          .map(timestamp => new Date(timestamp).toISOString().split('T')[0]),
+        districtCount: fc.integer({ min: 1, max: 10 }),
+        processingDurationMs: fc.integer({ min: 1000, max: 300000 }),
+      }),
+    }),
+  })
+
+  // Feature: district-scoped-data-collection, Property 9: Per-District Snapshot Structure
+  it(
+    'Property 9: Per-District Snapshot Structure - should create directory structure with individual district files',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(snapshotGenerator, async snapshot => {
+          // Ensure district count matches payload
+          snapshot.payload.metadata.districtCount =
+            snapshot.payload.districts.length
+
+          // Ensure district IDs are unique
+          const uniqueDistricts = Array.from(
+            new Set(snapshot.payload.districts.map(d => d.districtId))
+          )
+          if (uniqueDistricts.length !== snapshot.payload.districts.length) {
+            // Skip this test case if districts are not unique
+            return true
+          }
+
+          // Write the snapshot
+          await store.writeSnapshot(snapshot)
+
+          // Verify directory structure exists
+          const snapshotDir = path.join(
+            testCacheDir,
+            'snapshots',
+            snapshot.snapshot_id
+          )
+          const dirExists = await fs
+            .access(snapshotDir)
+            .then(() => true)
+            .catch(() => false)
+          expect(dirExists).toBe(true)
+
+          // Verify individual district files exist with correct naming pattern
+          for (const district of snapshot.payload.districts) {
+            const districtFile = path.join(
+              snapshotDir,
+              `district_${district.districtId}.json`
+            )
+            const fileExists = await fs
+              .access(districtFile)
+              .then(() => true)
+              .catch(() => false)
+            expect(fileExists).toBe(true)
+
+            // Verify file contains valid JSON with district data
+            const content = await fs.readFile(districtFile, 'utf-8')
+            const parsedData = JSON.parse(content)
+            expect(parsedData.districtId).toBe(district.districtId)
+            expect(parsedData.status).toBe('success')
+            expect(parsedData.data).toBeDefined()
+          }
+
+          // Verify metadata.json exists
+          const metadataFile = path.join(snapshotDir, 'metadata.json')
+          const metadataExists = await fs
+            .access(metadataFile)
+            .then(() => true)
+            .catch(() => false)
+          expect(metadataExists).toBe(true)
+
+          // Verify manifest.json exists
+          const manifestFile = path.join(snapshotDir, 'manifest.json')
+          const manifestExists = await fs
+            .access(manifestFile)
+            .then(() => true)
+            .catch(() => false)
+          expect(manifestExists).toBe(true)
+
+          return true
+        }),
+        { numRuns: TEST_ITERATIONS }
+      )
+    },
+    TEST_TIMEOUT
+  )
+
+  // Feature: district-scoped-data-collection, Property 10: Snapshot Metadata Completeness
+  it(
+    'Property 10: Snapshot Metadata Completeness - should include complete metadata and manifest files',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(snapshotGenerator, async snapshot => {
+          // Ensure district count matches payload
+          snapshot.payload.metadata.districtCount =
+            snapshot.payload.districts.length
+
+          // Ensure district IDs are unique
+          const uniqueDistricts = Array.from(
+            new Set(snapshot.payload.districts.map(d => d.districtId))
+          )
+          if (uniqueDistricts.length !== snapshot.payload.districts.length) {
+            return true
+          }
+
+          // Write the snapshot
+          await store.writeSnapshot(snapshot)
+
+          // Read and verify metadata.json
+          const metadata = await store.getSnapshotMetadata(snapshot.snapshot_id)
+          expect(metadata).toBeDefined()
+          expect(metadata!.snapshotId).toBe(snapshot.snapshot_id)
+          expect(metadata!.schemaVersion).toBe(snapshot.schema_version)
+          expect(metadata!.calculationVersion).toBe(
+            snapshot.calculation_version
+          )
+          expect(metadata!.status).toBe(snapshot.status)
+          expect(metadata!.configuredDistricts).toEqual(
+            snapshot.payload.districts.map(d => d.districtId)
+          )
+          expect(metadata!.source).toBe(snapshot.payload.metadata.source)
+          expect(metadata!.dataAsOfDate).toBe(
+            snapshot.payload.metadata.dataAsOfDate
+          )
+
+          // Read and verify manifest.json
+          const manifest = await store.getSnapshotManifest(snapshot.snapshot_id)
+          expect(manifest).toBeDefined()
+          expect(manifest!.snapshotId).toBe(snapshot.snapshot_id)
+          expect(manifest!.totalDistricts).toBe(
+            snapshot.payload.districts.length
+          )
+          expect(manifest!.districts).toHaveLength(
+            snapshot.payload.districts.length
+          )
+
+          // Verify each district entry in manifest
+          for (const district of snapshot.payload.districts) {
+            const manifestEntry = manifest!.districts.find(
+              d => d.districtId === district.districtId
+            )
+            expect(manifestEntry).toBeDefined()
+            expect(manifestEntry!.fileName).toBe(
+              `district_${district.districtId}.json`
+            )
+            expect(manifestEntry!.status).toBe('success')
+            expect(manifestEntry!.fileSize).toBeGreaterThan(0)
+          }
+
+          return true
+        }),
+        { numRuns: TEST_ITERATIONS }
+      )
+    },
+    TEST_TIMEOUT
+  )
+
+  // Feature: district-scoped-data-collection, Property 16: Current Snapshot Pointer Maintenance
+  it(
+    'Property 16: Current Snapshot Pointer Maintenance - should update current.json for successful snapshots',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.array(snapshotGenerator, { minLength: 1, maxLength: 5 }),
+          async snapshots => {
+            // Ensure unique snapshot IDs and district IDs within each snapshot
+            const uniqueSnapshots = snapshots.map((snapshot, index) => ({
+              ...snapshot,
+              snapshot_id: (Date.now() + index).toString(),
+              payload: {
+                ...snapshot.payload,
+                districts: snapshot.payload.districts.map(
+                  (district, districtIndex) => ({
+                    ...district,
+                    districtId: `${district.districtId}_${index}_${districtIndex}`,
+                  })
+                ),
+                metadata: {
+                  ...snapshot.payload.metadata,
+                  districtCount: snapshot.payload.districts.length,
+                },
+              },
+            }))
+
+            let lastSuccessfulSnapshot: (typeof uniqueSnapshots)[0] | null =
+              null
+
+            // Write snapshots in sequence
+            for (const snapshot of uniqueSnapshots) {
+              await store.writeSnapshot(snapshot)
+
+              if (snapshot.status === 'success') {
+                lastSuccessfulSnapshot = snapshot
+              }
+            }
+
+            // Verify current.json points to the last successful snapshot
+            if (lastSuccessfulSnapshot) {
+              const currentSnapshot = await store.getLatestSuccessful()
+              expect(currentSnapshot).toBeDefined()
+              expect(currentSnapshot!.snapshot_id).toBe(
+                lastSuccessfulSnapshot.snapshot_id
+              )
+            }
+
+            return true
+          }
+        ),
+        { numRuns: Math.min(TEST_ITERATIONS, 50) } // Reduce iterations for this more complex test
+      )
+    },
+    TEST_TIMEOUT
+  )
+
+  // Feature: district-scoped-data-collection, Property 11: Data Aggregation Consistency
+  it(
+    'Property 11: Data Aggregation Consistency - should reconstruct original snapshot format from per-district files',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(snapshotGenerator, async originalSnapshot => {
+          // Ensure district count matches payload
+          originalSnapshot.payload.metadata.districtCount =
+            originalSnapshot.payload.districts.length
+
+          // Ensure district IDs are unique
+          const uniqueDistricts = Array.from(
+            new Set(originalSnapshot.payload.districts.map(d => d.districtId))
+          )
+          if (
+            uniqueDistricts.length !== originalSnapshot.payload.districts.length
+          ) {
+            return true
+          }
+
+          // Write the snapshot
+          await store.writeSnapshot(originalSnapshot)
+
+          // Read it back using the aggregation method
+          const reconstructedSnapshot = await store.getSnapshot(
+            originalSnapshot.snapshot_id
+          )
+          expect(reconstructedSnapshot).toBeDefined()
+
+          // Verify core snapshot properties match
+          expect(reconstructedSnapshot!.snapshot_id).toBe(
+            originalSnapshot.snapshot_id
+          )
+          expect(reconstructedSnapshot!.schema_version).toBe(
+            originalSnapshot.schema_version
+          )
+          expect(reconstructedSnapshot!.calculation_version).toBe(
+            originalSnapshot.calculation_version
+          )
+          expect(reconstructedSnapshot!.status).toBe(originalSnapshot.status)
+          expect(reconstructedSnapshot!.errors).toEqual(originalSnapshot.errors)
+
+          // Verify district data is preserved
+          expect(reconstructedSnapshot!.payload.districts).toHaveLength(
+            originalSnapshot.payload.districts.length
+          )
+
+          // Verify each district's data is preserved
+          for (const originalDistrict of originalSnapshot.payload.districts) {
+            const reconstructedDistrict =
+              reconstructedSnapshot!.payload.districts.find(
+                d => d.districtId === originalDistrict.districtId
+              )
+            expect(reconstructedDistrict).toBeDefined()
+            expect(reconstructedDistrict!.districtId).toBe(
+              originalDistrict.districtId
+            )
+            expect(reconstructedDistrict!.membership.total).toBe(
+              originalDistrict.membership.total
+            )
+            expect(reconstructedDistrict!.clubs.total).toBe(
+              originalDistrict.clubs.total
+            )
+            expect(reconstructedDistrict!.education.totalAwards).toBe(
+              originalDistrict.education.totalAwards
+            )
+          }
+
+          // Verify metadata is preserved
+          expect(reconstructedSnapshot!.payload.metadata.source).toBe(
+            originalSnapshot.payload.metadata.source
+          )
+          expect(reconstructedSnapshot!.payload.metadata.dataAsOfDate).toBe(
+            originalSnapshot.payload.metadata.dataAsOfDate
+          )
+          expect(reconstructedSnapshot!.payload.metadata.districtCount).toBe(
+            originalSnapshot.payload.districts.length
+          )
+
+          return true
+        }),
+        { numRuns: TEST_ITERATIONS }
+      )
+    },
+    TEST_TIMEOUT
+  )
+
+  // Feature: district-scoped-data-collection, Property 17: Selective File Access
+  it(
+    'Property 17: Selective File Access - should read only requested district files',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(snapshotGenerator, async snapshot => {
+          // Ensure district count matches payload
+          snapshot.payload.metadata.districtCount =
+            snapshot.payload.districts.length
+
+          // Ensure district IDs are unique
+          const uniqueDistricts = Array.from(
+            new Set(snapshot.payload.districts.map(d => d.districtId))
+          )
+          if (uniqueDistricts.length !== snapshot.payload.districts.length) {
+            return true
+          }
+
+          // Write the snapshot
+          await store.writeSnapshot(snapshot)
+
+          // Test reading existing districts
+          for (const originalDistrict of snapshot.payload.districts) {
+            const districtData = await store.readDistrictData(
+              snapshot.snapshot_id,
+              originalDistrict.districtId
+            )
+
+            // District should be found and data should match
+            expect(districtData).toBeDefined()
+            expect(districtData!.districtId).toBe(originalDistrict.districtId)
+            expect(districtData!.membership.total).toBe(
+              originalDistrict.membership.total
+            )
+          }
+
+          // Test reading non-existent districts
+          const nonExistentDistrictIds = [
+            'NONEXISTENT1',
+            'NONEXISTENT2',
+            'NONEXISTENT3',
+          ]
+          for (const nonExistentId of nonExistentDistrictIds) {
+            // Only test if this ID doesn't exist in the snapshot
+            if (
+              !snapshot.payload.districts.some(
+                d => d.districtId === nonExistentId
+              )
+            ) {
+              const districtData = await store.readDistrictData(
+                snapshot.snapshot_id,
+                nonExistentId
+              )
+              // District should not be found
+              expect(districtData).toBeNull()
+            }
+          }
+
+          // Test listing districts in snapshot
+          const districtsInSnapshot = await store.listDistrictsInSnapshot(
+            snapshot.snapshot_id
+          )
+          expect(districtsInSnapshot).toHaveLength(
+            snapshot.payload.districts.length
+          )
+
+          for (const district of snapshot.payload.districts) {
+            expect(districtsInSnapshot).toContain(district.districtId)
+          }
+
+          return true
+        }),
+        { numRuns: TEST_ITERATIONS }
+      )
+    },
+    TEST_TIMEOUT
+  )
+})

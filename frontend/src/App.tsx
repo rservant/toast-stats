@@ -10,6 +10,7 @@ import { BackfillProgressBar } from './components/BackfillProgressBar'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
 import ReconciliationManagementPage from './pages/ReconciliationManagementPage'
+import DistrictConfigurationPage from './pages/DistrictConfigurationPage'
 
 function Layout() {
   const { activeBackfills, removeBackfill } = useBackfillContext()
@@ -54,6 +55,10 @@ const router = createBrowserRouter(
         {
           path: 'admin/reconciliation',
           element: <ReconciliationManagementPage />,
+        },
+        {
+          path: 'admin/districts',
+          element: <DistrictConfigurationPage />,
         },
       ],
     },

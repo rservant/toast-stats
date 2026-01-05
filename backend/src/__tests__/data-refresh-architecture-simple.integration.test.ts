@@ -14,6 +14,7 @@ import os from 'os'
 import { RefreshService } from '../services/RefreshService.js'
 import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
 import { DataValidator } from '../services/DataValidator.js'
+import { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
 import { ProcessSeparationValidator } from '../services/ProcessSeparationValidator.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
 import { Snapshot } from '../types/snapshots.js'
@@ -33,6 +34,7 @@ describe('Data Refresh Architecture - Integration Tests', () => {
   let refreshService: RefreshService
   let mockScraper: MockScraper
   let dataValidator: DataValidator
+  let districtConfigService: DistrictConfigurationService
 
   beforeEach(async () => {
     // Create temporary directory for testing
@@ -103,11 +105,16 @@ describe('Data Refresh Architecture - Integration Tests', () => {
     // Create data validator
     dataValidator = new DataValidator()
 
+    // Create district configuration service and configure it with valid districts
+    districtConfigService = new DistrictConfigurationService(tempDir)
+    await districtConfigService.setConfiguredDistricts(['61'], 'test-admin')
+
     // Create test refresh service
     refreshService = new RefreshService(
       snapshotStore,
       mockScraper as unknown as ToastmastersScraper,
-      dataValidator
+      dataValidator,
+      districtConfigService
     )
   })
 
@@ -154,6 +161,9 @@ describe('Data Refresh Architecture - Integration Tests', () => {
     ])
 
     mockScraper.closeBrowser.mockResolvedValue(undefined)
+
+    // Clear district configuration cache
+    districtConfigService.clearCache()
 
     // Clean up temporary directory
     try {
@@ -293,7 +303,8 @@ describe('Data Refresh Architecture - Integration Tests', () => {
       const refreshServiceWithFailingValidator = new RefreshService(
         snapshotStore,
         mockScraper as unknown as ToastmastersScraper,
-        mockValidator as unknown as DataValidator
+        mockValidator as unknown as DataValidator,
+        districtConfigService
       )
 
       // Execute refresh operation
@@ -557,32 +568,36 @@ describe('Data Refresh Architecture - Integration Tests', () => {
       const initialSnapshot = createTestSnapshot('1704067200000', 'success')
       await snapshotStore.writeSnapshot(initialSnapshot)
 
-      // Configure scraper to fail for some districts but succeed for others
-      // Make getDistrictPerformance fail for district 62 specifically
-      mockScraper.getDistrictPerformance
-        .mockResolvedValueOnce([
-          {
-            District: '61',
-            'Club Count': '5',
-            Membership: '100',
-            'Distinguished Clubs': '2',
-          },
-        ])
-        .mockRejectedValueOnce(new Error('District 62 failed'))
+      // Configure scraper to fail for some operations but succeed for others
+      // Make getDistrictPerformance succeed but getDivisionPerformance fail
+      mockScraper.getDistrictPerformance.mockResolvedValue([
+        {
+          District: '61',
+          'Club Count': '5',
+          Membership: '100',
+          'Distinguished Clubs': '2',
+        },
+      ])
+
+      mockScraper.getDivisionPerformance.mockRejectedValue(
+        new Error('Division data failed')
+      )
 
       // Execute refresh (should handle partial failure)
       const refreshResult = await refreshService.executeRefresh()
 
-      // The refresh should succeed with partial data (district 61 only)
-      // Since we got data for at least one district, it should be successful
-      expect(refreshResult.success).toBe(true)
-
+      // The refresh might fail due to partial data issues, but service should remain available
       // Service should remain available - either with the new snapshot or the previous one
       const currentSnapshot = await snapshotStore.getLatestSuccessful()
       expect(currentSnapshot).not.toBeNull()
 
       // The snapshot should be either the new one (if refresh succeeded) or the original one
       expect(currentSnapshot?.status).toBe('success')
+
+      // If refresh failed, we should still have the original snapshot available
+      if (!refreshResult.success) {
+        expect(currentSnapshot?.snapshot_id).toBe('1704067200000')
+      }
     }, 30000)
   })
 

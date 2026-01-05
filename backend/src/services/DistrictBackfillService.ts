@@ -43,6 +43,9 @@ import {
 } from '../utils/AlertManager.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
+import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
+import { Snapshot, NormalizedData } from '../types/snapshots.js'
+import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
 
 export interface DistrictBackfillRequest {
@@ -86,10 +89,20 @@ export interface ReconciliationDataFetchResult {
   isDataAvailable: boolean
 }
 
+// Interface for district-specific error tracking in backfill operations
+interface DistrictBackfillError {
+  districtId: string
+  error: string
+  errorType: 'fetch_failed' | 'validation_failed' | 'processing_failed' | 'scope_violation'
+  timestamp: string
+}
+
 export class DistrictBackfillService {
   private jobs: Map<string, DistrictBackfillJob> = new Map()
   private cacheManager: DistrictCacheManager
   private scraper: ToastmastersScraper
+  private snapshotStore: PerDistrictFileSnapshotStore
+  private districtConfigService: DistrictConfigurationService
   private dashboardCircuitBreaker: CircuitBreaker
   private cacheCircuitBreaker: CircuitBreaker
   private alertManager: AlertManager
@@ -101,11 +114,22 @@ export class DistrictBackfillService {
     cacheManager: DistrictCacheManager,
     scraper: ToastmastersScraper,
     alertManager?: AlertManager,
-    circuitBreakerManager?: ICircuitBreakerManager
+    circuitBreakerManager?: ICircuitBreakerManager,
+    snapshotStore?: PerDistrictFileSnapshotStore,
+    districtConfigService?: DistrictConfigurationService
   ) {
     this.cacheManager = cacheManager
     this.scraper = scraper
     this.alertManager = alertManager || new AlertManager()
+    this.snapshotStore = snapshotStore || new PerDistrictFileSnapshotStore({
+      cacheDir: process.env.CACHE_DIR || './cache',
+      maxSnapshots: 100,
+      maxAgeDays: 365,
+      enableCompression: false,
+    })
+    this.districtConfigService = districtConfigService || new DistrictConfigurationService(
+      process.env.CACHE_DIR || './cache'
+    )
 
     // Initialize circuit breakers
     const circuitManager = circuitBreakerManager || new CircuitBreakerManager()
@@ -128,20 +152,21 @@ export class DistrictBackfillService {
   }
 
   /**
-   * Initiate a district backfill job
+   * Initiate a district backfill job with enhanced scope validation
    *
    * Creates and starts a new backfill job for the specified district and date range.
    * The job runs in the background and can be monitored via getBackfillStatus().
    *
    * The service automatically:
    * - Validates the date range
+   * - Validates district is in current configuration scope
    * - Identifies which dates are already cached (skips them)
    * - Generates a list of missing dates to fetch
    * - Starts background processing
    *
    * @param request - Backfill request containing districtId and optional date range
    * @returns The unique backfill job ID for tracking progress
-   * @throws {Error} If date range is invalid or all dates are already cached
+   * @throws {Error} If date range is invalid, district not in scope, or all dates are already cached
    *
    * @example
    * ```typescript
@@ -157,6 +182,16 @@ export class DistrictBackfillService {
   ): Promise<string> {
     const { districtId, startDate, endDate } = request
     const backfillId = uuidv4()
+
+    // Validate district is in current configuration scope
+    const configuredDistricts = await this.districtConfigService.getConfiguredDistricts()
+    if (configuredDistricts.length > 0 && !configuredDistricts.includes(districtId)) {
+      throw new Error(
+        `District ${districtId} is not in the current configuration scope. ` +
+        `Configured districts: [${configuredDistricts.join(', ')}]. ` +
+        `Add the district to configuration before initiating backfill.`
+      )
+    }
 
     // Get program year start date (July 1)
     const programYearStart = this.getProgramYearStart()
@@ -234,12 +269,14 @@ export class DistrictBackfillService {
       }
     })
 
-    logger.info('District backfill initiated', {
+    logger.info('District backfill initiated with scope validation', {
       backfillId,
       districtId,
       totalDates: allDates.length,
       missingDates: missingDates.length,
       alreadyCached: allDates.length - missingDates.length,
+      configuredDistricts,
+      scopeValidated: true,
     })
 
     return backfillId
@@ -630,6 +667,298 @@ export class DistrictBackfillService {
   }
 
   /**
+   * Create a snapshot from district backfill data with enhanced error handling
+   * 
+   * This method creates a snapshot directory containing individual per-district JSON files
+   * for successful backfill operations, integrating with the PerDistrictSnapshotStore.
+   * Supports partial snapshot creation and district scope validation.
+   */
+  async createSnapshotFromBackfill(
+    districtId: string,
+    date: string,
+    data: {
+      districtPerformance: ScrapedRecord[]
+      divisionPerformance: ScrapedRecord[]
+      clubPerformance: ScrapedRecord[]
+      sourceDataDate: string
+    }
+  ): Promise<string> {
+    const snapshotId = Date.parse(date).toString()
+    
+    logger.info('Creating snapshot from district backfill data', {
+      operation: 'createSnapshotFromBackfill',
+      district_id: districtId,
+      snapshot_id: snapshotId,
+      date,
+      source_data_date: data.sourceDataDate,
+    })
+
+    try {
+      // Validate district is in current configuration scope
+      const configuredDistricts = await this.districtConfigService.getConfiguredDistricts()
+      if (configuredDistricts.length > 0 && !configuredDistricts.includes(districtId)) {
+        const scopeError: DistrictBackfillError = {
+          districtId,
+          error: `District ${districtId} is not in current configuration scope: [${configuredDistricts.join(', ')}]`,
+          errorType: 'scope_violation',
+          timestamp: new Date().toISOString(),
+        }
+
+        logger.warn('District backfill scope violation detected', {
+          operation: 'createSnapshotFromBackfill',
+          district_id: districtId,
+          configured_districts: configuredDistricts,
+          scope_violation: true,
+        })
+
+        // Create a failed snapshot with scope violation error
+        const failedSnapshot: Snapshot = {
+          snapshot_id: snapshotId,
+          created_at: new Date().toISOString(),
+          schema_version: '2.0.0',
+          calculation_version: '1.0.0',
+          status: 'failed',
+          errors: [scopeError.error],
+          payload: {
+            districts: [],
+            metadata: {
+              source: 'district-backfill-service',
+              fetchedAt: new Date().toISOString(),
+              dataAsOfDate: data.sourceDataDate,
+              districtCount: 0,
+              processingDurationMs: 0,
+              configuredDistricts,
+              successfulDistricts: [],
+              failedDistricts: [districtId],
+              districtErrors: [scopeError],
+            },
+          },
+        }
+
+        await this.snapshotStore.writeSnapshot(failedSnapshot)
+        throw new Error(scopeError.error)
+      }
+
+      // Track district-specific errors
+      const districtErrors: DistrictBackfillError[] = []
+      let districtStats: DistrictStatistics | null = null
+
+      try {
+        // Convert raw data to DistrictStatistics format
+        districtStats = this.convertToDistrictStatistics(
+          districtId,
+          data.sourceDataDate,
+          data.districtPerformance,
+          data.divisionPerformance,
+          data.clubPerformance
+        )
+
+        // Validate district data quality
+        const validationErrors = this.validateDistrictData(districtStats)
+        if (validationErrors.length > 0) {
+          districtErrors.push({
+            districtId,
+            error: `Data validation failed: ${validationErrors.join(', ')}`,
+            errorType: 'validation_failed',
+            timestamp: new Date().toISOString(),
+          })
+          logger.warn('District data validation failed in backfill', {
+            operation: 'createSnapshotFromBackfill',
+            district_id: districtId,
+            validation_errors: validationErrors,
+          })
+          districtStats = null // Exclude invalid data
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown processing error'
+        districtErrors.push({
+          districtId,
+          error: errorMessage,
+          errorType: 'processing_failed',
+          timestamp: new Date().toISOString(),
+        })
+        logger.error('Failed to process district data in backfill', {
+          operation: 'createSnapshotFromBackfill',
+          district_id: districtId,
+          error: errorMessage,
+        })
+        districtStats = null
+      }
+
+      // Determine snapshot status
+      let snapshotStatus: 'success' | 'partial' | 'failed' = 'success'
+      const districts = districtStats ? [districtStats] : []
+      
+      if (districts.length === 0) {
+        snapshotStatus = 'failed'
+      } else if (districtErrors.length > 0) {
+        snapshotStatus = 'partial'
+      }
+
+      // Create normalized data structure with enhanced metadata
+      const normalizedData: NormalizedData = {
+        districts,
+        metadata: {
+          source: 'district-backfill-service',
+          fetchedAt: new Date().toISOString(),
+          dataAsOfDate: data.sourceDataDate,
+          districtCount: districts.length,
+          processingDurationMs: 0, // Will be updated by snapshot store
+          configuredDistricts,
+          successfulDistricts: districts.map(d => d.districtId),
+          failedDistricts: districtErrors.map(e => e.districtId),
+          districtErrors,
+        },
+      }
+
+      // Create snapshot object with backfill-specific metadata
+      const snapshot: Snapshot = {
+        snapshot_id: snapshotId,
+        created_at: new Date().toISOString(),
+        schema_version: '2.0.0',
+        calculation_version: '1.0.0',
+        status: snapshotStatus,
+        errors: districtErrors.map(e => `District ${e.districtId}: ${e.error}`),
+        payload: normalizedData,
+      }
+
+      // Write snapshot using PerDistrictSnapshotStore
+      await this.snapshotStore.writeSnapshot(snapshot)
+
+      // Check if this snapshot is more recent than current and update pointer if needed
+      // Only update pointer for successful or partial snapshots
+      if (snapshotStatus !== 'failed') {
+        await this.updateCurrentPointerIfNewer(snapshot)
+      }
+
+      logger.info('Successfully created snapshot from district backfill data with enhanced error handling', {
+        operation: 'createSnapshotFromBackfill',
+        district_id: districtId,
+        snapshot_id: snapshotId,
+        date,
+        source_data_date: data.sourceDataDate,
+        status: snapshotStatus,
+        successful_districts: districts.length,
+        failed_districts: districtErrors.length,
+        configured_districts: configuredDistricts.length,
+        scope_validated: true,
+      })
+
+      return snapshotId
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to create snapshot from district backfill data', {
+        operation: 'createSnapshotFromBackfill',
+        district_id: districtId,
+        snapshot_id: snapshotId,
+        date,
+        error: errorMessage,
+      })
+      throw new Error(`Failed to create snapshot from district backfill data: ${errorMessage}`)
+    }
+  }
+
+  /**
+   * Integrate with snapshot store for consistent storage format
+   */
+  integrateWithSnapshotStore(snapshotStore: PerDistrictFileSnapshotStore): void {
+    this.snapshotStore = snapshotStore
+    logger.info('DistrictBackfillService integrated with PerDistrictSnapshotStore', {
+      operation: 'integrateWithSnapshotStore',
+    })
+  }
+
+  /**
+   * Update current snapshot pointer if the new snapshot is more recent
+   */
+  private async updateCurrentPointerIfNewer(snapshot: Snapshot): Promise<void> {
+    try {
+      const currentSnapshot = await this.snapshotStore.getLatestSuccessful()
+      
+      if (!currentSnapshot) {
+        // No current snapshot, this becomes the current one
+        logger.info('No current snapshot found, new district backfill snapshot becomes current', {
+          operation: 'updateCurrentPointerIfNewer',
+          snapshot_id: snapshot.snapshot_id,
+          date: snapshot.payload.metadata.dataAsOfDate,
+        })
+        return
+      }
+
+      const currentDate = new Date(currentSnapshot.payload.metadata.dataAsOfDate)
+      const newDate = new Date(snapshot.payload.metadata.dataAsOfDate)
+
+      if (newDate > currentDate) {
+        logger.info('District backfill snapshot is more recent than current, updating pointer', {
+          operation: 'updateCurrentPointerIfNewer',
+          current_snapshot_id: currentSnapshot.snapshot_id,
+          current_date: currentSnapshot.payload.metadata.dataAsOfDate,
+          new_snapshot_id: snapshot.snapshot_id,
+          new_date: snapshot.payload.metadata.dataAsOfDate,
+        })
+        // The writeSnapshot method already handles current pointer updates for successful snapshots
+      } else {
+        logger.debug('District backfill snapshot is not more recent than current, keeping existing pointer', {
+          operation: 'updateCurrentPointerIfNewer',
+          current_date: currentSnapshot.payload.metadata.dataAsOfDate,
+          new_date: snapshot.payload.metadata.dataAsOfDate,
+        })
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.warn('Failed to check/update current pointer for district backfill snapshot', {
+        operation: 'updateCurrentPointerIfNewer',
+        snapshot_id: snapshot.snapshot_id,
+        error: errorMessage,
+      })
+      // Don't throw - this is not critical for backfill success
+    }
+  }
+
+  /**
+   * Validate district data quality and return list of validation errors
+   */
+  private validateDistrictData(districtStats: DistrictStatistics): string[] {
+    const errors: string[] = []
+
+    // Check for required fields
+    if (!districtStats.districtId) {
+      errors.push('Missing district ID')
+    }
+
+    // Check for reasonable membership values
+    if (typeof districtStats.membership?.total !== 'number' || districtStats.membership.total < 0) {
+      errors.push('Invalid membership total')
+    }
+
+    // Check for reasonable club values
+    if (typeof districtStats.clubs?.total !== 'number' || districtStats.clubs.total < 0) {
+      errors.push('Invalid club total')
+    }
+
+    // Check for suspiciously low membership (likely data quality issue)
+    if (districtStats.clubs?.total > 0 && districtStats.membership?.total < 50) {
+      errors.push(`Suspiciously low membership: ${districtStats.membership.total} total members for ${districtStats.clubs.total} clubs`)
+    }
+
+    // Check for impossible ratios
+    if (districtStats.clubs?.distinguished > districtStats.clubs?.total) {
+      errors.push('More distinguished clubs than total clubs')
+    }
+
+    // Check for negative values
+    if (districtStats.membership?.total < 0) {
+      errors.push('Negative membership count')
+    }
+
+    if (districtStats.clubs?.total < 0) {
+      errors.push('Negative club count')
+    }
+
+    return errors
+  }
+
+  /**
    * Check if an error indicates date unavailability vs actual failure
    */
   private isDateUnavailableError(errorMessage: string): boolean {
@@ -992,73 +1321,138 @@ export class DistrictBackfillService {
                 }
               )
             } else {
-              // Cache all three reports together (atomic operation)
-              await this.cacheManager.cacheDistrictData(
-                districtId,
-                date,
-                districtPerformance,
-                divisionPerformance,
-                clubPerformance
-              )
-
-              // Trigger reconciliation hooks if any are registered
-              if (
-                this.reconciliationHooks &&
-                this.reconciliationHooks.length > 0
-              ) {
-                try {
-                  const districtStats = this.convertToDistrictStatistics(
-                    districtId,
-                    date,
+              // Create snapshot from backfill data instead of direct cache storage
+              try {
+                const snapshotId = await this.createSnapshotFromBackfill(
+                  districtId,
+                  date,
+                  {
                     districtPerformance,
                     divisionPerformance,
-                    clubPerformance
-                  )
+                    clubPerformance,
+                    sourceDataDate: date, // Use the target date as source date
+                  }
+                )
 
-                  for (const hook of this.reconciliationHooks) {
-                    try {
-                      hook(districtId, date, districtStats)
-                    } catch (hookError) {
-                      logger.warn('Reconciliation hook failed', {
+                // Also cache the data for backward compatibility and immediate access
+                await this.cacheManager.cacheDistrictData(
+                  districtId,
+                  date,
+                  districtPerformance,
+                  divisionPerformance,
+                  clubPerformance
+                )
+
+                // Trigger reconciliation hooks if any are registered
+                if (
+                  this.reconciliationHooks &&
+                  this.reconciliationHooks.length > 0
+                ) {
+                  try {
+                    const districtStats = this.convertToDistrictStatistics(
+                      districtId,
+                      date,
+                      districtPerformance,
+                      divisionPerformance,
+                      clubPerformance
+                    )
+
+                    for (const hook of this.reconciliationHooks) {
+                      try {
+                        hook(districtId, date, districtStats)
+                      } catch (hookError) {
+                        logger.warn('Reconciliation hook failed', {
+                          backfillId,
+                          districtId,
+                          date,
+                          error:
+                            hookError instanceof Error
+                              ? hookError.message
+                              : String(hookError),
+                        })
+                      }
+                    }
+                  } catch (conversionError) {
+                    logger.warn(
+                      'Failed to convert data for reconciliation hooks',
+                      {
                         backfillId,
                         districtId,
                         date,
                         error:
-                          hookError instanceof Error
-                            ? hookError.message
-                            : String(hookError),
-                      })
-                    }
+                          conversionError instanceof Error
+                            ? conversionError.message
+                            : String(conversionError),
+                      }
+                    )
                   }
-                } catch (conversionError) {
-                  logger.warn(
-                    'Failed to convert data for reconciliation hooks',
-                    {
+                }
+
+                successCount++
+                logger.info(
+                  'Successfully fetched, cached, and created snapshot for district data',
+                  {
+                    backfillId,
+                    districtId,
+                    date,
+                    snapshot_id: snapshotId,
+                    districtRecords: districtPerformance.length,
+                    divisionRecords: divisionPerformance.length,
+                    clubRecords: clubPerformance.length,
+                    totalMembers,
+                  }
+                )
+              } catch (snapshotError) {
+                const snapshotErrorMessage = snapshotError instanceof Error 
+                  ? snapshotError.message 
+                  : 'Unknown snapshot creation error'
+                
+                // Check if it's a scope violation error
+                if (snapshotErrorMessage.includes('not in current configuration scope')) {
+                  logger.warn('District backfill scope violation - skipping snapshot creation', {
+                    backfillId,
+                    districtId,
+                    date,
+                    scope_error: snapshotErrorMessage,
+                  })
+                  
+                  // Don't count as failed since it's a configuration issue, not a data issue
+                  job.progress.unavailable++
+                } else {
+                  // Still try to cache the data even if snapshot creation fails
+                  try {
+                    await this.cacheManager.cacheDistrictData(
+                      districtId,
+                      date,
+                      districtPerformance,
+                      divisionPerformance,
+                      clubPerformance
+                    )
+                    
+                    logger.warn('Cached data but failed to create snapshot', {
                       backfillId,
                       districtId,
                       date,
-                      error:
-                        conversionError instanceof Error
-                          ? conversionError.message
-                          : String(conversionError),
-                    }
-                  )
+                      snapshot_error: snapshotErrorMessage,
+                    })
+                    
+                    successCount++ // Still count as success since data was cached
+                  } catch (cacheError) {
+                    const cacheErrorMessage = cacheError instanceof Error 
+                      ? cacheError.message 
+                      : 'Unknown cache error'
+                    
+                    job.progress.failed++
+                    logger.error('Failed to cache data and create snapshot', {
+                      backfillId,
+                      districtId,
+                      date,
+                      snapshot_error: snapshotErrorMessage,
+                      cache_error: cacheErrorMessage,
+                    })
+                  }
                 }
               }
-
-              successCount++
-              logger.info(
-                'Successfully fetched and cached district data for date',
-                {
-                  backfillId,
-                  districtId,
-                  date,
-                  districtRecords: districtPerformance.length,
-                  divisionRecords: divisionPerformance.length,
-                  clubRecords: clubPerformance.length,
-                  totalMembers,
-                }
-              )
             }
           } else {
             // No data available (blackout period or reconciliation)

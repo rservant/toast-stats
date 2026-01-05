@@ -34,6 +34,11 @@ import type {
   CircuitBreaker,
   CircuitBreakerStats,
 } from '../utils/CircuitBreaker.js'
+import type {
+  DistrictConfiguration,
+  ConfigurationChange,
+  ConfigurationValidationResult,
+} from '../services/DistrictConfigurationService.js'
 
 /**
  * Logger interface for dependency injection
@@ -56,6 +61,27 @@ export interface ICircuitBreakerManager {
   getAllStats(): Record<string, CircuitBreakerStats>
   resetAll(): void
   dispose(): Promise<void>
+}
+
+/**
+ * District Configuration Service Interface
+ */
+export interface IDistrictConfigurationService {
+  getConfiguredDistricts(): Promise<string[]>
+  addDistrict(districtId: string, adminUser?: string): Promise<void>
+  removeDistrict(districtId: string, adminUser?: string): Promise<void>
+  setConfiguredDistricts(
+    districtIds: string[],
+    adminUser?: string
+  ): Promise<void>
+  validateDistrictId(districtId: string): boolean
+  getConfigurationHistory(): Promise<ConfigurationChange[]>
+  getConfiguration(): Promise<DistrictConfiguration>
+  hasConfiguredDistricts(): Promise<boolean>
+  validateConfiguration(
+    allDistrictIds?: string[]
+  ): Promise<ConfigurationValidationResult>
+  clearCache(): void
 }
 
 /**

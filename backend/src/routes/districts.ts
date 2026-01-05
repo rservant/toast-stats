@@ -18,6 +18,11 @@ import {
 } from '../types/analytics.js'
 import { AnalyticsEngine } from '../services/AnalyticsEngine.js'
 import {
+  DistrictDataAggregator,
+  createDistrictDataAggregator,
+} from '../services/DistrictDataAggregator.js'
+import { PerDistrictFileSnapshotStore } from '../services/PerDistrictSnapshotStore.js'
+import {
   transformDistrictsResponse,
   transformDistrictStatisticsResponse,
   transformMembershipHistoryResponse,
@@ -56,6 +61,16 @@ const cacheDirectory = cacheConfig.getCacheDirectory()
 
 // Initialize snapshot store for serving data from snapshots
 const snapshotStore = productionFactory.createSnapshotStore(cacheConfig)
+
+// Initialize per-district snapshot store and aggregator for new format
+const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+  cacheDir: cacheDirectory,
+  maxSnapshots: 100,
+  maxAgeDays: 30,
+})
+const districtDataAggregator = createDistrictDataAggregator(
+  perDistrictSnapshotStore
+)
 
 // Initialize services with configured cache directory
 const cacheManager = new CacheManager(cacheDirectory)
@@ -188,6 +203,115 @@ async function serveFromSnapshot<T>(
 
     logger.error('Snapshot read operation failed', {
       operation: 'serveFromSnapshot',
+      operation_id: operationId,
+      context: errorContext,
+      error: errorMessage,
+      duration_ms: duration,
+    })
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'SNAPSHOT_ERROR',
+        message: `Failed to ${errorContext}`,
+        details: errorResponse.details,
+      },
+    })
+    return null
+  }
+}
+
+/**
+ * Helper function to serve data from per-district snapshots with proper error handling
+ * Uses the new DistrictDataAggregator for efficient per-district file access
+ */
+async function serveFromPerDistrictSnapshot<T>(
+  res: Response,
+  dataExtractor: (
+    snapshot: Snapshot,
+    aggregator: DistrictDataAggregator
+  ) => Promise<T>,
+  errorContext: string
+): Promise<T | null> {
+  const startTime = Date.now()
+  const operationId = `per_district_read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  logger.info('Starting per-district snapshot read operation', {
+    operation: 'serveFromPerDistrictSnapshot',
+    operation_id: operationId,
+    context: errorContext,
+  })
+
+  try {
+    // Try per-district snapshot store first
+    const snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
+
+    if (!snapshot) {
+      // Fall back to old format
+      logger.debug(
+        'No per-district snapshot found, falling back to old format',
+        {
+          operation: 'serveFromPerDistrictSnapshot',
+          operation_id: operationId,
+          context: errorContext,
+        }
+      )
+
+      return await serveFromSnapshot(
+        res,
+        _oldSnapshot => {
+          // For backward compatibility, we need to adapt the old format
+          // This is a synchronous operation, so we need to handle the async dataExtractor differently
+          throw new Error(
+            'Backward compatibility not implemented for async extractors'
+          )
+        },
+        errorContext
+      )
+    }
+
+    logger.info('Retrieved per-district snapshot for read operation', {
+      operation: 'serveFromPerDistrictSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      created_at: snapshot.created_at,
+      schema_version: snapshot.schema_version,
+      calculation_version: snapshot.calculation_version,
+      district_count: snapshot.payload.districts.length,
+      context: errorContext,
+    })
+
+    const data = await dataExtractor(snapshot, districtDataAggregator)
+
+    // Add snapshot metadata to the response
+    const responseWithMetadata = {
+      ...data,
+      _snapshot_metadata: {
+        snapshot_id: snapshot.snapshot_id,
+        created_at: snapshot.created_at,
+        schema_version: snapshot.schema_version,
+        calculation_version: snapshot.calculation_version,
+        data_as_of: snapshot.payload.metadata.dataAsOfDate,
+      },
+    }
+
+    const duration = Date.now() - startTime
+    logger.info('Per-district snapshot read operation completed successfully', {
+      operation: 'serveFromPerDistrictSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      context: errorContext,
+      duration_ms: duration,
+    })
+
+    return responseWithMetadata as T
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Per-district snapshot read operation failed', {
+      operation: 'serveFromPerDistrictSnapshot',
       operation_id: operationId,
       context: errorContext,
       error: errorMessage,
@@ -352,6 +476,151 @@ async function serveDistrictFromSnapshot<T>(
 }
 
 /**
+ * Helper function to serve district-specific data from per-district snapshots
+ * Uses the new DistrictDataAggregator for efficient per-district file access
+ */
+async function serveDistrictFromPerDistrictSnapshot<T>(
+  res: Response,
+  districtId: string,
+  dataExtractor: (district: DistrictStatistics) => T,
+  errorContext: string
+): Promise<T | null> {
+  const startTime = Date.now()
+  const operationId = `per_district_district_read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  logger.info(
+    'Starting per-district district-specific snapshot read operation',
+    {
+      operation: 'serveDistrictFromPerDistrictSnapshot',
+      operation_id: operationId,
+      district_id: districtId,
+      context: errorContext,
+    }
+  )
+
+  try {
+    // Try per-district snapshot store first
+    const snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
+
+    if (!snapshot) {
+      // Fall back to old format
+      logger.debug(
+        'No per-district snapshot found, falling back to old format',
+        {
+          operation: 'serveDistrictFromPerDistrictSnapshot',
+          operation_id: operationId,
+          district_id: districtId,
+          context: errorContext,
+        }
+      )
+
+      return await serveDistrictFromSnapshot(
+        res,
+        districtId,
+        dataExtractor,
+        errorContext
+      )
+    }
+
+    logger.info('Retrieved per-district snapshot for district read operation', {
+      operation: 'serveDistrictFromPerDistrictSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+      created_at: snapshot.created_at,
+      schema_version: snapshot.schema_version,
+      calculation_version: snapshot.calculation_version,
+      context: errorContext,
+    })
+
+    // Get district data using the aggregator
+    const district = await districtDataAggregator.getDistrictData(
+      snapshot.snapshot_id,
+      districtId
+    )
+
+    if (!district) {
+      const duration = Date.now() - startTime
+      logger.warn('District not found in per-district snapshot', {
+        operation: 'serveDistrictFromPerDistrictSnapshot',
+        operation_id: operationId,
+        snapshot_id: snapshot.snapshot_id,
+        district_id: districtId,
+        context: errorContext,
+        duration_ms: duration,
+      })
+
+      res.status(404).json({
+        error: {
+          code: 'DISTRICT_NOT_FOUND',
+          message: 'District not found',
+        },
+      })
+      return null
+    }
+
+    logger.debug('Found district in per-district snapshot', {
+      operation: 'serveDistrictFromPerDistrictSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+    })
+
+    const data = dataExtractor(district)
+
+    // Add snapshot metadata to the response
+    const responseWithMetadata = {
+      ...data,
+      _snapshot_metadata: {
+        snapshot_id: snapshot.snapshot_id,
+        created_at: snapshot.created_at,
+        schema_version: snapshot.schema_version,
+        calculation_version: snapshot.calculation_version,
+        data_as_of: snapshot.payload.metadata.dataAsOfDate,
+      },
+    }
+
+    const duration = Date.now() - startTime
+    logger.info(
+      'Per-district district snapshot read operation completed successfully',
+      {
+        operation: 'serveDistrictFromPerDistrictSnapshot',
+        operation_id: operationId,
+        snapshot_id: snapshot.snapshot_id,
+        district_id: districtId,
+        context: errorContext,
+        duration_ms: duration,
+      }
+    )
+
+    return responseWithMetadata as T
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Per-district district snapshot read operation failed', {
+      operation: 'serveDistrictFromPerDistrictSnapshot',
+      operation_id: operationId,
+      district_id: districtId,
+      context: errorContext,
+      error: errorMessage,
+      duration_ms: duration,
+    })
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'SNAPSHOT_ERROR',
+        message: `Failed to ${errorContext}`,
+        details: errorResponse.details,
+      },
+    })
+    return null
+  }
+}
+
+/**
  * GET /api/districts
  * Fetch available districts from latest snapshot
  */
@@ -370,28 +639,31 @@ router.get(
       ip: req.ip,
     })
 
-    const data = await serveFromSnapshot(
+    const data = await serveFromPerDistrictSnapshot(
       res,
-      snapshot => {
-        logger.debug('Extracting districts list from snapshot', {
+      async (snapshot, aggregator) => {
+        logger.debug('Extracting districts list from per-district snapshot', {
           operation: 'GET /api/districts',
           request_id: requestId,
           snapshot_id: snapshot.snapshot_id,
-          total_districts: snapshot.payload.districts.length,
         })
 
-        // Extract districts list from snapshot
-        const districts = snapshot.payload.districts.map(
-          (district: DistrictStatistics) => ({
-            districtId: district.districtId,
-            name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
-            // Add any other district-level fields needed for the districts list
-          })
+        // Get district summary from aggregator
+        const districtSummaries = await aggregator.getDistrictSummary(
+          snapshot.snapshot_id
         )
+
+        // Transform to expected format
+        const districts = districtSummaries.map(summary => ({
+          districtId: summary.districtId,
+          name: summary.districtName,
+          status: summary.status,
+          lastUpdated: summary.lastUpdated,
+        }))
 
         return transformDistrictsResponse({ districts }) as DistrictsResponse
       },
-      'fetch districts from snapshot'
+      'fetch districts from per-district snapshot'
     )
 
     if (data) {
@@ -420,23 +692,26 @@ router.get(
     ttl: 900, // 15 minutes
   }),
   async (_req: Request, res: Response) => {
-    const data = await serveFromSnapshot(
+    const data = await serveFromPerDistrictSnapshot(
       res,
-      snapshot => {
-        // Extract rankings data from all districts in snapshot
-        const rankings = snapshot.payload.districts.map(
-          (district: DistrictStatistics) => ({
-            districtId: district.districtId,
-            name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
-            rank: null, // DistrictStatistics doesn't have rank field
-            score: null, // DistrictStatistics doesn't have score field
-            // Add other ranking-related fields as needed
-          })
+      async (snapshot, aggregator) => {
+        // Get all districts data from aggregator
+        const allDistricts = await aggregator.getAllDistricts(
+          snapshot.snapshot_id
         )
+
+        // Extract rankings data from all districts
+        const rankings = allDistricts.map((district: DistrictStatistics) => ({
+          districtId: district.districtId,
+          name: `District ${district.districtId}`,
+          rank: null, // DistrictStatistics doesn't have rank field
+          score: null, // DistrictStatistics doesn't have score field
+          // Add other ranking-related fields as needed
+        }))
 
         return { districts: rankings }
       },
-      'fetch district rankings from snapshot'
+      'fetch district rankings from per-district snapshot'
     )
 
     if (data) {
@@ -680,22 +955,24 @@ router.get(
       return
     }
 
-    const data = await serveDistrictFromSnapshot(
+    const data = await serveDistrictFromPerDistrictSnapshot(
       res,
       districtId,
       district => {
-        logger.debug('Extracting district statistics from snapshot', {
-          operation: 'GET /api/districts/:districtId/statistics',
-          request_id: requestId,
-          district_id: districtId,
-          district_name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
-        })
+        logger.debug(
+          'Extracting district statistics from per-district snapshot',
+          {
+            operation: 'GET /api/districts/:districtId/statistics',
+            request_id: requestId,
+            district_id: districtId,
+          }
+        )
 
         return transformDistrictStatisticsResponse(
           district
         ) as DistrictStatistics
       },
-      'fetch district statistics from snapshot'
+      'fetch district statistics from per-district snapshot'
     )
 
     if (data) {
@@ -751,7 +1028,7 @@ router.get(
       return
     }
 
-    const data = await serveDistrictFromSnapshot(
+    const data = await serveDistrictFromPerDistrictSnapshot(
       res,
       districtId,
       district => {
@@ -765,7 +1042,7 @@ router.get(
           membershipHistory,
         }) as MembershipHistoryResponse
       },
-      'fetch membership history from snapshot'
+      'fetch membership history from per-district snapshot'
     )
 
     if (data) {
@@ -799,14 +1076,14 @@ router.get(
       return
     }
 
-    const data = await serveDistrictFromSnapshot(
+    const data = await serveDistrictFromPerDistrictSnapshot(
       res,
       districtId,
       district =>
         transformClubsResponse({
           clubs: district.clubs || [],
         }) as ClubsResponse,
-      'fetch clubs from snapshot'
+      'fetch clubs from per-district snapshot'
     )
 
     if (data) {

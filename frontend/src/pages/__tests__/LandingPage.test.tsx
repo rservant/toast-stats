@@ -208,6 +208,92 @@ describe('LandingPage - Percentage Formatting', () => {
   })
 })
 
+describe('LandingPage - Error Handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should display welcome message and backfill button when no snapshots are available', async () => {
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
+
+    // Mock cached dates call to succeed
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        dates: [],
+      },
+    })
+
+    // Mock rankings call to return NO_SNAPSHOT_AVAILABLE error
+    apiClient.get.mockRejectedValueOnce({
+      response: {
+        status: 503,
+        data: {
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        },
+      },
+    })
+
+    renderWithProviders(<LandingPage />)
+
+    // Wait for error state to render
+    const welcomeHeading = await screen.findByText('Welcome to Toast-Stats!')
+    expect(welcomeHeading).toBeInTheDocument()
+
+    // Check for guidance message
+    expect(
+      screen.getByText(
+        'No data snapshots are available yet. To get started, you\'ll need to fetch data from the Toastmasters dashboard.'
+      )
+    ).toBeInTheDocument()
+
+    // Check for backfill button
+    expect(screen.getByText('Backfill Data')).toBeInTheDocument()
+
+    // Check for "Check Again" button
+    expect(screen.getByText('Check Again')).toBeInTheDocument()
+
+    // Check for setup instructions
+    expect(screen.getByText('What happens next:')).toBeInTheDocument()
+    expect(
+      screen.getByText('Click "Backfill Data" to fetch current and historical data')
+    ).toBeInTheDocument()
+  })
+
+  it('should display generic error message for other types of errors', async () => {
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
+
+    // Mock cached dates call to succeed
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        dates: [],
+      },
+    })
+
+    // Mock rankings call to return a different error
+    const mockError = new Error('Something went wrong')
+    apiClient.get.mockRejectedValueOnce(mockError)
+
+    renderWithProviders(<LandingPage />)
+
+    // Wait for error state to render
+    const errorHeading = await screen.findByText('Error Loading Rankings')
+    expect(errorHeading).toBeInTheDocument()
+
+    // Check for generic error message
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
+
+    // Check for "Try Again" button
+    expect(screen.getByText('Try Again')).toBeInTheDocument()
+
+    // Should NOT show the welcome message
+    expect(screen.queryByText('Welcome to Toast-Stats!')).not.toBeInTheDocument()
+  })
+})
+
 describe('LandingPage - Table Cell Rendering', () => {
   beforeEach(() => {
     vi.clearAllMocks()

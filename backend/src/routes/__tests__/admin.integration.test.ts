@@ -38,12 +38,8 @@ vi.mock('../../utils/logger.js', () => ({
 describe('Admin Routes Integration', () => {
   let app: express.Application
   let tempDir: string
-  const validAdminToken = 'test-admin-token'
 
   beforeEach(async () => {
-    // Set up test environment
-    process.env.ADMIN_TOKEN = validAdminToken
-
     // Create temporary directory for testing
     tempDir = await fs.mkdtemp(
       path.join(os.tmpdir(), 'admin-integration-test-')
@@ -64,8 +60,6 @@ describe('Admin Routes Integration', () => {
   })
 
   afterEach(async () => {
-    delete process.env.ADMIN_TOKEN
-
     // Clean up temporary directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true })
@@ -136,7 +130,6 @@ describe('Admin Routes Integration', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots?limit=5')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(response.status).toBe(200)
 
@@ -156,7 +149,6 @@ describe('Admin Routes Integration', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/1704067200000')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(response.status).toBe(200)
       expect(response.body.inspection.snapshot_id).toBe('1704067200000')
@@ -174,7 +166,6 @@ describe('Admin Routes Integration', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/1704067200000/payload')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(response.status).toBe(200)
       expect(response.body.snapshot_id).toBe('1704067200000')
@@ -189,7 +180,6 @@ describe('Admin Routes Integration', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/health')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(response.status).toBe(200)
       expect(response.body.health.is_ready).toBe(true)
@@ -203,7 +193,6 @@ describe('Admin Routes Integration', () => {
     it('should handle empty store gracefully', async () => {
       const response = await request(app)
         .get('/api/admin/snapshot-store/health')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       // Empty store might return 500 if no snapshots exist, which is expected behavior
       if (response.status === 500) {
@@ -227,7 +216,6 @@ describe('Admin Routes Integration', () => {
       // Filter for successful snapshots only
       const response = await request(app)
         .get('/api/admin/snapshots?status=success')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(response.status).toBe(200)
       expect(response.body.snapshots).toHaveLength(1)
@@ -246,7 +234,6 @@ describe('Admin Routes Integration', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/performance')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(response.status).toBe(200)
       expect(response.body.performance.totalReads).toBeGreaterThan(0)
@@ -264,7 +251,6 @@ describe('Admin Routes Integration', () => {
       // Reset metrics
       const resetResponse = await request(app)
         .post('/api/admin/snapshot-store/performance/reset')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(resetResponse.status).toBe(200)
       expect(resetResponse.body.success).toBe(true)
@@ -272,7 +258,6 @@ describe('Admin Routes Integration', () => {
       // Check that metrics are reset
       const metricsResponse = await request(app)
         .get('/api/admin/snapshot-store/performance')
-        .set('Authorization', `Bearer ${validAdminToken}`)
 
       expect(metricsResponse.status).toBe(200)
       expect(metricsResponse.body.performance.totalReads).toBe(0)

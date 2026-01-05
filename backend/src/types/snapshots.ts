@@ -32,6 +32,22 @@ export interface NormalizedData {
     districtCount: number
     /** Processing duration in milliseconds */
     processingDurationMs: number
+    /** Backfill job ID (optional, for backfill operations) */
+    backfillJobId?: string
+    /** List of districts configured for collection (optional) */
+    configuredDistricts?: string[]
+    /** List of districts that were successfully processed (optional) */
+    successfulDistricts?: string[]
+    /** List of districts that failed processing (optional) */
+    failedDistricts?: string[]
+    /** Detailed error information per district (optional) */
+    districtErrors?: Array<{
+      districtId: string
+      districtName?: string
+      error: string
+      errorType: 'fetch_failed' | 'validation_failed' | 'processing_failed' | 'scope_violation'
+      timestamp: string
+    }>
   }
 }
 

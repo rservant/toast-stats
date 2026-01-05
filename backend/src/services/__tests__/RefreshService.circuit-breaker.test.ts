@@ -6,18 +6,18 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { RefreshService } from '../services/RefreshService.js'
-import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
-import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
-import { DataValidator } from '../services/DataValidator.js'
-// import { CircuitBreakerError } from '../utils/CircuitBreaker.js'
-import type { ScrapedRecord } from '../types/districts.js'
+import { RefreshService } from '../RefreshService.js'
+import { FileSnapshotStore } from '../FileSnapshotStore.js'
+import { ToastmastersScraper } from '../ToastmastersScraper.js'
+import { DataValidator } from '../DataValidator.js'
+// import { CircuitBreakerError } from '../../utils/CircuitBreaker.js'
+import type { ScrapedRecord } from '../../types/districts.js'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { mkdtemp, rm } from 'fs/promises'
 
 // Mock the scraper to simulate network failures
-vi.mock('../services/ToastmastersScraper.ts')
+vi.mock('../ToastmastersScraper.js')
 
 describe('RefreshService Circuit Breaker Integration', () => {
   let refreshService: RefreshService
@@ -41,6 +41,10 @@ describe('RefreshService Circuit Breaker Integration', () => {
       mockScraper,
       new DataValidator()
     )
+
+    // Set up district configuration to pass validation
+    const districtConfigService = refreshService['districtConfigService']
+    await districtConfigService.addDistrict('123', 'test-admin')
   })
 
   afterEach(async () => {

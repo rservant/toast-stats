@@ -3,6 +3,8 @@
  *
  * Tests the debugging endpoints for snapshot analysis, listing,
  * inspection, and health checking functionality.
+ * 
+ * Note: Admin token validation has been removed for development simplicity.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -23,8 +25,22 @@ const mockSnapshotStore = {
   resetPerformanceMetrics: vi.fn(),
 }
 
+const mockCacheConfigService = {
+  getConfiguration: vi.fn(() => ({
+    baseDirectory: './test-cache',
+    source: 'test',
+    isConfigured: true,
+    validationStatus: {
+      isValid: true,
+      isAccessible: true,
+      isSecure: true,
+    },
+  })),
+}
+
 const mockFactory = {
   createSnapshotStore: vi.fn(() => mockSnapshotStore),
+  createCacheConfigService: vi.fn(() => mockCacheConfigService),
 }
 
 vi.mock('../../services/ProductionServiceFactory.js', () => ({
@@ -41,14 +57,33 @@ vi.mock('../../utils/logger.js', () => ({
   },
 }))
 
+// Mock DistrictConfigurationService
+const mockDistrictConfigService = {
+  getConfiguration: vi.fn(),
+  hasConfiguredDistricts: vi.fn(),
+  addDistrict: vi.fn(),
+  removeDistrict: vi.fn(),
+  setConfiguredDistricts: vi.fn(),
+  validateConfiguration: vi.fn(),
+  getConfiguredDistricts: vi.fn(),
+}
+
+vi.mock('../../services/DistrictConfigurationService.js', () => ({
+  DistrictConfigurationService: class MockDistrictConfigurationService {
+    getConfiguration = mockDistrictConfigService.getConfiguration
+    hasConfiguredDistricts = mockDistrictConfigService.hasConfiguredDistricts
+    addDistrict = mockDistrictConfigService.addDistrict
+    removeDistrict = mockDistrictConfigService.removeDistrict
+    setConfiguredDistricts = mockDistrictConfigService.setConfiguredDistricts
+    validateConfiguration = mockDistrictConfigService.validateConfiguration
+    getConfiguredDistricts = mockDistrictConfigService.getConfiguredDistricts
+  },
+}))
+
 describe('Admin Routes', () => {
   let app: express.Application
-  const validAdminToken = 'test-admin-token'
 
   beforeEach(() => {
-    // Set up test environment
-    process.env.ADMIN_TOKEN = validAdminToken
-
     // Create test app
     app = express()
     app.use(express.json())
@@ -56,10 +91,37 @@ describe('Admin Routes', () => {
 
     // Reset all mocks
     vi.clearAllMocks()
+
+    // Reset district config service mock
+    mockDistrictConfigService.getConfiguration.mockResolvedValue({
+      configuredDistricts: ['42', '15'],
+      lastUpdated: '2024-01-01T00:00:00Z',
+      updatedBy: 'admin',
+      version: 1,
+    })
+    mockDistrictConfigService.hasConfiguredDistricts.mockResolvedValue(true)
+    mockDistrictConfigService.getConfiguredDistricts.mockResolvedValue([
+      '42',
+      '15',
+    ])
+    mockDistrictConfigService.validateConfiguration.mockResolvedValue({
+      isValid: true,
+      configuredDistricts: ['42', '15'],
+      validDistricts: ['42', '15'],
+      invalidDistricts: [],
+      warnings: [],
+      suggestions: [],
+      lastCollectionInfo: [],
+    })
+    mockDistrictConfigService.addDistrict.mockResolvedValue(undefined)
+    mockDistrictConfigService.removeDistrict.mockResolvedValue(undefined)
+    mockDistrictConfigService.setConfiguredDistricts.mockResolvedValue(
+      undefined
+    )
   })
 
   afterEach(() => {
-    delete process.env.ADMIN_TOKEN
+    // Clean up after tests
   })
 
   const createTestSnapshot = (
@@ -76,11 +138,37 @@ describe('Admin Routes', () => {
       districts: [
         {
           districtId: '123',
-          name: 'Test District',
-          clubs: [],
-          membership: { total: 100 },
-          performance: { overallScore: 85 },
-        } as Snapshot['payload']['districts'][0],
+          asOfDate: '2024-01-01',
+          membership: { 
+            total: 100,
+            base: 90,
+            new: 10,
+            renewed: 80,
+            net: 10,
+            netGrowth: 0.11
+          },
+          clubs: { 
+            total: 25,
+            distinguished: 10,
+            select: 8,
+            president: 7
+          },
+          education: {
+            awards: 150,
+            cc: 50,
+            ac: 30,
+            cl: 25,
+            al: 20,
+            dtm: 15,
+            pathways: 10
+          },
+          performance: { 
+            membershipNet: 85,
+            clubsDistinguished: 40,
+            educationAwards: 75,
+            overallScore: 85
+          },
+        },
       ],
       metadata: {
         source: 'test',
@@ -106,52 +194,31 @@ describe('Admin Routes', () => {
     district_count: 1,
   })
 
-  describe('Authentication', () => {
-    it('should reject requests without admin token', async () => {
+  describe('Admin Access Logging', () => {
+    it('should allow requests without admin token and log access', async () => {
+      mockSnapshotStore.listSnapshots.mockResolvedValue([])
+
       const response = await request(app).get('/api/admin/snapshots')
 
-      expect(response.status).toBe(401)
-      expect(response.body.error.code).toBe('UNAUTHORIZED')
+      expect(response.status).toBe(200)
     })
 
-    it('should reject requests with invalid admin token', async () => {
-      const response = await request(app)
-        .get('/api/admin/snapshots')
-        .set('Authorization', 'Bearer invalid-token')
-
-      expect(response.status).toBe(401)
-      expect(response.body.error.code).toBe('UNAUTHORIZED')
-    })
-
-    it('should accept requests with valid admin token in header', async () => {
+    it('should allow requests with any token and log access', async () => {
       mockSnapshotStore.listSnapshots.mockResolvedValue([])
 
       const response = await request(app)
         .get('/api/admin/snapshots')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
     })
 
-    it('should accept requests with valid admin token in query', async () => {
+    it('should allow requests with query token and log access', async () => {
       mockSnapshotStore.listSnapshots.mockResolvedValue([])
 
-      const response = await request(app).get(
-        `/api/admin/snapshots?token=${validAdminToken}`
-      )
+      const response = await request(app).get('/api/admin/snapshots?token=any-token')
 
       expect(response.status).toBe(200)
-    })
-
-    it('should return 500 when ADMIN_TOKEN is not configured', async () => {
-      delete process.env.ADMIN_TOKEN
-
-      const response = await request(app)
-        .get('/api/admin/snapshots')
-        .set('Authorization', 'Bearer some-token')
-
-      expect(response.status).toBe(500)
-      expect(response.body.error.code).toBe('ADMIN_TOKEN_NOT_CONFIGURED')
     })
   })
 
@@ -163,9 +230,7 @@ describe('Admin Routes', () => {
       ]
       mockSnapshotStore.listSnapshots.mockResolvedValue(testMetadata)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+      const response = await request(app).get('/api/admin/snapshots')
 
       expect(response.status).toBe(200)
       expect(response.body.snapshots).toEqual(testMetadata)
@@ -188,7 +253,7 @@ describe('Admin Routes', () => {
           schema_version: '1.0.0',
           min_district_count: '1',
         })
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(mockSnapshotStore.listSnapshots).toHaveBeenCalledWith(5, {
@@ -205,7 +270,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(500)
       expect(response.body.error.code).toBe('SNAPSHOT_LISTING_FAILED')
@@ -219,7 +284,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/1704067200000')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.inspection.snapshot_id).toBe('1704067200000')
@@ -235,7 +300,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/nonexistent')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('SNAPSHOT_NOT_FOUND')
@@ -246,7 +311,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/1704067200000')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(500)
       expect(response.body.error.code).toBe('SNAPSHOT_INSPECTION_FAILED')
@@ -260,7 +325,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/1704067200000/payload')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.snapshot_id).toBe('1704067200000')
@@ -272,7 +337,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshots/nonexistent/payload')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('SNAPSHOT_NOT_FOUND')
@@ -295,7 +360,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/health')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.health.is_ready).toBe(true)
@@ -311,7 +376,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/health')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(500)
       expect(response.body.error.code).toBe('HEALTH_CHECK_FAILED')
@@ -330,7 +395,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/integrity')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.integrity.isValid).toBe(true)
@@ -342,7 +407,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/integrity')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.integrity.isValid).toBe(true) // Default fallback
@@ -365,7 +430,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/performance')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.performance.totalReads).toBe(100)
@@ -379,7 +444,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .get('/api/admin/snapshot-store/performance')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.performance.totalReads).toBe(0) // Default fallback
@@ -392,7 +457,7 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .post('/api/admin/snapshot-store/performance/reset')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
@@ -406,10 +471,314 @@ describe('Admin Routes', () => {
 
       const response = await request(app)
         .post('/api/admin/snapshot-store/performance/reset')
-        .set('Authorization', `Bearer ${validAdminToken}`)
+        
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true) // Should still succeed
+    })
+  })
+
+  describe('District Configuration Endpoints', () => {
+    describe('GET /api/admin/districts/config', () => {
+      it('should return current district configuration', async () => {
+        const response = await request(app)
+          .get('/api/admin/districts/config')
+          
+
+        if (response.status !== 200) {
+          console.log('Error response:', response.body)
+        }
+        expect(response.status).toBe(200)
+        expect(response.body.configuration.configuredDistricts).toEqual([
+          '42',
+          '15',
+        ])
+        expect(response.body.status.hasConfiguredDistricts).toBe(true)
+        expect(response.body.status.totalDistricts).toBe(2)
+      })
+
+      it('should handle configuration retrieval errors', async () => {
+        mockDistrictConfigService.getConfiguration.mockRejectedValue(
+          new Error('Config read error')
+        )
+
+        const response = await request(app)
+          .get('/api/admin/districts/config')
+          
+
+        expect(response.status).toBe(500)
+        expect(response.body.error.code).toBe(
+          'DISTRICT_CONFIG_RETRIEVAL_FAILED'
+        )
+      })
+    })
+
+    describe('POST /api/admin/districts/config', () => {
+      it('should add districts to configuration', async () => {
+        mockDistrictConfigService.getConfiguration.mockResolvedValue({
+          configuredDistricts: ['42', '15', '23'],
+          lastUpdated: '2024-01-01T00:00:00Z',
+          updatedBy: 'admin',
+          version: 1,
+        })
+
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: ['23'],
+          })
+
+        expect(response.status).toBe(200)
+        expect(response.body.success).toBe(true)
+        expect(response.body.message).toContain('added to configuration')
+        expect(response.body.changes.action).toBe('add')
+        expect(response.body.changes.districts).toEqual(['23'])
+        expect(mockDistrictConfigService.addDistrict).toHaveBeenCalledWith(
+          '23',
+          'admin'
+        )
+      })
+
+      it('should replace entire configuration when replace=true', async () => {
+        mockDistrictConfigService.getConfiguration.mockResolvedValue({
+          configuredDistricts: ['100', '200'],
+          lastUpdated: '2024-01-01T00:00:00Z',
+          updatedBy: 'admin',
+          version: 1,
+        })
+
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: ['100', '200'],
+            replace: true,
+          })
+
+        expect(response.status).toBe(200)
+        expect(response.body.success).toBe(true)
+        expect(response.body.message).toContain('replaced successfully')
+        expect(response.body.changes.action).toBe('replace')
+        expect(
+          mockDistrictConfigService.setConfiguredDistricts
+        ).toHaveBeenCalledWith(['100', '200'], 'admin')
+      })
+
+      it('should validate request body - missing districtIds', async () => {
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({})
+
+        expect(response.status).toBe(400)
+        expect(response.body.error.code).toBe('MISSING_DISTRICT_IDS')
+      })
+
+      it('should validate request body - invalid districtIds format', async () => {
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: 'not-an-array',
+          })
+
+        expect(response.status).toBe(400)
+        expect(response.body.error.code).toBe('INVALID_DISTRICT_IDS_FORMAT')
+      })
+
+      it('should validate request body - empty districtIds array', async () => {
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: [],
+          })
+
+        expect(response.status).toBe(400)
+        expect(response.body.error.code).toBe('EMPTY_DISTRICT_IDS')
+      })
+
+      it('should validate individual district IDs', async () => {
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: ['42', null, '15'],
+          })
+
+        expect(response.status).toBe(400)
+        expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
+      })
+
+      it('should handle district format validation errors', async () => {
+        mockDistrictConfigService.addDistrict.mockRejectedValue(
+          new Error('Invalid district ID format: invalid-id')
+        )
+
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: ['invalid-id'],
+          })
+
+        expect(response.status).toBe(400)
+        expect(response.body.error.code).toBe('INVALID_DISTRICT_ID_FORMAT')
+      })
+
+      it('should handle configuration update errors', async () => {
+        mockDistrictConfigService.addDistrict.mockRejectedValue(
+          new Error('Database error')
+        )
+
+        const response = await request(app)
+          .post('/api/admin/districts/config')
+          
+          .send({
+            districtIds: ['42'],
+          })
+
+        expect(response.status).toBe(500)
+        expect(response.body.error.code).toBe('DISTRICT_CONFIG_UPDATE_FAILED')
+      })
+    })
+
+    describe('DELETE /api/admin/districts/config/:districtId', () => {
+      it('should remove district from configuration', async () => {
+        mockDistrictConfigService.getConfiguration.mockResolvedValue({
+          configuredDistricts: ['42'],
+          lastUpdated: '2024-01-01T00:00:00Z',
+          updatedBy: 'admin',
+          version: 1,
+        })
+
+        const response = await request(app)
+          .delete('/api/admin/districts/config/15')
+          
+
+        expect(response.status).toBe(200)
+        expect(response.body.success).toBe(true)
+        expect(response.body.message).toContain('removed from configuration')
+        expect(response.body.changes.action).toBe('remove')
+        expect(response.body.changes.district).toBe('15')
+        expect(mockDistrictConfigService.removeDistrict).toHaveBeenCalledWith(
+          '15',
+          'admin'
+        )
+      })
+
+      it('should return 404 for district not in configuration', async () => {
+        mockDistrictConfigService.getConfiguredDistricts.mockResolvedValue([
+          '42',
+        ])
+
+        const response = await request(app)
+          .delete('/api/admin/districts/config/999')
+          
+
+        expect(response.status).toBe(404)
+        expect(response.body.error.code).toBe('DISTRICT_NOT_CONFIGURED')
+      })
+
+      it('should validate district ID parameter', async () => {
+        const response = await request(app)
+          .delete('/api/admin/districts/config/')
+          
+
+        expect(response.status).toBe(404) // Express route not found
+      })
+
+      it('should handle district removal errors', async () => {
+        mockDistrictConfigService.removeDistrict.mockRejectedValue(
+          new Error('Database error')
+        )
+
+        const response = await request(app)
+          .delete('/api/admin/districts/config/15')
+          
+
+        expect(response.status).toBe(500)
+        expect(response.body.error.code).toBe('DISTRICT_CONFIG_REMOVAL_FAILED')
+      })
+    })
+
+    describe('POST /api/admin/districts/config/validate', () => {
+      it('should validate district configuration without all-districts data', async () => {
+        const validationResult = {
+          isValid: true,
+          configuredDistricts: ['42', '15'],
+          validDistricts: ['42', '15'],
+          invalidDistricts: [],
+          warnings: [],
+          suggestions: [],
+          lastCollectionInfo: [],
+        }
+        mockDistrictConfigService.validateConfiguration.mockResolvedValue(
+          validationResult
+        )
+
+        const response = await request(app)
+          .post('/api/admin/districts/config/validate')
+          
+          .send({})
+
+        expect(response.status).toBe(200)
+        expect(response.body.validation.isValid).toBe(true)
+        expect(response.body.validation.configuredDistricts).toEqual([
+          '42',
+          '15',
+        ])
+        expect(
+          mockDistrictConfigService.validateConfiguration
+        ).toHaveBeenCalledWith(undefined, expect.any(Object))
+      })
+
+      it('should validate district configuration with all-districts data', async () => {
+        const validationResult = {
+          isValid: false,
+          configuredDistricts: ['42', '999'],
+          validDistricts: ['42'],
+          invalidDistricts: ['999'],
+          warnings: ['District ID "999" not found in Toastmasters system.'],
+          suggestions: [],
+          lastCollectionInfo: [],
+        }
+        mockDistrictConfigService.validateConfiguration.mockResolvedValue(
+          validationResult
+        )
+
+        const response = await request(app)
+          .post('/api/admin/districts/config/validate')
+          
+          .send({
+            allDistrictIds: ['42', '15', '23'],
+          })
+
+        expect(response.status).toBe(200)
+        expect(response.body.validation.isValid).toBe(false)
+        expect(response.body.validation.invalidDistricts).toEqual(['999'])
+        expect(response.body.validation.warnings).toHaveLength(1)
+        expect(
+          mockDistrictConfigService.validateConfiguration
+        ).toHaveBeenCalledWith(['42', '15', '23'], expect.any(Object))
+      })
+
+      it('should handle validation errors', async () => {
+        mockDistrictConfigService.validateConfiguration.mockRejectedValue(
+          new Error('Validation error')
+        )
+
+        const response = await request(app)
+          .post('/api/admin/districts/config/validate')
+          
+          .send({})
+
+        expect(response.status).toBe(500)
+        expect(response.body.error.code).toBe(
+          'DISTRICT_CONFIG_VALIDATION_FAILED'
+        )
+      })
     })
   })
 })
