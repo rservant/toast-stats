@@ -563,9 +563,9 @@ export class ReconciliationErrorHandler {
   private convertToDistrictStatistics(
     districtId: string,
     asOfDate: string,
-    _districtPerformance: any[],
-    _divisionPerformance: any[],
-    clubPerformance: any[]
+    _districtPerformance: unknown[],
+    _divisionPerformance: unknown[],
+    clubPerformance: Record<string, unknown>[]
   ): DistrictStatistics {
     // Calculate membership statistics from club data
     const totalMembers = clubPerformance.reduce((sum, club) => {

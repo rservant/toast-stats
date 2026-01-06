@@ -222,7 +222,17 @@ const LandingPage: React.FC = () => {
 
   if (isError) {
     // Check if this is a "no snapshots available" error
-    const errorResponse = (error as any)?.response?.data?.error
+    const errorResponse = (
+      error as Error & {
+        response?: {
+          data?: {
+            error?: {
+              code?: string
+            }
+          }
+        }
+      }
+    )?.response?.data?.error
     const isNoSnapshotError = errorResponse?.code === 'NO_SNAPSHOT_AVAILABLE'
 
     if (isNoSnapshotError) {

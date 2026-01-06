@@ -83,7 +83,8 @@ const districtConfigService = new DistrictConfigurationService(cacheDirectory)
 
 // Initialize unified backfill service (replaces both BackfillService and DistrictBackfillService)
 // Create ranking calculator
-const { BordaCountRankingCalculator } = await import('../services/RankingCalculator.js')
+const { BordaCountRankingCalculator } =
+  await import('../services/RankingCalculator.js')
 const rankingCalculator = new BordaCountRankingCalculator()
 
 const refreshService = new RefreshService(

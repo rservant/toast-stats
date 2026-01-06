@@ -73,7 +73,7 @@ export class IntermediateCache<T = unknown> {
     evicted: 0,
     averageEntrySize: 0,
   }
-  private cleanupTimer?: NodeJS.Timeout
+  private cleanupTimer?: ReturnType<typeof setTimeout>
 
   constructor(private options: CacheOptions = {}) {
     // Set defaults

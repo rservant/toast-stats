@@ -120,7 +120,7 @@ import { RefreshService } from './RefreshService.js'
 import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import type { RankingCalculator } from './RankingCalculator.js'
-import type { DistrictStatistics } from '../types/districts.js'
+import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
 import type {
   Snapshot,
   NormalizedData,
@@ -777,13 +777,19 @@ export class JobManager {
 export class DataSourceSelector {
   private snapshotStore: SnapshotStore
   private rateLimiter: RateLimiter
+  private rankingCalculator?: RankingCalculator
 
   constructor(
     private refreshService: RefreshService,
-    snapshotStore?: SnapshotStore
+    snapshotStore?: SnapshotStore,
+    rankingCalculator?: RankingCalculator
   ) {
     // Get snapshot store from RefreshService if not provided
-    this.snapshotStore = snapshotStore || (refreshService as any).snapshotStore
+    this.snapshotStore =
+      snapshotStore ||
+      (refreshService as unknown as { snapshotStore: SnapshotStore })
+        .snapshotStore
+    this.rankingCalculator = rankingCalculator
 
     if (!this.snapshotStore) {
       throw new Error('SnapshotStore is required for DataSourceSelector')
@@ -1120,9 +1126,9 @@ export class DataSourceSelector {
           })
 
           // Fetch district-specific data using the scraper with proper error handling
-          let districtPerformanceData: any[] = []
-          let divisionPerformanceData: any[] = []
-          let clubPerformanceData: any[] = []
+          let districtPerformanceData: ScrapedRecord[] = []
+          let divisionPerformanceData: ScrapedRecord[] = []
+          let clubPerformanceData: ScrapedRecord[] = []
 
           try {
             districtPerformanceData =
@@ -1231,32 +1237,42 @@ export class DataSourceSelector {
         })
 
         try {
-          const rankedResults = await this.rankingCalculator.calculateRankings(results)
-          
+          const rankedResults =
+            await this.rankingCalculator.calculateRankings(results)
+
           logger.info('Ranking calculation completed successfully', {
             districtCount: rankedResults.length,
-            rankedDistrictCount: rankedResults.filter(d => d.ranking).length,
+            rankedDistrictCount: rankedResults.filter(
+              (d: DistrictStatistics) => d.ranking
+            ).length,
             rankingVersion: this.rankingCalculator.getRankingVersion(),
             operation: 'executePerDistrictCollection',
           })
 
           return rankedResults
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-          logger.error('Ranking calculation failed, continuing without rankings', {
-            error: errorMessage,
-            districtCount: results.length,
-            operation: 'executePerDistrictCollection',
-          })
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
+          logger.error(
+            'Ranking calculation failed, continuing without rankings',
+            {
+              error: errorMessage,
+              districtCount: results.length,
+              operation: 'executePerDistrictCollection',
+            }
+          )
           // Continue with original results without ranking data
         }
       } else {
-        logger.debug('No ranking calculator provided or no successful districts, skipping ranking calculation', {
-          hasRankingCalculator: !!this.rankingCalculator,
-          rankingCalculatorType: this.rankingCalculator?.constructor?.name,
-          districtCount: results.length,
-          operation: 'executePerDistrictCollection',
-        })
+        logger.debug(
+          'No ranking calculator provided or no successful districts, skipping ranking calculation',
+          {
+            hasRankingCalculator: !!this.rankingCalculator,
+            rankingCalculatorType: this.rankingCalculator?.constructor?.name,
+            districtCount: results.length,
+            operation: 'executePerDistrictCollection',
+          }
+        )
       }
 
       return results
@@ -1348,9 +1364,9 @@ export class DataSourceSelector {
   private async normalizeDistrictData(
     districtId: string,
     data: {
-      districtPerformance: any[]
-      divisionPerformance: any[]
-      clubPerformance: any[]
+      districtPerformance: ScrapedRecord[]
+      divisionPerformance: ScrapedRecord[]
+      clubPerformance: ScrapedRecord[]
     }
   ): Promise<DistrictStatistics> {
     logger.debug('Normalizing district data', {
@@ -1428,7 +1444,7 @@ export class DataSourceSelector {
   /**
    * Extract total membership from club performance data
    */
-  private extractMembershipTotal(clubPerformance: any[]): number {
+  private extractMembershipTotal(clubPerformance: ScrapedRecord[]): number {
     let total = 0
     for (const club of clubPerformance) {
       const members =
@@ -1451,7 +1467,7 @@ export class DataSourceSelector {
   /**
    * Extract club membership data with proper typing
    */
-  private extractClubMembership(clubPerformance: any[]): Array<{
+  private extractClubMembership(clubPerformance: ScrapedRecord[]): Array<{
     clubId: string
     clubName: string
     memberCount: number
@@ -1476,7 +1492,7 @@ export class DataSourceSelector {
   /**
    * Count active clubs from performance data
    */
-  private countActiveClubs(clubPerformance: any[]): number {
+  private countActiveClubs(clubPerformance: ScrapedRecord[]): number {
     return clubPerformance.filter(club => {
       const status = club['Club Status'] || club['Status']
       return !status || String(status).toLowerCase() !== 'suspended'
@@ -1486,7 +1502,7 @@ export class DataSourceSelector {
   /**
    * Count distinguished clubs from performance data
    */
-  private countDistinguishedClubs(clubPerformance: any[]): number {
+  private countDistinguishedClubs(clubPerformance: ScrapedRecord[]): number {
     return clubPerformance.filter(club => {
       const distinguished =
         club['Club Distinguished Status'] ||
@@ -1705,14 +1721,14 @@ export class BackfillService {
   private scopeManager: ScopeManager
   private snapshotStore: PerDistrictFileSnapshotStore
   // Infrastructure components for future use
-  // @ts-ignore - These will be used in future implementations
+  // @ts-expect-error - These will be used in future implementations
   private _alertManager: AlertManager
-  // @ts-ignore - These will be used in future implementations
+  // @ts-expect-error - These will be used in future implementations
   private _refreshService: RefreshService
   private configService: DistrictConfigurationService
-  // @ts-ignore - These will be used in future implementations
+  // @ts-expect-error - These will be used in future implementations
   private _dashboardCircuitBreaker: CircuitBreaker
-  // @ts-ignore - These will be used in future implementations
+  // @ts-expect-error - These will be used in future implementations
   private _cacheCircuitBreaker: CircuitBreaker
   private rankingCalculator?: RankingCalculator
 
@@ -1739,7 +1755,8 @@ export class BackfillService {
     this.jobManager = new JobManager()
     this.dataSourceSelector = new DataSourceSelector(
       refreshService,
-      snapshotStore
+      snapshotStore,
+      rankingCalculator
     )
     this.scopeManager = new ScopeManager(configService)
 
@@ -2654,7 +2671,12 @@ export class BackfillService {
 
       return districtData
     } catch (error) {
-      // Re-throw to be handled by caller
+      // Log error before re-throwing for debugging
+      logger.error('Failed to collect district data with caching', {
+        districtId,
+        date,
+        error: error instanceof Error ? error.message : String(error),
+      })
       throw error
     }
   }

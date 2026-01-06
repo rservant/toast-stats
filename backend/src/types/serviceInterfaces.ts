@@ -349,7 +349,7 @@ export interface IUnifiedBackfillService {
           | 'getAllDistricts'
           | 'getDistrictPerformance'
           | 'getMultipleDistricts'
-        params: Record<string, any>
+        params: Record<string, unknown>
       }
       rationale: string
       estimatedEfficiency: number

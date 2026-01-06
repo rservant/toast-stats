@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import { createTestApp } from './setup'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 // Interface for district ranking data used in tests
 // interface DistrictRanking {
@@ -21,6 +23,59 @@ import { createTestApp } from './setup'
 
 describe('Districts API Integration Tests', () => {
   const app = createTestApp()
+  
+  // Ensure clean state before each test
+  beforeEach(async () => {
+    await cleanupTestSnapshots()
+  })
+  
+  // Clean up after each test to prevent interference
+  afterEach(async () => {
+    await cleanupTestSnapshots()
+  })
+  
+  /**
+   * Clean up all test snapshots to ensure test isolation
+   */
+  async function cleanupTestSnapshots(): Promise<void> {
+    const cacheDir = process.env.CACHE_DIR || './test-dir/test-cache-default'
+    const resolvedCacheDir = path.resolve(cacheDir)
+    
+    try {
+      // Clean up snapshot files
+      const snapshotFiles = [
+        'snapshots.json',
+        'per-district-snapshots.json'
+      ]
+      
+      for (const file of snapshotFiles) {
+        const filePath = path.join(resolvedCacheDir, file)
+        try {
+          await fs.unlink(filePath)
+        } catch {
+          // File doesn't exist, ignore
+        }
+      }
+      
+      // Clean up snapshot directories
+      const snapshotDirs = [
+        'snapshots',
+        'per-district-snapshots'
+      ]
+      
+      for (const dir of snapshotDirs) {
+        const dirPath = path.join(resolvedCacheDir, dir)
+        try {
+          await fs.rm(dirPath, { recursive: true, force: true })
+        } catch {
+          // Directory doesn't exist, ignore
+        }
+      }
+    } catch (error) {
+      // Ignore cleanup errors in tests
+      console.debug('Test cleanup warning:', error)
+    }
+  }
 
   describe('GET /api/districts', () => {
     it('should return 503 when no snapshot is available', async () => {

@@ -4,6 +4,7 @@ import {
   JobManager,
   DataSourceSelector,
   ScopeManager,
+  PartialSnapshotResult,
 } from '../UnifiedBackfillService'
 import { RefreshService } from '../RefreshService'
 import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore'
@@ -25,7 +26,7 @@ describe('UnifiedBackfillService', () => {
 
   beforeEach(() => {
     // Create mocked instances
-    refreshService = new RefreshService({} as any)
+    refreshService = new RefreshService({} as Record<string, unknown>)
     snapshotStore = new PerDistrictFileSnapshotStore({
       cacheDir: './test-cache',
     })
@@ -493,10 +494,11 @@ describe('UnifiedBackfillService', () => {
       }
 
       const backfillId = await backfillService.initiateBackfill(request)
-      const job = backfillService.getBackfillStatus(backfillId)
 
       // Simulate some errors
-      const jobManager = (backfillService as any).jobManager as JobManager
+      const jobManager = (
+        backfillService as BackfillService & { jobManager: JobManager }
+      ).jobManager
       jobManager.trackDistrictError(
         backfillId,
         '42',

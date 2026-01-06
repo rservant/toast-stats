@@ -37,7 +37,7 @@ describe('PerDistrictSnapshotStore - Ranking Version', () => {
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch (error) {
+    } catch {
       // Ignore cleanup errors
     }
   })

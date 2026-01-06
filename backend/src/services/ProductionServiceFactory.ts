@@ -22,6 +22,7 @@ import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
+import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { RefreshService } from './RefreshService.js'
 import {
   BordaCountRankingCalculator,
@@ -315,7 +316,7 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
 
           return new BackfillService(
             refreshService,
-            snapshotStore as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+            snapshotStore as PerDistrictFileSnapshotStore, // Cast to PerDistrictFileSnapshotStore - they're compatible
             configService,
             undefined, // alertManager
             undefined, // circuitBreakerManager
@@ -447,7 +448,7 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
 
     const service = new BackfillService(
       refresh,
-      store as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+      store as PerDistrictFileSnapshotStore, // Cast to PerDistrictFileSnapshotStore - they're compatible
       config,
       undefined, // alertManager
       undefined, // circuitBreakerManager

@@ -41,12 +41,6 @@ interface MockCircuitManager {
   dispose: ReturnType<typeof vi.fn>
 }
 
-// Interface for reconciliation data
-interface ReconciliationData {
-  districtId: string
-  [key: string]: unknown
-}
-
 describe('ReconciliationErrorHandler', () => {
   let errorHandler: ReconciliationErrorHandler
   let mockScraper: MockScraper
@@ -128,13 +122,6 @@ describe('ReconciliationErrorHandler', () => {
 
   describe('executeDashboardFetch', () => {
     it('should execute successful dashboard fetch', async () => {
-      const mockResult = {
-        success: true,
-        data: { districtId: 'D123' } as ReconciliationData,
-        sourceDataDate: '2024-01-31',
-        isDataAvailable: true,
-      }
-
       // Mock scraper methods to return sample data
       mockScraper.getDistrictPerformance.mockResolvedValue([
         { district: 'D123' },

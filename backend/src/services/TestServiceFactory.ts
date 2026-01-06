@@ -34,6 +34,7 @@ import {
 import { RefreshService } from './RefreshService.js'
 import { BackfillService } from './UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
+import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import path from 'path'
@@ -328,7 +329,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
 
     const service = new BackfillService(
       refresh,
-      store as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+      store as PerDistrictFileSnapshotStore, // Cast to PerDistrictFileSnapshotStore - they're compatible
       config,
       undefined, // alertManager
       undefined, // circuitBreakerManager
@@ -485,7 +486,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
 
           return new BackfillService(
             refreshService,
-            snapshotStore as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+            snapshotStore as PerDistrictFileSnapshotStore, // Cast to PerDistrictFileSnapshotStore - they're compatible
             configService,
             undefined, // alertManager
             undefined, // circuitBreakerManager

@@ -261,8 +261,8 @@ export class ConcurrencyLimiter {
    */
   isQueueFull(): boolean {
     return (
-      this.options.queueLimit > 0 &&
-      this.waitingQueue.length >= this.options.queueLimit
+      (this.options?.queueLimit ?? 0) > 0 &&
+      this.waitingQueue.length >= (this.options?.queueLimit ?? 0)
     )
   }
 

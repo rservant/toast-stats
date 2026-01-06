@@ -5,7 +5,7 @@
  * into RefreshService and BackfillService.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import {
   getProductionServiceFactory,
   resetProductionServiceFactory,
@@ -15,7 +15,8 @@ import {
   resetTestServiceFactory,
   ServiceTokens as TestServiceTokens,
 } from '../TestServiceFactory.js'
-import type { RankingCalculator } from '../RankingCalculator.js'
+import { RefreshService } from '../RefreshService.js'
+import { BackfillService } from '../UnifiedBackfillService.js'
 
 describe('Service Factory Integration', () => {
   afterEach(async () => {
@@ -34,7 +35,8 @@ describe('Service Factory Integration', () => {
 
       // Verify it has ranking calculator (check via private property access)
       const hasRankingCalculator =
-        (refreshService as any).rankingCalculator !== undefined
+        (refreshService as RefreshService & { rankingCalculator: unknown })
+          .rankingCalculator !== undefined
       expect(hasRankingCalculator).toBe(true)
     })
 
@@ -48,7 +50,8 @@ describe('Service Factory Integration', () => {
 
       // Verify it has ranking calculator (check via private property access)
       const hasRankingCalculator =
-        (backfillService as any).rankingCalculator !== undefined
+        (backfillService as BackfillService & { rankingCalculator: unknown })
+          .rankingCalculator !== undefined
       expect(hasRankingCalculator).toBe(true)
     })
 
@@ -92,8 +95,14 @@ describe('Service Factory Integration', () => {
       expect(backfillService).toBeDefined()
 
       // Verify dependency injection worked
-      expect((refreshService as any).rankingCalculator).toBeDefined()
-      expect((backfillService as any).rankingCalculator).toBeDefined()
+      expect(
+        (refreshService as RefreshService & { rankingCalculator: unknown })
+          .rankingCalculator
+      ).toBeDefined()
+      expect(
+        (backfillService as BackfillService & { rankingCalculator: unknown })
+          .rankingCalculator
+      ).toBeDefined()
     })
   })
 
@@ -108,7 +117,8 @@ describe('Service Factory Integration', () => {
 
       // Verify it has ranking calculator (check via private property access)
       const hasRankingCalculator =
-        (refreshService as any).rankingCalculator !== undefined
+        (refreshService as RefreshService & { rankingCalculator: unknown })
+          .rankingCalculator !== undefined
       expect(hasRankingCalculator).toBe(true)
     })
 
@@ -122,7 +132,8 @@ describe('Service Factory Integration', () => {
 
       // Verify it has ranking calculator (check via private property access)
       const hasRankingCalculator =
-        (backfillService as any).rankingCalculator !== undefined
+        (backfillService as BackfillService & { rankingCalculator: unknown })
+          .rankingCalculator !== undefined
       expect(hasRankingCalculator).toBe(true)
     })
 
@@ -166,8 +177,14 @@ describe('Service Factory Integration', () => {
       expect(backfillService).toBeDefined()
 
       // Verify dependency injection worked
-      expect((refreshService as any).rankingCalculator).toBeDefined()
-      expect((backfillService as any).rankingCalculator).toBeDefined()
+      expect(
+        (refreshService as RefreshService & { rankingCalculator: unknown })
+          .rankingCalculator
+      ).toBeDefined()
+      expect(
+        (backfillService as BackfillService & { rankingCalculator: unknown })
+          .rankingCalculator
+      ).toBeDefined()
     })
 
     it('should create services via container registration', () => {
@@ -230,8 +247,14 @@ describe('Service Factory Integration', () => {
       expect(prodRefresh.constructor.name).toBe(testRefresh.constructor.name)
 
       // Both should have ranking calculator
-      expect((prodRefresh as any).rankingCalculator).toBeDefined()
-      expect((testRefresh as any).rankingCalculator).toBeDefined()
+      expect(
+        (prodRefresh as RefreshService & { rankingCalculator: unknown })
+          .rankingCalculator
+      ).toBeDefined()
+      expect(
+        (testRefresh as RefreshService & { rankingCalculator: unknown })
+          .rankingCalculator
+      ).toBeDefined()
     })
   })
 })

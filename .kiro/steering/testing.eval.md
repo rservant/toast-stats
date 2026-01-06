@@ -62,7 +62,25 @@ If no test exists:
 
 ---
 
-## 6. Justified Gaps
+## 6. Test Isolation and Concurrency
+
+**NEW**: Evaluate test isolation and concurrency safety:
+
+- Do tests use unique, isolated resources (directories, ports, etc.)?
+- Can tests run safely in parallel without interference?
+- Are environment variables properly scoped to individual tests?
+- Is cleanup verified and complete?
+- Do tests use dependency injection instead of global state?
+
+If tests share resources or modify global state:
+
+- Is this acceptable in this scope?
+- What are the risks of test interference?
+- How will this affect CI/CD reliability?
+
+---
+
+## 7. Justified Gaps
 
 - What is intentionally _not_ tested?
 - Why is that acceptable?
@@ -70,7 +88,7 @@ If no test exists:
 
 ---
 
-## 7. Final Assessment
+## 8. Final Assessment
 
 One of the following MUST be chosen:
 
@@ -79,6 +97,13 @@ One of the following MUST be chosen:
 - ❌ **Unsafe without additional protection**
 
 Include rationale referencing steering principles.
+
+**Additional Assessment for Test Changes**:
+If this change affects test infrastructure or patterns:
+
+- ✅ **Tests are properly isolated and concurrent-safe**
+- ⚠️ **Tests have isolation issues but acceptable risk**
+- ❌ **Tests will cause race conditions or flaky failures**
 
 ---
 

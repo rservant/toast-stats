@@ -145,7 +145,7 @@ export function useDistrictConfigurationManager() {
     if (data?.configuration?.configuredDistricts) {
       setLocalDistricts([...data.configuration.configuredDistricts])
     }
-  }, [data?.configuration?.configuredDistricts])
+  }, [data])
 
   // Add district to local state
   const addDistrictLocally = useCallback(

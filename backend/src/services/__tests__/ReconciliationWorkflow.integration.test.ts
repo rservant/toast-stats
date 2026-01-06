@@ -9,10 +9,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { ReconciliationOrchestrator } from '../ReconciliationOrchestrator'
-import { BackfillService } from '../UnifiedBackfillService'
-import { RefreshService } from '../RefreshService'
-import { DistrictConfigurationService } from '../DistrictConfigurationService'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore'
 import { ReconciliationScheduler } from '../ReconciliationScheduler'
 import { ReconciliationStorageOptimizer } from '../ReconciliationStorageOptimizer'
 import { DistrictCacheManager } from '../DistrictCacheManager'
@@ -35,7 +31,7 @@ import type {
 describe('End-to-End Reconciliation Workflow Integration', () => {
   let testCacheConfig: TestCacheConfig
   let orchestrator: ReconciliationOrchestrator
-  let backfillService: BackfillService
+  // let backfillService: BackfillService // Currently only used in skipped tests
   let scheduler: ReconciliationScheduler
   let storageManager: ReconciliationStorageOptimizer
   let cacheManager: DistrictCacheManager
@@ -158,27 +154,28 @@ describe('End-to-End Reconciliation Workflow Integration', () => {
     )
 
     // Initialize unified backfill service
-    const snapshotStore = new PerDistrictFileSnapshotStore({
-      cacheDir: testCacheConfig.cacheDir,
-      maxSnapshots: 100,
-      maxAgeDays: 30,
-    })
-    const refreshService = new RefreshService(
-      snapshotStore,
-      {} as any, // Mock API service
-      {} as any, // Mock cache manager
-      cacheManager,
-      scraper
-    )
-    const districtConfigService = new DistrictConfigurationService(
-      testCacheConfig.cacheDir
-    )
+    // const snapshotStore = new PerDistrictFileSnapshotStore({
+    //   cacheDir: testCacheConfig.cacheDir,
+    //   maxSnapshots: 100,
+    //   maxAgeDays: 30,
+    // }) // Currently only used in skipped tests
+    // const refreshService = new RefreshService(
+    //   snapshotStore,
+    //   {} as Record<string, unknown>, // Mock API service
+    //   {} as Record<string, unknown>, // Mock cache manager
+    //   cacheManager,
+    //   scraper
+    // ) // Currently only used in skipped tests
+    // const districtConfigService = new DistrictConfigurationService(
+    //   testCacheConfig.cacheDir
+    // ) // Currently only used in skipped tests
 
-    backfillService = new BackfillService(
-      refreshService,
-      snapshotStore,
-      districtConfigService
-    )
+    // backfillService = new BackfillService(
+    //   refreshService,
+    //   snapshotStore,
+    //   districtConfigService
+    // ) // Currently only used in skipped tests
+
     scheduler = new ReconciliationScheduler(
       orchestrator,
       storageManager,

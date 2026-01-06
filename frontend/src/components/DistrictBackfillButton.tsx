@@ -113,7 +113,7 @@ export function DistrictBackfillButton({
         status: backfillStatus.status,
       })
     }
-  }, [backfillStatus?.status, backfillId, updateBackfill])
+  }, [backfillStatus, backfillId, updateBackfill])
 
   // Refresh cached dates when backfill completes
   useEffect(() => {
