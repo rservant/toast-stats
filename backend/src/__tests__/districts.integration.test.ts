@@ -23,31 +23,28 @@ import path from 'path'
 
 describe('Districts API Integration Tests', () => {
   const app = createTestApp()
-  
+
   // Ensure clean state before each test
   beforeEach(async () => {
     await cleanupTestSnapshots()
   })
-  
+
   // Clean up after each test to prevent interference
   afterEach(async () => {
     await cleanupTestSnapshots()
   })
-  
+
   /**
    * Clean up all test snapshots to ensure test isolation
    */
   async function cleanupTestSnapshots(): Promise<void> {
     const cacheDir = process.env.CACHE_DIR || './test-dir/test-cache-default'
     const resolvedCacheDir = path.resolve(cacheDir)
-    
+
     try {
       // Clean up snapshot files
-      const snapshotFiles = [
-        'snapshots.json',
-        'per-district-snapshots.json'
-      ]
-      
+      const snapshotFiles = ['snapshots.json', 'per-district-snapshots.json']
+
       for (const file of snapshotFiles) {
         const filePath = path.join(resolvedCacheDir, file)
         try {
@@ -56,13 +53,10 @@ describe('Districts API Integration Tests', () => {
           // File doesn't exist, ignore
         }
       }
-      
+
       // Clean up snapshot directories
-      const snapshotDirs = [
-        'snapshots',
-        'per-district-snapshots'
-      ]
-      
+      const snapshotDirs = ['snapshots', 'per-district-snapshots']
+
       for (const dir of snapshotDirs) {
         const dirPath = path.join(resolvedCacheDir, dir)
         try {

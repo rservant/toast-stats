@@ -75,10 +75,12 @@ const districtDataAggregator = createDistrictDataAggregator(
 
 // Initialize services with configured cache directory
 const cacheManager = new CacheManager(cacheDirectory)
-
-// Initialize district-level services with configured cache directory
 const districtCacheManager = new DistrictCacheManager(cacheDirectory)
-const scraper = new ToastmastersScraper()
+
+// Initialize services using the production service factory
+const serviceFactory = getProductionServiceFactory()
+const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+const scraper = new ToastmastersScraper(rawCSVCacheService)
 const districtConfigService = new DistrictConfigurationService(cacheDirectory)
 
 // Initialize unified backfill service (replaces both BackfillService and DistrictBackfillService)

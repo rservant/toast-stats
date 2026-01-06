@@ -7,14 +7,14 @@ Use this prompt to create a comprehensive spec for fixing test isolation, concur
 ## Prompt for Kiro
 
 ```
-I need you to create a comprehensive spec to fix critical test isolation, concurrency, and race condition issues in our backend test suite. 
+I need you to create a comprehensive spec to fix critical test isolation, concurrency, and race condition issues in our backend test suite.
 
 ## Context
 
 Our analysis (see TEST_ISOLATION_ANALYSIS.md) identified that the current test suite has significant problems:
 
 1. **Shared Cache Directory Race Conditions** - Tests use overlapping cache directories causing data corruption
-2. **Global State Pollution** - Environment variables and singletons leak between tests  
+2. **Global State Pollution** - Environment variables and singletons leak between tests
 3. **Insufficient Test Isolation** - Tests interfere with each other when run in parallel
 4. **Async Resource Cleanup Issues** - Resources leak between test runs
 5. **Concurrency-Unsafe Patterns** - Tests fail unpredictably in parallel execution
@@ -29,7 +29,7 @@ The spec should address these areas:
 - Create standardized test isolation utilities
 - Add resource leak detection and monitoring
 
-### 2. Architecture Changes for Testability  
+### 2. Architecture Changes for Testability
 - Convert singleton patterns to dependency injection
 - Ensure all services accept dependencies as constructor parameters
 - Implement proper resource management with cleanup/dispose methods
@@ -44,7 +44,7 @@ The spec should address these areas:
 ### 4. Specific Test File Fixes
 Focus on these problematic files:
 - `backend/src/__tests__/districts.integration.test.ts`
-- `backend/src/__tests__/unified-backfill-service.e2e.test.ts` 
+- `backend/src/__tests__/unified-backfill-service.e2e.test.ts`
 - `backend/src/services/__tests__/ReconciliationWorkflow.integration.test.ts`
 - `backend/src/services/__tests__/ServiceFactory.integration.test.ts`
 - `backend/src/services/__tests__/BackfillService.ranking-integration.test.ts`
@@ -75,7 +75,7 @@ Focus on these problematic files:
 
 Please structure the spec with:
 - Clear phases with dependencies and priorities
-- Specific technical solutions for each identified issue  
+- Specific technical solutions for each identified issue
 - Code examples showing before/after patterns
 - Verification steps to ensure fixes work
 - Rollback plans if issues arise
@@ -97,7 +97,7 @@ The spec should be implementable in phases while maintaining test functionality 
 The resulting spec should include:
 
 - **Executive Summary** with problem statement and solution approach
-- **Technical Requirements** with specific acceptance criteria  
+- **Technical Requirements** with specific acceptance criteria
 - **Implementation Phases** with clear dependencies and timelines
 - **Code Examples** showing before/after patterns for common issues
 - **Verification Plan** to ensure fixes work and don't regress
@@ -107,6 +107,7 @@ The resulting spec should include:
 ## Success Metrics
 
 The spec should define clear success metrics:
+
 - All tests pass in parallel execution (`vitest --run`)
 - Zero resource leaks in CI environment
 - Test execution time variance < 10% between serial and parallel

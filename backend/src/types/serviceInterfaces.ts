@@ -30,6 +30,14 @@ import type {
   SnapshotFilters,
 } from './snapshots.js'
 import type {
+  CSVType,
+  RawCSVCacheMetadata,
+  RawCSVCacheStatistics,
+  CacheHealthStatus,
+  CleanupResult,
+  RawCSVCacheConfig,
+} from './rawCSVCache.js'
+import type {
   CircuitBreakerOptions,
   CircuitBreaker,
   CircuitBreakerStats,
@@ -425,4 +433,82 @@ export interface ISnapshotStore {
   ): Promise<SnapshotMetadata[]>
   getSnapshot(snapshotId: string): Promise<Snapshot | null>
   isReady(): Promise<boolean>
+}
+
+/**
+ * Raw CSV Cache Service Interface
+ */
+export interface IRawCSVCacheService {
+  // Core cache operations
+  getCachedCSV(
+    date: string,
+    type: CSVType,
+    districtId?: string
+  ): Promise<string | null>
+  setCachedCSV(
+    date: string,
+    type: CSVType,
+    csvContent: string,
+    districtId?: string
+  ): Promise<void>
+  hasCachedCSV(
+    date: string,
+    type: CSVType,
+    districtId?: string
+  ): Promise<boolean>
+
+  // Metadata management
+  getCacheMetadata(date: string): Promise<RawCSVCacheMetadata | null>
+  updateCacheMetadata(
+    date: string,
+    metadata: Partial<RawCSVCacheMetadata>
+  ): Promise<void>
+  validateMetadataIntegrity(date: string): Promise<{
+    isValid: boolean
+    issues: string[]
+    actualStats: { fileCount: number; totalSize: number }
+    metadataStats: { fileCount: number; totalSize: number }
+  }>
+  repairMetadataIntegrity(date: string): Promise<{
+    success: boolean
+    repairedFields: string[]
+    errors: string[]
+  }>
+
+  // Cache management
+  clearCacheForDate(date: string): Promise<void>
+  getCachedDates(): Promise<string[]>
+
+  // Manual maintenance (no automatic cleanup)
+  getCacheStorageInfo(): Promise<{
+    totalSizeMB: number
+    totalFiles: number
+    oldestDate: string | null
+    newestDate: string | null
+    isLargeCache: boolean
+    recommendations: string[]
+  }>
+
+  // Configuration management
+  getConfiguration(): RawCSVCacheConfig
+  updateConfiguration(updates: Partial<RawCSVCacheConfig>): void
+  resetConfiguration(): void
+
+  // Statistics and monitoring
+  getCacheStatistics(): Promise<RawCSVCacheStatistics>
+  getHealthStatus(): Promise<CacheHealthStatus>
+  clearPerformanceHistory(): void
+
+  // Error handling and recovery
+  getCircuitBreakerStatus(): {
+    isOpen: boolean
+    failures: number
+    lastFailureTime: number | null
+    timeSinceLastFailure: number | null
+    halfOpenAttempts: number
+  }
+  resetCircuitBreakerManually(): void
+
+  // Service lifecycle
+  dispose(): Promise<void>
 }

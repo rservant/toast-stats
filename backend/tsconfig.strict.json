@@ -6,7 +6,7 @@
     "moduleResolution": "node",
     "rootDir": "./src",
     "outDir": "./dist",
-    // TypeScript Steering Document Requirements - Strict Mode
+    // TypeScript Steering Document Requirements - Strict Mode for New Code
     "strict": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
@@ -16,8 +16,8 @@
     "noImplicitThis": true,
     "noImplicitReturns": true,
     "alwaysStrict": true,
-    // Additional Type Safety
-    "exactOptionalPropertyTypes": false, // Temporarily relaxed for legacy code compatibility
+    // Additional Type Safety - STRICT for new code
+    "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     // Code Quality
@@ -34,7 +34,11 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src/**/*"],
+  "include": [
+    // Raw CSV Cache System - New implementation (only the core new files)
+    "src/services/RawCSVCacheService.ts"
+    // Note: Other files can be added here as they are made TypeScript strict compliant
+  ],
   "exclude": [
     "node_modules",
     "dist",

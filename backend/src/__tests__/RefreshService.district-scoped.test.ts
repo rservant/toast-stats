@@ -11,6 +11,7 @@ import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
 import { DataValidator } from '../services/DataValidator.js'
 import { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
+import { createMockCacheService } from './utils/mockCacheService.js'
 import type { ScrapedRecord } from '../types/districts.js'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -36,8 +37,9 @@ describe('RefreshService District-Scoped Data Collection', () => {
     // Create district configuration service
     districtConfigService = new DistrictConfigurationService(tempDir)
 
-    // Create mock scraper
-    mockScraper = vi.mocked(new ToastmastersScraper())
+    // Create mock scraper with mock cache service
+    const mockCacheService = createMockCacheService()
+    mockScraper = vi.mocked(new ToastmastersScraper(mockCacheService))
 
     // Create refresh service with mocked dependencies
     refreshService = new RefreshService(

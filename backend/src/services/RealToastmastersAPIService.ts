@@ -17,7 +17,11 @@ export class RealToastmastersAPIService {
   private scraper: ToastmastersScraper
   private cacheManager: CacheManager
 
-  constructor(allowInTest = false, cacheManager?: CacheManager) {
+  constructor(
+    scraper: ToastmastersScraper,
+    allowInTest = false,
+    cacheManager?: CacheManager
+  ) {
     // Prevent accidental use in test environment unless explicitly allowed
     if (process.env.NODE_ENV === 'test' && !allowInTest) {
       throw new Error(
@@ -25,7 +29,7 @@ export class RealToastmastersAPIService {
       )
     }
 
-    this.scraper = new ToastmastersScraper()
+    this.scraper = scraper
 
     if (cacheManager) {
       this.cacheManager = cacheManager

@@ -111,17 +111,19 @@ export class RefreshService {
 
   constructor(
     snapshotStore: SnapshotStore,
-    scraper?: ToastmastersScraper,
+    scraper: ToastmastersScraper,
     validator?: DataValidator,
     districtConfigService?: DistrictConfigurationService,
     rankingCalculator?: RankingCalculator
   ) {
     this.snapshotStore = snapshotStore
-    this.scraper = scraper || new ToastmastersScraper()
+    this.scraper = scraper
     this.validator = validator || new DataValidator()
     this.districtConfigService =
       districtConfigService || new DistrictConfigurationService()
-    this.rankingCalculator = rankingCalculator
+    if (rankingCalculator !== undefined) {
+      this.rankingCalculator = rankingCalculator
+    }
 
     // Initialize circuit breaker for scraping operations
     this.scrapingCircuitBreaker =
@@ -171,12 +173,18 @@ export class RefreshService {
         })
 
         // Create failed snapshot with configuration errors
+        const currentDate = new Date().toISOString()
+        const dateOnly = currentDate.split('T')[0]
+        if (!dateOnly) {
+          throw new Error('Failed to extract date from ISO string')
+        }
+        
         const minimalData: NormalizedData = {
           districts: [],
           metadata: {
             source: 'toastmasters-dashboard',
-            fetchedAt: new Date().toISOString(),
-            dataAsOfDate: new Date().toISOString().split('T')[0],
+            fetchedAt: currentDate,
+            dataAsOfDate: dateOnly,
             districtCount: 0,
             processingDurationMs: Date.now() - startTime,
           },
@@ -466,12 +474,18 @@ export class RefreshService {
           phase: 'error_recovery',
         })
 
+        const currentDate = new Date().toISOString()
+        const dateOnly = currentDate.split('T')[0]
+        if (!dateOnly) {
+          throw new Error('Failed to extract date from ISO string')
+        }
+
         const minimalData: NormalizedData = {
           districts: [],
           metadata: {
             source: 'toastmasters-dashboard',
-            fetchedAt: new Date().toISOString(),
-            dataAsOfDate: new Date().toISOString().split('T')[0],
+            fetchedAt: currentDate,
+            dataAsOfDate: dateOnly,
             districtCount: 0,
             processingDurationMs: duration_ms,
           },
@@ -1016,9 +1030,15 @@ export class RefreshService {
     // into the structured DistrictStatistics format
 
     // For now, create a basic structure with the raw data preserved
+    const currentDate = new Date().toISOString()
+    const dateOnly = currentDate.split('T')[0]
+    if (!dateOnly) {
+      throw new Error('Failed to extract date from ISO string')
+    }
+
     const districtStats: DistrictStatistics = {
       districtId,
-      asOfDate: new Date().toISOString().split('T')[0],
+      asOfDate: dateOnly,
       membership: {
         total: this.extractMembershipTotal(data.clubPerformance),
         change: 0,
@@ -1133,14 +1153,23 @@ export class RefreshService {
           // Try to parse as date
           const date = new Date(value)
           if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0]
+            const dateOnly = date.toISOString().split('T')[0]
+            if (!dateOnly) {
+              throw new Error('Failed to extract date from ISO string')
+            }
+            return dateOnly
           }
         }
       }
     }
 
     // Fallback to current date
-    return new Date().toISOString().split('T')[0]
+    const currentDate = new Date().toISOString()
+    const dateOnly = currentDate.split('T')[0]
+    if (!dateOnly) {
+      throw new Error('Failed to extract date from ISO string')
+    }
+    return dateOnly
   }
 
   /**

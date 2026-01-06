@@ -789,7 +789,9 @@ export class DataSourceSelector {
       snapshotStore ||
       (refreshService as unknown as { snapshotStore: SnapshotStore })
         .snapshotStore
-    this.rankingCalculator = rankingCalculator
+    if (rankingCalculator !== undefined) {
+      this.rankingCalculator = rankingCalculator
+    }
 
     if (!this.snapshotStore) {
       throw new Error('SnapshotStore is required for DataSourceSelector')
@@ -1116,7 +1118,12 @@ export class DataSourceSelector {
       // Create our own scraper instance for per-district collection
       // BackfillService should be independent and not rely on RefreshService internals
       const { ToastmastersScraper } = await import('./ToastmastersScraper.js')
-      const scraper = new ToastmastersScraper()
+      const { getProductionServiceFactory } = await import('./ProductionServiceFactory.js')
+      
+      // Get cache service from production factory
+      const serviceFactory = getProductionServiceFactory()
+      const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+      const scraper = new ToastmastersScraper(rawCSVCacheService)
 
       for (const districtId of params.districtIds) {
         try {
@@ -1389,9 +1396,15 @@ export class DataSourceSelector {
         data.clubPerformance
       )
 
+      const currentDate = new Date().toISOString()
+      const dateOnly = currentDate.split('T')[0]
+      if (!dateOnly) {
+        throw new Error('Failed to extract date from ISO string')
+      }
+
       const districtStats: DistrictStatistics = {
         districtId,
-        asOfDate: new Date().toISOString().split('T')[0],
+        asOfDate: dateOnly,
         membership: {
           total: totalMembership,
           change: 0, // Historical change calculation would require previous data
@@ -1749,7 +1762,9 @@ export class BackfillService {
     this.snapshotStore = snapshotStore
     this.configService = configService
     this._alertManager = alertManager || new AlertManager()
-    this.rankingCalculator = rankingCalculator
+    if (rankingCalculator !== undefined) {
+      this.rankingCalculator = rankingCalculator
+    }
 
     // Initialize managers
     this.jobManager = new JobManager()
@@ -2897,7 +2912,11 @@ export class BackfillService {
 
     const currentDate = new Date(start)
     while (currentDate <= end) {
-      dates.push(currentDate.toISOString().split('T')[0])
+      const dateOnly = currentDate.toISOString().split('T')[0]
+      if (!dateOnly) {
+        throw new Error('Failed to extract date from ISO string')
+      }
+      dates.push(dateOnly)
       currentDate.setDate(currentDate.getDate() + 1)
     }
 

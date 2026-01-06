@@ -350,6 +350,7 @@ The backend implements a **modular, dependency-injected service architecture** w
 #### Data Acquisition & Processing Services
 
 **RefreshService** (Orchestration Hub)
+
 - **Purpose**: Coordinates the complete refresh workflow with circuit breaker protection
 - **Dependencies**: ToastmastersScraper, DataValidator, SnapshotStore, DistrictConfigurationService, RankingCalculator
 - **Features**: Four-phase workflow (scraping → normalization → validation → snapshot creation)
@@ -357,18 +358,21 @@ The backend implements a **modular, dependency-injected service architecture** w
 - **Integration**: Works with both FileSnapshotStore and PerDistrictSnapshotStore
 
 **ToastmastersScraper** (Data Source Integration)
+
 - **Purpose**: Browser automation for Toastmasters dashboard data acquisition
 - **Technology**: Playwright for reliable browser automation
 - **Data Sources**: Four distinct CSV exports (All Districts, District Performance, Division Performance, Club Performance)
 - **Features**: Program year calculation, URL generation, browser lifecycle management
 
 **DataValidator** (Quality Assurance)
+
 - **Purpose**: Ensures data integrity using Zod schemas
 - **Validation**: Business rules, consistency checks, format validation
 - **Error Handling**: Distinguishes critical errors from warnings
 - **Integration**: Used by RefreshService before snapshot creation
 
 **RankingCalculator** (BordaCountRankingCalculator)
+
 - **Purpose**: Sophisticated Borda count ranking algorithm for district performance
 - **Categories**: Club growth, payment growth, distinguished club percentages
 - **Features**: Tie handling, Borda point calculation, aggregate scoring
@@ -377,23 +381,27 @@ The backend implements a **modular, dependency-injected service architecture** w
 #### Storage & Persistence Services
 
 **FileSnapshotStore** (Legacy Snapshot Storage)
+
 - **Purpose**: File-based snapshot storage with atomic operations
 - **Performance**: In-memory caching (5-minute TTL), concurrent read optimization
 - **Features**: Atomic writes using temp files, integrity validation, recovery services
 - **Storage**: Single JSON files per snapshot with current.json pointer
 
 **PerDistrictFileSnapshotStore** (Modern Snapshot Storage)
+
 - **Purpose**: Directory-based per-district snapshot storage
 - **Structure**: Each snapshot as directory with individual district JSON files
 - **Features**: Manifest tracking, district-level error handling, selective access
 - **Performance**: Optimized for per-district data access patterns
 
 **DistrictDataAggregator** (Data Access Optimization)
+
 - **Purpose**: Efficient per-district data access with caching
 - **Features**: LRU cache for district files, performance metrics, selective loading
 - **Integration**: Works with PerDistrictSnapshotStore for API responses
 
 **SnapshotIntegrityValidator** & **SnapshotRecoveryService**
+
 - **Purpose**: Validates snapshot consistency and automatic recovery
 - **Features**: Corruption detection, automatic repair, backup creation
 - **Integration**: Used by both snapshot store implementations
@@ -401,16 +409,19 @@ The backend implements a **modular, dependency-injected service architecture** w
 #### Analytics & Caching Services
 
 **AnalyticsEngine** (Data Processing)
+
 - **Purpose**: Processes cached district data to generate insights and analytics
 - **Features**: Club trends, division analytics, membership analytics, leadership insights
 - **Performance**: In-memory caching with TTL, optimized data access patterns
 
 **CacheManager** & **DistrictCacheManager**
+
 - **Purpose**: Multi-level caching for performance optimization
 - **Features**: TTL-based expiration, memory management, cache statistics
 - **Integration**: Used across multiple services for performance optimization
 
 **CacheConfigService** (Configuration Management)
+
 - **Purpose**: Centralized cache directory configuration with security validation
 - **Features**: Path security validation, write permission verification, automatic directory creation
 - **Security**: Prevents path traversal attacks, validates system directory access
@@ -418,44 +429,52 @@ The backend implements a **modular, dependency-injected service architecture** w
 #### Backfill & Reconciliation Services
 
 **UnifiedBackfillService** (Historical Data Collection)
+
 - **Purpose**: Modern backfill orchestration using RefreshService methods
 - **Features**: Intelligent collection strategy selection, job management, progress tracking
 - **Performance**: Rate limiting, concurrency controls, intermediate caching
 - **Integration**: Direct use of RefreshService for reliable data acquisition
 
 **ReconciliationOrchestrator** (Month-End Processing)
+
 - **Purpose**: Month-end data reconciliation and validation
 - **Features**: Change detection, storage optimization, progress tracking
 - **Dependencies**: ReconciliationStorageManager, ReconciliationCacheService, ChangeDetectionEngine
 
 **ReconciliationStorageManager** & **ReconciliationCacheService**
+
 - **Purpose**: Reconciliation-specific data persistence and caching
 - **Features**: Optimized storage patterns, performance monitoring, cleanup automation
 
 #### Infrastructure & Utility Services
 
 **CircuitBreakerManager** (Failure Protection)
+
 - **Purpose**: Protects external service calls from cascading failures
 - **Features**: Configurable thresholds, automatic recovery, exponential backoff
 - **Integration**: Used by ToastmastersScraper and external API calls
 
 **RetryManager** (Resilience)
+
 - **Purpose**: Exponential backoff retry logic with jitter
 - **Features**: Configurable retry policies, operation-specific settings
 - **Integration**: Used across all external service interactions
 
 **AlertManager** & **ProgressTracker**
+
 - **Purpose**: System monitoring and job progress tracking
 - **Features**: Alert categorization, progress visualization, metrics collection
 
 ### Service Factory Pattern
 
 **ProductionServiceFactory** (Service Creation)
+
 - **Purpose**: Factory for creating production service instances with proper DI
 - **Features**: Lifecycle management, configuration injection, mock support
 - **Integration**: Central point for service instantiation and dependency resolution
 
 **ServiceContainer** (Dependency Injection)
+
 - **Purpose**: Generic DI container with lifecycle management
 - **Features**: Singleton/scoped/transient lifecycles, circular dependency detection, disposal pattern
 - **Testing**: Mock registration support for test isolation
@@ -478,17 +497,20 @@ CACHE_DIR/
 ### Storage Characteristics
 
 **Atomic Operations**:
+
 - Uses temporary files + rename for crash safety
 - Current pointer updated only after successful snapshot creation
 - No partial writes or corrupted states
 
 **Performance Features**:
+
 - In-memory cache for current snapshot metadata and content
 - Concurrent read deduplication (multiple requests share single file operation)
 - Automatic cleanup of old snapshots (configurable age/count limits)
 - Optional compression support (currently disabled)
 
 **Integrity & Recovery**:
+
 - **SnapshotIntegrityValidator**: Validates snapshot store consistency
 - **SnapshotRecoveryService**: Automatic recovery from corrupted files
 - **Pointer Recovery**: Scans directory to find latest successful snapshot if pointer corrupted
@@ -508,6 +530,7 @@ CACHE_DIR/
 ```
 
 **Characteristics**:
+
 - Single JSON file per snapshot containing all district data
 - Optimized for system-wide data access
 - In-memory caching with 5-minute TTL
@@ -534,6 +557,7 @@ CACHE_DIR/
 ```
 
 **Characteristics**:
+
 - Directory-based storage with individual district files
 - Manifest tracking for district-level status
 - Optimized for per-district data access
@@ -586,28 +610,28 @@ interface SnapshotStoreConfig {
 
 ### Reconciliation Endpoints (`/api/reconciliation`)
 
-| Endpoint                            | Method | Purpose                       |
-| ----------------------------------- | ------ | ----------------------------- |
-| `/jobs`                             | GET    | List reconciliation jobs      |
-| `/jobs`                             | POST   | Create new reconciliation job |
-| `/jobs/:jobId`                      | GET    | Get job status and details    |
-| `/jobs/:jobId`                      | DELETE | Cancel running job            |
-| `/jobs/:jobId/progress`             | GET    | Get detailed progress info    |
-| `/performance/metrics`              | GET    | Performance metrics           |
-| `/performance/optimization`         | POST   | Trigger optimization          |
+| Endpoint                    | Method | Purpose                       |
+| --------------------------- | ------ | ----------------------------- |
+| `/jobs`                     | GET    | List reconciliation jobs      |
+| `/jobs`                     | POST   | Create new reconciliation job |
+| `/jobs/:jobId`              | GET    | Get job status and details    |
+| `/jobs/:jobId`              | DELETE | Cancel running job            |
+| `/jobs/:jobId/progress`     | GET    | Get detailed progress info    |
+| `/performance/metrics`      | GET    | Performance metrics           |
+| `/performance/optimization` | POST   | Trigger optimization          |
 
 ### Assessment Endpoints (`/api/assessment`)
 
-| Endpoint                            | Method | Purpose                       |
-| ----------------------------------- | ------ | ----------------------------- |
-| `/monthly/:districtId`              | GET    | Get monthly assessments       |
-| `/monthly/:districtId`              | POST   | Create monthly assessment     |
-| `/monthly/:districtId/:month`       | GET    | Get specific month assessment |
-| `/monthly/:districtId/:month`       | PUT    | Update monthly assessment     |
-| `/monthly/:districtId/:month`       | DELETE | Delete monthly assessment     |
-| `/district-leader-goals/:districtId`| GET    | Get district leader goals     |
-| `/district-leader-goals/:districtId`| POST   | Create district leader goals  |
-| `/reports/:districtId/:month`       | GET    | Generate assessment report    |
+| Endpoint                             | Method | Purpose                       |
+| ------------------------------------ | ------ | ----------------------------- |
+| `/monthly/:districtId`               | GET    | Get monthly assessments       |
+| `/monthly/:districtId`               | POST   | Create monthly assessment     |
+| `/monthly/:districtId/:month`        | GET    | Get specific month assessment |
+| `/monthly/:districtId/:month`        | PUT    | Update monthly assessment     |
+| `/monthly/:districtId/:month`        | DELETE | Delete monthly assessment     |
+| `/district-leader-goals/:districtId` | GET    | Get district leader goals     |
+| `/district-leader-goals/:districtId` | POST   | Create district leader goals  |
+| `/reports/:districtId/:month`        | GET    | Generate assessment report    |
 
 ### Cache Management Endpoints (`/api/districts/cache`)
 
@@ -699,19 +723,21 @@ The backend implements a comprehensive dependency injection system for proper se
 ### Service Container Architecture
 
 **DefaultServiceContainer** (Core DI Container)
+
 - **Purpose**: Manages service registration, resolution, and lifecycle
 - **Features**: Circular dependency detection, disposal pattern, mock support
 - **Lifecycles**: Singleton, scoped, transient service instances
 
 **Service Registration Pattern**:
+
 ```typescript
 // Service token definition
 const ServiceToken = createServiceToken<IService>('ServiceName')
 
 // Service factory with disposal
 const serviceFactory = createServiceFactory(
-  (container) => new ServiceImpl(container.resolve(DependencyToken)),
-  (instance) => instance.dispose?.()
+  container => new ServiceImpl(container.resolve(DependencyToken)),
+  instance => instance.dispose?.()
 )
 
 // Registration
@@ -719,6 +745,7 @@ container.register(ServiceToken, serviceFactory, 'singleton')
 ```
 
 **Service Resolution**:
+
 ```typescript
 // Type-safe resolution
 const service = container.resolve(ServiceToken)
@@ -735,22 +762,26 @@ class ServiceImpl {
 ### Service Lifecycle Management
 
 **Singleton Services** (Application-wide instances)
+
 - RefreshService, SnapshotStore, CacheConfigService
 - Created once per container, shared across all consumers
 - Disposed in reverse creation order during container cleanup
 
 **Scoped Services** (Request/operation-scoped)
+
 - AnalyticsEngine, DistrictDataAggregator
 - Single instance per scope, disposed at scope end
 - Useful for request-specific caching and state
 
 **Transient Services** (New instance per resolution)
+
 - Utility services, validators, temporary processors
 - No lifecycle management, garbage collected normally
 
 ### Production Service Factory
 
 **ProductionServiceFactory** (Service Creation Hub)
+
 - **Purpose**: Creates production-ready service instances with proper configuration
 - **Features**: Environment-specific configuration, service registration automation
 - **Integration**: Central point for all service instantiation
@@ -764,10 +795,12 @@ const refreshService = container.resolve(RefreshServiceToken)
 ### Configuration Management
 
 **ProductionConfigurationProvider** (Environment Configuration)
+
 - **Purpose**: Provides environment-specific configuration with validation
 - **Features**: Environment variable integration, configuration validation, override support
 
 **Configuration Structure**:
+
 ```typescript
 interface ServiceConfiguration {
   cacheDirectory: string
@@ -780,6 +813,7 @@ interface ServiceConfiguration {
 ### Test Integration
 
 **Mock Registration** (Test Isolation)
+
 - Services can be mocked for testing without affecting production code
 - Container supports mock overrides for specific test scenarios
 - Proper disposal ensures test isolation and resource cleanup
@@ -799,12 +833,14 @@ The backend implements multiple layers of performance optimization to ensure con
 ### Multi-Level Caching Strategy
 
 **In-Memory Caching**:
+
 - **Current Snapshot Cache**: 5-minute TTL for latest snapshot data
 - **Pointer Cache**: 30-second TTL for current.json pointer
 - **District Data Cache**: 5-minute TTL for frequently accessed districts
 - **Analytics Cache**: Configurable TTL for computed analytics results
 
 **Cache Hierarchy**:
+
 ```
 Request → In-Memory Cache → File System → External Source
     ↓         ↓                ↓            ↓
@@ -812,6 +848,7 @@ Request → In-Memory Cache → File System → External Source
 ```
 
 **Concurrent Read Optimization**:
+
 - Request deduplication for identical snapshot requests
 - Shared cache entries across concurrent requests
 - Lock-free read operations with atomic updates
@@ -819,11 +856,13 @@ Request → In-Memory Cache → File System → External Source
 ### File System Optimizations
 
 **Atomic Operations**:
+
 - Temporary file + rename pattern for crash safety
 - No partial writes or corrupted states
 - Consistent read performance during writes
 
 **Access Pattern Optimization**:
+
 - Stat caching for file metadata
 - Selective file loading for per-district access
 - Optimized directory scanning for snapshot listing
@@ -831,6 +870,7 @@ Request → In-Memory Cache → File System → External Source
 ### Performance Monitoring
 
 **Built-in Metrics Collection**:
+
 ```typescript
 interface ReadPerformanceMetrics {
   totalReads: number
@@ -843,6 +883,7 @@ interface ReadPerformanceMetrics {
 ```
 
 **Performance Endpoints**:
+
 - `/api/admin/snapshot-store/performance` - Real-time metrics
 - `/api/admin/process-separation/independence` - Read/write independence validation
 - Performance metrics reset and monitoring capabilities
@@ -856,11 +897,13 @@ The system implements comprehensive error handling and resilience patterns to en
 ### Circuit Breaker Pattern
 
 **CircuitBreakerManager** (Failure Protection)
+
 - **Purpose**: Prevents cascading failures from external service issues
 - **States**: Closed (normal), Open (failing), Half-Open (testing recovery)
 - **Configuration**: Configurable failure thresholds, timeout periods, recovery testing
 
 **Integration Points**:
+
 - ToastmastersScraper dashboard interactions
 - External API calls and data source access
 - File system operations with potential for failure
@@ -868,11 +911,13 @@ The system implements comprehensive error handling and resilience patterns to en
 ### Retry Logic
 
 **RetryManager** (Resilience)
+
 - **Strategy**: Exponential backoff with jitter to prevent thundering herd
 - **Configuration**: Operation-specific retry policies and maximum attempts
 - **Integration**: Used across all external service interactions
 
 **Retry Configuration**:
+
 ```typescript
 interface RetryOptions {
   maxAttempts: number
@@ -886,12 +931,14 @@ interface RetryOptions {
 ### Error Recovery
 
 **Snapshot Recovery System**:
+
 - **SnapshotIntegrityValidator**: Detects corrupted or invalid snapshots
 - **SnapshotRecoveryService**: Automatic recovery from corrupted files
 - **Pointer Recovery**: Scans directory to rebuild current.json if corrupted
 - **Backup Creation**: Creates backups before recovery operations
 
 **District-Level Error Handling**:
+
 - Individual district failures don't stop processing of other districts
 - Partial snapshots created when some districts fail
 - Detailed error tracking for retry logic and debugging
@@ -899,11 +946,13 @@ interface RetryOptions {
 ### Graceful Degradation
 
 **Last-Known-Good Data Pattern**:
+
 - Application continues serving data from last successful snapshot
 - Users see data freshness timestamp for transparency
 - Refresh failures don't affect read operation availability
 
 **Error Response Patterns**:
+
 - Consistent error response format across all endpoints
 - Detailed error information for debugging without exposing internals
 - Proper HTTP status codes and error categorization
@@ -917,12 +966,14 @@ The backend implements comprehensive testing infrastructure aligned with the tes
 ### Test Configuration
 
 **Vitest Configuration** (Test Runner)
+
 - **Execution**: Sequential execution with `pool: 'forks'` and `singleFork: true`
 - **Isolation**: Each test file runs in isolated environment
 - **Timeouts**: 30-second test timeout, 10-second hook timeout
 - **Setup**: Dedicated setup files for test environment initialization
 
 **Test Categories**:
+
 - **Unit Tests**: Core logic and business rules validation
 - **Integration Tests**: End-to-end workflow validation
 - **Property Tests**: Universal correctness properties using fast-check
@@ -931,12 +982,14 @@ The backend implements comprehensive testing infrastructure aligned with the tes
 ### Test Isolation Patterns
 
 **Resource Isolation**:
+
 - **Unique Directories**: Each test uses timestamp-based unique directories
 - **Port Management**: Dynamic port allocation for concurrent test execution
 - **Environment Variables**: Scoped environment variables per test
 - **Service Instances**: Fresh service instances via dependency injection
 
 **Cleanup Patterns**:
+
 ```typescript
 // Test setup with proper cleanup
 afterEach(async () => {
@@ -949,11 +1002,13 @@ afterEach(async () => {
 ### Dependency Injection in Tests
 
 **Test Service Factory**:
+
 - **TestServiceFactory**: Creates test-specific service instances
 - **Mock Registration**: Easy mock service registration for isolation
 - **Resource Management**: Automatic cleanup of test resources
 
 **Test Container Pattern**:
+
 ```typescript
 // Test-specific container with mocks
 const testContainer = createTestContainer()
@@ -964,6 +1019,7 @@ const serviceUnderTest = testContainer.resolve(ServiceToken)
 ### Property-Based Testing
 
 **Fast-Check Integration**:
+
 - Universal correctness properties for ranking calculations
 - Data validation property tests for edge cases
 - Snapshot consistency property tests
@@ -1103,18 +1159,21 @@ backend/
 ### Monitoring & Observability
 
 **Structured Logging**:
+
 - All operations include operation IDs for distributed tracing
 - Performance metrics for read/write operations with timing data
 - Error details with context for debugging without exposing sensitive information
 - Request/response logging with sanitized data
 
 **Health Checks**:
+
 - `/health` endpoint provides comprehensive system status
 - Snapshot store integrity validation with detailed reporting
 - Process separation compliance monitoring and validation
 - Service dependency health checking
 
 **Performance Metrics**:
+
 - Cache hit/miss ratios across all caching layers
 - Concurrent read statistics and peak usage tracking
 - Refresh operation timing and success rates
@@ -1122,6 +1181,7 @@ backend/
 - Resource utilization monitoring (memory, disk, CPU)
 
 **Alert Management**:
+
 - Configurable alert thresholds for system metrics
 - Alert categorization (info, warning, critical)
 - Integration points for external monitoring systems

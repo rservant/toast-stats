@@ -3,6 +3,11 @@
   "compilerOptions": {
     "noEmit": true,
     "skipLibCheck": true,
+    // TypeScript Steering Document Requirements - Enhanced for Testing
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
     "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*"],

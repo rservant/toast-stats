@@ -23,9 +23,6 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
   let mockCacheManager: MockCacheManager
 
   beforeEach(() => {
-    // Create a service instance and manually inject mocks
-    apiService = new RealToastmastersAPIService(true) // Allow in test environment
-
     // Create mock scraper
     mockScraper = {
       getAllDistricts: vi.fn(),
@@ -41,11 +38,12 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
       clearCache: vi.fn(),
     }
 
-    // Inject mocks directly
-    ;(apiService as unknown as { scraper: MockScraper }).scraper = mockScraper
-    ;(
-      apiService as unknown as { cacheManager: MockCacheManager }
-    ).cacheManager = mockCacheManager
+    // Create a service instance with proper parameters
+    apiService = new RealToastmastersAPIService(
+      mockScraper as any, // Pass mock scraper as first parameter
+      true, // Allow in test environment
+      mockCacheManager as any // Pass mock cache manager
+    )
   })
 
   afterEach(() => {

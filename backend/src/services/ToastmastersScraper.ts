@@ -7,6 +7,8 @@ import { chromium, Browser, Page } from 'playwright'
 import { parse } from 'csv-parse/sync'
 import { logger } from '../utils/logger.js'
 import { ScrapedRecord, DistrictInfo } from '../types/districts.js'
+import { IRawCSVCacheService } from '../types/serviceInterfaces.js'
+import { CSVType } from '../types/rawCSVCache.js'
 
 interface ScraperConfig {
   baseUrl: string
@@ -17,14 +19,97 @@ interface ScraperConfig {
 export class ToastmastersScraper {
   private config: ScraperConfig
   private browser: Browser | null = null
+  private rawCSVCache: IRawCSVCacheService
 
-  constructor() {
+  constructor(rawCSVCache: IRawCSVCacheService) {
     this.config = {
       baseUrl:
-        process.env.TOASTMASTERS_DASHBOARD_URL ||
+        process.env['TOASTMASTERS_DASHBOARD_URL'] ||
         'https://dashboards.toastmasters.org',
       headless: true, // Always run in headless mode
       timeout: 30000,
+    }
+    this.rawCSVCache = rawCSVCache
+
+    logger.debug('ToastmastersScraper initialized with cache service')
+  }
+
+  /**
+   * Get current date string in YYYY-MM-DD format
+   */
+  private getCurrentDateString(): string {
+    const now = new Date()
+    const dateString = now.toISOString().split('T')[0]
+    if (!dateString) {
+      throw new Error('Failed to generate current date string')
+    }
+    return dateString
+  }
+
+  /**
+   * Try to get CSV content from cache first, fallback to download if not found
+   */
+  private async getCachedOrDownload(
+    csvType: CSVType,
+    downloadFn: () => Promise<string>,
+    dateString?: string,
+    districtId?: string
+  ): Promise<string> {
+    const date = dateString || this.getCurrentDateString()
+    
+    try {
+      // Check cache first
+      const cachedContent = await this.rawCSVCache.getCachedCSV(
+        date,
+        csvType,
+        districtId
+      )
+
+      if (cachedContent) {
+        logger.info('Cache hit - returning cached CSV content', {
+          csvType,
+          date,
+          districtId,
+          contentLength: cachedContent.length,
+        })
+        return cachedContent
+      }
+
+      logger.info('Cache miss - downloading and caching CSV content', {
+        csvType,
+        date,
+        districtId,
+      })
+
+      // Cache miss - download and cache
+      const downloadedContent = await downloadFn()
+      
+      // Cache the downloaded content
+      await this.rawCSVCache.setCachedCSV(
+        date,
+        csvType,
+        downloadedContent,
+        districtId
+      )
+
+      logger.info('CSV content downloaded and cached successfully', {
+        csvType,
+        date,
+        districtId,
+        contentLength: downloadedContent.length,
+      })
+
+      return downloadedContent
+    } catch (cacheError) {
+      // Cache operation failed - log error and fallback to direct download
+      logger.warn('Cache operation failed, falling back to direct download', {
+        csvType,
+        date,
+        districtId,
+        error: cacheError instanceof Error ? cacheError.message : 'Unknown error',
+      })
+      
+      return await downloadFn()
     }
   }
 
@@ -218,27 +303,116 @@ export class ToastmastersScraper {
   /**
    * Fetch all districts with performance data from CSV export
    */
-  async getAllDistricts(): Promise<ScrapedRecord[]> {
-    const browser = await this.initBrowser()
-    const page = await browser.newPage()
+  async getAllDistricts(dateString?: string): Promise<ScrapedRecord[]> {
+    const downloadFn = async (): Promise<string> => {
+      const browser = await this.initBrowser()
+      const page = await browser.newPage()
 
-    try {
-      logger.info('Fetching all districts summary with performance data')
-      await page.goto(this.config.baseUrl, {
-        waitUntil: 'networkidle',
-        timeout: this.config.timeout,
-      })
+      try {
+        if (dateString) {
+          // Use the existing getAllDistrictsForDate logic for specific dates
+          return await this.downloadAllDistrictsForDate(page, dateString)
+        } else {
+          // Use current data logic
+          logger.info('Fetching all districts summary with performance data')
+          await page.goto(this.config.baseUrl, {
+            waitUntil: 'networkidle',
+            timeout: this.config.timeout,
+          })
 
-      const csvContent = await this.downloadCsv(page)
-      const records = this.parseCsv(csvContent)
-
-      logger.info('All districts performance data fetched', {
-        count: records.length,
-      })
-      return records
-    } finally {
-      await page.close()
+          return await this.downloadCsv(page)
+        }
+      } finally {
+        await page.close()
+      }
     }
+
+    const csvContent = await this.getCachedOrDownload(
+      CSVType.ALL_DISTRICTS,
+      downloadFn,
+      dateString
+    )
+
+    const records = this.parseCsv(csvContent)
+    logger.info('All districts performance data fetched', {
+      dateString,
+      count: records.length,
+    })
+    return records
+  }
+
+  /**
+   * Helper method to download all districts data for a specific date
+   */
+  private async downloadAllDistrictsForDate(
+    page: Page,
+    dateString: string
+  ): Promise<string> {
+    // Parse the date string (YYYY-MM-DD)
+    const dateObj = new Date(dateString + 'T00:00:00')
+    const month = dateObj.getMonth() + 1 // 1-12
+    const day = dateObj.getDate()
+    const year = dateObj.getFullYear()
+
+    // Format as mm/dd/yyyy (no zero padding for month/day)
+    const formattedDate = `${month}/${day}/${year}`
+
+    logger.info('Fetching all districts summary for specific date', {
+      dateString,
+      formattedDate,
+    })
+
+    // Build URL with program year and date (no id = all districts)
+    const baseUrl = this.buildBaseUrl(dateString)
+    const url = `${baseUrl}/Default.aspx?month=${month}&day=${formattedDate}`
+    logger.info('Navigating to URL', { url })
+    await page.goto(url, {
+      waitUntil: 'networkidle',
+      timeout: this.config.timeout,
+    })
+
+    // Log the page title for debugging
+    const title = await page.title()
+    logger.info('Page loaded', { title, url: page.url() })
+
+    // Try to verify the date, but don't fail if we can't
+    const actualDate = await this.getSelectedDate(page)
+    if (actualDate) {
+      const {
+        month: actualMonth,
+        day: actualDay,
+        year: actualYear,
+        dateString: actualDateString,
+      } = actualDate
+      if (actualMonth !== month || actualDay !== day || actualYear !== year) {
+        logger.warn(
+          'Requested date not available, dashboard returned different date',
+          {
+            requested: { month, day, year, dateString },
+            actual: {
+              month: actualMonth,
+              day: actualDay,
+              year: actualYear,
+              dateString: actualDateString,
+            },
+          }
+        )
+        throw new Error(
+          `Date ${dateString} not available (dashboard returned ${actualDateString})`
+        )
+      }
+      logger.info('Date verification successful', {
+        requested: dateString,
+        actual: actualDateString,
+      })
+    } else {
+      logger.warn('Could not verify date from dropdown, proceeding anyway', {
+        dateString,
+      })
+    }
+
+    // Download CSV with the selected date
+    return await this.downloadCsv(page)
   }
 
   /**
@@ -348,12 +522,8 @@ export class ToastmastersScraper {
 
       for (const select of allSelects) {
         const selectedText = await select.evaluate(el => {
-          const selectElement = el as {
-            options: { text: string }[]
-            selectedIndex: number
-          }
-          const selectedOption =
-            selectElement.options[selectElement.selectedIndex]
+          const selectElement = el as any // Use any to avoid HTMLSelectElement type issues in Playwright context
+          const selectedOption = selectElement.options[selectElement.selectedIndex]
           return selectedOption ? selectedOption.text : null
         })
 
@@ -371,12 +541,8 @@ export class ToastmastersScraper {
 
       // Get the selected option text (e.g., "As of 10-Oct-2025")
       const selectedText = await daySelect.evaluate(select => {
-        const selectElement = select as {
-          options: { text: string }[]
-          selectedIndex: number
-        }
-        const selectedOption =
-          selectElement.options[selectElement.selectedIndex]
+        const selectElement = select as any // Use any to avoid HTMLSelectElement type issues in Playwright context
+        const selectedOption = selectElement.options[selectElement.selectedIndex]
         return selectedOption ? selectedOption.text : null
       })
 
@@ -399,9 +565,16 @@ export class ToastmastersScraper {
         match = selectedText.match(/(\d+)\/(\d+)\/(\d{4})/)
         if (match) {
           // This is mm/dd/yyyy format
-          const month = parseInt(match[1], 10)
-          const day = parseInt(match[2], 10)
-          const year = parseInt(match[3], 10)
+          const monthStr = match[1]
+          const dayStr = match[2]
+          const yearStr = match[3]
+          if (!monthStr || !dayStr || !yearStr) {
+            logger.warn('Invalid date components in slash format', { selectedText })
+            return null
+          }
+          const month = parseInt(monthStr, 10)
+          const day = parseInt(dayStr, 10)
+          const year = parseInt(yearStr, 10)
           return { month, day, year, dateString: selectedText }
         }
       }
@@ -411,9 +584,17 @@ export class ToastmastersScraper {
         return null
       }
 
-      const day = parseInt(match[1], 10)
+      const dayStr = match[1]
       const monthName = match[2]
-      const year = parseInt(match[3], 10)
+      const yearStr = match[3]
+      
+      if (!dayStr || !monthName || !yearStr) {
+        logger.warn('Invalid date components in match', { selectedText, match })
+        return null
+      }
+
+      const day = parseInt(dayStr, 10)
+      const year = parseInt(yearStr, 10)
 
       // Convert month name to number
       const monthMap: { [key: string]: number } = {
@@ -460,92 +641,101 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const browser = await this.initBrowser()
-    const page = await browser.newPage()
+    const downloadFn = async (): Promise<string> => {
+      const browser = await this.initBrowser()
+      const page = await browser.newPage()
 
-    try {
-      let url: string
+      try {
+        let url: string
 
-      if (dateString) {
-        // Build URL with program year and date
-        const baseUrl = this.buildBaseUrl(dateString)
-        const dateObj = new Date(dateString + 'T00:00:00')
-        const month = dateObj.getMonth() + 1 // 1-12
-        const day = dateObj.getDate()
-        const year = dateObj.getFullYear()
-        const formattedDate = `${month}/${day}/${year}`
-        url = `${baseUrl}/District.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
-      } else {
-        // No date specified, use current data
-        url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
-      }
-
-      logger.info('Fetching district performance', {
-        districtId,
-        dateString,
-        url,
-      })
-
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: this.config.timeout,
-      })
-
-      // Verify the date if requested
-      if (dateString) {
-        const dateObj = new Date(dateString + 'T00:00:00')
-        const month = dateObj.getMonth() + 1
-        const day = dateObj.getDate()
-        const year = dateObj.getFullYear()
-
-        const actualDate = await this.getSelectedDate(page)
-        if (actualDate) {
-          const {
-            month: actualMonth,
-            day: actualDay,
-            year: actualYear,
-            dateString: actualDateString,
-          } = actualDate
-          if (
-            actualMonth !== month ||
-            actualDay !== day ||
-            actualYear !== year
-          ) {
-            logger.warn(
-              'Requested date not available, dashboard returned different date',
-              {
-                requested: { month, day, year, dateString },
-                actual: {
-                  month: actualMonth,
-                  day: actualDay,
-                  year: actualYear,
-                  dateString: actualDateString,
-                },
-              }
-            )
-            throw new Error(
-              `Date ${dateString} not available (dashboard returned ${actualDateString})`
-            )
-          }
-          logger.info('Date verification successful', {
-            requested: dateString,
-            actual: actualDateString,
-          })
+        if (dateString) {
+          // Build URL with program year and date
+          const baseUrl = this.buildBaseUrl(dateString)
+          const dateObj = new Date(dateString + 'T00:00:00')
+          const month = dateObj.getMonth() + 1 // 1-12
+          const day = dateObj.getDate()
+          const year = dateObj.getFullYear()
+          const formattedDate = `${month}/${day}/${year}`
+          url = `${baseUrl}/District.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
+        } else {
+          // No date specified, use current data
+          url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
         }
+
+        logger.info('Fetching district performance', {
+          districtId,
+          dateString,
+          url,
+        })
+
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: this.config.timeout,
+        })
+
+        // Verify the date if requested
+        if (dateString) {
+          const dateObj = new Date(dateString + 'T00:00:00')
+          const month = dateObj.getMonth() + 1
+          const day = dateObj.getDate()
+          const year = dateObj.getFullYear()
+
+          const actualDate = await this.getSelectedDate(page)
+          if (actualDate) {
+            const {
+              month: actualMonth,
+              day: actualDay,
+              year: actualYear,
+              dateString: actualDateString,
+            } = actualDate
+            if (
+              actualMonth !== month ||
+              actualDay !== day ||
+              actualYear !== year
+            ) {
+              logger.warn(
+                'Requested date not available, dashboard returned different date',
+                {
+                  requested: { month, day, year, dateString },
+                  actual: {
+                    month: actualMonth,
+                    day: actualDay,
+                    year: actualYear,
+                    dateString: actualDateString,
+                  },
+                }
+              )
+              throw new Error(
+                `Date ${dateString} not available (dashboard returned ${actualDateString})`
+              )
+            }
+            logger.info('Date verification successful', {
+              requested: dateString,
+              actual: actualDateString,
+            })
+          }
+        }
+
+        return await this.downloadCsv(page)
+      } finally {
+        await page.close()
       }
-
-      const csvContent = await this.downloadCsv(page)
-      const records = this.parseCsv(csvContent)
-
-      logger.info('District performance fetched', {
-        districtId,
-        dateString,
-        count: records.length,
-      })
-      return records
-    } finally {
-      await page.close()
     }
+
+    const csvContent = await this.getCachedOrDownload(
+      CSVType.DISTRICT_PERFORMANCE,
+      downloadFn,
+      dateString,
+      districtId
+    )
+
+    const records = this.parseCsv(csvContent)
+    logger.info('District performance fetched', {
+      districtId,
+      dateString,
+      count: records.length,
+    })
+    return records
   }
 
   /**
@@ -555,92 +745,101 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const browser = await this.initBrowser()
-    const page = await browser.newPage()
+    const downloadFn = async (): Promise<string> => {
+      const browser = await this.initBrowser()
+      const page = await browser.newPage()
 
-    try {
-      let url: string
+      try {
+        let url: string
 
-      if (dateString) {
-        // Build URL with program year and date
-        const baseUrl = this.buildBaseUrl(dateString)
-        const dateObj = new Date(dateString + 'T00:00:00')
-        const month = dateObj.getMonth() + 1 // 1-12
-        const day = dateObj.getDate()
-        const year = dateObj.getFullYear()
-        const formattedDate = `${month}/${day}/${year}`
-        url = `${baseUrl}/Division.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
-      } else {
-        // No date specified, use current data
-        url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
-      }
-
-      logger.info('Fetching division performance', {
-        districtId,
-        dateString,
-        url,
-      })
-
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: this.config.timeout,
-      })
-
-      // Verify the date if requested
-      if (dateString) {
-        const dateObj = new Date(dateString + 'T00:00:00')
-        const month = dateObj.getMonth() + 1
-        const day = dateObj.getDate()
-        const year = dateObj.getFullYear()
-
-        const actualDate = await this.getSelectedDate(page)
-        if (actualDate) {
-          const {
-            month: actualMonth,
-            day: actualDay,
-            year: actualYear,
-            dateString: actualDateString,
-          } = actualDate
-          if (
-            actualMonth !== month ||
-            actualDay !== day ||
-            actualYear !== year
-          ) {
-            logger.warn(
-              'Requested date not available, dashboard returned different date',
-              {
-                requested: { month, day, year, dateString },
-                actual: {
-                  month: actualMonth,
-                  day: actualDay,
-                  year: actualYear,
-                  dateString: actualDateString,
-                },
-              }
-            )
-            throw new Error(
-              `Date ${dateString} not available (dashboard returned ${actualDateString})`
-            )
-          }
-          logger.info('Date verification successful', {
-            requested: dateString,
-            actual: actualDateString,
-          })
+        if (dateString) {
+          // Build URL with program year and date
+          const baseUrl = this.buildBaseUrl(dateString)
+          const dateObj = new Date(dateString + 'T00:00:00')
+          const month = dateObj.getMonth() + 1 // 1-12
+          const day = dateObj.getDate()
+          const year = dateObj.getFullYear()
+          const formattedDate = `${month}/${day}/${year}`
+          url = `${baseUrl}/Division.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
+        } else {
+          // No date specified, use current data
+          url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
         }
+
+        logger.info('Fetching division performance', {
+          districtId,
+          dateString,
+          url,
+        })
+
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: this.config.timeout,
+        })
+
+        // Verify the date if requested
+        if (dateString) {
+          const dateObj = new Date(dateString + 'T00:00:00')
+          const month = dateObj.getMonth() + 1
+          const day = dateObj.getDate()
+          const year = dateObj.getFullYear()
+
+          const actualDate = await this.getSelectedDate(page)
+          if (actualDate) {
+            const {
+              month: actualMonth,
+              day: actualDay,
+              year: actualYear,
+              dateString: actualDateString,
+            } = actualDate
+            if (
+              actualMonth !== month ||
+              actualDay !== day ||
+              actualYear !== year
+            ) {
+              logger.warn(
+                'Requested date not available, dashboard returned different date',
+                {
+                  requested: { month, day, year, dateString },
+                  actual: {
+                    month: actualMonth,
+                    day: actualDay,
+                    year: actualYear,
+                    dateString: actualDateString,
+                  },
+                }
+              )
+              throw new Error(
+                `Date ${dateString} not available (dashboard returned ${actualDateString})`
+              )
+            }
+            logger.info('Date verification successful', {
+              requested: dateString,
+              actual: actualDateString,
+            })
+          }
+        }
+
+        return await this.downloadCsv(page)
+      } finally {
+        await page.close()
       }
-
-      const csvContent = await this.downloadCsv(page)
-      const records = this.parseCsv(csvContent)
-
-      logger.info('Division performance fetched', {
-        districtId,
-        dateString,
-        count: records.length,
-      })
-      return records
-    } finally {
-      await page.close()
     }
+
+    const csvContent = await this.getCachedOrDownload(
+      CSVType.DIVISION_PERFORMANCE,
+      downloadFn,
+      dateString,
+      districtId
+    )
+
+    const records = this.parseCsv(csvContent)
+    logger.info('Division performance fetched', {
+      districtId,
+      dateString,
+      count: records.length,
+    })
+    return records
   }
 
   /**
@@ -650,88 +849,97 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const browser = await this.initBrowser()
-    const page = await browser.newPage()
+    const downloadFn = async (): Promise<string> => {
+      const browser = await this.initBrowser()
+      const page = await browser.newPage()
 
-    try {
-      let url: string
+      try {
+        let url: string
 
-      if (dateString) {
-        // Build URL with program year and date
-        const baseUrl = this.buildBaseUrl(dateString)
-        const dateObj = new Date(dateString + 'T00:00:00')
-        const month = dateObj.getMonth() + 1 // 1-12
-        const day = dateObj.getDate()
-        const year = dateObj.getFullYear()
-        const formattedDate = `${month}/${day}/${year}`
-        url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
-      } else {
-        // No date specified, use current data
-        url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
-      }
-
-      logger.info('Fetching club performance', { districtId, dateString, url })
-
-      await page.goto(url, {
-        waitUntil: 'domcontentloaded',
-        timeout: this.config.timeout,
-      })
-
-      // Verify the date if requested
-      if (dateString) {
-        const dateObj = new Date(dateString + 'T00:00:00')
-        const month = dateObj.getMonth() + 1
-        const day = dateObj.getDate()
-        const year = dateObj.getFullYear()
-
-        const actualDate = await this.getSelectedDate(page)
-        if (actualDate) {
-          const {
-            month: actualMonth,
-            day: actualDay,
-            year: actualYear,
-            dateString: actualDateString,
-          } = actualDate
-          if (
-            actualMonth !== month ||
-            actualDay !== day ||
-            actualYear !== year
-          ) {
-            logger.warn(
-              'Requested date not available, dashboard returned different date',
-              {
-                requested: { month, day, year, dateString },
-                actual: {
-                  month: actualMonth,
-                  day: actualDay,
-                  year: actualYear,
-                  dateString: actualDateString,
-                },
-              }
-            )
-            throw new Error(
-              `Date ${dateString} not available (dashboard returned ${actualDateString})`
-            )
-          }
-          logger.info('Date verification successful', {
-            requested: dateString,
-            actual: actualDateString,
-          })
+        if (dateString) {
+          // Build URL with program year and date
+          const baseUrl = this.buildBaseUrl(dateString)
+          const dateObj = new Date(dateString + 'T00:00:00')
+          const month = dateObj.getMonth() + 1 // 1-12
+          const day = dateObj.getDate()
+          const year = dateObj.getFullYear()
+          const formattedDate = `${month}/${day}/${year}`
+          url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
+        } else {
+          // No date specified, use current data
+          url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
         }
+
+        logger.info('Fetching club performance', { districtId, dateString, url })
+
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: this.config.timeout,
+        })
+
+        // Verify the date if requested
+        if (dateString) {
+          const dateObj = new Date(dateString + 'T00:00:00')
+          const month = dateObj.getMonth() + 1
+          const day = dateObj.getDate()
+          const year = dateObj.getFullYear()
+
+          const actualDate = await this.getSelectedDate(page)
+          if (actualDate) {
+            const {
+              month: actualMonth,
+              day: actualDay,
+              year: actualYear,
+              dateString: actualDateString,
+            } = actualDate
+            if (
+              actualMonth !== month ||
+              actualDay !== day ||
+              actualYear !== year
+            ) {
+              logger.warn(
+                'Requested date not available, dashboard returned different date',
+                {
+                  requested: { month, day, year, dateString },
+                  actual: {
+                    month: actualMonth,
+                    day: actualDay,
+                    year: actualYear,
+                    dateString: actualDateString,
+                  },
+                }
+              )
+              throw new Error(
+                `Date ${dateString} not available (dashboard returned ${actualDateString})`
+              )
+            }
+            logger.info('Date verification successful', {
+              requested: dateString,
+              actual: actualDateString,
+            })
+          }
+        }
+
+        return await this.downloadCsv(page)
+      } finally {
+        await page.close()
       }
-
-      const csvContent = await this.downloadCsv(page)
-      const records = this.parseCsv(csvContent)
-
-      logger.info('Club performance fetched', {
-        districtId,
-        dateString,
-        count: records.length,
-      })
-      return records
-    } finally {
-      await page.close()
     }
+
+    const csvContent = await this.getCachedOrDownload(
+      CSVType.CLUB_PERFORMANCE,
+      downloadFn,
+      dateString,
+      districtId
+    )
+
+    const records = this.parseCsv(csvContent)
+    logger.info('Club performance fetched', {
+      districtId,
+      dateString,
+      count: records.length,
+    })
+    return records
   }
 
   /**

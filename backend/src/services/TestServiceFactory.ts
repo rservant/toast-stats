@@ -37,6 +37,8 @@ import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { SnapshotStore } from '../types/snapshots.js'
+import { ToastmastersScraper } from './ToastmastersScraper.js'
+import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
 import path from 'path'
 
 /**
@@ -294,9 +296,11 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
     const store = snapshotStore || this.createSnapshotStore()
     const rankingCalculator = this.createRankingCalculator()
+    const mockCacheService = createMockCacheService()
+    const scraper = new ToastmastersScraper(mockCacheService)
     const service = new RefreshService(
       store,
-      undefined,
+      scraper,
       undefined,
       undefined,
       rankingCalculator
@@ -458,9 +462,11 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
           const rankingCalculator = container.resolve(
             ServiceTokens.RankingCalculator
           )
+          const mockCacheService = createMockCacheService()
+          const scraper = new ToastmastersScraper(mockCacheService)
           return new RefreshService(
             snapshotStore,
-            undefined,
+            scraper,
             undefined,
             undefined,
             rankingCalculator

@@ -68,7 +68,8 @@ npm run typecheck
 
 - Fix TypeScript errors as they appear
 - Use proper type definitions for new code
-- Avoid `any` types or `@ts-ignore` comments
+- **Never use `any` types** - use `unknown`, interfaces, or proper type definitions instead
+- Avoid `@ts-ignore` comments without justification
 
 ### Before Committing
 
@@ -104,9 +105,31 @@ All phases of the error reduction strategy have been successfully completed:
 
 - ❌ Committing code with TypeScript errors
 - ❌ Using `@ts-ignore` without justification
-- ❌ Using `any` types without approval
+- ❌ **Using `any` types** - Explicitly prohibited by `@typescript-eslint/no-explicit-any`
 - ❌ Merging PRs with TypeScript errors
 - ❌ Deploying code with TypeScript errors
+
+### 🚨 Explicit `any` Type Prohibition
+
+The use of `any` type is **strictly forbidden** in this codebase. This rule is enforced by the `@typescript-eslint/no-explicit-any` ESLint rule.
+
+**Why `any` is prohibited:**
+
+- Defeats the purpose of TypeScript's type safety
+- Eliminates compile-time error checking
+- Makes code harder to maintain and refactor
+- Hides potential runtime errors
+- Reduces IDE support and autocomplete functionality
+
+**Instead of `any`, use:**
+
+- `unknown` for truly unknown types (safer than `any`)
+- Proper interface definitions for object types
+- Union types (`string | number`) for multiple possible types
+- Generic types (`<T>`) for reusable type-safe functions
+- `object` for general object types
+- `Record<string, unknown>` for key-value objects
+- Specific type assertions with proper validation
 
 ## ✅ What's Required
 
@@ -119,6 +142,40 @@ All phases of the error reduction strategy have been successfully completed:
 ## 🆘 Getting Help
 
 ### Common Error Types and Solutions
+
+**`any` Type Violations (@typescript-eslint/no-explicit-any)**
+
+```typescript
+// ❌ WRONG - Using any
+function processData(data: any): any {
+  return data.someProperty
+}
+
+// ✅ CORRECT - Using proper types
+interface DataInput {
+  someProperty: string
+  otherProperty?: number
+}
+
+function processData(data: DataInput): string {
+  return data.someProperty
+}
+
+// ✅ CORRECT - Using unknown for truly unknown data
+function processUnknownData(data: unknown): string {
+  if (typeof data === 'object' && data !== null && 'someProperty' in data) {
+    return String((data as { someProperty: unknown }).someProperty)
+  }
+  throw new Error('Invalid data structure')
+}
+
+// ✅ CORRECT - Using generics for reusable functions
+function processGenericData<T extends { someProperty: string }>(
+  data: T
+): string {
+  return data.someProperty
+}
+```
 
 **Type Errors (TS2339, TS2345, TS2322)**
 

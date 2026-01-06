@@ -17,6 +17,7 @@ import { PerDistrictFileSnapshotStore } from '../services/PerDistrictSnapshotSto
 import { DistrictConfigurationService } from '../services/DistrictConfigurationService'
 import { ToastmastersScraper } from '../services/ToastmastersScraper'
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService'
+import { createMockCacheService } from './utils/mockCacheService.js'
 import fs from 'fs/promises'
 import type { Express } from 'express'
 
@@ -50,7 +51,8 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
 
     // Initialize services with test configuration
     new MockToastmastersAPIService() // Create but don't store - not used in current tests
-    scraper = new ToastmastersScraper()
+    const mockCacheService = createMockCacheService()
+    scraper = new ToastmastersScraper(mockCacheService)
     configService = new DistrictConfigurationService(testCacheDir)
     snapshotStore = new PerDistrictFileSnapshotStore({
       cacheDir: testCacheDir,
