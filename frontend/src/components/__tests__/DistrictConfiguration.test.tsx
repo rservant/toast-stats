@@ -73,10 +73,14 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={false} />)
 
       expect(
-        screen.getByText('Admin access required to manage district configuration')
+        screen.getByText(
+          'Admin access required to manage district configuration'
+        )
       ).toBeInTheDocument()
       expect(
-        screen.getByText(/District configuration determines which districts are included/)
+        screen.getByText(
+          /District configuration determines which districts are included/
+        )
       ).toBeInTheDocument()
     })
 
@@ -92,8 +96,12 @@ describe('DistrictConfiguration', () => {
         expect(screen.getByText('District Configuration')).toBeInTheDocument()
       })
 
-      expect(screen.getByRole('heading', { name: 'Configured Districts' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Add District' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Configured Districts' })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Add District' })
+      ).toBeInTheDocument()
     })
   })
 
@@ -111,9 +119,11 @@ describe('DistrictConfiguration', () => {
       })
 
       // Check the statistics cards more specifically using getAllByText and checking context
-      const configuredDistrictsElements = screen.getAllByText('Configured Districts')
+      const configuredDistrictsElements = screen.getAllByText(
+        'Configured Districts'
+      )
       expect(configuredDistrictsElements).toHaveLength(2) // One in stats card, one as heading
-      
+
       expect(screen.getByText('Valid Districts')).toBeInTheDocument()
       expect(screen.getByText('Invalid Districts')).toBeInTheDocument()
       expect(screen.getByText('Last updated: 1/5/2025')).toBeInTheDocument()
@@ -173,7 +183,9 @@ describe('DistrictConfiguration', () => {
           ...mockConfigurationResponse.validation,
           isValid: false,
           invalidDistricts: ['99'],
-          warnings: ['District ID "99" not found in Toastmasters system. No similar districts found.'],
+          warnings: [
+            'District ID "99" not found in Toastmasters system. No similar districts found.',
+          ],
         },
       }
 
@@ -208,10 +220,14 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Add District' })).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: 'Add District' })
+        ).toBeInTheDocument()
       })
 
-      const input = screen.getByPlaceholderText('Enter district ID (e.g., 42, F)')
+      const input = screen.getByPlaceholderText(
+        'Enter district ID (e.g., 42, F)'
+      )
       const addButton = screen.getByRole('button', { name: 'Add District' })
 
       fireEvent.change(input, { target: { value: '123' } })
@@ -234,17 +250,23 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Add District' })).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: 'Add District' })
+        ).toBeInTheDocument()
       })
 
-      const input = screen.getByPlaceholderText('Enter district ID (e.g., 42, F)')
+      const input = screen.getByPlaceholderText(
+        'Enter district ID (e.g., 42, F)'
+      )
       const addButton = screen.getByRole('button', { name: 'Add District' })
 
       fireEvent.change(input, { target: { value: '42' } }) // District already exists
       fireEvent.click(addButton)
 
       await waitFor(() => {
-        expect(screen.getByText('District is already configured')).toBeInTheDocument()
+        expect(
+          screen.getByText('District is already configured')
+        ).toBeInTheDocument()
       })
 
       // Should not make API call for duplicate
@@ -265,7 +287,9 @@ describe('DistrictConfiguration', () => {
         expect(screen.getByText('Edit Configuration')).toBeInTheDocument()
       })
 
-      const editButton = screen.getByRole('button', { name: 'Edit Configuration' })
+      const editButton = screen.getByRole('button', {
+        name: 'Edit Configuration',
+      })
       fireEvent.click(editButton)
 
       // Should show edit mode UI
@@ -292,7 +316,9 @@ describe('DistrictConfiguration', () => {
       })
 
       // Enter edit mode
-      const editButton = screen.getByRole('button', { name: 'Edit Configuration' })
+      const editButton = screen.getByRole('button', {
+        name: 'Edit Configuration',
+      })
       fireEvent.click(editButton)
 
       // Save changes
@@ -325,7 +351,9 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Error Loading District Configuration')).toBeInTheDocument()
+        expect(
+          screen.getByText('Error Loading District Configuration')
+        ).toBeInTheDocument()
       })
 
       expect(screen.getByText('Network error')).toBeInTheDocument()
@@ -361,10 +389,14 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('No districts configured yet.')).toBeInTheDocument()
+        expect(
+          screen.getByText('No districts configured yet.')
+        ).toBeInTheDocument()
       })
 
-      expect(screen.getByText('Add districts to start collecting data.')).toBeInTheDocument()
+      expect(
+        screen.getByText('Add districts to start collecting data.')
+      ).toBeInTheDocument()
     })
   })
 })

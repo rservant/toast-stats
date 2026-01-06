@@ -298,6 +298,69 @@ export interface IDistrictBackfillService {
     error?: string
   } | null>
   cancelDistrictBackfill(jobId: string): Promise<void>
+}
+
+/**
+ * Unified Backfill Service Interface
+ * Modern interface that replaces both IBackfillService and IDistrictBackfillService
+ */
+export interface IUnifiedBackfillService {
+  initiateBackfill(request: {
+    targetDistricts?: string[]
+    startDate: string
+    endDate?: string
+    collectionType?: 'system-wide' | 'per-district' | 'auto'
+    concurrency?: number
+    retryFailures?: boolean
+    skipExisting?: boolean
+  }): Promise<string>
+
+  getBackfillStatus(backfillId: string): Promise<{
+    backfillId: string
+    status: 'processing' | 'complete' | 'error' | 'cancelled'
+    scope: {
+      targetDistricts: string[]
+      configuredDistricts: string[]
+      scopeType: 'system-wide' | 'targeted' | 'single-district'
+      validationPassed: boolean
+    }
+    progress: {
+      total: number
+      completed: number
+      skipped: number
+      unavailable: number
+      failed: number
+      current: string
+      districtProgress: Map<
+        string,
+        {
+          districtId: string
+          status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
+          datesProcessed: number
+          datesTotal: number
+          lastError?: string
+        }
+      >
+    }
+    collectionStrategy: {
+      type: 'system-wide' | 'per-district' | 'targeted'
+      refreshMethod: {
+        name:
+          | 'getAllDistricts'
+          | 'getDistrictPerformance'
+          | 'getMultipleDistricts'
+        params: Record<string, any>
+      }
+      rationale: string
+      estimatedEfficiency: number
+      targetDistricts?: string[]
+    }
+    error?: string
+    snapshotIds: string[]
+  } | null>
+
+  cancelBackfill(backfillId: string): Promise<boolean>
+  cleanupOldJobs(): Promise<void>
   dispose(): Promise<void>
 }
 

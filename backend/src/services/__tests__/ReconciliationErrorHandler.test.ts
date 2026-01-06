@@ -7,13 +7,15 @@ import {
 } from '../../utils/CircuitBreaker'
 
 // Mock dependencies
-vi.mock('../DistrictBackfillService.ts')
+vi.mock('../ToastmastersScraper.ts')
 vi.mock('../../utils/AlertManager.ts')
 vi.mock('../../utils/CircuitBreaker.ts')
 
-// Interface for mock backfill service
-interface MockBackfillService {
-  fetchReconciliationData: ReturnType<typeof vi.fn>
+// Interface for mock scraper service
+interface MockScraper {
+  getDistrictPerformance: ReturnType<typeof vi.fn>
+  getDivisionPerformance: ReturnType<typeof vi.fn>
+  getClubPerformance: ReturnType<typeof vi.fn>
 }
 
 // Interface for mock alert manager
@@ -47,7 +49,7 @@ interface ReconciliationData {
 
 describe('ReconciliationErrorHandler', () => {
   let errorHandler: ReconciliationErrorHandler
-  let mockBackfillService: MockBackfillService
+  let mockScraper: MockScraper
   let mockAlertManager: MockAlertManager
   let mockCircuitBreaker: MockCircuitBreaker
   let mockCircuitManager: MockCircuitManager
@@ -56,8 +58,10 @@ describe('ReconciliationErrorHandler', () => {
     vi.useFakeTimers()
 
     // Create mocks
-    mockBackfillService = {
-      fetchReconciliationData: vi.fn(),
+    mockScraper = {
+      getDistrictPerformance: vi.fn(),
+      getDivisionPerformance: vi.fn(),
+      getClubPerformance: vi.fn(),
     }
 
     mockAlertManager = {
@@ -131,7 +135,14 @@ describe('ReconciliationErrorHandler', () => {
         isDataAvailable: true,
       }
 
-      mockBackfillService.fetchReconciliationData.mockResolvedValue(mockResult)
+      // Mock scraper methods to return sample data
+      mockScraper.getDistrictPerformance.mockResolvedValue([
+        { district: 'D123' },
+      ])
+      mockScraper.getDivisionPerformance.mockResolvedValue([{ division: '1' }])
+      mockScraper.getClubPerformance.mockResolvedValue([
+        { 'Club Number': '123', 'Active Members': '25', Status: 'Active' },
+      ])
 
       // Mock circuit breaker to execute operation directly
       mockCircuitBreaker.execute.mockImplementation(async operation => {
@@ -139,7 +150,7 @@ describe('ReconciliationErrorHandler', () => {
       })
 
       const result = await errorHandler.executeDashboardFetch(
-        mockBackfillService as unknown as Parameters<
+        mockScraper as unknown as Parameters<
           typeof errorHandler.executeDashboardFetch
         >[0],
         'D123',
@@ -147,8 +158,17 @@ describe('ReconciliationErrorHandler', () => {
         { districtId: 'D123', operation: 'test-fetch' }
       )
 
-      expect(result).toEqual(mockResult)
-      expect(mockBackfillService.fetchReconciliationData).toHaveBeenCalledWith(
+      expect(result.success).toBe(true)
+      expect(result.isDataAvailable).toBe(true)
+      expect(mockScraper.getDistrictPerformance).toHaveBeenCalledWith(
+        'D123',
+        '2024-01-31'
+      )
+      expect(mockScraper.getDivisionPerformance).toHaveBeenCalledWith(
+        'D123',
+        '2024-01-31'
+      )
+      expect(mockScraper.getClubPerformance).toHaveBeenCalledWith(
         'D123',
         '2024-01-31'
       )
@@ -156,13 +176,13 @@ describe('ReconciliationErrorHandler', () => {
 
     it('should handle dashboard fetch failure with alerting', async () => {
       const mockError = new Error('Dashboard unavailable')
-      mockBackfillService.fetchReconciliationData.mockRejectedValue(mockError)
+      mockScraper.getDistrictPerformance.mockRejectedValue(mockError)
 
       // Mock circuit breaker to throw error
       mockCircuitBreaker.execute.mockRejectedValue(mockError)
 
       const result = await errorHandler.executeDashboardFetch(
-        mockBackfillService as unknown as Parameters<
+        mockScraper as unknown as Parameters<
           typeof errorHandler.executeDashboardFetch
         >[0],
         'D123',
@@ -185,17 +205,17 @@ describe('ReconciliationErrorHandler', () => {
         mockCircuitManager as unknown as ICircuitBreakerManager
       )
 
-      const mockResult = {
-        success: true,
-        data: { districtId: 'D123' } as ReconciliationData,
-        sourceDataDate: '2024-01-31',
-        isDataAvailable: true,
-      }
-
-      mockBackfillService.fetchReconciliationData.mockResolvedValue(mockResult)
+      // Mock scraper methods to return sample data
+      mockScraper.getDistrictPerformance.mockResolvedValue([
+        { district: 'D123' },
+      ])
+      mockScraper.getDivisionPerformance.mockResolvedValue([{ division: '1' }])
+      mockScraper.getClubPerformance.mockResolvedValue([
+        { 'Club Number': '123', 'Active Members': '25', Status: 'Active' },
+      ])
 
       const result = await errorHandlerNoCircuit.executeDashboardFetch(
-        mockBackfillService as unknown as Parameters<
+        mockScraper as unknown as Parameters<
           typeof errorHandlerNoCircuit.executeDashboardFetch
         >[0],
         'D123',
@@ -203,7 +223,12 @@ describe('ReconciliationErrorHandler', () => {
         { districtId: 'D123', operation: 'test-fetch' }
       )
 
-      expect(result).toEqual(mockResult)
+      expect(result.success).toBe(true)
+      expect(result.isDataAvailable).toBe(true)
+      expect(result.sourceDataDate).toBe('2024-01-31')
+      expect(result.data).toBeDefined()
+      expect(result.data?.districtId).toBe('D123')
+      expect(result.data?.membership.total).toBe(25)
     })
   })
 

@@ -45,9 +45,24 @@ export interface NormalizedData {
       districtId: string
       districtName?: string
       error: string
-      errorType: 'fetch_failed' | 'validation_failed' | 'processing_failed' | 'scope_violation'
+      errorType:
+        | 'fetch_failed'
+        | 'validation_failed'
+        | 'processing_failed'
+        | 'scope_violation'
       timestamp: string
     }>
+    /** Extended metadata for RefreshService compatibility and enhanced tracking */
+    extendedMetadata?: {
+      /** Collection method used (for RefreshService compatibility) */
+      collectionMethod?: string
+      /** Collection scope type (for RefreshService compatibility) */
+      collectionScope?: string
+      /** RefreshService method used (for RefreshService compatibility) */
+      refreshMethod?: string
+      /** Target districts for the operation (for RefreshService compatibility) */
+      targetDistricts?: string[]
+    }
   }
 }
 

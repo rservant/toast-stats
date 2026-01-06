@@ -425,170 +425,158 @@ router.get('/snapshot-store/health', logAdminAccess, async (req, res) => {
  * GET /api/admin/snapshot-store/integrity
  * Validate the integrity of the snapshot store
  */
-router.get(
-  '/snapshot-store/integrity',
-  logAdminAccess,
-  async (req, res) => {
-    const startTime = Date.now()
-    const operationId = `integrity_check_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.get('/snapshot-store/integrity', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = `integrity_check_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    logger.info('Admin snapshot store integrity check requested', {
+  logger.info('Admin snapshot store integrity check requested', {
+    operation: 'snapshotStoreIntegrityCheck',
+    operation_id: operationId,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getProductionServiceFactory()
+    const snapshotStore = factory.createSnapshotStore()
+
+    // Validate integrity (this assumes FileSnapshotStore has validateIntegrity method)
+    const integrityResult = (await (
+      snapshotStore as FileSnapshotStore & {
+        validateIntegrity?: () => Promise<unknown>
+      }
+    ).validateIntegrity?.()) || {
+      isValid: true,
+      corruptionIssues: [],
+      recoveryRecommendations: [],
+      validatedAt: new Date().toISOString(),
+    }
+
+    const duration = Date.now() - startTime
+
+    logger.info('Admin snapshot store integrity check completed', {
       operation: 'snapshotStoreIntegrityCheck',
       operation_id: operationId,
-      ip: req.ip,
+      is_valid: integrityResult.isHealthy,
+      issue_count: integrityResult.storeIssues?.length || 0,
+      duration_ms: duration,
     })
 
-    try {
-      const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
-
-      // Validate integrity (this assumes FileSnapshotStore has validateIntegrity method)
-      const integrityResult = (await (
-        snapshotStore as FileSnapshotStore & {
-          validateIntegrity?: () => Promise<unknown>
-        }
-      ).validateIntegrity?.()) || {
-        isValid: true,
-        corruptionIssues: [],
-        recoveryRecommendations: [],
-        validatedAt: new Date().toISOString(),
-      }
-
-      const duration = Date.now() - startTime
-
-      logger.info('Admin snapshot store integrity check completed', {
-        operation: 'snapshotStoreIntegrityCheck',
+    res.json({
+      integrity: integrityResult,
+      metadata: {
+        checked_at: new Date().toISOString(),
+        check_duration_ms: duration,
         operation_id: operationId,
-        is_valid: integrityResult.isHealthy,
-        issue_count: integrityResult.storeIssues?.length || 0,
-        duration_ms: duration,
-      })
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-      res.json({
-        integrity: integrityResult,
-        metadata: {
-          checked_at: new Date().toISOString(),
-          check_duration_ms: duration,
-          operation_id: operationId,
-        },
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Admin snapshot store integrity check failed', {
+      operation: 'snapshotStoreIntegrityCheck',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
 
-      logger.error('Admin snapshot store integrity check failed', {
-        operation: 'snapshotStoreIntegrityCheck',
-        operation_id: operationId,
-        error: errorMessage,
-        duration_ms: duration,
-      })
-
-      res.status(500).json({
-        error: {
-          code: 'INTEGRITY_CHECK_FAILED',
-          message: 'Failed to check snapshot store integrity',
-          details: errorMessage,
-        },
-      })
-    }
+    res.status(500).json({
+      error: {
+        code: 'INTEGRITY_CHECK_FAILED',
+        message: 'Failed to check snapshot store integrity',
+        details: errorMessage,
+      },
+    })
   }
-)
+})
 
 /**
  * GET /api/admin/snapshot-store/performance
  * Get performance metrics for the snapshot store
  */
-router.get(
-  '/snapshot-store/performance',
-  logAdminAccess,
-  async (req, res) => {
-    const startTime = Date.now()
-    const operationId = `performance_metrics_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.get('/snapshot-store/performance', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = `performance_metrics_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    logger.info('Admin snapshot store performance metrics requested', {
+  logger.info('Admin snapshot store performance metrics requested', {
+    operation: 'getPerformanceMetrics',
+    operation_id: operationId,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getProductionServiceFactory()
+    const snapshotStore = factory.createSnapshotStore()
+
+    // Get performance metrics (this assumes FileSnapshotStore has getPerformanceMetrics method)
+    const performanceMetrics = (await (
+      snapshotStore as FileSnapshotStore & {
+        getPerformanceMetrics?: () => Promise<unknown>
+      }
+    ).getPerformanceMetrics?.()) || {
+      totalReads: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      averageReadTime: 0,
+      concurrentReads: 0,
+      maxConcurrentReads: 0,
+    }
+
+    const duration = Date.now() - startTime
+
+    // Calculate additional metrics
+    const cacheHitRate =
+      performanceMetrics.totalReads > 0
+        ? (
+            (performanceMetrics.cacheHits / performanceMetrics.totalReads) *
+            100
+          ).toFixed(2)
+        : '0'
+
+    const enhancedMetrics = {
+      ...performanceMetrics,
+      cache_hit_rate_percent: parseFloat(cacheHitRate),
+      cache_efficiency: performanceMetrics.totalReads > 0 ? 'good' : 'no_data',
+    }
+
+    logger.info('Admin snapshot store performance metrics retrieved', {
       operation: 'getPerformanceMetrics',
       operation_id: operationId,
-      ip: req.ip,
+      total_reads: performanceMetrics.totalReads,
+      cache_hit_rate: `${cacheHitRate}%`,
+      duration_ms: duration,
     })
 
-    try {
-      const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
-
-      // Get performance metrics (this assumes FileSnapshotStore has getPerformanceMetrics method)
-      const performanceMetrics = (await (
-        snapshotStore as FileSnapshotStore & {
-          getPerformanceMetrics?: () => Promise<unknown>
-        }
-      ).getPerformanceMetrics?.()) || {
-        totalReads: 0,
-        cacheHits: 0,
-        cacheMisses: 0,
-        averageReadTime: 0,
-        concurrentReads: 0,
-        maxConcurrentReads: 0,
-      }
-
-      const duration = Date.now() - startTime
-
-      // Calculate additional metrics
-      const cacheHitRate =
-        performanceMetrics.totalReads > 0
-          ? (
-              (performanceMetrics.cacheHits / performanceMetrics.totalReads) *
-              100
-            ).toFixed(2)
-          : '0'
-
-      const enhancedMetrics = {
-        ...performanceMetrics,
-        cache_hit_rate_percent: parseFloat(cacheHitRate),
-        cache_efficiency:
-          performanceMetrics.totalReads > 0 ? 'good' : 'no_data',
-      }
-
-      logger.info('Admin snapshot store performance metrics retrieved', {
-        operation: 'getPerformanceMetrics',
+    res.json({
+      performance: enhancedMetrics,
+      metadata: {
+        retrieved_at: new Date().toISOString(),
+        retrieval_duration_ms: duration,
         operation_id: operationId,
-        total_reads: performanceMetrics.totalReads,
-        cache_hit_rate: `${cacheHitRate}%`,
-        duration_ms: duration,
-      })
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-      res.json({
-        performance: enhancedMetrics,
-        metadata: {
-          retrieved_at: new Date().toISOString(),
-          retrieval_duration_ms: duration,
-          operation_id: operationId,
-        },
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Admin snapshot store performance metrics retrieval failed', {
+      operation: 'getPerformanceMetrics',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
 
-      logger.error(
-        'Admin snapshot store performance metrics retrieval failed',
-        {
-          operation: 'getPerformanceMetrics',
-          operation_id: operationId,
-          error: errorMessage,
-          duration_ms: duration,
-        }
-      )
-
-      res.status(500).json({
-        error: {
-          code: 'PERFORMANCE_METRICS_FAILED',
-          message: 'Failed to retrieve performance metrics',
-          details: errorMessage,
-        },
-      })
-    }
+    res.status(500).json({
+      error: {
+        code: 'PERFORMANCE_METRICS_FAILED',
+        message: 'Failed to retrieve performance metrics',
+        details: errorMessage,
+      },
+    })
   }
-)
+})
 
 /**
  * POST /api/admin/snapshot-store/performance/reset
@@ -670,139 +658,131 @@ router.post(
  * GET /api/admin/process-separation/validate
  * Validate process separation compliance
  */
-router.get(
-  '/process-separation/validate',
-  logAdminAccess,
-  async (req, res) => {
-    const startTime = Date.now()
-    const operationId = `process_separation_validate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.get('/process-separation/validate', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = `process_separation_validate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    logger.info('Admin process separation validation requested', {
+  logger.info('Admin process separation validation requested', {
+    operation: 'validateProcessSeparation',
+    operation_id: operationId,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getProductionServiceFactory()
+    const snapshotStore = factory.createSnapshotStore()
+    const refreshService = factory.createRefreshService()
+
+    const validator = new ProcessSeparationValidator(
+      snapshotStore,
+      refreshService
+    )
+    const validationResult = await validator.validateProcessSeparation()
+
+    const duration = Date.now() - startTime
+
+    logger.info('Admin process separation validation completed', {
       operation: 'validateProcessSeparation',
       operation_id: operationId,
-      ip: req.ip,
+      is_valid: validationResult.isValid,
+      issues_count: validationResult.issues.length,
+      duration_ms: duration,
     })
 
-    try {
-      const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
-      const refreshService = factory.createRefreshService()
-
-      const validator = new ProcessSeparationValidator(
-        snapshotStore,
-        refreshService
-      )
-      const validationResult = await validator.validateProcessSeparation()
-
-      const duration = Date.now() - startTime
-
-      logger.info('Admin process separation validation completed', {
-        operation: 'validateProcessSeparation',
+    res.json({
+      validation: validationResult,
+      metadata: {
+        validated_at: new Date().toISOString(),
+        validation_duration_ms: duration,
         operation_id: operationId,
-        is_valid: validationResult.isValid,
-        issues_count: validationResult.issues.length,
-        duration_ms: duration,
-      })
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-      res.json({
-        validation: validationResult,
-        metadata: {
-          validated_at: new Date().toISOString(),
-          validation_duration_ms: duration,
-          operation_id: operationId,
-        },
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Admin process separation validation failed', {
+      operation: 'validateProcessSeparation',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
 
-      logger.error('Admin process separation validation failed', {
-        operation: 'validateProcessSeparation',
-        operation_id: operationId,
-        error: errorMessage,
-        duration_ms: duration,
-      })
-
-      res.status(500).json({
-        error: {
-          code: 'PROCESS_SEPARATION_VALIDATION_FAILED',
-          message: 'Failed to validate process separation',
-          details: errorMessage,
-        },
-      })
-    }
+    res.status(500).json({
+      error: {
+        code: 'PROCESS_SEPARATION_VALIDATION_FAILED',
+        message: 'Failed to validate process separation',
+        details: errorMessage,
+      },
+    })
   }
-)
+})
 
 /**
  * GET /api/admin/process-separation/monitor
  * Monitor concurrent operations performance
  */
-router.get(
-  '/process-separation/monitor',
-  logAdminAccess,
-  async (req, res) => {
-    const startTime = Date.now()
-    const operationId = `process_separation_monitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.get('/process-separation/monitor', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = `process_separation_monitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    logger.info('Admin process separation monitoring requested', {
+  logger.info('Admin process separation monitoring requested', {
+    operation: 'monitorConcurrentOperations',
+    operation_id: operationId,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getProductionServiceFactory()
+    const snapshotStore = factory.createSnapshotStore()
+    const refreshService = factory.createRefreshService()
+
+    const validator = new ProcessSeparationValidator(
+      snapshotStore,
+      refreshService
+    )
+    const monitoringResult = await validator.monitorConcurrentOperations()
+
+    const duration = Date.now() - startTime
+
+    logger.info('Admin process separation monitoring completed', {
       operation: 'monitorConcurrentOperations',
       operation_id: operationId,
-      ip: req.ip,
+      max_concurrent_reads: monitoringResult.maxConcurrentReads,
+      read_throughput: monitoringResult.readThroughput,
+      duration_ms: duration,
     })
 
-    try {
-      const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
-      const refreshService = factory.createRefreshService()
-
-      const validator = new ProcessSeparationValidator(
-        snapshotStore,
-        refreshService
-      )
-      const monitoringResult = await validator.monitorConcurrentOperations()
-
-      const duration = Date.now() - startTime
-
-      logger.info('Admin process separation monitoring completed', {
-        operation: 'monitorConcurrentOperations',
+    res.json({
+      monitoring: monitoringResult,
+      metadata: {
+        monitored_at: new Date().toISOString(),
+        monitoring_duration_ms: duration,
         operation_id: operationId,
-        max_concurrent_reads: monitoringResult.maxConcurrentReads,
-        read_throughput: monitoringResult.readThroughput,
-        duration_ms: duration,
-      })
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-      res.json({
-        monitoring: monitoringResult,
-        metadata: {
-          monitored_at: new Date().toISOString(),
-          monitoring_duration_ms: duration,
-          operation_id: operationId,
-        },
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Admin process separation monitoring failed', {
+      operation: 'monitorConcurrentOperations',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
 
-      logger.error('Admin process separation monitoring failed', {
-        operation: 'monitorConcurrentOperations',
-        operation_id: operationId,
-        error: errorMessage,
-        duration_ms: duration,
-      })
-
-      res.status(500).json({
-        error: {
-          code: 'PROCESS_SEPARATION_MONITORING_FAILED',
-          message: 'Failed to monitor concurrent operations',
-          details: errorMessage,
-        },
-      })
-    }
+    res.status(500).json({
+      error: {
+        code: 'PROCESS_SEPARATION_MONITORING_FAILED',
+        message: 'Failed to monitor concurrent operations',
+        details: errorMessage,
+      },
+    })
   }
-)
+})
 
 /**
  * GET /api/admin/process-separation/compliance
@@ -1276,189 +1256,180 @@ router.delete(
  * POST /api/admin/districts/config/validate
  * Validate district configuration against available districts with enhanced feedback
  */
-router.post(
-  '/districts/config/validate',
-  logAdminAccess,
-  async (req, res) => {
-    const startTime = Date.now()
-    const operationId = `validate_district_config_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.post('/districts/config/validate', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = `validate_district_config_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    logger.info('Admin district configuration validation requested', {
+  logger.info('Admin district configuration validation requested', {
+    operation: 'validateDistrictConfiguration',
+    operation_id: operationId,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getProductionServiceFactory()
+    const cacheConfig = factory.createCacheConfigService()
+    const config = cacheConfig.getConfiguration()
+
+    const districtConfigService = new DistrictConfigurationService(
+      config.baseDirectory
+    )
+    const snapshotStore = factory.createSnapshotStore()
+
+    // Get all district IDs from request body (optional)
+    const { allDistrictIds } = req.body
+
+    const validationResult = await districtConfigService.validateConfiguration(
+      allDistrictIds,
+      snapshotStore
+    )
+
+    // Update status in collection info based on validation results
+    const updatedCollectionInfo = validationResult.lastCollectionInfo.map(
+      info => ({
+        ...info,
+        status: validationResult.validDistricts.includes(info.districtId)
+          ? ('valid' as const)
+          : validationResult.invalidDistricts.includes(info.districtId)
+            ? ('invalid' as const)
+            : ('unknown' as const),
+      })
+    )
+
+    const enhancedValidationResult = {
+      ...validationResult,
+      lastCollectionInfo: updatedCollectionInfo,
+    }
+
+    const duration = Date.now() - startTime
+
+    logger.info('Admin district configuration validation completed', {
       operation: 'validateDistrictConfiguration',
       operation_id: operationId,
-      ip: req.ip,
+      is_valid: validationResult.isValid,
+      configured_count: validationResult.configuredDistricts.length,
+      valid_count: validationResult.validDistricts.length,
+      invalid_count: validationResult.invalidDistricts.length,
+      suggestions_count: validationResult.suggestions.length,
+      duration_ms: duration,
     })
 
-    try {
-      const factory = getProductionServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
-      const config = cacheConfig.getConfiguration()
-
-      const districtConfigService = new DistrictConfigurationService(
-        config.baseDirectory
-      )
-      const snapshotStore = factory.createSnapshotStore()
-
-      // Get all district IDs from request body (optional)
-      const { allDistrictIds } = req.body
-
-      const validationResult =
-        await districtConfigService.validateConfiguration(
-          allDistrictIds,
-          snapshotStore
-        )
-
-      // Update status in collection info based on validation results
-      const updatedCollectionInfo = validationResult.lastCollectionInfo.map(
-        info => ({
-          ...info,
-          status: validationResult.validDistricts.includes(info.districtId)
-            ? ('valid' as const)
-            : validationResult.invalidDistricts.includes(info.districtId)
-              ? ('invalid' as const)
-              : ('unknown' as const),
-        })
-      )
-
-      const enhancedValidationResult = {
-        ...validationResult,
-        lastCollectionInfo: updatedCollectionInfo,
-      }
-
-      const duration = Date.now() - startTime
-
-      logger.info('Admin district configuration validation completed', {
-        operation: 'validateDistrictConfiguration',
+    res.json({
+      validation: enhancedValidationResult,
+      metadata: {
+        validated_at: new Date().toISOString(),
+        validation_duration_ms: duration,
         operation_id: operationId,
-        is_valid: validationResult.isValid,
-        configured_count: validationResult.configuredDistricts.length,
-        valid_count: validationResult.validDistricts.length,
-        invalid_count: validationResult.invalidDistricts.length,
-        suggestions_count: validationResult.suggestions.length,
-        duration_ms: duration,
-      })
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-      res.json({
-        validation: enhancedValidationResult,
-        metadata: {
-          validated_at: new Date().toISOString(),
-          validation_duration_ms: duration,
-          operation_id: operationId,
-        },
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Admin district configuration validation failed', {
+      operation: 'validateDistrictConfiguration',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
 
-      logger.error('Admin district configuration validation failed', {
-        operation: 'validateDistrictConfiguration',
-        operation_id: operationId,
-        error: errorMessage,
-        duration_ms: duration,
-      })
-
-      res.status(500).json({
-        error: {
-          code: 'DISTRICT_CONFIG_VALIDATION_FAILED',
-          message: 'Failed to validate district configuration',
-          details: errorMessage,
-        },
-      })
-    }
+    res.status(500).json({
+      error: {
+        code: 'DISTRICT_CONFIG_VALIDATION_FAILED',
+        message: 'Failed to validate district configuration',
+        details: errorMessage,
+      },
+    })
   }
-)
+})
 
 /**
  * GET /api/admin/districts/config/history
  * Get configuration change history with optional filtering
  */
-router.get(
-  '/districts/config/history',
-  logAdminAccess,
-  async (req, res) => {
-    const startTime = Date.now()
-    const operationId = `get_district_config_history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.get('/districts/config/history', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = `get_district_config_history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    logger.info('Admin district configuration history requested', {
+  logger.info('Admin district configuration history requested', {
+    operation: 'getDistrictConfigurationHistory',
+    operation_id: operationId,
+    query: req.query,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getProductionServiceFactory()
+    const cacheConfig = factory.createCacheConfigService()
+    const config = cacheConfig.getConfiguration()
+
+    const districtConfigService = new DistrictConfigurationService(
+      config.baseDirectory
+    )
+
+    // Parse query parameters
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50
+    const startDate = req.query.start_date as string
+    const endDate = req.query.end_date as string
+    const includeSummary = req.query.include_summary === 'true'
+
+    // Get configuration history
+    const history = await districtConfigService.getConfigurationHistory(limit)
+
+    // Get summary if requested
+    let summary = null
+    if (includeSummary) {
+      summary = await districtConfigService.getConfigurationChangeSummary(
+        startDate,
+        endDate
+      )
+    }
+
+    const duration = Date.now() - startTime
+
+    logger.info('Admin district configuration history retrieved', {
       operation: 'getDistrictConfigurationHistory',
       operation_id: operationId,
-      query: req.query,
-      ip: req.ip,
+      history_count: history.length,
+      include_summary: includeSummary,
+      duration_ms: duration,
     })
 
-    try {
-      const factory = getProductionServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
-      const config = cacheConfig.getConfiguration()
-
-      const districtConfigService = new DistrictConfigurationService(
-        config.baseDirectory
-      )
-
-      // Parse query parameters
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50
-      const startDate = req.query.start_date as string
-      const endDate = req.query.end_date as string
-      const includeSummary = req.query.include_summary === 'true'
-
-      // Get configuration history
-      const history = await districtConfigService.getConfigurationHistory(limit)
-
-      // Get summary if requested
-      let summary = null
-      if (includeSummary) {
-        summary = await districtConfigService.getConfigurationChangeSummary(
-          startDate,
-          endDate
-        )
-      }
-
-      const duration = Date.now() - startTime
-
-      logger.info('Admin district configuration history retrieved', {
-        operation: 'getDistrictConfigurationHistory',
+    res.json({
+      history,
+      summary,
+      metadata: {
+        retrieved_at: new Date().toISOString(),
+        retrieval_duration_ms: duration,
         operation_id: operationId,
-        history_count: history.length,
-        include_summary: includeSummary,
-        duration_ms: duration,
-      })
-
-      res.json({
-        history,
-        summary,
-        metadata: {
-          retrieved_at: new Date().toISOString(),
-          retrieval_duration_ms: duration,
-          operation_id: operationId,
-          filters: {
-            limit,
-            start_date: startDate || null,
-            end_date: endDate || null,
-          },
+        filters: {
+          limit,
+          start_date: startDate || null,
+          end_date: endDate || null,
         },
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-      logger.error('Admin district configuration history retrieval failed', {
-        operation: 'getDistrictConfigurationHistory',
-        operation_id: operationId,
-        error: errorMessage,
-        duration_ms: duration,
-      })
+    logger.error('Admin district configuration history retrieval failed', {
+      operation: 'getDistrictConfigurationHistory',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
 
-      res.status(500).json({
-        error: {
-          code: 'DISTRICT_CONFIG_HISTORY_FAILED',
-          message: 'Failed to retrieve district configuration history',
-          details: errorMessage,
-        },
-      })
-    }
+    res.status(500).json({
+      error: {
+        code: 'DISTRICT_CONFIG_HISTORY_FAILED',
+        message: 'Failed to retrieve district configuration history',
+        details: errorMessage,
+      },
+    })
   }
-)
+})
 
 export default router

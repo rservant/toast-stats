@@ -5,6 +5,9 @@ interface BackfillInfo {
   backfillId: string
   type: 'global' | 'district'
   districtId?: string
+  targetDistricts?: string[]
+  collectionType?: string
+  status?: 'processing' | 'complete' | 'error' | 'cancelled' | 'partial_success'
 }
 
 interface BackfillContextType {
@@ -15,6 +18,8 @@ interface BackfillContextType {
   activeBackfills: BackfillInfo[]
   addBackfill: (info: BackfillInfo) => void
   removeBackfill: (backfillId: string) => void
+  updateBackfill: (backfillId: string, updates: Partial<BackfillInfo>) => void
+  getBackfill: (backfillId: string) => BackfillInfo | undefined
 }
 
 const BackfillContext = createContext<BackfillContextType | undefined>(
@@ -39,6 +44,19 @@ export function BackfillProvider({ children }: { children: ReactNode }) {
     setActiveBackfills(prev => prev.filter(b => b.backfillId !== backfillId))
   }
 
+  const updateBackfill = (
+    backfillId: string,
+    updates: Partial<BackfillInfo>
+  ) => {
+    setActiveBackfills(prev =>
+      prev.map(b => (b.backfillId === backfillId ? { ...b, ...updates } : b))
+    )
+  }
+
+  const getBackfill = (backfillId: string) => {
+    return activeBackfills.find(b => b.backfillId === backfillId)
+  }
+
   return (
     <BackfillContext.Provider
       value={{
@@ -49,6 +67,8 @@ export function BackfillProvider({ children }: { children: ReactNode }) {
         activeBackfills,
         addBackfill,
         removeBackfill,
+        updateBackfill,
+        getBackfill,
       }}
     >
       {children}

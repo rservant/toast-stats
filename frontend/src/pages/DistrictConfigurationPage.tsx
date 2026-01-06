@@ -28,7 +28,8 @@ const DistrictConfigurationPage: React.FC = () => {
             District Configuration
           </h1>
           <p className="mt-2 text-gray-600">
-            Manage which districts are included in data snapshots and monitor collection status
+            Manage which districts are included in data snapshots and monitor
+            collection status
           </p>
         </div>
 

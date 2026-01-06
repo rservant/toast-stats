@@ -2,8 +2,39 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 
 interface BackfillRequest {
+  // Targeting options
+  targetDistricts?: string[]
+
+  // Date range
   startDate?: string
   endDate?: string
+
+  // Collection preferences
+  collectionType?: 'system-wide' | 'per-district' | 'auto'
+
+  // Performance options
+  concurrency?: number
+  retryFailures?: boolean
+  skipExisting?: boolean
+  rateLimitDelayMs?: number
+  enableCaching?: boolean
+}
+
+interface DistrictProgress {
+  districtId: string
+  status:
+    | 'pending'
+    | 'processing'
+    | 'completed'
+    | 'failed'
+    | 'skipped'
+    | 'blacklisted'
+  datesProcessed: number
+  datesTotal: number
+  lastError?: string
+  successfulDates: string[]
+  failedDates: string[]
+  retryCount: number
 }
 
 interface BackfillProgress {
@@ -13,13 +44,81 @@ interface BackfillProgress {
   unavailable: number
   failed: number
   current: string
+
+  // Enhanced error tracking
+  partialSnapshots: number
+  totalErrors: number
+  retryableErrors: number
+  permanentErrors: number
+  districtProgress: Record<string, DistrictProgress>
+}
+
+interface CollectionStrategy {
+  type: 'system-wide' | 'per-district' | 'targeted'
+  refreshMethod: {
+    name: string
+    params: Record<string, unknown>
+  }
+  rationale: string
+  estimatedEfficiency: number
+  targetDistricts?: string[]
+}
+
+interface BackfillScope {
+  targetDistricts: string[]
+  configuredDistricts: string[]
+  scopeType: 'system-wide' | 'targeted' | 'single-district'
+  validationPassed: boolean
+}
+
+interface ErrorSummary {
+  totalErrors: number
+  retryableErrors: number
+  permanentErrors: number
+  affectedDistricts: string[]
+  partialSnapshots: number
+}
+
+interface PerformanceStatus {
+  rateLimiter: {
+    currentCount: number
+    maxRequests: number
+    windowMs: number
+    nextResetAt: string
+  }
+  concurrencyLimiter: {
+    activeSlots: number
+    maxConcurrent: number
+    queueLength: number
+  }
+  intermediateCache: {
+    hitRate: number
+    entryCount: number
+    sizeBytes: number
+  }
 }
 
 interface BackfillResponse {
   backfillId: string
-  status: 'processing' | 'complete' | 'error'
+  status: 'processing' | 'complete' | 'error' | 'cancelled' | 'partial_success'
+  scope: BackfillScope
   progress: BackfillProgress
+  collectionStrategy: CollectionStrategy
   error?: string
+  snapshotIds: string[]
+
+  // Enhanced error information
+  errorSummary?: ErrorSummary
+  partialSnapshots?: Array<{
+    snapshotId: string
+    successfulDistricts: string[]
+    failedDistricts: string[]
+    totalDistricts: number
+    successRate: number
+  }>
+
+  // Performance optimization status
+  performanceStatus?: PerformanceStatus
 }
 
 /**

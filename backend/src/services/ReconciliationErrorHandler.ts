@@ -20,8 +20,16 @@ import {
   AlertSeverity,
   AlertCategory,
 } from '../utils/AlertManager.js'
-import { DistrictBackfillService } from './DistrictBackfillService.js'
-import type { ReconciliationDataFetchResult } from './DistrictBackfillService.js'
+import { ToastmastersScraper } from './ToastmastersScraper.js'
+import type { DistrictStatistics } from '../types/districts.js'
+
+export interface ReconciliationDataFetchResult {
+  success: boolean
+  data?: DistrictStatistics
+  sourceDataDate?: string
+  error?: string
+  isDataAvailable: boolean
+}
 
 export interface ErrorHandlingConfig {
   dashboardRetry: Partial<RetryOptions>
@@ -96,7 +104,7 @@ export class ReconciliationErrorHandler {
    * Execute dashboard data fetch with comprehensive error handling
    */
   async executeDashboardFetch(
-    backfillService: DistrictBackfillService,
+    scraper: ToastmastersScraper,
     districtId: string,
     targetDate: string,
     context: ReconciliationErrorContext
@@ -107,7 +115,8 @@ export class ReconciliationErrorHandler {
       if (!this.config.circuitBreakerEnabled) {
         // Direct execution without circuit breaker
         return await this.executeWithRetryOnly(
-          () => backfillService.fetchReconciliationData(districtId, targetDate),
+          () =>
+            this.fetchReconciliationDataDirect(scraper, districtId, targetDate),
           this.config.dashboardRetry,
           context
         )
@@ -116,7 +125,8 @@ export class ReconciliationErrorHandler {
       // Execute with circuit breaker
       const result = await this.dashboardCircuitBreaker.execute(async () => {
         const retryResult = await RetryManager.executeWithRetry(
-          () => backfillService.fetchReconciliationData(districtId, targetDate),
+          () =>
+            this.fetchReconciliationDataDirect(scraper, districtId, targetDate),
           this.config.dashboardRetry,
           context
         )
@@ -432,6 +442,212 @@ export class ReconciliationErrorHandler {
           }
         )
       }
+    }
+  }
+
+  /**
+   * Fetch reconciliation data directly using ToastmastersScraper
+   */
+  private async fetchReconciliationDataDirect(
+    scraper: ToastmastersScraper,
+    districtId: string,
+    targetDate: string
+  ): Promise<ReconciliationDataFetchResult> {
+    logger.info('Fetching reconciliation data directly', {
+      districtId,
+      targetDate,
+    })
+
+    try {
+      // Fetch all three report types for the specific date
+      const [districtPerformance, divisionPerformance, clubPerformance] =
+        await Promise.all([
+          scraper.getDistrictPerformance(districtId, targetDate),
+          scraper.getDivisionPerformance(districtId, targetDate),
+          scraper.getClubPerformance(districtId, targetDate),
+        ])
+
+      // Check if we got valid data
+      if (
+        districtPerformance.length === 0 &&
+        divisionPerformance.length === 0 &&
+        clubPerformance.length === 0
+      ) {
+        logger.info('No data available for reconciliation date', {
+          districtId,
+          targetDate,
+        })
+        return {
+          success: true,
+          isDataAvailable: false,
+          error: 'No data available for the specified date',
+        }
+      }
+
+      // Extract source data date from the dashboard (simplified version)
+      const sourceDataDate = targetDate // Use target date as fallback
+
+      // Convert raw data to DistrictStatistics format (simplified)
+      const districtStats = this.convertToDistrictStatistics(
+        districtId,
+        sourceDataDate,
+        districtPerformance,
+        divisionPerformance,
+        clubPerformance
+      )
+
+      logger.info('Reconciliation data fetched successfully', {
+        districtId,
+        targetDate,
+        sourceDataDate,
+        districtRecords: districtPerformance.length,
+        divisionRecords: divisionPerformance.length,
+        clubRecords: clubPerformance.length,
+        totalMembers: districtStats.membership.total,
+      })
+
+      return {
+        success: true,
+        data: districtStats,
+        sourceDataDate,
+        isDataAvailable: true,
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+
+      // Check if it's a "date not available" error vs actual failure
+      if (this.isDateUnavailableError(errorMessage)) {
+        logger.info('No data available for reconciliation date', {
+          districtId,
+          targetDate,
+        })
+        return {
+          success: true,
+          isDataAvailable: false,
+          error: 'No data available for the specified date',
+        }
+      }
+
+      logger.error('Critical error in reconciliation data fetch', {
+        districtId,
+        targetDate,
+        error: errorMessage,
+      })
+
+      return {
+        success: false,
+        isDataAvailable: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
+   * Check if an error indicates date unavailability vs actual failure
+   */
+  private isDateUnavailableError(errorMessage: string): boolean {
+    const message = errorMessage.toLowerCase()
+    return (
+      message.includes('not available') ||
+      message.includes('dashboard returned') ||
+      message.includes('date selection failed') ||
+      message.includes('not found') ||
+      message.includes('404')
+    )
+  }
+
+  /**
+   * Convert raw dashboard data to DistrictStatistics format (simplified)
+   */
+  private convertToDistrictStatistics(
+    districtId: string,
+    asOfDate: string,
+    _districtPerformance: any[],
+    _divisionPerformance: any[],
+    clubPerformance: any[]
+  ): DistrictStatistics {
+    // Calculate membership statistics from club data
+    const totalMembers = clubPerformance.reduce((sum, club) => {
+      const members = parseInt(
+        (club['Active Members'] || club['Membership'] || '0').toString()
+      )
+      return sum + (isNaN(members) ? 0 : members)
+    }, 0)
+
+    // Calculate club statistics
+    const totalClubs = clubPerformance.length
+    const activeClubs = clubPerformance.filter(
+      club =>
+        club['Status'] === 'Active' || !club['Status'] || club['Status'] === ''
+    ).length
+
+    const suspendedClubs = clubPerformance.filter(
+      club => club['Status'] === 'Suspended'
+    ).length
+
+    const ineligibleClubs = clubPerformance.filter(
+      club => club['Status'] === 'Ineligible'
+    ).length
+
+    const lowClubs = clubPerformance.filter(club => {
+      const members = parseInt(
+        (club['Active Members'] || club['Membership'] || '0').toString()
+      )
+      return !isNaN(members) && members < 20 // Typically low membership threshold
+    }).length
+
+    // Calculate distinguished clubs
+    const distinguishedClubs = clubPerformance.filter(club => {
+      // Look for distinguished status indicators
+      return (
+        club['Distinguished Status'] === 'Distinguished' ||
+        club['Distinguished Status'] === 'Select Distinguished' ||
+        club['Distinguished Status'] === "President's Distinguished" ||
+        club['DCP Status'] === 'Distinguished' ||
+        club['DCP Status'] === 'Select Distinguished' ||
+        club['DCP Status'] === "President's Distinguished"
+      )
+    }).length
+
+    // Calculate education statistics (simplified)
+    const totalAwards = clubPerformance.reduce((sum, club) => {
+      const awards = parseInt(
+        (club['Awards'] || club['Total Awards'] || '0').toString()
+      )
+      return sum + (isNaN(awards) ? 0 : awards)
+    }, 0)
+
+    return {
+      districtId,
+      asOfDate,
+      membership: {
+        total: totalMembers,
+        change: 0, // Would need historical data to calculate
+        changePercent: 0, // Would need historical data to calculate
+        byClub: clubPerformance.map(club => ({
+          clubId: (club['Club Number'] || club['Club ID'] || '').toString(),
+          clubName: (club['Club Name'] || '').toString(),
+          memberCount:
+            parseInt(
+              (club['Active Members'] || club['Membership'] || '0').toString()
+            ) || 0,
+        })),
+      },
+      clubs: {
+        total: totalClubs,
+        active: activeClubs,
+        suspended: suspendedClubs,
+        ineligible: ineligibleClubs,
+        low: lowClubs,
+        distinguished: distinguishedClubs,
+      },
+      education: {
+        totalAwards,
+        byType: [], // Would need more detailed parsing
+        topClubs: [], // Would need more detailed parsing
+        byMonth: [], // Would need historical data
+      },
     }
   }
 }

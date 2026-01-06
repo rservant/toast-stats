@@ -10,6 +10,8 @@ import { Button } from './ui/Button'
 interface BackfillButtonProps {
   className?: string
   onBackfillStart?: (backfillId: string) => void
+  districtId?: string // For district-specific backfills
+  showAdvancedOptions?: boolean // Show targeting and performance options
 }
 
 interface ApiError {
@@ -23,18 +25,42 @@ interface ApiError {
 }
 
 interface BackfillRequest {
+  // Targeting options
+  targetDistricts?: string[]
+
+  // Date range
   startDate?: string
   endDate?: string
+
+  // Collection preferences
+  collectionType?: 'system-wide' | 'per-district' | 'auto'
+
+  // Performance options
+  concurrency?: number
+  retryFailures?: boolean
+  skipExisting?: boolean
+  rateLimitDelayMs?: number
+  enableCaching?: boolean
 }
 
 export function BackfillButton({
   className = '',
   onBackfillStart,
+  districtId,
+  showAdvancedOptions = false,
 }: BackfillButtonProps) {
   const [showModal, setShowModal] = useState(false)
   const [backfillId, setBackfillId] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [targetDistricts, setTargetDistricts] = useState<string[]>([])
+  const [collectionType, setCollectionType] = useState<
+    'system-wide' | 'per-district' | 'auto'
+  >('auto')
+  const [concurrency, setConcurrency] = useState(3)
+  const [retryFailures, setRetryFailures] = useState(true)
+  const [skipExisting, setSkipExisting] = useState(true)
+  const [enableCaching, setEnableCaching] = useState(true)
   const queryClient = useQueryClient()
 
   // Hooks
@@ -59,6 +85,17 @@ export function BackfillButton({
     const request: BackfillRequest = {
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      targetDistricts:
+        targetDistricts.length > 0
+          ? targetDistricts
+          : districtId
+            ? [districtId]
+            : undefined,
+      collectionType: showAdvancedOptions ? collectionType : 'auto',
+      concurrency: showAdvancedOptions ? concurrency : undefined,
+      retryFailures: showAdvancedOptions ? retryFailures : undefined,
+      skipExisting: showAdvancedOptions ? skipExisting : undefined,
+      enableCaching: showAdvancedOptions ? enableCaching : undefined,
     }
     initiateMutation.mutate(request, {
       onSuccess: data => {
@@ -91,6 +128,12 @@ export function BackfillButton({
     setBackfillId(null)
     setStartDate('')
     setEndDate('')
+    setTargetDistricts([])
+    setCollectionType('auto')
+    setConcurrency(3)
+    setRetryFailures(true)
+    setSkipExisting(true)
+    setEnableCaching(true)
   }
 
   const progressPercentage = backfillStatus
@@ -184,6 +227,116 @@ export function BackfillButton({
                       className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
                     />
                   </div>
+
+                  {showAdvancedOptions && (
+                    <>
+                      <div>
+                        <label
+                          htmlFor="backfill-target-districts"
+                          className="block tm-body-medium font-medium tm-text-black mb-1"
+                        >
+                          Target Districts (optional, comma-separated)
+                        </label>
+                        <input
+                          id="backfill-target-districts"
+                          type="text"
+                          value={targetDistricts.join(', ')}
+                          onChange={e =>
+                            setTargetDistricts(
+                              e.target.value
+                                .split(',')
+                                .map(d => d.trim())
+                                .filter(d => d)
+                            )
+                          }
+                          placeholder="e.g., 42, 15, 73"
+                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="backfill-collection-type"
+                          className="block tm-body-medium font-medium tm-text-black mb-1"
+                        >
+                          Collection Type
+                        </label>
+                        <select
+                          id="backfill-collection-type"
+                          value={collectionType}
+                          onChange={e =>
+                            setCollectionType(
+                              e.target.value as
+                                | 'system-wide'
+                                | 'per-district'
+                                | 'auto'
+                            )
+                          }
+                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                        >
+                          <option value="auto">Auto (recommended)</option>
+                          <option value="system-wide">System-wide</option>
+                          <option value="per-district">Per-district</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="backfill-concurrency"
+                          className="block tm-body-medium font-medium tm-text-black mb-1"
+                        >
+                          Concurrency ({concurrency})
+                        </label>
+                        <input
+                          id="backfill-concurrency"
+                          type="range"
+                          min="1"
+                          max="10"
+                          value={concurrency}
+                          onChange={e =>
+                            setConcurrency(parseInt(e.target.value))
+                          }
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={retryFailures}
+                            onChange={e => setRetryFailures(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span className="tm-body-small">
+                            Retry failed operations
+                          </span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={skipExisting}
+                            onChange={e => setSkipExisting(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span className="tm-body-small">
+                            Skip already cached dates
+                          </span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={enableCaching}
+                            onChange={e => setEnableCaching(e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span className="tm-body-small">
+                            Enable intermediate caching
+                          </span>
+                        </label>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {(initiateMutation.isError || isStatusError) && (
@@ -261,19 +414,82 @@ export function BackfillButton({
                             ✗ Failed: {backfillStatus.progress.failed}
                           </p>
                         )}
+                        {backfillStatus.progress.partialSnapshots > 0 && (
+                          <p className="tm-text-happy-yellow">
+                            ⚠ Partial snapshots:{' '}
+                            {backfillStatus.progress.partialSnapshots}
+                          </p>
+                        )}
                         <p className="font-medium">
                           Current: {backfillStatus.progress.current}
                         </p>
+                        {backfillStatus.collectionStrategy && (
+                          <p className="tm-text-cool-gray">
+                            Strategy: {backfillStatus.collectionStrategy.type}
+                          </p>
+                        )}
                       </div>
                     </div>
+
+                    {/* Performance optimization status */}
+                    {backfillStatus.performanceStatus && (
+                      <div className="tm-caption tm-text-cool-gray border-t pt-2 mt-2">
+                        <p className="font-medium mb-1">Performance Status:</p>
+                        <div className="space-y-1">
+                          <p>
+                            Rate Limiter:{' '}
+                            {
+                              backfillStatus.performanceStatus.rateLimiter
+                                .currentCount
+                            }
+                            /
+                            {
+                              backfillStatus.performanceStatus.rateLimiter
+                                .maxRequests
+                            }{' '}
+                            requests
+                          </p>
+                          <p>
+                            Concurrency:{' '}
+                            {
+                              backfillStatus.performanceStatus
+                                .concurrencyLimiter.activeSlots
+                            }
+                            /
+                            {
+                              backfillStatus.performanceStatus
+                                .concurrencyLimiter.maxConcurrent
+                            }{' '}
+                            slots
+                          </p>
+                          <p>
+                            Cache Hit Rate:{' '}
+                            {Math.round(
+                              backfillStatus.performanceStatus.intermediateCache
+                                .hitRate * 100
+                            )}
+                            %
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {backfillStatus?.status === 'complete' && (
+                {(backfillStatus?.status === 'complete' ||
+                  backfillStatus?.status === 'partial_success') && (
                   <div className="mb-6">
-                    <div className="p-4 tm-bg-loyal-blue-10 border border-tm-loyal-blue tm-rounded-md">
+                    <div
+                      className={`p-4 border tm-rounded-md ${
+                        backfillStatus.status === 'complete'
+                          ? 'tm-bg-loyal-blue-10 border-tm-loyal-blue'
+                          : 'tm-bg-happy-yellow-10 border-tm-happy-yellow'
+                      }`}
+                    >
                       <p className="tm-body-small tm-text-black font-medium">
-                        Backfill complete!
+                        {backfillStatus.status === 'complete'
+                          ? 'Backfill complete!'
+                          : 'Backfill completed with some issues'}
                       </p>
                       <div className="tm-caption tm-text-black mt-2 space-y-1">
                         <p>Processed {backfillStatus.progress.total} dates</p>
@@ -294,6 +510,12 @@ export function BackfillButton({
                             • Failed: {backfillStatus.progress.failed}
                           </p>
                         )}
+                        {backfillStatus.progress.partialSnapshots > 0 && (
+                          <p className="tm-text-happy-yellow">
+                            • Partial snapshots:{' '}
+                            {backfillStatus.progress.partialSnapshots}
+                          </p>
+                        )}
                         <p className="font-medium mt-2">
                           Successfully fetched:{' '}
                           {backfillStatus.progress.total -
@@ -301,6 +523,28 @@ export function BackfillButton({
                             backfillStatus.progress.failed}{' '}
                           new dates
                         </p>
+                        {backfillStatus.errorSummary &&
+                          backfillStatus.errorSummary.totalErrors > 0 && (
+                            <div className="mt-2 p-2 tm-bg-true-maroon-10 tm-rounded-md">
+                              <p className="tm-text-true-maroon font-medium">
+                                Error Summary:
+                              </p>
+                              <p className="tm-caption">
+                                Total errors:{' '}
+                                {backfillStatus.errorSummary.totalErrors}(
+                                {backfillStatus.errorSummary.retryableErrors}{' '}
+                                retryable,{' '}
+                                {backfillStatus.errorSummary.permanentErrors}{' '}
+                                permanent)
+                              </p>
+                              <p className="tm-caption">
+                                Affected districts:{' '}
+                                {backfillStatus.errorSummary.affectedDistricts.join(
+                                  ', '
+                                )}
+                              </p>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -333,7 +577,9 @@ export function BackfillButton({
                     </Button>
                   )}
                   {(backfillStatus?.status === 'complete' ||
-                    backfillStatus?.status === 'error') && (
+                    backfillStatus?.status === 'partial_success' ||
+                    backfillStatus?.status === 'error' ||
+                    backfillStatus?.status === 'cancelled') && (
                     <Button
                       onClick={handleClose}
                       variant="secondary"

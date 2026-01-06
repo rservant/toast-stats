@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useBackfillContext } from '../contexts/BackfillContext'
 import {
-  useInitiateDistrictBackfill,
-  useDistrictBackfillStatus,
-  useCancelDistrictBackfill,
-} from '../hooks/useDistrictBackfill'
+  useInitiateBackfill,
+  useBackfillStatus,
+  useCancelBackfill,
+} from '../hooks/useBackfill'
 import { useQueryClient } from '@tanstack/react-query'
 
 /**
@@ -20,13 +20,17 @@ interface DistrictBackfillButtonProps {
 }
 
 /**
- * Request structure for initiating a district backfill
+ * Request structure for initiating a district backfill using the unified API
  */
 interface DistrictBackfillRequest {
+  /** Target districts (will be set to this district) */
+  targetDistricts: string[]
   /** Optional start date in YYYY-MM-DD format (defaults to program year start) */
   startDate?: string
   /** Optional end date in YYYY-MM-DD format (defaults to today) */
   endDate?: string
+  /** Collection type optimized for single district */
+  collectionType?: 'per-district' | 'auto'
 }
 
 /**
@@ -63,11 +67,11 @@ export function DistrictBackfillButton({
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const queryClient = useQueryClient()
-  const { addBackfill, removeBackfill } = useBackfillContext()
+  const { addBackfill, removeBackfill, updateBackfill } = useBackfillContext()
 
-  // Hooks
-  const initiateMutation = useInitiateDistrictBackfill(districtId)
-  const cancelMutation = useCancelDistrictBackfill(districtId)
+  // Hooks - using unified API
+  const initiateMutation = useInitiateBackfill()
+  const cancelMutation = useCancelBackfill()
 
   // Handle initiate mutation success
   const handleInitiateSuccess = (data: { backfillId: string }) => {
@@ -78,6 +82,9 @@ export function DistrictBackfillButton({
       backfillId: id,
       type: 'district',
       districtId: districtId,
+      targetDistricts: [districtId],
+      collectionType: 'per-district',
+      status: 'processing',
     })
     // Notify parent and close modal
     if (onBackfillStart) {
@@ -93,13 +100,27 @@ export function DistrictBackfillButton({
     setShowModal(false)
   }
 
-  // Poll backfill status when we have a backfillId
-  const { data: backfillStatus, isError: isStatusError } =
-    useDistrictBackfillStatus(districtId, backfillId, !!backfillId)
+  // Poll backfill status when we have a backfillId - using unified API
+  const { data: backfillStatus, isError: isStatusError } = useBackfillStatus(
+    backfillId,
+    !!backfillId
+  )
+
+  // Update backfill context when status changes
+  useEffect(() => {
+    if (backfillStatus && backfillId) {
+      updateBackfill(backfillId, {
+        status: backfillStatus.status,
+      })
+    }
+  }, [backfillStatus?.status, backfillId, updateBackfill])
 
   // Refresh cached dates when backfill completes
   useEffect(() => {
-    if (backfillStatus?.status === 'complete') {
+    if (
+      backfillStatus?.status === 'complete' ||
+      backfillStatus?.status === 'partial_success'
+    ) {
       queryClient.invalidateQueries({
         queryKey: ['district-cached-dates', districtId],
       })
@@ -112,8 +133,10 @@ export function DistrictBackfillButton({
 
   const handleInitiateBackfill = () => {
     const request: DistrictBackfillRequest = {
+      targetDistricts: [districtId],
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      collectionType: 'per-district', // Optimize for single district
     }
     initiateMutation.mutate(request, {
       onSuccess: handleInitiateSuccess,
@@ -310,21 +333,53 @@ export function DistrictBackfillButton({
                             ✗ Failed: {backfillStatus.progress.failed}
                           </p>
                         )}
+                        {backfillStatus.progress.partialSnapshots > 0 && (
+                          <p className="text-yellow-600">
+                            ⚠ Partial snapshots:{' '}
+                            {backfillStatus.progress.partialSnapshots}
+                          </p>
+                        )}
                         <p className="font-medium">
                           Current: {backfillStatus.progress.current}
                         </p>
+                        {backfillStatus.collectionStrategy && (
+                          <p className="text-gray-500">
+                            Strategy: {backfillStatus.collectionStrategy.type}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {backfillStatus?.status === 'complete' && (
+                {(backfillStatus?.status === 'complete' ||
+                  backfillStatus?.status === 'partial_success') && (
                   <div className="mb-6">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-                      <p className="text-sm text-green-800 font-medium">
-                        District backfill complete!
+                    <div
+                      className={`p-4 border rounded-md ${
+                        backfillStatus.status === 'complete'
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-yellow-50 border-yellow-200'
+                      }`}
+                    >
+                      <p
+                        className={`text-sm font-medium ${
+                          backfillStatus.status === 'complete'
+                            ? 'text-green-800'
+                            : 'text-yellow-800'
+                        }`}
+                      >
+                        {backfillStatus.status === 'complete'
+                          ? 'District backfill complete!'
+                          : 'District backfill completed with some issues'}
                       </p>
-                      <div className="text-xs text-green-700 mt-2 space-y-1">
+                      <div
+                        className={`text-xs mt-2 space-y-1 ${
+                          backfillStatus.status === 'complete'
+                            ? 'text-green-700'
+                            : 'text-yellow-700'
+                        }`}
+                      >
                         <p>Processed {backfillStatus.progress.total} dates</p>
                         {backfillStatus.progress.skipped > 0 && (
                           <p>
@@ -343,6 +398,12 @@ export function DistrictBackfillButton({
                             • Failed: {backfillStatus.progress.failed}
                           </p>
                         )}
+                        {backfillStatus.progress.partialSnapshots > 0 && (
+                          <p className="text-yellow-700">
+                            • Partial snapshots:{' '}
+                            {backfillStatus.progress.partialSnapshots}
+                          </p>
+                        )}
                         <p className="font-medium mt-2">
                           Successfully fetched:{' '}
                           {backfillStatus.progress.total -
@@ -350,6 +411,22 @@ export function DistrictBackfillButton({
                             backfillStatus.progress.failed}{' '}
                           new dates
                         </p>
+                        {backfillStatus.errorSummary &&
+                          backfillStatus.errorSummary.totalErrors > 0 && (
+                            <div className="mt-2 p-2 bg-red-50 rounded-md">
+                              <p className="text-red-800 font-medium">
+                                Error Summary:
+                              </p>
+                              <p className="text-xs text-red-700">
+                                Total errors:{' '}
+                                {backfillStatus.errorSummary.totalErrors}(
+                                {backfillStatus.errorSummary.retryableErrors}{' '}
+                                retryable,{' '}
+                                {backfillStatus.errorSummary.permanentErrors}{' '}
+                                permanent)
+                              </p>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -381,7 +458,9 @@ export function DistrictBackfillButton({
                     </button>
                   )}
                   {(backfillStatus?.status === 'complete' ||
-                    backfillStatus?.status === 'error') && (
+                    backfillStatus?.status === 'partial_success' ||
+                    backfillStatus?.status === 'error' ||
+                    backfillStatus?.status === 'cancelled') && (
                     <button
                       onClick={handleClose}
                       className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"

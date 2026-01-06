@@ -246,7 +246,7 @@ describe('LandingPage - Error Handling', () => {
     // Check for guidance message
     expect(
       screen.getByText(
-        'No data snapshots are available yet. To get started, you\'ll need to fetch data from the Toastmasters dashboard.'
+        "No data snapshots are available yet. To get started, you'll need to fetch data from the Toastmasters dashboard."
       )
     ).toBeInTheDocument()
 
@@ -259,7 +259,9 @@ describe('LandingPage - Error Handling', () => {
     // Check for setup instructions
     expect(screen.getByText('What happens next:')).toBeInTheDocument()
     expect(
-      screen.getByText('Click "Backfill Data" to fetch current and historical data')
+      screen.getByText(
+        'Click "Backfill Data" to fetch current and historical data'
+      )
     ).toBeInTheDocument()
   })
 
@@ -290,7 +292,9 @@ describe('LandingPage - Error Handling', () => {
     expect(screen.getByText('Try Again')).toBeInTheDocument()
 
     // Should NOT show the welcome message
-    expect(screen.queryByText('Welcome to Toast-Stats!')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Welcome to Toast-Stats!')
+    ).not.toBeInTheDocument()
   })
 })
 

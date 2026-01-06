@@ -75,8 +75,7 @@ describe('Admin District Configuration Integration', () => {
 
   describe('District Configuration Endpoints', () => {
     it('should return empty configuration initially', async () => {
-      const response = await request(app)
-        .get('/api/admin/districts/config')
+      const response = await request(app).get('/api/admin/districts/config')
 
       expect(response.status).toBe(200)
       expect(response.body.configuration.configuredDistricts).toEqual([])
@@ -135,8 +134,9 @@ describe('Admin District Configuration Integration', () => {
         })
 
       // Then remove one
-      const response = await request(app)
-        .delete('/api/admin/districts/config/15')
+      const response = await request(app).delete(
+        '/api/admin/districts/config/15'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
@@ -147,8 +147,9 @@ describe('Admin District Configuration Integration', () => {
     })
 
     it('should return 404 for removing non-existent district', async () => {
-      const response = await request(app)
-        .delete('/api/admin/districts/config/999')
+      const response = await request(app).delete(
+        '/api/admin/districts/config/999'
+      )
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('DISTRICT_NOT_CONFIGURED')
@@ -204,21 +205,17 @@ describe('Admin District Configuration Integration', () => {
       expect(response.body.error.code).toBe('MISSING_DISTRICT_IDS')
 
       // Invalid districtIds format
-      response = await request(app)
-        .post('/api/admin/districts/config')
-        .send({
-          districtIds: 'not-an-array',
-        })
+      response = await request(app).post('/api/admin/districts/config').send({
+        districtIds: 'not-an-array',
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('INVALID_DISTRICT_IDS_FORMAT')
 
       // Empty districtIds array
-      response = await request(app)
-        .post('/api/admin/districts/config')
-        .send({
-          districtIds: [],
-        })
+      response = await request(app).post('/api/admin/districts/config').send({
+        districtIds: [],
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('EMPTY_DISTRICT_IDS')
@@ -254,8 +251,7 @@ describe('Admin District Configuration Integration', () => {
         })
 
       // Verify they persist
-      const response = await request(app)
-        .get('/api/admin/districts/config')
+      const response = await request(app).get('/api/admin/districts/config')
 
       expect(response.status).toBe(200)
       expect(response.body.configuration.configuredDistricts).toEqual([
@@ -332,16 +328,12 @@ describe('Admin District Configuration Integration', () => {
         })
 
       // Get configuration with validation info
-      const response = await request(app)
-        .get('/api/admin/districts/config')
+      const response = await request(app).get('/api/admin/districts/config')
 
       expect(response.status).toBe(200)
       expect(response.body.validation).toBeDefined()
       expect(response.body.validation.lastCollectionInfo).toHaveLength(2)
-      expect(response.body.validation.validDistricts).toEqual([
-        '42',
-        'F',
-      ])
+      expect(response.body.validation.validDistricts).toEqual(['42', 'F'])
       expect(response.body.validation.invalidDistricts).toEqual([])
     })
   })

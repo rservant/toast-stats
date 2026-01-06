@@ -4,10 +4,11 @@ import { generateDistrictCacheKey } from '../utils/cacheKeys.js'
 import { logger } from '../utils/logger.js'
 import { RealToastmastersAPIService } from '../services/RealToastmastersAPIService.js'
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
-import { BackfillService } from '../services/BackfillService.js'
+import { BackfillService } from '../services/UnifiedBackfillService.js'
 import { CacheManager } from '../services/CacheManager.js'
-import { DistrictBackfillService } from '../services/DistrictBackfillService.js'
 import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
+import { RefreshService } from '../services/RefreshService.js'
+import { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../services/ProductionServiceFactory.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
 import {
@@ -39,8 +40,8 @@ import type {
   ClubsResponse,
   DailyReportsResponse,
   DailyReportDetailResponse,
-  BackfillRequest,
 } from '../types/districts.js'
+import type { BackfillRequest } from '../services/UnifiedBackfillService.js'
 import type { Snapshot } from '../types/snapshots.js'
 
 const router = Router()
@@ -74,14 +75,23 @@ const districtDataAggregator = createDistrictDataAggregator(
 
 // Initialize services with configured cache directory
 const cacheManager = new CacheManager(cacheDirectory)
-const backfillService = new BackfillService(cacheManager, toastmastersAPI)
 
 // Initialize district-level services with configured cache directory
 const districtCacheManager = new DistrictCacheManager(cacheDirectory)
 const scraper = new ToastmastersScraper()
-const districtBackfillService = new DistrictBackfillService(
-  districtCacheManager,
-  scraper
+const districtConfigService = new DistrictConfigurationService(cacheDirectory)
+
+// Initialize unified backfill service (replaces both BackfillService and DistrictBackfillService)
+const refreshService = new RefreshService(
+  snapshotStore,
+  scraper,
+  undefined, // validator - use default
+  districtConfigService
+)
+const backfillService = new BackfillService(
+  refreshService,
+  perDistrictSnapshotStore,
+  districtConfigService
 )
 const analyticsEngine = new AnalyticsEngine(districtCacheManager)
 
@@ -101,16 +111,6 @@ setInterval(
   60 * 60 * 1000
 )
 
-// Cleanup old district backfill jobs every hour
-setInterval(
-  () => {
-    districtBackfillService.cleanupOldJobs().catch(error => {
-      console.error('Failed to cleanup old district backfill jobs:', error)
-    })
-  },
-  60 * 60 * 1000
-)
-
 /**
  * Validate district ID format
  */
@@ -118,106 +118,6 @@ function validateDistrictId(districtId: string): boolean {
   // District IDs are typically numeric or alphanumeric
   // Adjust this validation based on actual Toastmasters district ID format
   return /^[A-Za-z0-9]+$/.test(districtId) && districtId.length > 0
-}
-
-/**
- * Helper function to serve data from snapshots with proper error handling
- * Returns snapshot data with metadata or sends appropriate error response
- */
-async function serveFromSnapshot<T>(
-  res: Response,
-  dataExtractor: (snapshot: Snapshot) => T,
-  errorContext: string
-): Promise<T | null> {
-  const startTime = Date.now()
-  const operationId = `read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-  logger.info('Starting snapshot read operation', {
-    operation: 'serveFromSnapshot',
-    operation_id: operationId,
-    context: errorContext,
-  })
-
-  try {
-    const snapshot = await snapshotStore.getLatestSuccessful()
-
-    if (!snapshot) {
-      const duration = Date.now() - startTime
-      logger.warn('No successful snapshot available for read operation', {
-        operation: 'serveFromSnapshot',
-        operation_id: operationId,
-        context: errorContext,
-        duration_ms: duration,
-      })
-
-      res.status(503).json({
-        error: {
-          code: 'NO_SNAPSHOT_AVAILABLE',
-          message: 'No data snapshot available yet',
-          details: 'Run a refresh operation to create the first snapshot',
-        },
-      })
-      return null
-    }
-
-    logger.info('Retrieved snapshot for read operation', {
-      operation: 'serveFromSnapshot',
-      operation_id: operationId,
-      snapshot_id: snapshot.snapshot_id,
-      created_at: snapshot.created_at,
-      schema_version: snapshot.schema_version,
-      calculation_version: snapshot.calculation_version,
-      district_count: snapshot.payload.districts.length,
-      context: errorContext,
-    })
-
-    const data = dataExtractor(snapshot)
-
-    // Add snapshot metadata to the response
-    const responseWithMetadata = {
-      ...data,
-      _snapshot_metadata: {
-        snapshot_id: snapshot.snapshot_id,
-        created_at: snapshot.created_at,
-        schema_version: snapshot.schema_version,
-        calculation_version: snapshot.calculation_version,
-        data_as_of: snapshot.payload.metadata.dataAsOfDate,
-      },
-    }
-
-    const duration = Date.now() - startTime
-    logger.info('Snapshot read operation completed successfully', {
-      operation: 'serveFromSnapshot',
-      operation_id: operationId,
-      snapshot_id: snapshot.snapshot_id,
-      context: errorContext,
-      duration_ms: duration,
-    })
-
-    return responseWithMetadata as T
-  } catch (error) {
-    const duration = Date.now() - startTime
-    const errorResponse = transformErrorResponse(error)
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-
-    logger.error('Snapshot read operation failed', {
-      operation: 'serveFromSnapshot',
-      operation_id: operationId,
-      context: errorContext,
-      error: errorMessage,
-      duration_ms: duration,
-    })
-
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'SNAPSHOT_ERROR',
-        message: `Failed to ${errorContext}`,
-        details: errorResponse.details,
-      },
-    })
-    return null
-  }
 }
 
 /**
@@ -246,7 +146,7 @@ async function serveFromPerDistrictSnapshot<T>(
     const snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
 
     if (!snapshot) {
-      // Fall back to old format
+      // Try to fall back to old format
       logger.debug(
         'No per-district snapshot found, falling back to old format',
         {
@@ -256,17 +156,45 @@ async function serveFromPerDistrictSnapshot<T>(
         }
       )
 
-      return await serveFromSnapshot(
-        res,
-        _oldSnapshot => {
-          // For backward compatibility, we need to adapt the old format
-          // This is a synchronous operation, so we need to handle the async dataExtractor differently
-          throw new Error(
-            'Backward compatibility not implemented for async extractors'
-          )
+      // Check if old format snapshot exists
+      const oldSnapshot = await snapshotStore.getLatestSuccessful()
+      if (!oldSnapshot) {
+        const duration = Date.now() - startTime
+        logger.warn('No successful snapshot available for read operation', {
+          operation: 'serveFromPerDistrictSnapshot',
+          operation_id: operationId,
+          context: errorContext,
+          duration_ms: duration,
+        })
+
+        res.status(503).json({
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        })
+        return null
+      }
+
+      // For now, we don't support async extractors with old format fallback
+      // This is acceptable since we're transitioning to per-district snapshots
+      const duration = Date.now() - startTime
+      logger.warn('Async extractor not supported with old format fallback', {
+        operation: 'serveFromPerDistrictSnapshot',
+        operation_id: operationId,
+        context: errorContext,
+        duration_ms: duration,
+      })
+
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
         },
-        errorContext
-      )
+      })
+      return null
     }
 
     logger.info('Retrieved per-district snapshot for read operation', {
@@ -1166,6 +1094,310 @@ function validateDateFormat(date: string): boolean {
 }
 
 /**
+ * Comprehensive backfill request validation with detailed error reporting
+ */
+interface BackfillValidationResult {
+  isValid: boolean
+  errors: Array<{
+    field: string
+    message: string
+    received?: unknown
+    expected?: string
+  }>
+  suggestions: string[]
+  sanitizedRequest: BackfillRequest
+}
+
+function validateBackfillRequest(body: unknown): BackfillValidationResult {
+  const errors: BackfillValidationResult['errors'] = []
+  const suggestions: string[] = []
+
+  // Initialize with defaults
+  const sanitizedRequest: BackfillRequest = {
+    startDate: '',
+    endDate: undefined,
+    targetDistricts: undefined,
+    collectionType: 'auto',
+    concurrency: 3,
+    retryFailures: true,
+    skipExisting: true,
+  }
+
+  // Check if body exists and is an object
+  if (!body || typeof body !== 'object') {
+    errors.push({
+      field: 'body',
+      message: 'Request body must be a JSON object',
+      received: typeof body,
+      expected: 'object',
+    })
+    suggestions.push('Ensure Content-Type header is set to application/json')
+    suggestions.push('Provide a valid JSON object in the request body')
+
+    return {
+      isValid: false,
+      errors,
+      suggestions,
+      sanitizedRequest,
+    }
+  }
+
+  const req = body as Record<string, unknown>
+
+  // Validate startDate (required)
+  if (!req.startDate) {
+    errors.push({
+      field: 'startDate',
+      message: 'startDate is required',
+      expected: 'YYYY-MM-DD format string',
+    })
+    suggestions.push(
+      'Provide a startDate in YYYY-MM-DD format (e.g., "2024-01-01")'
+    )
+  } else if (typeof req.startDate !== 'string') {
+    errors.push({
+      field: 'startDate',
+      message: 'startDate must be a string',
+      received: typeof req.startDate,
+      expected: 'string in YYYY-MM-DD format',
+    })
+  } else if (!validateDateFormat(req.startDate)) {
+    errors.push({
+      field: 'startDate',
+      message: 'startDate must be in YYYY-MM-DD format',
+      received: req.startDate,
+      expected: 'YYYY-MM-DD format (e.g., "2024-01-01")',
+    })
+  } else {
+    sanitizedRequest.startDate = req.startDate
+  }
+
+  // Validate endDate (optional)
+  if (req.endDate !== undefined) {
+    if (typeof req.endDate !== 'string') {
+      errors.push({
+        field: 'endDate',
+        message: 'endDate must be a string',
+        received: typeof req.endDate,
+        expected: 'string in YYYY-MM-DD format or undefined',
+      })
+    } else if (!validateDateFormat(req.endDate)) {
+      errors.push({
+        field: 'endDate',
+        message: 'endDate must be in YYYY-MM-DD format',
+        received: req.endDate,
+        expected: 'YYYY-MM-DD format (e.g., "2024-12-31")',
+      })
+    } else {
+      sanitizedRequest.endDate = req.endDate
+    }
+  }
+
+  // Validate date range if both dates are provided and valid
+  if (sanitizedRequest.startDate && sanitizedRequest.endDate) {
+    const start = new Date(sanitizedRequest.startDate)
+    const end = new Date(sanitizedRequest.endDate)
+
+    if (start > end) {
+      errors.push({
+        field: 'dateRange',
+        message: 'startDate must be before or equal to endDate',
+        received: `${sanitizedRequest.startDate} to ${sanitizedRequest.endDate}`,
+      })
+      suggestions.push(
+        'Ensure startDate is chronologically before or equal to endDate'
+      )
+    }
+
+    // Check for reasonable date range (not too far in the past or future)
+    const now = new Date()
+    const oneYearAgo = new Date(
+      now.getFullYear() - 1,
+      now.getMonth(),
+      now.getDate()
+    )
+    const oneMonthFromNow = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      now.getDate()
+    )
+
+    if (start < oneYearAgo) {
+      suggestions.push(
+        'Consider that data older than one year may not be available'
+      )
+    }
+    if (end > oneMonthFromNow) {
+      suggestions.push(
+        'Future dates beyond one month may not have data available'
+      )
+    }
+  }
+
+  // Validate targetDistricts (optional)
+  if (req.targetDistricts !== undefined) {
+    if (!Array.isArray(req.targetDistricts)) {
+      errors.push({
+        field: 'targetDistricts',
+        message: 'targetDistricts must be an array',
+        received: typeof req.targetDistricts,
+        expected: 'array of district ID strings',
+      })
+    } else {
+      const validDistricts: string[] = []
+      req.targetDistricts.forEach((district, index) => {
+        if (typeof district !== 'string') {
+          errors.push({
+            field: `targetDistricts[${index}]`,
+            message: 'District ID must be a string',
+            received: typeof district,
+            expected: 'string',
+          })
+        } else if (!validateDistrictId(district)) {
+          errors.push({
+            field: `targetDistricts[${index}]`,
+            message: 'Invalid district ID format',
+            received: district,
+            expected: 'alphanumeric string',
+          })
+        } else {
+          validDistricts.push(district)
+        }
+      })
+
+      if (validDistricts.length > 0) {
+        sanitizedRequest.targetDistricts = validDistricts
+      }
+
+      if (req.targetDistricts.length > 50) {
+        suggestions.push(
+          'Consider processing large numbers of districts in smaller batches'
+        )
+      }
+    }
+  }
+
+  // Validate collectionType (optional)
+  if (req.collectionType !== undefined) {
+    const validTypes = ['system-wide', 'per-district', 'auto']
+    if (typeof req.collectionType !== 'string') {
+      errors.push({
+        field: 'collectionType',
+        message: 'collectionType must be a string',
+        received: typeof req.collectionType,
+        expected: `one of: ${validTypes.join(', ')}`,
+      })
+    } else if (!validTypes.includes(req.collectionType)) {
+      errors.push({
+        field: 'collectionType',
+        message: 'Invalid collectionType',
+        received: req.collectionType,
+        expected: `one of: ${validTypes.join(', ')}`,
+      })
+    } else {
+      sanitizedRequest.collectionType = req.collectionType as
+        | 'system-wide'
+        | 'per-district'
+        | 'auto'
+    }
+  }
+
+  // Validate concurrency (optional)
+  if (req.concurrency !== undefined) {
+    if (typeof req.concurrency !== 'number') {
+      errors.push({
+        field: 'concurrency',
+        message: 'concurrency must be a number',
+        received: typeof req.concurrency,
+        expected: 'number between 1 and 10',
+      })
+    } else if (
+      !Number.isInteger(req.concurrency) ||
+      req.concurrency < 1 ||
+      req.concurrency > 10
+    ) {
+      errors.push({
+        field: 'concurrency',
+        message: 'concurrency must be an integer between 1 and 10',
+        received: req.concurrency,
+        expected: 'integer between 1 and 10',
+      })
+    } else {
+      sanitizedRequest.concurrency = req.concurrency
+    }
+  }
+
+  // Validate boolean fields
+  const booleanFields = ['retryFailures', 'skipExisting'] as const
+  booleanFields.forEach(field => {
+    if (req[field] !== undefined) {
+      if (typeof req[field] !== 'boolean') {
+        errors.push({
+          field,
+          message: `${field} must be a boolean`,
+          received: typeof req[field],
+          expected: 'boolean (true or false)',
+        })
+      } else {
+        sanitizedRequest[field] = req[field] as boolean
+      }
+    }
+  })
+
+  // Add helpful suggestions
+  if (errors.length === 0) {
+    if (!req.targetDistricts) {
+      suggestions.push(
+        'No target districts specified - will process all configured districts'
+      )
+    }
+    if (!req.endDate) {
+      suggestions.push(
+        'No end date specified - will process only the start date'
+      )
+    }
+    if (req.collectionType === 'auto' || !req.collectionType) {
+      suggestions.push(
+        'Using auto collection type - system will choose optimal strategy'
+      )
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    suggestions,
+    sanitizedRequest,
+  }
+}
+
+/**
+ * Estimate completion time for a backfill job based on current progress
+ */
+function estimateCompletionTime(progress: {
+  completed: number
+  total: number
+  current: string
+}): string | undefined {
+  if (progress.total === 0 || progress.completed === 0) {
+    return undefined
+  }
+
+  const completionRate = progress.completed / progress.total
+  if (completionRate === 0) {
+    return undefined
+  }
+
+  // Rough estimate: assume linear progress (not always accurate but helpful)
+  const estimatedTotalMinutes = (progress.total - progress.completed) * 2 // ~2 minutes per date
+  const estimatedCompletion = new Date(
+    Date.now() + estimatedTotalMinutes * 60 * 1000
+  )
+
+  return estimatedCompletion.toISOString()
+}
+
+/**
  * GET /api/districts/:districtId/daily-reports
  * Fetch daily reports for a date range from latest snapshot
  * Note: Date range parameters are currently ignored as we serve from snapshot
@@ -1397,136 +1629,454 @@ router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
 
 /**
  * POST /api/districts/backfill
- * Initiate backfill of historical data (only fetches missing dates)
+ * Initiate backfill of historical data with modern API design
+ *
+ * Enhanced features:
+ * - Comprehensive input validation with detailed error messages
+ * - Proper HTTP status codes and response headers
+ * - Clear error handling with actionable feedback
+ * - Request validation with helpful suggestions
  */
 router.post('/backfill', async (req: Request, res: Response) => {
+  const requestId = `backfill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  logger.info('Received backfill initiation request', {
+    operation: 'POST /api/districts/backfill',
+    request_id: requestId,
+    user_agent: req.get('user-agent'),
+    ip: req.ip,
+    body_keys: Object.keys(req.body || {}),
+  })
+
   try {
-    const request: BackfillRequest = req.body
+    // Enhanced input validation
+    const validationResult = validateBackfillRequest(req.body)
+    if (!validationResult.isValid) {
+      logger.warn('Backfill request validation failed', {
+        operation: 'POST /api/districts/backfill',
+        request_id: requestId,
+        validation_errors: validationResult.errors,
+      })
 
-    // Validate date formats if provided
-    if (request.startDate && !validateDateFormat(request.startDate)) {
       res.status(400).json({
         error: {
-          code: 'INVALID_DATE_FORMAT',
-          message: 'startDate must be in YYYY-MM-DD format',
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          details: validationResult.errors,
+          suggestions: validationResult.suggestions,
         },
+        request_id: requestId,
       })
       return
     }
 
-    if (request.endDate && !validateDateFormat(request.endDate)) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DATE_FORMAT',
-          message: 'endDate must be in YYYY-MM-DD format',
-        },
-      })
-      return
-    }
+    const request: BackfillRequest = validationResult.sanitizedRequest
 
-    // Validate date range
-    if (request.startDate && request.endDate) {
-      const start = new Date(request.startDate)
-      const end = new Date(request.endDate)
-
-      if (start > end) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_RANGE',
-            message: 'startDate must be before or equal to endDate',
-          },
-        })
-        return
-      }
-    }
+    logger.info('Initiating backfill with validated request', {
+      operation: 'POST /api/districts/backfill',
+      request_id: requestId,
+      target_districts: request.targetDistricts?.length || 0,
+      start_date: request.startDate,
+      end_date: request.endDate,
+      collection_type: request.collectionType,
+      concurrency: request.concurrency,
+    })
 
     const backfillId = await backfillService.initiateBackfill(request)
     const status = backfillService.getBackfillStatus(backfillId)
 
-    res.json(status)
+    if (!status) {
+      logger.error('Failed to retrieve backfill status after creation', {
+        operation: 'POST /api/districts/backfill',
+        request_id: requestId,
+        backfill_id: backfillId,
+      })
+
+      res.status(500).json({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Backfill initiated but status unavailable',
+          details:
+            'The backfill job was created but status could not be retrieved',
+        },
+        request_id: requestId,
+      })
+      return
+    }
+
+    // Set appropriate response headers
+    res.set({
+      'Content-Type': 'application/json',
+      'X-Request-ID': requestId,
+      'X-Backfill-ID': backfillId,
+    })
+
+    // Return 202 Accepted for async operation
+    res.status(202).json({
+      ...status,
+      request_id: requestId,
+      links: {
+        self: `/api/districts/backfill/${backfillId}`,
+        cancel: `/api/districts/backfill/${backfillId}`,
+      },
+    })
+
+    logger.info('Backfill initiated successfully', {
+      operation: 'POST /api/districts/backfill',
+      request_id: requestId,
+      backfill_id: backfillId,
+      status: status.status,
+      scope_type: status.scope.scopeType,
+      target_districts: status.scope.targetDistricts.length,
+    })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
-    res.status(500).json({
+    logger.error('Backfill initiation failed', {
+      operation: 'POST /api/districts/backfill',
+      request_id: requestId,
+      error: errorMessage,
+      error_code: errorResponse.code,
+    })
+
+    // Determine appropriate HTTP status code based on error type
+    let statusCode = 500
+    let errorCode = errorResponse.code || 'BACKFILL_ERROR'
+
+    if (errorMessage.includes('scope') || errorMessage.includes('district')) {
+      statusCode = 400
+      errorCode = 'SCOPE_ERROR'
+    } else if (errorMessage.includes('configuration')) {
+      statusCode = 422
+      errorCode = 'CONFIGURATION_ERROR'
+    }
+
+    res.status(statusCode).json({
       error: {
-        code: errorResponse.code || 'BACKFILL_ERROR',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Failed to initiate backfill',
+        code: errorCode,
+        message: 'Failed to initiate backfill',
         details: errorResponse.details,
+        original_error: errorMessage,
       },
+      request_id: requestId,
     })
   }
 })
 
 /**
  * GET /api/districts/backfill/:backfillId
- * Get backfill progress/status
+ * Get backfill progress/status with enhanced response format
+ *
+ * Enhanced features:
+ * - Detailed progress information
+ * - Proper HTTP status codes
+ * - Response headers with metadata
+ * - Links for related operations
  */
 router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
+  const requestId = `backfill_status_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const { backfillId } = req.params
+
+  logger.info('Received backfill status request', {
+    operation: 'GET /api/districts/backfill/:backfillId',
+    request_id: requestId,
+    backfill_id: backfillId,
+    user_agent: req.get('user-agent'),
+    ip: req.ip,
+  })
+
   try {
-    const { backfillId } = req.params
+    // Validate backfill ID format
+    if (
+      !backfillId ||
+      typeof backfillId !== 'string' ||
+      backfillId.trim().length === 0
+    ) {
+      logger.warn('Invalid backfill ID format', {
+        operation: 'GET /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+      })
 
-    const status = backfillService.getBackfillStatus(backfillId)
-
-    if (!status) {
-      res.status(404).json({
+      res.status(400).json({
         error: {
-          code: 'BACKFILL_NOT_FOUND',
-          message: 'Backfill job not found',
+          code: 'INVALID_BACKFILL_ID',
+          message: 'Invalid backfill ID format',
+          details: 'Backfill ID must be a non-empty string',
         },
+        request_id: requestId,
       })
       return
     }
 
-    res.json(status)
+    const status = backfillService.getBackfillStatus(backfillId)
+
+    if (!status) {
+      logger.warn('Backfill job not found', {
+        operation: 'GET /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+      })
+
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found',
+          details:
+            'The specified backfill job does not exist or has been cleaned up',
+          suggestions: [
+            'Verify the backfill ID is correct',
+            'Check if the job has been completed and cleaned up',
+            'Initiate a new backfill if needed',
+          ],
+        },
+        request_id: requestId,
+      })
+      return
+    }
+
+    // Set response headers
+    res.set({
+      'Content-Type': 'application/json',
+      'X-Request-ID': requestId,
+      'X-Backfill-ID': backfillId,
+      'X-Backfill-Status': status.status,
+    })
+
+    // Add cache headers based on status
+    if (
+      status.status === 'complete' ||
+      status.status === 'error' ||
+      status.status === 'cancelled'
+    ) {
+      res.set('Cache-Control', 'public, max-age=3600') // Cache completed jobs for 1 hour
+    } else {
+      res.set('Cache-Control', 'no-cache') // Don't cache in-progress jobs
+    }
+
+    // Enhanced response with additional metadata
+    const enhancedStatus = {
+      ...status,
+      request_id: requestId,
+      links: {
+        self: `/api/districts/backfill/${backfillId}`,
+        cancel:
+          status.status === 'processing'
+            ? `/api/districts/backfill/${backfillId}`
+            : undefined,
+      },
+      metadata: {
+        estimated_completion:
+          status.status === 'processing' && status.progress.total > 0
+            ? estimateCompletionTime(status.progress)
+            : undefined,
+        efficiency_rating: status.collectionStrategy.estimatedEfficiency,
+        collection_method: status.collectionStrategy.type,
+      },
+    }
+
+    // Remove undefined values from links
+    if (!enhancedStatus.links.cancel) {
+      delete enhancedStatus.links.cancel
+    }
+
+    res.json(enhancedStatus)
+
+    logger.info('Backfill status retrieved successfully', {
+      operation: 'GET /api/districts/backfill/:backfillId',
+      request_id: requestId,
+      backfill_id: backfillId,
+      status: status.status,
+      progress: `${status.progress.completed}/${status.progress.total}`,
+      failed: status.progress.failed,
+    })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Failed to get backfill status', {
+      operation: 'GET /api/districts/backfill/:backfillId',
+      request_id: requestId,
+      backfill_id: backfillId,
+      error: errorMessage,
+    })
 
     res.status(500).json({
       error: {
         code: errorResponse.code || 'BACKFILL_ERROR',
         message: 'Failed to get backfill status',
         details: errorResponse.details,
+        original_error: errorMessage,
       },
+      request_id: requestId,
     })
   }
 })
 
 /**
  * DELETE /api/districts/backfill/:backfillId
- * Cancel a backfill job
+ * Cancel a backfill job with enhanced error handling
+ *
+ * Enhanced features:
+ * - Detailed validation and error messages
+ * - Proper HTTP status codes
+ * - Clear success/failure responses
+ * - Helpful suggestions for common issues
  */
 router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
+  const requestId = `backfill_cancel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const { backfillId } = req.params
+
+  logger.info('Received backfill cancellation request', {
+    operation: 'DELETE /api/districts/backfill/:backfillId',
+    request_id: requestId,
+    backfill_id: backfillId,
+    user_agent: req.get('user-agent'),
+    ip: req.ip,
+  })
+
   try {
-    const { backfillId } = req.params
+    // Validate backfill ID format
+    if (
+      !backfillId ||
+      typeof backfillId !== 'string' ||
+      backfillId.trim().length === 0
+    ) {
+      logger.warn('Invalid backfill ID format for cancellation', {
+        operation: 'DELETE /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+      })
 
-    const cancelled = await backfillService.cancelBackfill(backfillId)
-
-    if (!cancelled) {
-      res.status(404).json({
+      res.status(400).json({
         error: {
-          code: 'BACKFILL_NOT_FOUND',
-          message: 'Backfill job not found or cannot be cancelled',
+          code: 'INVALID_BACKFILL_ID',
+          message: 'Invalid backfill ID format',
+          details: 'Backfill ID must be a non-empty string',
         },
+        request_id: requestId,
       })
       return
     }
 
+    // Check if job exists before attempting cancellation
+    const currentStatus = backfillService.getBackfillStatus(backfillId)
+    if (!currentStatus) {
+      logger.warn('Attempted to cancel non-existent backfill job', {
+        operation: 'DELETE /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+      })
+
+      res.status(404).json({
+        error: {
+          code: 'BACKFILL_NOT_FOUND',
+          message: 'Backfill job not found',
+          details:
+            'The specified backfill job does not exist or has been cleaned up',
+          suggestions: [
+            'Verify the backfill ID is correct',
+            'Check if the job has already completed',
+            'Use GET /api/districts/backfill/:id to check job status',
+          ],
+        },
+        request_id: requestId,
+      })
+      return
+    }
+
+    // Check if job can be cancelled
+    if (currentStatus.status !== 'processing') {
+      logger.warn('Attempted to cancel non-processing backfill job', {
+        operation: 'DELETE /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+        current_status: currentStatus.status,
+      })
+
+      res.status(409).json({
+        error: {
+          code: 'CANNOT_CANCEL_JOB',
+          message: `Cannot cancel backfill job in '${currentStatus.status}' status`,
+          details: 'Only processing jobs can be cancelled',
+          current_status: currentStatus.status,
+          suggestions: [
+            'Only jobs with status "processing" can be cancelled',
+            'Completed, failed, or already cancelled jobs cannot be cancelled',
+          ],
+        },
+        request_id: requestId,
+      })
+      return
+    }
+
+    const cancelled = await backfillService.cancelBackfill(backfillId)
+
+    if (!cancelled) {
+      logger.error('Backfill cancellation failed unexpectedly', {
+        operation: 'DELETE /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+        current_status: currentStatus.status,
+      })
+
+      res.status(500).json({
+        error: {
+          code: 'CANCELLATION_FAILED',
+          message: 'Failed to cancel backfill job',
+          details: 'The cancellation operation failed unexpectedly',
+        },
+        request_id: requestId,
+      })
+      return
+    }
+
+    // Set response headers
+    res.set({
+      'Content-Type': 'application/json',
+      'X-Request-ID': requestId,
+      'X-Backfill-ID': backfillId,
+    })
+
     res.json({
       success: true,
       message: 'Backfill cancelled successfully',
+      backfill_id: backfillId,
+      request_id: requestId,
+      cancelled_at: new Date().toISOString(),
+      links: {
+        status: `/api/districts/backfill/${backfillId}`,
+      },
+    })
+
+    logger.info('Backfill cancelled successfully', {
+      operation: 'DELETE /api/districts/backfill/:backfillId',
+      request_id: requestId,
+      backfill_id: backfillId,
     })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Backfill cancellation failed', {
+      operation: 'DELETE /api/districts/backfill/:backfillId',
+      request_id: requestId,
+      backfill_id: backfillId,
+      error: errorMessage,
+    })
 
     res.status(500).json({
       error: {
         code: errorResponse.code || 'BACKFILL_ERROR',
         message: 'Failed to cancel backfill',
         details: errorResponse.details,
+        original_error: errorMessage,
       },
+      request_id: requestId,
     })
   }
 })
@@ -1708,14 +2258,15 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
       }
     }
 
-    // Initiate backfill
-    const backfillId = await districtBackfillService.initiateDistrictBackfill({
-      districtId,
+    // Initiate backfill using unified service
+    const backfillId = await backfillService.initiateBackfill({
+      targetDistricts: [districtId],
       startDate,
       endDate,
+      collectionType: 'per-district',
     })
 
-    const status = districtBackfillService.getBackfillStatus(backfillId)
+    const status = backfillService.getBackfillStatus(backfillId)
 
     res.json(status)
   } catch (error) {
@@ -1776,7 +2327,7 @@ router.get(
         return
       }
 
-      const status = districtBackfillService.getBackfillStatus(backfillId)
+      const status = backfillService.getBackfillStatus(backfillId)
 
       if (!status) {
         res.status(404).json({
@@ -1788,8 +2339,8 @@ router.get(
         return
       }
 
-      // Verify the backfill belongs to the requested district
-      if (status.districtId !== districtId) {
+      // Verify the backfill includes the requested district
+      if (!status.scope.targetDistricts.includes(districtId)) {
         res.status(404).json({
           error: {
             code: 'BACKFILL_NOT_FOUND',
@@ -1836,7 +2387,7 @@ router.delete(
       }
 
       // Get status first to verify it belongs to this district
-      const status = districtBackfillService.getBackfillStatus(backfillId)
+      const status = backfillService.getBackfillStatus(backfillId)
 
       if (!status) {
         res.status(404).json({
@@ -1848,8 +2399,8 @@ router.delete(
         return
       }
 
-      // Verify the backfill belongs to the requested district
-      if (status.districtId !== districtId) {
+      // Verify the backfill includes the requested district
+      if (!status.scope.targetDistricts.includes(districtId)) {
         res.status(404).json({
           error: {
             code: 'BACKFILL_NOT_FOUND',
@@ -1859,7 +2410,7 @@ router.delete(
         return
       }
 
-      const cancelled = await districtBackfillService.cancelBackfill(backfillId)
+      const cancelled = await backfillService.cancelBackfill(backfillId)
 
       if (!cancelled) {
         res.status(400).json({

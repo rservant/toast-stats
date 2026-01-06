@@ -128,8 +128,7 @@ describe('Admin Routes Integration', () => {
       await testSnapshotStore.writeSnapshot(snapshot1)
       await testSnapshotStore.writeSnapshot(snapshot2)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots?limit=5')
+      const response = await request(app).get('/api/admin/snapshots?limit=5')
 
       expect(response.status).toBe(200)
 
@@ -147,8 +146,9 @@ describe('Admin Routes Integration', () => {
       const testSnapshot = createTestSnapshot('1704067200000', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/1704067200000')
+      const response = await request(app).get(
+        '/api/admin/snapshots/1704067200000'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.inspection.snapshot_id).toBe('1704067200000')
@@ -164,8 +164,9 @@ describe('Admin Routes Integration', () => {
       const testSnapshot = createTestSnapshot('1704067200000', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/1704067200000/payload')
+      const response = await request(app).get(
+        '/api/admin/snapshots/1704067200000/payload'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.snapshot_id).toBe('1704067200000')
@@ -178,8 +179,9 @@ describe('Admin Routes Integration', () => {
       const testSnapshot = createTestSnapshot('1704067200000', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/health')
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/health'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.health.is_ready).toBe(true)
@@ -191,8 +193,9 @@ describe('Admin Routes Integration', () => {
     })
 
     it('should handle empty store gracefully', async () => {
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/health')
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/health'
+      )
 
       // Empty store might return 500 if no snapshots exist, which is expected behavior
       if (response.status === 500) {
@@ -214,8 +217,9 @@ describe('Admin Routes Integration', () => {
       await testSnapshotStore.writeSnapshot(failedSnapshot)
 
       // Filter for successful snapshots only
-      const response = await request(app)
-        .get('/api/admin/snapshots?status=success')
+      const response = await request(app).get(
+        '/api/admin/snapshots?status=success'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.snapshots).toHaveLength(1)
@@ -232,8 +236,9 @@ describe('Admin Routes Integration', () => {
       await testSnapshotStore.getLatestSuccessful()
       await testSnapshotStore.getLatestSuccessful() // Should be cache hit
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/performance')
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/performance'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.performance.totalReads).toBeGreaterThan(0)
@@ -249,15 +254,17 @@ describe('Admin Routes Integration', () => {
       await testSnapshotStore.getLatestSuccessful()
 
       // Reset metrics
-      const resetResponse = await request(app)
-        .post('/api/admin/snapshot-store/performance/reset')
+      const resetResponse = await request(app).post(
+        '/api/admin/snapshot-store/performance/reset'
+      )
 
       expect(resetResponse.status).toBe(200)
       expect(resetResponse.body.success).toBe(true)
 
       // Check that metrics are reset
-      const metricsResponse = await request(app)
-        .get('/api/admin/snapshot-store/performance')
+      const metricsResponse = await request(app).get(
+        '/api/admin/snapshot-store/performance'
+      )
 
       expect(metricsResponse.status).toBe(200)
       expect(metricsResponse.body.performance.totalReads).toBe(0)

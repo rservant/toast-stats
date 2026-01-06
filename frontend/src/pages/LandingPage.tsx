@@ -271,11 +271,14 @@ const LandingPage: React.FC = () => {
                   Welcome to Toast-Stats!
                 </h2>
                 <p className="text-tm-black mb-6 text-lg">
-                  No data snapshots are available yet. To get started, you'll need to fetch data from the Toastmasters dashboard.
+                  No data snapshots are available yet. To get started, you'll
+                  need to fetch data from the Toastmasters dashboard.
                 </p>
-                
+
                 <div className="bg-white rounded-lg p-6 mb-6 text-left">
-                  <h3 className="font-semibold text-tm-black mb-3">What happens next:</h3>
+                  <h3 className="font-semibold text-tm-black mb-3">
+                    What happens next:
+                  </h3>
                   <ul className="space-y-2 text-tm-black">
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">1.</span>
@@ -283,17 +286,19 @@ const LandingPage: React.FC = () => {
                     </li>
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">2.</span>
-                      The system will download data from the Toastmasters dashboard
+                      The system will download data from the Toastmasters
+                      dashboard
                     </li>
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">3.</span>
-                      Once complete, district rankings and analytics will be available
+                      Once complete, district rankings and analytics will be
+                      available
                     </li>
                   </ul>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <BackfillButton 
+                  <BackfillButton
                     className="px-6 py-3 text-lg"
                     onBackfillStart={() => {
                       // Optionally show a success message or redirect
@@ -308,7 +313,8 @@ const LandingPage: React.FC = () => {
                 </div>
 
                 <p className="text-sm text-tm-cool-gray mt-4">
-                  This is a one-time setup. Future visits will show your data immediately.
+                  This is a one-time setup. Future visits will show your data
+                  immediately.
                 </p>
               </div>
             </div>

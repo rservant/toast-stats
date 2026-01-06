@@ -3,7 +3,7 @@
  *
  * Tests the debugging endpoints for snapshot analysis, listing,
  * inspection, and health checking functionality.
- * 
+ *
  * Note: Admin token validation has been removed for development simplicity.
  */
 
@@ -139,19 +139,19 @@ describe('Admin Routes', () => {
         {
           districtId: '123',
           asOfDate: '2024-01-01',
-          membership: { 
+          membership: {
             total: 100,
             base: 90,
             new: 10,
             renewed: 80,
             net: 10,
-            netGrowth: 0.11
+            netGrowth: 0.11,
           },
-          clubs: { 
+          clubs: {
             total: 25,
             distinguished: 10,
             select: 8,
-            president: 7
+            president: 7,
           },
           education: {
             awards: 150,
@@ -160,13 +160,13 @@ describe('Admin Routes', () => {
             cl: 25,
             al: 20,
             dtm: 15,
-            pathways: 10
+            pathways: 10,
           },
-          performance: { 
+          performance: {
             membershipNet: 85,
             clubsDistinguished: 40,
             educationAwards: 75,
-            overallScore: 85
+            overallScore: 85,
           },
         },
       ],
@@ -206,9 +206,7 @@ describe('Admin Routes', () => {
     it('should allow requests with any token and log access', async () => {
       mockSnapshotStore.listSnapshots.mockResolvedValue([])
 
-      const response = await request(app)
-        .get('/api/admin/snapshots')
-        
+      const response = await request(app).get('/api/admin/snapshots')
 
       expect(response.status).toBe(200)
     })
@@ -216,7 +214,9 @@ describe('Admin Routes', () => {
     it('should allow requests with query token and log access', async () => {
       mockSnapshotStore.listSnapshots.mockResolvedValue([])
 
-      const response = await request(app).get('/api/admin/snapshots?token=any-token')
+      const response = await request(app).get(
+        '/api/admin/snapshots?token=any-token'
+      )
 
       expect(response.status).toBe(200)
     })
@@ -245,15 +245,12 @@ describe('Admin Routes', () => {
       const testMetadata = [createTestMetadata('1704067200000')]
       mockSnapshotStore.listSnapshots.mockResolvedValue(testMetadata)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots')
-        .query({
-          limit: '5',
-          status: 'success',
-          schema_version: '1.0.0',
-          min_district_count: '1',
-        })
-        
+      const response = await request(app).get('/api/admin/snapshots').query({
+        limit: '5',
+        status: 'success',
+        schema_version: '1.0.0',
+        min_district_count: '1',
+      })
 
       expect(response.status).toBe(200)
       expect(mockSnapshotStore.listSnapshots).toHaveBeenCalledWith(5, {
@@ -268,9 +265,7 @@ describe('Admin Routes', () => {
         new Error('Database error')
       )
 
-      const response = await request(app)
-        .get('/api/admin/snapshots')
-        
+      const response = await request(app).get('/api/admin/snapshots')
 
       expect(response.status).toBe(500)
       expect(response.body.error.code).toBe('SNAPSHOT_LISTING_FAILED')
@@ -282,9 +277,9 @@ describe('Admin Routes', () => {
       const testSnapshot = createTestSnapshot('1704067200000')
       mockSnapshotStore.getSnapshot.mockResolvedValue(testSnapshot)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/1704067200000')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshots/1704067200000'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.inspection.snapshot_id).toBe('1704067200000')
@@ -298,9 +293,9 @@ describe('Admin Routes', () => {
     it('should return 404 for non-existent snapshot', async () => {
       mockSnapshotStore.getSnapshot.mockResolvedValue(null)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/nonexistent')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshots/nonexistent'
+      )
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('SNAPSHOT_NOT_FOUND')
@@ -309,9 +304,9 @@ describe('Admin Routes', () => {
     it('should handle snapshot inspection errors', async () => {
       mockSnapshotStore.getSnapshot.mockRejectedValue(new Error('Read error'))
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/1704067200000')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshots/1704067200000'
+      )
 
       expect(response.status).toBe(500)
       expect(response.body.error.code).toBe('SNAPSHOT_INSPECTION_FAILED')
@@ -323,9 +318,9 @@ describe('Admin Routes', () => {
       const testSnapshot = createTestSnapshot('1704067200000')
       mockSnapshotStore.getSnapshot.mockResolvedValue(testSnapshot)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/1704067200000/payload')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshots/1704067200000/payload'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.snapshot_id).toBe('1704067200000')
@@ -335,9 +330,9 @@ describe('Admin Routes', () => {
     it('should return 404 for non-existent snapshot payload', async () => {
       mockSnapshotStore.getSnapshot.mockResolvedValue(null)
 
-      const response = await request(app)
-        .get('/api/admin/snapshots/nonexistent/payload')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshots/nonexistent/payload'
+      )
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('SNAPSHOT_NOT_FOUND')
@@ -358,9 +353,9 @@ describe('Admin Routes', () => {
       mockSnapshotStore.getLatest.mockResolvedValue(latestSnapshot)
       mockSnapshotStore.listSnapshots.mockResolvedValue(recentSnapshots)
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/health')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/health'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.health.is_ready).toBe(true)
@@ -374,9 +369,9 @@ describe('Admin Routes', () => {
     it('should handle health check errors', async () => {
       mockSnapshotStore.isReady.mockRejectedValue(new Error('Access error'))
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/health')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/health'
+      )
 
       expect(response.status).toBe(500)
       expect(response.body.error.code).toBe('HEALTH_CHECK_FAILED')
@@ -393,9 +388,9 @@ describe('Admin Routes', () => {
       }
       mockSnapshotStore.validateIntegrity.mockResolvedValue(integrityResult)
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/integrity')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/integrity'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.integrity.isValid).toBe(true)
@@ -405,9 +400,9 @@ describe('Admin Routes', () => {
       // Remove the method to test fallback
       delete (mockSnapshotStore as Record<string, unknown>).validateIntegrity
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/integrity')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/integrity'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.integrity.isValid).toBe(true) // Default fallback
@@ -428,9 +423,9 @@ describe('Admin Routes', () => {
         performanceMetrics
       )
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/performance')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/performance'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.performance.totalReads).toBe(100)
@@ -442,9 +437,9 @@ describe('Admin Routes', () => {
       delete (mockSnapshotStore as Record<string, unknown>)
         .getPerformanceMetrics
 
-      const response = await request(app)
-        .get('/api/admin/snapshot-store/performance')
-        
+      const response = await request(app).get(
+        '/api/admin/snapshot-store/performance'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.performance.totalReads).toBe(0) // Default fallback
@@ -455,9 +450,9 @@ describe('Admin Routes', () => {
     it('should reset performance metrics', async () => {
       mockSnapshotStore.resetPerformanceMetrics.mockImplementation(() => {})
 
-      const response = await request(app)
-        .post('/api/admin/snapshot-store/performance/reset')
-        
+      const response = await request(app).post(
+        '/api/admin/snapshot-store/performance/reset'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
@@ -469,9 +464,9 @@ describe('Admin Routes', () => {
       delete (mockSnapshotStore as Record<string, unknown>)
         .resetPerformanceMetrics
 
-      const response = await request(app)
-        .post('/api/admin/snapshot-store/performance/reset')
-        
+      const response = await request(app).post(
+        '/api/admin/snapshot-store/performance/reset'
+      )
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true) // Should still succeed
@@ -481,9 +476,7 @@ describe('Admin Routes', () => {
   describe('District Configuration Endpoints', () => {
     describe('GET /api/admin/districts/config', () => {
       it('should return current district configuration', async () => {
-        const response = await request(app)
-          .get('/api/admin/districts/config')
-          
+        const response = await request(app).get('/api/admin/districts/config')
 
         if (response.status !== 200) {
           console.log('Error response:', response.body)
@@ -502,9 +495,7 @@ describe('Admin Routes', () => {
           new Error('Config read error')
         )
 
-        const response = await request(app)
-          .get('/api/admin/districts/config')
-          
+        const response = await request(app).get('/api/admin/districts/config')
 
         expect(response.status).toBe(500)
         expect(response.body.error.code).toBe(
@@ -524,7 +515,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: ['23'],
           })
@@ -550,7 +541,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: ['100', '200'],
             replace: true,
@@ -568,7 +559,7 @@ describe('Admin Routes', () => {
       it('should validate request body - missing districtIds', async () => {
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({})
 
         expect(response.status).toBe(400)
@@ -578,7 +569,7 @@ describe('Admin Routes', () => {
       it('should validate request body - invalid districtIds format', async () => {
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: 'not-an-array',
           })
@@ -590,7 +581,7 @@ describe('Admin Routes', () => {
       it('should validate request body - empty districtIds array', async () => {
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: [],
           })
@@ -602,7 +593,7 @@ describe('Admin Routes', () => {
       it('should validate individual district IDs', async () => {
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: ['42', null, '15'],
           })
@@ -618,7 +609,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: ['invalid-id'],
           })
@@ -634,7 +625,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config')
-          
+
           .send({
             districtIds: ['42'],
           })
@@ -653,9 +644,9 @@ describe('Admin Routes', () => {
           version: 1,
         })
 
-        const response = await request(app)
-          .delete('/api/admin/districts/config/15')
-          
+        const response = await request(app).delete(
+          '/api/admin/districts/config/15'
+        )
 
         expect(response.status).toBe(200)
         expect(response.body.success).toBe(true)
@@ -673,18 +664,18 @@ describe('Admin Routes', () => {
           '42',
         ])
 
-        const response = await request(app)
-          .delete('/api/admin/districts/config/999')
-          
+        const response = await request(app).delete(
+          '/api/admin/districts/config/999'
+        )
 
         expect(response.status).toBe(404)
         expect(response.body.error.code).toBe('DISTRICT_NOT_CONFIGURED')
       })
 
       it('should validate district ID parameter', async () => {
-        const response = await request(app)
-          .delete('/api/admin/districts/config/')
-          
+        const response = await request(app).delete(
+          '/api/admin/districts/config/'
+        )
 
         expect(response.status).toBe(404) // Express route not found
       })
@@ -694,9 +685,9 @@ describe('Admin Routes', () => {
           new Error('Database error')
         )
 
-        const response = await request(app)
-          .delete('/api/admin/districts/config/15')
-          
+        const response = await request(app).delete(
+          '/api/admin/districts/config/15'
+        )
 
         expect(response.status).toBe(500)
         expect(response.body.error.code).toBe('DISTRICT_CONFIG_REMOVAL_FAILED')
@@ -720,7 +711,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config/validate')
-          
+
           .send({})
 
         expect(response.status).toBe(200)
@@ -750,7 +741,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config/validate')
-          
+
           .send({
             allDistrictIds: ['42', '15', '23'],
           })
@@ -771,7 +762,7 @@ describe('Admin Routes', () => {
 
         const response = await request(app)
           .post('/api/admin/districts/config/validate')
-          
+
           .send({})
 
         expect(response.status).toBe(500)

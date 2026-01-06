@@ -172,7 +172,10 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
           </div>
           <div className="text-right">
             <div className="text-sm text-tm-cool-gray">
-              Last updated: {configuration?.lastUpdated ? new Date(configuration.lastUpdated).toLocaleDateString() : 'Never'}
+              Last updated:{' '}
+              {configuration?.lastUpdated
+                ? new Date(configuration.lastUpdated).toLocaleDateString()
+                : 'Never'}
             </div>
             <div className="text-sm text-tm-cool-gray">
               By: {configuration?.updatedBy || 'Unknown'}
@@ -205,7 +208,9 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
         {/* Validation Warnings */}
         {validation?.warnings && validation.warnings.length > 0 && (
           <div className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow border-opacity-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-tm-black mb-2">Configuration Warnings</h4>
+            <h4 className="font-medium text-tm-black mb-2">
+              Configuration Warnings
+            </h4>
             <ul className="space-y-1">
               {validation.warnings.map((warning, index) => (
                 <li key={index} className="text-sm text-tm-black">
@@ -227,13 +232,13 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
             <input
               type="text"
               value={quickAddInput}
-              onChange={(e) => {
+              onChange={e => {
                 setQuickAddInput(e.target.value)
                 setQuickAddError('')
               }}
               placeholder="Enter district ID (e.g., 42, F)"
               className="flex-1 px-3 py-2 border-2 border-tm-cool-gray rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue bg-tm-white text-tm-black placeholder-tm-cool-gray"
-              onKeyPress={(e) => {
+              onKeyPress={e => {
                 if (e.key === 'Enter') {
                   handleQuickAdd()
                 }
@@ -293,10 +298,10 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
               <input
                 type="text"
                 value={newDistrictInput}
-                onChange={(e) => setNewDistrictInput(e.target.value)}
+                onChange={e => setNewDistrictInput(e.target.value)}
                 placeholder="Add district ID"
                 className="flex-1 px-3 py-2 border-2 border-tm-cool-gray rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue bg-tm-white text-tm-black placeholder-tm-cool-gray"
-                onKeyPress={(e) => {
+                onKeyPress={e => {
                   if (e.key === 'Enter') {
                     handleAddToLocal()
                   }
@@ -312,14 +317,18 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
               </Button>
             </div>
             <p className="text-sm text-tm-black">
-              Add districts to the configuration. Changes are not saved until you click "Save Changes".
+              Add districts to the configuration. Changes are not saved until
+              you click "Save Changes".
             </p>
           </div>
         )}
 
         {/* District Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {(editMode ? localDistricts : configuration?.configuredDistricts || []).map((districtId) => {
+          {(editMode
+            ? localDistricts
+            : configuration?.configuredDistricts || []
+          ).map(districtId => {
             const collectionInfo = validation?.lastCollectionInfo.find(
               info => info.districtId === districtId
             )
@@ -333,8 +342,8 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                   isInvalid
                     ? 'border-tm-true-maroon border-opacity-50 bg-tm-true-maroon bg-opacity-5'
                     : isValid
-                    ? 'border-tm-loyal-blue border-opacity-50 bg-tm-loyal-blue bg-opacity-5'
-                    : 'border-tm-cool-gray border-opacity-50 bg-tm-cool-gray bg-opacity-10'
+                      ? 'border-tm-loyal-blue border-opacity-50 bg-tm-loyal-blue bg-opacity-5'
+                      : 'border-tm-cool-gray border-opacity-50 bg-tm-cool-gray bg-opacity-10'
                 }`}
               >
                 <div className="flex justify-between items-start">
@@ -369,7 +378,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                     </button>
                   )}
                 </div>
-                
+
                 {/* Status indicator */}
                 <div className="mt-2">
                   {isInvalid && (
@@ -393,14 +402,16 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
           })}
         </div>
 
-        {(!configuration?.configuredDistricts.length && !editMode) && (
+        {!configuration?.configuredDistricts.length && !editMode && (
           <div className="text-center py-8 text-tm-cool-gray">
             <p>No districts configured yet.</p>
-            <p className="text-sm mt-1">Add districts to start collecting data.</p>
+            <p className="text-sm mt-1">
+              Add districts to start collecting data.
+            </p>
           </div>
         )}
 
-        {(editMode && localDistricts.length === 0) && (
+        {editMode && localDistricts.length === 0 && (
           <div className="text-center py-8 text-tm-cool-gray">
             <p>No districts in configuration.</p>
             <p className="text-sm mt-1">Add districts using the input above.</p>
@@ -409,68 +420,73 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
       </div>
 
       {/* Collection History */}
-      {validation?.lastCollectionInfo && validation.lastCollectionInfo.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-tm-black mb-4">
-            Collection History
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-tm-cool-gray divide-opacity-30">
-              <thead className="bg-tm-loyal-blue bg-opacity-5">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                    District
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                    Last Collection
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                    Recent Success Count
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-tm-cool-gray divide-opacity-20">
-                {validation.lastCollectionInfo.map((info) => (
-                  <tr key={info.districtId}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-tm-black">
-                      District {info.districtId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-tm-cool-gray">
-                      {info.lastSuccessfulCollection
-                        ? new Date(info.lastSuccessfulCollection).toLocaleString()
-                        : 'Never'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-tm-cool-gray">
-                      {info.recentSuccessCount}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          info.status === 'valid'
-                            ? 'bg-tm-loyal-blue bg-opacity-20 text-tm-loyal-blue border border-tm-loyal-blue border-opacity-30'
-                            : info.status === 'invalid'
-                            ? 'bg-tm-true-maroon bg-opacity-20 text-tm-true-maroon border border-tm-true-maroon border-opacity-30'
-                            : 'bg-tm-cool-gray bg-opacity-30 text-tm-black border border-tm-cool-gray border-opacity-50'
-                        }`}
-                      >
-                        {info.status}
-                      </span>
-                    </td>
+      {validation?.lastCollectionInfo &&
+        validation.lastCollectionInfo.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-tm-black mb-4">
+              Collection History
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-tm-cool-gray divide-opacity-30">
+                <thead className="bg-tm-loyal-blue bg-opacity-5">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
+                      District
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
+                      Last Collection
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
+                      Recent Success Count
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
+                      Status
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-tm-cool-gray divide-opacity-20">
+                  {validation.lastCollectionInfo.map(info => (
+                    <tr key={info.districtId}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-tm-black">
+                        District {info.districtId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-tm-cool-gray">
+                        {info.lastSuccessfulCollection
+                          ? new Date(
+                              info.lastSuccessfulCollection
+                            ).toLocaleString()
+                          : 'Never'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-tm-cool-gray">
+                        {info.recentSuccessCount}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            info.status === 'valid'
+                              ? 'bg-tm-loyal-blue bg-opacity-20 text-tm-loyal-blue border border-tm-loyal-blue border-opacity-30'
+                              : info.status === 'invalid'
+                                ? 'bg-tm-true-maroon bg-opacity-20 text-tm-true-maroon border border-tm-true-maroon border-opacity-30'
+                                : 'bg-tm-cool-gray bg-opacity-30 text-tm-black border border-tm-cool-gray border-opacity-50'
+                          }`}
+                        >
+                          {info.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Error Display */}
       {(saveError || removeError) && (
         <div className="bg-tm-true-maroon bg-opacity-10 border border-tm-true-maroon border-opacity-30 rounded-lg p-4">
-          <h4 className="font-medium text-tm-true-maroon mb-2">Operation Failed</h4>
+          <h4 className="font-medium text-tm-true-maroon mb-2">
+            Operation Failed
+          </h4>
           <p className="text-tm-black text-sm">
             {saveError?.message || removeError?.message || 'An error occurred'}
           </p>

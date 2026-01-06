@@ -176,7 +176,7 @@ interface EnhancedBackfillService {
   initiateDistrictBackfill(request: DistrictBackfillRequest): Promise<string>
   getBackfillStatus(backfillId: string): DistrictBackfillResponse | null
   cancelBackfill(backfillId: string): Promise<boolean>
-  
+
   // New snapshot integration methods
   createSnapshotFromBackfill(
     districtId: string,
@@ -201,6 +201,7 @@ interface BackfillData {
 - Integrates with PerDistrictSnapshotStore for consistent storage format
 - Updates current snapshot pointer when backfilling more recent dates
 - Includes backfill-specific metadata in snapshot records
+
 ```
 
 ## Data Models
@@ -208,23 +209,25 @@ interface BackfillData {
 ### Snapshot Directory Structure
 
 ```
-CACHE_DIR/
+
+CACHE*DIR/
 ├── snapshots/
-│   ├── 1704067200000/                    # Snapshot directory
-│   │   ├── metadata.json                 # Snapshot-level metadata
-│   │   ├── manifest.json                 # List of district files
-│   │   ├── district_42.json              # District 42 data
-│   │   ├── district_15.json              # District 15 data
-│   │   ├── district_F.json               # District F data
-│   │   └── district_23.json              # District 23 data
-│   └── 1704153600000/                    # Another snapshot
-│       ├── metadata.json
-│       ├── manifest.json
-│       └── district_*.json
-├── current.json                          # Points to latest successful snapshot
+│ ├── 1704067200000/ # Snapshot directory
+│ │ ├── metadata.json # Snapshot-level metadata
+│ │ ├── manifest.json # List of district files
+│ │ ├── district_42.json # District 42 data
+│ │ ├── district_15.json # District 15 data
+│ │ ├── district_F.json # District F data
+│ │ └── district_23.json # District 23 data
+│ └── 1704153600000/ # Another snapshot
+│ ├── metadata.json
+│ ├── manifest.json
+│ └── district*\*.json
+├── current.json # Points to latest successful snapshot
 └── config/
-    └── districts.json                    # District configuration
-```
+└── districts.json # District configuration
+
+````
 
 ### Per-District JSON Structure
 
@@ -255,7 +258,7 @@ CACHE_DIR/
     ]
   }
 }
-```
+````
 
 ### Snapshot Metadata Structure
 

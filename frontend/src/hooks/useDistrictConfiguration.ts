@@ -148,12 +148,15 @@ export function useDistrictConfigurationManager() {
   }, [data?.configuration?.configuredDistricts])
 
   // Add district to local state
-  const addDistrictLocally = useCallback((districtId: string) => {
-    const cleanId = districtId.trim().toUpperCase()
-    if (cleanId && !localDistricts.includes(cleanId)) {
-      setLocalDistricts(prev => [...prev, cleanId].sort())
-    }
-  }, [localDistricts])
+  const addDistrictLocally = useCallback(
+    (districtId: string) => {
+      const cleanId = districtId.trim().toUpperCase()
+      if (cleanId && !localDistricts.includes(cleanId)) {
+        setLocalDistricts(prev => [...prev, cleanId].sort())
+      }
+    },
+    [localDistricts]
+  )
 
   // Remove district from local state
   const removeDistrictLocally = useCallback((districtId: string) => {
@@ -183,29 +186,35 @@ export function useDistrictConfigurationManager() {
   }, [initializeLocalState])
 
   // Add single district immediately (not in edit mode)
-  const addDistrict = useCallback(async (districtId: string) => {
-    try {
-      await addDistrictsMutation.mutateAsync({
-        districtIds: [districtId],
-        replace: false,
-      })
-      return true
-    } catch (error) {
-      console.error('Failed to add district:', error)
-      return false
-    }
-  }, [addDistrictsMutation])
+  const addDistrict = useCallback(
+    async (districtId: string) => {
+      try {
+        await addDistrictsMutation.mutateAsync({
+          districtIds: [districtId],
+          replace: false,
+        })
+        return true
+      } catch (error) {
+        console.error('Failed to add district:', error)
+        return false
+      }
+    },
+    [addDistrictsMutation]
+  )
 
   // Remove single district immediately (not in edit mode)
-  const removeDistrict = useCallback(async (districtId: string) => {
-    try {
-      await removeDistrictMutation.mutateAsync(districtId)
-      return true
-    } catch (error) {
-      console.error('Failed to remove district:', error)
-      return false
-    }
-  }, [removeDistrictMutation])
+  const removeDistrict = useCallback(
+    async (districtId: string) => {
+      try {
+        await removeDistrictMutation.mutateAsync(districtId)
+        return true
+      } catch (error) {
+        console.error('Failed to remove district:', error)
+        return false
+      }
+    },
+    [removeDistrictMutation]
+  )
 
   return {
     // Data
