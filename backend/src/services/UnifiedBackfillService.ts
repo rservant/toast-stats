@@ -119,6 +119,7 @@ import {
 import { RefreshService } from './RefreshService.js'
 import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
+import type { RankingCalculator } from './RankingCalculator.js'
 import type { DistrictStatistics } from '../types/districts.js'
 import type {
   Snapshot,
@@ -1106,12 +1107,10 @@ export class DataSourceSelector {
     try {
       const results: DistrictStatistics[] = []
 
-      // For per-district collection, we need to use the RefreshService's scraper directly
-      // since executeRefresh() is designed for system-wide operations
-      const scraper = (this.refreshService as any).scraper
-      if (!scraper) {
-        throw new Error('RefreshService scraper not available')
-      }
+      // Create our own scraper instance for per-district collection
+      // BackfillService should be independent and not rely on RefreshService internals
+      const { ToastmastersScraper } = await import('./ToastmastersScraper.js')
+      const scraper = new ToastmastersScraper()
 
       for (const districtId of params.districtIds) {
         try {
@@ -1126,33 +1125,41 @@ export class DataSourceSelector {
           let clubPerformanceData: any[] = []
 
           try {
-            districtPerformanceData = await scraper.getDistrictPerformance(districtId)
+            districtPerformanceData =
+              await scraper.getDistrictPerformance(districtId)
             logger.debug('District performance data fetched successfully', {
               districtId,
               recordCount: districtPerformanceData.length,
               operation: 'executePerDistrictCollection',
             })
           } catch (error) {
-            logger.warn('District performance data not available, using empty data', {
-              districtId,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              operation: 'executePerDistrictCollection',
-            })
+            logger.warn(
+              'District performance data not available, using empty data',
+              {
+                districtId,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                operation: 'executePerDistrictCollection',
+              }
+            )
           }
 
           try {
-            divisionPerformanceData = await scraper.getDivisionPerformance(districtId)
+            divisionPerformanceData =
+              await scraper.getDivisionPerformance(districtId)
             logger.debug('Division performance data fetched successfully', {
               districtId,
               recordCount: divisionPerformanceData.length,
               operation: 'executePerDistrictCollection',
             })
           } catch (error) {
-            logger.warn('Division performance data not available, using empty data', {
-              districtId,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              operation: 'executePerDistrictCollection',
-            })
+            logger.warn(
+              'Division performance data not available, using empty data',
+              {
+                districtId,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                operation: 'executePerDistrictCollection',
+              }
+            )
           }
 
           try {
@@ -1214,6 +1221,43 @@ export class DataSourceSelector {
         successfulDistricts: results.length,
         operation: 'executePerDistrictCollection',
       })
+
+      // Apply ranking calculation if ranking calculator is available
+      if (this.rankingCalculator && results.length > 0) {
+        logger.info('Applying ranking calculation to collected districts', {
+          districtCount: results.length,
+          rankingVersion: this.rankingCalculator.getRankingVersion(),
+          operation: 'executePerDistrictCollection',
+        })
+
+        try {
+          const rankedResults = await this.rankingCalculator.calculateRankings(results)
+          
+          logger.info('Ranking calculation completed successfully', {
+            districtCount: rankedResults.length,
+            rankedDistrictCount: rankedResults.filter(d => d.ranking).length,
+            rankingVersion: this.rankingCalculator.getRankingVersion(),
+            operation: 'executePerDistrictCollection',
+          })
+
+          return rankedResults
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          logger.error('Ranking calculation failed, continuing without rankings', {
+            error: errorMessage,
+            districtCount: results.length,
+            operation: 'executePerDistrictCollection',
+          })
+          // Continue with original results without ranking data
+        }
+      } else {
+        logger.debug('No ranking calculator provided or no successful districts, skipping ranking calculation', {
+          hasRankingCalculator: !!this.rankingCalculator,
+          rankingCalculatorType: this.rankingCalculator?.constructor?.name,
+          districtCount: results.length,
+          operation: 'executePerDistrictCollection',
+        })
+      }
 
       return results
     } catch (error) {
@@ -1670,6 +1714,7 @@ export class BackfillService {
   private _dashboardCircuitBreaker: CircuitBreaker
   // @ts-ignore - These will be used in future implementations
   private _cacheCircuitBreaker: CircuitBreaker
+  private rankingCalculator?: RankingCalculator
 
   // Performance optimization components (Requirement 9.1, 9.2, 9.3)
   private rateLimiter: RateLimiter
@@ -1681,12 +1726,14 @@ export class BackfillService {
     snapshotStore: PerDistrictFileSnapshotStore,
     configService: DistrictConfigurationService,
     alertManager?: AlertManager,
-    circuitBreakerManager?: ICircuitBreakerManager
+    circuitBreakerManager?: ICircuitBreakerManager,
+    rankingCalculator?: RankingCalculator
   ) {
     this._refreshService = refreshService
     this.snapshotStore = snapshotStore
     this.configService = configService
     this._alertManager = alertManager || new AlertManager()
+    this.rankingCalculator = rankingCalculator
 
     // Initialize managers
     this.jobManager = new JobManager()
@@ -1745,9 +1792,11 @@ export class BackfillService {
     )
 
     logger.info(
-      'Unified BackfillService initialized with performance optimizations',
+      'Unified BackfillService initialized with performance optimizations and ranking calculator',
       {
         operation: 'constructor',
+        hasRankingCalculator: !!this.rankingCalculator,
+        rankingVersion: this.rankingCalculator?.getRankingVersion(),
         circuitBreakers: [
           'unified-backfill-dashboard',
           'unified-backfill-cache',
@@ -2529,22 +2578,6 @@ export class BackfillService {
   }
 
   /**
-   * Process a single date with district-level error handling and partial snapshot creation
-   * Implements Requirements 6.1, 6.2, 6.3: Continue processing when districts fail, track errors, create partial snapshots
-   */
-  private async processDateWithErrorHandling(
-    backfillId: string,
-    date: string,
-    job: BackfillJob
-  ): Promise<void> {
-    // Delegate to the enhanced method with default caching settings
-    return this.processDateWithErrorHandlingAndCaching(backfillId, date, job, {
-      startDate: date,
-      enableCaching: true,
-    })
-  }
-
-  /**
    * Collect data for a single district with error handling and caching support
    * Implements Requirement 9.3: Caching for intermediate results to avoid redundant operations
    */
@@ -2627,23 +2660,6 @@ export class BackfillService {
   }
 
   /**
-   * Collect data for a single district with error handling
-   */
-  private async collectDistrictData(
-    districtId: string,
-    date: string,
-    strategy: CollectionStrategy
-  ): Promise<DistrictStatistics | null> {
-    // Delegate to the caching version with caching disabled for backward compatibility
-    return this.collectDistrictDataWithCaching(
-      districtId,
-      date,
-      strategy,
-      false
-    )
-  }
-
-  /**
    * Map enhanced error types to snapshot error types
    */
   private mapToSnapshotErrorType(
@@ -2695,21 +2711,77 @@ export class BackfillService {
     })
 
     try {
-      // Create normalized data structure with only successful districts
+      // Step 1: Calculate rankings if ranking calculator is available
+      let rankedDistricts = successfulDistricts
+      if (this.rankingCalculator && successfulDistricts.length > 0) {
+        logger.info('Starting ranking calculation for partial snapshot', {
+          backfillId,
+          snapshotId,
+          date,
+          districtCount: successfulDistricts.length,
+          rankingVersion: this.rankingCalculator.getRankingVersion(),
+          operation: 'createPartialSnapshot',
+        })
+
+        try {
+          rankedDistricts =
+            await this.rankingCalculator.calculateRankings(successfulDistricts)
+
+          logger.info('Ranking calculation completed for partial snapshot', {
+            backfillId,
+            snapshotId,
+            date,
+            districtCount: rankedDistricts.length,
+            rankedDistrictCount: rankedDistricts.filter(d => d.ranking).length,
+            rankingVersion: this.rankingCalculator.getRankingVersion(),
+            operation: 'createPartialSnapshot',
+          })
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
+          logger.error(
+            'Ranking calculation failed for partial snapshot, continuing without rankings',
+            {
+              backfillId,
+              snapshotId,
+              date,
+              error: errorMessage,
+              districtCount: successfulDistricts.length,
+              operation: 'createPartialSnapshot',
+            }
+          )
+          // Continue with original districts without ranking data
+          // This implements the error handling requirement 5.3
+        }
+      } else {
+        logger.debug(
+          'No ranking calculator provided or no successful districts, skipping ranking calculation',
+          {
+            backfillId,
+            snapshotId,
+            date,
+            hasRankingCalculator: !!this.rankingCalculator,
+            districtCount: successfulDistricts.length,
+            operation: 'createPartialSnapshot',
+          }
+        )
+      }
+
+      // Step 2: Create normalized data structure with ranked districts
       // Enhanced metadata for Requirement 5.5: data source, scope, and collection method
       const job = this.jobManager.getJob(backfillId)
       const normalizedData: NormalizedData = {
-        districts: successfulDistricts,
+        districts: rankedDistricts,
         metadata: {
           source: 'unified-backfill-service',
           fetchedAt: new Date().toISOString(),
           dataAsOfDate: date,
-          districtCount: successfulDistricts.length,
+          districtCount: rankedDistricts.length,
           processingDurationMs: Date.now() - startTime,
           backfillJobId: backfillId,
           // Enhanced metadata for Requirement 5.5: scope and collection method
           configuredDistricts: job?.scope.configuredDistricts || [],
-          successfulDistricts: successfulDistricts.map(d => d.districtId),
+          successfulDistricts: rankedDistricts.map(d => d.districtId),
           failedDistricts: failedDistricts,
           districtErrors: errors.map(e => ({
             districtId: e.districtId,
@@ -2728,12 +2800,13 @@ export class BackfillService {
         },
       }
 
-      // Create snapshot with partial data
+      // Step 3: Create snapshot with ranked data
       const snapshot: Snapshot = {
         snapshot_id: snapshotId,
         created_at: new Date().toISOString(),
         schema_version: '2.0.0',
-        calculation_version: '1.0.0',
+        calculation_version:
+          this.rankingCalculator?.getRankingVersion() || '1.0.0',
         status: failedDistricts.length > 0 ? 'partial' : 'success',
         errors: errors.map(e => e.error),
         payload: normalizedData,
@@ -2749,7 +2822,7 @@ export class BackfillService {
 
       const partialResult: PartialSnapshotResult = {
         snapshotId,
-        successfulDistricts: successfulDistricts.map(d => d.districtId),
+        successfulDistricts: rankedDistricts.map(d => d.districtId),
         failedDistricts,
         totalDistricts,
         successRate,

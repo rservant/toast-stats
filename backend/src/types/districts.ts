@@ -121,6 +121,7 @@ export interface AllDistrictsCSVRecord {
   'Active Clubs': string
   'Total Distinguished Clubs': string
   'Select Distinguished Clubs': string
+  'Presidents Distinguished Clubs'?: string // Optional as it may not always be present
   [key: string]: string | undefined // Allow additional dynamic fields
 }
 
@@ -138,10 +139,49 @@ export interface DistrictStatistics {
   education: EducationStats
   goals?: DistrictGoals
   performance?: DistrictPerformance
+
+  // New ranking fields
+  ranking?: DistrictRankingData
+
   // Raw data arrays from scraper (for caching purposes)
   districtPerformance?: ScrapedRecord[]
   divisionPerformance?: ScrapedRecord[]
   clubPerformance?: ScrapedRecord[]
+}
+
+export interface DistrictRankingData {
+  // Individual category ranks (1 = best)
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+
+  // Aggregate Borda count score (higher = better)
+  aggregateScore: number
+
+  // Growth metrics used for ranking
+  clubGrowthPercent: number
+  paymentGrowthPercent: number
+  distinguishedPercent: number
+
+  // Base values for growth calculations
+  paidClubBase: number
+  paymentBase: number
+
+  // Absolute values
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+  activeClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+
+  // Regional information
+  region: string
+  districtName: string
+
+  // Algorithm metadata
+  rankingVersion: string
+  calculatedAt: string
 }
 
 export interface MembershipHistoryPoint {

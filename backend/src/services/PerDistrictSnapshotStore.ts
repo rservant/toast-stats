@@ -32,6 +32,8 @@ import {
   SnapshotFilters,
   SnapshotStoreConfig,
   NormalizedData,
+  CURRENT_SCHEMA_VERSION,
+  CURRENT_CALCULATION_VERSION,
 } from '../types/snapshots.js'
 import { DistrictStatistics } from '../types/districts.js'
 
@@ -67,6 +69,8 @@ export interface PerDistrictSnapshotMetadata {
   createdAt: string
   schemaVersion: string
   calculationVersion: string
+  /** Version of the ranking algorithm used for calculations */
+  rankingVersion?: string
   status: 'success' | 'partial' | 'failed'
   configuredDistricts: string[]
   successfulDistricts: string[]
@@ -134,6 +138,17 @@ export interface PerDistrictSnapshotStore {
   getSnapshotMetadata(
     snapshotId: string
   ): Promise<PerDistrictSnapshotMetadata | null>
+
+  /**
+   * Check version compatibility for historical snapshots
+   */
+  checkVersionCompatibility(snapshotId: string): Promise<{
+    isCompatible: boolean
+    schemaCompatible: boolean
+    calculationCompatible: boolean
+    rankingCompatible: boolean
+    warnings: string[]
+  }>
 }
 
 /**
@@ -272,11 +287,15 @@ export class PerDistrictFileSnapshotStore
       const districtErrorsFromSnapshot =
         this.extractDistrictErrorsFromSnapshot(snapshot)
 
+      // Extract ranking version from districts with ranking data
+      const rankingVersion = this.extractRankingVersion(snapshot)
+
       const metadata: PerDistrictSnapshotMetadata = {
         snapshotId: snapshot.snapshot_id,
         createdAt: snapshot.created_at,
         schemaVersion: snapshot.schema_version,
         calculationVersion: snapshot.calculation_version,
+        rankingVersion,
         status: snapshot.status,
         configuredDistricts: snapshot.payload.districts.map(d => d.districtId),
         successfulDistricts: manifestEntries
@@ -954,6 +973,146 @@ export class PerDistrictFileSnapshotStore
     }
 
     return districtErrors
+  }
+
+  /**
+   * Extract ranking algorithm version from districts with ranking data
+   * Returns the ranking version if any districts have ranking data, undefined otherwise
+   */
+  private extractRankingVersion(snapshot: Snapshot): string | undefined {
+    // Look for districts with ranking data
+    for (const district of snapshot.payload.districts) {
+      if (district.ranking?.rankingVersion) {
+        logger.debug('Extracted ranking version from district data', {
+          operation: 'extractRankingVersion',
+          snapshot_id: snapshot.snapshot_id,
+          ranking_version: district.ranking.rankingVersion,
+          district_id: district.districtId,
+        })
+        return district.ranking.rankingVersion
+      }
+    }
+
+    // No ranking data found
+    logger.debug('No ranking version found in district data', {
+      operation: 'extractRankingVersion',
+      snapshot_id: snapshot.snapshot_id,
+      district_count: snapshot.payload.districts.length,
+    })
+    return undefined
+  }
+
+  /**
+   * Check version compatibility for historical snapshots
+   * Validates that the snapshot metadata versions are compatible with current system
+   */
+  async checkVersionCompatibility(snapshotId: string): Promise<{
+    isCompatible: boolean
+    schemaCompatible: boolean
+    calculationCompatible: boolean
+    rankingCompatible: boolean
+    warnings: string[]
+  }> {
+    try {
+      const metadata = await this.getSnapshotMetadata(snapshotId)
+      if (!metadata) {
+        return {
+          isCompatible: false,
+          schemaCompatible: false,
+          calculationCompatible: false,
+          rankingCompatible: false,
+          warnings: ['Snapshot metadata not found'],
+        }
+      }
+
+      const warnings: string[] = []
+      let schemaCompatible = true
+      let calculationCompatible = true
+      let rankingCompatible = true
+
+      // Check schema version compatibility
+      // For now, we only support exact schema version matches
+      if (metadata.schemaVersion !== this.getCurrentSchemaVersion()) {
+        schemaCompatible = false
+        warnings.push(
+          `Schema version mismatch: snapshot has ${metadata.schemaVersion}, current is ${this.getCurrentSchemaVersion()}`
+        )
+      }
+
+      // Check calculation version compatibility
+      // Different calculation versions are acceptable but should be noted
+      if (metadata.calculationVersion !== this.getCurrentCalculationVersion()) {
+        warnings.push(
+          `Calculation version difference: snapshot has ${metadata.calculationVersion}, current is ${this.getCurrentCalculationVersion()}`
+        )
+      }
+
+      // Check ranking version compatibility
+      // Missing ranking version is acceptable for historical snapshots
+      if (metadata.rankingVersion) {
+        // If ranking version exists, check if it's different from current
+        // This would require access to current ranking calculator version
+        // For now, just note the version
+        warnings.push(
+          `Snapshot has ranking version: ${metadata.rankingVersion}`
+        )
+      } else {
+        warnings.push(
+          'Snapshot has no ranking data (pre-ranking implementation)'
+        )
+      }
+
+      const isCompatible =
+        schemaCompatible && calculationCompatible && rankingCompatible
+
+      logger.debug('Version compatibility check completed', {
+        operation: 'checkVersionCompatibility',
+        snapshot_id: snapshotId,
+        is_compatible: isCompatible,
+        schema_compatible: schemaCompatible,
+        calculation_compatible: calculationCompatible,
+        ranking_compatible: rankingCompatible,
+        warnings_count: warnings.length,
+      })
+
+      return {
+        isCompatible,
+        schemaCompatible,
+        calculationCompatible,
+        rankingCompatible,
+        warnings,
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Version compatibility check failed', {
+        operation: 'checkVersionCompatibility',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+      })
+
+      return {
+        isCompatible: false,
+        schemaCompatible: false,
+        calculationCompatible: false,
+        rankingCompatible: false,
+        warnings: [`Compatibility check failed: ${errorMessage}`],
+      }
+    }
+  }
+
+  /**
+   * Get current schema version (delegated to parent class method)
+   */
+  private getCurrentSchemaVersion(): string {
+    return CURRENT_SCHEMA_VERSION
+  }
+
+  /**
+   * Get current calculation version (delegated to parent class method)
+   */
+  private getCurrentCalculationVersion(): string {
+    return CURRENT_CALCULATION_VERSION
   }
 }
 

@@ -71,6 +71,44 @@ export interface DistrictStatistics {
   membership: MembershipStats
   clubs: ClubStats
   education: EducationStats
+
+  // New ranking fields
+  ranking?: DistrictRankingData
+}
+
+export interface DistrictRankingData {
+  // Individual category ranks (1 = best)
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+
+  // Aggregate Borda count score (higher = better)
+  aggregateScore: number
+
+  // Growth metrics used for ranking
+  clubGrowthPercent: number
+  paymentGrowthPercent: number
+  distinguishedPercent: number
+
+  // Base values for growth calculations
+  paidClubBase: number
+  paymentBase: number
+
+  // Absolute values
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+  activeClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+
+  // Regional information
+  region: string
+  districtName: string
+
+  // Algorithm metadata
+  rankingVersion: string
+  calculatedAt: string
 }
 
 export interface Club {
@@ -176,4 +214,31 @@ export interface AvailableDatesResponse {
     monthName: string
   }>
   programYear: ProgramYearInfo
+}
+
+// District Rankings Types (for getAllDistrictsRankings API)
+export interface DistrictRanking {
+  districtId: string
+  districtName: string
+  region: string
+  paidClubs: number
+  paidClubBase: number
+  clubGrowthPercent: number
+  totalPayments: number
+  paymentBase: number
+  paymentGrowthPercent: number
+  activeClubs: number
+  distinguishedClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+  distinguishedPercent: number
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  aggregateScore: number
+}
+
+export interface DistrictRankingsResponse {
+  rankings: DistrictRanking[]
+  date: string
 }

@@ -23,6 +23,12 @@ import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { RefreshService } from './RefreshService.js'
+import {
+  BordaCountRankingCalculator,
+  type RankingCalculator,
+} from './RankingCalculator.js'
+import { BackfillService } from './UnifiedBackfillService.js'
+import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { config } from '../config/index.js'
 
@@ -124,6 +130,20 @@ export interface ProductionServiceFactory {
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService
+
+  /**
+   * Create RankingCalculator instance
+   */
+  createRankingCalculator(): RankingCalculator
+
+  /**
+   * Create BackfillService instance
+   */
+  createBackfillService(
+    refreshService?: RefreshService,
+    snapshotStore?: SnapshotStore,
+    configService?: DistrictConfigurationService
+  ): BackfillService
 
   /**
    * Cleanup all resources
@@ -247,6 +267,67 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
+    // Register RankingCalculator
+    container.register(
+      ServiceTokens.RankingCalculator,
+      createServiceFactory(
+        () => new BordaCountRankingCalculator(),
+        async () => {
+          // RankingCalculator doesn't have dispose method
+        }
+      )
+    )
+
+    // Register RefreshService
+    container.register(
+      ServiceTokens.RefreshService,
+      createServiceFactory(
+        (container: ServiceContainer) => {
+          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
+          const rankingCalculator = container.resolve(
+            ServiceTokens.RankingCalculator
+          )
+          return new RefreshService(
+            snapshotStore,
+            undefined,
+            undefined,
+            undefined,
+            rankingCalculator
+          )
+        },
+        async () => {
+          // RefreshService doesn't have dispose method
+        }
+      )
+    )
+
+    // Register BackfillService
+    container.register(
+      ServiceTokens.BackfillService,
+      createServiceFactory(
+        (container: ServiceContainer) => {
+          const refreshService = container.resolve(ServiceTokens.RefreshService)
+          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
+          const rankingCalculator = container.resolve(
+            ServiceTokens.RankingCalculator
+          )
+          const configService = new DistrictConfigurationService()
+
+          return new BackfillService(
+            refreshService,
+            snapshotStore as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+            configService,
+            undefined, // alertManager
+            undefined, // circuitBreakerManager
+            rankingCalculator
+          )
+        },
+        async () => {
+          // BackfillService doesn't have dispose method
+        }
+      )
+    )
+
     this.containers.push(container)
     return container
   }
@@ -330,8 +411,49 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
     const store = snapshotStore || this.createSnapshotStore()
-    const service = new RefreshService(store)
+    const rankingCalculator = this.createRankingCalculator()
+    const service = new RefreshService(
+      store,
+      undefined,
+      undefined,
+      undefined,
+      rankingCalculator
+    )
     // RefreshService doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
+   * Create RankingCalculator instance
+   */
+  createRankingCalculator(): RankingCalculator {
+    const calculator = new BordaCountRankingCalculator()
+    // RankingCalculator doesn't have dispose method, so we don't track it
+    return calculator
+  }
+
+  /**
+   * Create BackfillService instance
+   */
+  createBackfillService(
+    refreshService?: RefreshService,
+    snapshotStore?: SnapshotStore,
+    configService?: DistrictConfigurationService
+  ): BackfillService {
+    const refresh = refreshService || this.createRefreshService()
+    const store = snapshotStore || this.createSnapshotStore()
+    const config = configService || new DistrictConfigurationService()
+    const rankingCalculator = this.createRankingCalculator()
+
+    const service = new BackfillService(
+      refresh,
+      store as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+      config,
+      undefined, // alertManager
+      undefined, // circuitBreakerManager
+      rankingCalculator
+    )
+    // BackfillService doesn't have dispose method, so we don't track it
     return service
   }
 
@@ -381,6 +503,12 @@ export const ServiceTokens = {
   ),
   Logger: createServiceToken('Logger', ProductionLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
+  RankingCalculator: createServiceToken(
+    'RankingCalculator',
+    BordaCountRankingCalculator
+  ),
+  RefreshService: createServiceToken('RefreshService', RefreshService),
+  BackfillService: createServiceToken('BackfillService', BackfillService),
 }
 
 /**

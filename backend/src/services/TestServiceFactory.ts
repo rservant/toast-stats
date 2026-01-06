@@ -27,6 +27,15 @@ import { CacheConfigService } from './CacheConfigService.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
+import {
+  BordaCountRankingCalculator,
+  type RankingCalculator,
+} from './RankingCalculator.js'
+import { RefreshService } from './RefreshService.js'
+import { BackfillService } from './UnifiedBackfillService.js'
+import { DistrictConfigurationService } from './DistrictConfigurationService.js'
+import { FileSnapshotStore } from './FileSnapshotStore.js'
+import { SnapshotStore } from '../types/snapshots.js'
 import path from 'path'
 
 /**
@@ -131,6 +140,30 @@ export interface TestServiceFactory {
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager
+
+  /**
+   * Create SnapshotStore instance
+   */
+  createSnapshotStore(cacheConfig?: ICacheConfigService): SnapshotStore
+
+  /**
+   * Create RefreshService instance
+   */
+  createRefreshService(snapshotStore?: SnapshotStore): RefreshService
+
+  /**
+   * Create RankingCalculator instance
+   */
+  createRankingCalculator(): RankingCalculator
+
+  /**
+   * Create BackfillService instance
+   */
+  createBackfillService(
+    refreshService?: RefreshService,
+    snapshotStore?: SnapshotStore,
+    configService?: DistrictConfigurationService
+  ): BackfillService
 
   /**
    * Create a fully configured service container with all services registered
@@ -240,6 +273,72 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
+   * Create SnapshotStore instance
+   */
+  createSnapshotStore(cacheConfig?: ICacheConfigService): SnapshotStore {
+    const config = cacheConfig || this.createCacheConfigService()
+    const service = new FileSnapshotStore({
+      cacheDir: config.getCacheDirectory(),
+      maxSnapshots: 10, // Lower limit for tests
+      maxAgeDays: 1, // Shorter retention for tests
+      enableCompression: false,
+    })
+    // FileSnapshotStore doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
+   * Create RefreshService instance
+   */
+  createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
+    const store = snapshotStore || this.createSnapshotStore()
+    const rankingCalculator = this.createRankingCalculator()
+    const service = new RefreshService(
+      store,
+      undefined,
+      undefined,
+      undefined,
+      rankingCalculator
+    )
+    // RefreshService doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
+   * Create RankingCalculator instance
+   */
+  createRankingCalculator(): RankingCalculator {
+    const calculator = new BordaCountRankingCalculator()
+    // RankingCalculator doesn't have dispose method, so we don't track it
+    return calculator
+  }
+
+  /**
+   * Create BackfillService instance
+   */
+  createBackfillService(
+    refreshService?: RefreshService,
+    snapshotStore?: SnapshotStore,
+    configService?: DistrictConfigurationService
+  ): BackfillService {
+    const refresh = refreshService || this.createRefreshService()
+    const store = snapshotStore || this.createSnapshotStore()
+    const config = configService || new DistrictConfigurationService()
+    const rankingCalculator = this.createRankingCalculator()
+
+    const service = new BackfillService(
+      refresh,
+      store as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+      config,
+      undefined, // alertManager
+      undefined, // circuitBreakerManager
+      rankingCalculator
+    )
+    // BackfillService doesn't have dispose method, so we don't track it
+    return service
+  }
+
+  /**
    * Create a fully configured service container with all services registered
    */
   createConfiguredContainer(
@@ -313,6 +412,88 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         () => new CircuitBreakerManager(),
         async (instance: CircuitBreakerManager) => {
           await instance.dispose()
+        }
+      )
+    )
+
+    // Register SnapshotStore
+    container.register(
+      ServiceTokens.SnapshotStore,
+      createServiceFactory(
+        (container: ServiceContainer) => {
+          const cacheConfig = container.resolve(
+            ServiceTokens.CacheConfigService
+          )
+          return new FileSnapshotStore({
+            cacheDir: cacheConfig.getCacheDirectory(),
+            maxSnapshots: 10, // Lower limit for tests
+            maxAgeDays: 1, // Shorter retention for tests
+            enableCompression: false,
+          })
+        },
+        async () => {
+          // FileSnapshotStore doesn't have dispose method
+        }
+      )
+    )
+
+    // Register RankingCalculator
+    container.register(
+      ServiceTokens.RankingCalculator,
+      createServiceFactory(
+        () => new BordaCountRankingCalculator(),
+        async () => {
+          // RankingCalculator doesn't have dispose method
+        }
+      )
+    )
+
+    // Register RefreshService
+    container.register(
+      ServiceTokens.RefreshService,
+      createServiceFactory(
+        (container: ServiceContainer) => {
+          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
+          const rankingCalculator = container.resolve(
+            ServiceTokens.RankingCalculator
+          )
+          return new RefreshService(
+            snapshotStore,
+            undefined,
+            undefined,
+            undefined,
+            rankingCalculator
+          )
+        },
+        async () => {
+          // RefreshService doesn't have dispose method
+        }
+      )
+    )
+
+    // Register BackfillService
+    container.register(
+      ServiceTokens.BackfillService,
+      createServiceFactory(
+        (container: ServiceContainer) => {
+          const refreshService = container.resolve(ServiceTokens.RefreshService)
+          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
+          const rankingCalculator = container.resolve(
+            ServiceTokens.RankingCalculator
+          )
+          const configService = new DistrictConfigurationService()
+
+          return new BackfillService(
+            refreshService,
+            snapshotStore as any, // Cast to PerDistrictFileSnapshotStore - they're compatible
+            configService,
+            undefined, // alertManager
+            undefined, // circuitBreakerManager
+            rankingCalculator
+          )
+        },
+        async () => {
+          // BackfillService doesn't have dispose method
         }
       )
     )
@@ -393,6 +574,50 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         async instance => await instance.dispose()
       )
     )
+
+    // Register SnapshotStore
+    container.registerInterface(
+      'SnapshotStore',
+      createServiceFactory(
+        () => this.createSnapshotStore(),
+        async _instance => {
+          // FileSnapshotStore doesn't have dispose method
+        }
+      )
+    )
+
+    // Register RankingCalculator
+    container.registerInterface(
+      'RankingCalculator',
+      createServiceFactory(
+        () => this.createRankingCalculator(),
+        async _instance => {
+          // RankingCalculator doesn't have dispose method
+        }
+      )
+    )
+
+    // Register RefreshService
+    container.registerInterface(
+      'RefreshService',
+      createServiceFactory(
+        () => this.createRefreshService(),
+        async _instance => {
+          // RefreshService doesn't have dispose method
+        }
+      )
+    )
+
+    // Register BackfillService
+    container.registerInterface(
+      'BackfillService',
+      createServiceFactory(
+        () => this.createBackfillService(),
+        async _instance => {
+          // BackfillService doesn't have dispose method
+        }
+      )
+    )
   }
 
   /**
@@ -440,6 +665,13 @@ export const ServiceTokens = {
     CircuitBreakerManager
   ),
   Logger: createServiceToken('Logger', TestLogger),
+  SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
+  RankingCalculator: createServiceToken(
+    'RankingCalculator',
+    BordaCountRankingCalculator
+  ),
+  RefreshService: createServiceToken('RefreshService', RefreshService),
+  BackfillService: createServiceToken('BackfillService', BackfillService),
 }
 
 /**
@@ -457,6 +689,11 @@ export const InterfaceTokens = {
     'ICircuitBreakerManager'
   ),
   ILogger: createInterfaceToken<ILogger>('ILogger'),
+  SnapshotStore: createInterfaceToken<SnapshotStore>('SnapshotStore'),
+  RankingCalculator:
+    createInterfaceToken<RankingCalculator>('RankingCalculator'),
+  RefreshService: createInterfaceToken<RefreshService>('RefreshService'),
+  BackfillService: createInterfaceToken<BackfillService>('BackfillService'),
 }
 
 /**

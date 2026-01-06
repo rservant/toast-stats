@@ -82,16 +82,24 @@ const scraper = new ToastmastersScraper()
 const districtConfigService = new DistrictConfigurationService(cacheDirectory)
 
 // Initialize unified backfill service (replaces both BackfillService and DistrictBackfillService)
+// Create ranking calculator
+const { BordaCountRankingCalculator } = await import('../services/RankingCalculator.js')
+const rankingCalculator = new BordaCountRankingCalculator()
+
 const refreshService = new RefreshService(
   snapshotStore,
   scraper,
   undefined, // validator - use default
-  districtConfigService
+  districtConfigService,
+  rankingCalculator
 )
 const backfillService = new BackfillService(
   refreshService,
   perDistrictSnapshotStore,
-  districtConfigService
+  districtConfigService,
+  undefined, // alertManager
+  undefined, // circuitBreakerManager
+  rankingCalculator
 )
 const analyticsEngine = new AnalyticsEngine(districtCacheManager)
 
@@ -619,30 +627,84 @@ router.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
   }),
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
+    const requestId = `rankings_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    logger.info('Received request for district rankings', {
+      operation: 'GET /api/districts/rankings',
+      request_id: requestId,
+      user_agent: req.get('user-agent'),
+      ip: req.ip,
+    })
+
     const data = await serveFromPerDistrictSnapshot(
       res,
       async (snapshot, aggregator) => {
+        logger.debug(
+          'Extracting district rankings from per-district snapshot',
+          {
+            operation: 'GET /api/districts/rankings',
+            request_id: requestId,
+            snapshot_id: snapshot.snapshot_id,
+          }
+        )
+
         // Get all districts data from aggregator
         const allDistricts = await aggregator.getAllDistricts(
           snapshot.snapshot_id
         )
 
         // Extract rankings data from all districts
-        const rankings = allDistricts.map((district: DistrictStatistics) => ({
-          districtId: district.districtId,
-          name: `District ${district.districtId}`,
-          rank: null, // DistrictStatistics doesn't have rank field
-          score: null, // DistrictStatistics doesn't have score field
-          // Add other ranking-related fields as needed
-        }))
+        const rankings = allDistricts
+          .filter((district: DistrictStatistics) => district.ranking) // Only include districts with ranking data
+          .map((district: DistrictStatistics) => {
+            const ranking = district.ranking!
+            return {
+              districtId: district.districtId,
+              districtName: ranking.districtName,
+              region: ranking.region,
+              paidClubs: ranking.paidClubs,
+              paidClubBase: ranking.paidClubBase,
+              clubGrowthPercent: ranking.clubGrowthPercent,
+              totalPayments: ranking.totalPayments,
+              paymentBase: ranking.paymentBase,
+              paymentGrowthPercent: ranking.paymentGrowthPercent,
+              activeClubs: ranking.activeClubs,
+              distinguishedClubs: ranking.distinguishedClubs,
+              selectDistinguished: ranking.selectDistinguished,
+              presidentsDistinguished: ranking.presidentsDistinguished,
+              distinguishedPercent: ranking.distinguishedPercent,
+              clubsRank: ranking.clubsRank,
+              paymentsRank: ranking.paymentsRank,
+              distinguishedRank: ranking.distinguishedRank,
+              aggregateScore: ranking.aggregateScore,
+            }
+          })
 
-        return { districts: rankings }
+        logger.info('Successfully extracted district rankings', {
+          operation: 'GET /api/districts/rankings',
+          request_id: requestId,
+          snapshot_id: snapshot.snapshot_id,
+          total_districts: allDistricts.length,
+          districts_with_rankings: rankings.length,
+        })
+
+        return {
+          rankings,
+          date: snapshot.created_at.split('T')[0], // Extract date from timestamp
+        }
       },
       'fetch district rankings from per-district snapshot'
     )
 
     if (data) {
+      logger.info('Successfully served district rankings', {
+        operation: 'GET /api/districts/rankings',
+        request_id: requestId,
+        snapshot_id: (data as { _snapshot_metadata?: { snapshot_id?: string } })
+          ._snapshot_metadata?.snapshot_id,
+        rankings_count: Array.isArray(data.rankings) ? data.rankings.length : 0,
+      })
       res.json(data)
     }
   }
@@ -1792,7 +1854,8 @@ router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
     if (
       !backfillId ||
       typeof backfillId !== 'string' ||
-      backfillId.trim().length === 0
+      backfillId.trim().length === 0 ||
+      !/^[a-zA-Z0-9\-_]+$/.test(backfillId.trim())
     ) {
       logger.warn('Invalid backfill ID format', {
         operation: 'GET /api/districts/backfill/:backfillId',
@@ -1804,7 +1867,8 @@ router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
         error: {
           code: 'INVALID_BACKFILL_ID',
           message: 'Invalid backfill ID format',
-          details: 'Backfill ID must be a non-empty string',
+          details:
+            'Backfill ID must be a non-empty string containing only alphanumeric characters, hyphens, and underscores',
         },
         request_id: requestId,
       })
@@ -1943,7 +2007,8 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
     if (
       !backfillId ||
       typeof backfillId !== 'string' ||
-      backfillId.trim().length === 0
+      backfillId.trim().length === 0 ||
+      !/^[a-zA-Z0-9\-_]+$/.test(backfillId.trim())
     ) {
       logger.warn('Invalid backfill ID format for cancellation', {
         operation: 'DELETE /api/districts/backfill/:backfillId',
@@ -1955,7 +2020,8 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
         error: {
           code: 'INVALID_BACKFILL_ID',
           message: 'Invalid backfill ID format',
-          details: 'Backfill ID must be a non-empty string',
+          details:
+            'Backfill ID must be a non-empty string containing only alphanumeric characters, hyphens, and underscores',
         },
         request_id: requestId,
       })

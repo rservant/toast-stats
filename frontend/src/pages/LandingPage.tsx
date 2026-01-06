@@ -13,27 +13,7 @@ import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
-
-interface DistrictRanking {
-  districtId: string
-  districtName: string
-  region: string
-  paidClubs: number
-  paidClubBase: number
-  clubGrowthPercent: number
-  totalPayments: number
-  paymentBase: number
-  paymentGrowthPercent: number
-  activeClubs: number
-  distinguishedClubs: number
-  selectDistinguished: number
-  presidentsDistinguished: number
-  distinguishedPercent: number
-  clubsRank: number
-  paymentsRank: number
-  distinguishedRank: number
-  aggregateScore: number
-}
+import { DistrictRanking } from '../types/districts'
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate()

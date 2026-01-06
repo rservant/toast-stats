@@ -760,8 +760,11 @@ describe('Districts API Integration Tests', () => {
     describe('GET /api/districts/backfill/:backfillId', () => {
       it('should return 400 for invalid backfill ID format', async () => {
         const response = await request(app)
-          .get('/api/districts/backfill/')
-          .expect(404) // Express returns 404 for missing route parameter
+          .get('/api/districts/backfill/invalid@id')
+          .expect(400)
+
+        expect(response.body.error.code).toBe('INVALID_BACKFILL_ID')
+        expect(response.body.error.message).toBe('Invalid backfill ID format')
       })
 
       it('should return 404 for non-existent backfill job', async () => {
@@ -784,7 +787,7 @@ describe('Districts API Integration Tests', () => {
     describe('DELETE /api/districts/backfill/:backfillId', () => {
       it('should return 400 for invalid backfill ID format', async () => {
         const response = await request(app)
-          .delete('/api/districts/backfill/ ')
+          .delete('/api/districts/backfill/invalid@id')
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_BACKFILL_ID')

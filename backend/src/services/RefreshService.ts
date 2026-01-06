@@ -12,6 +12,7 @@ import { CircuitBreaker, CircuitBreakerError } from '../utils/CircuitBreaker.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { DataValidator } from './DataValidator.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
+import type { RankingCalculator } from './RankingCalculator.js'
 import type {
   SnapshotStore,
   Snapshot,
@@ -104,6 +105,7 @@ export class RefreshService {
   private readonly validator: DataValidator
   private readonly snapshotStore: SnapshotStore
   private readonly districtConfigService: DistrictConfigurationService
+  private readonly rankingCalculator?: RankingCalculator
   private readonly retryOptions = RetryManager.getDashboardRetryOptions()
   private readonly scrapingCircuitBreaker: CircuitBreaker
 
@@ -111,13 +113,15 @@ export class RefreshService {
     snapshotStore: SnapshotStore,
     scraper?: ToastmastersScraper,
     validator?: DataValidator,
-    districtConfigService?: DistrictConfigurationService
+    districtConfigService?: DistrictConfigurationService,
+    rankingCalculator?: RankingCalculator
   ) {
     this.snapshotStore = snapshotStore
     this.scraper = scraper || new ToastmastersScraper()
     this.validator = validator || new DataValidator()
     this.districtConfigService =
       districtConfigService || new DistrictConfigurationService()
+    this.rankingCalculator = rankingCalculator
 
     // Initialize circuit breaker for scraping operations
     this.scrapingCircuitBreaker =
@@ -126,6 +130,7 @@ export class RefreshService {
     logger.debug('RefreshService initialized with circuit breaker', {
       circuitBreakerName: this.scrapingCircuitBreaker.getName(),
       retryOptions: this.retryOptions,
+      hasRankingCalculator: !!this.rankingCalculator,
     })
   }
 
@@ -245,14 +250,72 @@ export class RefreshService {
         processingDurationMs: normalizedData.metadata.processingDurationMs,
       })
 
+      // Step 2.5: Calculate rankings (NEW STEP)
+      let rankedDistricts = normalizedData.districts
+      if (this.rankingCalculator) {
+        logger.info('Starting ranking calculation phase', {
+          refreshId,
+          operation: 'executeRefresh',
+          phase: 'ranking_calculation',
+          districtCount: normalizedData.districts.length,
+          rankingVersion: this.rankingCalculator.getRankingVersion(),
+        })
+
+        try {
+          rankedDistricts = await this.rankingCalculator.calculateRankings(
+            normalizedData.districts
+          )
+
+          logger.info('Ranking calculation completed successfully', {
+            refreshId,
+            operation: 'executeRefresh',
+            phase: 'ranking_calculation',
+            districtCount: rankedDistricts.length,
+            rankedDistrictCount: rankedDistricts.filter(d => d.ranking).length,
+            rankingVersion: this.rankingCalculator.getRankingVersion(),
+          })
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
+          logger.error(
+            'Ranking calculation failed, continuing without rankings',
+            {
+              refreshId,
+              operation: 'executeRefresh',
+              phase: 'ranking_calculation',
+              error: errorMessage,
+              districtCount: normalizedData.districts.length,
+            }
+          )
+          // Continue with original districts without ranking data
+          // This implements the error handling requirement 5.3
+        }
+      } else {
+        logger.debug(
+          'No ranking calculator provided, skipping ranking calculation',
+          {
+            refreshId,
+            operation: 'executeRefresh',
+            phase: 'ranking_calculation',
+          }
+        )
+      }
+
+      // Update normalized data with ranked districts
+      const finalNormalizedData: NormalizedData = {
+        ...normalizedData,
+        districts: rankedDistricts,
+      }
+
       // Step 3: Validate normalized data
       logger.info('Starting data validation phase', {
         refreshId,
         operation: 'executeRefresh',
         phase: 'validation',
-        districtCount: normalizedData.districts.length,
+        districtCount: finalNormalizedData.districts.length,
       })
-      const validationResult = await this.validator.validate(normalizedData)
+      const validationResult =
+        await this.validator.validate(finalNormalizedData)
 
       logger.info('Data validation completed', {
         refreshId,
@@ -274,7 +337,7 @@ export class RefreshService {
         })
 
         const failedSnapshot = await this.createSnapshot(
-          normalizedData,
+          finalNormalizedData,
           'failed',
           validationResult.errors
         )
@@ -299,7 +362,7 @@ export class RefreshService {
           errors: validationResult.errors,
           status: 'failed',
           metadata: {
-            districtCount: normalizedData.districts.length,
+            districtCount: finalNormalizedData.districts.length,
             startedAt,
             completedAt,
             schemaVersion: this.getCurrentSchemaVersion(),
@@ -314,7 +377,7 @@ export class RefreshService {
         operation: 'executeRefresh',
         phase: 'snapshot_creation',
         status: 'success',
-        districtCount: normalizedData.districts.length,
+        districtCount: finalNormalizedData.districts.length,
         warningCount: validationResult.warnings.length,
       })
 
@@ -342,7 +405,7 @@ export class RefreshService {
       }
 
       const successSnapshot = await this.createSnapshot(
-        normalizedData,
+        finalNormalizedData,
         snapshotStatus,
         allErrors,
         rawData.scrapingMetadata // Pass scraping metadata for detailed error tracking
@@ -357,7 +420,7 @@ export class RefreshService {
         operation: 'executeRefresh',
         status: snapshotStatus,
         duration_ms,
-        districtCount: normalizedData.districts.length,
+        districtCount: finalNormalizedData.districts.length,
         warnings: validationResult.warnings.length,
         completedAt,
         schemaVersion: successSnapshot.schema_version,
@@ -374,7 +437,7 @@ export class RefreshService {
         errors: allErrors,
         status: snapshotStatus,
         metadata: {
-          districtCount: normalizedData.districts.length,
+          districtCount: finalNormalizedData.districts.length,
           startedAt,
           completedAt,
           schemaVersion: this.getCurrentSchemaVersion(),
