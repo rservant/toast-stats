@@ -931,13 +931,13 @@ router.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params.districtId
+      const districtId = req.params['districtId']
       if (!districtId) throw new Error('Missing districtId parameter')
       return generateDistrictCacheKey(districtId, 'statistics')
     },
   }),
   async (req: Request, res: Response) => {
-    const { districtId } = req.params
+    const districtId = req.params['districtId']
 
     if (!districtId) {
       res.status(400).json({
@@ -1017,16 +1017,16 @@ router.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'membership-history', {
-        months: req.query.months,
+      generateDistrictCacheKey(req.params['districtId'], 'membership-history', {
+        months: req.query['months'],
       }),
   }),
   async (req: Request, res: Response) => {
-    const { districtId } = req.params
-    const { months } = req.query
+    const districtId = req.params['districtId']
+    const months = req.query['months']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1080,13 +1080,13 @@ router.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'clubs'),
+      generateDistrictCacheKey(req.params['districtId'], 'clubs'),
   }),
   async (req: Request, res: Response) => {
-    const { districtId } = req.params
+    const districtId = req.params['districtId']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1121,16 +1121,16 @@ router.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'educational-awards', {
-        months: req.query.months,
+      generateDistrictCacheKey(req.params['districtId'], 'educational-awards', {
+        months: req.query['months'],
       }),
   }),
   async (req: Request, res: Response) => {
-    const { districtId } = req.params
-    const { months } = req.query
+    const districtId = req.params['districtId']
+    const months = req.query['months']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1499,17 +1499,18 @@ router.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'daily-reports', {
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
+      generateDistrictCacheKey(req.params['districtId'], 'daily-reports', {
+        startDate: req.query['startDate'],
+        endDate: req.query['endDate'],
       }),
   }),
   async (req: Request, res: Response) => {
-    const { districtId } = req.params
-    const { startDate, endDate } = req.query
+    const districtId = req.params['districtId']
+    const startDate = req.query['startDate']
+    const endDate = req.query['endDate']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1611,8 +1612,8 @@ router.get(
     ttl: 900, // 15 minutes
     keyGenerator: req =>
       generateDistrictCacheKey(
-        req.params.districtId,
-        `daily-reports/${req.params.date}`
+        req.params['districtId'],
+        `daily-reports/${req.params['date']}`
       ),
   }),
   async (req: Request, res: Response) => {
@@ -1687,10 +1688,10 @@ router.get(
  * Query params: startDate (optional), endDate (optional) - currently ignored
  */
 router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
-  const { districtId } = req.params
+  const districtId = req.params['districtId']
 
   // Validate district ID
-  if (!validateDistrictId(districtId)) {
+  if (!districtId || !validateDistrictId(districtId)) {
     res.status(400).json({
       error: {
         code: 'INVALID_DISTRICT_ID',
@@ -2241,10 +2242,10 @@ router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
  */
 router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
   try {
-    const { districtId } = req.params
+    const districtId = req.params['districtId']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -2289,11 +2290,11 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
  */
 router.post('/:districtId/backfill', async (req: Request, res: Response) => {
   try {
-    const { districtId } = req.params
+    const districtId = req.params['districtId']
     const { startDate, endDate } = req.body
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -2660,9 +2661,9 @@ router.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache for analytics
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'analytics', {
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
+      generateDistrictCacheKey(req.params['districtId'], 'analytics', {
+        startDate: req.query['startDate'],
+        endDate: req.query['endDate'],
       }),
   }),
   async (req: Request, res: Response) => {
@@ -2784,8 +2785,8 @@ router.get(
     ttl: 300, // 5 minutes cache
     keyGenerator: req =>
       generateDistrictCacheKey(
-        req.params.districtId,
-        `clubs/${req.params.clubId}/trends`
+        req.params['districtId'],
+        `clubs/${req.params['clubId']}/trends`
       ),
   }),
   async (req: Request, res: Response) => {
@@ -2871,7 +2872,7 @@ router.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'at-risk-clubs'),
+      generateDistrictCacheKey(req.params['districtId'], 'at-risk-clubs'),
   }),
   async (req: Request, res: Response) => {
     try {
@@ -2962,9 +2963,9 @@ router.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'leadership-insights', {
-        startDate: req.query.startDate,
-        endDate: req.query.endDate,
+      generateDistrictCacheKey(req.params['districtId'], 'leadership-insights', {
+        startDate: req.query['startDate'],
+        endDate: req.query['endDate'],
       }),
   }),
   async (req: Request, res: Response) => {
@@ -3087,11 +3088,11 @@ router.get(
     ttl: 300, // 5 minutes cache
     keyGenerator: req =>
       generateDistrictCacheKey(
-        req.params.districtId,
+        req.params['districtId'],
         'distinguished-club-analytics',
         {
-          startDate: req.query.startDate,
-          endDate: req.query.endDate,
+          startDate: req.query['startDate'],
+          endDate: req.query['endDate'],
         }
       ),
   }),
@@ -3215,8 +3216,8 @@ router.get(
     ttl: 300, // 5 minutes cache
     keyGenerator: req =>
       generateDistrictCacheKey(
-        req.params.districtId,
-        `year-over-year/${req.params.date}`
+        req.params['districtId'],
+        `year-over-year/${req.params['date']}`
       ),
   }),
   async (req: Request, res: Response) => {
