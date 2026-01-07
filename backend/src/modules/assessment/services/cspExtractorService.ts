@@ -87,9 +87,10 @@ export class CspExtractorService {
     for (let i = 0; i < normalized.length; i++) {
       const h = normalized[i]
       if (
-        h.includes('csp') ||
-        (h.includes('competent') && h.includes('speaker')) ||
-        h.includes('speaker program')
+        h &&
+        (h.includes('csp') ||
+          (h.includes('competent') && h.includes('speaker')) ||
+          h.includes('speaker program'))
       ) {
         return headers[i]
       }

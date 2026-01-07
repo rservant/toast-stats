@@ -66,9 +66,9 @@ export class CacheIntegrationService {
         : null
 
     const membership_payments_ytd =
-      districtRow?.totalPayments ?? districtRow?.membershipPayments ?? 0
-    const paid_clubs_ytd = districtRow?.paidClubs ?? 0
-    const distinguished_clubs_ytd = districtRow?.distinguishedClubs ?? 0
+      districtRow?.['totalPayments'] ?? districtRow?.['membershipPayments'] ?? 0
+    const paid_clubs_ytd = districtRow?.['paidClubs'] ?? 0
+    const distinguished_clubs_ytd = districtRow?.['distinguishedClubs'] ?? 0
 
     // Club performance is cached as array of club records
     const clubRecords = Array.isArray(data.clubPerformance)

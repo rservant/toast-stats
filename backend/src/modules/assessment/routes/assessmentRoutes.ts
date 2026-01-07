@@ -345,7 +345,7 @@ router.get(
         district_id: districtId,
         available_dates: dates,
         recommended_date:
-          dates.length > 0 ? dates[dates.length - 1].date : null,
+          dates.length > 0 ? dates[dates.length - 1]?.date || null : null,
       },
     })
   })
