@@ -8,12 +8,6 @@
  */
 
 import fc from 'fast-check'
-import type {
-  ReconciliationJob,
-  ReconciliationConfig,
-  ReconciliationProgress,
-  ReconciliationJobStatus,
-} from '../types/reconciliation.js'
 import type { DistrictCacheEntry } from '../types/districts.js'
 import type { ServiceConfiguration } from '../types/serviceContainer.js'
 
@@ -178,112 +172,7 @@ export const serviceConfigurationArbitrary = (
     })
     .map(config => ({ ...config, ...overrides }))
 
-/**
- * Generates valid ReconciliationConfig objects for testing
- *
- * @param overrides Optional overrides for specific properties
- * @returns Arbitrary that generates ReconciliationConfig objects
- */
-export const reconciliationConfigArbitrary = (
-  overrides: Partial<ReconciliationConfig> = {}
-): fc.Arbitrary<ReconciliationConfig> =>
-  fc
-    .record({
-      maxReconciliationDays: fc.integer({ min: 1, max: 30 }),
-      stabilityPeriodDays: fc.integer({ min: 1, max: 10 }),
-      checkFrequencyHours: fc.integer({ min: 1, max: 48 }),
-      significantChangeThresholds: fc.record({
-        membershipPercent: fc.float({
-          min: Math.fround(0.1),
-          max: Math.fround(10.0),
-        }),
-        clubCountAbsolute: fc.integer({ min: 1, max: 10 }),
-        distinguishedPercent: fc.float({
-          min: Math.fround(0.1),
-          max: Math.fround(10.0),
-        }),
-      }),
-      autoExtensionEnabled: fc.boolean(),
-      maxExtensionDays: fc.integer({ min: 1, max: 15 }),
-    })
-    .map(config => ({ ...config, ...overrides }))
 
-/**
- * Generates valid ReconciliationProgress objects for testing
- *
- * @param overrides Optional overrides for specific properties
- * @returns Arbitrary that generates ReconciliationProgress objects
- */
-export const reconciliationProgressArbitrary = (
-  overrides: Partial<ReconciliationProgress> = {}
-): fc.Arbitrary<ReconciliationProgress> =>
-  fc
-    .record({
-      phase: fc.constantFrom(
-        'monitoring',
-        'reconciling',
-        'completed',
-        'failed'
-      ),
-      completionPercentage: fc.integer({ min: 0, max: 100 }),
-      estimatedCompletion: fc.date({
-        min: new Date(),
-        max: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      }),
-    })
-    .map(progress => ({ ...progress, ...overrides }))
-
-/**
- * Generates valid ReconciliationJob objects for testing
- *
- * @param overrides Optional overrides for specific properties
- * @returns Arbitrary that generates ReconciliationJob objects
- */
-export const reconciliationJobArbitrary = (
-  overrides: Partial<ReconciliationJob> = {}
-): fc.Arbitrary<ReconciliationJob> =>
-  fc
-    .record({
-      id: safeTestId('job'),
-      districtId: fc
-        .string({ minLength: 1, maxLength: 10 })
-        .filter(s => s.trim().length > 0 && /^[a-zA-Z0-9]+$/.test(s))
-        .map(s => `D${s}`),
-      targetMonth: fc
-        .date({ min: new Date('2020-01-01'), max: new Date('2030-12-31') })
-        .map(
-          d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-        ),
-      status: fc.constantFrom(
-        'active',
-        'completed',
-        'failed',
-        'cancelled'
-      ) as fc.Arbitrary<ReconciliationJobStatus>,
-      startDate: fc.date({
-        min: new Date('2020-01-01'),
-        max: new Date('2030-12-31'),
-      }),
-      maxEndDate: fc.date({
-        min: new Date('2020-01-02'),
-        max: new Date('2030-12-31'),
-      }),
-      progress: reconciliationProgressArbitrary(),
-      triggeredBy: fc.constantFrom('automatic', 'manual'),
-      config: reconciliationConfigArbitrary(),
-    })
-    .filter(job => job.maxEndDate.getTime() > job.startDate.getTime()) // Ensure maxEndDate > startDate
-    .map(job => ({
-      ...job,
-      metadata: {
-        createdAt: job.startDate,
-        updatedAt: new Date(
-          job.startDate.getTime() + Math.random() * 24 * 60 * 60 * 1000
-        ),
-        triggeredBy: job.triggeredBy,
-      },
-      ...overrides,
-    }))
 
 /**
  * Generates valid DistrictCacheEntry objects for testing

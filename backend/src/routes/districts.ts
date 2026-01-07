@@ -2547,11 +2547,12 @@ router.get(
   '/:districtId/membership-analytics',
   async (req: Request, res: Response) => {
     try {
-      const { districtId } = req.params
-      const { startDate, endDate } = req.query
+      const districtId = req.params['districtId']
+      const startDate = req.query['startDate']
+      const endDate = req.query['endDate']
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId || !validateDistrictId(districtId)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',

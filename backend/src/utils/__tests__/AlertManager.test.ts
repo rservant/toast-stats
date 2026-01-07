@@ -41,7 +41,7 @@ describe('AlertManager', () => {
 
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Test Alert',
         'This is a test alert',
         { testData: 'value' }
@@ -54,7 +54,7 @@ describe('AlertManager', () => {
       expect(activeAlerts).toHaveLength(1)
       expect(activeAlerts[0].title).toBe('Test Alert')
       expect(activeAlerts[0].severity).toBe(AlertSeverity.HIGH)
-      expect(activeAlerts[0].category).toBe(AlertCategory.RECONCILIATION)
+      expect(activeAlerts[0].category).toBe(AlertCategory.CIRCUIT_BREAKER)
     })
 
     it('should throttle duplicate alerts', async () => {
@@ -63,7 +63,7 @@ describe('AlertManager', () => {
       // Send first alert
       const alertId1 = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Duplicate Alert',
         'First message'
       )
@@ -71,7 +71,7 @@ describe('AlertManager', () => {
       // Send duplicate alert immediately
       const alertId2 = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Duplicate Alert',
         'Second message'
       )
@@ -89,18 +89,18 @@ describe('AlertManager', () => {
       // Send first alert
       const alertId1 = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Throttle Test',
         'First message'
       )
 
-      // Fast-forward past throttle period (30 minutes for reconciliation alerts)
-      vi.advanceTimersByTime(31 * 60 * 1000)
+      // Fast-forward past throttle period (15 minutes for circuit breaker alerts)
+      vi.advanceTimersByTime(16 * 60 * 1000)
 
       // Send same alert again
       const alertId2 = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Throttle Test',
         'Second message'
       )
@@ -115,26 +115,6 @@ describe('AlertManager', () => {
   })
 
   describe('specialized alert methods', () => {
-    it('should send reconciliation failure alert', async () => {
-      const alertManager = setupAlertManager()
-
-      const alertId = await alertManager.sendReconciliationFailureAlert(
-        'D123',
-        '2024-01',
-        'Test error message',
-        'job-123'
-      )
-
-      expect(alertId).toBeDefined()
-
-      const activeAlerts = alertManager.getActiveAlerts()
-      expect(activeAlerts).toHaveLength(1)
-      expect(activeAlerts[0].category).toBe(AlertCategory.RECONCILIATION)
-      expect(activeAlerts[0].severity).toBe(AlertSeverity.HIGH)
-      expect(activeAlerts[0].context.districtId).toBe('D123')
-      expect(activeAlerts[0].context.targetMonth).toBe('2024-01')
-    })
-
     it('should send circuit breaker alert', async () => {
       const alertManager = setupAlertManager()
 
@@ -159,7 +139,7 @@ describe('AlertManager', () => {
       const alertId = await alertManager.sendDashboardUnavailableAlert(
         120000, // 2 minutes
         'Connection timeout',
-        ['reconciliation']
+        ['data-refresh']
       )
 
       expect(alertId).toBeDefined()
@@ -187,24 +167,6 @@ describe('AlertManager', () => {
       expect(activeAlerts[0].category).toBe(AlertCategory.DATA_QUALITY)
       expect(activeAlerts[0].severity).toBe(AlertSeverity.MEDIUM)
     })
-
-    it('should send reconciliation timeout alert', async () => {
-      const alertManager = setupAlertManager()
-
-      const alertId = await alertManager.sendReconciliationTimeoutAlert(
-        'D123',
-        '2024-01',
-        20,
-        15
-      )
-
-      expect(alertId).toBeDefined()
-
-      const activeAlerts = alertManager.getActiveAlerts()
-      expect(activeAlerts).toHaveLength(1)
-      expect(activeAlerts[0].category).toBe(AlertCategory.RECONCILIATION)
-      expect(activeAlerts[0].severity).toBe(AlertSeverity.MEDIUM)
-    })
   })
 
   describe('alert resolution', () => {
@@ -213,7 +175,7 @@ describe('AlertManager', () => {
 
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Test Alert',
         'Test message'
       )
@@ -239,7 +201,7 @@ describe('AlertManager', () => {
 
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Test Alert',
         'Test message'
       )
@@ -262,35 +224,35 @@ describe('AlertManager', () => {
 
       await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
-        'Reconciliation Alert',
-        'Test message'
-      )
-
-      await alertManager.sendAlert(
-        AlertSeverity.MEDIUM,
         AlertCategory.CIRCUIT_BREAKER,
         'Circuit Breaker Alert',
         'Test message'
       )
 
-      const reconciliationAlerts = alertManager.getActiveAlerts(
-        AlertCategory.RECONCILIATION
+      await alertManager.sendAlert(
+        AlertSeverity.MEDIUM,
+        AlertCategory.DATA_QUALITY,
+        'Data Quality Alert',
+        'Test message'
       )
+
       const circuitBreakerAlerts = alertManager.getActiveAlerts(
         AlertCategory.CIRCUIT_BREAKER
       )
+      const dataQualityAlerts = alertManager.getActiveAlerts(
+        AlertCategory.DATA_QUALITY
+      )
       const allAlerts = alertManager.getActiveAlerts()
 
-      expect(reconciliationAlerts).toHaveLength(1)
       expect(circuitBreakerAlerts).toHaveLength(1)
+      expect(dataQualityAlerts).toHaveLength(1)
       expect(allAlerts).toHaveLength(2)
 
-      expect(reconciliationAlerts[0].category).toBe(
-        AlertCategory.RECONCILIATION
-      )
       expect(circuitBreakerAlerts[0].category).toBe(
         AlertCategory.CIRCUIT_BREAKER
+      )
+      expect(dataQualityAlerts[0].category).toBe(
+        AlertCategory.DATA_QUALITY
       )
     })
   })
@@ -302,23 +264,23 @@ describe('AlertManager', () => {
       // Send various alerts with unique titles to avoid throttling
       const alert1Id = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Unique Alert 1',
         'Message'
       )
 
-      // Advance time to avoid throttling for the second RECONCILIATION alert
-      vi.advanceTimersByTime(31 * 60 * 1000) // 31 minutes
+      // Advance time to avoid throttling for the second CIRCUIT_BREAKER alert
+      vi.advanceTimersByTime(16 * 60 * 1000) // 16 minutes
 
       await alertManager.sendAlert(
         AlertSeverity.MEDIUM,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Unique Alert 2',
         'Message'
       )
       await alertManager.sendAlert(
         AlertSeverity.CRITICAL,
-        AlertCategory.CIRCUIT_BREAKER,
+        AlertCategory.DATA_QUALITY,
         'Unique Alert 3',
         'Message'
       )
@@ -334,8 +296,8 @@ describe('AlertManager', () => {
       expect(stats.bySeverity[AlertSeverity.HIGH]).toBe(0) // The HIGH alert was resolved
       expect(stats.bySeverity[AlertSeverity.MEDIUM]).toBe(1)
       expect(stats.bySeverity[AlertSeverity.CRITICAL]).toBe(1)
-      expect(stats.byCategory[AlertCategory.RECONCILIATION]).toBe(1)
       expect(stats.byCategory[AlertCategory.CIRCUIT_BREAKER]).toBe(1)
+      expect(stats.byCategory[AlertCategory.DATA_QUALITY]).toBe(1)
     })
   })
 
@@ -346,7 +308,7 @@ describe('AlertManager', () => {
       // Send and resolve an alert
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Old Alert',
         'Test message'
       )
@@ -371,7 +333,7 @@ describe('AlertManager', () => {
       // Send and resolve an alert
       const alertId = await alertManager.sendAlert(
         AlertSeverity.HIGH,
-        AlertCategory.RECONCILIATION,
+        AlertCategory.CIRCUIT_BREAKER,
         'Recent Alert',
         'Test message'
       )

@@ -361,8 +361,129 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   }
 
   /**
-   * Check if CSV file exists in cache
+   * Store CSV content in cache with enhanced metadata for month-end closing periods
    */
+  async setCachedCSVWithMetadata(
+    date: string,
+    type: CSVType,
+    csvContent: string,
+    districtId?: string,
+    additionalMetadata?: {
+      requestedDate?: string
+      isClosingPeriod?: boolean
+      dataMonth?: string
+    }
+  ): Promise<void> {
+    const startTime = Date.now()
+
+    try {
+      // Check circuit breaker state
+      if (this.isCircuitBreakerOpen()) {
+        this.logger.warn('Circuit breaker is open, skipping cache write', {
+          date,
+          type,
+          districtId,
+          failures: this.circuitBreaker.failures,
+          lastFailureTime: this.circuitBreaker.lastFailureTime,
+        })
+        throw new Error('Cache write skipped due to circuit breaker being open')
+      }
+
+      this.validateDateString(date)
+      this.validateCSVType(type)
+      if (districtId) {
+        this.validateDistrictId(districtId)
+      }
+      this.validateCSVContent(csvContent)
+
+      const filePath = this.buildFilePath(date, type, districtId)
+      const dirPath = path.dirname(filePath)
+
+      // Ensure directory exists
+      await fs.mkdir(dirPath, { recursive: true })
+
+      // Set secure directory permissions
+      await this.setSecureDirectoryPermissions(dirPath)
+
+      // Write file atomically using temporary file
+      const tempFilePath = `${filePath}.tmp.${Date.now()}`
+
+      try {
+        await fs.writeFile(tempFilePath, csvContent, 'utf-8')
+
+        // Set secure file permissions on temporary file
+        await this.setSecureFilePermissions(tempFilePath)
+
+        // Atomically move to final location
+        await fs.rename(tempFilePath, filePath)
+
+        // Update metadata with additional closing period information
+        await this.updateCacheMetadataForFileWithClosingInfo(
+          date,
+          type,
+          districtId,
+          csvContent,
+          additionalMetadata
+        )
+
+        // Update download statistics
+        await this.updateDownloadStats(date, 'download')
+
+        const duration = Date.now() - startTime
+        this.logger.info('CSV file cached successfully with enhanced metadata', {
+          date,
+          type,
+          districtId,
+          filePath,
+          duration,
+          size: csvContent.length,
+          requestedDate: additionalMetadata?.requestedDate,
+          isClosingPeriod: additionalMetadata?.isClosingPeriod,
+          dataMonth: additionalMetadata?.dataMonth,
+        })
+
+        // Track performance
+        this.trackSlowOperation('setCachedCSVWithMetadata', duration)
+
+        // Reset circuit breaker on successful operation
+        this.resetCircuitBreaker()
+      } catch (error) {
+        // Clean up temporary file if it exists
+        try {
+          await fs.unlink(tempFilePath)
+        } catch {
+          // Ignore cleanup errors
+        }
+
+        // Record failure for circuit breaker
+        this.recordCircuitBreakerFailure()
+        throw error
+      }
+    } catch (error) {
+      const duration = Date.now() - startTime
+      this.logger.error('Failed to cache CSV file with enhanced metadata', {
+        date,
+        type,
+        districtId,
+        duration,
+        error: this.formatErrorForLogging(error),
+        circuitBreakerState: this.getCircuitBreakerState(),
+        requestedDate: additionalMetadata?.requestedDate,
+        isClosingPeriod: additionalMetadata?.isClosingPeriod,
+        dataMonth: additionalMetadata?.dataMonth,
+      })
+
+      // Record failure for circuit breaker (if not already recorded)
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes('circuit breaker')
+      ) {
+        this.recordCircuitBreakerFailure()
+      }
+
+      throw error
+    }
+  }
   async hasCachedCSV(
     date: string,
     type: CSVType,
@@ -1832,6 +1953,50 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       return `${year}-${year + 1}`
     } else {
       return `${year - 1}-${year}`
+    }
+  }
+
+  /**
+   * Update cache metadata when a file is cached with enhanced closing period information
+   */
+  private async updateCacheMetadataForFileWithClosingInfo(
+    date: string,
+    type: CSVType,
+    districtId: string | undefined,
+    csvContent: string,
+    additionalMetadata?: {
+      requestedDate?: string
+      isClosingPeriod?: boolean
+      dataMonth?: string
+    }
+  ): Promise<void> {
+    // First, do the standard metadata update
+    await this.updateCacheMetadataForFile(date, type, districtId, csvContent)
+
+    // Then, enhance with closing period information
+    if (additionalMetadata) {
+      const metadata = await this.getCacheMetadata(date)
+      if (metadata) {
+        // Add closing period specific metadata
+        if (additionalMetadata.requestedDate) {
+          metadata.requestedDate = additionalMetadata.requestedDate
+        }
+        if (additionalMetadata.isClosingPeriod !== undefined) {
+          metadata.isClosingPeriod = additionalMetadata.isClosingPeriod
+        }
+        if (additionalMetadata.dataMonth) {
+          metadata.dataMonth = additionalMetadata.dataMonth
+        }
+
+        await this.updateCacheMetadata(date, metadata)
+
+        this.logger.debug('Enhanced metadata with closing period information', {
+          date,
+          requestedDate: additionalMetadata.requestedDate,
+          isClosingPeriod: additionalMetadata.isClosingPeriod,
+          dataMonth: additionalMetadata.dataMonth,
+        })
+      }
     }
   }
 

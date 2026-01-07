@@ -1,8 +1,8 @@
 /**
  * Alert Manager for Administrator Notifications
  *
- * Provides centralized alerting functionality for reconciliation errors,
- * circuit breaker events, and other critical system issues.
+ * Provides centralized alerting functionality for circuit breaker events,
+ * and other critical system issues.
  */
 
 import { logger } from './logger.js'
@@ -14,12 +14,6 @@ export interface IAlertManager {
     title: string,
     message: string,
     context?: Record<string, unknown>
-  ): Promise<string | null>
-  sendReconciliationFailureAlert(
-    districtId: string,
-    targetMonth: string,
-    error: string,
-    jobId?: string
   ): Promise<string | null>
   sendCircuitBreakerAlert(
     circuitName: string,
@@ -37,12 +31,6 @@ export interface IAlertManager {
     date: string,
     issue: string,
     details: Record<string, unknown>
-  ): Promise<string | null>
-  sendReconciliationTimeoutAlert(
-    districtId: string,
-    targetMonth: string,
-    daysActive: number,
-    maxDays: number
   ): Promise<string | null>
   resolveAlert(alertId: string, resolvedBy?: string): Promise<boolean>
   getActiveAlerts(category?: AlertCategory): Alert[]
@@ -64,7 +52,6 @@ export enum AlertSeverity {
 }
 
 export enum AlertCategory {
-  RECONCILIATION = 'RECONCILIATION',
   CIRCUIT_BREAKER = 'CIRCUIT_BREAKER',
   DATA_QUALITY = 'DATA_QUALITY',
   SYSTEM = 'SYSTEM',
@@ -159,24 +146,6 @@ export class AlertManager implements IAlertManager {
   }
 
   /**
-   * Send reconciliation failure alert
-   */
-  async sendReconciliationFailureAlert(
-    districtId: string,
-    targetMonth: string,
-    error: string,
-    jobId?: string
-  ): Promise<string | null> {
-    return this.sendAlert(
-      AlertSeverity.HIGH,
-      AlertCategory.RECONCILIATION,
-      'Reconciliation Job Failed',
-      `Reconciliation failed for district ${districtId}, month ${targetMonth}: ${error}`,
-      { districtId, targetMonth, error, jobId }
-    )
-  }
-
-  /**
    * Send circuit breaker alert
    */
   async sendCircuitBreakerAlert(
@@ -237,24 +206,6 @@ export class AlertManager implements IAlertManager {
       'Data Quality Issue',
       `Data quality issue detected for district ${districtId} on ${date}: ${issue}`,
       { districtId, date, issue, ...details }
-    )
-  }
-
-  /**
-   * Send reconciliation timeout alert
-   */
-  async sendReconciliationTimeoutAlert(
-    districtId: string,
-    targetMonth: string,
-    daysActive: number,
-    maxDays: number
-  ): Promise<string | null> {
-    return this.sendAlert(
-      AlertSeverity.MEDIUM,
-      AlertCategory.RECONCILIATION,
-      'Reconciliation Timeout',
-      `Reconciliation for district ${districtId}, month ${targetMonth} has been active for ${daysActive} days (max: ${maxDays})`,
-      { districtId, targetMonth, daysActive, maxDays }
     )
   }
 
@@ -320,7 +271,6 @@ export class AlertManager implements IAlertManager {
     }
 
     const byCategory: Record<AlertCategory, number> = {
-      [AlertCategory.RECONCILIATION]: 0,
       [AlertCategory.CIRCUIT_BREAKER]: 0,
       [AlertCategory.DATA_QUALITY]: 0,
       [AlertCategory.SYSTEM]: 0,
@@ -372,14 +322,6 @@ export class AlertManager implements IAlertManager {
   private initializeDefaultRules(): void {
     const defaultRules: AlertRule[] = [
       {
-        id: 'reconciliation-failure',
-        category: AlertCategory.RECONCILIATION,
-        severity: AlertSeverity.HIGH,
-        enabled: true,
-        throttleMinutes: 30,
-        description: 'Reconciliation job failures',
-      },
-      {
         id: 'circuit-breaker-open',
         category: AlertCategory.CIRCUIT_BREAKER,
         severity: AlertSeverity.HIGH,
@@ -402,14 +344,6 @@ export class AlertManager implements IAlertManager {
         enabled: true,
         throttleMinutes: 60,
         description: 'Data quality issues detected',
-      },
-      {
-        id: 'reconciliation-timeout',
-        category: AlertCategory.RECONCILIATION,
-        severity: AlertSeverity.MEDIUM,
-        enabled: true,
-        throttleMinutes: 120,
-        description: 'Reconciliation taking too long',
       },
     ]
 

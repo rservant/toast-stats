@@ -8,10 +8,6 @@
 import { TestPerformanceMetrics, TestSuiteMetrics } from './test-types'
 
 // Interfaces for backend test data generation
-interface ReconciliationConfig {
-  maxReconciliationDays: number
-  stabilityPeriodDays: number
-  checkFrequencyHours: number
   significantChangeThresholds: {
     membershipPercent: number
     clubCountAbsolute: number
@@ -145,11 +141,6 @@ export class BackendTestMetricsCollector {
 
 // Property-based testing utilities for backend
 export class BackendPropertyTestUtils {
-  static generateReconciliationConfig(): ReconciliationConfig {
-    return {
-      maxReconciliationDays: Math.floor(Math.random() * 30) + 1,
-      stabilityPeriodDays: Math.floor(Math.random() * 7) + 1,
-      checkFrequencyHours: Math.floor(Math.random() * 48) + 1,
       significantChangeThresholds: {
         membershipPercent: Math.random() * 10,
         clubCountAbsolute: Math.floor(Math.random() * 10) + 1,

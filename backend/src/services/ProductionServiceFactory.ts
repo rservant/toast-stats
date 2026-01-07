@@ -32,6 +32,7 @@ import {
 } from './RankingCalculator.js'
 import { BackfillService } from './UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
+import { MonthEndDataMapper } from './MonthEndDataMapper.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { config } from '../config/index.js'
 
@@ -143,6 +144,14 @@ export interface ProductionServiceFactory {
    * Create RawCSVCacheService instance
    */
   createRawCSVCacheService(cacheConfig?: CacheConfigService): RawCSVCacheService
+
+  /**
+   * Create MonthEndDataMapper instance
+   */
+  createMonthEndDataMapper(
+    cacheConfig?: CacheConfigService,
+    rawCSVCache?: RawCSVCacheService
+  ): MonthEndDataMapper
 
   /**
    * Create BackfillService instance
@@ -479,6 +488,21 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const logger = new ProductionLogger()
     const service = new RawCSVCacheService(config, logger)
     this.services.push(service)
+    return service
+  }
+
+  /**
+   * Create MonthEndDataMapper instance
+   */
+  createMonthEndDataMapper(
+    cacheConfig?: CacheConfigService,
+    rawCSVCache?: RawCSVCacheService
+  ): MonthEndDataMapper {
+    const config = cacheConfig || this.createCacheConfigService()
+    const cache = rawCSVCache || this.createRawCSVCacheService(config)
+    const logger = new ProductionLogger()
+    const service = new MonthEndDataMapper(config, cache, logger)
+    // MonthEndDataMapper doesn't have dispose method, so we don't track it
     return service
   }
 

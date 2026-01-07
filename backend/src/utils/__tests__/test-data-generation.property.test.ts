@@ -18,16 +18,12 @@ import {
 } from '../test-string-generators.js'
 import {
   createTestServiceConfiguration,
-  createTestReconciliationJobFactory,
   createTestDistrictCacheEntry,
   createTestServiceConfigurations,
-  createTestReconciliationJobs,
   createTestDistrictCacheEntries,
   createDeterministicServiceConfiguration,
-  createDeterministicReconciliationJob,
   createDeterministicDistrictCacheEntry,
   validateServiceConfiguration,
-  validateReconciliationJob,
   validateDistrictCacheEntry,
 } from '../test-data-factories.js'
 import { createTestSelfCleanup } from '../test-self-cleanup.js'
@@ -164,39 +160,6 @@ describe('Test Data Generation Property Tests', () => {
       expect(config2.logLevel).toBe(overrides2.logLevel)
     })
 
-    it('should create valid ReconciliationJob objects through factory methods', () => {
-      // Test with a simple, reliable approach
-      const overrides = {
-        status: 'active' as const,
-        triggeredBy: 'automatic' as const,
-      }
-
-      // Test single object creation
-      const job = createTestReconciliationJobFactory(overrides)
-      expect(validateReconciliationJob(job)).toBe(true)
-      expect(job.status).toBe(overrides.status)
-      expect(job.triggeredBy).toBe(overrides.triggeredBy)
-
-      // Test batch creation
-      const jobs = createTestReconciliationJobs(3, overrides)
-      expect(jobs).toHaveLength(3)
-      for (const j of jobs) {
-        expect(validateReconciliationJob(j)).toBe(true)
-        expect(j.status).toBe(overrides.status)
-        expect(j.triggeredBy).toBe(overrides.triggeredBy)
-      }
-
-      // Test with different overrides
-      const overrides2 = {
-        status: 'completed' as const,
-        triggeredBy: 'manual' as const,
-      }
-      const job2 = createTestReconciliationJobFactory(overrides2)
-      expect(validateReconciliationJob(job2)).toBe(true)
-      expect(job2.status).toBe(overrides2.status)
-      expect(job2.triggeredBy).toBe(overrides2.triggeredBy)
-    })
-
     it('should create valid DistrictCacheEntry objects through factory methods', () => {
       // Test with a simple, reliable approach
       const overrides = { districtId: 'D42' }
@@ -266,9 +229,6 @@ describe('Test Data Generation Property Tests', () => {
       const config = createDeterministicServiceConfiguration(seed)
       expect(validateServiceConfiguration(config)).toBe(true)
 
-      const job = createDeterministicReconciliationJob(seed)
-      expect(validateReconciliationJob(job)).toBe(true)
-
       const entry = createDeterministicDistrictCacheEntry(seed)
       expect(validateDistrictCacheEntry(entry)).toBe(true)
 
@@ -277,9 +237,6 @@ describe('Test Data Generation Property Tests', () => {
 
       const config2 = createDeterministicServiceConfiguration(seed2)
       expect(validateServiceConfiguration(config2)).toBe(true)
-
-      const job2 = createDeterministicReconciliationJob(seed2)
-      expect(validateReconciliationJob(job2)).toBe(true)
 
       const entry2 = createDeterministicDistrictCacheEntry(seed2)
       expect(validateDistrictCacheEntry(entry2)).toBe(true)

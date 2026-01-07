@@ -21,13 +21,4 @@ export const config = {
     windowMs: parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000', 10),
     maxRequests: parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '100', 10),
   },
-  reconciliation: {
-    configFilePath:
-      process.env['RECONCILIATION_CONFIG_FILE'] || 'reconciliation-config.json',
-    cacheKey: process.env['RECONCILIATION_CACHE_KEY'] || 'reconciliation:config',
-    cacheTTL: parseInt(
-      process.env['RECONCILIATION_CONFIG_CACHE_TTL'] || '3600',
-      10
-    ),
-  },
 } as const

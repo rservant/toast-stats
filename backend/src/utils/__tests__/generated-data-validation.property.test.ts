@@ -8,21 +8,17 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import {
   serviceConfigurationArbitrary,
-  reconciliationJobArbitrary,
   districtCacheEntryArbitrary,
   validateGeneratedData,
   isFilesystemSafe,
 } from '../test-string-generators.js'
 import {
   validateServiceConfiguration,
-  validateReconciliationJob,
   validateDistrictCacheEntry,
   checkServiceConfigurationCompatibility,
-  checkReconciliationJobCompatibility,
 } from '../test-data-factories.js'
 import { createTestSelfCleanup } from '../test-self-cleanup.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
-import type { ReconciliationJob } from '../../types/reconciliation.js'
 
 describe('Generated Data Validation Property Tests', () => {
   // Self-cleanup setup - each test manages its own cleanup
@@ -71,46 +67,7 @@ describe('Generated Data Validation Property Tests', () => {
       )
     })
 
-    it('should ensure generated ReconciliationJob data is valid and realistic', () => {
-      fc.assert(
-        fc.property(reconciliationJobArbitrary(), job => {
-          // Generated data should be valid
-          expect(validateReconciliationJob(job)).toBe(true)
 
-          // Check realistic constraints
-          expect(job.id).toBeTruthy()
-          expect(typeof job.id).toBe('string')
-          expect(job.districtId).toBeTruthy()
-          expect(typeof job.districtId).toBe('string')
-
-          // Target month should be in valid format
-          expect(job.targetMonth).toMatch(/^\d{4}-\d{2}$/)
-
-          // Status should be one of valid values
-          expect(['active', 'completed', 'failed', 'cancelled']).toContain(
-            job.status
-          )
-
-          // Triggered by should be one of valid values
-          expect(['automatic', 'manual']).toContain(job.triggeredBy)
-
-          // Date constraints should be realistic
-          expect(job.maxEndDate.getTime()).toBeGreaterThan(
-            job.startDate.getTime()
-          )
-
-          // Progress should be valid
-          expect(job.progress.completionPercentage).toBeGreaterThanOrEqual(0)
-          expect(job.progress.completionPercentage).toBeLessThanOrEqual(100)
-
-          // Config should have realistic values
-          expect(job.config.maxReconciliationDays).toBeGreaterThan(0)
-          expect(job.config.stabilityPeriodDays).toBeGreaterThan(0)
-          expect(job.config.checkFrequencyHours).toBeGreaterThan(0)
-        }),
-        { numRuns: 5 }
-      )
-    })
 
     it('should ensure generated DistrictCacheEntry data is valid and realistic', () => {
       fc.assert(
@@ -251,42 +208,7 @@ describe('Generated Data Validation Property Tests', () => {
       )
     })
 
-    it('should handle type changes in compatibility validation', () => {
-      fc.assert(
-        fc.property(
-          reconciliationJobArbitrary().filter(
-            job =>
-              !isNaN(job.startDate.getTime()) &&
-              !isNaN(job.maxEndDate.getTime())
-          ),
-          baseJob => {
-            // Create old version with string dates
-            const oldJob = {
-              ...baseJob,
-              startDate: baseJob.startDate.toISOString(),
-              maxEndDate: baseJob.maxEndDate.toISOString(),
-            } as unknown as ReconciliationJob
 
-            // New version has Date objects (current format)
-            const newJob = baseJob
-
-            // Test compatibility with allowed type changes
-            const isCompatible = checkReconciliationJobCompatibility(
-              oldJob,
-              newJob
-            )
-            expect(isCompatible).toBe(true)
-
-            // Test that core fields are preserved
-            expect(newJob.id).toBe(oldJob.id)
-            expect(newJob.districtId).toBe(oldJob.districtId)
-            expect(newJob.targetMonth).toBe(oldJob.targetMonth)
-            expect(newJob.status).toBe(oldJob.status)
-          }
-        ),
-        { numRuns: 5 }
-      )
-    })
   })
 
   describe('Property 22: Generated Data Validation - Edge Cases', () => {

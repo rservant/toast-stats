@@ -1,346 +1,148 @@
 /**
- * Comprehensive test data factories for creating complex test objects
- *
- * This module provides factory methods for creating valid test data objects
- * with proper validation and compatibility checking. It extends the basic
- * test-helpers.ts with more sophisticated factory patterns.
+ * Test Data Factories and Validation Functions
+ * 
+ * Provides validation functions for test data generation and compatibility checking.
+ * This is a minimal implementation after reconciliation cleanup.
  */
 
-import fc from 'fast-check'
-import type { ReconciliationJob } from '../types/reconciliation.js'
-import type { DistrictCacheEntry } from '../types/districts.js'
 import type { ServiceConfiguration } from '../types/serviceContainer.js'
-import {
-  serviceConfigurationArbitrary,
-  reconciliationJobArbitrary,
-  districtCacheEntryArbitrary,
-  createTestFixtureFactory,
-  createTestFixtures,
-  validateGeneratedData,
-  validateDataCompatibility,
-} from './test-string-generators.js'
-
-// ============================================================================
-// FACTORY FUNCTIONS FOR COMPLEX OBJECTS
-// ============================================================================
+import type { DistrictCacheEntry } from '../types/districts.js'
 
 /**
- * Factory for creating ServiceConfiguration test objects
+ * Validates ServiceConfiguration objects
  */
-export const createTestServiceConfiguration = createTestFixtureFactory(
-  serviceConfigurationArbitrary(),
-  {
-    environment: 'test' as const,
-    logLevel: 'error' as const, // Quiet logs in tests
-  }
-)
-
-/**
- * Factory for creating ReconciliationJob test objects
- */
-export function createTestReconciliationJobFactory(
-  overrides: Partial<ReconciliationJob> = {}
-): ReconciliationJob {
-  // Create a reliable base job with all required fields
-  const baseJob: ReconciliationJob = {
-    id: `job-test-${Date.now()}`,
-    districtId: 'D42',
-    targetMonth: '2024-11',
-    status: 'active',
-    startDate: new Date('2024-01-01'),
-    maxEndDate: new Date('2024-12-31'),
-    progress: {
-      phase: 'reconciling',
-      completionPercentage: 50,
-      estimatedCompletion: new Date('2024-12-31'),
-    },
-    triggeredBy: 'automatic',
-    config: {
-      maxReconciliationDays: 15,
-      stabilityPeriodDays: 3,
-      checkFrequencyHours: 24,
-      significantChangeThresholds: {
-        membershipPercent: 1,
-        clubCountAbsolute: 1,
-        distinguishedPercent: 2,
-      },
-      autoExtensionEnabled: true,
-      maxExtensionDays: 7,
-    },
-    metadata: {
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-02'),
-      triggeredBy: 'automatic',
-    },
-  }
-
-  return { ...baseJob, ...overrides }
+export function validateServiceConfiguration(config: ServiceConfiguration): boolean {
+  if (!config || typeof config !== 'object') return false
+  if (!config.cacheDirectory || typeof config.cacheDirectory !== 'string') return false
+  if (!config.environment || typeof config.environment !== 'string') return false
+  if (!config.logLevel || typeof config.logLevel !== 'string') return false
+  
+  const validEnvironments = ['test', 'development', 'production']
+  const validLogLevels = ['debug', 'info', 'warn', 'error']
+  
+  return validEnvironments.includes(config.environment) && 
+         validLogLevels.includes(config.logLevel)
 }
 
 /**
- * Factory for creating DistrictCacheEntry test objects
- */
-export const createTestDistrictCacheEntry = createTestFixtureFactory(
-  districtCacheEntryArbitrary(),
-  {}
-)
-
-// ============================================================================
-// BATCH CREATION UTILITIES
-// ============================================================================
-
-/**
- * Creates multiple ServiceConfiguration objects for testing
- */
-export function createTestServiceConfigurations(
-  count: number,
-  overrides: Partial<ServiceConfiguration> = {}
-): ServiceConfiguration[] {
-  return createTestFixtures(serviceConfigurationArbitrary(), count, overrides)
-}
-
-/**
- * Creates multiple ReconciliationJob objects for testing
- */
-export function createTestReconciliationJobs(
-  count: number,
-  overrides: Partial<ReconciliationJob> = {}
-): ReconciliationJob[] {
-  return createTestFixtures(reconciliationJobArbitrary(), count, overrides)
-}
-/**
- * Creates multiple DistrictCacheEntry objects for testing
- */
-export function createTestDistrictCacheEntries(
-  count: number,
-  overrides: Partial<DistrictCacheEntry> = {}
-): DistrictCacheEntry[] {
-  return createTestFixtures(districtCacheEntryArbitrary(), count, overrides)
-}
-
-// ============================================================================
-// DETERMINISTIC FACTORIES
-// ============================================================================
-
-/**
- * Creates deterministic ServiceConfiguration for reproducible tests
- */
-export function createDeterministicServiceConfiguration(
-  _seed: number,
-  overrides: Partial<ServiceConfiguration> = {}
-): ServiceConfiguration {
-  // Use a more reliable approach - generate multiple samples and pick the first valid one
-  const samples = fc.sample(serviceConfigurationArbitrary(), 10)
-  const validSample = samples.find(sample =>
-    validateServiceConfiguration(sample)
-  )
-
-  if (!validSample) {
-    // Fallback to factory method if no valid sample found
-    return createTestServiceConfiguration(overrides)
-  }
-
-  return { ...validSample, ...overrides }
-}
-
-/**
- * Creates deterministic ReconciliationJob for reproducible tests
- */
-export function createDeterministicReconciliationJob(
-  _seed: number,
-  overrides: Partial<ReconciliationJob> = {}
-): ReconciliationJob {
-  // Use a more reliable approach - generate multiple samples and pick the first valid one
-  const samples = fc.sample(reconciliationJobArbitrary(), 10)
-  const validSample = samples.find(sample => validateReconciliationJob(sample))
-
-  if (!validSample) {
-    // Fallback to factory method if no valid sample found
-    return createTestReconciliationJobFactory(overrides)
-  }
-
-  return { ...validSample, ...overrides }
-}
-
-/**
- * Creates deterministic DistrictCacheEntry for reproducible tests
- */
-export function createDeterministicDistrictCacheEntry(
-  _seed: number,
-  overrides: Partial<DistrictCacheEntry> = {}
-): DistrictCacheEntry {
-  // Use a more reliable approach - generate multiple samples and pick the first valid one
-  const samples = fc.sample(districtCacheEntryArbitrary(), 10)
-  const validSample = samples.find(sample => validateDistrictCacheEntry(sample))
-
-  if (!validSample) {
-    // Fallback to factory method if no valid sample found
-    return createTestDistrictCacheEntry(overrides)
-  }
-
-  return { ...validSample, ...overrides }
-}
-
-// ============================================================================
-// VALIDATION UTILITIES
-// ============================================================================
-
-/**
- * Validates a ServiceConfiguration object
- */
-export function validateServiceConfiguration(
-  config: ServiceConfiguration
-): boolean {
-  return validateGeneratedData(config as unknown as Record<string, unknown>, {
-    requiredFields: ['cacheDirectory', 'environment', 'logLevel'],
-    stringFields: ['cacheDirectory', 'environment', 'logLevel'],
-    customValidators: [
-      data =>
-        ['test', 'development', 'production'].includes(
-          (data as unknown as ServiceConfiguration).environment
-        ),
-      data =>
-        ['debug', 'info', 'warn', 'error'].includes(
-          (data as unknown as ServiceConfiguration).logLevel
-        ),
-      data =>
-        typeof (data as unknown as ServiceConfiguration).cacheDirectory ===
-          'string' &&
-        (data as unknown as ServiceConfiguration).cacheDirectory.length > 0,
-    ],
-  })
-}
-
-/**
- * Validates a ReconciliationJob object
- */
-export function validateReconciliationJob(job: ReconciliationJob): boolean {
-  return validateGeneratedData(job as unknown as Record<string, unknown>, {
-    requiredFields: [
-      'id',
-      'districtId',
-      'targetMonth',
-      'status',
-      'startDate',
-      'maxEndDate',
-      'progress',
-      'config',
-      'metadata',
-    ],
-    stringFields: ['id', 'districtId', 'targetMonth', 'status', 'triggeredBy'],
-    dateFields: ['startDate', 'maxEndDate'],
-    customValidators: [
-      data =>
-        ['active', 'completed', 'failed', 'cancelled'].includes(
-          (data as unknown as ReconciliationJob).status
-        ),
-      data =>
-        ['automatic', 'manual', 'scheduled'].includes(
-          (data as unknown as ReconciliationJob).triggeredBy
-        ),
-      data =>
-        (data as unknown as ReconciliationJob).maxEndDate >
-        (data as unknown as ReconciliationJob).startDate,
-      data =>
-        /^\d{4}-\d{2}$/.test(
-          (data as unknown as ReconciliationJob).targetMonth
-        ),
-      // Validate metadata structure
-      data => {
-        const metadata = (data as unknown as ReconciliationJob).metadata
-        return (
-          metadata &&
-          typeof metadata === 'object' &&
-          metadata.createdAt instanceof Date &&
-          metadata.updatedAt instanceof Date &&
-          ['automatic', 'manual'].includes(metadata.triggeredBy)
-        )
-      },
-      // Validate progress structure
-      data => {
-        const progress = (data as unknown as ReconciliationJob).progress
-        return progress && typeof progress === 'object'
-      },
-      // Validate config structure
-      data => {
-        const config = (data as unknown as ReconciliationJob).config
-        return config && typeof config === 'object'
-      },
-    ],
-  })
-}
-
-/**
- * Validates a DistrictCacheEntry object
+ * Validates DistrictCacheEntry objects
  */
 export function validateDistrictCacheEntry(entry: DistrictCacheEntry): boolean {
-  return validateGeneratedData(entry as unknown as Record<string, unknown>, {
-    requiredFields: [
-      'districtId',
-      'date',
-      'districtPerformance',
-      'divisionPerformance',
-      'clubPerformance',
-      'fetchedAt',
-    ],
-    stringFields: ['districtId', 'date', 'fetchedAt'],
-    customValidators: [
-      data =>
-        Array.isArray(
-          (data as unknown as DistrictCacheEntry).districtPerformance
-        ),
-      data =>
-        Array.isArray(
-          (data as unknown as DistrictCacheEntry).divisionPerformance
-        ),
-      data =>
-        Array.isArray((data as unknown as DistrictCacheEntry).clubPerformance),
-      data =>
-        /^\d{4}-\d{2}-\d{2}$/.test(
-          (data as unknown as DistrictCacheEntry).date
-        ),
-    ],
-  })
+  if (!entry || typeof entry !== 'object') return false
+  if (!entry.districtId || typeof entry.districtId !== 'string') return false
+  if (!entry.date || typeof entry.date !== 'string') return false
+  if (!entry.fetchedAt || typeof entry.fetchedAt !== 'string') return false
+  
+  // Validate date format (YYYY-MM-DD)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date)) return false
+  
+  // Validate arrays exist
+  if (!Array.isArray(entry.districtPerformance)) return false
+  if (!Array.isArray(entry.divisionPerformance)) return false
+  if (!Array.isArray(entry.clubPerformance)) return false
+  
+  return true
 }
 
-// ============================================================================
-// COMPATIBILITY CHECKING
-// ============================================================================
-
 /**
- * Checks compatibility between old and new ServiceConfiguration formats
+ * Checks compatibility between ServiceConfiguration objects
  */
 export function checkServiceConfigurationCompatibility(
   oldConfig: ServiceConfiguration,
   newConfig: ServiceConfiguration
 ): boolean {
-  return validateDataCompatibility(
-    oldConfig as unknown as Record<string, unknown>,
-    newConfig as unknown as Record<string, unknown>,
-    {
-      preservedFields: ['cacheDirectory', 'environment', 'logLevel'],
-      allowedNewFields: [], // No new fields allowed for backward compatibility
+  if (!validateServiceConfiguration(oldConfig) || !validateServiceConfiguration(newConfig)) {
+    return false
+  }
+  
+  // Check that required fields are preserved
+  const requiredFields: (keyof ServiceConfiguration)[] = ['cacheDirectory', 'environment', 'logLevel']
+  
+  for (const field of requiredFields) {
+    if (field in oldConfig && !(field in newConfig)) {
+      return false
     }
-  )
+  }
+  
+  return true
 }
 
 /**
- * Checks compatibility between old and new ReconciliationJob formats
+ * Creates a test ServiceConfiguration object
  */
-export function checkReconciliationJobCompatibility(
-  oldJob: ReconciliationJob,
-  newJob: ReconciliationJob
-): boolean {
-  return validateDataCompatibility(
-    oldJob as unknown as Record<string, unknown>,
-    newJob as unknown as Record<string, unknown>,
-    {
-      preservedFields: ['id', 'districtId', 'targetMonth', 'status'],
-      allowedNewFields: ['metadata', 'config', 'progress'], // These can be added
-      allowedTypeChanges: [
-        { field: 'startDate', oldType: 'string', newType: 'object' }, // string to Date
-        { field: 'maxEndDate', oldType: 'string', newType: 'object' }, // string to Date
-      ],
+export function createTestServiceConfiguration(overrides: Partial<ServiceConfiguration> = {}): ServiceConfiguration {
+  return {
+    cacheDirectory: './test-cache',
+    environment: 'test',
+    logLevel: 'info',
+    ...overrides
+  }
+}
+
+/**
+ * Creates multiple test ServiceConfiguration objects
+ */
+export function createTestServiceConfigurations(count: number, overrides: Partial<ServiceConfiguration> = {}): ServiceConfiguration[] {
+  return Array.from({ length: count }, (_, i) => createTestServiceConfiguration({
+    ...overrides,
+    cacheDirectory: `./test-cache-${i}`
+  }))
+}
+
+/**
+ * Creates a test DistrictCacheEntry object
+ */
+export function createTestDistrictCacheEntry(overrides: Partial<DistrictCacheEntry> = {}): DistrictCacheEntry {
+  return {
+    districtId: 'D42',
+    date: '2024-01-01',
+    districtPerformance: [],
+    divisionPerformance: [],
+    clubPerformance: [],
+    fetchedAt: new Date().toISOString(),
+    ...overrides
+  }
+}
+
+/**
+ * Creates multiple test DistrictCacheEntry objects
+ */
+export function createTestDistrictCacheEntries(count: number, overrides: Partial<DistrictCacheEntry> = {}): DistrictCacheEntry[] {
+  return Array.from({ length: count }, (_, i) => {
+    const baseEntry = createTestDistrictCacheEntry({
+      districtId: `D${42 + i}`,
+      date: `2024-01-${String(i + 1).padStart(2, '0')}`
+    })
+    
+    // Apply overrides after base generation, ensuring overrides take precedence
+    return {
+      ...baseEntry,
+      ...overrides
     }
-  )
+  })
+}
+
+/**
+ * Creates a deterministic ServiceConfiguration for testing
+ */
+export function createDeterministicServiceConfiguration(seed: number): ServiceConfiguration {
+  return {
+    cacheDirectory: `./test-cache-${seed}`,
+    environment: 'test',
+    logLevel: 'info'
+  }
+}
+
+/**
+ * Creates a deterministic DistrictCacheEntry for testing
+ */
+export function createDeterministicDistrictCacheEntry(seed: number): DistrictCacheEntry {
+  return {
+    districtId: `D${seed}`,
+    date: '2024-01-01',
+    districtPerformance: [],
+    divisionPerformance: [],
+    clubPerformance: [],
+    fetchedAt: new Date(2024, 0, 1).toISOString()
+  }
 }

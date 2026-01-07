@@ -51,16 +51,16 @@ export class ToastmastersScraper {
    */
   private async getCachedOrDownload(
     csvType: CSVType,
-    downloadFn: () => Promise<string>,
+    downloadFn: () => Promise<{ content: string; actualDate: string }>,
     dateString?: string,
     districtId?: string
   ): Promise<string> {
-    const date = dateString || this.getCurrentDateString()
+    const requestedDate = dateString || this.getCurrentDateString()
 
     try {
       // Check cache first
       const cachedContent = await this.rawCSVCache.getCachedCSV(
-        date,
+        requestedDate,
         csvType,
         districtId
       )
@@ -68,7 +68,7 @@ export class ToastmastersScraper {
       if (cachedContent) {
         logger.info('Cache hit - returning cached CSV content', {
           csvType,
-          date,
+          date: requestedDate,
           districtId,
           contentLength: cachedContent.length,
         })
@@ -77,25 +77,38 @@ export class ToastmastersScraper {
 
       logger.info('Cache miss - downloading and caching CSV content', {
         csvType,
-        date,
+        date: requestedDate,
         districtId,
       })
 
       // Cache miss - download and cache
-      const downloadedContent = await downloadFn()
+      const { content: downloadedContent, actualDate } = await downloadFn()
 
-      // Cache the downloaded content
-      await this.rawCSVCache.setCachedCSV(
-        date,
+      // Determine if this is a month-end closing period
+      const isClosingPeriod = requestedDate !== actualDate
+      const requestedDateObj = new Date(requestedDate + 'T00:00:00')
+      const dataMonth = `${requestedDateObj.getFullYear()}-${String(requestedDateObj.getMonth() + 1).padStart(2, '0')}`
+
+      // Cache the downloaded content with enhanced metadata
+      await this.rawCSVCache.setCachedCSVWithMetadata(
+        actualDate, // Store by actual dashboard date
         csvType,
         downloadedContent,
-        districtId
+        districtId,
+        {
+          requestedDate,
+          isClosingPeriod,
+          dataMonth,
+        }
       )
 
       logger.info('CSV content downloaded and cached successfully', {
         csvType,
-        date,
+        requestedDate,
+        actualDate,
         districtId,
+        isClosingPeriod,
+        dataMonth,
         contentLength: downloadedContent.length,
       })
 
@@ -104,13 +117,14 @@ export class ToastmastersScraper {
       // Cache operation failed - log error and fallback to direct download
       logger.warn('Cache operation failed, falling back to direct download', {
         csvType,
-        date,
+        date: requestedDate,
         districtId,
         error:
           cacheError instanceof Error ? cacheError.message : 'Unknown error',
       })
 
-      return await downloadFn()
+      const { content } = await downloadFn()
+      return content
     }
   }
 
@@ -305,7 +319,7 @@ export class ToastmastersScraper {
    * Fetch all districts with performance data from CSV export
    */
   async getAllDistricts(dateString?: string): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<string> => {
+    const downloadFn = async (): Promise<{ content: string; actualDate: string }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 
@@ -321,7 +335,9 @@ export class ToastmastersScraper {
             timeout: this.config.timeout,
           })
 
-          return await this.downloadCsv(page)
+          const content = await this.downloadCsv(page)
+          const actualDate = this.getCurrentDateString()
+          return { content, actualDate }
         }
       } finally {
         await page.close()
@@ -348,7 +364,7 @@ export class ToastmastersScraper {
   private async downloadAllDistrictsForDate(
     page: Page,
     dateString: string
-  ): Promise<string> {
+  ): Promise<{ content: string; actualDate: string }> {
     // Parse the date string (YYYY-MM-DD)
     const dateObj = new Date(dateString + 'T00:00:00')
     const month = dateObj.getMonth() + 1 // 1-12
@@ -378,16 +394,22 @@ export class ToastmastersScraper {
 
     // Try to verify the date, but don't fail if we can't
     const actualDate = await this.getSelectedDate(page)
+    let actualDateString = dateString // Default to requested date
+
     if (actualDate) {
       const {
         month: actualMonth,
         day: actualDay,
         year: actualYear,
-        dateString: actualDateString,
+        dateString: dashboardDateString,
       } = actualDate
+      
+      actualDateString = dashboardDateString
+
+      // Check for month-end closing period
       if (actualMonth !== month || actualDay !== day || actualYear !== year) {
-        logger.warn(
-          'Requested date not available, dashboard returned different date',
+        logger.info(
+          'Month-end closing period detected - dashboard returned different date',
           {
             requested: { month, day, year, dateString },
             actual: {
@@ -398,14 +420,12 @@ export class ToastmastersScraper {
             },
           }
         )
-        throw new Error(
-          `Date ${dateString} not available (dashboard returned ${actualDateString})`
-        )
+      } else {
+        logger.info('Date verification successful', {
+          requested: dateString,
+          actual: actualDateString,
+        })
       }
-      logger.info('Date verification successful', {
-        requested: dateString,
-        actual: actualDateString,
-      })
     } else {
       logger.warn('Could not verify date from dropdown, proceeding anyway', {
         dateString,
@@ -413,7 +433,8 @@ export class ToastmastersScraper {
     }
 
     // Download CSV with the selected date
-    return await this.downloadCsv(page)
+    const content = await this.downloadCsv(page)
+    return { content, actualDate: actualDateString }
   }
 
   /**
@@ -646,7 +667,7 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<string> => {
+    const downloadFn = async (): Promise<{ content: string; actualDate: string }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 
@@ -678,6 +699,8 @@ export class ToastmastersScraper {
           timeout: this.config.timeout,
         })
 
+        let actualDateString = dateString || this.getCurrentDateString()
+
         // Verify the date if requested
         if (dateString) {
           const dateObj = new Date(dateString + 'T00:00:00')
@@ -691,15 +714,18 @@ export class ToastmastersScraper {
               month: actualMonth,
               day: actualDay,
               year: actualYear,
-              dateString: actualDateString,
+              dateString: dashboardDateString,
             } = actualDate
+            
+            actualDateString = dashboardDateString
+
             if (
               actualMonth !== month ||
               actualDay !== day ||
               actualYear !== year
             ) {
-              logger.warn(
-                'Requested date not available, dashboard returned different date',
+              logger.info(
+                'Month-end closing period detected - dashboard returned different date',
                 {
                   requested: { month, day, year, dateString },
                   actual: {
@@ -710,18 +736,17 @@ export class ToastmastersScraper {
                   },
                 }
               )
-              throw new Error(
-                `Date ${dateString} not available (dashboard returned ${actualDateString})`
-              )
+            } else {
+              logger.info('Date verification successful', {
+                requested: dateString,
+                actual: actualDateString,
+              })
             }
-            logger.info('Date verification successful', {
-              requested: dateString,
-              actual: actualDateString,
-            })
           }
         }
 
-        return await this.downloadCsv(page)
+        const content = await this.downloadCsv(page)
+        return { content, actualDate: actualDateString }
       } finally {
         await page.close()
       }
@@ -750,7 +775,7 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<string> => {
+    const downloadFn = async (): Promise<{ content: string; actualDate: string }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 

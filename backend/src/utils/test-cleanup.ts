@@ -35,7 +35,6 @@ export const DEFAULT_CLEANUP_CONFIG: TestCleanupConfig = {
   baseDir: './test-dir',
   patterns: [
     'test-cache*',
-    'test-reconciliation*',
     'test-assessment*',
     'test-*',
   ],

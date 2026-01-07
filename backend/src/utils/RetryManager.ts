@@ -2,7 +2,7 @@
  * Retry Manager with Exponential Backoff
  *
  * Provides configurable retry logic with exponential backoff for dashboard requests
- * and other external API calls during reconciliation processes.
+ * and other external API calls.
  */
 
 import { logger } from './logger.js'

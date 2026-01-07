@@ -19,9 +19,12 @@ export enum CSVType {
  * Cache metadata for each cached date directory
  */
 export interface RawCSVCacheMetadata {
-  date: string // YYYY-MM-DD format
+  date: string // YYYY-MM-DD format (actual dashboard date)
+  requestedDate?: string // YYYY-MM-DD format (originally requested date, if different)
   timestamp: number // When cache was created
   programYear: string // e.g., "2024-2025"
+  dataMonth?: string // YYYY-MM format (which month the data represents, for closing periods)
+  isClosingPeriod?: boolean // True if this data was collected during month-end closing
   csvFiles: {
     // Track cached files
     allDistricts: boolean
@@ -123,6 +126,45 @@ export interface RawCSVCacheConfig {
     maxSlowOperationsHistory: number
     storageSizeWarningMB: number
   }
+}
+
+/**
+ * Month-end closing period handling interface
+ */
+export interface MonthEndClosingInfo {
+  isClosingPeriod: boolean
+  dataMonth: string // YYYY-MM format
+  actualDate: string // YYYY-MM-DD format (dashboard date)
+  requestedDate: string // YYYY-MM-DD format (originally requested date)
+}
+
+/**
+ * Month-end data mapping service interface
+ */
+export interface IMonthEndDataMapper {
+  /**
+   * Determine if a date falls during a month-end closing period
+   */
+  detectClosingPeriod(
+    requestedDate: string,
+    actualDashboardDate: string
+  ): MonthEndClosingInfo
+
+  /**
+   * Get the appropriate CSV date for a given processed data date
+   * Returns null if no data should be available (expected gap)
+   */
+  getCSVDateForProcessedDate(processedDate: string): Promise<string | null>
+
+  /**
+   * Get the last day data for a given month (uses closing period data)
+   */
+  getMonthEndData(month: string, year: number): Promise<string | null>
+
+  /**
+   * Check if a date should have no data due to closing period
+   */
+  isExpectedDataGap(date: string): Promise<boolean>
 }
 
 /**

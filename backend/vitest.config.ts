@@ -30,8 +30,6 @@ export default defineConfig({
       '**/assessment/**',
       // Skip test directory artifacts
       '**/test-dir/**',
-      // Skip specific flaky tests in ReconciliationOrchestrator
-      '**/ReconciliationOrchestrator.property.test.ts',
     ],
     coverage: {
       provider: 'v8',

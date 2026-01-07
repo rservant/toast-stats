@@ -11,11 +11,6 @@ import type {
   DistrictStatistics,
 } from './districts.js'
 import type {
-  ReconciliationJob,
-  ReconciliationTimeline,
-  ReconciliationConfig,
-} from './reconciliation.js'
-import type {
   DistrictAnalytics,
   ClubTrend,
   DivisionAnalytics,
@@ -214,62 +209,6 @@ export interface IToastmastersAPIService {
 }
 
 /**
- * Reconciliation Cache Service Interface
- */
-export interface IReconciliationCacheService {
-  getJob(jobId: string): Promise<ReconciliationJob | null>
-  saveJob(job: ReconciliationJob): Promise<void>
-  deleteJob(jobId: string): Promise<void>
-  getTimeline(districtId: string): Promise<ReconciliationTimeline | null>
-  saveTimeline(timeline: ReconciliationTimeline): Promise<void>
-  clearCache(): Promise<void>
-  dispose(): Promise<void>
-}
-
-/**
- * Reconciliation Config Service Interface
- */
-export interface IReconciliationConfigService {
-  getConfig(): Promise<ReconciliationConfig>
-  updateConfig(updates: Partial<ReconciliationConfig>): Promise<void>
-  validateConfig(config: ReconciliationConfig): Promise<boolean>
-  resetToDefaults(): Promise<void>
-  dispose(): Promise<void>
-}
-
-/**
- * Reconciliation Metrics Interface
- */
-export interface ReconciliationMetrics {
-  totalJobs: number
-  successfulJobs: number
-  failedJobs: number
-  cancelledJobs: number
-  activeJobs: number
-  successRate: number
-  failureRate: number
-  averageDuration: number
-  medianDuration: number
-  longestDuration: number
-  shortestDuration: number
-  averageStabilityPeriod: number
-  extensionRate: number
-  timeoutRate: number
-}
-
-/**
- * Reconciliation Metrics Service Interface
- */
-export interface IReconciliationMetricsService {
-  recordJobStart(jobId: string): void
-  recordJobComplete(jobId: string, duration: number): void
-  recordJobError(jobId: string, error: Error): void
-  getMetrics(): Promise<ReconciliationMetrics>
-  clearMetrics(): Promise<void>
-  dispose(): Promise<void>
-}
-
-/**
  * Backfill Service Interface
  */
 export interface IBackfillService {
@@ -394,19 +333,6 @@ export interface ICacheService {
 }
 
 /**
- * Reconciliation Storage Manager Interface
- */
-export interface IReconciliationStorageManager {
-  saveJob(job: ReconciliationJob): Promise<void>
-  getJob(jobId: string): Promise<ReconciliationJob | null>
-  deleteJob(jobId: string): Promise<void>
-  listJobs(): Promise<ReconciliationJob[]>
-  saveTimeline(timeline: ReconciliationTimeline): Promise<void>
-  getTimeline(districtId: string): Promise<ReconciliationTimeline | null>
-  dispose(): Promise<void>
-}
-
-/**
  * Cache Update Manager Interface
  */
 export interface ICacheUpdateManager {
@@ -451,6 +377,20 @@ export interface IRawCSVCacheService {
     csvContent: string,
     districtId?: string
   ): Promise<void>
+  
+  // Enhanced cache operation for month-end closing periods
+  setCachedCSVWithMetadata(
+    date: string,
+    type: CSVType,
+    csvContent: string,
+    districtId?: string,
+    additionalMetadata?: {
+      requestedDate?: string
+      isClosingPeriod?: boolean
+      dataMonth?: string
+    }
+  ): Promise<void>
+  
   hasCachedCSV(
     date: string,
     type: CSVType,

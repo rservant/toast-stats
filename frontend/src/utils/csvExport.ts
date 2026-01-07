@@ -475,13 +475,11 @@ export const exportDistrictAnalytics = async (
   districtId: string,
   startDate?: string,
   endDate?: string,
-  reconciliationMetadata?: {
-    reconciliationStatus: string
+  exportMetadata?: {
     dataCollectionDate: string
     exportTimestamp: string
     isPreliminary: boolean
     isFinal: boolean
-    reconciliationPhase?: string
   }
 ): Promise<void> => {
   try {
@@ -490,27 +488,17 @@ export const exportDistrictAnalytics = async (
     if (startDate) params.append('startDate', startDate)
     if (endDate) params.append('endDate', endDate)
 
-    // Add reconciliation metadata as query parameters
-    if (reconciliationMetadata) {
-      params.append(
-        'reconciliationStatus',
-        reconciliationMetadata.reconciliationStatus
-      )
+    // Add export metadata as query parameters
+    if (exportMetadata) {
       params.append(
         'dataCollectionDate',
-        reconciliationMetadata.dataCollectionDate
+        exportMetadata.dataCollectionDate
       )
       params.append(
         'isPreliminary',
-        reconciliationMetadata.isPreliminary.toString()
+        exportMetadata.isPreliminary.toString()
       )
-      params.append('isFinal', reconciliationMetadata.isFinal.toString())
-      if (reconciliationMetadata.reconciliationPhase) {
-        params.append(
-          'reconciliationPhase',
-          reconciliationMetadata.reconciliationPhase
-        )
-      }
+      params.append('isFinal', exportMetadata.isFinal.toString())
     }
 
     // Fetch CSV from backend
