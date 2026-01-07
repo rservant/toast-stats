@@ -45,7 +45,9 @@ export const EnhancedExportButton: React.FC<EnhancedExportButtonProps> = ({
       exportTimestamp: new Date().toISOString(),
       isPreliminary: dataStatus.isPreliminary,
       isFinal: dataStatus.isFinal,
-      reconciliationPhase: dataStatus.reconciliationStatus?.phase,
+      ...(dataStatus.reconciliationStatus?.phase && {
+        reconciliationPhase: dataStatus.reconciliationStatus.phase,
+      }),
     }
 
     await onExport(metadata)

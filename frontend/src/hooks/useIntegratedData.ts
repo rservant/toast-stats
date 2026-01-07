@@ -44,7 +44,7 @@ export function useEnhancedMembershipData(
     data: dailyReportsData,
     isLoading: isLoadingReports,
     error: reportsError,
-  } = useDailyReports(districtId, startDate, endDate)
+  } = useDailyReports(districtId, startDate!, endDate!)
 
   const enhancedData = useMemo<EnhancedMembershipPoint[]>(() => {
     if (!membershipHistory?.data || !dailyReportsData?.reports) {
@@ -114,7 +114,7 @@ export function useSignificantEvents(
     data: dailyReportsData,
     isLoading,
     error,
-  } = useDailyReports(districtId, startDate, endDate)
+  } = useDailyReports(districtId, startDate!, endDate!)
 
   const events = useMemo<SignificantEvent[]>(() => {
     if (!dailyReportsData?.reports) {
@@ -141,12 +141,11 @@ export function useRealTimeMembership(districtId: string | null) {
   // Get daily reports since the statistics base date
   const endDate = new Date().toISOString().split('T')[0]
   const startDate = useMemo(() => {
-    if (!statistics?.asOfDate) return endDate
-    return statistics.asOfDate
+    return statistics?.asOfDate || endDate
   }, [statistics, endDate])
 
   const { data: dailyReportsData, isLoading: isLoadingReports } =
-    useDailyReports(districtId, startDate, endDate)
+    useDailyReports(districtId, startDate!, endDate!)
 
   const realTimeData = useMemo(() => {
     if (!statistics || !dailyReportsData?.reports) {

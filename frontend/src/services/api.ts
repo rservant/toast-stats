@@ -6,14 +6,14 @@ let bypassCache = false
 /**
  * Enable cache bypass for the next set of requests
  */
-export const enableCacheBypass = () => {
+export const enableCacheBypass = (): void => {
   bypassCache = true
 }
 
 /**
  * Disable cache bypass
  */
-export const disableCacheBypass = () => {
+export const disableCacheBypass = (): void => {
   bypassCache = false
 }
 

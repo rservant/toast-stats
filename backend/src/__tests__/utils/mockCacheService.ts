@@ -1,6 +1,6 @@
 /**
  * Mock Cache Service for Testing
- * 
+ *
  * Provides a mock implementation of IRawCSVCacheService for use in tests.
  * By default, simulates cache misses to ensure tests exercise the download path.
  */
@@ -72,7 +72,11 @@ export function createMockCacheService(): IRawCSVCacheService {
       oldestCacheDate: null,
       newestCacheDate: null,
       diskUsage: { used: 0, available: 1000000, percentUsed: 0 },
-      performance: { averageReadTime: 0, averageWriteTime: 0, slowestOperations: [] },
+      performance: {
+        averageReadTime: 0,
+        averageWriteTime: 0,
+        slowestOperations: [],
+      },
     }),
     getHealthStatus: vi.fn().mockResolvedValue({
       isHealthy: true,
@@ -105,12 +109,14 @@ export function createMockCacheService(): IRawCSVCacheService {
  * Create a mock cache service that simulates cache hits
  * Useful for testing cache hit scenarios
  */
-export function createMockCacheServiceWithHits(cachedContent: string = 'mock,csv,content\nrow1,value1,value2'): IRawCSVCacheService {
+export function createMockCacheServiceWithHits(
+  cachedContent: string = 'mock,csv,content\nrow1,value1,value2'
+): IRawCSVCacheService {
   const mockService = createMockCacheService()
-  
+
   // Override to return cached content
   mockService.getCachedCSV = vi.fn().mockResolvedValue(cachedContent)
   mockService.hasCachedCSV = vi.fn().mockResolvedValue(true)
-  
+
   return mockService
 }

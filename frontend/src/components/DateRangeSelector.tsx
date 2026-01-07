@@ -53,7 +53,7 @@ export const DateRangeSelector = ({
 
   // Emit valid date ranges
   useEffect(() => {
-    if (!validationError) {
+    if (!validationError && startDate && endDate) {
       onDateRangeChange(startDate, endDate)
     }
   }, [startDate, endDate, validationError, onDateRangeChange])

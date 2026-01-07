@@ -46,7 +46,7 @@ export const AccessibilityChecker: React.FC<AccessibilityCheckerProps> = ({
       // Convert RGB to hex for validation (simplified)
       const rgbToHex = (rgb: string): string => {
         const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
-        if (!match) return rgb
+        if (!match || !match[1] || !match[2] || !match[3]) return rgb
 
         const [, r, g, b] = match
         return `#${parseInt(r).toString(16).padStart(2, '0')}${parseInt(g).toString(16).padStart(2, '0')}${parseInt(b).toString(16).padStart(2, '0')}`
@@ -153,26 +153,28 @@ export const AccessibilityChecker: React.FC<AccessibilityCheckerProps> = ({
 
         if (previousHeadings.length > 0) {
           const lastHeading = previousHeadings[previousHeadings.length - 1]
-          const lastLevel = parseInt(lastHeading.tagName.charAt(1))
+          if (lastHeading) {
+            const lastLevel = parseInt(lastHeading.tagName.charAt(1))
 
-          if (headingLevel > lastLevel + 1) {
-            const error: ValidationError = {
-              type: 'accessibility',
-              severity: 'warning',
-              message: `Heading hierarchy violation: ${tagName} follows ${lastHeading.tagName.toLowerCase()} (skipped levels)`,
-              element,
-              suggestion:
-                'Use proper heading hierarchy (h1 → h2 → h3, etc.) without skipping levels',
-            }
+            if (headingLevel > lastLevel + 1) {
+              const error: ValidationError = {
+                type: 'accessibility',
+                severity: 'warning',
+                message: `Heading hierarchy violation: ${tagName} follows ${lastHeading.tagName.toLowerCase()} (skipped levels)`,
+                element,
+                suggestion:
+                  'Use proper heading hierarchy (h1 → h2 → h3, etc.) without skipping levels',
+              }
 
-            console.warn(
-              'Accessibility Violation - Heading Hierarchy:',
-              error.message,
-              element
-            )
+              console.warn(
+                'Accessibility Violation - Heading Hierarchy:',
+                error.message,
+                element
+              )
 
-            if (onAccessibilityViolation) {
-              onAccessibilityViolation(error)
+              if (onAccessibilityViolation) {
+                onAccessibilityViolation(error)
+              }
             }
           }
         }
@@ -383,10 +385,12 @@ export const withAccessibilityChecking = <P extends object>(
     ...props
   }) => (
     <AccessibilityChecker
-      enableRuntimeChecks={enableRuntimeChecks}
-      checkContrast={checkContrast}
-      checkTouchTargets={checkTouchTargets}
-      onAccessibilityViolation={onAccessibilityViolation}
+      {...(enableRuntimeChecks !== undefined && { enableRuntimeChecks })}
+      {...(checkContrast !== undefined && { checkContrast })}
+      {...(checkTouchTargets !== undefined && { checkTouchTargets })}
+      {...(onAccessibilityViolation !== undefined && {
+        onAccessibilityViolation,
+      })}
     >
       <Component {...(props as P)} />
     </AccessibilityChecker>

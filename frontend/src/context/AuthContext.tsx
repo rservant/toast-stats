@@ -3,7 +3,7 @@ import React, { createContext, useState, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 
-interface AuthContextType {
+export interface AuthContextType {
   token: string | null
   isAuthenticated: boolean
   login: (username: string, password: string) => Promise<void>

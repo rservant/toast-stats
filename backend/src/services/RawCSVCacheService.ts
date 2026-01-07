@@ -664,7 +664,8 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         missRatio,
         averageFileSize,
         oldestCacheDate: dates.length > 0 ? (dates[0] ?? null) : null,
-        newestCacheDate: dates.length > 0 ? (dates[dates.length - 1] ?? null) : null,
+        newestCacheDate:
+          dates.length > 0 ? (dates[dates.length - 1] ?? null) : null,
         diskUsage: {
           used: totalSize,
           available: 0, // Would need system call to get actual disk space
@@ -978,7 +979,8 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         // Check for district-specific files
         const entries = await fs.readdir(datePath, { withFileTypes: true })
         const districtDirs = entries.filter(
-          (entry: any) => entry.isDirectory() && entry.name.startsWith('district-')
+          (entry: any) =>
+            entry.isDirectory() && entry.name.startsWith('district-')
         )
 
         for (const districtDir of districtDirs) {

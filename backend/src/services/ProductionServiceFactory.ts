@@ -309,14 +309,16 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       createServiceFactory(
         (container: ServiceContainer) => {
           const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rawCSVCacheService = container.resolve(ServiceTokens.RawCSVCacheService)
+          const rawCSVCacheService = container.resolve(
+            ServiceTokens.RawCSVCacheService
+          )
           const rankingCalculator = container.resolve(
             ServiceTokens.RankingCalculator
           )
-          
+
           // Create ToastmastersScraper with injected cache service
           const scraper = new ToastmastersScraper(rawCSVCacheService)
-          
+
           return new RefreshService(
             snapshotStore,
             scraper,
@@ -443,10 +445,10 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const store = snapshotStore || this.createSnapshotStore()
     const rawCSVCacheService = this.createRawCSVCacheService()
     const rankingCalculator = this.createRankingCalculator()
-    
+
     // Create ToastmastersScraper with injected cache service
     const scraper = new ToastmastersScraper(rawCSVCacheService)
-    
+
     const service = new RefreshService(
       store,
       scraper,

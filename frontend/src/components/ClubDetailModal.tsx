@@ -27,20 +27,20 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
   // Get latest membership
   const latestMembership =
     club.membershipTrend.length > 0
-      ? club.membershipTrend[club.membershipTrend.length - 1].count
+      ? (club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0)
       : 0
 
   // Get membership change
   const membershipChange =
     club.membershipTrend.length > 1
-      ? club.membershipTrend[club.membershipTrend.length - 1].count -
-        club.membershipTrend[0].count
+      ? (club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0) -
+        (club.membershipTrend[0]?.count ?? 0)
       : 0
 
   // Get latest DCP goals
   const latestDcpGoals =
     club.dcpGoalsTrend.length > 0
-      ? club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1].goalsAchieved
+      ? (club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved ?? 0)
       : 0
 
   // Format date
@@ -357,11 +357,18 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
 
                 {/* Date range */}
                 <div className="flex items-center justify-between mt-2 text-xs text-gray-600 font-tm-body">
-                  <span>{formatDate(club.membershipTrend[0].date)}</span>
                   <span>
-                    {formatDate(
-                      club.membershipTrend[club.membershipTrend.length - 1].date
-                    )}
+                    {club.membershipTrend[0]
+                      ? formatDate(club.membershipTrend[0].date)
+                      : 'N/A'}
+                  </span>
+                  <span>
+                    {club.membershipTrend[club.membershipTrend.length - 1]
+                      ? formatDate(
+                          club.membershipTrend[club.membershipTrend.length - 1]
+                            ?.date ?? ''
+                        )
+                      : 'N/A'}
                   </span>
                 </div>
               </div>

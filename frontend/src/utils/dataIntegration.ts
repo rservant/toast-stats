@@ -325,7 +325,7 @@ export function calculateRealTimeMembership(
 
   const lastUpdated =
     recentReports.length > 0
-      ? recentReports[recentReports.length - 1].date
+      ? (recentReports[recentReports.length - 1]?.date ?? baseDate)
       : baseDate
 
   return {

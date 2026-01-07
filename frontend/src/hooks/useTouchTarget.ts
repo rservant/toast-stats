@@ -80,7 +80,7 @@ export function useTouchTarget(options: TouchTargetValidationOptions = {}) {
         height: effectiveHeight,
         passes,
         element,
-        recommendation,
+        ...(recommendation && { recommendation }),
       }
     },
     [minSize, includeMargin]

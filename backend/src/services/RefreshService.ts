@@ -178,7 +178,7 @@ export class RefreshService {
         if (!dateOnly) {
           throw new Error('Failed to extract date from ISO string')
         }
-        
+
         const minimalData: NormalizedData = {
           districts: [],
           metadata: {

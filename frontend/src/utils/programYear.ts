@@ -111,7 +111,7 @@ export function getMostRecentDateInProgramYear(
   if (filteredDates.length === 0) return null
 
   // Sort in descending order and return the first (most recent)
-  return filteredDates.sort((a, b) => b.localeCompare(a))[0]
+  return filteredDates.sort((a, b) => b.localeCompare(a))[0] ?? null
 }
 
 /**

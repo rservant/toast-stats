@@ -12,7 +12,7 @@ import DistrictDetailPage from './pages/DistrictDetailPage'
 import ReconciliationManagementPage from './pages/ReconciliationManagementPage'
 import DistrictConfigurationPage from './pages/DistrictConfigurationPage'
 
-function Layout() {
+function Layout(): React.JSX.Element {
   const { activeBackfills, removeBackfill } = useBackfillContext()
 
   return (
@@ -23,7 +23,9 @@ function Layout() {
           key={backfillInfo.backfillId}
           backfillId={backfillInfo.backfillId}
           type={backfillInfo.type}
-          districtId={backfillInfo.districtId}
+          {...(backfillInfo.districtId && {
+            districtId: backfillInfo.districtId,
+          })}
           onComplete={() => removeBackfill(backfillInfo.backfillId)}
           onCancel={() => removeBackfill(backfillInfo.backfillId)}
         />
@@ -72,7 +74,7 @@ const router = createBrowserRouter(
   // }
 )
 
-function App() {
+function App(): React.JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <ProgramYearProvider>

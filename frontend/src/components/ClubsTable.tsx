@@ -191,8 +191,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   membershipTrend: club.membershipTrend,
                   dcpGoalsTrend: club.dcpGoalsTrend,
                   currentStatus: club.currentStatus,
-                  distinguishedLevel: club.distinguishedLevel,
-                  riskFactors: club.riskFactors,
+                  ...(club.distinguishedLevel && {
+                    distinguishedLevel: club.distinguishedLevel,
+                  }),
+                  ...(club.riskFactors && { riskFactors: club.riskFactors }),
                 })),
                 districtId
               )
@@ -280,7 +282,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                       currentFilter={getFilter(config.field)}
                       onSort={handleSort}
                       onFilter={setFilter}
-                      options={config.filterOptions}
+                      {...(config.filterOptions && {
+                        options: config.filterOptions,
+                      })}
                     />
                   </th>
                 ))}

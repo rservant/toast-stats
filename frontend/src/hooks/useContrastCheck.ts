@@ -152,7 +152,7 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
         backgroundColor,
         contrastRatio,
         passes,
-        recommendation,
+        ...(recommendation && { recommendation }),
       }
     },
     []
@@ -181,7 +181,9 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
             level: result.passes ? 'AA' : 'fail',
             foreground: result.focusColor,
             background: result.backgroundColor,
-            recommendation: result.recommendation,
+            ...(result.recommendation && {
+              recommendation: result.recommendation,
+            }),
           })
         }
       })
@@ -238,7 +240,7 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
         violation.background,
         violation.isLargeText
       )
-      if (suggestions.length > 0) {
+      if (suggestions.length > 0 && suggestions[0]) {
         element.style.color = suggestions[0]
       }
     },
@@ -268,6 +270,7 @@ export function useContrastCheck(options: ContrastCheckOptions = {}) {
       }, 0)
       return () => clearTimeout(timeoutId)
     }
+    return undefined
   }, [checkOnMount, validateAllContrasts])
 
   // Handle resize if enabled
@@ -373,7 +376,7 @@ function rgbStringToHex(rgbString: string): string | null {
   }
 
   const rgbMatch = rgbString.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
-  if (rgbMatch) {
+  if (rgbMatch && rgbMatch[1] && rgbMatch[2] && rgbMatch[3]) {
     const r = parseInt(rgbMatch[1])
     const g = parseInt(rgbMatch[2])
     const b = parseInt(rgbMatch[3])
@@ -381,7 +384,7 @@ function rgbStringToHex(rgbString: string): string | null {
   }
 
   const rgbaMatch = rgbString.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/)
-  if (rgbaMatch) {
+  if (rgbaMatch && rgbaMatch[1] && rgbaMatch[2] && rgbaMatch[3]) {
     const r = parseInt(rgbaMatch[1])
     const g = parseInt(rgbaMatch[2])
     const b = parseInt(rgbaMatch[3])

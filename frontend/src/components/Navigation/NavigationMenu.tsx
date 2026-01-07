@@ -32,11 +32,11 @@ const NavigationMenu: React.FC<NavigationMenuProps> = ({
       {items.map((item, index) => (
         <li key={index} role="none">
           <NavigationItem
-            href={item.href}
-            onClick={item.onClick}
-            isActive={item.isActive}
-            disabled={item.disabled}
-            aria-label={item['aria-label']}
+            {...(item.href && { href: item.href })}
+            {...(item.onClick && { onClick: item.onClick })}
+            {...(item.isActive !== undefined && { isActive: item.isActive })}
+            {...(item.disabled !== undefined && { disabled: item.disabled })}
+            {...(item['aria-label'] && { 'aria-label': item['aria-label'] })}
             role="menuitem"
           >
             {item.label}

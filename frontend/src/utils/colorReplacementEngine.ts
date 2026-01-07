@@ -246,6 +246,8 @@ export class ColorReplacementEngine {
       const fullMatch = match[0]
       const colorArray = match[1]
 
+      if (!colorArray) continue
+
       const lineNumber = this.getLineNumber(content, match.index!)
       const replacedArray = this.replaceChartColorArray(colorArray)
 
@@ -275,6 +277,8 @@ export class ColorReplacementEngine {
     for (const match of propertyMatches) {
       const fullMatch = match[0]
       const colorValue = match[1]
+
+      if (!colorValue) continue
 
       if (!isBrandCompliantColor(colorValue)) {
         const mapping = this.findBestColorMapping(colorValue, 'primary')
@@ -639,7 +643,7 @@ export class ColorReplacementEngine {
    */
   private hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-    return result
+    return result && result[1] && result[2] && result[3]
       ? {
           r: parseInt(result[1], 16),
           g: parseInt(result[2], 16),

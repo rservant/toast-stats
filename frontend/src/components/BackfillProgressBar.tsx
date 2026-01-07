@@ -71,6 +71,7 @@ export function BackfillProgressBar({
 
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [backfillStatus?.status, onComplete, queryClient, type, districtId])
 
   if (!backfillStatus) return null

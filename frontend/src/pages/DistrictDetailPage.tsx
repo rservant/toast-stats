@@ -367,7 +367,7 @@ const DistrictDetailPage: React.FC = () => {
                 <DistrictOverview
                   districtId={districtId}
                   districtName={districtName}
-                  selectedDate={selectedDate}
+                  {...(selectedDate && { selectedDate })}
                   programYearStartDate={selectedProgramYear.startDate}
                 />
 
@@ -456,7 +456,9 @@ const DistrictDetailPage: React.FC = () => {
                 {analytics && (
                   <LazyChart height="300px">
                     <YearOverYearComparison
-                      yearOverYear={analytics.yearOverYear}
+                      {...(analytics.yearOverYear && {
+                        yearOverYear: analytics.yearOverYear,
+                      })}
                       currentYear={{
                         totalMembership: analytics.totalMembership,
                         distinguishedClubs: analytics.distinguishedClubs.total,
@@ -490,7 +492,19 @@ const DistrictDetailPage: React.FC = () => {
                         goalsAchieved:
                           club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
                             ?.goalsAchieved || 0,
-                        distinguishedLevel: club.distinguishedLevel,
+                        ...(club.distinguishedLevel &&
+                          [
+                            'Smedley',
+                            'President',
+                            'Select',
+                            'Distinguished',
+                          ].includes(club.distinguishedLevel) && {
+                            distinguishedLevel: club.distinguishedLevel as
+                              | 'Smedley'
+                              | 'President'
+                              | 'Select'
+                              | 'Distinguished',
+                          }),
                       }))
                       .sort((a, b) => b.goalsAchieved - a.goalsAchieved)
                       .slice(0, 10)}

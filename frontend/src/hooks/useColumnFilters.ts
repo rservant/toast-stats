@@ -19,7 +19,7 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
    */
   const getLatestMembership = useCallback((club: ClubTrend): number => {
     if (club.membershipTrend.length === 0) return 0
-    return club.membershipTrend[club.membershipTrend.length - 1].count
+    return club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0
   }, [])
 
   /**
@@ -27,7 +27,7 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
    */
   const getLatestDcpGoals = useCallback((club: ClubTrend): number => {
     if (club.dcpGoalsTrend.length === 0) return 0
-    return club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1].goalsAchieved
+    return club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved ?? 0
   }, [])
 
   /**

@@ -6,7 +6,7 @@ import '../styles/brand.css'
 
 // Mock ResizeObserver for Recharts components
 global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
 }

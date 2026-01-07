@@ -1118,8 +1118,9 @@ export class DataSourceSelector {
       // Create our own scraper instance for per-district collection
       // BackfillService should be independent and not rely on RefreshService internals
       const { ToastmastersScraper } = await import('./ToastmastersScraper.js')
-      const { getProductionServiceFactory } = await import('./ProductionServiceFactory.js')
-      
+      const { getProductionServiceFactory } =
+        await import('./ProductionServiceFactory.js')
+
       // Get cache service from production factory
       const serviceFactory = getProductionServiceFactory()
       const rawCSVCacheService = serviceFactory.createRawCSVCacheService()

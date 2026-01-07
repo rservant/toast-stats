@@ -22,7 +22,10 @@ import { ToastmastersScraper } from '../services/ToastmastersScraper'
 import { RawCSVCacheService } from '../services/RawCSVCacheService'
 import { CacheConfigService } from '../services/CacheConfigService'
 import { CSVType } from '../types/rawCSVCache'
-import { createTestSelfCleanup, createUniqueTestDir } from '../utils/test-self-cleanup'
+import {
+  createTestSelfCleanup,
+  createUniqueTestDir,
+} from '../utils/test-self-cleanup'
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger'
@@ -41,7 +44,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
   let testCleanup: { cleanup: any; afterEach: () => Promise<void> }
   let testCacheDir: string
   let testSnapshotDir: string
-  
+
   let refreshService: RefreshService
   let snapshotStore: PerDistrictFileSnapshotStore
   let configService: DistrictConfigurationService
@@ -54,17 +57,20 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
     testCleanup = createTestSelfCleanup()
     testCacheDir = createUniqueTestDir(testCleanup.cleanup, 'raw-csv-cache-e2e')
     testSnapshotDir = path.join(testCacheDir, 'snapshots')
-    
+
     // Ensure directories exist
     await fs.mkdir(testCacheDir, { recursive: true })
     await fs.mkdir(testSnapshotDir, { recursive: true })
 
     // Initialize cache configuration service
-    cacheConfigService = new CacheConfigService({
-      cacheDirectory: path.join(testCacheDir, 'raw-csv'),
-      environment: 'test',
-      logLevel: 'error',
-    }, logger)
+    cacheConfigService = new CacheConfigService(
+      {
+        cacheDirectory: path.join(testCacheDir, 'raw-csv'),
+        environment: 'test',
+        logLevel: 'error',
+      },
+      logger
+    )
 
     // Initialize cache service
     cacheService = new RawCSVCacheService(cacheConfigService, logger)
@@ -96,7 +102,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
     if (scraper) {
       await scraper.closeBrowser()
     }
-    
+
     // Clean up test environment
     await testCleanup.afterEach()
   })
@@ -146,12 +152,12 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
     it('should handle mixed cache hit/miss scenarios during refresh', async () => {
       const testDate = '2024-01-16'
-      
+
       // Pre-populate cache with some data
       const allDistrictsCSV = `District,Club Name,Status
 42,Test Club 1,Active
 15,Test Club 2,Active`
-      
+
       await cacheService.setCachedCSV(
         testDate,
         CSVType.ALL_DISTRICTS,
@@ -160,13 +166,16 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
       // Mock scraper methods
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
-      const getDistrictPerformanceSpy = vi.spyOn(scraper, 'getDistrictPerformance')
-      
+      const getDistrictPerformanceSpy = vi.spyOn(
+        scraper,
+        'getDistrictPerformance'
+      )
+
       getAllDistrictsSpy.mockResolvedValue([
         { District: '42', 'Club Name': 'Test Club 1', Status: 'Active' },
         { District: '15', 'Club Name': 'Test Club 2', Status: 'Active' },
       ])
-      
+
       getDistrictPerformanceSpy.mockResolvedValue([
         { District: '42', 'Performance Metric': '85%' },
       ])
@@ -207,28 +216,32 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
     it('should preserve existing API contracts and return types', async () => {
       // Mock scraper methods with expected return types
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
-      const getDistrictPerformanceSpy = vi.spyOn(scraper, 'getDistrictPerformance')
-      
+      const getDistrictPerformanceSpy = vi.spyOn(
+        scraper,
+        'getDistrictPerformance'
+      )
+
       const expectedAllDistricts = [
         { District: '42', 'Club Name': 'Test Club 1', Status: 'Active' },
         { District: '15', 'Club Name': 'Test Club 2', Status: 'Active' },
       ]
-      
+
       const expectedDistrictPerformance = [
         { District: '42', 'Performance Metric': '85%', 'Goals Met': '8/10' },
       ]
-      
+
       getAllDistrictsSpy.mockResolvedValue(expectedAllDistricts)
       getDistrictPerformanceSpy.mockResolvedValue(expectedDistrictPerformance)
 
       // Test direct scraper calls (should work with or without cache)
       const allDistrictsResult = await scraper.getAllDistricts()
-      const districtPerformanceResult = await scraper.getDistrictPerformance('42')
+      const districtPerformanceResult =
+        await scraper.getDistrictPerformance('42')
 
       // Verify return types and data structure are preserved
       expect(Array.isArray(allDistrictsResult)).toBe(true)
       expect(Array.isArray(districtPerformanceResult)).toBe(true)
-      
+
       expect(allDistrictsResult).toEqual(expectedAllDistricts)
       expect(districtPerformanceResult).toEqual(expectedDistrictPerformance)
 
@@ -247,7 +260,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
   describe('Error Recovery and Fallback Scenarios (Requirements 2.5, 8.3)', () => {
     it('should gracefully fallback to direct download when cache read fails', async () => {
       const testDate = '2024-01-19'
-      
+
       // Create corrupted cache file to simulate read failure
       const cacheDir = path.join(testCacheDir, 'raw-csv', testDate)
       await fs.mkdir(cacheDir, { recursive: true })
@@ -277,7 +290,9 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
     it('should handle cache write failures gracefully', async () => {
       // Mock cache service to simulate write failure
       const setCachedCSVSpy = vi.spyOn(cacheService, 'setCachedCSV')
-      setCachedCSVSpy.mockRejectedValue(new Error('Disk full - cannot write cache'))
+      setCachedCSVSpy.mockRejectedValue(
+        new Error('Disk full - cannot write cache')
+      )
 
       // Mock scraper to provide data
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
@@ -299,17 +314,17 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
     it('should handle partial cache corruption with mixed recovery', async () => {
       const testDate = '2024-01-21'
-      
+
       // Create partially corrupted cache state
       const cacheDir = path.join(testCacheDir, 'raw-csv', testDate)
       await fs.mkdir(cacheDir, { recursive: true })
-      
+
       // Valid cache file
       await fs.writeFile(
         path.join(cacheDir, 'all-districts.csv'),
         'District,Club Name,Status\n42,Cached Club,Active'
       )
-      
+
       // Corrupted district-specific cache
       const districtDir = path.join(cacheDir, 'district-42')
       await fs.mkdir(districtDir, { recursive: true })
@@ -320,12 +335,15 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
       // Mock scraper methods
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
-      const getDistrictPerformanceSpy = vi.spyOn(scraper, 'getDistrictPerformance')
-      
+      const getDistrictPerformanceSpy = vi.spyOn(
+        scraper,
+        'getDistrictPerformance'
+      )
+
       getAllDistrictsSpy.mockResolvedValue([
         { District: '42', 'Club Name': 'Cached Club', Status: 'Active' },
       ])
-      
+
       getDistrictPerformanceSpy.mockResolvedValue([
         { District: '42', 'Performance Metric': '90%' },
       ])
@@ -358,7 +376,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
       const results = await Promise.all(concurrentRefreshes)
 
       // Verify all completed
-      results.forEach((result) => {
+      results.forEach(result => {
         expect(typeof result.success).toBe('boolean')
         expect(typeof result.duration_ms).toBe('number')
         expect(Array.isArray(result.errors)).toBe(true)
@@ -386,7 +404,13 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
       getAllDistrictsSpy.mockImplementation(async () => {
         await new Promise(resolve => setTimeout(resolve, 100)) // 100ms delay
-        return [{ District: '42', 'Club Name': 'Performance Test Club', Status: 'Active' }]
+        return [
+          {
+            District: '42',
+            'Club Name': 'Performance Test Club',
+            Status: 'Active',
+          },
+        ]
       })
 
       // Measure cache hit performance
@@ -396,7 +420,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
       // Measure cache miss performance (clear cache first)
       await cacheService.clearCacheForDate(testDate)
-      
+
       const cacheMissStart = Date.now()
       const result2 = await refreshService.executeRefresh()
       const cacheMissTime = Date.now() - cacheMissStart
@@ -417,7 +441,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
     it('should track cache effectiveness metrics', async () => {
       // Get initial statistics
       const initialStats = await cacheService.getCacheStatistics()
-      
+
       // Mock scraper
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
       getAllDistrictsSpy.mockResolvedValue([
@@ -426,17 +450,21 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
       // Execute refresh (cache miss)
       await refreshService.executeRefresh()
-      
+
       // Execute again (potential cache hit)
       await refreshService.executeRefresh()
 
       // Get final statistics
       const finalStats = await cacheService.getCacheStatistics()
-      
+
       // Verify statistics were updated (may be same if no caching occurred)
-      expect(finalStats.totalCachedFiles).toBeGreaterThanOrEqual(initialStats.totalCachedFiles)
-      expect(finalStats.totalCachedDates).toBeGreaterThanOrEqual(initialStats.totalCachedDates)
-      
+      expect(finalStats.totalCachedFiles).toBeGreaterThanOrEqual(
+        initialStats.totalCachedFiles
+      )
+      expect(finalStats.totalCachedDates).toBeGreaterThanOrEqual(
+        initialStats.totalCachedDates
+      )
+
       // Verify cache health
       const healthStatus = await cacheService.getHealthStatus()
       expect(healthStatus.isHealthy).toBe(true)
@@ -485,10 +513,14 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
     it('should verify cache service is properly integrated into scraper', async () => {
       // Verify scraper has cache service
       expect(scraper).toBeDefined()
-      
+
       // Test direct cache operations through scraper
       const mockData = [
-        { District: '42', 'Club Name': 'Integration Test Club', Status: 'Active' },
+        {
+          District: '42',
+          'Club Name': 'Integration Test Club',
+          Status: 'Active',
+        },
       ]
 
       // Mock scraper method
@@ -505,7 +537,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
     it('should verify cache metadata is properly maintained', async () => {
       const testDate = '2024-01-27'
-      
+
       // Execute refresh to generate cache data
       const getAllDistrictsSpy = vi.spyOn(scraper, 'getAllDistricts')
       getAllDistrictsSpy.mockResolvedValue([
@@ -516,7 +548,7 @@ describe('Raw CSV Cache System End-to-End Integration Tests', () => {
 
       // Check cache metadata (may not exist if no caching occurred)
       const metadata = await cacheService.getCacheMetadata(testDate)
-      
+
       if (metadata) {
         expect(metadata.date).toBe(testDate)
         expect(metadata.timestamp).toBeGreaterThan(0)

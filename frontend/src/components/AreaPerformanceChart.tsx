@@ -51,7 +51,7 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
       if (!acc[area.divisionId]) {
         acc[area.divisionId] = []
       }
-      acc[area.divisionId].push(area)
+      acc[area.divisionId]?.push(area)
       return acc
     },
     {} as Record<string, AreaAnalytics[]>

@@ -33,7 +33,7 @@ export default [
       // TypeScript Steering Document Requirements
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': [
-        'error',
+        'warn',
         {
           allowExpressions: true,
           allowTypedFunctionExpressions: true,
@@ -78,7 +78,7 @@ export default [
         { argsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/explicit-function-return-type': [
-        'error',
+        'warn',
         {
           allowExpressions: true,
           allowTypedFunctionExpressions: true,

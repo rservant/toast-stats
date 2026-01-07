@@ -168,13 +168,11 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
       title="Educational Awards"
       subtitle={`Total Awards: ${data.totalAwards.toLocaleString()} | Avg per Member: ${averageAwardsPerMember}`}
       isLoading={isLoading}
-      error={
-        isError
-          ? error
-            ? String(error)
-            : 'An unexpected error occurred'
-          : undefined
-      }
+      {...(isError
+        ? {
+            error: error ? String(error) : 'An unexpected error occurred',
+          }
+        : {})}
       className="tm-brand-compliant"
     >
       <div className="flex flex-col gap-3 mb-4">

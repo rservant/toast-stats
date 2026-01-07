@@ -83,19 +83,16 @@ export function BackfillButton({
 
   const handleInitiateBackfill = () => {
     const request: BackfillRequest = {
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      targetDistricts:
-        targetDistricts.length > 0
-          ? targetDistricts
-          : districtId
-            ? [districtId]
-            : undefined,
-      collectionType: showAdvancedOptions ? collectionType : 'auto',
-      concurrency: showAdvancedOptions ? concurrency : undefined,
-      retryFailures: showAdvancedOptions ? retryFailures : undefined,
-      skipExisting: showAdvancedOptions ? skipExisting : undefined,
-      enableCaching: showAdvancedOptions ? enableCaching : undefined,
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
+      ...(targetDistricts.length > 0 && { targetDistricts }),
+      ...(districtId &&
+        targetDistricts.length === 0 && { targetDistricts: [districtId] }),
+      ...(showAdvancedOptions && { collectionType }),
+      ...(showAdvancedOptions && concurrency !== 3 && { concurrency }),
+      ...(showAdvancedOptions && { retryFailures }),
+      ...(showAdvancedOptions && { skipExisting }),
+      ...(showAdvancedOptions && { enableCaching }),
     }
     initiateMutation.mutate(request, {
       onSuccess: data => {

@@ -36,22 +36,22 @@ export const FormExample: React.FC = () => {
     // Simple validation for demonstration
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required'
+    if (!formData['name'].trim()) {
+      newErrors['name'] = 'Name is required'
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
+    if (!formData['email'].trim()) {
+      newErrors['email'] = 'Email is required'
+    } else if (!/\S+@\S+\.\S+/.test(formData['email'])) {
+      newErrors['email'] = 'Please enter a valid email address'
     }
 
-    if (!formData.district) {
-      newErrors.district = 'Please select your district'
+    if (!formData['district']) {
+      newErrors['district'] = 'Please select your district'
     }
 
-    if (!formData.role) {
-      newErrors.role = 'Please select your role'
+    if (!formData['role']) {
+      newErrors['role'] = 'Please select your role'
     }
 
     setErrors(newErrors)
@@ -80,19 +80,21 @@ export const FormExample: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Text Input */}
-        <FormField error={!!errors.name} required>
+        <FormField error={!!errors['name']} required>
           <FormLabel htmlFor="name" required>
             Full Name
           </FormLabel>
           <FormInput
             id="name"
             type="text"
-            value={formData.name}
+            value={formData['name']}
             onChange={e => handleInputChange('name', e.target.value)}
-            error={!!errors.name}
+            error={!!errors['name']}
             placeholder="Enter your full name"
           />
-          {errors.name && <FormErrorMessage>{errors.name}</FormErrorMessage>}
+          {errors['name'] && (
+            <FormErrorMessage>{errors['name']}</FormErrorMessage>
+          )}
           <FormHelperText>
             Please enter your first and last name as they appear on your
             membership.
@@ -100,31 +102,33 @@ export const FormExample: React.FC = () => {
         </FormField>
 
         {/* Email Input */}
-        <FormField error={!!errors.email} required>
+        <FormField error={!!errors['email']} required>
           <FormLabel htmlFor="email" required>
             Email Address
           </FormLabel>
           <FormInput
             id="email"
             type="email"
-            value={formData.email}
+            value={formData['email']}
             onChange={e => handleInputChange('email', e.target.value)}
-            error={!!errors.email}
+            error={!!errors['email']}
             placeholder="your.email@example.com"
           />
-          {errors.email && <FormErrorMessage>{errors.email}</FormErrorMessage>}
+          {errors['email'] && (
+            <FormErrorMessage>{errors['email']}</FormErrorMessage>
+          )}
         </FormField>
 
         {/* Select Dropdown */}
-        <FormField error={!!errors.district} required>
+        <FormField error={!!errors['district']} required>
           <FormLabel htmlFor="district" required>
             District
           </FormLabel>
           <FormSelect
             id="district"
-            value={formData.district}
+            value={formData['district']}
             onChange={e => handleInputChange('district', e.target.value)}
-            error={!!errors.district}
+            error={!!errors['district']}
             placeholder="Select your district"
           >
             <option value="D1">District 1</option>
@@ -133,8 +137,8 @@ export const FormExample: React.FC = () => {
             <option value="D4">District 4</option>
             <option value="D5">District 5</option>
           </FormSelect>
-          {errors.district && (
-            <FormErrorMessage>{errors.district}</FormErrorMessage>
+          {errors['district'] && (
+            <FormErrorMessage>{errors['district']}</FormErrorMessage>
           )}
         </FormField>
 
@@ -143,7 +147,7 @@ export const FormExample: React.FC = () => {
           <FormLabel htmlFor="message">Message</FormLabel>
           <FormTextarea
             id="message"
-            value={formData.message}
+            value={formData['message']}
             onChange={e => handleInputChange('message', e.target.value)}
             placeholder="Tell us about your Toastmasters experience..."
             rows={4}
@@ -154,49 +158,51 @@ export const FormExample: React.FC = () => {
         </FormField>
 
         {/* Radio Buttons */}
-        <FormField error={!!errors.role} required>
+        <FormField error={!!errors['role']} required>
           <FormLabel required>Your Role in Toastmasters</FormLabel>
           <div className="space-y-3 mt-2">
             <FormRadio
               name="role"
               value="member"
-              checked={formData.role === 'member'}
+              checked={formData['role'] === 'member'}
               onChange={e => handleInputChange('role', e.target.value)}
               label="Club Member"
-              error={!!errors.role}
+              error={!!errors['role']}
             />
             <FormRadio
               name="role"
               value="officer"
-              checked={formData.role === 'officer'}
+              checked={formData['role'] === 'officer'}
               onChange={e => handleInputChange('role', e.target.value)}
               label="Club Officer"
-              error={!!errors.role}
+              error={!!errors['role']}
             />
             <FormRadio
               name="role"
               value="area-director"
-              checked={formData.role === 'area-director'}
+              checked={formData['role'] === 'area-director'}
               onChange={e => handleInputChange('role', e.target.value)}
               label="Area Director"
-              error={!!errors.role}
+              error={!!errors['role']}
             />
             <FormRadio
               name="role"
               value="division-director"
-              checked={formData.role === 'division-director'}
+              checked={formData['role'] === 'division-director'}
               onChange={e => handleInputChange('role', e.target.value)}
               label="Division Director"
-              error={!!errors.role}
+              error={!!errors['role']}
             />
           </div>
-          {errors.role && <FormErrorMessage>{errors.role}</FormErrorMessage>}
+          {errors['role'] && (
+            <FormErrorMessage>{errors['role']}</FormErrorMessage>
+          )}
         </FormField>
 
         {/* Checkbox */}
         <FormField>
           <FormCheckbox
-            checked={formData.newsletter}
+            checked={formData['newsletter']}
             onChange={e => handleInputChange('newsletter', e.target.checked)}
             label="Subscribe to the Toastmasters newsletter for updates and tips"
           />

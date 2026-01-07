@@ -212,7 +212,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
   if (isLoading) {
     return (
       <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-        {title && <ChartTitle title={title} subtitle={subtitle} />}
+        {title && <ChartTitle title={title} {...(subtitle && { subtitle })} />}
         <div className="flex items-center justify-center h-80">
           <div className="animate-pulse flex flex-col items-center">
             <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
@@ -229,7 +229,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
         className={`bg-white rounded-lg shadow-md p-6 ${className}`}
         role="alert"
       >
-        {title && <ChartTitle title={title} subtitle={subtitle} />}
+        {title && <ChartTitle title={title} {...(subtitle && { subtitle })} />}
         <div className="flex items-center justify-center h-80">
           <div className="text-center">
             <p className="text-tm-true-maroon font-tm-body font-semibold mb-2">
@@ -244,7 +244,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
 
   return (
     <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-      {title && <ChartTitle title={title} subtitle={subtitle} />}
+      {title && <ChartTitle title={title} {...(subtitle && { subtitle })} />}
 
       {legend && legendPosition === 'top' && (
         <ChartLegend

@@ -100,11 +100,11 @@ The `any` type is **STRICTLY FORBIDDEN**.
 ```ts
 // ❌ FORBIDDEN
 function process(data: any): any {
-  return data.value;
+  return data.value
 }
 
 interface InvalidExample {
-  payload: any;
+  payload: any
 }
 ```
 
@@ -117,9 +117,9 @@ interface InvalidExample {
 ```ts
 function processUnknown(value: unknown): string {
   if (typeof value === 'string') {
-    return value;
+    return value
   }
-  throw new Error('Expected string');
+  throw new Error('Expected string')
 }
 ```
 

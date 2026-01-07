@@ -166,7 +166,7 @@ class PerformanceMonitoringService {
     // Extract font family from Google Fonts URL or file name
     if (url.includes('fonts.googleapis.com')) {
       const match = url.match(/family=([^&:]+)/)
-      return match
+      return match && match[1]
         ? decodeURIComponent(match[1].replace(/\+/g, ' '))
         : 'Unknown'
     }

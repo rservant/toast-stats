@@ -22,8 +22,8 @@ export const useRankHistory = ({
       // Fetch rank history for each district
       const promises = districtIds.map(async districtId => {
         const params: Record<string, string> = {}
-        if (startDate) params.startDate = startDate
-        if (endDate) params.endDate = endDate
+        if (startDate) params['startDate'] = startDate
+        if (endDate) params['endDate'] = endDate
 
         const response = await apiClient.get<RankHistoryResponse>(
           `/districts/${districtId}/rank-history`,

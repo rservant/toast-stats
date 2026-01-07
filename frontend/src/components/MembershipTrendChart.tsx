@@ -37,7 +37,9 @@ const CustomTooltip = ({
   periods: Period[]
 }) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload
+    const data = payload[0]?.payload
+    if (!data) return null
+
     const date = new Date(data.date)
     const formattedDate = date.toLocaleDateString('en-US', {
       month: 'long',
@@ -103,10 +105,13 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   const counts = sortedData.map(d => d.count)
   const maxMembership = Math.max(...counts)
   const minMembership = Math.min(...counts)
-  const startMembership = counts[0]
-  const endMembership = counts[counts.length - 1]
+  const startMembership = counts[0] ?? 0
+  const endMembership = counts[counts.length - 1] ?? 0
   const netChange = endMembership - startMembership
-  const percentChange = ((netChange / startMembership) * 100).toFixed(1)
+  const percentChange =
+    startMembership > 0
+      ? ((netChange / startMembership) * 100).toFixed(1)
+      : '0.0'
 
   // Detect growth/decline periods (3+ consecutive increases/decreases)
   const periods: Array<{
@@ -117,7 +122,11 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   let currentPeriod: { start: number; type: 'growth' | 'decline' } | null = null
 
   for (let i = 1; i < sortedData.length; i++) {
-    const change = sortedData[i].count - sortedData[i - 1].count
+    const current = sortedData[i]
+    const previous = sortedData[i - 1]
+    if (!current || !previous) continue
+
+    const change = current.count - previous.count
     const type = change > 0 ? 'growth' : change < 0 ? 'decline' : null
 
     if (type) {
@@ -168,8 +177,15 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
 
   // Program year milestones (Toastmasters year: July 1 - June 30)
   const milestones: Array<{ date: string; label: string }> = []
-  const startDate = new Date(sortedData[0].date)
-  const endDate = new Date(sortedData[sortedData.length - 1].date)
+  const firstDataPoint = sortedData[0]
+  const lastDataPoint = sortedData[sortedData.length - 1]
+
+  if (!firstDataPoint || !lastDataPoint) {
+    return <div>No data available</div>
+  }
+
+  const startDate = new Date(firstDataPoint.date)
+  const endDate = new Date(lastDataPoint.date)
 
   // Add program year start dates (July 1)
   for (
@@ -179,10 +195,13 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   ) {
     const julyFirst = new Date(year, 6, 1) // Month is 0-indexed
     if (julyFirst >= startDate && julyFirst <= endDate) {
-      milestones.push({
-        date: julyFirst.toISOString().split('T')[0],
-        label: `PY ${year}-${year + 1}`,
-      })
+      const dateString = julyFirst.toISOString().split('T')[0]
+      if (dateString) {
+        milestones.push({
+          date: dateString,
+          label: `PY ${year}-${year + 1}`,
+        })
+      }
     }
   }
 
@@ -192,7 +211,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const chartDescription = `Line chart showing district membership trend from ${sortedData[0].date} to ${sortedData[sortedData.length - 1].date}. Membership ${netChange >= 0 ? 'increased' : 'decreased'} by ${Math.abs(netChange)} members (${percentChange}%).`
+  const chartDescription = `Line chart showing district membership trend from ${firstDataPoint.date} to ${lastDataPoint.date}. Membership ${netChange >= 0 ? 'increased' : 'decreased'} by ${Math.abs(netChange)} members (${percentChange}%).`
 
   return (
     <div
@@ -359,8 +378,12 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               {/* Highlight growth periods */}
               {periods.map((period, index) => {
                 if (period.type === 'growth') {
-                  const startDate = sortedData[period.start].date
-                  const endDate = sortedData[period.end].date
+                  const startPoint = sortedData[period.start]
+                  const endPoint = sortedData[period.end]
+                  if (!startPoint || !endPoint) return null
+
+                  const startDate = startPoint.date
+                  const endDate = endPoint.date
                   return (
                     <React.Fragment key={`growth-${index}`}>
                       <ReferenceLine
@@ -384,8 +407,12 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
               {/* Highlight decline periods */}
               {periods.map((period, index) => {
                 if (period.type === 'decline') {
-                  const startDate = sortedData[period.start].date
-                  const endDate = sortedData[period.end].date
+                  const startPoint = sortedData[period.start]
+                  const endPoint = sortedData[period.end]
+                  if (!startPoint || !endPoint) return null
+
+                  const startDate = startPoint.date
+                  const endDate = endPoint.date
                   return (
                     <React.Fragment key={`decline-${index}`}>
                       <ReferenceLine

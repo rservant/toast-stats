@@ -151,16 +151,23 @@ export function useGradientValidation(options: GradientValidationOptions = {}) {
         return '#808080' // Default gray if no colors found
       }
 
-      if (colors.length === 1) {
+      if (colors.length === 1 && colors[0]) {
         return colors[0]
       }
 
       // Calculate average of first and last color for simplicity
-      const firstColor = hexToRgb(colors[0])
-      const lastColor = hexToRgb(colors[colors.length - 1])
+      const firstColorHex = colors[0]
+      const lastColorHex = colors[colors.length - 1]
+
+      if (!firstColorHex || !lastColorHex) {
+        return firstColorHex || '#808080'
+      }
+
+      const firstColor = hexToRgb(firstColorHex)
+      const lastColor = hexToRgb(lastColorHex)
 
       if (!firstColor || !lastColor) {
-        return colors[0]
+        return firstColorHex
       }
 
       const avgR = Math.round((firstColor.r + lastColor.r) / 2)
@@ -249,7 +256,7 @@ export function useGradientValidation(options: GradientValidationOptions = {}) {
         gradientType: gradientType || 'unknown',
         gradientValue: backgroundImage,
         hasTextOverlay: hasText,
-        textContrastRatio,
+        ...(textContrastRatio !== undefined && { textContrastRatio }),
         passes: violations.length === 0,
         violations,
         recommendations,
@@ -448,6 +455,7 @@ export function useGradientValidation(options: GradientValidationOptions = {}) {
       }, 0)
       return () => clearTimeout(timeoutId)
     }
+    return undefined
   }, [checkOnMount, validateAllGradients])
 
   // Handle resize if enabled
@@ -502,7 +510,7 @@ export function useAutoGradientValidation(
  */
 function rgbToHex(rgb: string): string {
   const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/)
-  if (!match) return '#000000'
+  if (!match || !match[1] || !match[2] || !match[3]) return '#000000'
 
   const r = parseInt(match[1])
   const g = parseInt(match[2])
@@ -516,7 +524,7 @@ function rgbToHex(rgb: string): string {
  */
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  return result
+  return result && result[1] && result[2] && result[3]
     ? {
         r: parseInt(result[1], 16),
         g: parseInt(result[2], 16),

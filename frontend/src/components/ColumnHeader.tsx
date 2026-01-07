@@ -137,6 +137,8 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         document.removeEventListener('keydown', handleEscapeKey)
       }
     }
+
+    return undefined
   }, [isDropdownOpen])
 
   // Handle keyboard navigation

@@ -96,7 +96,9 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                   metadata
                 )
               }
-              dataStatus={reconciliationStatus?.dataStatus}
+              {...(reconciliationStatus?.dataStatus && {
+                dataStatus: reconciliationStatus.dataStatus,
+              })}
               label="Export Analytics"
               disabled={!analytics}
             />

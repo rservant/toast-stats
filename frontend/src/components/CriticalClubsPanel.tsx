@@ -296,10 +296,10 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                       {selectedClub.membershipTrend.length > 1 && (
                         <span className="text-gray-600 font-tm-body">
                           Change:{' '}
-                          {selectedClub.membershipTrend[
+                          {(selectedClub.membershipTrend[
                             selectedClub.membershipTrend.length - 1
-                          ]?.count -
-                            selectedClub.membershipTrend[0]?.count}{' '}
+                          ]?.count || 0) -
+                            (selectedClub.membershipTrend[0]?.count || 0)}{' '}
                           members
                         </span>
                       )}

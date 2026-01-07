@@ -48,10 +48,13 @@ const CustomTooltip = ({
   comparisonData: ComparisonDataItem[]
 }) => {
   if (active && payload && payload.length) {
-    const metric = payload[0].payload.metric
-    const data = comparisonData.find(d => d.metric === metric)
+    const data = payload[0]?.payload
+    if (!data) return null
 
-    if (data) {
+    const metric = data.metric
+    const comparisonItem = comparisonData.find(d => d.metric === metric)
+
+    if (comparisonItem) {
       return (
         <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3">
           <p className="text-sm font-medium text-gray-900 mb-2">{metric}</p>
@@ -59,23 +62,29 @@ const CustomTooltip = ({
             <p className="text-sm text-gray-600">
               Previous:{' '}
               <span className="font-semibold">
-                {data.previous.toFixed(metric === 'Club Health %' ? 1 : 0)}
+                {comparisonItem.previous.toFixed(
+                  metric === 'Club Health %' ? 1 : 0
+                )}
               </span>
             </p>
             <p className="text-sm text-gray-600">
               Current:{' '}
               <span className="font-semibold">
-                {data.current.toFixed(metric === 'Club Health %' ? 1 : 0)}
+                {comparisonItem.current.toFixed(
+                  metric === 'Club Health %' ? 1 : 0
+                )}
               </span>
             </p>
             <p
               className={`text-sm font-semibold ${
-                data.change >= 0 ? 'text-green-600' : 'text-red-600'
+                comparisonItem.change >= 0 ? 'text-green-600' : 'text-red-600'
               }`}
             >
-              {data.change >= 0 ? '+' : ''}
-              {data.change.toFixed(metric === 'Club Health %' ? 1 : 0)} (
-              {data.percentChange}%)
+              {comparisonItem.change >= 0 ? '+' : ''}
+              {comparisonItem.change.toFixed(
+                metric === 'Club Health %' ? 1 : 0
+              )}{' '}
+              ({comparisonItem.percentChange}%)
             </p>
           </div>
         </div>

@@ -46,6 +46,8 @@ const EXCLUDE_DIRECTORIES = [
 
 /**
  * Check if a file should be scanned
+ * @param {string} filePath
+ * @returns {boolean}
  */
 function shouldScanFile(filePath) {
   const ext = path.extname(filePath)
@@ -54,6 +56,8 @@ function shouldScanFile(filePath) {
 
 /**
  * Check if a directory should be excluded
+ * @param {string} dirPath
+ * @returns {boolean}
  */
 function shouldExcludeDirectory(dirPath) {
   const dirName = path.basename(dirPath)
@@ -62,6 +66,9 @@ function shouldExcludeDirectory(dirPath) {
 
 /**
  * Recursively get all files to scan
+ * @param {string} dirPath
+ * @param {string[]} fileList
+ * @returns {string[]}
  */
 function getAllFiles(dirPath, fileList = []) {
   if (!fs.existsSync(dirPath)) {
@@ -88,6 +95,8 @@ function getAllFiles(dirPath, fileList = []) {
 
 /**
  * Scan a file for prohibited text effects
+ * @param {string} filePath
+ * @returns {Array}
  */
 function scanFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8')
@@ -116,6 +125,8 @@ function scanFile(filePath) {
 
 /**
  * Remove prohibited text effects from a file
+ * @param {string} filePath
+ * @returns {boolean}
  */
 function removeTextEffectsFromFile(filePath) {
   let content = fs.readFileSync(filePath, 'utf8')
@@ -156,6 +167,7 @@ function removeTextEffectsFromFile(filePath) {
 
 /**
  * Main execution function
+ * @returns {Promise<void>}
  */
 async function main() {
   console.log('🔍 Scanning for prohibited text effects...\n')

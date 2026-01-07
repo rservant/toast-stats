@@ -134,9 +134,9 @@ export function DistrictBackfillButton({
   const handleInitiateBackfill = () => {
     const request: DistrictBackfillRequest = {
       targetDistricts: [districtId],
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
       collectionType: 'per-district', // Optimize for single district
+      ...(startDate && { startDate }),
+      ...(endDate && { endDate }),
     }
     initiateMutation.mutate(request, {
       onSuccess: handleInitiateSuccess,

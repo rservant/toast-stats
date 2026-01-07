@@ -125,10 +125,10 @@ export const useAssessment = () => {
 
       const summary: AssessmentSummary = {
         month,
-        snapshotDate: latest || undefined,
-        totalClubs,
-        totalMembership,
-        distinctClubsSeen: clubIdSet.size || undefined,
+        ...(latest && { snapshotDate: latest }),
+        ...(totalClubs !== undefined && { totalClubs }),
+        ...(totalMembership !== undefined && { totalMembership }),
+        ...(clubIdSet.size > 0 && { distinctClubsSeen: clubIdSet.size }),
       }
 
       setIsComputing(false)

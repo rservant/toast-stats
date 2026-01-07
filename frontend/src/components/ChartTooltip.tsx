@@ -85,7 +85,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({
     payload?.map(entry => ({
       label: entry.name || entry.dataKey || 'Value',
       value: entry.value || 0,
-      color: entry.color,
+      ...(entry.color && { color: entry.color }),
     })) ||
     []
 

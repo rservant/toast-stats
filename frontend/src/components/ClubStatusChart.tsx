@@ -41,22 +41,22 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
     return [
       {
         name: 'Active',
-        count: distribution.active || 0,
+        count: distribution['active'] || 0,
         color: colors[0], // TM Loyal Blue for active status
       },
       {
         name: 'Low',
-        count: distribution.low || 0,
+        count: distribution['low'] || 0,
         color: colors[3], // TM Happy Yellow for warning status
       },
       {
         name: 'Suspended',
-        count: distribution.suspended || 0,
+        count: distribution['suspended'] || 0,
         color: colors[1], // TM True Maroon for error status
       },
       {
         name: 'Ineligible',
-        count: distribution.ineligible || 0,
+        count: distribution['ineligible'] || 0,
         color: colors[2], // TM Cool Gray for neutral status
       },
     ].filter(item => item.count > 0) // Only show statuses that exist
@@ -70,7 +70,7 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
           const level = club.distinguishedLevel || 'distinguished'
           acc[level] = (acc[level] || 0) + 1
         } else {
-          acc.regular = (acc.regular || 0) + 1
+          acc['regular'] = (acc['regular'] || 0) + 1
         }
         return acc
       },
@@ -81,22 +81,22 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
     return [
       {
         name: 'Regular',
-        count: distribution.regular || 0,
+        count: distribution['regular'] || 0,
         color: colors[2], // TM Cool Gray for regular status
       },
       {
         name: 'Select',
-        count: distribution.select || 0,
+        count: distribution['select'] || 0,
         color: colors[3], // TM Happy Yellow for select status
       },
       {
         name: 'Distinguished',
-        count: distribution.distinguished || 0,
+        count: distribution['distinguished'] || 0,
         color: colors[0], // TM Loyal Blue - already compliant
       },
       {
         name: "President's",
-        count: distribution.president || 0,
+        count: distribution['president'] || 0,
         color: colors[1], // TM True Maroon - already compliant
       },
     ].filter(item => item.count > 0)

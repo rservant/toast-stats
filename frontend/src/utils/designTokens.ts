@@ -1542,7 +1542,7 @@ export function generateTokenUsageExamples(): Record<string, string[]> {
   const examples: Record<string, string[]> = {}
 
   // Color examples
-  examples.color = [
+  examples['color'] = [
     '/* Primary button with brand colors */',
     '.tm-btn-primary {',
     '  background-color: var(--tm-loyal-blue);',
@@ -1564,7 +1564,7 @@ export function generateTokenUsageExamples(): Record<string, string[]> {
   ]
 
   // Typography examples
-  examples.typography = [
+  examples['typography'] = [
     '/* Heading styles */',
     '.tm-h1 {',
     '  font-family: var(--tm-font-headline);',
@@ -1589,7 +1589,7 @@ export function generateTokenUsageExamples(): Record<string, string[]> {
   ]
 
   // Spacing examples
-  examples.spacing = [
+  examples['spacing'] = [
     '/* Card component */',
     '.tm-card {',
     '  padding: var(--tm-component-padding-md);',
@@ -1609,7 +1609,7 @@ export function generateTokenUsageExamples(): Record<string, string[]> {
   ]
 
   // Gradient examples
-  examples.gradient = [
+  examples['gradient'] = [
     '/* Hero section with gradient (max one per screen) */',
     '.hero {',
     '  background: var(--tm-gradient-loyal-blue);',
@@ -1635,7 +1635,7 @@ export function generateTokenUsageExamples(): Record<string, string[]> {
   ]
 
   // Shadow examples
-  examples.shadow = [
+  examples['shadow'] = [
     '/* Card elevation */',
     '.tm-card { box-shadow: var(--tm-shadow-md); }',
     '',

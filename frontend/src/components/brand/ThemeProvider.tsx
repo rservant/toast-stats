@@ -196,8 +196,8 @@ export const withTheme = <P extends object>(
     ...props
   }) => (
     <ThemeProvider
-      enableValidation={enableValidation}
-      contrastMode={contrastMode}
+      {...(enableValidation !== undefined && { enableValidation })}
+      {...(contrastMode !== undefined && { contrastMode })}
     >
       <Component {...(props as P)} />
     </ThemeProvider>
