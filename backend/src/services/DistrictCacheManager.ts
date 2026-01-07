@@ -68,7 +68,7 @@ export class DistrictCacheManager {
    * @param cacheDir - Base directory for cache storage (defaults to './cache' if not provided)
    */
   constructor(cacheDir?: string) {
-    this.cacheDir = cacheDir || process.env.CACHE_DIR || './cache'
+    this.cacheDir = cacheDir || process.env['CACHE_DIR'] || './cache'
     // Normalize and fix the root directory for all district cache files
     this.districtRoot = path.resolve(this.cacheDir, 'districts')
   }

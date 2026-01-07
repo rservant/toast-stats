@@ -18,7 +18,7 @@ class Logger {
   private environment: string
 
   constructor() {
-    this.environment = process.env.NODE_ENV || 'development'
+    this.environment = process.env['NODE_ENV'] || 'development'
   }
 
   private formatLog(

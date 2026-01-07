@@ -868,7 +868,7 @@ export class FileSnapshotStore implements SnapshotStore {
         .sort((a, b) => b.timestamp - a.timestamp) // Newest first
 
       // In test environment, be very conservative about cleanup
-      if (process.env.NODE_ENV === 'test') {
+      if (process.env['NODE_ENV'] === 'test') {
         // Only clean up obviously corrupted files in tests
         const filesToDelete: string[] = []
         for (const { path: filePath } of snapshotFiles) {
@@ -1255,7 +1255,7 @@ export class FileSnapshotStore implements SnapshotStore {
  * Factory function to create a FileSnapshotStore with default configuration
  */
 export function createFileSnapshotStore(cacheDir?: string): FileSnapshotStore {
-  const resolvedCacheDir = cacheDir || process.env.CACHE_DIR || './cache'
+  const resolvedCacheDir = cacheDir || process.env['CACHE_DIR'] || './cache'
 
   return new FileSnapshotStore({
     cacheDir: resolvedCacheDir,

@@ -23,7 +23,7 @@ export class RealToastmastersAPIService {
     cacheManager?: CacheManager
   ) {
     // Prevent accidental use in test environment unless explicitly allowed
-    if (process.env.NODE_ENV === 'test' && !allowInTest) {
+    if (process.env['NODE_ENV'] === 'test' && !allowInTest) {
       throw new Error(
         'RealToastmastersAPIService should not be used in test environment. Use MockToastmastersAPIService instead.'
       )
@@ -35,7 +35,7 @@ export class RealToastmastersAPIService {
       this.cacheManager = cacheManager
     } else {
       // Use dependency injection instead of singleton
-      const isTestEnvironment = process.env.NODE_ENV === 'test'
+      const isTestEnvironment = process.env['NODE_ENV'] === 'test'
 
       if (isTestEnvironment) {
         const testFactory = getTestServiceFactory()

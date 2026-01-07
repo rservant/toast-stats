@@ -24,7 +24,7 @@ export class CacheIntegrationService {
       this.cacheManager = cacheManager
     } else {
       // Use dependency injection instead of singleton
-      const isTestEnvironment = process.env.NODE_ENV === 'test'
+      const isTestEnvironment = process.env['NODE_ENV'] === 'test'
 
       if (isTestEnvironment) {
         const testFactory = getTestServiceFactory()

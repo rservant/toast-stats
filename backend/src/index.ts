@@ -13,13 +13,13 @@ import { logger } from './utils/logger.js'
 import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
 
 const app = express()
-const PORT = process.env.PORT || 5001
+const PORT = process.env['PORT'] || 5001
 
 // CORS configuration
 const corsOptions = {
   origin:
-    process.env.NODE_ENV === 'production'
-      ? process.env.CORS_ORIGIN || false
+    process.env['NODE_ENV'] === 'production'
+      ? process.env['CORS_ORIGIN'] || false
       : 'http://localhost:3000',
   credentials: true,
   optionsSuccessStatus: 200,
@@ -30,7 +30,7 @@ app.use(cors(corsOptions))
 app.use(express.json())
 
 // Request logging
-if (process.env.NODE_ENV === 'production') {
+if (process.env['NODE_ENV'] === 'production') {
   app.use(logger.requestLogger())
 }
 
@@ -45,7 +45,7 @@ app.get('/health', async (_req, res) => {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env['NODE_ENV'] || 'development',
       cache: {
         directory: config.baseDirectory,
         source: config.source,
@@ -63,12 +63,12 @@ app.get('/health', async (_req, res) => {
       status: 'error',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env['NODE_ENV'] || 'development',
       error: 'Cache configuration error',
       cache: {
-        directory: process.env.CACHE_DIR || './cache (default)',
-        source: process.env.CACHE_DIR ? 'environment' : 'default',
-        isConfigured: !!process.env.CACHE_DIR,
+        directory: process.env['CACHE_DIR'] || './cache (default)',
+        source: process.env['CACHE_DIR'] ? 'environment' : 'default',
+        isConfigured: !!process.env['CACHE_DIR'],
         isReady: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       },
@@ -107,7 +107,7 @@ app.use(
       error: {
         code: 'INTERNAL_SERVER_ERROR',
         message:
-          process.env.NODE_ENV === 'production'
+          process.env['NODE_ENV'] === 'production'
             ? 'An internal error occurred'
             : err.message,
       },
@@ -118,7 +118,7 @@ app.use(
 const server = app.listen(PORT, async () => {
   logger.info('Server started', {
     port: PORT,
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env['NODE_ENV'] || 'development',
     healthCheck: `http://localhost:${PORT}/health`,
   })
 
@@ -135,7 +135,7 @@ const server = app.listen(PORT, async () => {
       cacheDirectory: config.baseDirectory,
       source: config.source,
       isConfigured: config.isConfigured,
-      environmentVariable: process.env.CACHE_DIR || 'not set',
+      environmentVariable: process.env['CACHE_DIR'] || 'not set',
       isValid: config.validationStatus.isValid,
       isAccessible: config.validationStatus.isAccessible,
       isSecure: config.validationStatus.isSecure,
@@ -143,7 +143,7 @@ const server = app.listen(PORT, async () => {
 
     if (config.source === 'environment') {
       logger.info('✅ Using CACHE_DIR from environment configuration', {
-        configuredPath: process.env.CACHE_DIR,
+        configuredPath: process.env['CACHE_DIR'],
         resolvedPath: config.baseDirectory,
       })
     } else {
@@ -159,7 +159,7 @@ const server = app.listen(PORT, async () => {
   } catch (error) {
     logger.error('❌ Failed to initialize cache configuration', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      environmentVariable: process.env.CACHE_DIR || 'not set',
+      environmentVariable: process.env['CACHE_DIR'] || 'not set',
     })
     // Don't exit the server, but log the critical error
   }

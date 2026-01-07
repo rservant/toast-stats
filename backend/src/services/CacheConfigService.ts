@@ -180,7 +180,7 @@ export class CacheConfigService implements ICacheConfigService {
     private logger: ILogger
   ) {
     this.cacheDir = this.resolveCacheDirectory()
-    const envCacheDir = process.env.CACHE_DIR
+    const envCacheDir = process.env['CACHE_DIR']
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
 
     // Determine source based on environment and configuration
@@ -367,7 +367,7 @@ export class CacheConfigService implements ICacheConfigService {
       }
     }
 
-    const envCacheDir = process.env.CACHE_DIR
+    const envCacheDir = process.env['CACHE_DIR']
     if (envCacheDir && envCacheDir.trim()) {
       return path.resolve(envCacheDir.trim())
     }
@@ -380,7 +380,7 @@ export class CacheConfigService implements ICacheConfigService {
    */
   refreshConfiguration(): void {
     const newCacheDir = this.resolveCacheDirectory()
-    const envCacheDir = process.env.CACHE_DIR
+    const envCacheDir = process.env['CACHE_DIR']
     const isConfigured = !!(envCacheDir && envCacheDir.trim())
 
     // Update the cache directory if it changed

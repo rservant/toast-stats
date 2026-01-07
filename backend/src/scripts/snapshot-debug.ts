@@ -18,7 +18,7 @@ import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
 // import { logger } from '../utils/logger.js'
 
 // Configure logger for CLI usage
-process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'info'
+process.env['LOG_LEVEL'] = process.env['LOG_LEVEL'] || 'info'
 
 const program = new Command()
 

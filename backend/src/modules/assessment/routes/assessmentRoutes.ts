@@ -162,6 +162,11 @@ router.get(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear, month } = req.params
 
+    if (!districtId || !programYear || !month) {
+      res.status(400).json({ error: 'Missing required parameters' })
+      return
+    }
+
     // Sanitize programYear (replace slashes with underscores to match storage)
     const sanitizedProgramYear = programYear.replace(/\//g, '_')
 

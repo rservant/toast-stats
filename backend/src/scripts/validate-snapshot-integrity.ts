@@ -28,7 +28,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Configuration
-const CACHE_DIR = process.env.CACHE_DIR || join(__dirname, '../../cache')
+const CACHE_DIR = process.env['CACHE_DIR'] || join(__dirname, '../../cache')
 
 /**
  * Display usage information

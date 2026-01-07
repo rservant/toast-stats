@@ -1340,7 +1340,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       }
 
       // Debug logging with club details (only when in development environment)
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env['NODE_ENV'] === 'development') {
         logger.debug('Distinguished status calculation', {
           clubId: club['Club Number'],
           clubName: club['Club Name'],

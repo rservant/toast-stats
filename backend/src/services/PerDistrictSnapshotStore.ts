@@ -1122,7 +1122,7 @@ export class PerDistrictFileSnapshotStore
 export function createPerDistrictSnapshotStore(
   cacheDir?: string
 ): PerDistrictFileSnapshotStore {
-  const resolvedCacheDir = cacheDir || process.env.CACHE_DIR || './cache'
+  const resolvedCacheDir = cacheDir || process.env['CACHE_DIR'] || './cache'
 
   return new PerDistrictFileSnapshotStore({
     cacheDir: resolvedCacheDir,

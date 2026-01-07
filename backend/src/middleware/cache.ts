@@ -21,8 +21,8 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
 
     // Check for cache bypass mechanisms
     const bypassCache =
-      req.query.refresh === 'true' ||
-      req.query.bypass_cache === 'true' ||
+      req.query['refresh'] === 'true' ||
+      req.query['bypass_cache'] === 'true' ||
       req.headers['x-bypass-cache'] === 'true'
 
     if (bypassCache) {

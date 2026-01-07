@@ -504,8 +504,8 @@ export class PropertyTestUtils {
    * Determine appropriate configuration based on environment variables
    */
   static createEnvironmentConfig(): PropertyTestConfig {
-    const isCI = process.env.CI === 'true' || process.env.NODE_ENV === 'ci'
-    const isTest = process.env.NODE_ENV === 'test'
+    const isCI = process.env['CI'] === 'true' || process.env['NODE_ENV'] === 'ci'
+    const isTest = process.env['NODE_ENV'] === 'test'
 
     if (isCI) {
       return this.createCIConfig()
@@ -521,9 +521,9 @@ export class PropertyTestUtils {
  * Default property test runner instance
  */
 export const defaultPropertyTestRunner = new PropertyTestRunner(
-  process.env.CI === 'true'
+  process.env['CI'] === 'true'
     ? 'ci'
-    : process.env.NODE_ENV === 'test'
+    : process.env['NODE_ENV'] === 'test'
       ? 'test'
       : 'local'
 )

@@ -69,13 +69,13 @@ async function main(): Promise<void> {
   // Configure logging based on verbose flag
   if (options.verbose) {
     // Set log level to debug for verbose output
-    process.env.LOG_LEVEL = 'debug'
+    process.env['LOG_LEVEL'] = 'debug'
   }
 
   logger.info('Starting CLI refresh operation', {
     options,
-    nodeEnv: process.env.NODE_ENV,
-    cacheDir: process.env.CACHE_DIR || config.cache.dir,
+    nodeEnv: process.env['NODE_ENV'],
+    cacheDir: process.env['CACHE_DIR'] || config.cache.dir,
   })
 
   let refreshService: RefreshService | null = null
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
 
   try {
     // Validate required environment variables
-    if (!process.env.CACHE_DIR && !config.cache.dir) {
+    if (!process.env['CACHE_DIR'] && !config.cache.dir) {
       logger.error('CACHE_DIR environment variable is required')
       process.exit(ExitCodes.CONFIGURATION_ERROR)
     }

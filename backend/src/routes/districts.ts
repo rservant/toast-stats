@@ -49,7 +49,7 @@ const router = Router()
 // Use mock API in development (USE_MOCK_DATA=true), real scraper otherwise
 // Force mock data in test environment
 const useMockData =
-  process.env.USE_MOCK_DATA === 'true' || process.env.NODE_ENV === 'test'
+  process.env['USE_MOCK_DATA'] === 'true' || process.env['NODE_ENV'] === 'test'
 
 const toastmastersAPI = useMockData
   ? new MockToastmastersAPIService()

@@ -118,12 +118,12 @@ export class DefaultTestIsolationManager implements TestIsolationManager {
    * Set test-specific environment variables
    */
   private setTestEnvironmentVariables(): void {
-    process.env.NODE_ENV = 'test'
-    process.env.LOG_LEVEL = 'error'
+    process.env['NODE_ENV'] = 'test'
+    process.env['LOG_LEVEL'] = 'error'
 
     // Set test-specific cache directory if not already set
-    if (!process.env.CACHE_DIRECTORY) {
-      process.env.CACHE_DIRECTORY = join(tmpdir(), 'test-cache')
+    if (!process.env['CACHE_DIRECTORY']) {
+      process.env['CACHE_DIRECTORY'] = join(tmpdir(), 'test-cache')
     }
   }
 
