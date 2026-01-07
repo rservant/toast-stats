@@ -5,7 +5,7 @@
 
 import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
-async function testDistinguishedAPI() {
+async function testDistinguishedAPI(): Promise<void> {
   console.log('='.repeat(80))
   console.log('DISTINGUISHED CLUB ANALYTICS API TEST')
   console.log('='.repeat(80))

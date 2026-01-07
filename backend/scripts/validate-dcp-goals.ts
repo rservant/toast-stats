@@ -7,7 +7,7 @@ import type { AnalyticsEngine } from '../src/services/AnalyticsEngine.js'
  * Tests Goals 5 and 6 with real cached data from different program years
  */
 
-async function validateDCPGoals() {
+async function validateDCPGoals(): Promise<void> {
   let container: unknown = null
 
   try {
@@ -80,7 +80,7 @@ async function testProgramYear(
   format: string,
   cacheManager: DistrictCacheManager,
   analyticsEngine: AnalyticsEngine
-) {
+): Promise<void> {
   console.log(`District: ${districtId}`)
   console.log(`Date: ${date}`)
   console.log(`Expected Format: ${format}`)

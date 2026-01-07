@@ -33,11 +33,7 @@ export interface TestCleanupConfig {
  */
 export const DEFAULT_CLEANUP_CONFIG: TestCleanupConfig = {
   baseDir: './test-dir',
-  patterns: [
-    'test-cache*',
-    'test-assessment*',
-    'test-*',
-  ],
+  patterns: ['test-cache*', 'test-assessment*', 'test-*'],
   verbose: false,
 }
 

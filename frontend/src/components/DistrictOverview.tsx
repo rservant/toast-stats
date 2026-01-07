@@ -1,15 +1,10 @@
 import React from 'react'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
-import { EnhancedExportButton } from './EnhancedExportButton'
+import { ExportButton } from './ExportButton'
 import { exportDistrictAnalytics } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import { Tooltip, InfoIcon } from './Tooltip'
-import { DataStatusIndicator } from './DataStatusIndicator'
-import {
-  useReconciliationStatus,
-  useCurrentReconciliationMonth,
-} from '../hooks/useReconciliationStatus'
 
 interface DistrictOverviewProps {
   districtId: string
@@ -30,13 +25,6 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     isLoading: isLoadingAnalytics,
     error,
   } = useDistrictAnalytics(districtId, programYearStartDate, selectedDate)
-
-  // Get current reconciliation month and status
-  const currentMonth = useCurrentReconciliationMonth()
-  const { data: reconciliationStatus } = useReconciliationStatus(
-    districtId,
-    currentMonth
-  )
 
   // Get club counts from the new separate arrays
   const criticalClubsCount = React.useMemo(() => {
@@ -72,33 +60,19 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
               {formatDate(analytics.dateRange.end)}
             </p>
           )}
-
-          {/* Reconciliation Status Indicator */}
-          {reconciliationStatus?.dataStatus && (
-            <div className="mt-2">
-              <DataStatusIndicator
-                dataStatus={reconciliationStatus.dataStatus}
-                showDetails={true}
-              />
-            </div>
-          )}
         </div>
 
         {/* Export Button */}
         {analytics && (
           <div className="flex flex-col gap-2">
-            <EnhancedExportButton
-              onExport={metadata =>
+            <ExportButton
+              onExport={() =>
                 exportDistrictAnalytics(
                   districtId,
                   analytics.dateRange.start,
-                  analytics.dateRange.end,
-                  metadata
+                  analytics.dateRange.end
                 )
               }
-              {...(reconciliationStatus?.dataStatus && {
-                dataStatus: reconciliationStatus.dataStatus,
-              })}
               label="Export Analytics"
               disabled={!analytics}
             />

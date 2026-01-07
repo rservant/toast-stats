@@ -172,8 +172,6 @@ export const serviceConfigurationArbitrary = (
     })
     .map(config => ({ ...config, ...overrides }))
 
-
-
 /**
  * Generates valid DistrictCacheEntry objects for testing
  *

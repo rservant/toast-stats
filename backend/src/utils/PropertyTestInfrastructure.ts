@@ -504,7 +504,8 @@ export class PropertyTestUtils {
    * Determine appropriate configuration based on environment variables
    */
   static createEnvironmentConfig(): PropertyTestConfig {
-    const isCI = process.env['CI'] === 'true' || process.env['NODE_ENV'] === 'ci'
+    const isCI =
+      process.env['CI'] === 'true' || process.env['NODE_ENV'] === 'ci'
     const isTest = process.env['NODE_ENV'] === 'test'
 
     if (isCI) {

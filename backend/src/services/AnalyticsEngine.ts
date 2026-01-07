@@ -215,72 +215,75 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       if (yearOverYearData) {
         const latestEntry = dataEntries[dataEntries.length - 1]
         if (!latestEntry) {
-          logger.warn('No latest entry available for year-over-year comparison', {
-            districtId,
-          })
+          logger.warn(
+            'No latest entry available for year-over-year comparison',
+            {
+              districtId,
+            }
+          )
         } else {
           const currentDate = latestEntry.date
           const currentYear = parseInt(currentDate.substring(0, 4))
           const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
-        try {
-          const previousEntry = await this.cacheManager.getDistrictData(
-            districtId,
-            previousYearDate
-          )
-
-          if (previousEntry) {
-            // Calculate distinguished clubs change
-            const currentDistinguished =
-              this.calculateDistinguishedClubs(latestEntry)
-            const previousDistinguished =
-              this.calculateDistinguishedClubs(previousEntry)
-            const distinguishedChange =
-              previousDistinguished.total > 0
-                ? Math.round(
-                    ((currentDistinguished.total -
-                      previousDistinguished.total) /
-                      previousDistinguished.total) *
-                      1000
-                  ) / 10
-                : 0
-
-            // Calculate club health change (percentage of healthy clubs)
-            const currentHealthyPercent =
-              (healthyClubs.length / clubTrends.length) * 100
-            const previousClubTrends = await this.analyzeClubTrends(
+          try {
+            const previousEntry = await this.cacheManager.getDistrictData(
               districtId,
-              [previousEntry]
+              previousYearDate
             )
-            const previousHealthyClubs = previousClubTrends.filter(
-              c => c.currentStatus === 'healthy'
-            ).length
-            const previousHealthyPercent =
-              previousClubTrends.length > 0
-                ? (previousHealthyClubs / previousClubTrends.length) * 100
-                : 0
-            const clubHealthChange =
-              Math.round(
-                (currentHealthyPercent - previousHealthyPercent) * 10
-              ) / 10
 
+            if (previousEntry) {
+              // Calculate distinguished clubs change
+              const currentDistinguished =
+                this.calculateDistinguishedClubs(latestEntry)
+              const previousDistinguished =
+                this.calculateDistinguishedClubs(previousEntry)
+              const distinguishedChange =
+                previousDistinguished.total > 0
+                  ? Math.round(
+                      ((currentDistinguished.total -
+                        previousDistinguished.total) /
+                        previousDistinguished.total) *
+                        1000
+                    ) / 10
+                  : 0
+
+              // Calculate club health change (percentage of healthy clubs)
+              const currentHealthyPercent =
+                (healthyClubs.length / clubTrends.length) * 100
+              const previousClubTrends = await this.analyzeClubTrends(
+                districtId,
+                [previousEntry]
+              )
+              const previousHealthyClubs = previousClubTrends.filter(
+                c => c.currentStatus === 'healthy'
+              ).length
+              const previousHealthyPercent =
+                previousClubTrends.length > 0
+                  ? (previousHealthyClubs / previousClubTrends.length) * 100
+                  : 0
+              const clubHealthChange =
+                Math.round(
+                  (currentHealthyPercent - previousHealthyPercent) * 10
+                ) / 10
+
+              yearOverYear = {
+                membershipChange: yearOverYearData.percentageChange,
+                distinguishedChange,
+                clubHealthChange,
+              }
+            }
+          } catch (error) {
+            logger.warn('Failed to calculate full year-over-year comparison', {
+              districtId,
+              error,
+            })
             yearOverYear = {
               membershipChange: yearOverYearData.percentageChange,
-              distinguishedChange,
-              clubHealthChange,
+              distinguishedChange: 0,
+              clubHealthChange: 0,
             }
           }
-        } catch (error) {
-          logger.warn('Failed to calculate full year-over-year comparison', {
-            districtId,
-            error,
-          })
-          yearOverYear = {
-            membershipChange: yearOverYearData.percentageChange,
-            distinguishedChange: 0,
-            clubHealthChange: 0,
-          }
-        }
         } // Close the else block for latestEntry check
       }
 

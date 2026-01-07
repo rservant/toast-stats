@@ -9,7 +9,6 @@ import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { BackfillProgressBar } from './components/BackfillProgressBar'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
-import ReconciliationManagementPage from './pages/ReconciliationManagementPage'
 import DistrictConfigurationPage from './pages/DistrictConfigurationPage'
 
 function Layout(): React.JSX.Element {
@@ -53,10 +52,6 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId',
           element: <DistrictDetailPage />,
-        },
-        {
-          path: 'admin/reconciliation',
-          element: <ReconciliationManagementPage />,
         },
         {
           path: 'admin/districts',

@@ -2964,10 +2964,14 @@ router.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'leadership-insights', {
-        startDate: req.query['startDate'],
-        endDate: req.query['endDate'],
-      }),
+      generateDistrictCacheKey(
+        req.params['districtId'],
+        'leadership-insights',
+        {
+          startDate: req.query['startDate'],
+          endDate: req.query['endDate'],
+        }
+      ),
   }),
   async (req: Request, res: Response) => {
     try {

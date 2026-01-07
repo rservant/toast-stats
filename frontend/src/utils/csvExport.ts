@@ -474,32 +474,13 @@ export const exportHistoricalRankData = (
 export const exportDistrictAnalytics = async (
   districtId: string,
   startDate?: string,
-  endDate?: string,
-  exportMetadata?: {
-    dataCollectionDate: string
-    exportTimestamp: string
-    isPreliminary: boolean
-    isFinal: boolean
-  }
+  endDate?: string
 ): Promise<void> => {
   try {
     // Build query parameters
     const params = new URLSearchParams({ format: 'csv' })
     if (startDate) params.append('startDate', startDate)
     if (endDate) params.append('endDate', endDate)
-
-    // Add export metadata as query parameters
-    if (exportMetadata) {
-      params.append(
-        'dataCollectionDate',
-        exportMetadata.dataCollectionDate
-      )
-      params.append(
-        'isPreliminary',
-        exportMetadata.isPreliminary.toString()
-      )
-      params.append('isFinal', exportMetadata.isFinal.toString())
-    }
 
     // Fetch CSV from backend
     const response = await fetch(

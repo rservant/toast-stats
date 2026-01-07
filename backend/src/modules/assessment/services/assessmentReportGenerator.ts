@@ -220,18 +220,18 @@ export function renderYearEndSummary(
 
   // Use first report for district and program_year (all should match)
   const firstReport = monthlyReports[0]
-  
+
   if (!firstReport) {
     throw new Error('No monthly reports available for annual summary')
   }
 
   // Aggregate annual totals from final month's YTD values
   const finalMonthReport = monthlyReports[monthlyReports.length - 1]
-  
+
   if (!finalMonthReport) {
     throw new Error('No final month report available for annual summary')
   }
-  
+
   const annualTotals = {
     membership_payments_ytd: finalMonthReport.metrics.membership_payments_ytd,
     paid_clubs_ytd: finalMonthReport.metrics.paid_clubs_ytd,

@@ -1,6 +1,6 @@
 /**
  * Month-End Data Mapper Service
- * 
+ *
  * Handles the complex logic of mapping month-end closing period CSV data
  * to appropriate processed data dates. This service implements the strategy
  * where:
@@ -71,8 +71,8 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
     const requestedYear = requested.getFullYear()
     const actualYear = actual.getFullYear()
 
-    const isClosingPeriod = 
-      (actualYear > requestedYear) || 
+    const isClosingPeriod =
+      actualYear > requestedYear ||
       (actualYear === requestedYear && actualMonth > requestedMonth)
 
     // Data month is the month being closed (typically the requested month)
@@ -90,7 +90,9 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
    * Get the appropriate CSV date for a given processed data date
    * Returns null if no data should be available (expected gap)
    */
-  async getCSVDateForProcessedDate(processedDate: string): Promise<string | null> {
+  async getCSVDateForProcessedDate(
+    processedDate: string
+  ): Promise<string | null> {
     try {
       const processedDateObj = new Date(processedDate + 'T00:00:00')
       const processedMonth = processedDateObj.getMonth() + 1
@@ -167,7 +169,7 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
 
       // Get all cached dates
       const cachedDates = await this.rawCSVCache.getCachedDates()
-      
+
       // Filter for dates that might contain closing period data for this month
       const closingPeriodCandidates: string[] = []
 
@@ -179,10 +181,16 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
           }
         } catch (metadataError) {
           // If we can't read metadata, skip this date
-          this.logger.warn('Failed to read metadata for month-end data detection', {
-            date,
-            error: metadataError instanceof Error ? metadataError.message : 'Unknown error',
-          })
+          this.logger.warn(
+            'Failed to read metadata for month-end data detection',
+            {
+              date,
+              error:
+                metadataError instanceof Error
+                  ? metadataError.message
+                  : 'Unknown error',
+            }
+          )
           continue
         }
       }
@@ -191,7 +199,7 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
         // No closing period data found, try the last day of the month directly
         const lastDay = this.getLastDayOfMonth(year, monthNum)
         const lastDayStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-        
+
         const hasDirectData = await this.hasCSVDataForDate(lastDayStr)
         if (hasDirectData) {
           this.logger.debug('Found direct month-end data', {
@@ -210,7 +218,10 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
       const latestClosingData = closingPeriodCandidates[0]
 
       if (!latestClosingData) {
-        this.logger.warn('No closing period data found after sorting', { month, year })
+        this.logger.warn('No closing period data found after sorting', {
+          month,
+          year,
+        })
         return null
       }
 
@@ -259,20 +270,32 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
         if (cachedMonth === month && cachedYear === year) {
           try {
             const metadata = await this.rawCSVCache.getCacheMetadata(cachedDate)
-            if (metadata?.isClosingPeriod && metadata.dataMonth === prevMonthStr) {
-              this.logger.debug('Expected data gap due to previous month closing period', {
-                date,
-                previousMonth: prevMonthStr,
-                closingPeriodDate: cachedDate,
-              })
+            if (
+              metadata?.isClosingPeriod &&
+              metadata.dataMonth === prevMonthStr
+            ) {
+              this.logger.debug(
+                'Expected data gap due to previous month closing period',
+                {
+                  date,
+                  previousMonth: prevMonthStr,
+                  closingPeriodDate: cachedDate,
+                }
+              )
               return true
             }
           } catch (metadataError) {
             // If we can't read metadata, continue checking other dates
-            this.logger.warn('Failed to read metadata for closing period detection', {
-              cachedDate,
-              error: metadataError instanceof Error ? metadataError.message : 'Unknown error',
-            })
+            this.logger.warn(
+              'Failed to read metadata for closing period detection',
+              {
+                cachedDate,
+                error:
+                  metadataError instanceof Error
+                    ? metadataError.message
+                    : 'Unknown error',
+              }
+            )
             continue
           }
         }
@@ -295,11 +318,11 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
     try {
       const datePath = path.join(this.cacheDir, date)
       await fs.access(datePath)
-      
+
       // Check if directory has any CSV files
       const entries = await fs.readdir(datePath, { withFileTypes: true })
-      const hasCsvFiles = entries.some(entry => 
-        entry.isFile() && entry.name.endsWith('.csv')
+      const hasCsvFiles = entries.some(
+        entry => entry.isFile() && entry.name.endsWith('.csv')
       )
 
       return hasCsvFiles
@@ -315,7 +338,7 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
     const date = new Date(dateString + 'T00:00:00')
     const nextDay = new Date(date)
     nextDay.setDate(date.getDate() + 1)
-    
+
     return nextDay.getMonth() !== date.getMonth()
   }
 
@@ -334,11 +357,11 @@ export class MonthEndDataMapper implements IMonthEndDataMapper {
   private subtractDays(dateString: string, days: number): string {
     const date = new Date(dateString + 'T00:00:00')
     date.setDate(date.getDate() - days)
-    
+
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
-    
+
     return `${year}-${month}-${day}`
   }
 }

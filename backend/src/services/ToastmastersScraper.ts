@@ -319,7 +319,10 @@ export class ToastmastersScraper {
    * Fetch all districts with performance data from CSV export
    */
   async getAllDistricts(dateString?: string): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<{ content: string; actualDate: string }> => {
+    const downloadFn = async (): Promise<{
+      content: string
+      actualDate: string
+    }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 
@@ -403,7 +406,7 @@ export class ToastmastersScraper {
         year: actualYear,
         dateString: dashboardDateString,
       } = actualDate
-      
+
       actualDateString = dashboardDateString
 
       // Check for month-end closing period
@@ -667,7 +670,10 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<{ content: string; actualDate: string }> => {
+    const downloadFn = async (): Promise<{
+      content: string
+      actualDate: string
+    }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 
@@ -716,7 +722,7 @@ export class ToastmastersScraper {
               year: actualYear,
               dateString: dashboardDateString,
             } = actualDate
-            
+
             actualDateString = dashboardDateString
 
             if (
@@ -775,7 +781,10 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<{ content: string; actualDate: string }> => {
+    const downloadFn = async (): Promise<{
+      content: string
+      actualDate: string
+    }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 

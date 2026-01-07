@@ -67,8 +67,6 @@ describe('Generated Data Validation Property Tests', () => {
       )
     })
 
-
-
     it('should ensure generated DistrictCacheEntry data is valid and realistic', () => {
       fc.assert(
         fc.property(districtCacheEntryArbitrary(), entry => {
@@ -207,8 +205,6 @@ describe('Generated Data Validation Property Tests', () => {
         { numRuns: 5 }
       )
     })
-
-
   })
 
   describe('Property 22: Generated Data Validation - Edge Cases', () => {

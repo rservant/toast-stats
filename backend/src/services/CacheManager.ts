@@ -71,8 +71,12 @@ export class CacheManager {
     }
 
     // Additional validation: check if it's a valid date
-    const [year, month, day] = date.split('-').map(Number)
-    if (month < 1 || month > 12 || day < 1 || day > 31) {
+    const dateParts = date.split('-').map(Number)
+    if (dateParts.length !== 3) {
+      return false
+    }
+    const [year, month, day] = dateParts
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
       return false
     }
 
@@ -582,7 +586,11 @@ export class CacheManager {
    */
   static getTodayDate(): string {
     const now = new Date()
-    return now.toISOString().split('T')[0]
+    const dateString = now.toISOString().split('T')[0]
+    if (!dateString) {
+      throw new Error('Failed to generate today\'s date string')
+    }
+    return dateString
   }
 
   /**

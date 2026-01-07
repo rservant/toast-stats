@@ -55,24 +55,28 @@ The Toastmasters International dashboard at `https://dashboards.toastmasters.org
 The dashboard provides four distinct data views, each accessible via specific URLs and exportable as CSV:
 
 ### 1. All Districts Summary
+
 - **Purpose**: High-level overview of all districts
 - **Scope**: Global district performance metrics
 - **Update Frequency**: Daily (shows previous day's data after refresh)
 - **Primary Use**: District identification and comparative analysis
 
 ### 2. District Performance
+
 - **Purpose**: Detailed metrics for a specific district
 - **Scope**: District-level membership, clubs, and performance data
 - **Update Frequency**: Daily (shows previous day's data after refresh)
 - **Primary Use**: District-specific analysis and reporting
 
 ### 3. Division Performance
+
 - **Purpose**: Division and area breakdown within a district
 - **Scope**: Mid-level organizational structure and performance
 - **Update Frequency**: Daily (shows previous day's data after refresh)
 - **Primary Use**: Division/area leadership insights
 
 ### 4. Club Performance
+
 - **Purpose**: Individual club details within a district
 - **Scope**: Club-level membership, status, and achievement data
 - **Update Frequency**: Daily (shows previous day's data after refresh)
@@ -85,6 +89,7 @@ The dashboard provides four distinct data views, each accessible via specific UR
 ### Daily Data Refresh Pattern
 
 **Standard Operation**:
+
 - Dashboard data is refreshed daily at an undetermined time
 - Once refreshed, the dashboard shows data for the **previous calendar date**
 - Data represents a specific month within the current program year
@@ -95,11 +100,13 @@ The dashboard provides four distinct data views, each accessible via specific UR
 ### Month-End Closing Periods
 
 **Closing Period Behavior**:
+
 - At the end of each month, a **month-end closing period** begins
 - This period extends into the next calendar month for an **indeterminate number of days**
 - During closing periods, data timing becomes unpredictable and complex
 
 **During Month-End Closing**:
+
 - **Data Month**: Dashboard continues to show the **previous month's data**
 - **Date Display**: Shows a date in the **current month** (usually yesterday)
 - **Example**: On January 5, 2025 (during December closing), dashboard might show:
@@ -109,12 +116,14 @@ The dashboard provides four distinct data views, each accessible via specific UR
 ### Data Timing Implications
 
 **For Application Design**:
+
 - **Cannot predict exact data freshness**: May be 1-2 days or longer during closing periods
 - **Month boundaries are complex**: Data month and date stamp may not align
 - **Closing period duration varies**: No fixed schedule for when closing periods end
 - **Historical queries affected**: Month-end periods may affect historical data availability
 
 **For Users**:
+
 - **Data freshness visibility**: Application must clearly display the actual data date from dashboard
 - **Month-end awareness**: Users should understand data may be delayed during closing periods
 - **Trend analysis caution**: Month-end periods may create gaps or inconsistencies in time series data
@@ -124,16 +133,19 @@ The dashboard provides four distinct data views, each accessible via specific UR
 The application implements a specific strategy to handle month-end closing periods effectively:
 
 **CSV Storage Strategy**:
+
 - **Date Folder Naming**: CSV files are stored in folders named after the "As of <date>" from the dashboard
 - **Example**: Dashboard showing "As of January 25, 2025" stores CSVs in `2025-01-25/` folder
 - **Benefit**: Maintains accurate timestamp of when data was actually captured
 
 **Processed Data Strategy**:
+
 - **Last Day of Month Logic**: The last day of Month X uses the final data collected during the closing period (which occurs in Month X+1)
 - **Example**: December 31, 2024 processed data uses the last CSV collected during December's closing period (captured in late January 2025)
 - **Month Transition Handling**: Any day of Month X+1 may have no processed data while closing period continues
 
 **Data Availability Expectations**:
+
 - **Normal Days**: Processed data available 1-2 days after calendar date
 - **Month-End**: Last day of month data may be delayed until closing period ends
 - **Closing Period Duration**: Can extend 25+ days into the next month - no assumptions about length
@@ -151,6 +163,7 @@ private async getSelectedDate(page: Page): Promise<DateInfo | null> {
 ```
 
 **Verification and Storage Logic**:
+
 1. **Extract Dashboard Date**: Parse "As of DD-MMM-YYYY" from dashboard dropdown
 2. **Store by Actual Date**: Use dashboard date for CSV folder naming, not requested date
 3. **Month-End Mapping**: Map closing period data to the appropriate month's final day
@@ -169,6 +182,7 @@ private async getSelectedDate(page: Page): Promise<DateInfo | null> {
 **Purpose**: Provides high-level performance metrics for all districts worldwide
 
 **Key Columns**:
+
 ```
 DISTRICT          - District identifier (e.g., "42", "F", "61")
 REGION           - Geographic region identifier
@@ -185,12 +199,14 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 ```
 
 **Data Characteristics**:
+
 - Contains all districts in a single export
 - Numeric values stored as strings (require parsing)
 - Growth percentages may include "%" symbol
 - Some columns may be optional depending on program year
 
 **Usage in Application**:
+
 - Extract district IDs for subsequent detailed queries
 - Calculate district rankings using Borda count algorithm
 - Provide district-level comparative metrics
@@ -205,6 +221,7 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 **Data Structure**: List of all clubs in the district with district-focused columns
 
 **Key Column Categories**:
+
 - Club identification (Club Number, Club Name, Division, Area)
 - District-level goal tracking and achievement metrics
 - Overall district performance indicators
@@ -213,12 +230,14 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 - Educational awards contributing to district totals
 
 **Data Characteristics**:
+
 - Contains all clubs in the district (same club list as other CSV files)
 - Columns focus on how each club contributes to district-wide goals
 - May include district-specific performance calculations
 - Goal tracking emphasizes district-level targets and achievements
 
 **Usage in Application**:
+
 - Generate `DistrictStatistics.membership` data
 - Calculate `DistrictStatistics.clubs` statistics
 - Populate `DistrictStatistics.education` metrics
@@ -235,6 +254,7 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 **Data Structure**: List of all clubs in the district with division/area-focused columns
 
 **Key Column Categories**:
+
 - Club identification (Club Number, Club Name, Division, Area)
 - Division and area assignment and structure
 - Division-level goal tracking and performance metrics
@@ -243,6 +263,7 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 - Division/area leadership effectiveness metrics
 
 **Data Characteristics**:
+
 - Contains all clubs in the district (same club list as other CSV files)
 - Columns emphasize division and area organizational structure
 - Performance metrics focus on mid-level leadership goals
@@ -250,6 +271,7 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 - May include area-specific achievement breakdowns
 
 **Usage in Application**:
+
 - Generate division-level analytics
 - Support area leadership insights
 - Provide organizational structure mapping
@@ -266,6 +288,7 @@ Presidents Distinguished Clubs - Clubs achieving presidents distinguished status
 **Data Structure**: List of all clubs in the district with club-focused columns
 
 **Key Columns**:
+
 ```
 Club Number                - Unique club identifier (e.g., "123456")
 Club Name                 - Official club name
@@ -281,6 +304,7 @@ Membership              - Alternative membership field (optional)
 ```
 
 **Data Characteristics**:
+
 - Contains all clubs in the district (same club list as other CSV files)
 - Columns focus on individual club performance and achievements
 - Most detailed club-specific metrics and status information
@@ -290,6 +314,7 @@ Membership              - Alternative membership field (optional)
 - Numeric values stored as strings requiring parsing
 
 **Usage in Application**:
+
 - Generate `DistrictStatistics.clubDetails` array
 - Calculate club-level statistics and trends
 - Support club health analysis and risk assessment
@@ -328,28 +353,30 @@ graph TD
 Since all three CSV files contain the same clubs but with different column focuses, the normalization process consolidates this data:
 
 **Data Consolidation Process**:
+
 1. **District Performance CSV**: Provides district-goal-focused metrics for each club
-2. **Division Performance CSV**: Provides division/area structure and mid-level goals for each club  
+2. **Division Performance CSV**: Provides division/area structure and mid-level goals for each club
 3. **Club Performance CSV**: Provides detailed club-specific performance metrics for each club
 4. **Normalization**: Combines all three perspectives into comprehensive club records
 
 **Consolidated Club Data Structure**:
+
 ```typescript
 interface ConsolidatedClubData {
   // Basic identification (consistent across all CSVs)
-  clubId: string           // From Club Number
-  clubName: string         // From Club Name  
-  division: string         // From Division
-  area: string            // From Area
-  
+  clubId: string // From Club Number
+  clubName: string // From Club Name
+  division: string // From Division
+  area: string // From Area
+
   // District-focused metrics (from District Performance CSV)
   districtGoalContribution: DistrictGoalMetrics
   districtPerformanceRank: number
-  
-  // Division-focused metrics (from Division Performance CSV)  
+
+  // Division-focused metrics (from Division Performance CSV)
   divisionGoalContribution: DivisionGoalMetrics
   areaPerformanceRank: number
-  
+
   // Club-focused metrics (from Club Performance CSV)
   clubSpecificGoals: ClubGoalMetrics
   membershipDetails: MembershipMetrics
@@ -361,6 +388,7 @@ interface ConsolidatedClubData {
 ### 3. Data Transformation Process
 
 **Raw CSV Records** (`ScrapedRecord[]`)
+
 - Three CSV files each containing all clubs in the district
 - Different column sets focusing on district, division, and club perspectives
 - String/number values requiring parsing and validation
@@ -369,11 +397,12 @@ interface ConsolidatedClubData {
 **↓ Normalization Process**
 
 **Consolidated Club Data** → **Structured District Data** (`DistrictStatistics`)
+
 ```typescript
 interface DistrictStatistics {
-  districtId: string        // From All Districts CSV
+  districtId: string // From All Districts CSV
   membership: MembershipStats // Aggregated from all club records across CSVs
-  clubs: ClubStats         // Calculated from consolidated club data
+  clubs: ClubStats // Calculated from consolidated club data
   education: EducationStats // From district-focused columns
   divisions: DivisionStats[] // From division-focused columns
   clubDetails: ClubDetail[] // Consolidated from all three club CSV sources
@@ -382,31 +411,34 @@ interface DistrictStatistics {
 ```
 
 **Key Consolidation Logic**:
+
 - **Club Identification**: Use Club Number as primary key across all three CSVs
 - **Data Merging**: Combine district, division, and club perspectives for each club
 - **Conflict Resolution**: Prioritize club-focused CSV for basic club data (membership, status)
 - **Validation**: Ensure club lists are consistent across all three CSV files
-- **Aggregation**: Roll up club-level data to district and division statistics  
+- **Aggregation**: Roll up club-level data to district and division statistics
+
 3. **Club Performance CSV**: Provides detailed club-specific performance metrics for each club
 4. **Normalization**: Combines all three perspectives into comprehensive club records
 
 **Consolidated Club Data Structure**:
-```typescript
+
+````typescript
 interface ConsolidatedClubData {
   // Basic identification (consistent across all CSVs)
   clubId: string           // From Club Number
-  clubName: string         // From Club Name  
+  clubName: string         // From Club Name
   division: string         // From Division
   area: string            // From Area
-  
+
   // District-focused metrics (from District Performance CSV)
   districtGoalContribution: DistrictGoalMetrics
   districtPerformanceRank: number
-  
-  // Division-focused metrics (from Division Performance CSV)  
+
+  // Division-focused metrics (from Division Performance CSV)
   divisionGoalContribution: DivisionGoalMetrics
   areaPerformanceRank: number
-  
+
   // Club-focused metrics (from Club Performance CSV)
   clubSpecificGoals: ClubGoalMetrics
   membershipDetails: MembershipMetrics
@@ -432,11 +464,12 @@ interface DistrictStatistics {
   clubDetails: ClubDetail[] // From Club Performance CSV
   performance: PerformanceMetrics // Calculated from multiple sources
 }
-```
+````
 
 ### Data Validation and Quality Assurance
 
 **Validation Steps**:
+
 1. **Schema Validation**: Zod schemas ensure data structure integrity
 2. **Business Rule Validation**: Logical consistency checks (e.g., active clubs ≤ total clubs)
 3. **Cross-Reference Validation**: Consistency between related data sources and club lists across CSVs
@@ -445,6 +478,7 @@ interface DistrictStatistics {
 6. **Club List Consistency**: Verify same clubs appear in all three CSV files
 
 **Quality Filters**:
+
 - Remove "Month of" summary rows from CSV data
 - Handle missing or null values gracefully
 - Parse numeric strings with error handling
@@ -452,6 +486,7 @@ interface DistrictStatistics {
 - Validate club data consistency across the three CSV perspectives
 
 **Cross-CSV Validation**:
+
 - **Club Count Verification**: Ensure all three CSVs contain the same number of clubs
 - **Club ID Consistency**: Verify Club Numbers match across all three files
 - **Basic Data Consistency**: Check that club names, divisions, and areas are consistent
@@ -464,12 +499,14 @@ interface DistrictStatistics {
 ### Common Data Types and Parsing
 
 **Club Identifiers**:
+
 - Format: 6-digit numeric strings (e.g., "123456")
 - Parsing: Direct string usage, no numeric conversion needed
 - Validation: Non-empty, typically 6 digits
 - **Consistency**: Same Club Number appears in all three CSV files for each club
 
 **Membership Counts**:
+
 - Format: Numeric strings, may include commas (e.g., "1,234")
 - Parsing: `parseInt()` after comma removal
 - Validation: Non-negative integers
@@ -477,6 +514,7 @@ interface DistrictStatistics {
 - **CSV Variations**: Different CSVs may emphasize different membership metrics
 
 **Status Values**:
+
 - Club Status: "Active", "Suspended", "Ineligible", "Low"
 - Distinguished Status: "Distinguished", "Select Distinguished", "Presidents Distinguished", or empty
 - Parsing: Case-insensitive string matching
@@ -484,15 +522,17 @@ interface DistrictStatistics {
 - **CSV Focus**: Club Performance CSV typically has most detailed status information
 
 **Goal Achievement**:
+
 - Format: "X/Y" strings (e.g., "7/10")
 - Parsing: Split on "/" and parse both numerator and denominator
 - Validation: Numerator ≤ denominator, both non-negative
-- **CSV Variations**: 
+- **CSV Variations**:
   - District Performance CSV: Goals contributing to district targets
-  - Division Performance CSV: Goals contributing to division/area targets  
+  - Division Performance CSV: Goals contributing to division/area targets
   - Club Performance CSV: Individual club DCP goals
 
 **Percentage Values**:
+
 - Format: Numeric strings, may include "%" symbol
 - Parsing: Remove "%" and parse as float
 - Validation: Typically 0-100 range, but growth can exceed 100%
@@ -502,23 +542,27 @@ interface DistrictStatistics {
 The dashboard occasionally changes column names, and different CSV files may use different column names for similar data:
 
 **Basic Club Information** (consistent across all CSVs):
+
 - Club Number: "Club Number", "Club ID", "ClubID"
 - Club Name: "Club Name", "ClubName"
 - Division: "Division", "Div"
 - Area: "Area"
 
 **Membership Columns** (may vary by CSV focus):
+
 - District Performance CSV: May emphasize membership contributions to district goals
 - Division Performance CSV: May focus on membership within division/area context
 - Club Performance CSV: Most detailed membership data
 - Common variations: "Active Members", "Membership", "Active Membership"
 
 **Goal Tracking Columns** (different focus per CSV):
+
 - District Performance CSV: "District Goals Met", "Goals Contributing to District"
-- Division Performance CSV: "Division Goals Met", "Area Goals Met"  
+- Division Performance CSV: "Division Goals Met", "Area Goals Met"
 - Club Performance CSV: "Goals Met", "DCP Goals", "Club Goals Met"
 
 **Status Columns** (most detailed in Club Performance CSV):
+
 - Primary: "Club Status"
 - Alternatives: "Status"
 - Default: "active" if missing
@@ -527,18 +571,21 @@ The dashboard occasionally changes column names, and different CSV files may use
 ### CSV-Specific Column Characteristics
 
 **District Performance CSV Columns**:
+
 - Focus on how each club contributes to district-wide metrics
 - May include district ranking or percentile information
 - Educational awards that count toward district totals
 - Membership growth contributing to district goals
 
 **Division Performance CSV Columns**:
+
 - Emphasis on division and area organizational structure
 - Division/area leadership effectiveness metrics
 - Mid-level goal achievement and ranking
 - Area-specific performance indicators
 
 **Club Performance CSV Columns**:
+
 - Most comprehensive individual club data
 - Detailed membership statistics and trends
 - Complete DCP goal breakdown
@@ -570,6 +617,7 @@ private getProgramYear(dateString: string): string {
 ```
 
 **Examples**:
+
 - Date: "2024-08-15" → Program Year: "2024-2025"
 - Date: "2025-03-10" → Program Year: "2024-2025"
 - Date: "2025-07-01" → Program Year: "2025-2026"
@@ -579,10 +627,12 @@ private getProgramYear(dateString: string): string {
 The dashboard supports querying historical data within program years using date parameters:
 
 **URL Format**: `?month={month}&day={formattedDate}`
+
 - `month`: Numeric month (1-12)
 - `formattedDate`: "mm/dd/yyyy" format (no zero padding)
 
 **Example**: For date "2024-11-03":
+
 - `month=11`
 - `day=11/3/2024`
 - Full URL: `...Club.aspx?id=42&month=11&day=11/3/2024`
@@ -599,18 +649,22 @@ The dashboard supports querying historical data within program years using date 
 ### Specific URL Patterns
 
 **All Districts Summary**:
+
 - Current: `https://dashboards.toastmasters.org/2024-2025/Default.aspx`
 - Historical: `https://dashboards.toastmasters.org/2024-2025/Default.aspx?month=11&day=11/3/2024`
 
 **District Performance**:
+
 - Current: `https://dashboards.toastmasters.org/2024-2025/District.aspx?id=42`
 - Historical: `https://dashboards.toastmasters.org/2024-2025/District.aspx?id=42&month=11&day=11/3/2024`
 
 **Division Performance**:
+
 - Current: `https://dashboards.toastmasters.org/2024-2025/Division.aspx?id=42`
 - Historical: `https://dashboards.toastmasters.org/2024-2025/Division.aspx?id=42&month=11&day=11/3/2024`
 
 **Club Performance**:
+
 - Current: `https://dashboards.toastmasters.org/2024-2025/Club.aspx?id=42`
 - Historical: `https://dashboards.toastmasters.org/2024-2025/Club.aspx?id=42&month=11&day=11/3/2024`
 
@@ -624,6 +678,7 @@ private buildBaseUrl(dateString: string): string {
 ```
 
 **Configuration**:
+
 - Base URL: `process.env.TOASTMASTERS_DASHBOARD_URL` or `https://dashboards.toastmasters.org`
 - Program year automatically calculated from date
 - Parameters added for historical data queries
@@ -635,21 +690,25 @@ private buildBaseUrl(dateString: string): string {
 ### Expected Data Issues
 
 **Inconsistent Column Names**:
+
 - Dashboard may change column names between versions
 - Application uses fallback column name strategies
 - Multiple column name variations handled gracefully
 
 **Missing Data**:
+
 - Some clubs may have missing membership counts
 - Distinguished status may be empty for non-achieving clubs
 - Optional columns may not be present in all exports
 
 **Data Format Variations**:
+
 - Numeric values stored as strings with potential formatting
 - Percentage values may or may not include "%" symbol
 - Comma-separated thousands in numeric strings
 
 **Summary Row Contamination**:
+
 - CSV exports may include "Month of" summary rows
 - These rows are filtered out during processing
 - Filter logic: `!value.includes('Month of')`
@@ -657,12 +716,14 @@ private buildBaseUrl(dateString: string): string {
 ### Data Validation Strategies
 
 **Defensive Parsing**:
+
 ```typescript
 // Safe integer parsing with fallback
-const memberCount = parseInt(
-  (club['Active Members'] || club['Membership'] || '0').toString(),
-  10
-) || 0
+const memberCount =
+  parseInt(
+    (club['Active Members'] || club['Membership'] || '0').toString(),
+    10
+  ) || 0
 
 // Safe status parsing with normalization
 const status = (club['Club Status'] || 'active')
@@ -671,11 +732,13 @@ const status = (club['Club Status'] || 'active')
 ```
 
 **Cross-Validation**:
+
 - Verify club counts match between different CSV sources
 - Ensure membership totals are consistent across data sources
 - Validate district IDs exist in all related data sources
 
 **Business Rule Validation**:
+
 - Active clubs count ≤ total clubs count
 - Distinguished clubs count ≤ active clubs count
 - Goal achievement numerator ≤ denominator
@@ -689,11 +752,13 @@ const status = (club['Club Status'] || 'active')
 
 **Technology**: Playwright with Chromium
 **Configuration**:
+
 - Headless mode: Always enabled for production
 - Timeout: 30 seconds for page operations
 - Network idle: Wait for network activity to cease
 
 **Browser Lifecycle**:
+
 ```typescript
 private async initBrowser(): Promise<Browser> {
   if (!this.browser) {
@@ -708,6 +773,7 @@ private async initBrowser(): Promise<Browser> {
 ### CSV Export Process
 
 **Export Mechanism**:
+
 1. Navigate to dashboard page
 2. Wait for page load and network idle
 3. Locate export dropdown (select element with id containing 'Export')
@@ -716,6 +782,7 @@ private async initBrowser(): Promise<Browser> {
 6. Read downloaded file content as UTF-8 string
 
 **Export Code**:
+
 ```typescript
 private async downloadCsv(page: Page): Promise<string> {
   await page.waitForLoadState('networkidle', {
@@ -752,6 +819,7 @@ private async getSelectedDate(page: Page): Promise<DateInfo | null> {
 ```
 
 **Date Validation**:
+
 - Compares requested date with dashboard-selected date
 - Throws error if dates don't match (data not available)
 - Logs warnings for date verification failures
@@ -764,9 +832,11 @@ private async getSelectedDate(page: Page): Promise<DateInfo | null> {
 ### Caching Strategy
 
 **Raw CSV Cache System**:
+
 - **Date-Based Storage**: CSV files stored in folders named after dashboard's "As of" date
 - **Month-End Handling**: Closing period CSVs stored with their actual capture dates
 - **Example Structure**:
+
 ```
 cache/raw-csv/
 ├── 2024-12-30/                    # Normal December data
@@ -778,11 +848,13 @@ cache/raw-csv/
 ```
 
 **Processed Data Mapping**:
+
 - **Month-End Logic**: December 31 processed data uses the last CSV from December closing period
 - **Gap Handling**: January 1-14 may have no processed data during December closing
 - **Data Continuity**: Ensures month-end data represents the final state of that month
 
 **Cache Types**:
+
 ```typescript
 enum CSVType {
   ALL_DISTRICTS = 'all-districts',
@@ -795,18 +867,21 @@ enum CSVType {
 ### Cache-First Strategy
 
 **Lookup Process**:
+
 1. Check cache for requested CSV type, date, and district
 2. If cache hit: Return cached content immediately
 3. If cache miss: Download from dashboard and cache result
 4. Cache failures fall back to direct download
 
 **Cache Metadata**:
+
 ```typescript
 interface RawCSVCacheMetadata {
-  date: string                    // YYYY-MM-DD format
-  timestamp: number              // Cache creation time
-  programYear: string            // e.g., "2024-2025"
-  csvFiles: {                    // Track cached files
+  date: string // YYYY-MM-DD format
+  timestamp: number // Cache creation time
+  programYear: string // e.g., "2024-2025"
+  csvFiles: {
+    // Track cached files
     allDistricts: boolean
     districts: {
       [districtId: string]: {
@@ -833,12 +908,14 @@ interface RawCSVCacheMetadata {
 ### Performance Benefits
 
 **Cache Hit Performance**:
+
 - Eliminates network requests to dashboard
 - Reduces browser automation overhead
 - Provides consistent response times
 - Enables offline development and testing
 
 **Cache Statistics Tracking**:
+
 - Hit/miss ratios for performance monitoring
 - File size and count tracking
 - Access pattern analysis
@@ -851,17 +928,20 @@ interface RawCSVCacheMetadata {
 ### Expected Failure Modes
 
 **Network Failures**:
+
 - Dashboard site unavailable or slow
 - Network connectivity issues
 - Timeout during page load or CSV download
 
 **Dashboard Changes**:
+
 - Export dropdown selector changes
 - CSV column name modifications
 - Page structure alterations
 - New authentication requirements
 
 **Data Quality Issues**:
+
 - Malformed CSV content
 - Missing expected columns
 - Unexpected data formats
@@ -870,12 +950,14 @@ interface RawCSVCacheMetadata {
 ### Error Recovery Strategies
 
 **Circuit Breaker Pattern**:
+
 - Protects against cascading failures
 - Automatic recovery after failure threshold
 - Exponential backoff for retry attempts
 - Graceful degradation to cached data
 
 **Retry Logic**:
+
 ```typescript
 // Exponential backoff with jitter
 const retryDelay = Math.min(
@@ -885,6 +967,7 @@ const retryDelay = Math.min(
 ```
 
 **Fallback Mechanisms**:
+
 - Use cached data when scraping fails
 - Continue with partial data if some districts fail
 - Preserve last-known-good snapshots
@@ -893,18 +976,21 @@ const retryDelay = Math.min(
 ### Error Classification
 
 **Transient Errors** (Retry Appropriate):
+
 - Network timeouts
 - Temporary site unavailability
 - Rate limiting responses
 - Browser automation failures
 
 **Permanent Errors** (No Retry):
+
 - Authentication failures
 - Site structure changes
 - Invalid district IDs
 - Malformed URLs
 
 **Data Errors** (Validation Failures):
+
 - Missing required columns
 - Invalid data formats
 - Business rule violations
@@ -919,17 +1005,20 @@ const retryDelay = Math.min(
 ### Date Range Limitations
 
 **Program Year Boundaries**:
+
 - Historical data only available within current program year
 - Cross-program-year queries not supported
 - Date validation ensures program year consistency
 
 **Data Availability**:
+
 - Not all historical dates may have data
 - Dashboard may return nearest available date
 - Date verification prevents incorrect data usage
 - **Month-end closing periods affect historical data availability**
 
 **Month-End Closing Impact on Historical Queries**:
+
 - During closing periods, recent historical dates may be unavailable
 - Dashboard may return data from the closing month instead of requested date
 - Historical queries near month boundaries require careful date verification
@@ -938,6 +1027,7 @@ const retryDelay = Math.min(
 ### Historical Query Process
 
 **Date Parameter Generation**:
+
 ```typescript
 // Parse date string (YYYY-MM-DD)
 const dateObj = new Date(dateString + 'T00:00:00')
@@ -950,12 +1040,14 @@ const formattedDate = `${month}/${day}/${year}`
 ```
 
 **URL Construction**:
+
 ```typescript
 const baseUrl = this.buildBaseUrl(dateString)
 const url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
 ```
 
 **Date Verification**:
+
 - Parse dashboard's selected date from dropdown
 - Compare with requested date
 - Throw error if dates don't match
@@ -964,24 +1056,28 @@ const url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formatte
 ### Historical Data Use Cases
 
 **Trend Analysis**:
+
 - Compare membership changes over time
 - Track club performance evolution
 - Analyze seasonal patterns (accounting for month-end closing gaps)
 - Monitor goal achievement progress
 
 **Snapshot Comparisons**:
+
 - Before/after analysis for initiatives
 - Monthly progress tracking (with awareness of closing period delays)
 - Year-over-year comparisons
 - Performance trend identification
 
 **Data Validation**:
+
 - Verify current data against historical patterns
 - Identify anomalies or data quality issues (distinguishing from closing period effects)
 - Cross-validate different data sources
 - Ensure consistency across time periods (accounting for month-end variations)
 
 **Month-End Closing Considerations**:
+
 - **Trend Analysis**: Expect data gaps or delays during closing periods
 - **Monthly Comparisons**: Month-end dates may not be available immediately
 - **Automated Reporting**: Build tolerance for closing period delays
@@ -994,12 +1090,14 @@ const url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formatte
 ### Data Collection and Storage
 
 **CSV Collection Process**:
+
 1. **Scrape Dashboard**: Extract data and parse "As of <date>" from dashboard
 2. **Store by Actual Date**: Save CSV files in folder named after dashboard date (not requested date)
 3. **Metadata Tracking**: Record both requested date and actual dashboard date in metadata
 4. **Closing Period Detection**: Identify when dashboard date doesn't match requested date
 
 **Storage Structure**:
+
 ```
 cache/raw-csv/
 ├── 2024-12-30/                    # Normal end-of-month data
@@ -1019,6 +1117,7 @@ cache/raw-csv/
 ### Processed Data Generation
 
 **Month-End Data Logic**:
+
 ```typescript
 interface MonthEndDataStrategy {
   // For last day of month (e.g., December 31)
@@ -1027,7 +1126,7 @@ interface MonthEndDataStrategy {
     // Use that data for the month's final day
     // Example: December 31 uses CSV from January 5 (last closing period data)
   }
-  
+
   // For early days of new month (e.g., January 1-14)
   getEarlyMonthData(date: string): ProcessedData | null {
     // Return null if date falls during previous month's closing period
@@ -1037,6 +1136,7 @@ interface MonthEndDataStrategy {
 ```
 
 **Data Mapping Rules**:
+
 1. **Normal Days**: Use CSV from same date or 1-2 days prior
 2. **Last Day of Month**: Use the final CSV collected during that month's closing period
 3. **Closing Period Days**: May return null during previous month's closing period (any duration)
@@ -1045,18 +1145,21 @@ interface MonthEndDataStrategy {
 ### Implementation Components
 
 **Enhanced CSV Cache Service**:
+
 - Store CSVs by actual dashboard date
 - Track month context in metadata
 - Identify closing period data
 - Provide month-end data mapping
 
 **Processed Data Service**:
+
 - Implement month-end data logic
 - Handle expected data gaps
 - Map closing period CSVs to appropriate processed dates
 - Provide clear gap vs. error distinction
 
 **API Response Strategy**:
+
 - Return null for dates during expected closing periods
 - Include metadata about data gaps vs. errors
 - Provide "last available data" fallback options
@@ -1065,12 +1168,14 @@ interface MonthEndDataStrategy {
 ### User Experience Considerations
 
 **Data Availability Messaging**:
+
 - **Normal Delays**: "Data typically available 1-2 days after date"
 - **Month-End**: "Month-end data may be delayed during closing period"
 - **Closing Period**: "Data for [Month] may be unavailable during [Previous Month] closing (can extend 25+ days)"
 - **Gap vs. Error**: Clear distinction between expected gaps and system errors
 
 **Fallback Strategies**:
+
 - Show last available data with clear timestamp
 - Provide month-end summary when daily data unavailable
 - Offer historical comparison during gap periods
@@ -1083,6 +1188,7 @@ interface MonthEndDataStrategy {
 ### Data Flow Integration
 
 **Scraper → RefreshService → Snapshot Store**:
+
 1. ToastmastersScraper fetches CSV data from dashboard
 2. RefreshService normalizes CSV records to DistrictStatistics
 3. DataValidator ensures data quality and consistency
@@ -1092,6 +1198,7 @@ interface MonthEndDataStrategy {
 ### Configuration Management
 
 **Environment Variables**:
+
 ```bash
 # Dashboard URL (default: https://dashboards.toastmasters.org)
 TOASTMASTERS_DASHBOARD_URL=https://dashboards.toastmasters.org
@@ -1101,6 +1208,7 @@ USE_MOCK_DATA=false
 ```
 
 **Service Factory Integration**:
+
 ```typescript
 const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
 const scraper = new ToastmastersScraper(rawCSVCacheService)
@@ -1110,18 +1218,21 @@ const apiService = new RealToastmastersAPIService(scraper)
 ### Monitoring and Observability
 
 **Scraping Metrics**:
+
 - Success/failure rates by CSV type
 - Response time distributions
 - Cache hit/miss ratios
 - Error categorization and frequency
 
 **Data Quality Metrics**:
+
 - Column name variation tracking
 - Missing data frequency
 - Validation failure patterns
 - Data consistency scores
 
 **Operational Metrics**:
+
 - Refresh operation duration
 - Snapshot creation success rates
 - API response times
@@ -1134,16 +1245,19 @@ const apiService = new RealToastmastersAPIService(scraper)
 ### Potential Dashboard Changes
 
 **Authentication Requirements**:
+
 - Dashboard may require login in the future
 - Application designed to handle authentication gracefully
 - Credential management prepared for secure storage
 
 **API Availability**:
+
 - Toastmasters may provide official APIs
 - Current scraping approach provides fallback capability
 - Architecture supports multiple data source integration
 
 **Data Structure Evolution**:
+
 - Column names and formats may continue changing
 - Flexible parsing handles most variations
 - Schema versioning supports data model evolution
@@ -1151,16 +1265,19 @@ const apiService = new RealToastmastersAPIService(scraper)
 ### Scalability Considerations
 
 **Rate Limiting**:
+
 - Respectful scraping practices implemented
 - Configurable delays between requests
 - Circuit breaker prevents overwhelming dashboard
 
 **Caching Optimization**:
+
 - Raw CSV cache reduces dashboard load
 - Snapshot-based architecture minimizes refresh frequency
 - Performance monitoring guides optimization efforts
 
 **Error Recovery Enhancement**:
+
 - Improved failure detection and classification
 - Enhanced retry strategies with better backoff
 - More sophisticated fallback mechanisms
@@ -1172,6 +1289,7 @@ const apiService = new RealToastmastersAPIService(scraper)
 The Toastmasters dashboard at dashboards.toastmasters.org provides comprehensive organizational data through four distinct CSV export capabilities. The Toast-Stats application successfully integrates with this data source through robust scraping, caching, and error handling mechanisms.
 
 Key success factors include:
+
 - **Defensive Programming**: Handles data format variations and missing information
 - **Performance Optimization**: Multi-level caching reduces external dependencies
 - **Error Resilience**: Circuit breakers and fallback mechanisms ensure reliability

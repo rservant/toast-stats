@@ -1,6 +1,6 @@
 /**
  * Month-End Data Mapper Tests
- * 
+ *
  * Tests the month-end closing period detection and data mapping logic.
  * These tests ensure the system correctly handles the complex timing
  * patterns of Toastmasters dashboard month-end closing periods.
@@ -122,16 +122,18 @@ describe('MonthEndDataMapper', () => {
       ])
 
       const result = await mapper.getCSVDateForProcessedDate('2024-12-15')
-      
+
       expect(result).toBe('2024-12-15')
     })
 
     it('should return null when no CSV data is found', async () => {
       // Mock file system access to fail (no data found)
-      vi.spyOn(require('fs').promises, 'access').mockRejectedValue(new Error('File not found'))
+      vi.spyOn(require('fs').promises, 'access').mockRejectedValue(
+        new Error('File not found')
+      )
 
       const result = await mapper.getCSVDateForProcessedDate('2025-01-05')
-      
+
       // Should return null when no data is found
       expect(result).toBeNull()
     })
@@ -145,7 +147,7 @@ describe('MonthEndDataMapper', () => {
       ])
 
       const result = await mapper.getMonthEndData('2024-12', 2024)
-      
+
       expect(result).toBeNull()
     })
 
@@ -161,7 +163,7 @@ describe('MonthEndDataMapper', () => {
       ])
 
       const result = await mapper.getMonthEndData('2024-12', 2024)
-      
+
       expect(result).toBe('2024-12-31')
     })
   })
@@ -189,7 +191,7 @@ describe('MonthEndDataMapper', () => {
 
       // Test that even late in the month, we can detect closing periods
       const result = await mapper.isExpectedDataGap('2025-01-25')
-      
+
       // This should detect the closing period regardless of day
       expect(typeof result).toBe('boolean')
     })
@@ -199,7 +201,7 @@ describe('MonthEndDataMapper', () => {
       vi.mocked(mockRawCSVCache.getCachedDates).mockResolvedValue([])
 
       const result = await mapper.isExpectedDataGap('2025-01-20')
-      
+
       expect(result).toBe(false)
     })
   })

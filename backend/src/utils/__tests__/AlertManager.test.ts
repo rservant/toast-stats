@@ -251,9 +251,7 @@ describe('AlertManager', () => {
       expect(circuitBreakerAlerts[0].category).toBe(
         AlertCategory.CIRCUIT_BREAKER
       )
-      expect(dataQualityAlerts[0].category).toBe(
-        AlertCategory.DATA_QUALITY
-      )
+      expect(dataQualityAlerts[0].category).toBe(AlertCategory.DATA_QUALITY)
     })
   })
 

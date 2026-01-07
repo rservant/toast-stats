@@ -5,7 +5,7 @@
 
 import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
-async function testAPIDCPGoals() {
+async function testAPIDCPGoals(): Promise<void> {
   console.log('='.repeat(80))
   console.log('API DCP GOALS TEST')
   console.log('='.repeat(80))

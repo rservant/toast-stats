@@ -29,7 +29,6 @@ import type {
   RawCSVCacheMetadata,
   RawCSVCacheStatistics,
   CacheHealthStatus,
-  CleanupResult,
   RawCSVCacheConfig,
 } from './rawCSVCache.js'
 import type {
@@ -377,7 +376,7 @@ export interface IRawCSVCacheService {
     csvContent: string,
     districtId?: string
   ): Promise<void>
-  
+
   // Enhanced cache operation for month-end closing periods
   setCachedCSVWithMetadata(
     date: string,
@@ -390,7 +389,7 @@ export interface IRawCSVCacheService {
       dataMonth?: string
     }
   ): Promise<void>
-  
+
   hasCachedCSV(
     date: string,
     type: CSVType,

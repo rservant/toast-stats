@@ -8,6 +8,7 @@
 import { TestPerformanceMetrics, TestSuiteMetrics } from './test-types'
 
 // Interfaces for backend test data generation
+interface BackendTestConfig {
   significantChangeThresholds: {
     membershipPercent: number
     clubCountAbsolute: number
@@ -141,6 +142,8 @@ export class BackendTestMetricsCollector {
 
 // Property-based testing utilities for backend
 export class BackendPropertyTestUtils {
+  static generateBackendTestConfig(): BackendTestConfig {
+    return {
       significantChangeThresholds: {
         membershipPercent: Math.random() * 10,
         clubCountAbsolute: Math.floor(Math.random() * 10) + 1,

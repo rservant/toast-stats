@@ -80,7 +80,7 @@ export class CspExtractorService {
     // Check mappings first
     for (const candidate of this.mapping.csv_columns_to_check) {
       const idx = normalized.findIndex(h => h === candidate.toLowerCase())
-      if (idx >= 0) return headers[idx]
+      if (idx >= 0) return headers[idx] ?? null
     }
 
     // Fallback: any header containing 'csp' or 'competent' or 'speaker' + 'program'
@@ -92,7 +92,7 @@ export class CspExtractorService {
           (h.includes('competent') && h.includes('speaker')) ||
           h.includes('speaker program'))
       ) {
-        return headers[i]
+        return headers[i] ?? null
       }
     }
 
@@ -127,7 +127,17 @@ export class CspExtractorService {
       }
     }
 
-    const headers = Object.keys(clubRecords[0])
+    const firstRecord = clubRecords[0]
+    if (!firstRecord) {
+      return {
+        csp_count: 0,
+        clubs_with_csp: [],
+        total_clubs: 0,
+        csp_field_name: null,
+      }
+    }
+
+    const headers = Object.keys(firstRecord)
     const cspField = this.findCspColumn(headers)
 
     if (!cspField) {

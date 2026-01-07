@@ -12,5 +12,4 @@ export * from './ui/Button'
 export * from './ui/Form'
 
 // Existing components
-export { DataStatusIndicator } from './DataStatusIndicator'
 export { Tooltip, InfoIcon } from './Tooltip'

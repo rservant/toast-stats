@@ -18,20 +18,20 @@ graph TB
         MEDM --> CCS[CacheConfigService]
         MEDM --> LOG[Logger]
     end
-    
+
     subgraph "API Layer"
         API[District API Routes] --> MEDM
         API --> DCM[DistrictCacheManager]
         API --> NULL[Null Response Handler]
     end
-    
+
     subgraph "Frontend Layer"
         UI[District Dashboard] --> API
         GAP[Gap Message Component] --> UI
         META[Metadata Display] --> UI
         EXPORT[Export Handler] --> UI
     end
-    
+
     subgraph "Monitoring Layer"
         METRICS[Closing Period Metrics] --> MEDM
         ALERTS[Gap Duration Alerts] --> METRICS
@@ -57,6 +57,7 @@ interface ProductionServiceFactory {
 ```
 
 **Implementation Strategy**:
+
 - Add MonthEndDataMapper to service factory with proper dependency injection
 - Ensure singleton behavior for consistent service instances
 - Add service token for container-based dependency injection
@@ -87,7 +88,7 @@ interface MonthEndAPIService {
     districtId: string,
     date: string
   ): Promise<DistrictDataResponse>
-  
+
   validateDataAvailability(
     districtId: string,
     date: string
@@ -150,23 +151,17 @@ interface MonitoringService {
     actualDate: string,
     duration: number
   ): void
-  
-  recordExpectedGap(
-    districtId: string,
-    date: string,
-    gapDuration: number
-  ): void
-  
+
+  recordExpectedGap(districtId: string, date: string, gapDuration: number): void
+
   recordMappingSuccess(
     districtId: string,
     processedDate: string,
     csvDate: string,
     responseTime: number
   ): void
-  
-  getClosingPeriodMetrics(
-    timeRange: string
-  ): Promise<ClosingPeriodMetrics>
+
+  getClosingPeriodMetrics(timeRange: string): Promise<ClosingPeriodMetrics>
 }
 ```
 

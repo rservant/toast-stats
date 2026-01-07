@@ -116,7 +116,7 @@ export function getMonthlyTarget(
       throw new Error(`Invalid month number: ${monthIdentifier}. Must be 1-12.`)
     }
 
-    month = months[monthIdentifier - 1]
+    month = months[monthIdentifier - 1] ?? 'July'
   } else {
     // Normalize month string to Title Case
     month =
@@ -190,7 +190,7 @@ export function getMonthName(monthNumber: number): string {
     throw new Error(`Invalid month number: ${monthNumber}. Must be 1-12.`)
   }
 
-  return getProgramYearMonths()[monthNumber - 1]
+  return getProgramYearMonths()[monthNumber - 1] ?? 'July'
 }
 
 /**

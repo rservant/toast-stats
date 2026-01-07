@@ -26,7 +26,7 @@ const logAdminAccess = (
   req: express.Request,
   _res: express.Response,
   next: express.NextFunction
-) => {
+): void => {
   logger.info('Admin endpoint accessed', {
     endpoint: req.path,
     ip: req.ip,
@@ -69,15 +69,15 @@ router.get('/snapshots', logAdminAccess, async (req, res) => {
     if (req.query['calculation_version']) {
       filters.calculation_version = req.query['calculation_version'] as string
     }
-    if (req.query.created_after) {
-      filters.created_after = req.query.created_after as string
+    if (req.query['created_after']) {
+      filters.created_after = req.query['created_after'] as string
     }
-    if (req.query.created_before) {
-      filters.created_before = req.query.created_before as string
+    if (req.query['created_before']) {
+      filters.created_before = req.query['created_before'] as string
     }
-    if (req.query.min_district_count) {
+    if (req.query['min_district_count']) {
       filters.min_district_count = parseInt(
-        req.query.min_district_count as string
+        req.query['min_district_count'] as string
       )
     }
 
@@ -130,119 +130,123 @@ router.get('/snapshots', logAdminAccess, async (req, res) => {
  * GET /api/admin/snapshots/:snapshotId
  * Get detailed information about a specific snapshot
  */
-router.get('/snapshots/:snapshotId', logAdminAccess, async (req, res): Promise<void> => {
-  const startTime = Date.now()
-  const snapshotId = req.params['snapshotId']
-  const operationId = `inspect_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.get(
+  '/snapshots/:snapshotId',
+  logAdminAccess,
+  async (req, res): Promise<void> => {
+    const startTime = Date.now()
+    const snapshotId = req.params['snapshotId']
+    const operationId = `inspect_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-  // Validate snapshotId parameter
-  if (!snapshotId) {
-    res.status(400).json({
-      error: {
-        code: 'MISSING_SNAPSHOT_ID',
-        message: 'Snapshot ID is required',
-      },
+    // Validate snapshotId parameter
+    if (!snapshotId) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_SNAPSHOT_ID',
+          message: 'Snapshot ID is required',
+        },
+      })
+      return
+    }
+
+    logger.info('Admin snapshot inspection requested', {
+      operation: 'inspectSnapshot',
+      operation_id: operationId,
+      snapshot_id: snapshotId,
+      ip: req.ip,
     })
-    return
-  }
 
-  logger.info('Admin snapshot inspection requested', {
-    operation: 'inspectSnapshot',
-    operation_id: operationId,
-    snapshot_id: snapshotId,
-    ip: req.ip,
-  })
+    try {
+      const factory = getProductionServiceFactory()
+      const snapshotStore = factory.createSnapshotStore()
 
-  try {
-    const factory = getProductionServiceFactory()
-    const snapshotStore = factory.createSnapshotStore()
+      // Get the specific snapshot
+      const snapshot = await snapshotStore.getSnapshot(snapshotId)
 
-    // Get the specific snapshot
-    const snapshot = await snapshotStore.getSnapshot(snapshotId)
+      if (!snapshot) {
+        logger.warn('Admin requested non-existent snapshot', {
+          operation: 'inspectSnapshot',
+          operation_id: operationId,
+          snapshot_id: snapshotId,
+        })
 
-    if (!snapshot) {
-      logger.warn('Admin requested non-existent snapshot', {
+        return res.status(404).json({
+          error: {
+            code: 'SNAPSHOT_NOT_FOUND',
+            message: `Snapshot ${snapshotId} not found`,
+          },
+        })
+      }
+
+      const duration = Date.now() - startTime
+
+      // Create detailed inspection data
+      const inspectionData = {
+        snapshot_id: snapshot.snapshot_id,
+        created_at: snapshot.created_at,
+        status: snapshot.status,
+        schema_version: snapshot.schema_version,
+        calculation_version: snapshot.calculation_version,
+        errors: snapshot.errors,
+        payload_summary: {
+          district_count: snapshot.payload.districts.length,
+          metadata: snapshot.payload.metadata,
+          districts: snapshot.payload.districts.map(district => ({
+            districtId: district.districtId,
+            name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
+            club_count: district.clubs?.total || 0, // Use total instead of length
+            membership_total: district.membership?.total || 0,
+            performance_score: district.performance?.membershipNet || 0, // Use membershipNet instead of overallScore
+          })),
+        },
+        size_analysis: {
+          total_size_estimate: JSON.stringify(snapshot).length,
+          payload_size_estimate: JSON.stringify(snapshot.payload).length,
+          errors_size: JSON.stringify(snapshot.errors).length,
+        },
+      }
+
+      logger.info('Admin snapshot inspection completed', {
         operation: 'inspectSnapshot',
         operation_id: operationId,
         snapshot_id: snapshotId,
+        status: snapshot.status,
+        district_count: snapshot.payload.districts.length,
+        error_count: snapshot.errors.length,
+        duration_ms: duration,
       })
 
-      return res.status(404).json({
+      res.json({
+        inspection: inspectionData,
+        metadata: {
+          inspected_at: new Date().toISOString(),
+          inspection_duration_ms: duration,
+          operation_id: operationId,
+        },
+      })
+    } catch (error) {
+      const duration = Date.now() - startTime
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      logger.error('Admin snapshot inspection failed', {
+        operation: 'inspectSnapshot',
+        operation_id: operationId,
+        snapshot_id: snapshotId,
+        error: errorMessage,
+        duration_ms: duration,
+      })
+
+      res.status(500).json({
         error: {
-          code: 'SNAPSHOT_NOT_FOUND',
-          message: `Snapshot ${snapshotId} not found`,
+          code: 'SNAPSHOT_INSPECTION_FAILED',
+          message: 'Failed to inspect snapshot',
+          details: errorMessage,
         },
       })
     }
-
-    const duration = Date.now() - startTime
-
-    // Create detailed inspection data
-    const inspectionData = {
-      snapshot_id: snapshot.snapshot_id,
-      created_at: snapshot.created_at,
-      status: snapshot.status,
-      schema_version: snapshot.schema_version,
-      calculation_version: snapshot.calculation_version,
-      errors: snapshot.errors,
-      payload_summary: {
-        district_count: snapshot.payload.districts.length,
-        metadata: snapshot.payload.metadata,
-        districts: snapshot.payload.districts.map(district => ({
-          districtId: district.districtId,
-          name: `District ${district.districtId}`, // DistrictStatistics doesn't have name field
-          club_count: district.clubs?.total || 0, // Use total instead of length
-          membership_total: district.membership?.total || 0,
-          performance_score: district.performance?.membershipNet || 0, // Use membershipNet instead of overallScore
-        })),
-      },
-      size_analysis: {
-        total_size_estimate: JSON.stringify(snapshot).length,
-        payload_size_estimate: JSON.stringify(snapshot.payload).length,
-        errors_size: JSON.stringify(snapshot.errors).length,
-      },
-    }
-
-    logger.info('Admin snapshot inspection completed', {
-      operation: 'inspectSnapshot',
-      operation_id: operationId,
-      snapshot_id: snapshotId,
-      status: snapshot.status,
-      district_count: snapshot.payload.districts.length,
-      error_count: snapshot.errors.length,
-      duration_ms: duration,
-    })
-
-    res.json({
-      inspection: inspectionData,
-      metadata: {
-        inspected_at: new Date().toISOString(),
-        inspection_duration_ms: duration,
-        operation_id: operationId,
-      },
-    })
-  } catch (error) {
-    const duration = Date.now() - startTime
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-
-    logger.error('Admin snapshot inspection failed', {
-      operation: 'inspectSnapshot',
-      operation_id: operationId,
-      snapshot_id: snapshotId,
-      error: errorMessage,
-      duration_ms: duration,
-    })
-
-    res.status(500).json({
-      error: {
-        code: 'SNAPSHOT_INSPECTION_FAILED',
-        message: 'Failed to inspect snapshot',
-        details: errorMessage,
-      },
-    })
   }
-})
+)
 
 /**
  * GET /api/admin/snapshots/:snapshotId/payload

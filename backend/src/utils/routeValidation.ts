@@ -10,7 +10,7 @@ export function validateRouteParams<T extends Record<string, string>>(
   res: Response
 ): T | null {
   const validated: Record<string, string> = {}
-  
+
   for (const param of requiredParams) {
     const value = params[param as string]
     if (!value || typeof value !== 'string' || value.trim() === '') {
@@ -18,14 +18,14 @@ export function validateRouteParams<T extends Record<string, string>>(
         error: {
           code: 'MISSING_PARAMETER',
           message: `Missing or invalid required parameter: ${String(param)}`,
-          parameter: param
-        }
+          parameter: param,
+        },
       })
       return null
     }
     validated[param as string] = value.trim()
   }
-  
+
   return validated as T
 }
 

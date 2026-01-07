@@ -195,8 +195,12 @@ export class DistrictCacheManager {
     }
 
     // Additional validation: check if it's a valid date
-    const [year, month, day] = date.split('-').map(Number)
-    if (month < 1 || month > 12 || day < 1 || day > 31) {
+    const dateParts = date.split('-').map(Number)
+    if (dateParts.length !== 3) {
+      throw new Error(`Invalid date format for cache file path: ${date}`)
+    }
+    const [year, month, day] = dateParts
+    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
       throw new Error(`Invalid date values for cache file path: ${date}`)
     }
 
@@ -496,9 +500,17 @@ export class DistrictCacheManager {
         return null
       }
 
+      const startDate = dates[0]
+      const endDate = dates[dates.length - 1]
+      
+      if (!startDate || !endDate) {
+        logger.warn('Invalid date range data for district', { districtId, dates })
+        return null
+      }
+
       return {
-        startDate: dates[0],
-        endDate: dates[dates.length - 1],
+        startDate,
+        endDate,
       }
     } catch (error) {
       logger.error('Failed to get district data range', { districtId, error })

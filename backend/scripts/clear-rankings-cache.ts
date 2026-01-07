@@ -26,7 +26,7 @@
 import { CacheManager } from '../src/services/CacheManager.js'
 import { getProductionServiceFactory } from '../src/services/ProductionServiceFactory.js'
 
-async function clearRankingsCache() {
+async function clearRankingsCache(): Promise<void> {
   let container: unknown = null
 
   try {

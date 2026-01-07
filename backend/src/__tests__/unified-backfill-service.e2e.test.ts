@@ -112,7 +112,7 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
       const backfillId = initiateResponse.body.backfillId
 
       // Step 2: Monitor progress until completion
-      let status: any
+      let status: { status: string; progress?: number; error?: string }
       let attempts = 0
       const maxAttempts = 30 // 30 seconds timeout
 

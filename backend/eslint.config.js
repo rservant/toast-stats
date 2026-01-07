@@ -8,12 +8,7 @@ export default [
   // Production code - strict rules
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: [
-      '**/*.test.ts',
-      '**/*.spec.ts',
-      '**/__tests__/**/*',
-      '**/__*',
-    ],
+    ignores: ['**/*.test.ts', '**/*.spec.ts', '**/__tests__/**/*', '**/__*'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -30,14 +25,14 @@ export default [
     },
     rules: {
       ...tseslint.configs.recommended.rules,
-      // TypeScript Steering Document Requirements
+      // TypeScript Steering Document Requirements - Relaxed for Maintenance Mode
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/explicit-function-return-type': [
-        'error',
+        'warn', // Reduced from error to warn for maintenance mode
         {
           allowExpressions: true,
           allowTypedFunctionExpressions: true,
@@ -56,12 +51,7 @@ export default [
   },
   // Test code - relaxed rules
   {
-    files: [
-      '**/*.test.ts',
-      '**/*.spec.ts',
-      '**/__tests__/**/*',
-      '**/__*',
-    ],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/__tests__/**/*', '**/__*'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

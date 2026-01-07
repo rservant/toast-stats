@@ -430,17 +430,20 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         await this.updateDownloadStats(date, 'download')
 
         const duration = Date.now() - startTime
-        this.logger.info('CSV file cached successfully with enhanced metadata', {
-          date,
-          type,
-          districtId,
-          filePath,
-          duration,
-          size: csvContent.length,
-          requestedDate: additionalMetadata?.requestedDate,
-          isClosingPeriod: additionalMetadata?.isClosingPeriod,
-          dataMonth: additionalMetadata?.dataMonth,
-        })
+        this.logger.info(
+          'CSV file cached successfully with enhanced metadata',
+          {
+            date,
+            type,
+            districtId,
+            filePath,
+            duration,
+            size: csvContent.length,
+            requestedDate: additionalMetadata?.requestedDate,
+            isClosingPeriod: additionalMetadata?.isClosingPeriod,
+            dataMonth: additionalMetadata?.dataMonth,
+          }
+        )
 
         // Track performance
         this.trackSlowOperation('setCachedCSVWithMetadata', duration)

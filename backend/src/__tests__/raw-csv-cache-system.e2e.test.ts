@@ -41,7 +41,7 @@ vi.mock('../utils/logger', () => ({
 }))
 
 describe('Raw CSV Cache System End-to-End Integration Tests', () => {
-  let testCleanup: { cleanup: any; afterEach: () => Promise<void> }
+  let testCleanup: { cleanup: () => Promise<void>; afterEach: () => Promise<void> }
   let testCacheDir: string
   let testSnapshotDir: string
 
