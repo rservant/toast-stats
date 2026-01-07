@@ -48,13 +48,14 @@ export class ToastmastersScraper {
 
   /**
    * Try to get CSV content from cache first, fallback to download if not found
+   * Returns both the content and the actual "As of" date from the dashboard
    */
-  private async getCachedOrDownload(
+  private async getCachedOrDownloadWithDate(
     csvType: CSVType,
     downloadFn: () => Promise<{ content: string; actualDate: string }>,
     dateString?: string,
     districtId?: string
-  ): Promise<string> {
+  ): Promise<{ content: string; actualDate: string }> {
     const requestedDate = dateString || this.getCurrentDateString()
 
     try {
@@ -66,13 +67,19 @@ export class ToastmastersScraper {
       )
 
       if (cachedContent) {
+        // Get the actual date from cache metadata
+        const cacheMetadata =
+          await this.rawCSVCache.getCacheMetadata(requestedDate)
+        const actualDate = cacheMetadata?.date || requestedDate
+
         logger.info('Cache hit - returning cached CSV content', {
           csvType,
-          date: requestedDate,
+          requestedDate,
+          actualDate,
           districtId,
           contentLength: cachedContent.length,
         })
-        return cachedContent
+        return { content: cachedContent, actualDate }
       }
 
       logger.info('Cache miss - downloading and caching CSV content', {
@@ -112,7 +119,7 @@ export class ToastmastersScraper {
         contentLength: downloadedContent.length,
       })
 
-      return downloadedContent
+      return { content: downloadedContent, actualDate }
     } catch (cacheError) {
       // Cache operation failed - log error and fallback to direct download
       logger.warn('Cache operation failed, falling back to direct download', {
@@ -123,9 +130,28 @@ export class ToastmastersScraper {
           cacheError instanceof Error ? cacheError.message : 'Unknown error',
       })
 
-      const { content } = await downloadFn()
-      return content
+      const { content, actualDate } = await downloadFn()
+      return { content, actualDate }
     }
+  }
+
+  /**
+   * Try to get CSV content from cache first, fallback to download if not found
+   * Legacy method that only returns content (for backward compatibility)
+   */
+  private async getCachedOrDownload(
+    csvType: CSVType,
+    downloadFn: () => Promise<{ content: string; actualDate: string }>,
+    dateString?: string,
+    districtId?: string
+  ): Promise<string> {
+    const result = await this.getCachedOrDownloadWithDate(
+      csvType,
+      downloadFn,
+      dateString,
+      districtId
+    )
+    return result.content
   }
 
   /**
@@ -359,6 +385,65 @@ export class ToastmastersScraper {
       count: records.length,
     })
     return records
+  }
+
+  /**
+   * Fetch all districts with performance data from CSV export
+   * Returns both the records and the actual "As of" date from the dashboard
+   *
+   * IMPORTANT: The actualDate is the date the dashboard data represents,
+   * which is always 1-2 days behind the current date. Snapshots MUST be
+   * stored using this actualDate, not the date the refresh was run.
+   */
+  async getAllDistrictsWithMetadata(dateString?: string): Promise<{
+    records: ScrapedRecord[]
+    actualDate: string
+  }> {
+    const downloadFn = async (): Promise<{
+      content: string
+      actualDate: string
+    }> => {
+      const browser = await this.initBrowser()
+      const page = await browser.newPage()
+
+      try {
+        if (dateString) {
+          // Use the existing getAllDistrictsForDate logic for specific dates
+          return await this.downloadAllDistrictsForDate(page, dateString)
+        } else {
+          // Use current data logic - get the actual date from the dashboard
+          logger.info('Fetching all districts summary with performance data')
+          await page.goto(this.config.baseUrl, {
+            waitUntil: 'networkidle',
+            timeout: this.config.timeout,
+          })
+
+          // Get the actual "As of" date from the dashboard dropdown
+          const selectedDate = await this.getSelectedDate(page)
+          const actualDate =
+            selectedDate?.dateString || this.getCurrentDateString()
+
+          const content = await this.downloadCsv(page)
+          return { content, actualDate }
+        }
+      } finally {
+        await page.close()
+      }
+    }
+
+    const { content, actualDate } = await this.getCachedOrDownloadWithDate(
+      CSVType.ALL_DISTRICTS,
+      downloadFn,
+      dateString
+    )
+
+    const records = this.parseCsv(content)
+    logger.info('All districts performance data fetched with metadata', {
+      requestedDate: dateString,
+      actualDate,
+      count: records.length,
+    })
+    return { records, actualDate }
   }
 
   /**

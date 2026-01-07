@@ -125,3 +125,33 @@ export function createMockCacheServiceWithHits(
 
   return mockService
 }
+
+/**
+ * Helper to set up mock scraper with getAllDistrictsWithMetadata
+ *
+ * This function sets up the mock implementation for getAllDistrictsWithMetadata
+ * based on the getAllDistricts mock data. The actualDate is set to 1 day before
+ * the current date to simulate the dashboard's typical behavior.
+ *
+ * @param mockScraper - The mocked ToastmastersScraper instance
+ * @param mockAllDistricts - The mock data to return from getAllDistricts
+ */
+export function setupMockScraperWithMetadata(
+  mockScraper: {
+    getAllDistricts: ReturnType<typeof vi.fn>
+    getAllDistrictsWithMetadata: ReturnType<typeof vi.fn>
+  },
+  mockAllDistricts: unknown[]
+): void {
+  // Calculate the actual date (1 day behind current date, as the dashboard typically is)
+  const mockActualDate = new Date()
+  mockActualDate.setDate(mockActualDate.getDate() - 1)
+  const mockActualDateString = mockActualDate.toISOString().split('T')[0]
+
+  // Set up both methods
+  mockScraper.getAllDistricts.mockResolvedValue(mockAllDistricts)
+  mockScraper.getAllDistrictsWithMetadata.mockResolvedValue({
+    records: mockAllDistricts,
+    actualDate: mockActualDateString,
+  })
+}

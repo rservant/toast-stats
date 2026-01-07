@@ -637,15 +637,17 @@ export class RefreshService {
 
       if (cachedData) {
         // Cache hit - use cached data
+        // IMPORTANT: Use the actual date from cache metadata, not the requested date
         allDistrictsData = cachedData.data
         allDistrictsMetadata = {
           fromCache: true,
-          csvDate: cachedData.metadata.date,
+          csvDate: cachedData.metadata.date, // This is the actual "As of" date
           fetchedAt: cachedData.metadata.fetchedAt,
         }
 
         logger.info('All Districts data retrieved from cache', {
-          date: currentDate,
+          requestedDate: currentDate,
+          actualDate: allDistrictsMetadata.csvDate,
           recordCount: allDistrictsData.length,
           fromCache: true,
           fetchedAt: allDistrictsMetadata.fetchedAt,
@@ -656,46 +658,14 @@ export class RefreshService {
           date: currentDate,
         })
 
-        const allDistricts = await this.scrapingCircuitBreaker.execute(
-          async () => {
-            const retryResult = await RetryManager.executeWithRetry(
-              () => this.scraper.getAllDistricts(),
-              this.retryOptions,
-              { operation: 'getAllDistricts' }
-            )
+        // Try getAllDistrictsWithMetadata first (preferred - returns actual "As of" date)
+        // Fall back to getAllDistricts for backward compatibility with tests
+        const fetchResult =
+          await this.fetchAllDistrictsFromDashboard(currentDate)
+        allDistrictsData = fetchResult.data
+        allDistrictsMetadata = fetchResult.metadata
 
-            // If retry failed, throw the error so circuit breaker can record it
-            if (!retryResult.success) {
-              throw retryResult.error || new Error('Retry operation failed')
-            }
-
-            return retryResult
-          },
-          { operation: 'getAllDistricts' }
-        )
-
-        if (!allDistricts.success || !allDistricts.result) {
-          throw new Error(
-            `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
-          )
-        }
-
-        allDistrictsData = allDistricts.result
-
-        logger.info('All Districts data fetched from dashboard', {
-          date: currentDate,
-          recordCount: allDistrictsData.length,
-          fromCache: false,
-          attempts: allDistricts.attempts,
-        })
-
-        allDistrictsMetadata = {
-          fromCache: false,
-          csvDate: currentDate,
-          fetchedAt: new Date().toISOString(),
-        }
-
-        // Note: Caching happens automatically inside scraper.getAllDistricts()
+        // Note: Caching happens automatically inside scraper methods
         // via getCachedOrDownload() which calls setCachedCSVWithMetadata()
       }
 
@@ -899,6 +869,128 @@ export class RefreshService {
   }
 
   /**
+   * Fetch all districts data from the dashboard
+   * Tries getAllDistrictsWithMetadata first (preferred - returns actual "As of" date)
+   * Falls back to getAllDistricts for backward compatibility with tests
+   */
+  private async fetchAllDistrictsFromDashboard(currentDate: string): Promise<{
+    data: ScrapedRecord[]
+    metadata: { fromCache: boolean; csvDate: string; fetchedAt: string }
+  }> {
+    // Try getAllDistrictsWithMetadata first if available
+    if (typeof this.scraper.getAllDistrictsWithMetadata === 'function') {
+      try {
+        const allDistricts = await this.scrapingCircuitBreaker.execute(
+          async () => {
+            const retryResult = await RetryManager.executeWithRetry(
+              () => this.scraper.getAllDistrictsWithMetadata(),
+              this.retryOptions,
+              { operation: 'getAllDistrictsWithMetadata' }
+            )
+
+            if (!retryResult.success) {
+              throw retryResult.error || new Error('Retry operation failed')
+            }
+
+            // Check if result has the expected shape
+            if (
+              !retryResult.result ||
+              !('records' in retryResult.result) ||
+              !('actualDate' in retryResult.result)
+            ) {
+              throw new Error(
+                'getAllDistrictsWithMetadata returned invalid result'
+              )
+            }
+
+            return retryResult
+          },
+          { operation: 'getAllDistrictsWithMetadata' }
+        )
+
+        if (!allDistricts.success || !allDistricts.result) {
+          throw new Error(
+            `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
+          )
+        }
+
+        const { records, actualDate } = allDistricts.result
+
+        logger.info('All Districts data fetched from dashboard with metadata', {
+          requestedDate: currentDate,
+          actualDate,
+          recordCount: records.length,
+          fromCache: false,
+          attempts: allDistricts.attempts,
+        })
+
+        return {
+          data: records,
+          metadata: {
+            fromCache: false,
+            csvDate: actualDate,
+            fetchedAt: new Date().toISOString(),
+          },
+        }
+      } catch (metadataError) {
+        logger.warn(
+          'getAllDistrictsWithMetadata failed, falling back to getAllDistricts',
+          {
+            error:
+              metadataError instanceof Error
+                ? metadataError.message
+                : 'Unknown error',
+          }
+        )
+        // Fall through to legacy method
+      }
+    }
+
+    // Fallback to getAllDistricts (for backward compatibility with tests)
+    // WARNING: This path uses currentDate which may be incorrect
+    logger.warn('Using legacy getAllDistricts - actualDate may be incorrect')
+
+    const allDistricts = await this.scrapingCircuitBreaker.execute(
+      async () => {
+        const retryResult = await RetryManager.executeWithRetry(
+          () => this.scraper.getAllDistricts(),
+          this.retryOptions,
+          { operation: 'getAllDistricts' }
+        )
+
+        if (!retryResult.success) {
+          throw retryResult.error || new Error('Retry operation failed')
+        }
+
+        return retryResult
+      },
+      { operation: 'getAllDistricts' }
+    )
+
+    if (!allDistricts.success || !allDistricts.result) {
+      throw new Error(
+        `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
+      )
+    }
+
+    logger.info('All Districts data fetched from dashboard (legacy)', {
+      date: currentDate,
+      recordCount: allDistricts.result.length,
+      fromCache: false,
+      attempts: allDistricts.attempts,
+    })
+
+    return {
+      data: allDistricts.result,
+      metadata: {
+        fromCache: false,
+        csvDate: currentDate,
+        fetchedAt: new Date().toISOString(),
+      },
+    }
+  }
+
+  /**
    * Get configured district IDs and validate them against all districts data
    * This replaces the old extractDistrictIds method to use configured districts instead of all districts
    */
@@ -1075,12 +1167,15 @@ export class RefreshService {
 
       const processingDurationMs = Date.now() - startTime
 
+      // CRITICAL: Use the csvDate from allDistrictsMetadata, which is the actual
+      // "As of" date from the Toastmasters dashboard. This date is always 1-2 days
+      // behind the current date. Snapshots MUST be stored using this date.
       const normalizedData: NormalizedData = {
         districts,
         metadata: {
           source: 'toastmasters-dashboard',
           fetchedAt: rawData.scrapingMetadata.startTime,
-          dataAsOfDate: this.extractDataAsOfDate(rawData.allDistricts),
+          dataAsOfDate: rawData.allDistrictsMetadata.csvDate,
           districtCount: districts.length,
           processingDurationMs,
         },
@@ -1388,36 +1483,6 @@ export class RefreshService {
         `Failed to calculate all-districts rankings: ${errorMessage}`
       )
     }
-  }
-
-  /**
-   * Extract the data as-of date from all districts data
-   */
-  private extractDataAsOfDate(allDistricts: ScrapedRecord[]): string {
-    // Try to find a date field in the data
-    for (const record of allDistricts) {
-      for (const [key, value] of Object.entries(record)) {
-        if (key.toLowerCase().includes('date') && typeof value === 'string') {
-          // Try to parse as date
-          const date = new Date(value)
-          if (!isNaN(date.getTime())) {
-            const dateOnly = date.toISOString().split('T')[0]
-            if (!dateOnly) {
-              throw new Error('Failed to extract date from ISO string')
-            }
-            return dateOnly
-          }
-        }
-      }
-    }
-
-    // Fallback to current date
-    const currentDate = new Date().toISOString()
-    const dateOnly = currentDate.split('T')[0]
-    if (!dateOnly) {
-      throw new Error('Failed to extract date from ISO string')
-    }
-    return dateOnly
   }
 
   /**

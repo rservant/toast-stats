@@ -208,16 +208,26 @@ describe('RefreshService E2E - All Districts Rankings Storage', () => {
     // Create mock scraper
     mockScraper = {
       getAllDistricts: vi.fn(),
+      getAllDistrictsWithMetadata: vi.fn(),
       getDistrictPerformance: vi.fn(),
       getDivisionPerformance: vi.fn(),
       getClubPerformance: vi.fn(),
       closeBrowser: vi.fn(),
     } as unknown as ToastmastersScraper
 
+    // Mock the actual date from the dashboard (1-2 days behind current date)
+    const mockActualDate = new Date()
+    mockActualDate.setDate(mockActualDate.getDate() - 1)
+    const mockActualDateString = mockActualDate.toISOString().split('T')[0]
+
     // Setup default mock responses - scraper methods return arrays directly
     vi.mocked(mockScraper.getAllDistricts).mockResolvedValue(
       mockAllDistrictsData
     )
+    vi.mocked(mockScraper.getAllDistrictsWithMetadata).mockResolvedValue({
+      records: mockAllDistrictsData,
+      actualDate: mockActualDateString!,
+    })
 
     vi.mocked(mockScraper.getDistrictPerformance).mockResolvedValue(
       mockDistrictPerformanceData
@@ -372,19 +382,19 @@ describe('RefreshService E2E - All Districts Rankings Storage', () => {
       const result1 = await refreshService.executeRefresh()
       expect(result1.success).toBe(true)
 
-      // Verify download was called
-      expect(mockScraper.getAllDistricts).toHaveBeenCalledTimes(1)
+      // Verify download was called (getAllDistrictsWithMetadata is now the primary method)
+      expect(mockScraper.getAllDistrictsWithMetadata).toHaveBeenCalledTimes(1)
 
       // Reset mock call counts
-      vi.mocked(mockScraper.getAllDistricts).mockClear()
+      vi.mocked(mockScraper.getAllDistrictsWithMetadata).mockClear()
 
       // Second refresh - currently fetches fresh data (cache not implemented)
       const result2 = await refreshService.executeRefresh()
       expect(result2.success).toBe(true)
 
       // Current behavior: download is called again (cache not implemented)
-      // When cache is implemented, this should be: expect(mockScraper.getAllDistricts).not.toHaveBeenCalled()
-      expect(mockScraper.getAllDistricts).toHaveBeenCalledTimes(1)
+      // When cache is implemented, this should be: expect(mockScraper.getAllDistrictsWithMetadata).not.toHaveBeenCalled()
+      expect(mockScraper.getAllDistrictsWithMetadata).toHaveBeenCalledTimes(1)
 
       // Verify both snapshots have rankings
       const snapshot1 = await snapshotStore.getSnapshot(result1.snapshot_id!)

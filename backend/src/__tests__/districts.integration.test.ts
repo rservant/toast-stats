@@ -567,6 +567,31 @@ function createIsolatedTestApp(cacheDirectory: string): Express {
 
   // Rankings Endpoint
   router.get('/rankings', (req, res) => {
+    const requestedDate = req.query['date'] as string | undefined
+
+    if (requestedDate) {
+      // Validate date format (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+        return res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'Date must be in YYYY-MM-DD format',
+            details: `Received: ${requestedDate}`,
+          },
+        })
+      }
+
+      // For testing: specific date requested but no snapshot exists
+      return res.status(404).json({
+        error: {
+          code: 'SNAPSHOT_NOT_FOUND',
+          message: `No snapshot available for date ${requestedDate}`,
+          details: 'The requested date does not have cached data',
+        },
+      })
+    }
+
+    // No date parameter - return 503 for no latest snapshot
     res.status(503).json({
       error: {
         code: 'NO_SNAPSHOT_AVAILABLE',
@@ -1357,12 +1382,12 @@ describe('Districts API Integration Tests', () => {
         )
       })
 
-      it('should return 503 when no snapshot is available for date parameter', async () => {
+      it('should return 404 when no snapshot exists for requested date parameter', async () => {
         const response = await request(app)
           .get('/api/districts/rankings?date=2024-01-01')
-          .expect(503)
+          .expect(404)
 
-        expect(response.body.error.code).toBe('NO_SNAPSHOT_AVAILABLE')
+        expect(response.body.error.code).toBe('SNAPSHOT_NOT_FOUND')
       })
     })
   })

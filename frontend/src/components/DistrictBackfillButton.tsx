@@ -69,6 +69,13 @@ export function DistrictBackfillButton({
   const queryClient = useQueryClient()
   const { addBackfill, removeBackfill, updateBackfill } = useBackfillContext()
 
+  // Calculate yesterday's date for max date constraint
+  // The Toastmasters dashboard data is always 1-2 days behind,
+  // so we only allow backfilling up to yesterday
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const maxDate = yesterday.toISOString().split('T')[0]
+
   // Hooks - using unified API
   const initiateMutation = useInitiateBackfill()
   const cancelMutation = useCancelBackfill()
@@ -235,6 +242,7 @@ export function DistrictBackfillButton({
                       type="date"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
+                      max={maxDate}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
                     />
                   </div>
@@ -244,15 +252,20 @@ export function DistrictBackfillButton({
                       htmlFor="district-backfill-end-date"
                       className="block text-sm font-tm-body font-medium text-gray-700 mb-1"
                     >
-                      End Date (optional, defaults to today)
+                      End Date (optional, defaults to yesterday)
                     </label>
                     <input
                       id="district-backfill-end-date"
                       type="date"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
+                      max={maxDate}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Dashboard data is 1-2 days behind, so today's data is not
+                      available.
+                    </p>
                   </div>
                 </div>
 

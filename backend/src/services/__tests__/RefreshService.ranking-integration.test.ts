@@ -115,6 +115,7 @@ describe('RefreshService Ranking Integration', () => {
     // Create mock scraper
     mockScraper = {
       getAllDistricts: vi.fn(),
+      getAllDistrictsWithMetadata: vi.fn(),
       getDistrictPerformance: vi.fn(),
       getDivisionPerformance: vi.fn(),
       getClubPerformance: vi.fn(),
@@ -165,7 +166,16 @@ describe('RefreshService Ranking Integration', () => {
       },
     ]
 
+    // Mock the actual date from the dashboard (1-2 days behind current date)
+    const mockActualDate = new Date()
+    mockActualDate.setDate(mockActualDate.getDate() - 1)
+    const mockActualDateString = mockActualDate.toISOString().split('T')[0]
+
     vi.mocked(mockScraper.getAllDistricts).mockResolvedValue(mockAllDistricts)
+    vi.mocked(mockScraper.getAllDistrictsWithMetadata).mockResolvedValue({
+      records: mockAllDistricts,
+      actualDate: mockActualDateString!,
+    })
     vi.mocked(mockScraper.getDistrictPerformance).mockResolvedValue(
       mockDistrictData
     )

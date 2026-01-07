@@ -638,8 +638,12 @@ router.get(
 
 /**
  * GET /api/districts/rankings
- * Fetch all districts with performance rankings from latest snapshot
+ * Fetch all districts with performance rankings from snapshot
  * Reads from all-districts-rankings.json file for comprehensive rankings
+ *
+ * Query parameters:
+ * - date: Optional ISO date (YYYY-MM-DD) to fetch rankings for a specific historical snapshot
+ *         If not provided, returns rankings from the latest successful snapshot
  */
 router.get(
   '/rankings',
@@ -648,17 +652,62 @@ router.get(
   }),
   async (req: Request, res: Response) => {
     const requestId = `rankings_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const requestedDate = req.query['date'] as string | undefined
 
     logger.info('Received request for district rankings', {
       operation: 'GET /api/districts/rankings',
       request_id: requestId,
+      requested_date: requestedDate || 'latest',
       user_agent: req.get('user-agent'),
       ip: req.ip,
     })
 
     try {
-      // Get latest successful snapshot
-      const snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
+      // Get snapshot - either for specific date or latest
+      let snapshot: Snapshot | null
+
+      if (requestedDate) {
+        // Validate date format (YYYY-MM-DD)
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+          logger.warn('Invalid date format in rankings request', {
+            operation: 'GET /api/districts/rankings',
+            request_id: requestId,
+            requested_date: requestedDate,
+          })
+
+          res.status(400).json({
+            error: {
+              code: 'INVALID_DATE_FORMAT',
+              message: 'Date must be in YYYY-MM-DD format',
+              details: `Received: ${requestedDate}`,
+            },
+          })
+          return
+        }
+
+        // Get snapshot for specific date (snapshot IDs are ISO dates)
+        snapshot = await perDistrictSnapshotStore.getSnapshot(requestedDate)
+
+        if (!snapshot) {
+          logger.warn('No snapshot found for requested date', {
+            operation: 'GET /api/districts/rankings',
+            request_id: requestId,
+            requested_date: requestedDate,
+          })
+
+          res.status(404).json({
+            error: {
+              code: 'SNAPSHOT_NOT_FOUND',
+              message: `No snapshot available for date ${requestedDate}`,
+              details: 'The requested date does not have cached data',
+            },
+          })
+          return
+        }
+      } else {
+        // Get latest successful snapshot
+        snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
+      }
 
       if (!snapshot) {
         logger.warn('No successful snapshot available for rankings request', {
@@ -679,6 +728,7 @@ router.get(
       logger.info('Retrieved snapshot for rankings request', {
         operation: 'GET /api/districts/rankings',
         request_id: requestId,
+        requested_date: requestedDate || 'latest',
         snapshot_id: snapshot.snapshot_id,
         created_at: snapshot.created_at,
       })
@@ -732,6 +782,7 @@ router.get(
       logger.info('Successfully served district rankings', {
         operation: 'GET /api/districts/rankings',
         request_id: requestId,
+        requested_date: requestedDate || 'latest',
         snapshot_id: snapshot.snapshot_id,
         rankings_count: rankingsData.rankings.length,
         data_source: 'all-districts-rankings-file',
@@ -760,12 +811,27 @@ router.get(
 
 /**
  * GET /api/districts/cache/dates
- * Get all cached dates
+ * Get all cached dates from both old cache format and new per-district snapshots
  */
 router.get('/cache/dates', async (_req: Request, res: Response) => {
   try {
-    const dates = await toastmastersAPI.getCachedDates()
-    res.json({ dates })
+    // Get dates from old cache format
+    const oldFormatDates = await toastmastersAPI.getCachedDates()
+
+    // Get dates from new per-district snapshot format
+    const snapshots = await perDistrictSnapshotStore.listSnapshots()
+    const snapshotDates = snapshots
+      .filter(s => s.status === 'success')
+      .map(s => s.snapshot_id)
+      .filter(id => /^\d{4}-\d{2}-\d{2}$/.test(id)) // Only ISO date format IDs
+
+    // Combine and deduplicate dates
+    const allDates = [...new Set([...oldFormatDates, ...snapshotDates])]
+
+    // Sort in descending order (newest first)
+    allDates.sort((a, b) => b.localeCompare(a))
+
+    res.json({ dates: allDates })
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({

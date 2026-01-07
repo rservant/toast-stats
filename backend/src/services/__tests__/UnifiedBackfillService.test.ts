@@ -584,5 +584,60 @@ describe('UnifiedBackfillService', () => {
       const status = backfillService.getBackfillStatus(backfillId)
       expect(status?.status).toBe('cancelled')
     })
+
+    it('should reject backfill with end date of today or later', async () => {
+      // The Toastmasters dashboard data is always 1-2 days behind,
+      // so requesting today's date would result in a mismatch between
+      // the requested date and the actual "As of" date in the CSV.
+      vi.mocked(configService.getConfiguredDistricts).mockResolvedValue(['42'])
+
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+
+      const request = {
+        startDate: '2024-01-01',
+        endDate: todayStr,
+        targetDistricts: ['42'],
+      }
+
+      await expect(backfillService.initiateBackfill(request)).rejects.toThrow(
+        /End date must be before today/
+      )
+    })
+
+    it('should reject backfill with start date of today when no end date specified', async () => {
+      // When no end date is specified, startDate is used as the effective end date
+      vi.mocked(configService.getConfiguredDistricts).mockResolvedValue(['42'])
+
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+
+      const request = {
+        startDate: todayStr!,
+        targetDistricts: ['42'],
+      }
+
+      await expect(backfillService.initiateBackfill(request)).rejects.toThrow(
+        /End date must be before today/
+      )
+    })
+
+    it('should accept backfill with end date of yesterday', async () => {
+      vi.mocked(configService.getConfiguredDistricts).mockResolvedValue(['42'])
+
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+      const request = {
+        startDate: '2024-01-01',
+        endDate: yesterdayStr,
+        targetDistricts: ['42'],
+      }
+
+      const backfillId = await backfillService.initiateBackfill(request)
+      expect(backfillId).toBeDefined()
+      expect(typeof backfillId).toBe('string')
+    })
   })
 })

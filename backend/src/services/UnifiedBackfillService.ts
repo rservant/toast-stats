@@ -1965,6 +1965,22 @@ export class BackfillService {
     })
 
     try {
+      // Step 0: Validate date range - reject today's date
+      // The Toastmasters dashboard data is always 1-2 days behind the current date.
+      // Querying for "today" will return yesterday's (or older) data, causing a mismatch
+      // between the requested date and the actual "As of" date in the CSV.
+      // To prevent this confusion, we only allow historical dates (yesterday or earlier).
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split('T')[0]
+
+      const effectiveEndDate = request.endDate || request.startDate
+      if (effectiveEndDate >= todayStr!) {
+        throw new Error(
+          `End date must be before today (${todayStr}). The Toastmasters dashboard data is always 1-2 days behind, so today's data is not yet available. Please use yesterday's date or earlier.`
+        )
+      }
+
       // Step 1: Enhanced scope validation with violation handling
       const targetDistricts =
         await this.scopeManager.getTargetDistricts(request)
@@ -3038,19 +3054,23 @@ export class BackfillService {
     const scraper = new ToastmastersScraper(rawCSVCacheService)
 
     try {
-      // Fetch All Districts CSV data
-      const allDistrictsData = await scraper.getAllDistricts(date)
+      // Fetch All Districts CSV data with metadata (includes actual "As of" date)
+      const allDistrictsResult = await scraper.getAllDistrictsWithMetadata(date)
 
       logger.info('All Districts CSV fetched successfully', {
         backfillId,
-        date,
-        recordCount: allDistrictsData.length,
+        requestedDate: date,
+        actualCsvDate: allDistrictsResult.actualDate,
+        recordCount: allDistrictsResult.records.length,
         operation: 'fetchAndCalculateAllDistrictsRankings',
       })
 
-      if (allDistrictsData.length === 0) {
+      if (allDistrictsResult.records.length === 0) {
         throw new Error('No districts found in All Districts CSV')
       }
+
+      const allDistrictsData = allDistrictsResult.records
+      const actualCsvDate = allDistrictsResult.actualDate
 
       // Convert CSV records to DistrictStatistics format for ranking calculation
       // Each record needs to have the CSV data in districtPerformance for the RankingCalculator
@@ -3064,7 +3084,7 @@ export class BackfillService {
 
           return {
             districtId,
-            asOfDate: date,
+            asOfDate: actualCsvDate,
             membership: {
               total: 0,
               change: 0,

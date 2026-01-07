@@ -317,14 +317,24 @@ describe('RefreshService Production-Like Data Tests', () => {
     // Create mock scraper
     mockScraper = {
       getAllDistricts: vi.fn(),
+      getAllDistrictsWithMetadata: vi.fn(),
       getDistrictPerformance: vi.fn(),
       getDivisionPerformance: vi.fn(),
       getClubPerformance: vi.fn(),
       closeBrowser: vi.fn(),
     } as unknown as ToastmastersScraper
 
+    // Mock the actual date from the dashboard (1-2 days behind current date)
+    const mockActualDate = new Date()
+    mockActualDate.setDate(mockActualDate.getDate() - 1)
+    const mockActualDateString = mockActualDate.toISOString().split('T')[0]
+
     // Setup mock responses with production-like data
     vi.mocked(mockScraper.getAllDistricts).mockResolvedValue(productionLikeData)
+    vi.mocked(mockScraper.getAllDistrictsWithMetadata).mockResolvedValue({
+      records: productionLikeData,
+      actualDate: mockActualDateString!,
+    })
 
     vi.mocked(mockScraper.getDistrictPerformance).mockImplementation(
       async (districtId: string) =>

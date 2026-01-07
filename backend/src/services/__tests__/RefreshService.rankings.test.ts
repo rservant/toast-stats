@@ -49,6 +49,7 @@ describe('RefreshService - Rankings Calculation', () => {
 
     mockScraper = {
       getAllDistricts: vi.fn(),
+      getAllDistrictsWithMetadata: vi.fn(),
       getDistrictPerformance: vi.fn(),
       getDivisionPerformance: vi.fn(),
       getClubPerformance: vi.fn(),

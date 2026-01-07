@@ -23,6 +23,7 @@ import { createMockCacheService } from './utils/mockCacheService.js'
 // Mock scraper interface matching ToastmastersScraper methods used by RefreshService
 interface MockScraper {
   getAllDistricts: ReturnType<typeof vi.fn>
+  getAllDistrictsWithMetadata: ReturnType<typeof vi.fn>
   getDistrictPerformance: ReturnType<typeof vi.fn>
   getDivisionPerformance: ReturnType<typeof vi.fn>
   getClubPerformance: ReturnType<typeof vi.fn>
@@ -54,17 +55,31 @@ describe('Data Refresh Architecture - Integration Tests', () => {
     // Create mock scraper with realistic data - ensure consistent structure
     mockScraper = {
       getAllDistricts: vi.fn(),
+      getAllDistrictsWithMetadata: vi.fn(),
       getDistrictPerformance: vi.fn(),
       getDivisionPerformance: vi.fn(),
       getClubPerformance: vi.fn(),
       closeBrowser: vi.fn(),
     }
 
+    // Mock the actual date from the dashboard (1-2 days behind current date)
+    const mockActualDate = new Date()
+    mockActualDate.setDate(mockActualDate.getDate() - 1)
+    const mockActualDateString = mockActualDate.toISOString().split('T')[0]
+
     // Set up default mock implementations - return raw arrays as expected by RetryManager
     mockScraper.getAllDistricts.mockResolvedValue([
       { DISTRICT: '61', 'District Name': 'Test District 61' },
       { DISTRICT: '62', 'District Name': 'Test District 62' },
     ])
+
+    mockScraper.getAllDistrictsWithMetadata.mockResolvedValue({
+      records: [
+        { DISTRICT: '61', 'District Name': 'Test District 61' },
+        { DISTRICT: '62', 'District Name': 'Test District 62' },
+      ],
+      actualDate: mockActualDateString,
+    })
 
     mockScraper.getDistrictPerformance.mockResolvedValue([
       {
@@ -251,7 +266,8 @@ describe('Data Refresh Architecture - Integration Tests', () => {
       expect(latestSnapshot?.payload.districts.length).toBeGreaterThan(0)
 
       // Verify scraper methods were called correctly
-      expect(mockScraper.getAllDistricts).toHaveBeenCalledTimes(1)
+      // getAllDistrictsWithMetadata is now the primary method (returns actual date from dashboard)
+      expect(mockScraper.getAllDistrictsWithMetadata).toHaveBeenCalledTimes(1)
       expect(mockScraper.getDistrictPerformance).toHaveBeenCalled()
       expect(mockScraper.getDivisionPerformance).toHaveBeenCalled()
       expect(mockScraper.getClubPerformance).toHaveBeenCalled()
@@ -260,6 +276,10 @@ describe('Data Refresh Architecture - Integration Tests', () => {
 
     it('should handle scraping failures gracefully and create failed snapshot', async () => {
       // Configure scraper to fail - return failure by throwing an error
+      // Must mock both methods since getAllDistrictsWithMetadata is tried first
+      mockScraper.getAllDistrictsWithMetadata.mockRejectedValue(
+        new Error('Scraping failed')
+      )
       mockScraper.getAllDistricts.mockRejectedValue(
         new Error('Scraping failed')
       )
@@ -342,7 +362,11 @@ describe('Data Refresh Architecture - Integration Tests', () => {
       const initialSnapshot = createTestSnapshot('1704067200000', 'success')
       await snapshotStore.writeSnapshot(initialSnapshot)
 
-      // Configure scraper to fail completely - make getAllDistricts fail
+      // Configure scraper to fail completely - make both methods fail
+      // getAllDistrictsWithMetadata is tried first, then getAllDistricts as fallback
+      mockScraper.getAllDistrictsWithMetadata.mockRejectedValue(
+        new Error('Network timeout')
+      )
       mockScraper.getAllDistricts.mockRejectedValue(
         new Error('Network timeout')
       )
@@ -406,6 +430,22 @@ describe('Data Refresh Architecture - Integration Tests', () => {
       )
 
       // Start refresh operation in background (make it slow)
+      // Must mock both methods since getAllDistrictsWithMetadata is tried first
+      mockScraper.getAllDistrictsWithMetadata.mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () =>
+                resolve({
+                  records: [
+                    { DISTRICT: '61', 'District Name': 'Test District 61' },
+                  ],
+                  actualDate: new Date().toISOString().split('T')[0],
+                }),
+              1000
+            )
+          )
+      )
       mockScraper.getAllDistricts.mockImplementation(
         () =>
           new Promise(resolve =>
