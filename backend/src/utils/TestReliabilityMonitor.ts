@@ -216,6 +216,10 @@ export class DefaultTestReliabilityMonitor implements TestReliabilityMonitor {
 
       if (isFlaky) {
         const [testName, suiteName] = testKey.split('::')
+        if (!testName || !suiteName) {
+          logger.warn('Invalid test key format', { testKey })
+          continue
+        }
         const recentResults = results.slice(-10).map(r => r.passed)
 
         flakyTests.push({
@@ -251,6 +255,12 @@ export class DefaultTestReliabilityMonitor implements TestReliabilityMonitor {
       if (results.length < 5) continue // Need enough data for comparison
 
       const [testName, suiteName] = testKey.split('::')
+      if (!testName || !suiteName) {
+        logger.warn('Invalid test key format for performance check', {
+          testKey,
+        })
+        continue
+      }
       const baseline = this.performanceBaselines.get(testKey)
 
       if (!baseline) continue

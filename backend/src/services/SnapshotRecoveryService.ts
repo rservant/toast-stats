@@ -217,6 +217,13 @@ export class SnapshotRecoveryService {
       if (pointerResult.alternativeSnapshots.length > 0) {
         const latestSuccessfulId = pointerResult.alternativeSnapshots[0] // Already sorted newest first
 
+        if (!latestSuccessfulId) {
+          recoveryResult.remainingIssues.push(
+            'No valid snapshot ID found in alternative snapshots'
+          )
+          return
+        }
+
         // Get the snapshot to extract metadata
         const snapshotPath = path.join(
           this.config.cacheDir,

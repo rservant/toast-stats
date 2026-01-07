@@ -427,6 +427,16 @@ export function createTestCacheCleanup(baseCachePath: string): {
       createdDirectories.length = 0
       createdFiles.length = 0
     },
+
+    /**
+     * Get tracked paths for inspection
+     */
+    getTrackedPaths(): { directories: string[]; files: string[] } {
+      return {
+        directories: [...createdDirectories],
+        files: [...createdFiles],
+      }
+    },
   }
 }
 

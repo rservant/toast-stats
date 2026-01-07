@@ -1640,7 +1640,8 @@ router.get(
     keyGenerator: req => {
       const districtId = req.params['districtId']
       const date = req.params['date']
-      if (!districtId || !date) throw new Error('Missing districtId or date parameter')
+      if (!districtId || !date)
+        throw new Error('Missing districtId or date parameter')
       return generateDistrictCacheKey(districtId, `daily-reports/${date}`)
     },
   }),
@@ -2286,8 +2287,9 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
     }
 
     // Get cached dates
-    const dates =
-      await districtCacheManager.getCachedDatesForDistrict(districtId!)
+    const dates = await districtCacheManager.getCachedDatesForDistrict(
+      districtId!
+    )
 
     // Get date range if dates exist
     const dateRange =
@@ -2822,7 +2824,8 @@ router.get(
     keyGenerator: req => {
       const districtId = req.params['districtId']
       const clubId = req.params['clubId']
-      if (!districtId || !clubId) throw new Error('Missing districtId or clubId parameter')
+      if (!districtId || !clubId)
+        throw new Error('Missing districtId or clubId parameter')
       return generateDistrictCacheKey(districtId, `clubs/${clubId}/trends`)
     },
   }),
@@ -3133,10 +3136,14 @@ router.get(
     keyGenerator: req => {
       const districtId = req.params['districtId']
       if (!districtId) throw new Error('Missing districtId parameter')
-      return generateDistrictCacheKey(districtId, 'distinguished-club-analytics', {
-        startDate: req.query['startDate'],
-        endDate: req.query['endDate'],
-      })
+      return generateDistrictCacheKey(
+        districtId,
+        'distinguished-club-analytics',
+        {
+          startDate: req.query['startDate'],
+          endDate: req.query['endDate'],
+        }
+      )
     },
   }),
   async (req: Request, res: Response) => {
@@ -3260,7 +3267,8 @@ router.get(
     keyGenerator: req => {
       const districtId = req.params['districtId']
       const date = req.params['date']
-      if (!districtId || !date) throw new Error('Missing districtId or date parameter')
+      if (!districtId || !date)
+        throw new Error('Missing districtId or date parameter')
       return generateDistrictCacheKey(districtId, `year-over-year/${date}`)
     },
   }),

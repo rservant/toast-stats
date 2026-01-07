@@ -189,7 +189,7 @@ export class PropertyTestRunner {
 
       // Look for counterexample in error message
       const counterexampleMatch = errorMessage.match(/Counterexample: (.+)/)
-      if (counterexampleMatch) {
+      if (counterexampleMatch && counterexampleMatch[1]) {
         try {
           counterExample = JSON.parse(counterexampleMatch[1]) as T
         } catch {
@@ -202,7 +202,7 @@ export class PropertyTestRunner {
       const shrunkMatch = errorMessage.match(
         /Shrunk \d+ time\(s\)\nCounterexample: (.+)/
       )
-      if (shrunkMatch) {
+      if (shrunkMatch && shrunkMatch[1]) {
         try {
           shrunkCounterExample = JSON.parse(shrunkMatch[1]) as T
         } catch {
@@ -382,10 +382,13 @@ export class DeterministicGenerators {
 
     const cacheDirectory = `./test-dir/test-cache-${suffix}-${this.seed}`
 
+    const environmentIndex = Math.floor(rng() * environments.length)
+    const logLevelIndex = Math.floor(rng() * logLevels.length)
+
     return {
       cacheDirectory,
-      environment: environments[Math.floor(rng() * environments.length)],
-      logLevel: logLevels[Math.floor(rng() * logLevels.length)],
+      environment: environments[environmentIndex]!,
+      logLevel: logLevels[logLevelIndex]!,
     }
   }
 
@@ -409,21 +412,30 @@ export class DeterministicGenerators {
       ): fc.Arbitrary<string> => {
         return fc.constant(this.deterministicSafeString(minLength, maxLength))
       },
-      integer: (min: number = 0, max: number = 100): fc.Arbitrary<number> => {
+      safeInteger: (
+        min: number = 0,
+        max: number = 100
+      ): fc.Arbitrary<number> => {
         return fc.constant(this.deterministicInteger(min, max))
       },
-      boolean: (trueProbability: number = 0.5): fc.Arbitrary<boolean> => {
-        return fc.constant(this.deterministicBoolean(trueProbability))
+      safeDate: (after?: Date, before?: Date): fc.Arbitrary<Date> => {
+        // Simple deterministic date generation
+        const timestamp = this.deterministicInteger(
+          after?.getTime() || 0,
+          before?.getTime() || Date.now()
+        )
+        return fc.constant(new Date(timestamp))
       },
-      cacheDirectory: (): fc.Arbitrary<string> => {
-        return fc.constant(this.deterministicCacheDirectory())
-      },
-      serviceConfig: (): fc.Arbitrary<{
-        cacheDirectory: string
-        environment: 'test' | 'development' | 'production'
-        logLevel: 'debug' | 'info' | 'warn' | 'error'
-      }> => {
-        return fc.constant(this.deterministicServiceConfig())
+      safeArray: <T>(
+        _arb: fc.Arbitrary<T>,
+        minLength: number = 0,
+        maxLength: number = 10
+      ): fc.Arbitrary<T[]> => {
+        const length = this.deterministicInteger(minLength, maxLength)
+        // For simplicity, just return a constant array with repeated elements
+        // This maintains determinism while avoiding complex fast-check internals
+        const sampleValue = this.deterministicSafeString() as unknown as T
+        return fc.constant(Array.from({ length }, () => sampleValue))
       },
     }
   }

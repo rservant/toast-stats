@@ -93,8 +93,8 @@ async function main(): Promise<void> {
     serviceFactory = getProductionServiceFactory()
     const snapshotStore = serviceFactory.createSnapshotStore()
 
-    // Create RefreshService with shared logic
-    refreshService = new RefreshService(snapshotStore)
+    // Create RefreshService with shared logic (includes scraper)
+    refreshService = serviceFactory.createRefreshService(snapshotStore)
 
     // Reset circuit breaker if requested
     if (options.resetCircuitBreaker) {

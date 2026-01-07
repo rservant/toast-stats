@@ -367,8 +367,9 @@ export class SnapshotIntegrityValidator {
         const content = await fs.readFile(this.currentPointerFile, 'utf-8')
         pointer = JSON.parse(content)
         result.jsonValid = true
-        result.validationMetadata.referencedSnapshotId =
-          pointer.snapshot_id as string
+        result.validationMetadata.referencedSnapshotId = pointer[
+          'snapshot_id'
+        ] as string
       } catch (error) {
         result.issues.push(
           `Invalid JSON in current pointer: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -411,10 +412,13 @@ export class SnapshotIntegrityValidator {
       }
 
       // Check if referenced snapshot exists
-      if (pointer.snapshot_id && typeof pointer.snapshot_id === 'string') {
+      if (
+        pointer['snapshot_id'] &&
+        typeof pointer['snapshot_id'] === 'string'
+      ) {
         const snapshotPath = path.join(
           this.snapshotsDir,
-          `${pointer.snapshot_id}.json`
+          `${pointer['snapshot_id']}.json`
         )
         try {
           await fs.access(snapshotPath, fs.constants.R_OK)
@@ -450,7 +454,7 @@ export class SnapshotIntegrityValidator {
           }
         } catch {
           result.issues.push(
-            `Referenced snapshot does not exist: ${pointer.snapshot_id}`
+            `Referenced snapshot does not exist: ${pointer['snapshot_id']}`
           )
           result.recoveryRecommendations.push(
             'Current pointer references a non-existent snapshot'
@@ -475,8 +479,8 @@ export class SnapshotIntegrityValidator {
       if (result.isValid) {
         logger.info('Current pointer integrity validation passed', {
           operation: 'validateCurrentPointer',
-          referenced_snapshot: pointer.snapshot_id,
-          updated_at: pointer.updated_at,
+          referenced_snapshot: pointer['snapshot_id'],
+          updated_at: pointer['updated_at'],
         })
       } else {
         logger.warn('Current pointer integrity validation failed', {

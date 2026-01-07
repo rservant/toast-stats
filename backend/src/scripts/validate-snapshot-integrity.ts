@@ -111,7 +111,7 @@ function parseArguments(): {
         config.verbose = true
         break
       default:
-        if (arg.startsWith('--')) {
+        if (arg && arg.startsWith('--')) {
           console.error(`Unknown option: ${arg}`)
           process.exit(1)
         }

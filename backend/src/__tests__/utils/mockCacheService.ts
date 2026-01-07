@@ -17,6 +17,7 @@ export function createMockCacheService(): IRawCSVCacheService {
     // Core cache operations - default to cache miss behavior
     getCachedCSV: vi.fn().mockResolvedValue(null),
     setCachedCSV: vi.fn().mockResolvedValue(undefined),
+    setCachedCSVWithMetadata: vi.fn().mockResolvedValue(undefined),
     hasCachedCSV: vi.fn().mockResolvedValue(false),
 
     // Metadata management

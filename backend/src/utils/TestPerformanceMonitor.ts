@@ -165,7 +165,13 @@ export class DefaultTestPerformanceMonitor implements TestPerformanceMonitor {
     )) {
       if (dataPoints.length < 5) continue // Need enough data for trend analysis
 
-      const [testName, suiteName] = testKey.split('::')
+      const keyParts = testKey.split('::')
+      const testName = keyParts[0]
+      const suiteName = keyParts[1]
+
+      // Skip if key format is invalid
+      if (!testName || !suiteName) continue
+
       const trend = this.calculateTrend(dataPoints)
 
       trends.push({
@@ -270,7 +276,10 @@ export class DefaultTestPerformanceMonitor implements TestPerformanceMonitor {
 
     const sumX = x.reduce((sum, val) => sum + val, 0)
     const sumY = y.reduce((sum, val) => sum + val, 0)
-    const sumXY = x.reduce((sum, val, i) => sum + val * y[i], 0)
+    const sumXY = x.reduce((sum, val, i) => {
+      const yValue = y[i]
+      return yValue !== undefined ? sum + val * yValue : sum
+    }, 0)
     const sumXX = x.reduce((sum, val) => sum + val * val, 0)
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
@@ -279,10 +288,10 @@ export class DefaultTestPerformanceMonitor implements TestPerformanceMonitor {
     const meanX = sumX / n
     const meanY = sumY / n
 
-    const numerator = x.reduce(
-      (sum, val, i) => sum + (val - meanX) * (y[i] - meanY),
-      0
-    )
+    const numerator = x.reduce((sum, val, i) => {
+      const yValue = y[i]
+      return yValue !== undefined ? sum + (val - meanX) * (yValue - meanY) : sum
+    }, 0)
     const denomX = Math.sqrt(
       x.reduce((sum, val) => sum + (val - meanX) ** 2, 0)
     )

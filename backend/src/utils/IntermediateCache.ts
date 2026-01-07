@@ -388,10 +388,13 @@ export class IntermediateCache<T = unknown> {
     )
 
     for (let i = 0; i < Math.min(count, entries.length); i++) {
-      const [key, entry] = entries[i]
+      const entry = entries[i]
+      if (!entry) continue
+
+      const [key, entryData] = entry
       this.cache.delete(key)
       this.stats.totalEntries--
-      this.stats.totalSizeBytes -= entry.sizeBytes
+      this.stats.totalSizeBytes -= entryData.sizeBytes
       this.stats.evicted++
     }
 

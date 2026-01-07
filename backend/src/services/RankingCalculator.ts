@@ -299,13 +299,20 @@ export class BordaCountRankingCalculator implements RankingCalculator {
 
     for (let i = 0; i < sortedMetrics.length; i++) {
       const metric = sortedMetrics[i]
+      if (!metric) {
+        continue
+      }
+
       const value = metric[valueField] as number
 
       // Handle ties: if current value equals previous value, use same rank
       if (i > 0) {
-        const previousValue = sortedMetrics[i - 1][valueField] as number
-        if (value !== previousValue) {
-          currentRank = i + 1
+        const previousMetric = sortedMetrics[i - 1]
+        if (previousMetric) {
+          const previousValue = previousMetric[valueField] as number
+          if (value !== previousValue) {
+            currentRank = i + 1
+          }
         }
       }
 

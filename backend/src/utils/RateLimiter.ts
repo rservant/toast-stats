@@ -217,7 +217,9 @@ export class RateLimiter {
    * Get the timestamp of the oldest request in the current window
    */
   private getOldestRequestTime(): number {
-    return this.requestHistory.length > 0 ? this.requestHistory[0] : Date.now()
+    return this.requestHistory.length > 0
+      ? (this.requestHistory[0] ?? Date.now())
+      : Date.now()
   }
 }
 

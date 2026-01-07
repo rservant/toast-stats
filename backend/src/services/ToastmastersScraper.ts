@@ -822,6 +822,8 @@ export class ToastmastersScraper {
           timeout: this.config.timeout,
         })
 
+        let actualDateString = dateString || this.getCurrentDateString()
+
         // Verify the date if requested
         if (dateString) {
           const dateObj = new Date(dateString + 'T00:00:00')
@@ -835,8 +837,11 @@ export class ToastmastersScraper {
               month: actualMonth,
               day: actualDay,
               year: actualYear,
-              dateString: actualDateString,
+              dateString: dashboardDateString,
             } = actualDate
+
+            actualDateString = dashboardDateString
+
             if (
               actualMonth !== month ||
               actualDay !== day ||
@@ -865,7 +870,8 @@ export class ToastmastersScraper {
           }
         }
 
-        return await this.downloadCsv(page)
+        const content = await this.downloadCsv(page)
+        return { content, actualDate: actualDateString }
       } finally {
         await page.close()
       }
@@ -894,7 +900,10 @@ export class ToastmastersScraper {
     districtId: string,
     dateString?: string
   ): Promise<ScrapedRecord[]> {
-    const downloadFn = async (): Promise<string> => {
+    const downloadFn = async (): Promise<{
+      content: string
+      actualDate: string
+    }> => {
       const browser = await this.initBrowser()
       const page = await browser.newPage()
 
@@ -926,6 +935,8 @@ export class ToastmastersScraper {
           timeout: this.config.timeout,
         })
 
+        let actualDateString = dateString || this.getCurrentDateString()
+
         // Verify the date if requested
         if (dateString) {
           const dateObj = new Date(dateString + 'T00:00:00')
@@ -939,8 +950,11 @@ export class ToastmastersScraper {
               month: actualMonth,
               day: actualDay,
               year: actualYear,
-              dateString: actualDateString,
+              dateString: dashboardDateString,
             } = actualDate
+
+            actualDateString = dashboardDateString
+
             if (
               actualMonth !== month ||
               actualDay !== day ||
@@ -969,7 +983,8 @@ export class ToastmastersScraper {
           }
         }
 
-        return await this.downloadCsv(page)
+        const content = await this.downloadCsv(page)
+        return { content, actualDate: actualDateString }
       } finally {
         await page.close()
       }

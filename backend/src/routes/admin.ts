@@ -170,12 +170,13 @@ router.get(
           snapshot_id: snapshotId,
         })
 
-        return res.status(404).json({
+        res.status(404).json({
           error: {
             code: 'SNAPSHOT_NOT_FOUND',
             message: `Snapshot ${snapshotId} not found`,
           },
         })
+        return
       }
 
       const duration = Date.now() - startTime
@@ -286,12 +287,13 @@ router.get(
       const snapshot = await snapshotStore.getSnapshot(snapshotId)
 
       if (!snapshot) {
-        return res.status(404).json({
+        res.status(404).json({
           error: {
             code: 'SNAPSHOT_NOT_FOUND',
             message: `Snapshot ${snapshotId} not found`,
           },
         })
+        return
       }
 
       const duration = Date.now() - startTime
@@ -1038,139 +1040,151 @@ router.get('/districts/config', logAdminAccess, async (req, res) => {
  * POST /api/admin/districts/config
  * Add districts to the configuration
  */
-router.post('/districts/config', logAdminAccess, async (req, res) => {
-  const startTime = Date.now()
-  const operationId = `add_districts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+router.post(
+  '/districts/config',
+  logAdminAccess,
+  async (req, res): Promise<void> => {
+    const startTime = Date.now()
+    const operationId = `add_districts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-  logger.info('Admin add districts to configuration requested', {
-    operation: 'addDistrictsToConfiguration',
-    operation_id: operationId,
-    ip: req.ip,
-    request_body: req.body,
-  })
+    logger.info('Admin add districts to configuration requested', {
+      operation: 'addDistrictsToConfiguration',
+      operation_id: operationId,
+      ip: req.ip,
+      request_body: req.body,
+    })
 
-  try {
-    // Validate request body
-    const { districtIds, replace = false } = req.body
+    try {
+      // Validate request body
+      const { districtIds, replace = false } = req.body
 
-    if (!districtIds) {
-      return res.status(400).json({
-        error: {
-          code: 'MISSING_DISTRICT_IDS',
-          message: 'districtIds field is required',
-        },
-      })
-    }
-
-    if (!Array.isArray(districtIds)) {
-      return res.status(400).json({
-        error: {
-          code: 'INVALID_DISTRICT_IDS_FORMAT',
-          message: 'districtIds must be an array of strings',
-        },
-      })
-    }
-
-    if (districtIds.length === 0) {
-      return res.status(400).json({
-        error: {
-          code: 'EMPTY_DISTRICT_IDS',
-          message: 'districtIds array cannot be empty',
-        },
-      })
-    }
-
-    // Validate each district ID format
-    for (const districtId of districtIds) {
-      if (!districtId || typeof districtId !== 'string') {
-        return res.status(400).json({
+      if (!districtIds) {
+        res.status(400).json({
           error: {
-            code: 'INVALID_DISTRICT_ID',
-            message: `Invalid district ID: ${districtId}. Must be a non-empty string`,
+            code: 'MISSING_DISTRICT_IDS',
+            message: 'districtIds field is required',
           },
         })
+        return
       }
-    }
 
-    const factory = getProductionServiceFactory()
-    const cacheConfig = factory.createCacheConfigService()
-    const config = cacheConfig.getConfiguration()
+      if (!Array.isArray(districtIds)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_IDS_FORMAT',
+            message: 'districtIds must be an array of strings',
+          },
+        })
+        return
+      }
 
-    const districtConfigService = new DistrictConfigurationService(
-      config.baseDirectory
-    )
-    const adminUser = 'admin' // In a real system, this would come from authentication
+      if (districtIds.length === 0) {
+        res.status(400).json({
+          error: {
+            code: 'EMPTY_DISTRICT_IDS',
+            message: 'districtIds array cannot be empty',
+          },
+        })
+        return
+      }
 
-    if (replace) {
-      // Replace entire configuration
-      await districtConfigService.setConfiguredDistricts(districtIds, adminUser)
-    } else {
-      // Add districts individually
+      // Validate each district ID format
       for (const districtId of districtIds) {
-        await districtConfigService.addDistrict(districtId, adminUser)
+        if (!districtId || typeof districtId !== 'string') {
+          res.status(400).json({
+            error: {
+              code: 'INVALID_DISTRICT_ID',
+              message: `Invalid district ID: ${districtId}. Must be a non-empty string`,
+            },
+          })
+          return
+        }
       }
-    }
 
-    const updatedConfig = await districtConfigService.getConfiguration()
-    const duration = Date.now() - startTime
+      const factory = getProductionServiceFactory()
+      const cacheConfig = factory.createCacheConfigService()
+      const config = cacheConfig.getConfiguration()
 
-    logger.info('Admin districts added to configuration', {
-      operation: 'addDistrictsToConfiguration',
-      operation_id: operationId,
-      districts_added: districtIds,
-      replace_mode: replace,
-      total_districts: updatedConfig.configuredDistricts.length,
-      duration_ms: duration,
-    })
+      const districtConfigService = new DistrictConfigurationService(
+        config.baseDirectory
+      )
+      const adminUser = 'admin' // In a real system, this would come from authentication
 
-    res.json({
-      success: true,
-      message: replace
-        ? 'District configuration replaced successfully'
-        : 'Districts added to configuration successfully',
-      configuration: updatedConfig,
-      changes: {
-        action: replace ? 'replace' : 'add',
-        districts: districtIds,
-        total_districts: updatedConfig.configuredDistricts.length,
-      },
-      metadata: {
-        updated_at: new Date().toISOString(),
-        operation_duration_ms: duration,
+      if (replace) {
+        // Replace entire configuration
+        await districtConfigService.setConfiguredDistricts(
+          districtIds,
+          adminUser
+        )
+      } else {
+        // Add districts individually
+        for (const districtId of districtIds) {
+          await districtConfigService.addDistrict(districtId, adminUser)
+        }
+      }
+
+      const updatedConfig = await districtConfigService.getConfiguration()
+      const duration = Date.now() - startTime
+
+      logger.info('Admin districts added to configuration', {
+        operation: 'addDistrictsToConfiguration',
         operation_id: operationId,
-      },
-    })
-  } catch (error) {
-    const duration = Date.now() - startTime
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
+        districts_added: districtIds,
+        replace_mode: replace,
+        total_districts: updatedConfig.configuredDistricts.length,
+        duration_ms: duration,
+      })
 
-    logger.error('Admin add districts to configuration failed', {
-      operation: 'addDistrictsToConfiguration',
-      operation_id: operationId,
-      error: errorMessage,
-      duration_ms: duration,
-    })
+      res.json({
+        success: true,
+        message: replace
+          ? 'District configuration replaced successfully'
+          : 'Districts added to configuration successfully',
+        configuration: updatedConfig,
+        changes: {
+          action: replace ? 'replace' : 'add',
+          districts: districtIds,
+          total_districts: updatedConfig.configuredDistricts.length,
+        },
+        metadata: {
+          updated_at: new Date().toISOString(),
+          operation_duration_ms: duration,
+          operation_id: operationId,
+        },
+      })
+    } catch (error) {
+      const duration = Date.now() - startTime
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
 
-    // Check for validation errors and return appropriate status
-    if (errorMessage.includes('Invalid district ID format')) {
-      return res.status(400).json({
+      logger.error('Admin add districts to configuration failed', {
+        operation: 'addDistrictsToConfiguration',
+        operation_id: operationId,
+        error: errorMessage,
+        duration_ms: duration,
+      })
+
+      // Check for validation errors and return appropriate status
+      if (errorMessage.includes('Invalid district ID format')) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DISTRICT_ID_FORMAT',
+            message: errorMessage,
+          },
+        })
+        return
+      }
+
+      res.status(500).json({
         error: {
-          code: 'INVALID_DISTRICT_ID_FORMAT',
-          message: errorMessage,
+          code: 'DISTRICT_CONFIG_UPDATE_FAILED',
+          message: 'Failed to update district configuration',
+          details: errorMessage,
         },
       })
     }
-
-    res.status(500).json({
-      error: {
-        code: 'DISTRICT_CONFIG_UPDATE_FAILED',
-        message: 'Failed to update district configuration',
-        details: errorMessage,
-      },
-    })
   }
-})
+)
 
 /**
  * DELETE /api/admin/districts/config/:districtId
@@ -1179,7 +1193,7 @@ router.post('/districts/config', logAdminAccess, async (req, res) => {
 router.delete(
   '/districts/config/:districtId',
   logAdminAccess,
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const startTime = Date.now()
     const { districtId } = req.params
     const operationId = `remove_district_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -1193,12 +1207,13 @@ router.delete(
 
     try {
       if (!districtId || typeof districtId !== 'string') {
-        return res.status(400).json({
+        res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
             message: 'District ID must be a non-empty string',
           },
         })
+        return
       }
 
       const factory = getProductionServiceFactory()
@@ -1219,12 +1234,13 @@ router.delete(
         .trim()
 
       if (!currentDistricts.includes(normalizedDistrictId)) {
-        return res.status(404).json({
+        res.status(404).json({
           error: {
             code: 'DISTRICT_NOT_CONFIGURED',
             message: `District ${districtId} is not in the current configuration`,
           },
         })
+        return
       }
 
       await districtConfigService.removeDistrict(districtId, adminUser)
@@ -1395,10 +1411,12 @@ router.get('/districts/config/history', logAdminAccess, async (req, res) => {
     )
 
     // Parse query parameters
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50
-    const startDate = req.query.start_date as string
-    const endDate = req.query.end_date as string
-    const includeSummary = req.query.include_summary === 'true'
+    const limit = req.query['limit']
+      ? parseInt(req.query['limit'] as string)
+      : 50
+    const startDate = req.query['start_date'] as string
+    const endDate = req.query['end_date'] as string
+    const includeSummary = req.query['include_summary'] === 'true'
 
     // Get configuration history
     const history = await districtConfigService.getConfigurationHistory(limit)

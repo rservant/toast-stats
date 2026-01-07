@@ -5,8 +5,8 @@
  * supporting test isolation and parallel execution.
  */
 
-import fs from 'fs/promises'
-import path from 'path'
+import { promises as fs } from 'fs'
+import * as path from 'path'
 import { deterministicSafeString } from './test-string-generators'
 import { getTestServiceFactory } from '../services/TestServiceFactory.js'
 
@@ -39,10 +39,10 @@ export async function createTestCacheConfig(
   await fs.mkdir(cacheDir, { recursive: true })
 
   // Store original CACHE_DIR
-  const originalCacheDir = process.env.CACHE_DIR
+  const originalCacheDir = process.env['CACHE_DIR']
 
   // Set test cache directory
-  process.env.CACHE_DIR = cacheDir
+  process.env['CACHE_DIR'] = cacheDir
 
   // No need to reset singleton - using dependency injection
 
@@ -62,9 +62,9 @@ export async function cleanupTestCacheConfig(
   try {
     // Restore original CACHE_DIR
     if (config.originalCacheDir !== undefined) {
-      process.env.CACHE_DIR = config.originalCacheDir
+      process.env['CACHE_DIR'] = config.originalCacheDir
     } else {
-      delete process.env.CACHE_DIR
+      delete process.env['CACHE_DIR']
     }
 
     // No need to reset singleton - using dependency injection
@@ -110,7 +110,7 @@ export async function initializeTestCache(
   config: TestCacheConfig
 ): Promise<void> {
   // Set environment variable
-  process.env.CACHE_DIR = config.cacheDir
+  process.env['CACHE_DIR'] = config.cacheDir
 
   // Ensure the cache directory exists
   await fs.mkdir(config.cacheDir, { recursive: true })

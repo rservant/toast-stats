@@ -193,7 +193,7 @@ export const districtCacheEntryArbitrary = (
           max: new Date('2030-12-31'),
         })
         .filter(d => !isNaN(d.getTime()))
-        .map(d => d.toISOString().split('T')[0]),
+        .map(d => d.toISOString().split('T')[0] as string),
       districtPerformance: fc.array(
         fc.record({
           districtId: fc
@@ -249,7 +249,7 @@ export function createTestFixtureFactory<T>(
 ) {
   return (overrides: Partial<T> = {}): T => {
     const sample = fc.sample(arbitrary, 1)[0]
-    return { ...sample, ...defaultOverrides, ...overrides }
+    return { ...sample, ...defaultOverrides, ...overrides } as T
   }
 }
 
@@ -285,7 +285,7 @@ export function createDeterministicTestFixture<T>(
   // Use fc.sample for generation (deterministic based on seed)
   const samples = fc.sample(arbitrary, 1)
   const sample = samples[0]
-  return { ...sample, ...overrides }
+  return { ...sample, ...overrides } as T
 }
 
 // ============================================================================

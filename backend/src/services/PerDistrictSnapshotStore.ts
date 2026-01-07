@@ -960,7 +960,7 @@ export class PerDistrictFileSnapshotStore
     // Parse error messages that follow the pattern: "DistrictId: operation - error"
     for (const error of snapshot.errors) {
       const match = error.match(/^([^:]+):\s*([^-]+)\s*-\s*(.+)$/)
-      if (match) {
+      if (match && match[1] && match[2] && match[3]) {
         const [, districtId, operation, errorMessage] = match
         districtErrors.push({
           districtId: districtId.trim(),
