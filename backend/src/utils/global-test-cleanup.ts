@@ -91,7 +91,7 @@ export async function cleanupAllTestDirectories(
  */
 export function setupGlobalTestCleanup(verbose: boolean = false): void {
   // Register cleanup to run when the process exits
-  const cleanup = () => {
+  const cleanup = (): void => {
     cleanupAllTestDirectories('./test-dir', verbose).catch(error => {
       if (verbose) {
         console.warn('Global cleanup failed:', error)

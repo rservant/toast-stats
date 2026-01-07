@@ -89,7 +89,14 @@ export class CacheIntegrationService {
   /**
    * Extract CSP count directly from club records (exposed for tests)
    */
-  async extractCspCount(districtId: string, date: string): Promise<{ csp_count: number; total_clubs: number; csp_field_name: string | null }> {
+  async extractCspCount(
+    districtId: string,
+    date: string
+  ): Promise<{
+    csp_count: number
+    total_clubs: number
+    csp_field_name: string | null
+  }> {
     const data = await this.cacheManager.getDistrictData(districtId, date)
     if (!data) return { csp_count: 0, total_clubs: 0, csp_field_name: null }
 

@@ -61,7 +61,9 @@ export class RealToastmastersAPIService {
   /**
    * Get list of all districts (simple list)
    */
-  async getDistricts() {
+  async getDistricts(): Promise<{
+    districts: Array<{ id: string; name: string }>
+  }> {
     try {
       const districts = await this.scraper.getAllDistrictsList()
 
@@ -275,7 +277,7 @@ export class RealToastmastersAPIService {
   /**
    * Get district statistics
    */
-  async getDistrictStatistics(districtId: string) {
+  async getDistrictStatistics(districtId: string): Promise<unknown> {
     try {
       const clubData = await this.scraper.getClubPerformance(districtId)
 
@@ -376,7 +378,10 @@ export class RealToastmastersAPIService {
   /**
    * Get membership history
    */
-  async getMembershipHistory(districtId: string, months: number) {
+  async getMembershipHistory(
+    districtId: string,
+    months: number
+  ): Promise<unknown> {
     try {
       // Note: Historical data would require scraping historical year pages
       // For now, we'll use current data and generate a simple history
@@ -407,7 +412,7 @@ export class RealToastmastersAPIService {
   /**
    * Get clubs for a district
    */
-  async getClubs(districtId: string) {
+  async getClubs(districtId: string): Promise<unknown> {
     try {
       const clubData = await this.scraper.getClubPerformance(districtId)
 
@@ -468,7 +473,10 @@ export class RealToastmastersAPIService {
   /**
    * Get educational awards
    */
-  async getEducationalAwards(districtId: string, months: number) {
+  async getEducationalAwards(
+    districtId: string,
+    months: number
+  ): Promise<unknown> {
     try {
       // Educational awards would require additional scraping
       // For now, return empty data structure
@@ -502,7 +510,7 @@ export class RealToastmastersAPIService {
     districtId: string,
     _startDate: string,
     _endDate: string
-  ) {
+  ): Promise<{ reports: unknown[] }> {
     // Daily reports would require additional scraping or different data source
     // For now, return empty structure
     logger.info('Getting daily reports (placeholder)', { districtId })
@@ -512,7 +520,10 @@ export class RealToastmastersAPIService {
   /**
    * Get daily report detail
    */
-  async getDailyReportDetail(districtId: string, date: string) {
+  async getDailyReportDetail(
+    districtId: string,
+    date: string
+  ): Promise<unknown> {
     try {
       // Daily report detail would require additional scraping
       // For now, return empty structure
@@ -543,7 +554,7 @@ export class RealToastmastersAPIService {
   /**
    * Get available dates with month/day information
    */
-  async getAvailableDates() {
+  async getAvailableDates(): Promise<string[]> {
     try {
       const cachedDates = await this.cacheManager.getCachedDates('districts')
 
@@ -598,7 +609,7 @@ export class RealToastmastersAPIService {
     districtId: string,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<unknown> {
     try {
       // Determine date range - default to current program year
       const start =
@@ -646,7 +657,7 @@ export class RealToastmastersAPIService {
   /**
    * Get cache statistics
    */
-  async getCacheStatistics() {
+  async getCacheStatistics(): Promise<unknown> {
     try {
       return await this.cacheManager.getCacheStatistics()
     } catch (error) {
@@ -658,7 +669,7 @@ export class RealToastmastersAPIService {
   /**
    * Get cache metadata for a specific date
    */
-  async getCacheMetadata(date: string) {
+  async getCacheMetadata(date: string): Promise<unknown> {
     try {
       return await this.cacheManager.getMetadata(date)
     } catch (error) {

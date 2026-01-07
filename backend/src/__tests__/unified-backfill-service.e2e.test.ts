@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import request from 'supertest'
 import { RefreshService } from '../services/RefreshService'
+import type { BackfillJob } from '../types/districts'
 import { PerDistrictFileSnapshotStore } from '../services/PerDistrictSnapshotStore'
 import { DistrictConfigurationService } from '../services/DistrictConfigurationService'
 import { ToastmastersScraper } from '../services/ToastmastersScraper'
@@ -194,7 +195,7 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
       expect(initiateResponse.body.scope.scopeType).toBe('system-wide')
 
       // Wait for completion
-      let status: any
+      let status: BackfillJob
       let attempts = 0
       do {
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -227,7 +228,7 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
       expect(initiateResponse.body.scope.scopeType).toBe('targeted')
 
       // Wait for completion
-      let status: any
+      let status: BackfillJob
       let attempts = 0
       do {
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -532,7 +533,7 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
       const backfillId = initiateResponse.body.backfillId
 
       // Wait for completion
-      let status: any
+      let status: BackfillJob
       let attempts = 0
       do {
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -569,7 +570,7 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
       const backfillId = initiateResponse.body.backfillId
 
       // Wait for completion
-      let status: any
+      let status: BackfillJob
       let attempts = 0
       do {
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -632,7 +633,7 @@ describe('Unified BackfillService End-to-End Integration Tests', () => {
       const backfillId = initiateResponse.body.backfillId
 
       // Wait for completion
-      let status: any
+      let status: BackfillJob
       let attempts = 0
       do {
         await new Promise(resolve => setTimeout(resolve, 1000))

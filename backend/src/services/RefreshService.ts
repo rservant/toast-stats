@@ -1266,7 +1266,7 @@ export class RefreshService {
   /**
    * Get circuit breaker statistics for monitoring and debugging
    */
-  getCircuitBreakerStats() {
+  getCircuitBreakerStats(): { scraping: unknown } {
     return {
       scraping: this.scrapingCircuitBreaker.getStats(),
     }

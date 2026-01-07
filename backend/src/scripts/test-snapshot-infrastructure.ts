@@ -16,7 +16,7 @@ import {
 import { generateSnapshotId } from '../utils/snapshotUtils.js'
 import { config } from '../config/index.js'
 
-async function main() {
+async function main(): Promise<void> {
   console.log('🔧 Testing Snapshot Infrastructure')
   console.log('================================')
 

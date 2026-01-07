@@ -392,7 +392,16 @@ export class DeterministicGenerators {
   /**
    * Create fast-check arbitraries that use the seeded RNG for deterministic generation
    */
-  createArbitraries() {
+  createArbitraries(): {
+    safeString: (minLength?: number, maxLength?: number) => fc.Arbitrary<string>
+    safeInteger: (min?: number, max?: number) => fc.Arbitrary<number>
+    safeDate: (after?: Date, before?: Date) => fc.Arbitrary<Date>
+    safeArray: <T>(
+      arb: fc.Arbitrary<T>,
+      minLength?: number,
+      maxLength?: number
+    ) => fc.Arbitrary<T[]>
+  } {
     return {
       safeString: (
         minLength: number = 1,

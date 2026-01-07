@@ -88,7 +88,7 @@ export class CacheService {
    * Get cache statistics
    * @returns Cache statistics object
    */
-  getStats() {
+  getStats(): { hits: number; misses: number; keys: number; size: number } {
     return this.cache.getStats()
   }
 }

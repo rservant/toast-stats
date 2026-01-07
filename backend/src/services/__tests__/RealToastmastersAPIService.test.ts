@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { RealToastmastersAPIService } from '../RealToastmastersAPIService'
 import type { DistrictRanking } from '../../types/districts'
+import type {
+  IRawCSVCacheService,
+  ICacheManager,
+} from '../../types/serviceInterfaces'
 
 // Interface for mock scraper
 interface MockScraper {
@@ -40,9 +44,9 @@ describe('RealToastmastersAPIService - Borda Count System', () => {
 
     // Create a service instance with proper parameters
     apiService = new RealToastmastersAPIService(
-      mockScraper as any, // Pass mock scraper as first parameter
+      mockScraper as IRawCSVCacheService, // Pass mock scraper as first parameter
       true, // Allow in test environment
-      mockCacheManager as any // Pass mock cache manager
+      mockCacheManager as ICacheManager // Pass mock cache manager
     )
   })
 

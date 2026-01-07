@@ -7,12 +7,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { promises as fs } from 'fs'
 import { MonthEndDataMapper } from '../MonthEndDataMapper.js'
 import type {
   ILogger,
   ICacheConfigService,
   IRawCSVCacheService,
 } from '../../types/serviceInterfaces.js'
+import type { RawCSVCacheMetadata } from '../../types/rawCSVCache.js'
 
 // Mock implementations
 const mockLogger: ILogger = {
@@ -116,8 +118,8 @@ describe('MonthEndDataMapper', () => {
   describe('getCSVDateForProcessedDate', () => {
     it('should find CSV data for normal dates', async () => {
       // Mock file system access
-      vi.spyOn(require('fs').promises, 'access').mockResolvedValue(undefined)
-      vi.spyOn(require('fs').promises, 'readdir').mockResolvedValue([
+      vi.spyOn(fs.promises, 'access').mockResolvedValue(undefined)
+      vi.spyOn(fs.promises, 'readdir').mockResolvedValue([
         { name: 'all-districts.csv', isFile: () => true },
       ])
 
@@ -128,7 +130,7 @@ describe('MonthEndDataMapper', () => {
 
     it('should return null when no CSV data is found', async () => {
       // Mock file system access to fail (no data found)
-      vi.spyOn(require('fs').promises, 'access').mockRejectedValue(
+      vi.spyOn(fs.promises, 'access').mockRejectedValue(
         new Error('File not found')
       )
 
@@ -157,8 +159,8 @@ describe('MonthEndDataMapper', () => {
       ])
 
       // Mock file system access for direct date
-      vi.spyOn(require('fs').promises, 'access').mockResolvedValue(undefined)
-      vi.spyOn(require('fs').promises, 'readdir').mockResolvedValue([
+      vi.spyOn(fs.promises, 'access').mockResolvedValue(undefined)
+      vi.spyOn(fs.promises, 'readdir').mockResolvedValue([
         { name: 'all-districts.csv', isFile: () => true },
       ])
 
@@ -182,12 +184,12 @@ describe('MonthEndDataMapper', () => {
           date: '2025-01-03',
           isClosingPeriod: true,
           dataMonth: '2024-12',
-        } as any)
+        } as Partial<RawCSVCacheMetadata>)
         .mockResolvedValueOnce({
           date: '2025-01-25',
           isClosingPeriod: true,
           dataMonth: '2024-12',
-        } as any)
+        } as Partial<RawCSVCacheMetadata>)
 
       // Test that even late in the month, we can detect closing periods
       const result = await mapper.isExpectedDataGap('2025-01-25')

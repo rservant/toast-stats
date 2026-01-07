@@ -76,7 +76,15 @@ export class CacheManager {
       return false
     }
     const [year, month, day] = dateParts
-    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+    if (
+      !year ||
+      !month ||
+      !day ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > 31
+    ) {
       return false
     }
 
@@ -588,7 +596,7 @@ export class CacheManager {
     const now = new Date()
     const dateString = now.toISOString().split('T')[0]
     if (!dateString) {
-      throw new Error('Failed to generate today\'s date string')
+      throw new Error("Failed to generate today's date string")
     }
     return dateString
   }

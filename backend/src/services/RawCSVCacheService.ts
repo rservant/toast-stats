@@ -635,8 +635,8 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       try {
         const entries = await fs.readdir(this.cacheDir, { withFileTypes: true })
         const dates = entries
-          .filter((entry: any) => entry.isDirectory())
-          .map((entry: any) => entry.name)
+          .filter((entry: fs.Dirent) => entry.isDirectory())
+          .map((entry: fs.Dirent) => entry.name)
           .filter((name: string) => this.isValidDateString(name))
           .sort()
 
@@ -1025,7 +1025,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
             issues.push(`Checksum mismatch for ${filename}`)
             isValid = false
           }
-        } catch (error) {
+        } catch {
           issues.push(
             `File ${filename} referenced in metadata but not found on disk`
           )
@@ -1103,7 +1103,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         // Check for district-specific files
         const entries = await fs.readdir(datePath, { withFileTypes: true })
         const districtDirs = entries.filter(
-          (entry: any) =>
+          (entry: fs.Dirent) =>
             entry.isDirectory() && entry.name.startsWith('district-')
         )
 
@@ -1309,6 +1309,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       }
 
       // Check for binary content or control characters
+      // eslint-disable-next-line no-control-regex
       if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(content)) {
         issues.push('File contains binary or control characters')
       }
@@ -1535,7 +1536,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         name: error.name,
         message: error.message,
         stack: error.stack,
-        ...((error as any).code && { code: (error as any).code }),
+        ...((error as { code?: string }).code && {
+          code: (error as { code?: string }).code,
+        }),
       }
     }
 
@@ -1633,6 +1636,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     }
 
     // Check for control characters
+    // eslint-disable-next-line no-control-regex
     if (/[\x00-\x1f\x7f-\x9f]/.test(input)) {
       throw new Error(`${inputType} contains control characters`)
     }
@@ -1686,6 +1690,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     }
 
     // Check for suspicious binary content
+    // eslint-disable-next-line no-control-regex
     if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(csvContent)) {
       throw new Error('CSV content contains binary or control characters')
     }

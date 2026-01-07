@@ -358,7 +358,12 @@ export async function getCacheDirectoryStats(cachePath: string): Promise<{
 /**
  * Create a test cache cleanup utility for use in tests
  */
-export function createTestCacheCleanup(baseCachePath: string) {
+export function createTestCacheCleanup(baseCachePath: string): {
+  trackDirectory: (dirPath: string) => void
+  trackFile: (filePath: string) => void
+  cleanup: () => Promise<void>
+  getTrackedPaths: () => { directories: string[]; files: string[] }
+} {
   const createdDirectories: string[] = []
   const createdFiles: string[] = []
 

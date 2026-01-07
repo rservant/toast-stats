@@ -23,7 +23,12 @@ export class AssessmentGenerationService {
     program_year: string
     month: string
     cache_date?: string
-  }): Promise<CalculatedAssessment & { generated_at: string; generated_from_cache_date: string }> {
+  }): Promise<
+    CalculatedAssessment & {
+      generated_at: string
+      generated_from_cache_date: string
+    }
+  > {
     const district_number = Number(params.district_number)
     const program_year = params.program_year
     const month = params.month

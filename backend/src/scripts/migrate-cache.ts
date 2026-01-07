@@ -15,7 +15,7 @@ import { CacheManager } from '../services/CacheManager.js'
 import { getProductionServiceFactory } from '../services/ProductionServiceFactory.js'
 import { logger } from '../utils/logger.js'
 
-async function main() {
+async function main(): Promise<void> {
   console.log('='.repeat(60))
   console.log('Cache Migration Script')
   console.log('='.repeat(60))

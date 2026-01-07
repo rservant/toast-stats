@@ -4,7 +4,9 @@
  */
 
 export class MockToastmastersAPIService {
-  async getDistricts() {
+  async getDistricts(): Promise<{
+    districts: Array<{ id: string; name: string }>
+  }> {
     return {
       districts: [
         { id: '1', name: 'District 1' },
@@ -17,7 +19,7 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getAllDistrictsRankings(date?: string) {
+  async getAllDistrictsRankings(date?: string): Promise<unknown[]> {
     try {
       const districtIds = ['1', '2', '10', '25', '46', '61', '101', '120']
       const mockData = []
@@ -146,7 +148,7 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getDistrictStatistics(_districtId: string) {
+  async getDistrictStatistics(_districtId: string): Promise<unknown> {
     const baseMembers = 3000
     const baseMemberCount = baseMembers + Math.floor(Math.random() * 500)
     const previousMemberCount = baseMemberCount - 50
@@ -191,7 +193,10 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getMembershipHistory(_districtId: string, months: number) {
+  async getMembershipHistory(
+    _districtId: string,
+    months: number
+  ): Promise<unknown[]> {
     const data = []
     const now = new Date()
     let baseCount = 2800
@@ -208,7 +213,7 @@ export class MockToastmastersAPIService {
     return { data }
   }
 
-  async getClubs(_districtId: string) {
+  async getClubs(_districtId: string): Promise<{ clubs: unknown[] }> {
     const clubs = []
     const statuses: Array<'active' | 'suspended' | 'ineligible' | 'low'> = [
       'active',
@@ -245,7 +250,10 @@ export class MockToastmastersAPIService {
     return { clubs }
   }
 
-  async getEducationalAwards(_districtId: string, months: number) {
+  async getEducationalAwards(
+    _districtId: string,
+    months: number
+  ): Promise<unknown> {
     const byMonth = []
     const now = new Date()
 
@@ -279,7 +287,7 @@ export class MockToastmastersAPIService {
     _districtId: string,
     startDate: string,
     endDate: string
-  ) {
+  ): Promise<unknown[]> {
     const reports = []
     const start = new Date(startDate)
     const end = new Date(endDate)
@@ -299,7 +307,10 @@ export class MockToastmastersAPIService {
     return { reports }
   }
 
-  async getDailyReportDetail(_districtId: string, date: string) {
+  async getDailyReportDetail(
+    _districtId: string,
+    date: string
+  ): Promise<unknown> {
     const newMembers = Array.from({ length: 5 }, (_, i) => ({
       name: `New Member ${i + 1}`,
       clubId: `club-${i + 1}`,
@@ -355,12 +366,12 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async clearCache() {
+  async clearCache(): Promise<{ success: boolean; message: string }> {
     // Mock implementation - just return success
     return { success: true, message: 'Mock cache cleared' }
   }
 
-  async getAvailableDates() {
+  async getAvailableDates(): Promise<string[]> {
     try {
       const cachedDates = await this.getCachedDates()
 
@@ -426,7 +437,7 @@ export class MockToastmastersAPIService {
     districtId: string,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<unknown> {
     const cachedDates = await this.getCachedDates()
     const start = startDate || cachedDates[0]
     const end = endDate || cachedDates[cachedDates.length - 1]
@@ -474,7 +485,7 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getCacheStatistics() {
+  async getCacheStatistics(): Promise<unknown> {
     const dates = await this.getCachedDates()
     return {
       totalDates: dates.length,
@@ -491,7 +502,7 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getCacheMetadata(date: string) {
+  async getCacheMetadata(date: string): Promise<unknown | null> {
     const dates = await this.getCachedDates()
     if (!dates.includes(date)) {
       return null

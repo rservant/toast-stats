@@ -595,7 +595,7 @@ export class ProcessSeparationValidator {
     const startTime = Date.now()
 
     return new Promise<void>(resolve => {
-      const simulateWork = () => {
+      const simulateWork = (): void => {
         const elapsed = Date.now() - startTime
         if (elapsed >= simulationDuration) {
           resolve()

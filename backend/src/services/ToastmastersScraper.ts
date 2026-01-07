@@ -547,7 +547,10 @@ export class ToastmastersScraper {
 
       for (const select of allSelects) {
         const selectedText = await select.evaluate(el => {
-          const selectElement = el as any // Use any to avoid HTMLSelectElement type issues in Playwright context
+          const selectElement = el as {
+            options: Array<{ text: string }>
+            selectedIndex: number
+          }
           const selectedOption =
             selectElement.options[selectElement.selectedIndex]
           return selectedOption ? selectedOption.text : null
@@ -567,7 +570,10 @@ export class ToastmastersScraper {
 
       // Get the selected option text (e.g., "As of 10-Oct-2025")
       const selectedText = await daySelect.evaluate(select => {
-        const selectElement = select as any // Use any to avoid HTMLSelectElement type issues in Playwright context
+        const selectElement = select as {
+          options: Array<{ text: string }>
+          selectedIndex: number
+        }
         const selectedOption =
           selectElement.options[selectElement.selectedIndex]
         return selectedOption ? selectedOption.text : null

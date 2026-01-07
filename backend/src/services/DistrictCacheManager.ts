@@ -200,7 +200,15 @@ export class DistrictCacheManager {
       throw new Error(`Invalid date format for cache file path: ${date}`)
     }
     const [year, month, day] = dateParts
-    if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+    if (
+      !year ||
+      !month ||
+      !day ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > 31
+    ) {
       throw new Error(`Invalid date values for cache file path: ${date}`)
     }
 
@@ -502,9 +510,12 @@ export class DistrictCacheManager {
 
       const startDate = dates[0]
       const endDate = dates[dates.length - 1]
-      
+
       if (!startDate || !endDate) {
-        logger.warn('Invalid date range data for district', { districtId, dates })
+        logger.warn('Invalid date range data for district', {
+          districtId,
+          dates,
+        })
         return null
       }
 
