@@ -15,6 +15,20 @@ import { BordaCountRankingCalculator } from '../RankingCalculator.js'
 import type { ScrapedRecord } from '../../types/districts.js'
 import type { AllDistrictsRankingsData } from '../../types/snapshots.js'
 
+// Type for accessing private methods in tests
+interface RefreshServicePrivate {
+  calculateAllDistrictsRankings(
+    allDistricts: ScrapedRecord[],
+    metadata: { csvDate: string; fetchedAt: string; fromCache: boolean }
+  ): Promise<AllDistrictsRankingsData>
+}
+
+// Type for ranking calculator mock
+interface RankingCalculatorMock {
+  calculateRankings: ReturnType<typeof vi.fn>
+  getRankingVersion: ReturnType<typeof vi.fn>
+}
+
 describe('RefreshService - Rankings Calculation', () => {
   let refreshService: RefreshService
   let mockSnapshotStore: FileSnapshotStore
@@ -100,7 +114,7 @@ describe('RefreshService - Rankings Calculation', () => {
 
       // Act
       const result = await (
-        refreshService as any
+        refreshService as unknown as RefreshServicePrivate
       ).calculateAllDistrictsRankings(allDistricts, metadata)
 
       // Assert
@@ -150,15 +164,14 @@ describe('RefreshService - Rankings Calculation', () => {
         mockRawCSVCache,
         undefined,
         undefined,
-        failingCalculator as any
+        failingCalculator as unknown as BordaCountRankingCalculator
       )
 
       // Act & Assert
       await expect(
-        (serviceWithFailingCalculator as any).calculateAllDistrictsRankings(
-          allDistricts,
-          metadata
-        )
+        (
+          serviceWithFailingCalculator as unknown as RefreshServicePrivate
+        ).calculateAllDistrictsRankings(allDistricts, metadata)
       ).rejects.toThrow('Failed to calculate all-districts rankings')
     })
 
@@ -189,7 +202,7 @@ describe('RefreshService - Rankings Calculation', () => {
 
       // Act
       const result: AllDistrictsRankingsData = await (
-        refreshService as any
+        refreshService as unknown as RefreshServicePrivate
       ).calculateAllDistrictsRankings(allDistricts, metadata)
 
       // Assert - Property 1: All Districts Rankings Completeness
@@ -255,7 +268,7 @@ describe('RefreshService - Rankings Calculation', () => {
 
       // Act
       const result = await (
-        refreshService as any
+        refreshService as unknown as RefreshServicePrivate
       ).calculateAllDistrictsRankings(allDistricts, metadata)
 
       // Assert - Property 4: Version Consistency

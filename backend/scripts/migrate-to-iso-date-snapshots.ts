@@ -79,7 +79,7 @@ async function listSnapshotItems(): Promise<{
       }
     }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((error as { code?: string }).code === 'ENOENT') {
       console.log('Snapshots directory does not exist yet.')
     } else {
       throw error
@@ -194,7 +194,7 @@ async function verifyNewSnapshotStructure(): Promise<{
       )
     }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((error as { code?: string }).code === 'ENOENT') {
       issues.push('current.json pointer file does not exist')
     } else {
       issues.push(
@@ -243,7 +243,7 @@ async function verifyNewSnapshotStructure(): Promise<{
         )
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if ((error as { code?: string }).code !== 'ENOENT') {
         issues.push(
           `Error reading all-districts-rankings.json: ${error instanceof Error ? error.message : 'Unknown error'}`
         )

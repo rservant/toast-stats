@@ -13,6 +13,26 @@ import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import type { ScrapedRecord } from '../../types/districts.js'
 
+// Type for accessing private methods in tests
+interface RefreshServicePrivate {
+  scrapeData(): Promise<{
+    allDistricts: ScrapedRecord[]
+    allDistrictsMetadata: {
+      fromCache: boolean
+      csvDate: string
+      fetchedAt: string
+    }
+    districtData: Map<
+      string,
+      {
+        districtPerformance: ScrapedRecord[]
+        divisionPerformance: ScrapedRecord[]
+        clubPerformance: ScrapedRecord[]
+      }
+    >
+  }>
+}
+
 describe('RefreshService - Cache Integration', () => {
   let refreshService: RefreshService
   let mockSnapshotStore: FileSnapshotStore
@@ -111,7 +131,9 @@ describe('RefreshService - Cache Integration', () => {
       ])
 
       // Act
-      const result = await (refreshService as any).scrapeData()
+      const result = await (
+        refreshService as unknown as RefreshServicePrivate
+      ).scrapeData()
 
       // Assert - Property 2: Cache Consistency
       // Validates: Requirements 2.1, 2.2, 2.5, 5.2
@@ -158,7 +180,9 @@ describe('RefreshService - Cache Integration', () => {
       ])
 
       // Act
-      const result = await (refreshService as any).scrapeData()
+      const result = await (
+        refreshService as unknown as RefreshServicePrivate
+      ).scrapeData()
 
       // Assert
       expect(mockRawCSVCache.getAllDistrictsCached).toHaveBeenCalled()
@@ -202,7 +226,9 @@ describe('RefreshService - Cache Integration', () => {
       ])
 
       // Act
-      const result = await (refreshService as any).scrapeData()
+      const result = await (
+        refreshService as unknown as RefreshServicePrivate
+      ).scrapeData()
 
       // Assert
       expect(result.allDistrictsMetadata).toBeDefined()
@@ -250,7 +276,9 @@ describe('RefreshService - Cache Integration', () => {
       ])
 
       // Act
-      const result = await (refreshService as any).scrapeData()
+      const result = await (
+        refreshService as unknown as RefreshServicePrivate
+      ).scrapeData()
 
       // Assert - Validates: Requirements 2.1, 2.2, 2.5, 5.2
       // Even with cache hit for All Districts, should still fetch detailed data for configured districts
