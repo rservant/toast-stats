@@ -5,6 +5,7 @@
 export type ClubHealthStatus = 'healthy' | 'at-risk' | 'critical'
 export type TrendDirection = 'improving' | 'stable' | 'declining'
 export type DistinguishedLevel =
+  | 'NotDistinguished'
   | 'Smedley'
   | 'President'
   | 'Select'
@@ -21,7 +22,7 @@ export interface ClubTrend {
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
   currentStatus: ClubHealthStatus
   riskFactors: string[]
-  distinguishedLevel?: DistinguishedLevel
+  distinguishedLevel: DistinguishedLevel
 }
 
 export interface DivisionAnalytics {

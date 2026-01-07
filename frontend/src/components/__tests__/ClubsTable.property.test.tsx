@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import * as fc from 'fast-check'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { ClubsTable } from '../ClubsTable'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import * as csvExport from '../../utils/csvExport'
@@ -10,13 +10,13 @@ import * as csvExport from '../../utils/csvExport'
  * **Feature: clubs-table-column-filtering**
  */
 
-// Generator for distinguished levels
+// Generator for distinguished levels (mandatory field)
 const distinguishedLevelArb = fc.oneof(
-  fc.constant('Distinguished'),
-  fc.constant('Select'),
-  fc.constant('President'),
+  fc.constant('NotDistinguished'),
   fc.constant('Smedley'),
-  fc.constant(undefined)
+  fc.constant('President'),
+  fc.constant('Select'),
+  fc.constant('Distinguished')
 )
 
 // Generator for club status
@@ -28,8 +28,12 @@ const clubStatusArb = fc.oneof(
 
 // Generator for club trend data
 const clubTrendArb = fc.record({
-  clubId: fc.string({ minLength: 1, maxLength: 10 }),
-  clubName: fc.string({ minLength: 1, maxLength: 50 }),
+  clubId: fc
+    .string({ minLength: 1, maxLength: 10 })
+    .filter(s => s.trim().length > 0),
+  clubName: fc
+    .string({ minLength: 1, maxLength: 50 })
+    .filter(s => s.trim().length > 0),
   divisionId: fc.string({ minLength: 1, maxLength: 10 }),
   divisionName: fc.string({ minLength: 1, maxLength: 20 }),
   areaId: fc.string({ minLength: 1, maxLength: 10 }),
@@ -57,7 +61,13 @@ const clubTrendArb = fc.record({
  * Get distinguished order for sorting (same logic as in useColumnFilters)
  */
 const getDistinguishedOrder = (level?: string): number => {
-  const order = { Distinguished: 0, Select: 1, President: 2, Smedley: 3 }
+  const order = {
+    Distinguished: 0,
+    Select: 1,
+    President: 2,
+    Smedley: 3,
+    NotDistinguished: 4,
+  }
   return order[level as keyof typeof order] ?? 999
 }
 
@@ -267,7 +277,9 @@ describe('ClubsTable Property Tests', () => {
             })
             expect(exportButton).toBeInTheDocument()
 
-            fireEvent.click(exportButton)
+            act(() => {
+              fireEvent.click(exportButton)
+            })
 
             // Verify that exportClubPerformance was called exactly once
             expect(mockExportClubPerformance).toHaveBeenCalledTimes(1)

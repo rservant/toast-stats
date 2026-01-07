@@ -12,7 +12,12 @@ export interface ClubTrend {
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
   currentStatus: 'healthy' | 'at-risk' | 'critical'
   riskFactors: string[]
-  distinguishedLevel?: 'Smedley' | 'President' | 'Select' | 'Distinguished'
+  distinguishedLevel:
+    | 'NotDistinguished'
+    | 'Smedley'
+    | 'President'
+    | 'Select'
+    | 'Distinguished'
 }
 
 export interface DivisionAnalytics {

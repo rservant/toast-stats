@@ -191,10 +191,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   membershipTrend: club.membershipTrend,
                   dcpGoalsTrend: club.dcpGoalsTrend,
                   currentStatus: club.currentStatus,
-                  ...(club.distinguishedLevel && {
-                    distinguishedLevel: club.distinguishedLevel,
-                  }),
-                  ...(club.riskFactors && { riskFactors: club.riskFactors }),
+                  distinguishedLevel: club.distinguishedLevel,
+                  riskFactors: club.riskFactors,
                 })),
                 districtId
               )

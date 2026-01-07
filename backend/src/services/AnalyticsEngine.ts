@@ -1109,6 +1109,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         dcpGoalsTrend: [],
         currentStatus: 'healthy',
         riskFactors: [],
+        distinguishedLevel: 'NotDistinguished', // Default value, will be updated later
       })
     }
 
@@ -1278,8 +1279,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       clubTrend.distinguishedLevel = 'Select'
     } else if (distinguishedLevel === 'Distinguished') {
       clubTrend.distinguishedLevel = 'Distinguished'
+    } else {
+      // If level is 'None' or any other value, default to 'NotDistinguished'
+      // Every club must have a distinguished level
+      clubTrend.distinguishedLevel = 'NotDistinguished'
     }
-    // If level is 'None', don't set distinguishedLevel (leave undefined)
   }
 
   /**

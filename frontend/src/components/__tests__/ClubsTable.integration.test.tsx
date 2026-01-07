@@ -71,7 +71,7 @@ const createTestClubs = (): ClubTrend[] => [
     divisionName: 'Division A',
     areaId: 'area-1',
     areaName: 'Area 1',
-    distinguishedLevel: undefined,
+    distinguishedLevel: 'NotDistinguished',
     currentStatus: 'healthy',
     riskFactors: [],
     membershipTrend: [{ date: '2024-01-01', count: 20 }],
@@ -337,7 +337,15 @@ describe('ClubsTable Integration Tests', () => {
         divisionName: 'Division A',
         areaId: 'area-1',
         areaName: 'Area 1',
-        distinguishedLevel: undefined,
+        distinguishedLevel: (
+          [
+            'NotDistinguished',
+            'Smedley',
+            'President',
+            'Select',
+            'Distinguished',
+          ] as const
+        )[i % 5],
         currentStatus: (i % 3 === 0
           ? 'healthy'
           : i % 3 === 1

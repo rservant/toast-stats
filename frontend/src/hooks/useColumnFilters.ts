@@ -34,7 +34,13 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
    * Get distinguished order for sorting
    */
   const getDistinguishedOrder = useCallback((club: ClubTrend): number => {
-    const order = { Distinguished: 0, Select: 1, President: 2, Smedley: 3 }
+    const order = {
+      NotDistinguished: 0,
+      Distinguished: 1,
+      Select: 2,
+      President: 3,
+      Smedley: 4,
+    }
     return order[club.distinguishedLevel as keyof typeof order] ?? 999
   }, [])
 

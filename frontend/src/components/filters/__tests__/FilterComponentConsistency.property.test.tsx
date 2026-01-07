@@ -162,6 +162,7 @@ describe('Filter Component Consistency Properties', () => {
       'Select',
       'President',
       'Smedley',
+      'NotDistinguished',
     ])
 
     // Test Status column has correct options

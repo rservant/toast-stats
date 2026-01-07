@@ -126,7 +126,11 @@ describe('DistrictConfiguration', () => {
 
       expect(screen.getByText('Valid Districts')).toBeInTheDocument()
       expect(screen.getByText('Invalid Districts')).toBeInTheDocument()
-      expect(screen.getByText('Last updated: 1/5/2025')).toBeInTheDocument()
+      // Check for the date format that toLocaleDateString() produces
+      const expectedDate = new Date('2025-01-05T10:00:00Z').toLocaleDateString()
+      expect(
+        screen.getByText(`Last updated: ${expectedDate}`)
+      ).toBeInTheDocument()
       expect(screen.getByText('By: admin')).toBeInTheDocument()
     })
 

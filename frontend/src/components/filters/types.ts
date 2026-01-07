@@ -172,9 +172,21 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     sortable: true,
     filterable: true,
     filterType: 'categorical',
-    filterOptions: ['Distinguished', 'Select', 'President', 'Smedley'],
+    filterOptions: [
+      'Distinguished',
+      'Select',
+      'President',
+      'Smedley',
+      'NotDistinguished',
+    ],
     sortCustom: (a: unknown, b: unknown) => {
-      const order = { Distinguished: 0, Select: 1, President: 2, Smedley: 3 }
+      const order = {
+        Distinguished: 0,
+        Select: 1,
+        President: 2,
+        Smedley: 3,
+        NotDistinguished: 4,
+      }
       const aValue = a as keyof typeof order
       const bValue = b as keyof typeof order
       return (order[aValue] || 999) - (order[bValue] || 999)
