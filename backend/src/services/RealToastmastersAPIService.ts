@@ -177,7 +177,11 @@ export class RealToastmastersAPIService {
       let currentRank = 1
       let previousValue = sortedByClubs[0]?.clubGrowthPercent
       sortedByClubs.forEach((d, i) => {
-        if (i > 0 && d.clubGrowthPercent < previousValue) {
+        if (
+          i > 0 &&
+          previousValue !== undefined &&
+          d.clubGrowthPercent < previousValue
+        ) {
           currentRank = i + 1
         }
         clubsRank.set((d.districtId || '').toString(), currentRank)
@@ -191,7 +195,11 @@ export class RealToastmastersAPIService {
       currentRank = 1
       previousValue = sortedByPayments[0]?.paymentGrowthPercent
       sortedByPayments.forEach((d, i) => {
-        if (i > 0 && d.paymentGrowthPercent < previousValue) {
+        if (
+          i > 0 &&
+          previousValue !== undefined &&
+          d.paymentGrowthPercent < previousValue
+        ) {
           currentRank = i + 1
         }
         paymentsRank.set((d.districtId || '').toString(), currentRank)
@@ -205,7 +213,11 @@ export class RealToastmastersAPIService {
       currentRank = 1
       previousValue = sortedByDistinguished[0]?.distinguishedPercent
       sortedByDistinguished.forEach((d, i) => {
-        if (i > 0 && d.distinguishedPercent < previousValue) {
+        if (
+          i > 0 &&
+          previousValue !== undefined &&
+          d.distinguishedPercent < previousValue
+        ) {
           currentRank = i + 1
         }
         distinguishedRank.set((d.districtId || '').toString(), currentRank)
@@ -387,10 +399,19 @@ export class RealToastmastersAPIService {
       // For now, we'll use current data and generate a simple history
       const stats = await this.getDistrictStatistics(districtId)
 
+      // Type guard to ensure we have the expected structure
+      if (!stats || typeof stats !== 'object' || !('membership' in stats)) {
+        throw new Error('Invalid district statistics structure')
+      }
+
+      const membership = (
+        stats as { membership: { total: number; change: number } }
+      ).membership
+
       const data = []
       const now = new Date()
-      const currentTotal = stats.membership.total
-      const monthlyChange = Math.floor(stats.membership.change / months)
+      const currentTotal = membership.total
+      const monthlyChange = Math.floor(membership.change / months)
 
       for (let i = months - 1; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
@@ -557,44 +578,7 @@ export class RealToastmastersAPIService {
   async getAvailableDates(): Promise<string[]> {
     try {
       const cachedDates = await this.cacheManager.getCachedDates('districts')
-
-      const monthNames = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ]
-
-      const dates = cachedDates.map(dateStr => {
-        const date = new Date(dateStr + 'T00:00:00')
-        return {
-          date: dateStr,
-          month: date.getMonth() + 1, // 1-12
-          day: date.getDate(),
-          monthName: monthNames[date.getMonth()],
-        }
-      })
-
-      const programYearStart = CacheManager.getProgramYearStart()
-
-      return {
-        dates,
-        programYear: {
-          startDate: programYearStart.toISOString().split('T')[0],
-          endDate: new Date(programYearStart.getFullYear() + 1, 5, 30)
-            .toISOString()
-            .split('T')[0], // June 30
-          year: CacheManager.getProgramYear(),
-        },
-      }
+      return cachedDates
     } catch (error) {
       logger.error('Failed to get available dates', error)
       throw error
@@ -635,7 +619,7 @@ export class RealToastmastersAPIService {
 
       const districtName =
         snapshots.length > 0
-          ? snapshots[0].districtName
+          ? snapshots[0]!.districtName
           : `District ${districtId}`
 
       return {

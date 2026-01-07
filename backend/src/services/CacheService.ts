@@ -89,7 +89,13 @@ export class CacheService {
    * @returns Cache statistics object
    */
   getStats(): { hits: number; misses: number; keys: number; size: number } {
-    return this.cache.getStats()
+    const stats = this.cache.getStats()
+    return {
+      hits: stats.hits,
+      misses: stats.misses,
+      keys: stats.keys,
+      size: 0, // NodeCache doesn't provide size, so we'll return 0
+    }
   }
 }
 

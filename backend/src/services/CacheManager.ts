@@ -445,15 +445,15 @@ export class CacheManager {
       const snapshots: DistrictRankSnapshot[] = rankings.map((r: unknown) => {
         const ranking = r as Record<string, unknown>
         return {
-          districtId: String(ranking.districtId || ''),
-          districtName: String(ranking.districtName || ''),
-          aggregateScore: Number(ranking.aggregateScore || 0),
-          clubsRank: Number(ranking.clubsRank || 0),
-          paymentsRank: Number(ranking.paymentsRank || 0),
-          distinguishedRank: Number(ranking.distinguishedRank || 0),
-          paidClubs: Number(ranking.paidClubs || 0),
-          totalPayments: Number(ranking.totalPayments || 0),
-          distinguishedClubs: Number(ranking.distinguishedClubs || 0),
+          districtId: String(ranking['districtId'] || ''),
+          districtName: String(ranking['districtName'] || ''),
+          aggregateScore: Number(ranking['aggregateScore'] || 0),
+          clubsRank: Number(ranking['clubsRank'] || 0),
+          paymentsRank: Number(ranking['paymentsRank'] || 0),
+          distinguishedRank: Number(ranking['distinguishedRank'] || 0),
+          paidClubs: Number(ranking['paidClubs'] || 0),
+          totalPayments: Number(ranking['totalPayments'] || 0),
+          distinguishedClubs: Number(ranking['distinguishedClubs'] || 0),
         }
       })
 
@@ -472,7 +472,7 @@ export class CacheManager {
       }
 
       // Update dates list
-      const dates = indexData.dates as string[]
+      const dates = indexData['dates'] as string[]
       if (!dates.includes(date)) {
         dates.push(date)
         dates.sort()
@@ -480,10 +480,10 @@ export class CacheManager {
 
       // Update district IDs list
       const newDistrictIds = snapshots.map(s => s.districtId)
-      const districtIds = indexData.districtIds as string[]
+      const districtIds = indexData['districtIds'] as string[]
       const existingIds = new Set(districtIds)
       newDistrictIds.forEach(id => existingIds.add(id))
-      indexData.districtIds = Array.from(existingIds).sort()
+      indexData['districtIds'] = Array.from(existingIds).sort()
 
       // Save updated index
       const indexPath = this.getIndexFilePath()
@@ -495,8 +495,8 @@ export class CacheManager {
 
       logger.info('Historical index updated', {
         date,
-        totalDates: (indexData.dates as string[]).length,
-        totalDistricts: (indexData.districtIds as string[]).length,
+        totalDates: (indexData['dates'] as string[]).length,
+        totalDistricts: (indexData['districtIds'] as string[]).length,
       })
     } catch (error) {
       logger.error('Failed to update historical index', { date, error })
@@ -680,15 +680,17 @@ export class CacheManager {
               (r: unknown) => {
                 const ranking = r as Record<string, unknown>
                 return {
-                  districtId: String(ranking.districtId || ''),
-                  districtName: String(ranking.districtName || ''),
-                  aggregateScore: Number(ranking.aggregateScore || 0),
-                  clubsRank: Number(ranking.clubsRank || 0),
-                  paymentsRank: Number(ranking.paymentsRank || 0),
-                  distinguishedRank: Number(ranking.distinguishedRank || 0),
-                  paidClubs: Number(ranking.paidClubs || 0),
-                  totalPayments: Number(ranking.totalPayments || 0),
-                  distinguishedClubs: Number(ranking.distinguishedClubs || 0),
+                  districtId: String(ranking['districtId'] || ''),
+                  districtName: String(ranking['districtName'] || ''),
+                  aggregateScore: Number(ranking['aggregateScore'] || 0),
+                  clubsRank: Number(ranking['clubsRank'] || 0),
+                  paymentsRank: Number(ranking['paymentsRank'] || 0),
+                  distinguishedRank: Number(ranking['distinguishedRank'] || 0),
+                  paidClubs: Number(ranking['paidClubs'] || 0),
+                  totalPayments: Number(ranking['totalPayments'] || 0),
+                  distinguishedClubs: Number(
+                    ranking['distinguishedClubs'] || 0
+                  ),
                 }
               }
             )
@@ -734,6 +736,10 @@ export class CacheManager {
     const allDates = Array.from(this.indexCache.keys()).sort()
     const start = startDate || allDates[0]
     const end = endDate || allDates[allDates.length - 1]
+
+    if (!start || !end) {
+      return []
+    }
 
     const history: Array<DistrictRankSnapshot & { date: string }> = []
 

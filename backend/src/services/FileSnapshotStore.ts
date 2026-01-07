@@ -272,6 +272,10 @@ export class FileSnapshotStore implements SnapshotStore {
       }
 
       const latestFile = snapshotFiles[0]
+      if (!latestFile) {
+        logger.warn('No snapshot files found')
+        return null
+      }
       const snapshotPath = path.join(this.snapshotsDir, latestFile)
       const content = await fs.readFile(snapshotPath, 'utf-8')
       const snapshot = JSON.parse(content)
@@ -900,7 +904,9 @@ export class FileSnapshotStore implements SnapshotStore {
       const filesToDelete: string[] = []
 
       for (let i = 0; i < snapshotFiles.length; i++) {
-        const { timestamp, path: filePath } = snapshotFiles[i]
+        const snapshotFile = snapshotFiles[i]
+        if (!snapshotFile) continue
+        const { timestamp, path: filePath } = snapshotFile
         const age = now - timestamp
 
         // Check if this is a successful snapshot

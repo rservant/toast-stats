@@ -136,6 +136,17 @@ function validateDistrictId(districtId: string): boolean {
 }
 
 /**
+ * Helper function to validate and extract district ID from request params
+ */
+function getValidDistrictId(req: Request): string | null {
+  const districtId = req.params['districtId']
+  if (!districtId || !validateDistrictId(districtId!)) {
+    return null
+  }
+  return districtId
+}
+
+/**
  * Helper function to serve data from per-district snapshots with proper error handling
  * Uses the new DistrictDataAggregator for efficient per-district file access
  */
@@ -860,6 +871,7 @@ router.get('/cache/version', async (_req: Request, res: Response) => {
         2: 'Borda count scoring with percentage-based ranking (current)',
       },
     })
+    return
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
@@ -869,6 +881,7 @@ router.get('/cache/version', async (_req: Request, res: Response) => {
         details: errorResponse.details,
       },
     })
+    return
   }
 })
 
@@ -890,6 +903,7 @@ router.get('/cache/stats', async (_req: Request, res: Response) => {
 
     const statistics = await cacheManagerInstance.getCacheStatistics()
     res.json(statistics)
+    return
   } catch (error) {
     const errorResponse = transformErrorResponse(error)
     res.status(500).json({
@@ -899,6 +913,7 @@ router.get('/cache/stats', async (_req: Request, res: Response) => {
         details: errorResponse.details,
       },
     })
+    return
   }
 })
 
@@ -937,7 +952,7 @@ router.get(
     },
   }),
   async (req: Request, res: Response) => {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
 
     if (!districtId) {
       res.status(400).json({
@@ -959,7 +974,7 @@ router.get(
     })
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId || !validateDistrictId(districtId!)) {
       logger.warn('Invalid district ID format in request', {
         operation: 'GET /api/districts/:districtId/statistics',
         request_id: requestId,
@@ -1016,17 +1031,20 @@ router.get(
   '/:districtId/membership-history',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'membership-history', {
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'membership-history', {
         months: req.query['months'],
-      }),
+      })
+    },
   }),
   async (req: Request, res: Response) => {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
     const months = req.query['months']
 
     // Validate district ID
-    if (!districtId || !validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1079,14 +1097,17 @@ router.get(
   '/:districtId/clubs',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'clubs'),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'clubs')
+    },
   }),
   async (req: Request, res: Response) => {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
 
     // Validate district ID
-    if (!districtId || !validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1120,17 +1141,20 @@ router.get(
   '/:districtId/educational-awards',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'educational-awards', {
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'educational-awards', {
         months: req.query['months'],
-      }),
+      })
+    },
   }),
   async (req: Request, res: Response) => {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
     const months = req.query['months']
 
     // Validate district ID
-    if (!districtId || !validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1237,7 +1261,7 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
   const req = body as Record<string, unknown>
 
   // Validate startDate (required)
-  if (!req.startDate) {
+  if (!req['startDate']) {
     errors.push({
       field: 'startDate',
       message: 'startDate is required',
@@ -1246,42 +1270,42 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
     suggestions.push(
       'Provide a startDate in YYYY-MM-DD format (e.g., "2024-01-01")'
     )
-  } else if (typeof req.startDate !== 'string') {
+  } else if (typeof req['startDate'] !== 'string') {
     errors.push({
       field: 'startDate',
       message: 'startDate must be a string',
-      received: typeof req.startDate,
+      received: typeof req['startDate'],
       expected: 'string in YYYY-MM-DD format',
     })
-  } else if (!validateDateFormat(req.startDate)) {
+  } else if (!validateDateFormat(req['startDate'])) {
     errors.push({
       field: 'startDate',
       message: 'startDate must be in YYYY-MM-DD format',
-      received: req.startDate,
+      received: req['startDate'],
       expected: 'YYYY-MM-DD format (e.g., "2024-01-01")',
     })
   } else {
-    sanitizedRequest.startDate = req.startDate
+    sanitizedRequest.startDate = req['startDate']
   }
 
   // Validate endDate (optional)
-  if (req.endDate !== undefined) {
-    if (typeof req.endDate !== 'string') {
+  if (req['endDate'] !== undefined) {
+    if (typeof req['endDate'] !== 'string') {
       errors.push({
         field: 'endDate',
         message: 'endDate must be a string',
-        received: typeof req.endDate,
+        received: typeof req['endDate'],
         expected: 'string in YYYY-MM-DD format or undefined',
       })
-    } else if (!validateDateFormat(req.endDate)) {
+    } else if (!validateDateFormat(req['endDate'])) {
       errors.push({
         field: 'endDate',
         message: 'endDate must be in YYYY-MM-DD format',
-        received: req.endDate,
+        received: req['endDate'],
         expected: 'YYYY-MM-DD format (e.g., "2024-12-31")',
       })
     } else {
-      sanitizedRequest.endDate = req.endDate
+      sanitizedRequest.endDate = req['endDate']
     }
   }
 
@@ -1327,17 +1351,17 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
   }
 
   // Validate targetDistricts (optional)
-  if (req.targetDistricts !== undefined) {
-    if (!Array.isArray(req.targetDistricts)) {
+  if (req['targetDistricts'] !== undefined) {
+    if (!Array.isArray(req['targetDistricts'])) {
       errors.push({
         field: 'targetDistricts',
         message: 'targetDistricts must be an array',
-        received: typeof req.targetDistricts,
+        received: typeof req['targetDistricts'],
         expected: 'array of district ID strings',
       })
     } else {
       const validDistricts: string[] = []
-      req.targetDistricts.forEach((district, index) => {
+      req['targetDistricts'].forEach((district, index) => {
         if (typeof district !== 'string') {
           errors.push({
             field: `targetDistricts[${index}]`,
@@ -1361,7 +1385,7 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
         sanitizedRequest.targetDistricts = validDistricts
       }
 
-      if (req.targetDistricts.length > 50) {
+      if (req['targetDistricts'].length > 50) {
         suggestions.push(
           'Consider processing large numbers of districts in smaller batches'
         )
@@ -1370,24 +1394,24 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
   }
 
   // Validate collectionType (optional)
-  if (req.collectionType !== undefined) {
+  if (req['collectionType'] !== undefined) {
     const validTypes = ['system-wide', 'per-district', 'auto']
-    if (typeof req.collectionType !== 'string') {
+    if (typeof req['collectionType'] !== 'string') {
       errors.push({
         field: 'collectionType',
         message: 'collectionType must be a string',
-        received: typeof req.collectionType,
+        received: typeof req['collectionType'],
         expected: `one of: ${validTypes.join(', ')}`,
       })
-    } else if (!validTypes.includes(req.collectionType)) {
+    } else if (!validTypes.includes(req['collectionType'])) {
       errors.push({
         field: 'collectionType',
         message: 'Invalid collectionType',
-        received: req.collectionType,
+        received: req['collectionType'],
         expected: `one of: ${validTypes.join(', ')}`,
       })
     } else {
-      sanitizedRequest.collectionType = req.collectionType as
+      sanitizedRequest.collectionType = req['collectionType'] as
         | 'system-wide'
         | 'per-district'
         | 'auto'
@@ -1395,27 +1419,27 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
   }
 
   // Validate concurrency (optional)
-  if (req.concurrency !== undefined) {
-    if (typeof req.concurrency !== 'number') {
+  if (req['concurrency'] !== undefined) {
+    if (typeof req['concurrency'] !== 'number') {
       errors.push({
         field: 'concurrency',
         message: 'concurrency must be a number',
-        received: typeof req.concurrency,
+        received: typeof req['concurrency'],
         expected: 'number between 1 and 10',
       })
     } else if (
-      !Number.isInteger(req.concurrency) ||
-      req.concurrency < 1 ||
-      req.concurrency > 10
+      !Number.isInteger(req['concurrency']) ||
+      req['concurrency'] < 1 ||
+      req['concurrency'] > 10
     ) {
       errors.push({
         field: 'concurrency',
         message: 'concurrency must be an integer between 1 and 10',
-        received: req.concurrency,
+        received: req['concurrency'],
         expected: 'integer between 1 and 10',
       })
     } else {
-      sanitizedRequest.concurrency = req.concurrency
+      sanitizedRequest.concurrency = req['concurrency']
     }
   }
 
@@ -1438,17 +1462,17 @@ function validateBackfillRequest(body: unknown): BackfillValidationResult {
 
   // Add helpful suggestions
   if (errors.length === 0) {
-    if (!req.targetDistricts) {
+    if (!req['targetDistricts']) {
       suggestions.push(
         'No target districts specified - will process all configured districts'
       )
     }
-    if (!req.endDate) {
+    if (!req['endDate']) {
       suggestions.push(
         'No end date specified - will process only the start date'
       )
     }
-    if (req.collectionType === 'auto' || !req.collectionType) {
+    if (req['collectionType'] === 'auto' || !req['collectionType']) {
       suggestions.push(
         'Using auto collection type - system will choose optimal strategy'
       )
@@ -1498,19 +1522,22 @@ router.get(
   '/:districtId/daily-reports',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'daily-reports', {
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'daily-reports', {
         startDate: req.query['startDate'],
         endDate: req.query['endDate'],
-      }),
+      })
+    },
   }),
   async (req: Request, res: Response) => {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
     const startDate = req.query['startDate']
     const endDate = req.query['endDate']
 
     // Validate district ID
-    if (!districtId || !validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1541,7 +1568,7 @@ router.get(
       return
     }
 
-    if (!validateDateFormat(startDate) || !validateDateFormat(endDate)) {
+    if (!validateDateFormat(startDate!) || !validateDateFormat(endDate!)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -1610,17 +1637,19 @@ router.get(
   '/:districtId/daily-reports/:date',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(
-        req.params['districtId'],
-        `daily-reports/${req.params['date']}`
-      ),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      const date = req.params['date']
+      if (!districtId || !date) throw new Error('Missing districtId or date parameter')
+      return generateDistrictCacheKey(districtId, `daily-reports/${date}`)
+    },
   }),
   async (req: Request, res: Response) => {
-    const { districtId, date } = req.params
+    const districtId = getValidDistrictId(req)
+    const date = req.params['date']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -1631,7 +1660,7 @@ router.get(
     }
 
     // Validate date format
-    if (!validateDateFormat(date)) {
+    if (!date || !validateDateFormat(date)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -1688,10 +1717,10 @@ router.get(
  * Query params: startDate (optional), endDate (optional) - currently ignored
  */
 router.get('/:districtId/rank-history', async (req: Request, res: Response) => {
-  const districtId = req.params['districtId']
+  const districtId = getValidDistrictId(req)
 
   // Validate district ID
-  if (!districtId || !validateDistrictId(districtId)) {
+  if (!districtId) {
     res.status(400).json({
       error: {
         code: 'INVALID_DISTRICT_ID',
@@ -1776,7 +1805,7 @@ router.post('/backfill', async (req: Request, res: Response) => {
     })
 
     const backfillId = await backfillService.initiateBackfill(request)
-    const status = backfillService.getBackfillStatus(backfillId)
+    const status = backfillService.getBackfillStatus(backfillId!)
 
     if (!status) {
       logger.error('Failed to retrieve backfill status after creation', {
@@ -1906,7 +1935,7 @@ router.get('/backfill/:backfillId', async (req: Request, res: Response) => {
       return
     }
 
-    const status = backfillService.getBackfillStatus(backfillId)
+    const status = backfillService.getBackfillStatus(backfillId!)
 
     if (!status) {
       logger.warn('Backfill job not found', {
@@ -2060,7 +2089,7 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
     }
 
     // Check if job exists before attempting cancellation
-    const currentStatus = backfillService.getBackfillStatus(backfillId)
+    const currentStatus = backfillService.getBackfillStatus(backfillId!)
     if (!currentStatus) {
       logger.warn('Attempted to cancel non-existent backfill job', {
         operation: 'DELETE /api/districts/backfill/:backfillId',
@@ -2110,7 +2139,7 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
       return
     }
 
-    const cancelled = await backfillService.cancelBackfill(backfillId)
+    const cancelled = await backfillService.cancelBackfill(backfillId!)
 
     if (!cancelled) {
       logger.error('Backfill cancellation failed unexpectedly', {
@@ -2184,10 +2213,11 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
  */
 router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
   try {
-    const { districtId, date } = req.params
+    const districtId = getValidDistrictId(req)
+    const date = req.params['date']
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -2198,7 +2228,7 @@ router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
     }
 
     // Validate date format
-    if (!validateDateFormat(date)) {
+    if (!date || !validateDateFormat(date)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -2209,7 +2239,7 @@ router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
     }
 
     // Get cached district data
-    const data = await districtCacheManager.getDistrictData(districtId, date)
+    const data = await districtCacheManager.getDistrictData(districtId!, date)
 
     if (!data) {
       res.status(404).json({
@@ -2242,10 +2272,10 @@ router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
  */
 router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
   try {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
 
     // Validate district ID
-    if (!districtId || !validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -2257,12 +2287,12 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
 
     // Get cached dates
     const dates =
-      await districtCacheManager.getCachedDatesForDistrict(districtId)
+      await districtCacheManager.getCachedDatesForDistrict(districtId!)
 
     // Get date range if dates exist
     const dateRange =
       dates.length > 0
-        ? await districtCacheManager.getDistrictDataRange(districtId)
+        ? await districtCacheManager.getDistrictDataRange(districtId!)
         : null
 
     res.json({
@@ -2290,11 +2320,11 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
  */
 router.post('/:districtId/backfill', async (req: Request, res: Response) => {
   try {
-    const districtId = req.params['districtId']
+    const districtId = getValidDistrictId(req)
     const { startDate, endDate } = req.body
 
     // Validate district ID
-    if (!districtId || !validateDistrictId(districtId)) {
+    if (!districtId) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -2305,7 +2335,7 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
     }
 
     // Validate date formats if provided
-    if (startDate && !validateDateFormat(startDate)) {
+    if (startDate && !validateDateFormat(startDate!)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -2315,7 +2345,7 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
       return
     }
 
-    if (endDate && !validateDateFormat(endDate)) {
+    if (endDate && !validateDateFormat(endDate!)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DATE_FORMAT',
@@ -2363,7 +2393,7 @@ router.post('/:districtId/backfill', async (req: Request, res: Response) => {
       collectionType: 'per-district',
     })
 
-    const status = backfillService.getBackfillStatus(backfillId)
+    const status = backfillService.getBackfillStatus(backfillId!)
 
     res.json(status)
   } catch (error) {
@@ -2411,10 +2441,11 @@ router.get(
   '/:districtId/backfill/:backfillId',
   async (req: Request, res: Response) => {
     try {
-      const { districtId, backfillId } = req.params
+      const districtId = getValidDistrictId(req)
+      const backfillId = req.params['backfillId']
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2424,7 +2455,7 @@ router.get(
         return
       }
 
-      const status = backfillService.getBackfillStatus(backfillId)
+      const status = backfillService.getBackfillStatus(backfillId!)
 
       if (!status) {
         res.status(404).json({
@@ -2437,7 +2468,7 @@ router.get(
       }
 
       // Verify the backfill includes the requested district
-      if (!status.scope.targetDistricts.includes(districtId)) {
+      if (!status.scope.targetDistricts.includes(districtId!)) {
         res.status(404).json({
           error: {
             code: 'BACKFILL_NOT_FOUND',
@@ -2470,10 +2501,11 @@ router.delete(
   '/:districtId/backfill/:backfillId',
   async (req: Request, res: Response) => {
     try {
-      const { districtId, backfillId } = req.params
+      const districtId = getValidDistrictId(req)
+      const backfillId = req.params['backfillId']
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2484,7 +2516,7 @@ router.delete(
       }
 
       // Get status first to verify it belongs to this district
-      const status = backfillService.getBackfillStatus(backfillId)
+      const status = backfillService.getBackfillStatus(backfillId!)
 
       if (!status) {
         res.status(404).json({
@@ -2497,7 +2529,7 @@ router.delete(
       }
 
       // Verify the backfill includes the requested district
-      if (!status.scope.targetDistricts.includes(districtId)) {
+      if (!status.scope.targetDistricts.includes(districtId!)) {
         res.status(404).json({
           error: {
             code: 'BACKFILL_NOT_FOUND',
@@ -2507,7 +2539,7 @@ router.delete(
         return
       }
 
-      const cancelled = await backfillService.cancelBackfill(backfillId)
+      const cancelled = await backfillService.cancelBackfill(backfillId!)
 
       if (!cancelled) {
         res.status(400).json({
@@ -2547,12 +2579,12 @@ router.get(
   '/:districtId/membership-analytics',
   async (req: Request, res: Response) => {
     try {
-      const districtId = req.params['districtId']
+      const districtId = getValidDistrictId(req)
       const startDate = req.query['startDate']
       const endDate = req.query['endDate']
 
       // Validate district ID
-      if (!districtId || !validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2566,7 +2598,7 @@ router.get(
       if (
         startDate &&
         typeof startDate === 'string' &&
-        !validateDateFormat(startDate)
+        !validateDateFormat(startDate!)
       ) {
         res.status(400).json({
           error: {
@@ -2580,7 +2612,7 @@ router.get(
       if (
         endDate &&
         typeof endDate === 'string' &&
-        !validateDateFormat(endDate)
+        !validateDateFormat(endDate!)
       ) {
         res.status(400).json({
           error: {
@@ -2661,19 +2693,22 @@ router.get(
   '/:districtId/analytics',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache for analytics
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'analytics', {
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'analytics', {
         startDate: req.query['startDate'],
         endDate: req.query['endDate'],
-      }),
+      })
+    },
   }),
   async (req: Request, res: Response) => {
     try {
-      const { districtId } = req.params
+      const districtId = getValidDistrictId(req)
       const { startDate, endDate } = req.query
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2687,7 +2722,7 @@ router.get(
       if (
         startDate &&
         typeof startDate === 'string' &&
-        !validateDateFormat(startDate)
+        !validateDateFormat(startDate!)
       ) {
         res.status(400).json({
           error: {
@@ -2701,7 +2736,7 @@ router.get(
       if (
         endDate &&
         typeof endDate === 'string' &&
-        !validateDateFormat(endDate)
+        !validateDateFormat(endDate!)
       ) {
         res.status(400).json({
           error: {
@@ -2784,18 +2819,20 @@ router.get(
   '/:districtId/clubs/:clubId/trends',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: req =>
-      generateDistrictCacheKey(
-        req.params['districtId'],
-        `clubs/${req.params['clubId']}/trends`
-      ),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      const clubId = req.params['clubId']
+      if (!districtId || !clubId) throw new Error('Missing districtId or clubId parameter')
+      return generateDistrictCacheKey(districtId, `clubs/${clubId}/trends`)
+    },
   }),
   async (req: Request, res: Response) => {
     try {
-      const { districtId, clubId } = req.params
+      const districtId = getValidDistrictId(req)
+      const clubId = req.params['clubId']
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2817,7 +2854,7 @@ router.get(
       }
 
       // Get club trends
-      const clubTrend = await analyticsEngine.getClubTrends(districtId, clubId)
+      const clubTrend = await analyticsEngine.getClubTrends(districtId!, clubId)
 
       if (!clubTrend) {
         res.status(404).json({
@@ -2872,15 +2909,18 @@ router.get(
   '/:districtId/at-risk-clubs',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params['districtId'], 'at-risk-clubs'),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'at-risk-clubs')
+    },
   }),
   async (req: Request, res: Response) => {
     try {
-      const { districtId } = req.params
+      const districtId = getValidDistrictId(req)
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2891,7 +2931,7 @@ router.get(
       }
 
       // Identify at-risk clubs
-      const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId)
+      const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId!)
 
       // Get critical clubs separately - only if we have at-risk clubs data
       let criticalClubsCount = 0
@@ -2963,15 +3003,14 @@ router.get(
   '/:districtId/leadership-insights',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: req =>
-      generateDistrictCacheKey(
-        req.params['districtId'],
-        'leadership-insights',
-        {
-          startDate: req.query['startDate'],
-          endDate: req.query['endDate'],
-        }
-      ),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'leadership-insights', {
+        startDate: req.query['startDate'],
+        endDate: req.query['endDate'],
+      })
+    },
   }),
   async (req: Request, res: Response) => {
     try {
@@ -2979,7 +3018,7 @@ router.get(
       const { startDate, endDate } = req.query
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!validateDistrictId(districtId!)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -2993,7 +3032,7 @@ router.get(
       if (
         startDate &&
         typeof startDate === 'string' &&
-        !validateDateFormat(startDate)
+        !validateDateFormat(startDate!)
       ) {
         res.status(400).json({
           error: {
@@ -3007,7 +3046,7 @@ router.get(
       if (
         endDate &&
         typeof endDate === 'string' &&
-        !validateDateFormat(endDate)
+        !validateDateFormat(endDate!)
       ) {
         res.status(400).json({
           error: {
@@ -3041,7 +3080,7 @@ router.get(
 
       // Generate leadership insights
       const insights = await analyticsEngine.generateLeadershipInsights(
-        districtId,
+        districtId!,
         startDate as string | undefined,
         endDate as string | undefined
       )
@@ -3091,15 +3130,14 @@ router.get(
   '/:districtId/distinguished-club-analytics',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: req =>
-      generateDistrictCacheKey(
-        req.params['districtId'],
-        'distinguished-club-analytics',
-        {
-          startDate: req.query['startDate'],
-          endDate: req.query['endDate'],
-        }
-      ),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'distinguished-club-analytics', {
+        startDate: req.query['startDate'],
+        endDate: req.query['endDate'],
+      })
+    },
   }),
   async (req: Request, res: Response) => {
     try {
@@ -3107,7 +3145,7 @@ router.get(
       const { startDate, endDate } = req.query
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!validateDistrictId(districtId!)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -3121,7 +3159,7 @@ router.get(
       if (
         startDate &&
         typeof startDate === 'string' &&
-        !validateDateFormat(startDate)
+        !validateDateFormat(startDate!)
       ) {
         res.status(400).json({
           error: {
@@ -3135,7 +3173,7 @@ router.get(
       if (
         endDate &&
         typeof endDate === 'string' &&
-        !validateDateFormat(endDate)
+        !validateDateFormat(endDate!)
       ) {
         res.status(400).json({
           error: {
@@ -3170,7 +3208,7 @@ router.get(
       // Generate distinguished club analytics
       const analytics =
         await analyticsEngine.generateDistinguishedClubAnalytics(
-          districtId,
+          districtId!,
           startDate as string | undefined,
           endDate as string | undefined
         )
@@ -3219,18 +3257,20 @@ router.get(
   '/:districtId/year-over-year/:date',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
-    keyGenerator: req =>
-      generateDistrictCacheKey(
-        req.params['districtId'],
-        `year-over-year/${req.params['date']}`
-      ),
+    keyGenerator: req => {
+      const districtId = req.params['districtId']
+      const date = req.params['date']
+      if (!districtId || !date) throw new Error('Missing districtId or date parameter')
+      return generateDistrictCacheKey(districtId, `year-over-year/${date}`)
+    },
   }),
   async (req: Request, res: Response) => {
     try {
-      const { districtId, date } = req.params
+      const districtId = getValidDistrictId(req)
+      const date = req.params['date']
 
       // Validate district ID
-      if (!validateDistrictId(districtId)) {
+      if (!districtId) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -3241,7 +3281,7 @@ router.get(
       }
 
       // Validate date format
-      if (!validateDateFormat(date)) {
+      if (!date || !validateDateFormat(date)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -3293,7 +3333,7 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     const { format, startDate, endDate } = req.query
 
     // Validate district ID
-    if (!validateDistrictId(districtId)) {
+    if (!validateDistrictId(districtId!)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -3318,7 +3358,7 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     if (
       startDate &&
       typeof startDate === 'string' &&
-      !validateDateFormat(startDate)
+      !validateDateFormat(startDate!)
     ) {
       res.status(400).json({
         error: {
@@ -3332,7 +3372,7 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
     if (
       endDate &&
       typeof endDate === 'string' &&
-      !validateDateFormat(endDate)
+      !validateDateFormat(endDate!)
     ) {
       res.status(400).json({
         error: {
@@ -3366,13 +3406,13 @@ router.get('/:districtId/export', async (req: Request, res: Response) => {
 
     // Generate analytics data for export
     const analytics = await analyticsEngine.generateDistrictAnalytics(
-      districtId,
+      districtId!,
       startDate as string | undefined,
       endDate as string | undefined
     )
 
     // Generate CSV content
-    const csvContent = generateDistrictAnalyticsCSV(analytics, districtId)
+    const csvContent = generateDistrictAnalyticsCSV(analytics, districtId!)
 
     // Generate filename with date range
     const dateRangeStr =

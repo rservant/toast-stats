@@ -427,16 +427,6 @@ export function createTestCacheCleanup(baseCachePath: string): {
       createdDirectories.length = 0
       createdFiles.length = 0
     },
-
-    /**
-     * Get cleanup statistics
-     */
-    getStats(): { trackedDirectories: number; trackedFiles: number } {
-      return {
-        trackedDirectories: createdDirectories.length,
-        trackedFiles: createdFiles.length,
-      }
-    },
   }
 }
 

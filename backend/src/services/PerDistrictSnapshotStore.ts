@@ -176,7 +176,7 @@ export class PerDistrictFileSnapshotStore
   /**
    * Write a snapshot using per-district directory structure
    */
-  async writeSnapshot(snapshot: Snapshot): Promise<void> {
+  override async writeSnapshot(snapshot: Snapshot): Promise<void> {
     const startTime = Date.now()
     logger.info('Starting per-district snapshot write operation', {
       operation: 'writeSnapshot',
@@ -566,7 +566,7 @@ export class PerDistrictFileSnapshotStore
   /**
    * Get the most recent successful snapshot with per-district support
    */
-  async getLatestSuccessful(): Promise<Snapshot | null> {
+  override async getLatestSuccessful(): Promise<Snapshot | null> {
     try {
       // Try to read from current.json pointer first
       try {
@@ -652,7 +652,7 @@ export class PerDistrictFileSnapshotStore
    * This method aggregates individual district files back into a single Snapshot object
    * for backward compatibility with existing code
    */
-  async getSnapshot(snapshotId: string): Promise<Snapshot | null> {
+  override async getSnapshot(snapshotId: string): Promise<Snapshot | null> {
     try {
       const snapshotDir = path.join(this.perDistrictSnapshotsDir, snapshotId)
 
@@ -732,7 +732,7 @@ export class PerDistrictFileSnapshotStore
   /**
    * List snapshots with support for both old and new formats
    */
-  async listSnapshots(
+  override async listSnapshots(
     limit?: number,
     filters?: SnapshotFilters
   ): Promise<SnapshotMetadata[]> {

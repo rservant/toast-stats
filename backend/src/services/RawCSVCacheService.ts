@@ -14,7 +14,7 @@
  * - Automatic cleanup and retention policies
  */
 
-import { promises as fs } from 'fs'
+import { promises as fs, Dirent } from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
 import {
@@ -635,8 +635,8 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       try {
         const entries = await fs.readdir(this.cacheDir, { withFileTypes: true })
         const dates = entries
-          .filter((entry: fs.Dirent) => entry.isDirectory())
-          .map((entry: fs.Dirent) => entry.name)
+          .filter((entry: Dirent) => entry.isDirectory())
+          .map((entry: Dirent) => entry.name)
           .filter((name: string) => this.isValidDateString(name))
           .sort()
 
@@ -1103,7 +1103,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         // Check for district-specific files
         const entries = await fs.readdir(datePath, { withFileTypes: true })
         const districtDirs = entries.filter(
-          (entry: fs.Dirent) =>
+          (entry: Dirent) =>
             entry.isDirectory() && entry.name.startsWith('district-')
         )
 

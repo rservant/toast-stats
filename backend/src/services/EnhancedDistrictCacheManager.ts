@@ -31,7 +31,7 @@ export class EnhancedDistrictCacheManager extends DistrictCacheManager {
   /**
    * Initialize cache with comprehensive validation
    */
-  async init(): Promise<void> {
+  override async init(): Promise<void> {
     try {
       // Get the cache directory from parent
       const cacheDir = this.getCacheDirectory()
@@ -100,7 +100,7 @@ export class EnhancedDistrictCacheManager extends DistrictCacheManager {
   /**
    * Enhanced cache district data with validation
    */
-  async cacheDistrictData(
+  override async cacheDistrictData(
     districtId: string,
     date: string,
     districtPerformance: ScrapedRecord[],
@@ -137,7 +137,7 @@ export class EnhancedDistrictCacheManager extends DistrictCacheManager {
   /**
    * Enhanced get district data with validation
    */
-  async getDistrictData(
+  override async getDistrictData(
     districtId: string,
     date: string
   ): Promise<DistrictCacheEntry | null> {
@@ -332,8 +332,8 @@ export class EnhancedDistrictCacheManager extends DistrictCacheManager {
         const range =
           dates.length > 0
             ? {
-                start: dates[0],
-                end: dates[dates.length - 1],
+                start: dates[0]!,
+                end: dates[dates.length - 1]!,
               }
             : undefined
 
@@ -341,11 +341,11 @@ export class EnhancedDistrictCacheManager extends DistrictCacheManager {
 
         // Update global oldest/newest
         if (dates.length > 0) {
-          if (!oldestEntry || dates[0] < oldestEntry) {
-            oldestEntry = dates[0]
+          if (!oldestEntry || dates[0]! < oldestEntry) {
+            oldestEntry = dates[0]!
           }
-          if (!newestEntry || dates[dates.length - 1] > newestEntry) {
-            newestEntry = dates[dates.length - 1]
+          if (!newestEntry || dates[dates.length - 1]! > newestEntry) {
+            newestEntry = dates[dates.length - 1]!
           }
         }
 

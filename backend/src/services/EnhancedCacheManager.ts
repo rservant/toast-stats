@@ -30,7 +30,7 @@ export class EnhancedCacheManager extends CacheManager {
   /**
    * Initialize cache with comprehensive validation
    */
-  async init(): Promise<void> {
+  override async init(): Promise<void> {
     try {
       // Validate cache directory first
       const validation = await validateCacheInitialization(
@@ -92,7 +92,7 @@ export class EnhancedCacheManager extends CacheManager {
   /**
    * Enhanced cache setting with validation
    */
-  async setCache(
+  override async setCache(
     date: string,
     data: unknown,
     type: string = 'districts'
@@ -121,7 +121,7 @@ export class EnhancedCacheManager extends CacheManager {
   /**
    * Enhanced cache getting with validation
    */
-  async getCache(
+  override async getCache(
     date: string,
     type: string = 'districts'
   ): Promise<unknown | null> {

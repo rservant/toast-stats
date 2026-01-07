@@ -67,7 +67,7 @@ export function generateCacheKeyPattern(pattern: string): string {
  */
 export function extractDistrictIdFromKey(key: string): string | null {
   const match = key.match(/cache:\/districts\/([^/]+)/)
-  return match ? match[1] : null
+  return match ? match[1]! : null
 }
 
 /**

@@ -600,11 +600,11 @@ export class DistrictConfigurationService {
     const c = config as Record<string, unknown>
 
     return (
-      Array.isArray(c.configuredDistricts) &&
-      c.configuredDistricts.every(id => typeof id === 'string') &&
-      typeof c.lastUpdated === 'string' &&
-      typeof c.updatedBy === 'string' &&
-      typeof c.version === 'number'
+      Array.isArray(c['configuredDistricts']) &&
+      c['configuredDistricts'].every(id => typeof id === 'string') &&
+      typeof c['lastUpdated'] === 'string' &&
+      typeof c['updatedBy'] === 'string' &&
+      typeof c['version'] === 'number'
     )
   }
 
@@ -667,7 +667,7 @@ export class DistrictConfigurationService {
       // Determine confidence level
       let confidence: 'high' | 'medium' | 'low' = 'low'
       if (topSuggestions.length > 0) {
-        const topScore = topSuggestions[0].score
+        const topScore = topSuggestions[0]!.score
         if (topScore >= 80) confidence = 'high'
         else if (topScore >= 50) confidence = 'medium'
       }
@@ -691,24 +691,24 @@ export class DistrictConfigurationService {
     }
 
     for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j
+      matrix[0]![j] = j
     }
 
     for (let i = 1; i <= str2.length; i++) {
       for (let j = 1; j <= str1.length; j++) {
         if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1]
+          matrix[i]![j] = matrix[i - 1]![j - 1]!
         } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1, // substitution
-            matrix[i][j - 1] + 1, // insertion
-            matrix[i - 1][j] + 1 // deletion
+          matrix[i]![j] = Math.min(
+            matrix[i - 1]![j - 1]! + 1, // substitution
+            matrix[i]![j - 1]! + 1, // insertion
+            matrix[i - 1]![j]! + 1 // deletion
           )
         }
       }
     }
 
-    return matrix[str2.length][str1.length]
+    return matrix[str2.length]![str1.length]!
   }
 
   /**
