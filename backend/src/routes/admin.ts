@@ -130,7 +130,7 @@ router.get('/snapshots', logAdminAccess, async (req, res) => {
  * GET /api/admin/snapshots/:snapshotId
  * Get detailed information about a specific snapshot
  */
-router.get('/snapshots/:snapshotId', logAdminAccess, async (req, res) => {
+router.get('/snapshots/:snapshotId', logAdminAccess, async (req, res): Promise<void> => {
   const startTime = Date.now()
   const { snapshotId } = req.params
   const operationId = `inspect_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -240,7 +240,7 @@ router.get('/snapshots/:snapshotId', logAdminAccess, async (req, res) => {
 router.get(
   '/snapshots/:snapshotId/payload',
   logAdminAccess,
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const startTime = Date.now()
     const { snapshotId } = req.params
     const operationId = `get_payload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
