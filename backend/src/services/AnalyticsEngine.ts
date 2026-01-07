@@ -214,9 +214,14 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       if (yearOverYearData) {
         const latestEntry = dataEntries[dataEntries.length - 1]
-        const currentDate = latestEntry.date
-        const currentYear = parseInt(currentDate.substring(0, 4))
-        const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
+        if (!latestEntry) {
+          logger.warn('No latest entry available for year-over-year comparison', {
+            districtId,
+          })
+        } else {
+          const currentDate = latestEntry.date
+          const currentYear = parseInt(currentDate.substring(0, 4))
+          const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
         try {
           const previousEntry = await this.cacheManager.getDistrictData(
@@ -276,6 +281,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
             clubHealthChange: 0,
           }
         }
+        } // Close the else block for latestEntry check
       }
 
       const analytics: DistrictAnalytics = {
@@ -980,11 +986,12 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       const achievements = this.trackDistinguishedAchievements(dataEntries)
 
       // Compare to previous years if data available (Requirement 7.4)
-      const yearOverYearComparison =
-        await this.calculateDistinguishedYearOverYear(
-          districtId,
-          latestEntry.date
-        )
+      const yearOverYearComparison = latestEntry
+        ? await this.calculateDistinguishedYearOverYear(
+            districtId,
+            latestEntry.date
+          )
+        : undefined
 
       // Identify most/least commonly achieved DCP goals (Requirement 7.5)
       const dcpGoalAnalysis = this.analyzeDCPGoals(latestEntry)
