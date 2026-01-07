@@ -4,6 +4,7 @@ import {
   formatProgramYear,
   getProgramYearProgress,
 } from '../utils/programYear'
+import { formatDisplayDate } from '../utils/dateFormatting'
 
 interface ProgramYearSelectorProps {
   availableProgramYears: ProgramYear[]
@@ -87,17 +88,8 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
 
       {/* Date Range Display */}
       <div className="text-xs font-tm-body text-gray-500">
-        {new Date(selectedProgramYear.startDate).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })}{' '}
-        -{' '}
-        {new Date(selectedProgramYear.endDate).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })}
+        {formatDisplayDate(selectedProgramYear.startDate)} -{' '}
+        {formatDisplayDate(selectedProgramYear.endDate)}
       </div>
     </div>
   )

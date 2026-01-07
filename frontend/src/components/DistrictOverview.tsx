@@ -5,6 +5,7 @@ import { exportDistrictAnalytics } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import { Tooltip, InfoIcon } from './Tooltip'
+import { formatDisplayDate } from '../utils/dateFormatting'
 
 interface DistrictOverviewProps {
   districtId: string
@@ -37,15 +38,8 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
   const isLoading = isLoadingAnalytics
 
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  // Format date for display (using utility to avoid UTC timezone shift)
+  const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

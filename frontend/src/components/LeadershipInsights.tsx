@@ -1,4 +1,5 @@
 import React from 'react'
+import { formatDisplayDate } from '../utils/dateFormatting'
 
 interface LeadershipEffectivenessScore {
   divisionId: string
@@ -331,7 +332,7 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
                       {change.divisionName}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      {new Date(change.changeDate).toLocaleDateString()}
+                      {formatDisplayDate(change.changeDate)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

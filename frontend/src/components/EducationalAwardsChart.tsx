@@ -18,6 +18,7 @@ import { ExportButton } from './ExportButton'
 import { exportEducationalAwards } from '../utils/csvExport'
 import { ChartContainer } from './ChartLegend'
 import { ChartTooltip, DateTooltip } from './ChartTooltip'
+import { parseLocalDate } from '../utils/dateFormatting'
 import {
   getChartColorPalette,
   generateChartDescription,
@@ -127,7 +128,7 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
 
   // Format data for monthly chart
   const byMonthData = data.byMonth.map(point => ({
-    month: new Date(point.month).toLocaleDateString('en-US', {
+    month: parseLocalDate(point.month).toLocaleDateString('en-US', {
       month: 'short',
       year: 'numeric',
     }),

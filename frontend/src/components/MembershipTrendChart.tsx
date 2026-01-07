@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
+import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 
 interface MembershipTrendChartProps {
   membershipTrend: Array<{ date: string; count: number }>
@@ -40,12 +41,7 @@ const CustomTooltip = ({
     const data = payload[0]?.payload
     if (!data) return null
 
-    const date = new Date(data.date)
-    const formattedDate = date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    })
+    const formattedDate = formatLongDate(data.date)
 
     // Find if this point is in a growth/decline period
     const pointIndex = sortedData.findIndex(d => d.date === data.date)
@@ -205,9 +201,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
     }
   }
 
-  // Format date for X-axis
+  // Format date for X-axis (using utility to avoid UTC timezone shift)
   const formatXAxis = (dateStr: string) => {
-    const date = new Date(dateStr)
+    const date = parseLocalDate(dateStr)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 

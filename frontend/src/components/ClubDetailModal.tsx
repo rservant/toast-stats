@@ -1,5 +1,6 @@
 import React from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { formatDisplayDate } from '../utils/dateFormatting'
 
 interface ClubDetailModalProps {
   club: ClubTrend | null
@@ -43,15 +44,8 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
       ? (club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved ?? 0)
       : 0
 
-  // Format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  // Format date (using utility to avoid UTC timezone shift)
+  const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
 
   // Export club data as CSV
   const handleExport = () => {

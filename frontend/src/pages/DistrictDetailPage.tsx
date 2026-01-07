@@ -12,6 +12,7 @@ import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
+import { formatDisplayDate } from '../utils/dateFormatting'
 import { DistrictOverview } from '../components/DistrictOverview'
 import { AtRiskClubsPanel } from '../components/AtRiskClubsPanel'
 import { CriticalClubsPanel } from '../components/CriticalClubsPanel'
@@ -173,15 +174,8 @@ const DistrictDetailPage: React.FC = () => {
     setSelectedDate(value === 'latest' ? undefined : value)
   }
 
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  // Format date for display (using utility to avoid UTC timezone shift)
+  const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
 
   // Handle backfill start
   const handleBackfillStart = (backfillId: string) => {

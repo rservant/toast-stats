@@ -13,6 +13,7 @@ import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
+import { formatDisplayDate } from '../utils/dateFormatting'
 import { DistrictRanking } from '../types/districts'
 
 const LandingPage: React.FC = () => {
@@ -408,11 +409,7 @@ const LandingPage: React.FC = () => {
                         value={date}
                         className="text-gray-900 bg-white"
                       >
-                        {new Date(date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {formatDisplayDate(date)}
                       </option>
                     ))}
                 </select>

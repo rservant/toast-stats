@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
+import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 
 interface HistoricalRankChartProps {
   data: RankHistoryResponse[]
@@ -41,11 +42,7 @@ const CustomTooltip = ({
   if (active && payload && payload.length) {
     const date = (payload[0] as unknown as { payload: { date: string } })
       .payload.date
-    const formattedDate = new Date(date).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    })
+    const formattedDate = formatLongDate(date)
 
     return (
       <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs">
@@ -302,7 +299,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 height={80}
                 interval="preserveStartEnd"
                 tickFormatter={value => {
-                  const date = new Date(value)
+                  const date = parseLocalDate(value)
                   return date.toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',

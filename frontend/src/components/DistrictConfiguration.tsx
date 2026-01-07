@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from './ui/Button'
 import { useDistrictConfigurationManager } from '../hooks/useDistrictConfiguration'
+import { parseLocalDate } from '../utils/dateFormatting'
 
 interface DistrictConfigurationProps {
   isAdmin: boolean
@@ -174,7 +175,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
             <div className="text-sm text-tm-cool-gray">
               Last updated:{' '}
               {configuration?.lastUpdated
-                ? new Date(configuration.lastUpdated).toLocaleDateString()
+                ? parseLocalDate(configuration.lastUpdated).toLocaleDateString()
                 : 'Never'}
             </div>
             <div className="text-sm text-tm-cool-gray">
@@ -354,7 +355,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                     {collectionInfo && (
                       <div className="text-xs text-tm-cool-gray mt-1">
                         {collectionInfo.lastSuccessfulCollection
-                          ? `Last: ${new Date(collectionInfo.lastSuccessfulCollection).toLocaleDateString()}`
+                          ? `Last: ${parseLocalDate(collectionInfo.lastSuccessfulCollection).toLocaleDateString()}`
                           : 'Never collected'}
                       </div>
                     )}

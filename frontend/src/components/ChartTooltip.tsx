@@ -1,4 +1,5 @@
 import React from 'react'
+import { parseLocalDate } from '../utils/dateFormatting'
 
 /**
  * Props for chart tooltip data items
@@ -240,7 +241,7 @@ const DateTooltip: React.FC<DateTooltipProps> = ({
 }) => {
   const labelFormatter = (label: string): string => {
     try {
-      const date = new Date(label)
+      const date = parseLocalDate(label)
       return date.toLocaleDateString('en-US', dateFormat)
     } catch {
       return label
