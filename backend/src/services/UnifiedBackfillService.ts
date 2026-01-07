@@ -125,6 +125,8 @@ import type {
   Snapshot,
   NormalizedData,
   SnapshotStore,
+  AllDistrictsRankingsData,
+  DistrictRanking,
 } from '../types/snapshots.js'
 
 /**
@@ -1126,23 +1128,59 @@ export class DataSourceSelector {
       const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
       const scraper = new ToastmastersScraper(rawCSVCacheService)
 
+      // Extract the date from params for historical data fetching
+      const dateString = params.date
+
+      // Fetch and cache the all-districts CSV for this date
+      // This ensures we have the summary/rankings data for historical backfill
+      try {
+        logger.info('Fetching all-districts CSV for backfill date', {
+          date: dateString,
+          operation: 'executePerDistrictCollection',
+        })
+
+        const allDistrictsData = await scraper.getAllDistricts(dateString)
+
+        logger.info('All-districts CSV fetched and cached successfully', {
+          date: dateString,
+          recordCount: allDistrictsData.length,
+          operation: 'executePerDistrictCollection',
+        })
+      } catch (error) {
+        // Log warning but continue with per-district collection
+        // The all-districts CSV is useful but not strictly required for per-district data
+        logger.warn(
+          'Failed to fetch all-districts CSV for backfill date, continuing with per-district collection',
+          {
+            date: dateString,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            operation: 'executePerDistrictCollection',
+          }
+        )
+      }
+
       for (const districtId of params.districtIds) {
         try {
           logger.debug('Collecting data for district', {
             districtId,
+            date: dateString,
             operation: 'executePerDistrictCollection',
           })
 
           // Fetch district-specific data using the scraper with proper error handling
+          // Pass the date parameter to fetch historical data for backfill operations
           let districtPerformanceData: ScrapedRecord[] = []
           let divisionPerformanceData: ScrapedRecord[] = []
           let clubPerformanceData: ScrapedRecord[] = []
 
           try {
-            districtPerformanceData =
-              await scraper.getDistrictPerformance(districtId)
+            districtPerformanceData = await scraper.getDistrictPerformance(
+              districtId,
+              dateString
+            )
             logger.debug('District performance data fetched successfully', {
               districtId,
+              date: dateString,
               recordCount: districtPerformanceData.length,
               operation: 'executePerDistrictCollection',
             })
@@ -1151,6 +1189,7 @@ export class DataSourceSelector {
               'District performance data not available, using empty data',
               {
                 districtId,
+                date: dateString,
                 error: error instanceof Error ? error.message : 'Unknown error',
                 operation: 'executePerDistrictCollection',
               }
@@ -1158,10 +1197,13 @@ export class DataSourceSelector {
           }
 
           try {
-            divisionPerformanceData =
-              await scraper.getDivisionPerformance(districtId)
+            divisionPerformanceData = await scraper.getDivisionPerformance(
+              districtId,
+              dateString
+            )
             logger.debug('Division performance data fetched successfully', {
               districtId,
+              date: dateString,
               recordCount: divisionPerformanceData.length,
               operation: 'executePerDistrictCollection',
             })
@@ -1170,6 +1212,7 @@ export class DataSourceSelector {
               'Division performance data not available, using empty data',
               {
                 districtId,
+                date: dateString,
                 error: error instanceof Error ? error.message : 'Unknown error',
                 operation: 'executePerDistrictCollection',
               }
@@ -1177,15 +1220,20 @@ export class DataSourceSelector {
           }
 
           try {
-            clubPerformanceData = await scraper.getClubPerformance(districtId)
+            clubPerformanceData = await scraper.getClubPerformance(
+              districtId,
+              dateString
+            )
             logger.debug('Club performance data fetched successfully', {
               districtId,
+              date: dateString,
               recordCount: clubPerformanceData.length,
               operation: 'executePerDistrictCollection',
             })
           } catch (error) {
             logger.warn('Failed to fetch club performance data for district', {
               districtId,
+              date: dateString,
               error: error instanceof Error ? error.message : 'Unknown error',
               operation: 'executePerDistrictCollection',
             })
@@ -1197,6 +1245,7 @@ export class DataSourceSelector {
           if (!clubPerformanceData || clubPerformanceData.length === 0) {
             logger.warn('No club performance data available for district', {
               districtId,
+              date: dateString,
               operation: 'executePerDistrictCollection',
             })
             continue
@@ -1213,6 +1262,7 @@ export class DataSourceSelector {
 
           logger.debug('Successfully collected district data', {
             districtId,
+            date: dateString,
             districtRecords: districtPerformanceData.length,
             divisionRecords: divisionPerformanceData.length,
             clubRecords: clubPerformanceData.length,
@@ -1223,6 +1273,7 @@ export class DataSourceSelector {
             error instanceof Error ? error.message : 'Unknown error'
           logger.warn('Failed to collect data for district', {
             districtId,
+            date: dateString,
             error: errorMessage,
             operation: 'executePerDistrictCollection',
           })
@@ -1231,6 +1282,7 @@ export class DataSourceSelector {
       }
 
       logger.info('Per-district collection completed', {
+        date: dateString,
         requestedDistricts: params.districtIds.length,
         successfulDistricts: results.length,
         operation: 'executePerDistrictCollection',
@@ -2352,6 +2404,36 @@ export class BackfillService {
         job.error = 'No successful data collection occurred'
       }
 
+      // After all snapshots are written, set current pointer to the most recent successful date
+      // dates[0] is the most recent date since generateDateRange returns dates in reverse order
+      if (hasSuccesses && dates.length > 0) {
+        // Find the most recent date that has a successful snapshot
+        const mostRecentDate = dates[0]
+        if (mostRecentDate && 'setCurrentSnapshot' in this.snapshotStore) {
+          try {
+            const perDistrictStore = this.snapshotStore as {
+              setCurrentSnapshot: (snapshotId: string) => Promise<void>
+            }
+            await perDistrictStore.setCurrentSnapshot(mostRecentDate)
+            logger.info('Set current snapshot to most recent backfill date', {
+              backfillId,
+              mostRecentDate,
+              operation: 'processBackfill',
+            })
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : 'Unknown error'
+            logger.warn('Failed to set current snapshot pointer', {
+              backfillId,
+              mostRecentDate,
+              error: errorMessage,
+              operation: 'processBackfill',
+            })
+            // Don't fail the job for this - snapshots are still written
+          }
+        }
+      }
+
       job.completedAt = Date.now()
 
       logger.info(
@@ -2728,6 +2810,10 @@ export class BackfillService {
   /**
    * Create partial snapshot with mixed success/failure results
    * Implements Requirement 6.3: Create partial snapshots when some districts succeed and others fail
+   *
+   * IMPORTANT: Rankings are calculated from ALL districts in the All Districts CSV,
+   * not just the configured districts. This ensures rankings are accurate across
+   * all ~126 districts in the Toastmasters system.
    */
   private async createPartialSnapshot(
     backfillId: string,
@@ -2749,61 +2835,37 @@ export class BackfillService {
     })
 
     try {
-      // Step 1: Calculate rankings if ranking calculator is available
-      let rankedDistricts = successfulDistricts
-      if (this.rankingCalculator && successfulDistricts.length > 0) {
-        logger.info('Starting ranking calculation for partial snapshot', {
-          backfillId,
-          snapshotId,
-          date,
-          districtCount: successfulDistricts.length,
-          rankingVersion: this.rankingCalculator.getRankingVersion(),
-          operation: 'createPartialSnapshot',
-        })
-
+      // Step 1: Fetch All Districts CSV data for ranking calculation
+      // Rankings must be calculated from ALL districts, not just configured ones
+      let allDistrictsRankings: AllDistrictsRankingsData | undefined
+      if (this.rankingCalculator) {
         try {
-          rankedDistricts =
-            await this.rankingCalculator.calculateRankings(successfulDistricts)
-
-          logger.info('Ranking calculation completed for partial snapshot', {
-            backfillId,
-            snapshotId,
-            date,
-            districtCount: rankedDistricts.length,
-            rankedDistrictCount: rankedDistricts.filter(d => d.ranking).length,
-            rankingVersion: this.rankingCalculator.getRankingVersion(),
-            operation: 'createPartialSnapshot',
-          })
+          allDistrictsRankings =
+            await this.fetchAndCalculateAllDistrictsRankings(
+              backfillId,
+              date,
+              snapshotId
+            )
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
           logger.error(
-            'Ranking calculation failed for partial snapshot, continuing without rankings',
+            'Failed to calculate all-districts rankings, continuing without rankings',
             {
               backfillId,
               snapshotId,
               date,
               error: errorMessage,
-              districtCount: successfulDistricts.length,
               operation: 'createPartialSnapshot',
             }
           )
-          // Continue with original districts without ranking data
-          // This implements the error handling requirement 5.3
+          // Continue without rankings - this is acceptable for backfill
         }
-      } else {
-        logger.debug(
-          'No ranking calculator provided or no successful districts, skipping ranking calculation',
-          {
-            backfillId,
-            snapshotId,
-            date,
-            hasRankingCalculator: !!this.rankingCalculator,
-            districtCount: successfulDistricts.length,
-            operation: 'createPartialSnapshot',
-          }
-        )
       }
+
+      // Step 1b: The configured districts don't need individual ranking data
+      // Rankings are stored separately in all-districts-rankings.json
+      const rankedDistricts = successfulDistricts
 
       // Step 2: Create normalized data structure with ranked districts
       // Enhanced metadata for Requirement 5.5: data source, scope, and collection method
@@ -2850,8 +2912,49 @@ export class BackfillService {
         payload: normalizedData,
       }
 
-      // Write snapshot
-      await this.snapshotStore.writeSnapshot(snapshot)
+      // Step 4: Write snapshot with all-districts rankings (calculated from CSV, not configured districts)
+      // Skip current pointer update during backfill - we'll set it at the end to the most recent date
+      if (
+        allDistrictsRankings &&
+        'writeAllDistrictsRankings' in this.snapshotStore
+      ) {
+        // Cast to the per-district store type that supports rankings and options
+        const perDistrictStore = this.snapshotStore as {
+          writeSnapshot: (
+            snapshot: Snapshot,
+            rankings?: AllDistrictsRankingsData,
+            options?: { skipCurrentPointerUpdate?: boolean }
+          ) => Promise<void>
+        }
+        await perDistrictStore.writeSnapshot(snapshot, allDistrictsRankings, {
+          skipCurrentPointerUpdate: true,
+        })
+
+        logger.info(
+          'Snapshot written with all-districts rankings (backfill mode)',
+          {
+            backfillId,
+            snapshotId,
+            date,
+            rankingsCount: allDistrictsRankings.rankings.length,
+            configuredDistrictsCount: rankedDistricts.length,
+            operation: 'createPartialSnapshot',
+          }
+        )
+      } else {
+        // No rankings or store doesn't support them - still skip current pointer update
+        // Cast to the per-district store type that supports options
+        const perDistrictStore = this.snapshotStore as {
+          writeSnapshot: (
+            snapshot: Snapshot,
+            rankings?: AllDistrictsRankingsData,
+            options?: { skipCurrentPointerUpdate?: boolean }
+          ) => Promise<void>
+        }
+        await perDistrictStore.writeSnapshot(snapshot, undefined, {
+          skipCurrentPointerUpdate: true,
+        })
+      }
 
       const processingTime = Date.now() - startTime
       const totalDistricts = successfulDistricts.length + failedDistricts.length
@@ -2900,6 +3003,179 @@ export class BackfillService {
       })
 
       throw new Error(`Failed to create partial snapshot: ${errorMessage}`)
+    }
+  }
+
+  /**
+   * Fetch All Districts CSV and calculate rankings for ALL districts
+   *
+   * This method fetches the All Districts CSV data (which contains all ~126 districts)
+   * and calculates Borda count rankings for every district in the system.
+   *
+   * This is different from the configured districts - rankings must include ALL districts
+   * to be accurate, even if we only collect detailed data for configured districts.
+   */
+  private async fetchAndCalculateAllDistrictsRankings(
+    backfillId: string,
+    date: string,
+    snapshotId: string
+  ): Promise<AllDistrictsRankingsData> {
+    logger.info('Fetching All Districts CSV for rankings calculation', {
+      backfillId,
+      date,
+      snapshotId,
+      operation: 'fetchAndCalculateAllDistrictsRankings',
+    })
+
+    // Import scraper dynamically to avoid circular dependencies
+    const { ToastmastersScraper } = await import('./ToastmastersScraper.js')
+    const { getProductionServiceFactory } =
+      await import('./ProductionServiceFactory.js')
+
+    // Get cache service from production factory
+    const serviceFactory = getProductionServiceFactory()
+    const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+    const scraper = new ToastmastersScraper(rawCSVCacheService)
+
+    try {
+      // Fetch All Districts CSV data
+      const allDistrictsData = await scraper.getAllDistricts(date)
+
+      logger.info('All Districts CSV fetched successfully', {
+        backfillId,
+        date,
+        recordCount: allDistrictsData.length,
+        operation: 'fetchAndCalculateAllDistrictsRankings',
+      })
+
+      if (allDistrictsData.length === 0) {
+        throw new Error('No districts found in All Districts CSV')
+      }
+
+      // Convert CSV records to DistrictStatistics format for ranking calculation
+      // Each record needs to have the CSV data in districtPerformance for the RankingCalculator
+      const districtStats: DistrictStatistics[] = allDistrictsData.map(
+        record => {
+          const districtId = String(
+            record['DISTRICT'] || record['District'] || ''
+          )
+            .replace(/^District\s+/i, '')
+            .trim()
+
+          return {
+            districtId,
+            asOfDate: date,
+            membership: {
+              total: 0,
+              change: 0,
+              changePercent: 0,
+              byClub: [],
+            },
+            clubs: {
+              total: 0,
+              active: 0,
+              suspended: 0,
+              ineligible: 0,
+              low: 0,
+              distinguished: 0,
+            },
+            education: {
+              totalAwards: 0,
+              byType: [],
+              topClubs: [],
+            },
+            // Store the raw All Districts CSV record for ranking calculation
+            districtPerformance: [record],
+            divisionPerformance: [],
+            clubPerformance: [],
+          }
+        }
+      )
+
+      logger.debug('Converted All Districts CSV to DistrictStatistics', {
+        backfillId,
+        date,
+        inputCount: allDistrictsData.length,
+        outputCount: districtStats.length,
+        operation: 'fetchAndCalculateAllDistrictsRankings',
+      })
+
+      // Calculate rankings using the ranking calculator
+      if (!this.rankingCalculator) {
+        throw new Error('Ranking calculator not available')
+      }
+
+      const rankedDistricts =
+        await this.rankingCalculator.calculateRankings(districtStats)
+
+      logger.info('Rankings calculated for all districts', {
+        backfillId,
+        date,
+        rankedCount: rankedDistricts.length,
+        rankedWithData: rankedDistricts.filter(d => d.ranking).length,
+        rankingVersion: this.rankingCalculator.getRankingVersion(),
+        operation: 'fetchAndCalculateAllDistrictsRankings',
+      })
+
+      // Build AllDistrictsRankingsData structure
+      const rankings: DistrictRanking[] = rankedDistricts
+        .filter(d => d.ranking)
+        .map(d => {
+          const ranking = d.ranking!
+          return {
+            districtId: d.districtId,
+            districtName: ranking.districtName,
+            region: ranking.region,
+            paidClubs: ranking.paidClubs,
+            paidClubBase: ranking.paidClubBase,
+            clubGrowthPercent: ranking.clubGrowthPercent,
+            totalPayments: ranking.totalPayments,
+            paymentBase: ranking.paymentBase,
+            paymentGrowthPercent: ranking.paymentGrowthPercent,
+            activeClubs: ranking.activeClubs,
+            distinguishedClubs: ranking.distinguishedClubs,
+            selectDistinguished: ranking.selectDistinguished,
+            presidentsDistinguished: ranking.presidentsDistinguished,
+            distinguishedPercent: ranking.distinguishedPercent,
+            clubsRank: ranking.clubsRank,
+            paymentsRank: ranking.paymentsRank,
+            distinguishedRank: ranking.distinguishedRank,
+            aggregateScore: ranking.aggregateScore,
+          }
+        })
+
+      const allDistrictsRankings: AllDistrictsRankingsData = {
+        metadata: {
+          snapshotId: date, // Use ISO date as snapshot ID
+          calculatedAt: new Date().toISOString(),
+          schemaVersion: '2.0.0',
+          calculationVersion: this.rankingCalculator.getRankingVersion(),
+          rankingVersion: this.rankingCalculator.getRankingVersion(),
+          sourceCsvDate: date,
+          csvFetchedAt: new Date().toISOString(),
+          totalDistricts: rankings.length,
+          fromCache: false,
+        },
+        rankings,
+      }
+
+      logger.info('All-districts rankings generated successfully', {
+        backfillId,
+        date,
+        snapshotId,
+        totalDistricts: rankings.length,
+        rankingVersion: this.rankingCalculator.getRankingVersion(),
+        operation: 'fetchAndCalculateAllDistrictsRankings',
+      })
+
+      return allDistrictsRankings
+    } finally {
+      // Clean up scraper resources
+      try {
+        await scraper.closeBrowser()
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }
 

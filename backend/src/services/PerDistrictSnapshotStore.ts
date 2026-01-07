@@ -185,10 +185,13 @@ export class PerDistrictFileSnapshotStore
    *
    * @param snapshot - The snapshot to write
    * @param allDistrictsRankings - Optional all-districts rankings data to include
+   * @param options - Optional write options
+   * @param options.skipCurrentPointerUpdate - If true, don't update current.json (useful for backfill operations)
    */
   override async writeSnapshot(
     snapshot: Snapshot,
-    allDistrictsRankings?: AllDistrictsRankingsData
+    allDistrictsRankings?: AllDistrictsRankingsData,
+    options?: { skipCurrentPointerUpdate?: boolean }
   ): Promise<void> {
     const startTime = Date.now()
     logger.info('Starting per-district snapshot write operation', {
@@ -394,8 +397,8 @@ export class PerDistrictFileSnapshotStore
         processing_duration: metadata.processingDuration,
       })
 
-      // Update current pointer if this is a successful snapshot
-      if (snapshot.status === 'success') {
+      // Update current pointer if this is a successful snapshot and not skipped
+      if (snapshot.status === 'success' && !options?.skipCurrentPointerUpdate) {
         // Update snapshot_id to match directory name for pointer
         const snapshotWithUpdatedId = {
           ...snapshot,
@@ -409,6 +412,15 @@ export class PerDistrictFileSnapshotStore
             operation: 'writeSnapshot',
             snapshot_id: snapshotDirName,
             pointer_file: this.perDistrictCurrentPointerFile,
+          }
+        )
+      } else if (options?.skipCurrentPointerUpdate) {
+        logger.info(
+          'Skipping current pointer update as requested (backfill mode)',
+          {
+            operation: 'writeSnapshot',
+            snapshot_id: snapshotDirName,
+            status: snapshot.status,
           }
         )
       } else {
@@ -1111,6 +1123,41 @@ export class PerDistrictFileSnapshotStore
       })
       throw error
     }
+  }
+
+  /**
+   * Set the current snapshot pointer to a specific snapshot ID
+   * This is useful for backfill operations where we want to set the current
+   * pointer to the most recent date after all snapshots are written.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format) to set as current
+   */
+  async setCurrentSnapshot(snapshotId: string): Promise<void> {
+    logger.info('Setting current snapshot pointer', {
+      operation: 'setCurrentSnapshot',
+      snapshot_id: snapshotId,
+    })
+
+    // Verify the snapshot exists
+    const snapshot = await this.getSnapshot(snapshotId)
+    if (!snapshot) {
+      throw new Error(`Snapshot ${snapshotId} not found`)
+    }
+
+    if (snapshot.status !== 'success' && snapshot.status !== 'partial') {
+      logger.warn('Setting current pointer to non-successful snapshot', {
+        operation: 'setCurrentSnapshot',
+        snapshot_id: snapshotId,
+        status: snapshot.status,
+      })
+    }
+
+    await this.updatePerDistrictCurrentPointer(snapshot)
+
+    logger.info('Current snapshot pointer set successfully', {
+      operation: 'setCurrentSnapshot',
+      snapshot_id: snapshotId,
+    })
   }
 
   /**

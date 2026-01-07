@@ -610,7 +610,9 @@ export class ToastmastersScraper {
           const month = parseInt(monthStr, 10)
           const day = parseInt(dayStr, 10)
           const year = parseInt(yearStr, 10)
-          return { month, day, year, dateString: selectedText }
+          // Format as ISO date string (YYYY-MM-DD)
+          const isoDateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          return { month, day, year, dateString: isoDateString }
         }
       }
 
@@ -656,13 +658,17 @@ export class ToastmastersScraper {
         return null
       }
 
+      // Format as ISO date string (YYYY-MM-DD)
+      const isoDateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
       logger.info('Successfully parsed date', {
         month,
         day,
         year,
         selectedText,
+        isoDateString,
       })
-      return { month, day, year, dateString: selectedText }
+      return { month, day, year, dateString: isoDateString }
     } catch (error) {
       logger.error('Failed to get selected date', error)
       return null

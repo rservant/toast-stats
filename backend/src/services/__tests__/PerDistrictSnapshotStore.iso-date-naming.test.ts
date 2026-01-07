@@ -262,4 +262,217 @@ describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
       }
     })
   })
+
+  describe('skipCurrentPointerUpdate option', () => {
+    it('should not update current.json when skipCurrentPointerUpdate is true', async () => {
+      const dataAsOfDate = '2025-01-15'
+
+      const snapshot = {
+        snapshot_id: Date.now().toString(),
+        created_at: new Date().toISOString(),
+        schema_version: '2.0.0',
+        calculation_version: '2.0.0',
+        status: 'success' as const,
+        errors: [],
+        payload: {
+          districts: [
+            {
+              districtId: '42',
+              asOfDate: new Date().toISOString(),
+              membership: {
+                total: 1000,
+                change: 50,
+                changePercent: 5.0,
+                byClub: [],
+              },
+              clubs: {
+                total: 50,
+                active: 48,
+                suspended: 2,
+                ineligible: 0,
+                low: 5,
+                distinguished: 30,
+              },
+              education: {
+                totalAwards: 200,
+                byType: [],
+                topClubs: [],
+              },
+            },
+          ],
+          metadata: {
+            source: 'toastmasters-dashboard',
+            fetchedAt: new Date().toISOString(),
+            dataAsOfDate,
+            districtCount: 1,
+            processingDurationMs: 5000,
+          },
+        },
+      }
+
+      // Write snapshot with skipCurrentPointerUpdate = true
+      await store.writeSnapshot(snapshot, undefined, {
+        skipCurrentPointerUpdate: true,
+      })
+
+      // Verify snapshot directory was created
+      const snapshotDir = path.join(testCacheDir, 'snapshots', dataAsOfDate)
+      const dirExists = await fs
+        .access(snapshotDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(dirExists).toBe(true)
+
+      // Verify current.json was NOT created
+      const currentPointerPath = path.join(testCacheDir, 'current.json')
+      const currentExists = await fs
+        .access(currentPointerPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(currentExists).toBe(false)
+    })
+
+    it('should update current.json when skipCurrentPointerUpdate is false or not provided', async () => {
+      const dataAsOfDate = '2025-01-16'
+
+      const snapshot = {
+        snapshot_id: Date.now().toString(),
+        created_at: new Date().toISOString(),
+        schema_version: '2.0.0',
+        calculation_version: '2.0.0',
+        status: 'success' as const,
+        errors: [],
+        payload: {
+          districts: [
+            {
+              districtId: '42',
+              asOfDate: new Date().toISOString(),
+              membership: {
+                total: 1000,
+                change: 50,
+                changePercent: 5.0,
+                byClub: [],
+              },
+              clubs: {
+                total: 50,
+                active: 48,
+                suspended: 2,
+                ineligible: 0,
+                low: 5,
+                distinguished: 30,
+              },
+              education: {
+                totalAwards: 200,
+                byType: [],
+                topClubs: [],
+              },
+            },
+          ],
+          metadata: {
+            source: 'toastmasters-dashboard',
+            fetchedAt: new Date().toISOString(),
+            dataAsOfDate,
+            districtCount: 1,
+            processingDurationMs: 5000,
+          },
+        },
+      }
+
+      // Write snapshot without skipCurrentPointerUpdate option
+      await store.writeSnapshot(snapshot)
+
+      // Verify current.json WAS created
+      const currentPointerPath = path.join(testCacheDir, 'current.json')
+      const currentExists = await fs
+        .access(currentPointerPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(currentExists).toBe(true)
+
+      // Verify it points to the correct snapshot
+      const currentContent = await fs.readFile(currentPointerPath, 'utf-8')
+      const current = JSON.parse(currentContent)
+      expect(current.snapshot_id).toBe(dataAsOfDate)
+    })
+  })
+
+  describe('setCurrentSnapshot()', () => {
+    it('should set current.json to the specified snapshot', async () => {
+      // Create two snapshots
+      const dates = ['2025-01-10', '2025-01-11']
+
+      for (const dataAsOfDate of dates) {
+        const snapshot = {
+          snapshot_id: Date.now().toString(),
+          created_at: new Date().toISOString(),
+          schema_version: '2.0.0',
+          calculation_version: '2.0.0',
+          status: 'success' as const,
+          errors: [],
+          payload: {
+            districts: [
+              {
+                districtId: '42',
+                asOfDate: new Date().toISOString(),
+                membership: {
+                  total: 1000,
+                  change: 50,
+                  changePercent: 5.0,
+                  byClub: [],
+                },
+                clubs: {
+                  total: 50,
+                  active: 48,
+                  suspended: 2,
+                  ineligible: 0,
+                  low: 5,
+                  distinguished: 30,
+                },
+                education: {
+                  totalAwards: 200,
+                  byType: [],
+                  topClubs: [],
+                },
+              },
+            ],
+            metadata: {
+              source: 'toastmasters-dashboard',
+              fetchedAt: new Date().toISOString(),
+              dataAsOfDate,
+              districtCount: 1,
+              processingDurationMs: 5000,
+            },
+          },
+        }
+
+        // Write snapshots without updating current pointer
+        await store.writeSnapshot(snapshot, undefined, {
+          skipCurrentPointerUpdate: true,
+        })
+      }
+
+      // Now set current to the first date (not the most recent)
+      await store.setCurrentSnapshot('2025-01-10')
+
+      // Verify current.json points to 2025-01-10
+      const currentPointerPath = path.join(testCacheDir, 'current.json')
+      const currentContent = await fs.readFile(currentPointerPath, 'utf-8')
+      const current = JSON.parse(currentContent)
+      expect(current.snapshot_id).toBe('2025-01-10')
+
+      // Now set current to the second date
+      await store.setCurrentSnapshot('2025-01-11')
+
+      // Verify current.json now points to 2025-01-11
+      const updatedContent = await fs.readFile(currentPointerPath, 'utf-8')
+      const updated = JSON.parse(updatedContent)
+      expect(updated.snapshot_id).toBe('2025-01-11')
+    })
+
+    it('should throw error when snapshot does not exist', async () => {
+      await expect(store.setCurrentSnapshot('2025-01-99')).rejects.toThrow(
+        'Snapshot 2025-01-99 not found'
+      )
+    })
+  })
 })
