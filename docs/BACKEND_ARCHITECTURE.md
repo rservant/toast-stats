@@ -592,6 +592,133 @@ interface SnapshotStoreConfig {
 | `/:districtId/daily-reports`       | GET    | Daily reports for date range                |
 | `/:districtId/daily-reports/:date` | GET    | Specific daily report                       |
 
+#### Rankings Endpoint Details
+
+**GET `/api/districts/rankings`**
+
+Returns comprehensive district rankings data from the all-districts-rankings.json file.
+
+**Purpose**: Provides BordaCount-based performance rankings for all districts worldwide, regardless of which districts are configured for detailed data collection.
+
+**Response Structure**:
+
+```json
+{
+  "rankings": [
+    {
+      "districtId": "42",
+      "districtName": "District 42",
+      "region": "Region 5",
+      "paidClubs": 245,
+      "paidClubBase": 240,
+      "clubGrowthPercent": 2.08,
+      "totalPayments": 12500,
+      "paymentBase": 12000,
+      "paymentGrowthPercent": 4.17,
+      "activeClubs": 243,
+      "distinguishedClubs": 180,
+      "selectDistinguished": 45,
+      "presidentsDistinguished": 12,
+      "distinguishedPercent": 74.07,
+      "clubsRank": 15,
+      "paymentsRank": 8,
+      "distinguishedRank": 3,
+      "aggregateScore": 342.5
+    }
+    // ... more districts
+  ],
+  "date": "2025-01-07",
+  "_snapshot_metadata": {
+    "snapshot_id": "2025-01-07",
+    "created_at": "2025-01-07T10:30:00.000Z",
+    "data_source": "all-districts-rankings-file",
+    "from_cache": false,
+    "calculation_version": "2.0.0",
+    "ranking_version": "borda-count-v1"
+  }
+}
+```
+
+**Response Fields**:
+
+_Rankings Array_ - Each district object contains:
+
+- `districtId`: Unique district identifier (e.g., "42", "F")
+- `districtName`: Human-readable district name
+- `region`: Toastmasters International region designation
+- `paidClubs`: Current number of paid clubs
+- `paidClubBase`: Baseline number of paid clubs for growth calculation
+- `clubGrowthPercent`: Percentage growth in paid clubs
+- `totalPayments`: Current total member payments
+- `paymentBase`: Baseline payments for growth calculation
+- `paymentGrowthPercent`: Percentage growth in member payments
+- `activeClubs`: Number of active clubs
+- `distinguishedClubs`: Number of clubs achieving Distinguished status
+- `selectDistinguished`: Number of clubs achieving Select Distinguished status
+- `presidentsDistinguished`: Number of clubs achieving President's Distinguished status
+- `distinguishedPercent`: Percentage of clubs achieving Distinguished or higher
+- `clubsRank`: Rank based on club growth (1 = best)
+- `paymentsRank`: Rank based on payment growth (1 = best)
+- `distinguishedRank`: Rank based on distinguished club percentage (1 = best)
+- `aggregateScore`: BordaCount aggregate score (higher = better overall performance)
+
+_Metadata Fields_ (`_snapshot_metadata`):
+
+- `snapshot_id`: ISO date format (YYYY-MM-DD) identifying the snapshot
+- `created_at`: ISO 8601 timestamp when the snapshot was created
+- `data_source`: Always "all-districts-rankings-file" - indicates data is read from the dedicated rankings file rather than aggregated from individual district files
+- `from_cache`: Boolean indicating whether the source CSV data was retrieved from the Raw CSV Cache (true) or freshly downloaded (false)
+- `calculation_version`: Semantic version of the data processing and normalization logic used (e.g., "2.0.0")
+- `ranking_version`: Version identifier of the ranking algorithm used (e.g., "borda-count-v1")
+
+**Data Source Details**:
+
+The rankings endpoint reads from the `all-districts-rankings.json` file within each snapshot directory. This file is created during the refresh process and contains:
+
+1. **Pre-calculated Rankings**: BordaCount rankings are calculated once during refresh, not on-demand
+2. **Comprehensive Coverage**: Includes all districts from the "All Districts" CSV (~126 districts worldwide)
+3. **Independent of Configuration**: Rankings include all districts regardless of which districts are configured for detailed data collection
+4. **Cached Source Data**: The `from_cache` field indicates whether the source CSV was retrieved from cache, improving refresh performance
+
+**Performance Characteristics**:
+
+- Response time: Sub-10ms (served from snapshot file)
+- Cache TTL: 15 minutes (HTTP cache middleware)
+- Data freshness: Reflects latest successful snapshot (check `created_at` timestamp)
+
+**Error Responses**:
+
+_503 Service Unavailable_ - No snapshot available:
+
+```json
+{
+  "error": {
+    "code": "NO_SNAPSHOT_AVAILABLE",
+    "message": "No data snapshot available yet",
+    "details": "Run a refresh operation to create the first snapshot"
+  }
+}
+```
+
+_500 Internal Server Error_ - Rankings file missing:
+
+```json
+{
+  "error": {
+    "code": "RANKINGS_DATA_NOT_FOUND",
+    "message": "Rankings data not found in snapshot",
+    "details": "The snapshot does not contain all-districts-rankings data"
+  }
+}
+```
+
+**Usage Notes**:
+
+- Rankings are sorted by `aggregateScore` in descending order (best performers first)
+- The `date` field indicates the data-as-of date for the rankings
+- Rankings are immutable once created - they reflect the calculation version at snapshot creation time
+- For historical rankings, query specific snapshot IDs through admin endpoints
+
 ### Admin Endpoints (`/api/admin`)
 
 | Endpoint                            | Method | Purpose                       |
@@ -659,6 +786,48 @@ All API responses include snapshot metadata for transparency:
     "data_as_of": "2023-12-31",
     "schema_version": "1.0.0",
     "calculation_version": "2.1.0"
+  }
+}
+```
+
+### Rankings Endpoint Metadata
+
+The `/api/districts/rankings` endpoint includes additional metadata fields beyond the standard snapshot metadata:
+
+**Standard Metadata** (present in all endpoints):
+
+- `snapshot_id`: Unique identifier for the snapshot (ISO date format for modern snapshots)
+- `created_at`: ISO 8601 timestamp when the snapshot was created
+- `schema_version`: Version of the data structure format
+- `calculation_version`: Version of the data processing and normalization logic
+
+**Rankings-Specific Metadata** (unique to `/api/districts/rankings`):
+
+- `data_source`: Always "all-districts-rankings-file" - indicates the data is read from a dedicated rankings file rather than aggregated from individual district files
+- `from_cache`: Boolean indicating whether the source CSV data was retrieved from the Raw CSV Cache (true) or freshly downloaded from Toastmasters dashboard (false)
+- `ranking_version`: Version identifier of the ranking algorithm used (e.g., "borda-count-v1")
+
+**Purpose of Rankings Metadata**:
+
+- `data_source`: Provides transparency about where the rankings data originates, helping developers understand the data flow
+- `from_cache`: Indicates refresh performance optimization - cached data means faster refresh times and reduced load on Toastmasters servers
+- `ranking_version`: Enables tracking of ranking algorithm changes over time, supporting historical analysis and algorithm validation
+
+**Example Rankings Response**:
+
+```json
+{
+  "rankings": [
+    /* array of district rankings */
+  ],
+  "date": "2025-01-07",
+  "_snapshot_metadata": {
+    "snapshot_id": "2025-01-07",
+    "created_at": "2025-01-07T10:30:00.000Z",
+    "data_source": "all-districts-rankings-file",
+    "from_cache": false,
+    "calculation_version": "2.0.0",
+    "ranking_version": "borda-count-v1"
   }
 }
 ```

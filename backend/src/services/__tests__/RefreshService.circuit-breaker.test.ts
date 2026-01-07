@@ -10,6 +10,7 @@ import { RefreshService } from '../RefreshService.js'
 import { FileSnapshotStore } from '../FileSnapshotStore.js'
 import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import { DataValidator } from '../DataValidator.js'
+import { createMockCacheService } from '../../__tests__/utils/mockCacheService.js'
 // import { CircuitBreakerError } from '../../utils/CircuitBreaker.js'
 import type { ScrapedRecord } from '../../types/districts.js'
 import { tmpdir } from 'os'
@@ -39,6 +40,7 @@ describe('RefreshService Circuit Breaker Integration', () => {
     refreshService = new RefreshService(
       snapshotStore,
       mockScraper,
+      createMockCacheService(),
       new DataValidator()
     )
 

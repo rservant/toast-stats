@@ -34,6 +34,7 @@ import {
   NormalizedData,
   CURRENT_SCHEMA_VERSION,
   CURRENT_CALCULATION_VERSION,
+  AllDistrictsRankingsData,
 } from '../types/snapshots.js'
 import { DistrictStatistics } from '../types/districts.js'
 
@@ -59,6 +60,12 @@ export interface SnapshotManifest {
   totalDistricts: number
   successfulDistricts: number
   failedDistricts: number
+  /** All districts rankings file information */
+  allDistrictsRankings?: {
+    filename: string
+    size: number
+    status: 'present' | 'missing'
+  }
 }
 
 /**
@@ -175,8 +182,14 @@ export class PerDistrictFileSnapshotStore
 
   /**
    * Write a snapshot using per-district directory structure
+   *
+   * @param snapshot - The snapshot to write
+   * @param allDistrictsRankings - Optional all-districts rankings data to include
    */
-  override async writeSnapshot(snapshot: Snapshot): Promise<void> {
+  override async writeSnapshot(
+    snapshot: Snapshot,
+    allDistrictsRankings?: AllDistrictsRankingsData
+  ): Promise<void> {
     const startTime = Date.now()
     logger.info('Starting per-district snapshot write operation', {
       operation: 'writeSnapshot',
@@ -186,23 +199,29 @@ export class PerDistrictFileSnapshotStore
       calculation_version: snapshot.calculation_version,
       district_count: snapshot.payload.districts.length,
       error_count: snapshot.errors.length,
+      has_rankings: !!allDistrictsRankings,
     })
 
     try {
       await fs.mkdir(this.perDistrictSnapshotsDir, { recursive: true })
 
+      // Generate ISO date-based directory name from dataAsOfDate
+      const snapshotDirName = this.generateSnapshotDirectoryName(
+        snapshot.payload.metadata.dataAsOfDate
+      )
       const snapshotDir = path.join(
         this.perDistrictSnapshotsDir,
-        snapshot.snapshot_id
+        snapshotDirName
       )
 
-      // Create snapshot directory
+      // Create snapshot directory (overwrite if exists for same date)
       await fs.mkdir(snapshotDir, { recursive: true })
 
       logger.debug('Created snapshot directory', {
         operation: 'writeSnapshot',
         snapshot_id: snapshot.snapshot_id,
         snapshot_dir: snapshotDir,
+        snapshot_dir_name: snapshotDirName,
       })
 
       // Write individual district files
@@ -213,7 +232,7 @@ export class PerDistrictFileSnapshotStore
       for (const district of snapshot.payload.districts) {
         try {
           await this.writeDistrictData(
-            snapshot.snapshot_id,
+            snapshotDirName,
             district.districtId,
             district
           )
@@ -250,7 +269,7 @@ export class PerDistrictFileSnapshotStore
 
           logger.warn('Failed to write district data', {
             operation: 'writeSnapshot',
-            snapshot_id: snapshot.snapshot_id,
+            snapshot_id: snapshotDirName,
             district_id: district.districtId,
             error: errorMessage,
           })
@@ -259,12 +278,60 @@ export class PerDistrictFileSnapshotStore
 
       // Write manifest.json
       const manifest: SnapshotManifest = {
-        snapshotId: snapshot.snapshot_id,
+        snapshotId: snapshotDirName,
         createdAt: snapshot.created_at,
         districts: manifestEntries,
         totalDistricts: snapshot.payload.districts.length,
         successfulDistricts,
         failedDistricts,
+      }
+
+      // Write all-districts rankings if provided
+      if (allDistrictsRankings) {
+        try {
+          await this.writeAllDistrictsRankings(
+            snapshotDirName,
+            allDistrictsRankings
+          )
+
+          // Add rankings file to manifest
+          const rankingsFile = path.join(
+            snapshotDir,
+            'all-districts-rankings.json'
+          )
+          const rankingsStats = await fs.stat(rankingsFile)
+          manifest.allDistrictsRankings = {
+            filename: 'all-districts-rankings.json',
+            size: rankingsStats.size,
+            status: 'present',
+          }
+
+          logger.info('Successfully wrote all-districts rankings to snapshot', {
+            operation: 'writeSnapshot',
+            snapshot_id: snapshotDirName,
+            rankings_count: allDistrictsRankings.rankings.length,
+            file_size: rankingsStats.size,
+          })
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
+          logger.error('Failed to write all-districts rankings', {
+            operation: 'writeSnapshot',
+            snapshot_id: snapshotDirName,
+            error: errorMessage,
+          })
+          // Fail entire operation if rankings write fails
+          throw new Error(
+            `Failed to write all-districts rankings: ${errorMessage}`
+          )
+        }
+      } else {
+        // No rankings provided, mark as missing in manifest
+        manifest.allDistrictsRankings = {
+          filename: 'all-districts-rankings.json',
+          size: 0,
+          status: 'missing',
+        }
       }
 
       const manifestPath = path.join(snapshotDir, 'manifest.json')
@@ -276,7 +343,7 @@ export class PerDistrictFileSnapshotStore
 
       logger.debug('Wrote snapshot manifest', {
         operation: 'writeSnapshot',
-        snapshot_id: snapshot.snapshot_id,
+        snapshot_id: snapshotDirName,
         manifest_path: manifestPath,
         total_districts: manifest.totalDistricts,
         successful_districts: manifest.successfulDistricts,
@@ -287,11 +354,13 @@ export class PerDistrictFileSnapshotStore
       const districtErrorsFromSnapshot =
         this.extractDistrictErrorsFromSnapshot(snapshot)
 
-      // Extract ranking version from districts with ranking data
-      const rankingVersion = this.extractRankingVersion(snapshot)
+      // Extract ranking version from all-districts rankings if provided, otherwise from district data
+      const rankingVersion = allDistrictsRankings
+        ? allDistrictsRankings.metadata.rankingVersion
+        : this.extractRankingVersion(snapshot)
 
       const metadata: PerDistrictSnapshotMetadata = {
-        snapshotId: snapshot.snapshot_id,
+        snapshotId: snapshotDirName,
         createdAt: snapshot.created_at,
         schemaVersion: snapshot.schema_version,
         calculationVersion: snapshot.calculation_version,
@@ -320,20 +389,25 @@ export class PerDistrictFileSnapshotStore
 
       logger.debug('Wrote snapshot metadata', {
         operation: 'writeSnapshot',
-        snapshot_id: snapshot.snapshot_id,
+        snapshot_id: snapshotDirName,
         metadata_path: metadataPath,
         processing_duration: metadata.processingDuration,
       })
 
       // Update current pointer if this is a successful snapshot
       if (snapshot.status === 'success') {
-        await this.updatePerDistrictCurrentPointer(snapshot)
+        // Update snapshot_id to match directory name for pointer
+        const snapshotWithUpdatedId = {
+          ...snapshot,
+          snapshot_id: snapshotDirName,
+        }
+        await this.updatePerDistrictCurrentPointer(snapshotWithUpdatedId)
 
         logger.info(
           'Current pointer updated for successful per-district snapshot',
           {
             operation: 'writeSnapshot',
-            snapshot_id: snapshot.snapshot_id,
+            snapshot_id: snapshotDirName,
             pointer_file: this.perDistrictCurrentPointerFile,
           }
         )
@@ -342,7 +416,7 @@ export class PerDistrictFileSnapshotStore
           'Skipping current pointer update for non-successful per-district snapshot',
           {
             operation: 'writeSnapshot',
-            snapshot_id: snapshot.snapshot_id,
+            snapshot_id: snapshotDirName,
             status: snapshot.status,
           }
         )
@@ -355,7 +429,7 @@ export class PerDistrictFileSnapshotStore
         'Per-district snapshot write operation completed successfully',
         {
           operation: 'writeSnapshot',
-          snapshot_id: snapshot.snapshot_id,
+          snapshot_id: snapshotDirName,
           status: snapshot.status,
           successful_districts: successfulDistricts,
           failed_districts: failedDistricts,
@@ -407,6 +481,107 @@ export class PerDistrictFileSnapshotStore
       district_id: districtId,
       file_path: districtFile,
     })
+  }
+
+  /**
+   * Write all-districts rankings data to a snapshot directory
+   * Creates all-districts-rankings.json file with rankings data and metadata
+   *
+   * @param snapshotId - The snapshot ID (ISO date format)
+   * @param rankingsData - The all-districts rankings data to write
+   */
+  async writeAllDistrictsRankings(
+    snapshotId: string,
+    rankingsData: AllDistrictsRankingsData
+  ): Promise<void> {
+    const snapshotDir = path.join(this.perDistrictSnapshotsDir, snapshotId)
+    const rankingsFile = path.join(snapshotDir, 'all-districts-rankings.json')
+
+    // Update the snapshotId in metadata to match the actual snapshot directory
+    const updatedRankingsData = {
+      ...rankingsData,
+      metadata: {
+        ...rankingsData.metadata,
+        snapshotId,
+      },
+    }
+
+    await fs.writeFile(
+      rankingsFile,
+      JSON.stringify(updatedRankingsData, null, 2),
+      'utf-8'
+    )
+
+    logger.info('Wrote all-districts rankings file', {
+      operation: 'writeAllDistrictsRankings',
+      snapshot_id: snapshotId,
+      file_path: rankingsFile,
+      district_count: updatedRankingsData.rankings.length,
+      total_districts: updatedRankingsData.metadata.totalDistricts,
+    })
+  }
+
+  /**
+   * Read all-districts rankings data from a snapshot directory
+   * Returns null if the rankings file doesn't exist
+   *
+   * @param snapshotId - The snapshot ID (ISO date format)
+   * @returns The all-districts rankings data, or null if not found
+   */
+  async readAllDistrictsRankings(
+    snapshotId: string
+  ): Promise<AllDistrictsRankingsData | null> {
+    try {
+      const snapshotDir = path.join(this.perDistrictSnapshotsDir, snapshotId)
+      const rankingsFile = path.join(snapshotDir, 'all-districts-rankings.json')
+
+      const content = await fs.readFile(rankingsFile, 'utf-8')
+      const rankingsData: AllDistrictsRankingsData = JSON.parse(content)
+
+      logger.debug('Read all-districts rankings file', {
+        operation: 'readAllDistrictsRankings',
+        snapshot_id: snapshotId,
+        file_path: rankingsFile,
+        district_count: rankingsData.rankings.length,
+      })
+
+      return rankingsData
+    } catch (error) {
+      if ((error as { code?: string }).code === 'ENOENT') {
+        logger.debug('All-districts rankings file not found', {
+          operation: 'readAllDistrictsRankings',
+          snapshot_id: snapshotId,
+        })
+        return null
+      }
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to read all-districts rankings file', {
+        operation: 'readAllDistrictsRankings',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+      })
+      throw new Error(`Failed to read all-districts rankings: ${errorMessage}`)
+    }
+  }
+
+  /**
+   * Check if all-districts rankings file exists for a snapshot
+   *
+   * @param snapshotId - The snapshot ID (ISO date format)
+   * @returns True if the rankings file exists, false otherwise
+   */
+  async hasAllDistrictsRankings(snapshotId: string): Promise<boolean> {
+    try {
+      const snapshotDir = path.join(this.perDistrictSnapshotsDir, snapshotId)
+      const rankingsFile = path.join(snapshotDir, 'all-districts-rankings.json')
+
+      await fs.access(rankingsFile)
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -1113,6 +1288,21 @@ export class PerDistrictFileSnapshotStore
    */
   private getCurrentCalculationVersion(): string {
     return CURRENT_CALCULATION_VERSION
+  }
+
+  /**
+   * Generate ISO date-based snapshot directory name from dataAsOfDate
+   * Converts a date string to YYYY-MM-DD format for snapshot directory naming
+   *
+   * @param dataAsOfDate - The date string to convert (ISO 8601 format)
+   * @returns Directory name in YYYY-MM-DD format
+   */
+  private generateSnapshotDirectoryName(dataAsOfDate: string): string {
+    const date = new Date(dataAsOfDate)
+    const year = date.getUTCFullYear()
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(date.getUTCDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 }
 

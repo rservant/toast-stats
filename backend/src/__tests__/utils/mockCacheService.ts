@@ -103,6 +103,10 @@ export function createMockCacheService(): IRawCSVCacheService {
 
     // Service lifecycle
     dispose: vi.fn().mockResolvedValue(undefined),
+
+    // All Districts caching (added for all-districts-rankings-storage feature)
+    getAllDistrictsCached: vi.fn().mockResolvedValue(null),
+    cacheAllDistricts: vi.fn().mockResolvedValue(undefined),
   } as IRawCSVCacheService
 }
 

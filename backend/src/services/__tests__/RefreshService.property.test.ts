@@ -19,6 +19,7 @@ import { FileSnapshotStore } from '../FileSnapshotStore.js'
 import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import { DataValidator } from '../DataValidator.js'
 import { safeString } from '../../utils/test-string-generators.js'
+import { createMockCacheService } from '../../__tests__/utils/mockCacheService.js'
 import type { ScrapedRecord } from '../../types/districts.js'
 
 // Mock the scraper to simulate network operations
@@ -130,9 +131,11 @@ describe('RefreshService - Property-Based Tests', () => {
               cacheDir: propertyTestCacheDir,
             })
             const testMockScraper = vi.mocked(new ToastmastersScraper())
+            const testMockRawCSVCache = createMockCacheService()
             const testRefreshService = new RefreshService(
               testSnapshotStore,
               testMockScraper,
+              testMockRawCSVCache,
               new DataValidator(),
               testConfigService
             )
@@ -249,9 +252,11 @@ describe('RefreshService - Property-Based Tests', () => {
               cacheDir: propertyTestCacheDir,
             })
             const testMockScraper = vi.mocked(new ToastmastersScraper())
+            const testMockRawCSVCache = createMockCacheService()
             const testRefreshService = new RefreshService(
               testSnapshotStore,
               testMockScraper,
+              testMockRawCSVCache,
               new DataValidator(),
               testConfigService
             )
@@ -401,9 +406,11 @@ describe('RefreshService - Property-Based Tests', () => {
               cacheDir: propertyTestCacheDir,
             })
             const testMockScraper = vi.mocked(new ToastmastersScraper())
+            const testMockRawCSVCache = createMockCacheService()
             const testRefreshService = new RefreshService(
               testSnapshotStore,
               testMockScraper,
+              testMockRawCSVCache,
               new DataValidator(),
               testConfigService
             )
@@ -583,9 +590,11 @@ describe('RefreshService - Property-Based Tests', () => {
               cacheDir: propertyTestCacheDir,
             })
             const testMockScraper = vi.mocked(new ToastmastersScraper())
+            const testMockRawCSVCache = createMockCacheService()
             const testRefreshService = new RefreshService(
               testSnapshotStore,
               testMockScraper,
+              testMockRawCSVCache,
               new DataValidator(),
               testConfigService
             )
@@ -765,9 +774,11 @@ describe('RefreshService - Property-Based Tests', () => {
               cacheDir: propertyTestCacheDir,
             })
             const testMockScraper = vi.mocked(new ToastmastersScraper())
+            const testMockRawCSVCache = createMockCacheService()
             const testRefreshService = new RefreshService(
               testSnapshotStore,
               testMockScraper,
+              testMockRawCSVCache,
               new DataValidator(),
               testConfigService
             )
@@ -916,9 +927,11 @@ describe('RefreshService - Property-Based Tests', () => {
               cacheDir: propertyTestCacheDir,
             })
             const testMockScraper = vi.mocked(new ToastmastersScraper())
+            const testMockRawCSVCache = createMockCacheService()
             const testRefreshService = new RefreshService(
               testSnapshotStore,
               testMockScraper,
+              testMockRawCSVCache,
               new DataValidator(),
               testConfigService
             )

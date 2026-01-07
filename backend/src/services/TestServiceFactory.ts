@@ -38,6 +38,7 @@ import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
+import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
 import path from 'path'
 
@@ -301,9 +302,10 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     const service = new RefreshService(
       store,
       scraper,
-      undefined,
-      undefined,
-      rankingCalculator
+      mockCacheService as unknown as RawCSVCacheService, // Cast mock to concrete type for testing
+      undefined, // 4th parameter: validator
+      undefined, // 5th parameter: districtConfigService
+      rankingCalculator // 6th parameter: rankingCalculator
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service
@@ -467,9 +469,10 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
           return new RefreshService(
             snapshotStore,
             scraper,
-            undefined,
-            undefined,
-            rankingCalculator
+            mockCacheService as unknown as RawCSVCacheService, // Cast mock to concrete type for testing
+            undefined, // 4th parameter: validator
+            undefined, // 5th parameter: districtConfigService
+            rankingCalculator // 6th parameter: rankingCalculator
           )
         },
         async () => {

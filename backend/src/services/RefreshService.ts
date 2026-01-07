@@ -12,6 +12,7 @@ import { CircuitBreaker, CircuitBreakerError } from '../utils/CircuitBreaker.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { DataValidator } from './DataValidator.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
+import { RawCSVCacheService } from './RawCSVCacheService.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type {
   SnapshotStore,
@@ -27,7 +28,17 @@ import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
 interface RawData {
   /** All districts summary data */
   allDistricts: ScrapedRecord[]
-  /** District-specific performance data */
+
+  /** Metadata about all districts data source */
+  allDistrictsMetadata: {
+    fromCache: boolean
+    csvDate: string
+    fetchedAt: string
+  }
+
+  /** District-specific performance data (configured districts only) */
+  /** For each configured district, we fetch 3 CSV files: */
+  /** 1. District performance, 2. Division performance, 3. Club performance */
   districtData: Map<
     string,
     {
@@ -106,18 +117,21 @@ export class RefreshService {
   private readonly snapshotStore: SnapshotStore
   private readonly districtConfigService: DistrictConfigurationService
   private readonly rankingCalculator?: RankingCalculator
+  private readonly rawCSVCache: RawCSVCacheService
   private readonly retryOptions = RetryManager.getDashboardRetryOptions()
   private readonly scrapingCircuitBreaker: CircuitBreaker
 
   constructor(
     snapshotStore: SnapshotStore,
     scraper: ToastmastersScraper,
+    rawCSVCache: RawCSVCacheService,
     validator?: DataValidator,
     districtConfigService?: DistrictConfigurationService,
     rankingCalculator?: RankingCalculator
   ) {
     this.snapshotStore = snapshotStore
     this.scraper = scraper
+    this.rawCSVCache = rawCSVCache
     this.validator = validator || new DataValidator()
     this.districtConfigService =
       districtConfigService || new DistrictConfigurationService()
@@ -258,61 +272,73 @@ export class RefreshService {
         processingDurationMs: normalizedData.metadata.processingDurationMs,
       })
 
-      // Step 2.5: Calculate rankings (NEW STEP)
-      let rankedDistricts = normalizedData.districts
+      // Step 2.5: Calculate all-districts rankings (NEW STEP)
+      let allDistrictsRankings:
+        | import('../types/snapshots.js').AllDistrictsRankingsData
+        | undefined
       if (this.rankingCalculator) {
-        logger.info('Starting ranking calculation phase', {
+        logger.info('Starting all-districts rankings calculation phase', {
           refreshId,
           operation: 'executeRefresh',
-          phase: 'ranking_calculation',
-          districtCount: normalizedData.districts.length,
-          rankingVersion: this.rankingCalculator.getRankingVersion(),
+          phase: 'all_districts_rankings',
+          districtCount: rawData.allDistricts.length,
+          fromCache: rawData.allDistrictsMetadata.fromCache,
         })
 
         try {
-          rankedDistricts = await this.rankingCalculator.calculateRankings(
-            normalizedData.districts
+          allDistrictsRankings = await this.calculateAllDistrictsRankings(
+            rawData.allDistricts,
+            rawData.allDistrictsMetadata
           )
 
-          logger.info('Ranking calculation completed successfully', {
-            refreshId,
-            operation: 'executeRefresh',
-            phase: 'ranking_calculation',
-            districtCount: rankedDistricts.length,
-            rankedDistrictCount: rankedDistricts.filter(d => d.ranking).length,
-            rankingVersion: this.rankingCalculator.getRankingVersion(),
-          })
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          logger.error(
-            'Ranking calculation failed, continuing without rankings',
+          // Set the snapshot ID (will be updated with actual ID later)
+          allDistrictsRankings.metadata.snapshotId = refreshId
+
+          logger.info(
+            'All-districts rankings calculation completed successfully',
             {
               refreshId,
               operation: 'executeRefresh',
-              phase: 'ranking_calculation',
-              error: errorMessage,
-              districtCount: normalizedData.districts.length,
+              phase: 'all_districts_rankings',
+              totalDistricts: allDistrictsRankings.rankings.length,
+              rankingVersion: allDistrictsRankings.metadata.rankingVersion,
+              fromCache: allDistrictsRankings.metadata.fromCache,
             }
           )
-          // Continue with original districts without ranking data
-          // This implements the error handling requirement 5.3
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
+          logger.error('All-districts rankings calculation failed', {
+            refreshId,
+            operation: 'executeRefresh',
+            phase: 'all_districts_rankings',
+            error: errorMessage,
+            districtCount: rawData.allDistricts.length,
+          })
+          // Per requirement 5.6 in all-districts-rankings-storage spec:
+          // "IF ranking calculation fails for all districts, THEN THE System SHALL fail the entire refresh operation"
+          throw new Error(
+            `All-districts rankings calculation failed: ${errorMessage}`
+          )
         }
       } else {
         logger.debug(
-          'No ranking calculator provided, skipping ranking calculation',
+          'No ranking calculator provided, skipping all-districts rankings calculation',
           {
             refreshId,
             operation: 'executeRefresh',
-            phase: 'ranking_calculation',
+            phase: 'all_districts_rankings',
           }
         )
       }
 
-      // Update normalized data with ranked districts
+      // Step 2.6: Use normalized data as-is (rankings are stored separately)
+      // Note: Rankings are calculated in Step 2.5 for all districts and stored
+      // in all-districts-rankings.json. Individual district files do not include
+      // ranking data as per Requirement 1.4.
       const finalNormalizedData: NormalizedData = {
         ...normalizedData,
-        districts: rankedDistricts,
+        districts: normalizedData.districts,
       }
 
       // Step 3: Validate normalized data
@@ -387,6 +413,7 @@ export class RefreshService {
         status: 'success',
         districtCount: finalNormalizedData.districts.length,
         warningCount: validationResult.warnings.length,
+        hasAllDistrictsRankings: !!allDistrictsRankings,
       })
 
       // Determine snapshot status based on scraping results
@@ -416,7 +443,8 @@ export class RefreshService {
         finalNormalizedData,
         snapshotStatus,
         allErrors,
-        rawData.scrapingMetadata // Pass scraping metadata for detailed error tracking
+        rawData.scrapingMetadata, // Pass scraping metadata for detailed error tracking
+        allDistrictsRankings // Pass all-districts rankings data
       )
 
       const duration_ms = Date.now() - startTime
@@ -586,41 +614,99 @@ export class RefreshService {
     )
 
     try {
-      // Step 1: Get all districts summary data with circuit breaker and retry
-      const allDistricts = await this.scrapingCircuitBreaker.execute(
-        async () => {
-          const retryResult = await RetryManager.executeWithRetry(
-            () => this.scraper.getAllDistricts(),
-            this.retryOptions,
-            { operation: 'getAllDistricts' }
-          )
+      // Determine the date for cache lookup (use current date)
+      const currentDate = new Date().toISOString().split('T')[0]
+      if (!currentDate) {
+        throw new Error('Failed to extract date from ISO string')
+      }
 
-          // If retry failed, throw the error so circuit breaker can record it
-          if (!retryResult.success) {
-            throw retryResult.error || new Error('Retry operation failed')
-          }
+      // Step 1: Check Raw CSV Cache for All Districts data
+      logger.info('Checking Raw CSV Cache for All Districts data', {
+        date: currentDate,
+      })
 
-          return retryResult
-        },
-        { operation: 'getAllDistricts' }
-      )
+      let allDistrictsData: ScrapedRecord[]
+      let allDistrictsMetadata: {
+        fromCache: boolean
+        csvDate: string
+        fetchedAt: string
+      }
 
-      if (!allDistricts.success || !allDistricts.result) {
-        throw new Error(
-          `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
+      const cachedData =
+        await this.rawCSVCache.getAllDistrictsCached(currentDate)
+
+      if (cachedData) {
+        // Cache hit - use cached data
+        allDistrictsData = cachedData.data
+        allDistrictsMetadata = {
+          fromCache: true,
+          csvDate: cachedData.metadata.date,
+          fetchedAt: cachedData.metadata.fetchedAt,
+        }
+
+        logger.info('All Districts data retrieved from cache', {
+          date: currentDate,
+          recordCount: allDistrictsData.length,
+          fromCache: true,
+          fetchedAt: allDistrictsMetadata.fetchedAt,
+        })
+      } else {
+        // Cache miss - fetch from dashboard and cache it
+        logger.info('Cache miss - fetching All Districts data from dashboard', {
+          date: currentDate,
+        })
+
+        const allDistricts = await this.scrapingCircuitBreaker.execute(
+          async () => {
+            const retryResult = await RetryManager.executeWithRetry(
+              () => this.scraper.getAllDistricts(),
+              this.retryOptions,
+              { operation: 'getAllDistricts' }
+            )
+
+            // If retry failed, throw the error so circuit breaker can record it
+            if (!retryResult.success) {
+              throw retryResult.error || new Error('Retry operation failed')
+            }
+
+            return retryResult
+          },
+          { operation: 'getAllDistricts' }
         )
+
+        if (!allDistricts.success || !allDistricts.result) {
+          throw new Error(
+            `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
+          )
+        }
+
+        allDistrictsData = allDistricts.result
+
+        logger.info('All Districts data fetched from dashboard', {
+          date: currentDate,
+          recordCount: allDistrictsData.length,
+          fromCache: false,
+          attempts: allDistricts.attempts,
+        })
+
+        allDistrictsMetadata = {
+          fromCache: false,
+          csvDate: currentDate,
+          fetchedAt: new Date().toISOString(),
+        }
+
+        // Note: Caching happens automatically inside scraper.getAllDistricts()
+        // via getCachedOrDownload() which calls setCachedCSVWithMetadata()
       }
 
       logger.info('Fetched all districts summary', {
-        count: allDistricts.result.length,
-        attempts: allDistricts.attempts,
+        count: allDistrictsData.length,
+        fromCache: allDistrictsMetadata.fromCache,
         circuitBreakerState: this.scrapingCircuitBreaker.getStats().state,
       })
 
       // Step 2: Get configured district IDs instead of extracting all
-      const districtIds = await this.getConfiguredDistrictIds(
-        allDistricts.result
-      )
+      const districtIds = await this.getConfiguredDistrictIds(allDistrictsData)
       logger.info('Using configured district IDs', {
         count: districtIds.length,
         districtIds,
@@ -780,7 +866,8 @@ export class RefreshService {
       }
 
       return {
-        allDistricts: allDistricts.result,
+        allDistricts: allDistrictsData,
+        allDistrictsMetadata,
         districtData,
         scrapingMetadata: {
           startTime: startTimeIso,
@@ -1143,6 +1230,167 @@ export class RefreshService {
   }
 
   /**
+   * Calculate all-districts rankings from All Districts CSV data
+   * Converts ScrapedRecord array to DistrictStatistics format and calculates rankings
+   *
+   * @param allDistricts - Array of scraped records from All Districts CSV
+   * @param metadata - Metadata about the data source (cache info, dates, etc.)
+   * @returns AllDistrictsRankingsData with rankings and metadata
+   */
+  private async calculateAllDistrictsRankings(
+    allDistricts: ScrapedRecord[],
+    metadata: { csvDate: string; fetchedAt: string; fromCache: boolean }
+  ): Promise<import('../types/snapshots.js').AllDistrictsRankingsData> {
+    const startTime = Date.now()
+    const calculatedAt = new Date().toISOString()
+
+    logger.info('Starting all-districts rankings calculation', {
+      operation: 'calculateAllDistrictsRankings',
+      districtCount: allDistricts.length,
+      csvDate: metadata.csvDate,
+      fromCache: metadata.fromCache,
+    })
+
+    try {
+      if (!this.rankingCalculator) {
+        throw new Error(
+          'Ranking calculator not available for all-districts rankings calculation'
+        )
+      }
+
+      if (allDistricts.length === 0) {
+        throw new Error('No districts provided for rankings calculation')
+      }
+
+      // Convert ScrapedRecord array to DistrictStatistics format
+      // Each ScrapedRecord from All Districts CSV needs to be converted to DistrictStatistics
+      const districtStats: DistrictStatistics[] = allDistricts.map(record => {
+        const districtId = String(
+          record['DISTRICT'] || record['District'] || ''
+        )
+          .replace(/^District\s+/i, '')
+          .trim()
+
+        return {
+          districtId,
+          asOfDate: metadata.csvDate,
+          membership: {
+            total: 0,
+            change: 0,
+            changePercent: 0,
+            byClub: [],
+          },
+          clubs: {
+            total: 0,
+            active: 0,
+            suspended: 0,
+            ineligible: 0,
+            low: 0,
+            distinguished: 0,
+          },
+          education: {
+            totalAwards: 0,
+            byType: [],
+            topClubs: [],
+          },
+          // Store the raw All Districts CSV record for ranking calculation
+          districtPerformance: [record],
+          divisionPerformance: [],
+          clubPerformance: [],
+        }
+      })
+
+      logger.debug('Converted ScrapedRecords to DistrictStatistics', {
+        operation: 'calculateAllDistrictsRankings',
+        inputCount: allDistricts.length,
+        outputCount: districtStats.length,
+      })
+
+      // Calculate rankings using the ranking calculator
+      const rankedDistricts =
+        await this.rankingCalculator.calculateRankings(districtStats)
+
+      logger.debug('Rankings calculated successfully', {
+        operation: 'calculateAllDistrictsRankings',
+        rankedCount: rankedDistricts.length,
+        rankingVersion: this.rankingCalculator.getRankingVersion(),
+      })
+
+      // Build AllDistrictsRankingsData structure
+      const rankings: import('../types/snapshots.js').DistrictRanking[] =
+        rankedDistricts
+          .filter(d => d.ranking) // Only include districts with ranking data
+          .map(d => {
+            const ranking = d.ranking!
+
+            return {
+              districtId: d.districtId,
+              districtName: ranking.districtName,
+              region: ranking.region,
+              paidClubs: ranking.paidClubs,
+              paidClubBase: ranking.paidClubBase,
+              clubGrowthPercent: ranking.clubGrowthPercent,
+              totalPayments: ranking.totalPayments,
+              paymentBase: ranking.paymentBase,
+              paymentGrowthPercent: ranking.paymentGrowthPercent,
+              activeClubs: ranking.activeClubs,
+              distinguishedClubs: ranking.distinguishedClubs,
+              selectDistinguished: ranking.selectDistinguished,
+              presidentsDistinguished: ranking.presidentsDistinguished,
+              distinguishedPercent: ranking.distinguishedPercent,
+              clubsRank: ranking.clubsRank,
+              paymentsRank: ranking.paymentsRank,
+              distinguishedRank: ranking.distinguishedRank,
+              aggregateScore: ranking.aggregateScore,
+            }
+          })
+
+      const duration = Date.now() - startTime
+
+      const rankingsData: import('../types/snapshots.js').AllDistrictsRankingsData =
+        {
+          metadata: {
+            snapshotId: '', // Will be set by caller
+            calculatedAt,
+            schemaVersion: this.getCurrentSchemaVersion(),
+            calculationVersion: this.getCurrentCalculationVersion(),
+            rankingVersion: this.rankingCalculator.getRankingVersion(),
+            sourceCsvDate: metadata.csvDate,
+            csvFetchedAt: metadata.fetchedAt,
+            totalDistricts: rankings.length,
+            fromCache: metadata.fromCache,
+          },
+          rankings,
+        }
+
+      logger.info('All-districts rankings calculation completed successfully', {
+        operation: 'calculateAllDistrictsRankings',
+        totalDistricts: rankings.length,
+        durationMs: duration,
+        rankingVersion: this.rankingCalculator.getRankingVersion(),
+        fromCache: metadata.fromCache,
+      })
+
+      return rankingsData
+    } catch (error) {
+      const duration = Date.now() - startTime
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      logger.error('All-districts rankings calculation failed', {
+        operation: 'calculateAllDistrictsRankings',
+        error: errorMessage,
+        districtCount: allDistricts.length,
+        durationMs: duration,
+      })
+
+      throw new Error(
+        `Failed to calculate all-districts rankings: ${errorMessage}`
+      )
+    }
+  }
+
+  /**
    * Extract the data as-of date from all districts data
    */
   private extractDataAsOfDate(allDistricts: ScrapedRecord[]): string {
@@ -1180,7 +1428,8 @@ export class RefreshService {
     data: NormalizedData,
     status: SnapshotStatus,
     errors: string[] = [],
-    scrapingMetadata?: RawData['scrapingMetadata']
+    scrapingMetadata?: RawData['scrapingMetadata'],
+    allDistrictsRankings?: import('../types/snapshots.js').AllDistrictsRankingsData
   ): Promise<Snapshot> {
     const snapshotId = Date.now().toString()
     const createdAt = new Date().toISOString()
@@ -1220,20 +1469,64 @@ export class RefreshService {
       created_at: createdAt,
       successful_districts: scrapingMetadata?.successfulDistricts?.length || 0,
       failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
+      has_all_districts_rankings: !!allDistrictsRankings,
     })
 
     try {
-      await this.snapshotStore.writeSnapshot(snapshot)
+      // Write snapshot with all-districts rankings if available
+      // The PerDistrictFileSnapshotStore.writeSnapshot accepts rankings as second parameter
+      if (
+        allDistrictsRankings &&
+        'writeAllDistrictsRankings' in this.snapshotStore
+      ) {
+        // Cast to the per-district store type that supports rankings
+        const perDistrictStore = this.snapshotStore as {
+          writeSnapshot: (
+            snapshot: Snapshot,
+            rankings?: import('../types/snapshots.js').AllDistrictsRankingsData
+          ) => Promise<void>
+        }
+
+        await perDistrictStore.writeSnapshot(snapshot, allDistrictsRankings)
+
+        logger.info('Snapshot created with all-districts rankings', {
+          operation: 'createSnapshot',
+          snapshot_id: snapshotId,
+          rankings_count: allDistrictsRankings.rankings.length,
+        })
+      } else {
+        // No rankings or store doesn't support them
+        await this.snapshotStore.writeSnapshot(snapshot)
+      }
+
+      // Get the actual snapshot that was written (may have different ID due to ISO date conversion)
+      // For failed/partial snapshots, use getLatest() since getLatestSuccessful() only returns success status
+      const writtenSnapshot =
+        status === 'success'
+          ? await this.snapshotStore.getLatestSuccessful()
+          : await this.snapshotStore.getLatest()
+
+      // For failed snapshots, the snapshot may not be retrievable if it's the first snapshot
+      // In that case, return the original snapshot with its ID
+      const actualSnapshotId = writtenSnapshot?.snapshot_id || snapshotId
+
       logger.info('Snapshot created successfully with error tracking', {
         operation: 'createSnapshot',
-        snapshot_id: snapshotId,
+        snapshot_id: actualSnapshotId,
+        original_snapshot_id: snapshotId,
         status,
         district_count: data.districts.length,
         successful_districts:
           scrapingMetadata?.successfulDistricts?.length || 0,
         failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
+        has_all_districts_rankings: !!allDistrictsRankings,
       })
-      return snapshot
+
+      // Return the snapshot with the actual written ID
+      return {
+        ...snapshot,
+        snapshot_id: actualSnapshotId,
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'

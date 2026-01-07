@@ -30,6 +30,7 @@ import {
   ILogger,
   ICacheConfigService,
 } from '../types/serviceInterfaces.js'
+import { ScrapedRecord } from '../types/districts.js'
 
 /**
  * Raw CSV Cache Service Implementation
@@ -1272,6 +1273,203 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       previousState,
       newState: this.getCircuitBreakerState(),
     })
+  }
+
+  /**
+   * Get cached All Districts CSV for a specific date
+   * Returns cached data with metadata if available, null if cache miss
+   */
+  async getAllDistrictsCached(date: string): Promise<{
+    data: ScrapedRecord[]
+    fromCache: boolean
+    metadata: {
+      fileName: string
+      date: string
+      fetchedAt: string
+      fileSize: number
+      checksum: string
+    }
+  } | null> {
+    const startTime = Date.now()
+
+    try {
+      this.validateDateString(date)
+
+      // Check if cached CSV exists
+      const csvContent = await this.getCachedCSV(
+        date,
+        CSVType.ALL_DISTRICTS,
+        undefined
+      )
+
+      if (!csvContent) {
+        this.logger.debug('Cache miss for All Districts CSV', { date })
+        return null
+      }
+
+      // Get metadata for the cached file
+      const cacheMetadata = await this.getCacheMetadata(date)
+      if (!cacheMetadata) {
+        this.logger.warn(
+          'CSV file exists but metadata missing for All Districts',
+          { date }
+        )
+        return null
+      }
+
+      // Parse CSV content into ScrapedRecord array
+      const data = this.parseCSVContent(csvContent)
+
+      // Build metadata response
+      const filename = this.getFilename(CSVType.ALL_DISTRICTS, undefined)
+      const checksum = cacheMetadata.integrity.checksums[filename] || ''
+      const fileSize = Buffer.byteLength(csvContent, 'utf-8')
+
+      const duration = Date.now() - startTime
+      this.logger.info('All Districts CSV retrieved from cache', {
+        date,
+        recordCount: data.length,
+        fileSize,
+        duration,
+      })
+
+      return {
+        data,
+        fromCache: true,
+        metadata: {
+          fileName: `all-districts-${date}.csv`,
+          date,
+          fetchedAt: new Date(cacheMetadata.timestamp).toISOString(),
+          fileSize,
+          checksum,
+        },
+      }
+    } catch (error) {
+      const duration = Date.now() - startTime
+      this.logger.error('Failed to get cached All Districts CSV', {
+        date,
+        duration,
+        error: this.formatErrorForLogging(error),
+      })
+      return null
+    }
+  }
+
+  /**
+   * Store All Districts CSV in cache with metadata
+   */
+  async cacheAllDistricts(
+    date: string,
+    data: ScrapedRecord[],
+    rawCsv: string
+  ): Promise<void> {
+    const startTime = Date.now()
+
+    try {
+      this.validateDateString(date)
+
+      // Store the raw CSV content
+      await this.setCachedCSV(date, CSVType.ALL_DISTRICTS, rawCsv, undefined)
+
+      const duration = Date.now() - startTime
+      const fileSize = Buffer.byteLength(rawCsv, 'utf-8')
+
+      this.logger.info('All Districts CSV cached successfully', {
+        date,
+        recordCount: data.length,
+        fileSize,
+        duration,
+      })
+    } catch (error) {
+      const duration = Date.now() - startTime
+      this.logger.error('Failed to cache All Districts CSV', {
+        date,
+        duration,
+        error: this.formatErrorForLogging(error),
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Parse CSV content into ScrapedRecord array
+   * Simple CSV parser for cached content
+   */
+  private parseCSVContent(csvContent: string): ScrapedRecord[] {
+    const lines = csvContent.trim().split('\n')
+    if (lines.length < 2) {
+      return []
+    }
+
+    // Parse header
+    const headerLine = lines[0]
+    if (!headerLine) {
+      return []
+    }
+    const headers = this.parseCSVLine(headerLine)
+
+    // Parse data rows
+    const records: ScrapedRecord[] = []
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i]
+      if (!line || line.trim().length === 0) {
+        continue
+      }
+
+      const values = this.parseCSVLine(line)
+      const record: ScrapedRecord = {}
+
+      for (let j = 0; j < headers.length; j++) {
+        const header = headers[j]
+        const value = values[j]
+        if (header) {
+          // Try to parse as number if possible
+          if (value !== undefined && value !== null && value !== '') {
+            const numValue = Number(value)
+            record[header] = isNaN(numValue) ? value : numValue
+          } else {
+            record[header] = null
+          }
+        }
+      }
+
+      records.push(record)
+    }
+
+    return records
+  }
+
+  /**
+   * Parse a single CSV line handling quoted values
+   */
+  private parseCSVLine(line: string): string[] {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+
+      if (char === '"') {
+        // Check for escaped quote
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"'
+          i++ // Skip next quote
+        } else {
+          inQuotes = !inQuotes
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim())
+        current = ''
+      } else {
+        current += char
+      }
+    }
+
+    // Add last field
+    result.push(current.trim())
+
+    return result
   }
 
   /**

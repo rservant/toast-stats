@@ -331,9 +331,10 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
           return new RefreshService(
             snapshotStore,
             scraper,
-            undefined,
-            undefined,
-            rankingCalculator
+            rawCSVCacheService, // 3rd parameter: rawCSVCache
+            undefined, // 4th parameter: validator
+            undefined, // 5th parameter: districtConfigService
+            rankingCalculator // 6th parameter: rankingCalculator
           )
         },
         async () => {
@@ -461,9 +462,10 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const service = new RefreshService(
       store,
       scraper,
-      undefined,
-      undefined,
-      rankingCalculator
+      rawCSVCacheService, // 3rd parameter: rawCSVCache
+      undefined, // 4th parameter: validator
+      undefined, // 5th parameter: districtConfigService
+      rankingCalculator // 6th parameter: rankingCalculator
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service

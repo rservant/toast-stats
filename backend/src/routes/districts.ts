@@ -96,6 +96,7 @@ const rankingCalculator = new BordaCountRankingCalculator()
 const refreshService = new RefreshService(
   snapshotStore,
   scraper,
+  rawCSVCacheService,
   undefined, // validator - use default
   districtConfigService,
   rankingCalculator
@@ -638,7 +639,7 @@ router.get(
 /**
  * GET /api/districts/rankings
  * Fetch all districts with performance rankings from latest snapshot
- * Optional query param: date (YYYY-MM-DD) - currently ignored as we serve from snapshot
+ * Reads from all-districts-rankings.json file for comprehensive rankings
  */
 router.get(
   '/rankings',
@@ -655,75 +656,104 @@ router.get(
       ip: req.ip,
     })
 
-    const data = await serveFromPerDistrictSnapshot(
-      res,
-      async (snapshot, aggregator) => {
-        logger.debug(
-          'Extracting district rankings from per-district snapshot',
-          {
-            operation: 'GET /api/districts/rankings',
-            request_id: requestId,
-            snapshot_id: snapshot.snapshot_id,
-          }
-        )
+    try {
+      // Get latest successful snapshot
+      const snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
 
-        // Get all districts data from aggregator
-        const allDistricts = await aggregator.getAllDistricts(
+      if (!snapshot) {
+        logger.warn('No successful snapshot available for rankings request', {
+          operation: 'GET /api/districts/rankings',
+          request_id: requestId,
+        })
+
+        res.status(503).json({
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        })
+        return
+      }
+
+      logger.info('Retrieved snapshot for rankings request', {
+        operation: 'GET /api/districts/rankings',
+        request_id: requestId,
+        snapshot_id: snapshot.snapshot_id,
+        created_at: snapshot.created_at,
+      })
+
+      // Read all-districts-rankings.json file
+      const rankingsData =
+        await perDistrictSnapshotStore.readAllDistrictsRankings(
           snapshot.snapshot_id
         )
 
-        // Extract rankings data from all districts
-        const rankings = allDistricts
-          .filter((district: DistrictStatistics) => district.ranking) // Only include districts with ranking data
-          .map((district: DistrictStatistics) => {
-            const ranking = district.ranking!
-            return {
-              districtId: district.districtId,
-              districtName: ranking.districtName,
-              region: ranking.region,
-              paidClubs: ranking.paidClubs,
-              paidClubBase: ranking.paidClubBase,
-              clubGrowthPercent: ranking.clubGrowthPercent,
-              totalPayments: ranking.totalPayments,
-              paymentBase: ranking.paymentBase,
-              paymentGrowthPercent: ranking.paymentGrowthPercent,
-              activeClubs: ranking.activeClubs,
-              distinguishedClubs: ranking.distinguishedClubs,
-              selectDistinguished: ranking.selectDistinguished,
-              presidentsDistinguished: ranking.presidentsDistinguished,
-              distinguishedPercent: ranking.distinguishedPercent,
-              clubsRank: ranking.clubsRank,
-              paymentsRank: ranking.paymentsRank,
-              distinguishedRank: ranking.distinguishedRank,
-              aggregateScore: ranking.aggregateScore,
-            }
-          })
-
-        logger.info('Successfully extracted district rankings', {
+      if (!rankingsData) {
+        logger.error('All-districts-rankings file not found in snapshot', {
           operation: 'GET /api/districts/rankings',
           request_id: requestId,
           snapshot_id: snapshot.snapshot_id,
-          total_districts: allDistricts.length,
-          districts_with_rankings: rankings.length,
         })
 
-        return {
-          rankings,
-          date: snapshot.created_at.split('T')[0], // Extract date from timestamp
-        }
-      },
-      'fetch district rankings from per-district snapshot'
-    )
+        res.status(500).json({
+          error: {
+            code: 'RANKINGS_DATA_NOT_FOUND',
+            message: 'Rankings data not found in snapshot',
+            details:
+              'The snapshot does not contain all-districts-rankings data',
+          },
+        })
+        return
+      }
 
-    if (data) {
+      logger.info('Successfully read all-districts-rankings file', {
+        operation: 'GET /api/districts/rankings',
+        request_id: requestId,
+        snapshot_id: snapshot.snapshot_id,
+        total_districts: rankingsData.metadata.totalDistricts,
+        from_cache: rankingsData.metadata.fromCache,
+      })
+
+      // Return rankings with metadata
+      res.json({
+        rankings: rankingsData.rankings,
+        date: rankingsData.metadata.sourceCsvDate,
+        _snapshot_metadata: {
+          snapshot_id: snapshot.snapshot_id,
+          created_at: snapshot.created_at,
+          data_source: 'all-districts-rankings-file',
+          from_cache: rankingsData.metadata.fromCache,
+          calculation_version: rankingsData.metadata.calculationVersion,
+          ranking_version: rankingsData.metadata.rankingVersion,
+        },
+      })
+
       logger.info('Successfully served district rankings', {
         operation: 'GET /api/districts/rankings',
         request_id: requestId,
-        snapshot_id: (data as { _snapshot_metadata?: { snapshot_id?: string } })
-          ._snapshot_metadata?.snapshot_id,
-        rankings_count: Array.isArray(data.rankings) ? data.rankings.length : 0,
+        snapshot_id: snapshot.snapshot_id,
+        rankings_count: rankingsData.rankings.length,
+        data_source: 'all-districts-rankings-file',
       })
-      res.json(data)
+    } catch (error) {
+      const errorResponse = transformErrorResponse(error)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      logger.error('Failed to serve district rankings', {
+        operation: 'GET /api/districts/rankings',
+        request_id: requestId,
+        error: errorMessage,
+      })
+
+      res.status(500).json({
+        error: {
+          code: errorResponse.code || 'RANKINGS_ERROR',
+          message: 'Failed to fetch district rankings',
+          details: errorResponse.details,
+        },
+      })
     }
   }
 )

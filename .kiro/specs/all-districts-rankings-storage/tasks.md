@@ -1,0 +1,230 @@
+# Implementation Plan: All Districts Rankings Storage
+
+## Overview
+
+This implementation plan addresses the bug where All Districts CSV data with BordaCount rankings is fetched but never stored. The solution extends PerDistrictSnapshotStore to include a dedicated all-districts-rankings.json file and leverages Raw CSV caching to avoid redundant downloads.
+
+## Tasks
+
+- [x] 1. Extend TypeScript interfaces and types
+  - Add `AllDistrictsRankingsData` interface to snapshots types
+  - Add `DistrictRanking` interface for individual district rankings
+  - Add `RawCSVCacheMetadata` interface for cache metadata
+  - Update `RawData` interface to include `allDistrictsMetadata`
+  - Update `SnapshotManifest` to reference all-districts-rankings file
+  - _Requirements: 1.1, 3.1, 6.1_
+
+- [x] 2. Extend RawCSVCacheService for All Districts caching
+  - [x] 2.1 Add `getAllDistrictsCached()` method to check cache and return cached data
+    - Check for cached CSV file by date
+    - Read and parse cached CSV if exists
+    - Return data with fromCache flag and metadata
+    - _Requirements: 2.1, 2.2_
+  - [x] 2.2 Write unit tests for cache lookup
+    - Test cache hit returns cached data
+    - Test cache miss returns null
+    - Test fromCache flag is set correctly
+    - Use mocked CSV data, no network calls
+    - **Property 2: Cache Consistency**
+    - **Validates: Requirements 2.1, 2.2, 2.5**
+  - [x] 2.3 Add `cacheAllDistricts()` method to store CSV in cache
+    - Generate date-based filename
+    - Write raw CSV to cache directory
+    - Create metadata file with fetch timestamp and file size
+    - _Requirements: 2.3, 7.1, 7.2_
+  - [x] 2.4 Write unit tests for cache storage
+    - Test CSV file is written with correct naming
+    - Test metadata file is created
+    - Test file content is preserved
+    - **Property 7: Cache File Naming Consistency**
+    - \*\*Validates: Requirements 7.1, 7.2\_
+
+- [x] 3. Extend PerDistrictSnapshotStore for rankings storage and ISO date naming
+  - [x] 3.1 Add `generateSnapshotDirectoryName()` private method
+    - Generate ISO date-based directory name from dataAsOfDate
+    - Return directory name in format YYYY-MM-DD
+    - _Requirements: 8.1, 8.2_
+  - [x] 3.2 Write unit tests for directory naming
+    - Test generateSnapshotDirectoryName creates ISO date format
+    - Test directory name matches dataAsOfDate
+    - **Property 7: ISO Date Directory Naming**
+    - **Validates: Requirements 8.1, 8.2**
+  - [x] 3.3 Update `writeSnapshot()` to use ISO date directory naming
+    - Call generateSnapshotDirectoryName() to get directory name
+    - Create snapshot directory with date-based name
+    - Update snapshot_id to match directory name
+    - Overwrite existing directory if it exists for same date
+    - _Requirements: 8.1, 8.2, 8.3_
+  - [x] 3.4 Add `writeAllDistrictsRankings()` method
+    - Create all-districts-rankings.json in snapshot directory
+    - Write rankings data with metadata
+    - Log success with file path and district count
+    - _Requirements: 1.3, 3.1, 3.2_
+  - [x] 3.5 Add `readAllDistrictsRankings()` method
+    - Read all-districts-rankings.json from snapshot directory
+    - Parse and return rankings data
+    - Return null if file doesn't exist
+    - _Requirements: 3.2, 4.1_
+  - [x] 3.6 Add `hasAllDistrictsRankings()` method
+    - Check if all-districts-rankings.json exists for snapshot
+    - Return boolean indicating file presence
+    - _Requirements: 4.1_
+  - [x] 3.7 Write unit tests for rankings file operations
+    - Test writeAllDistrictsRankings creates correct file
+    - Test readAllDistrictsRankings returns correct data
+    - Test hasAllDistrictsRankings detects file presence
+    - Test readAllDistrictsRankings returns null for missing file
+    - **Property 3: Rankings Data Immutability**
+    - **Property 5: Rankings Count Invariant**
+    - **Validates: Requirements 1.3, 3.1, 3.2**
+  - [x] 3.8 Update `writeSnapshot()` to include rankings file in manifest
+    - Add rankings file entry to manifest
+    - Include file size and status
+    - _Requirements: 3.4_
+
+- [x] 4. Update RefreshService to calculate and store all-districts rankings
+  - [x] 4.1 Modify `scrapeData()` to use Raw CSV Cache
+    - Check cache for All Districts CSV before downloading
+    - Use cached data if available
+    - Download and cache if not available
+    - Include cache metadata in RawData
+    - Continue fetching all 3 CSV files for each configured district
+    - _Requirements: 2.1, 2.2, 2.3, 5.1, 5.2_
+  - [x] 4.2 Add `calculateAllDistrictsRankings()` private method
+    - Accept allDistricts ScrapedRecord array
+    - Convert to DistrictStatistics format
+    - Call rankingCalculator.calculateRankings()
+    - Build AllDistrictsRankingsData structure with metadata
+    - Handle errors gracefully
+    - _Requirements: 1.2, 5.2, 6.1, 6.2_
+  - [x] 4.3 Update `executeRefresh()` to calculate all-districts rankings
+    - Call calculateAllDistrictsRankings() after scraping
+    - Pass rankings data to createSnapshot()
+    - Log ranking calculation results
+    - _Requirements: 5.2, 5.3_
+  - [x] 4.4 Update `createSnapshot()` to accept rankings data parameter
+    - Add optional allDistrictsRankings parameter
+    - Pass rankings to snapshotStore.writeSnapshot()
+    - _Requirements: 5.3_
+  - [x] 4.5 Write unit tests for rankings calculation
+    - Test calculateAllDistrictsRankings with valid data
+    - Test error handling when ranking calculation fails
+    - Test rankings data structure is correct
+    - **Property 1: All Districts Rankings Completeness**
+    - **Property 4: Version Consistency**
+    - **Validates: Requirements 1.2, 5.2, 6.1, 6.2**
+  - [x] 4.6 Write unit tests for cache integration
+    - Test scrapeData uses cache when available
+    - Test scrapeData downloads when cache miss
+    - Test cache metadata is included in RawData
+    - Test configured districts still fetch all 3 CSV files
+    - Use mocked scraper responses, no network calls
+    - **Property 2: Cache Consistency**
+    - **Validates: Requirements 2.1, 2.2, 2.5, 5.2**
+
+- [x] 5. Update PerDistrictSnapshotStore.writeSnapshot() to store rankings
+  - [x] 5.1 Modify writeSnapshot() to accept rankings data
+    - Add optional allDistrictsRankings parameter to method signature
+    - Call writeAllDistrictsRankings() if rankings data provided
+    - Fail entire operation if rankings write fails
+    - _Requirements: 1.3, 1.4, 5.3_
+  - [x] 5.2 Write integration tests for snapshot with rankings
+    - Test complete snapshot creation includes rankings file
+    - Test snapshot creation fails if rankings write fails
+    - **Property 1: All Districts Rankings Completeness**
+    - **Validates: Requirements 1.3, 1.4, 5.3**
+
+- [x] 6. Update /api/districts/rankings endpoint
+  - [x] 6.1 Modify rankings route handler to read from rankings file
+    - Read all-districts-rankings.json file
+    - Return error if file doesn't exist
+    - Include metadata indicating data source
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+  - [x] 6.2 Write unit tests for rankings endpoint
+    - Test endpoint with all-districts-rankings file present
+    - Test endpoint error handling with missing rankings file
+    - Test response metadata indicates data source
+    - Test error handling for missing snapshot
+    - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
+
+- [x] 7. Implement cache cleanup for Raw CSV files
+  - [x] 7.1 Add cache cleanup method to RawCSVCacheService
+    - Remove CSV files older than retention period
+    - Preserve at least one cached file
+    - Remove corresponding metadata files
+    - Log cleanup results
+    - _Requirements: 7.2, 7.3, 7.4_
+  - [x] 7.2 Integrate cache cleanup with snapshot cleanup
+    - Call CSV cache cleanup during snapshot cleanup
+    - Use same retention configuration
+    - _Requirements: 7.5_
+  - [x] 7.3 Write unit tests for cache cleanup
+    - Test old files are removed
+    - Test recent files are preserved
+    - Test at least one file is always kept
+    - Test metadata files are cleaned up
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5**
+
+- [x] 8. Add comprehensive integration tests
+  - [x] 8.1 Write end-to-end refresh flow test
+    - Test complete refresh creates all-districts-rankings file
+    - Test rankings file contains all districts from CSV
+    - Test rankings accessible via API endpoint
+    - Test cache reuse on subsequent refresh for same date
+    - Test configured districts still get detailed data
+    - Use mocked scraper and CSV data, no network calls
+    - **Property 1: All Districts Rankings Completeness**
+    - **Property 2: Cache Consistency**
+    - **Validates: Requirements 1.1, 1.2, 1.3, 2.1, 2.2, 4.1, 4.3, 5.2**
+  - [x] 8.2 Write version consistency test
+    - Test rankings metadata versions match snapshot metadata
+    - Test version mismatch detection and logging
+    - **Property 4: Version Consistency**
+    - **Validates: Requirements 6.1, 6.2, 6.4**
+
+- [-] 9. Update documentation and logging
+  - [x] 9.1 Add logging for cache operations
+    - Log cache hits and misses
+    - Log cache file creation
+    - Log cache cleanup operations
+    - _Requirements: 2.5_
+    - Log cache hits and misses
+    - Log cache file creation
+    - Log cache cleanup operations
+    - _Requirements: 2.5_
+  - [x] 9.2 Add logging for rankings operations
+    - Log rankings calculation start and completion
+    - Log rankings file creation
+    - Log rankings file read operations
+    - _Requirements: 5.5, 6.5_
+  - [x] 9.3 Update API documentation
+    - Document new response metadata fields
+    - Document data source indicators
+    - _Requirements: 4.4_
+
+- [x] 10. Final validation and testing
+  - [x] 10.1 Run complete test suite
+    - Verify all unit tests pass
+    - Verify all integration tests pass
+    - Verify all property-based tests pass
+    - _Requirements: 9.1, 9.2, 9.3, 9.4_
+  - [x] 10.2 Test with production-like data
+    - Test with real All Districts CSV data
+    - Verify rankings calculations are correct
+    - Verify API responses match expected format
+    - _Requirements: 1.5, 4.3, 6.3_
+  - [x] 10.3 Perform migration
+    - Delete existing timestamp-based snapshot directories
+    - Run refresh to create new ISO date-based snapshot
+    - Verify new snapshot structure is correct
+    - _Requirements: 8.1, 8.2, 8.3, 8.5_
+
+## Notes
+
+- Tasks marked with `*` are optional test tasks that can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Property tests validate universal correctness properties from the design document
+- The implementation builds incrementally on existing RefreshService and PerDistrictSnapshotStore architecture
+- No backward compatibility needed - this is a breaking change requiring migration
+- **CRITICAL:** All automated tests MUST use mocked data and MUST NOT contact the Toastmasters website
+- **Data Fetching:** The system fetches All Districts CSV (all ~126 districts) PLUS 3 CSV files for each configured district (district, division, club performance)

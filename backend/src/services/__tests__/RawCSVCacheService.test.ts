@@ -11,6 +11,7 @@ import path from 'path'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { CSVType } from '../../types/rawCSVCache.js'
 import { ICacheConfigService, ILogger } from '../../types/serviceInterfaces.js'
+import { ScrapedRecord } from '../../types/districts.js'
 
 // Mock implementations for testing
 class MockCacheConfigService implements ICacheConfigService {
@@ -1201,6 +1202,504 @@ describe('RawCSVCacheService', () => {
           r.includes('monitoring disk space')
         )
       ).toBe(true)
+    })
+  })
+
+  describe('getAllDistrictsCached - Cache Lookup', () => {
+    it('should return null for cache miss (no cached file)', async () => {
+      const date = '2026-01-07'
+
+      // Try to get cached data when nothing is cached
+      const result = await cacheService.getAllDistrictsCached(date)
+
+      expect(result).toBeNull()
+    })
+
+    it('should return cached data with fromCache=true for cache hit', async () => {
+      const date = '2026-01-07'
+      const csvContent =
+        'District,Region,Clubs,Members\n42,Region 1,25,500\n43,Region 2,30,600\n'
+
+      // Cache the All Districts CSV
+      await cacheService.setCachedCSV(date, CSVType.ALL_DISTRICTS, csvContent)
+
+      // Retrieve from cache
+      const result = await cacheService.getAllDistrictsCached(date)
+
+      expect(result).not.toBeNull()
+      expect(result!.fromCache).toBe(true)
+      expect(result!.data).toHaveLength(2)
+      expect(result!.data[0]).toHaveProperty('District')
+      expect(result!.data[0]?.District).toBe(42) // Parsed as number
+      expect(result!.data[1]).toHaveProperty('District')
+      expect(result!.data[1]?.District).toBe(43) // Parsed as number
+    })
+
+    it('should return correct metadata for cached file', async () => {
+      const date = '2026-01-07'
+      const csvContent =
+        'District,Region,Clubs\n42,Region 1,25\n43,Region 2,30\n'
+
+      // Cache the All Districts CSV
+      await cacheService.setCachedCSV(date, CSVType.ALL_DISTRICTS, csvContent)
+
+      // Retrieve from cache
+      const result = await cacheService.getAllDistrictsCached(date)
+
+      expect(result).not.toBeNull()
+      expect(result!.metadata).toHaveProperty('fileName')
+      expect(result!.metadata.fileName).toBe(`all-districts-${date}.csv`)
+      expect(result!.metadata).toHaveProperty('date')
+      expect(result!.metadata.date).toBe(date)
+      expect(result!.metadata).toHaveProperty('fetchedAt')
+      expect(result!.metadata).toHaveProperty('fileSize')
+      expect(result!.metadata.fileSize).toBeGreaterThan(0)
+      expect(result!.metadata).toHaveProperty('checksum')
+    })
+
+    it('should parse CSV content correctly into ScrapedRecord array', async () => {
+      const date = '2026-01-07'
+      const csvContent =
+        'District,Region,Clubs,Members,Growth\n42,Region 1,25,500,5.5\n43,Region 2,30,600,3.2\n'
+
+      // Cache the All Districts CSV
+      await cacheService.setCachedCSV(date, CSVType.ALL_DISTRICTS, csvContent)
+
+      // Retrieve from cache
+      const result = await cacheService.getAllDistrictsCached(date)
+
+      expect(result).not.toBeNull()
+      expect(result!.data).toHaveLength(2)
+
+      // Check first record - numeric values are parsed as numbers
+      expect(result!.data[0]?.District).toBe(42) // Parsed as number
+      expect(result!.data[0]?.Region).toBe('Region 1')
+      expect(result!.data[0]?.Clubs).toBe(25) // Should be parsed as number
+      expect(result!.data[0]?.Members).toBe(500) // Should be parsed as number
+      expect(result!.data[0]?.Growth).toBe(5.5) // Should be parsed as number
+
+      // Check second record
+      expect(result!.data[1]?.District).toBe(43) // Parsed as number
+      expect(result!.data[1]?.Region).toBe('Region 2')
+      expect(result!.data[1]?.Clubs).toBe(30)
+      expect(result!.data[1]?.Members).toBe(600)
+      expect(result!.data[1]?.Growth).toBe(3.2)
+    })
+
+    it('should handle metadata recreation gracefully', async () => {
+      const date = '2026-01-07'
+      const csvContent = 'District,Region,Clubs\n42,Region 1,25\n'
+
+      // Cache the CSV
+      await cacheService.setCachedCSV(date, CSVType.ALL_DISTRICTS, csvContent)
+
+      // Get the metadata to verify it exists
+      let metadata = await cacheService.getCacheMetadata(date)
+      expect(metadata).not.toBeNull()
+
+      // Manually delete the metadata file to simulate missing metadata
+      const metadataPath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'metadata.json'
+      )
+      await fs.unlink(metadataPath)
+
+      // Verify metadata is gone
+      metadata = await cacheService.getCacheMetadata(date)
+      expect(metadata).toBeNull()
+
+      // Try to retrieve - the service should handle missing metadata gracefully
+      // The getCachedCSV call will trigger updateDownloadStats which recreates metadata
+      const result = await cacheService.getAllDistrictsCached(date)
+
+      // The service is resilient and recreates metadata when needed
+      // So the result should still be valid
+      expect(result).not.toBeNull()
+      expect(result!.fromCache).toBe(true)
+      expect(result!.data).toHaveLength(1)
+
+      // Verify metadata was recreated
+      metadata = await cacheService.getCacheMetadata(date)
+      expect(metadata).not.toBeNull()
+    })
+
+    it('should handle CSV with minimal data rows', async () => {
+      const date = '2026-01-07'
+      const csvContent = 'District,Region,Clubs\n42,Region 1,25\n' // Header + 1 data row
+
+      // Cache the CSV
+      await cacheService.setCachedCSV(date, CSVType.ALL_DISTRICTS, csvContent)
+
+      // Retrieve from cache
+      const result = await cacheService.getAllDistrictsCached(date)
+
+      expect(result).not.toBeNull()
+      expect(result!.fromCache).toBe(true)
+      expect(result!.data).toHaveLength(1) // One data row
+      expect(result!.data[0]?.District).toBe(42)
+    })
+
+    it('should set fromCache flag correctly for multiple retrievals', async () => {
+      const date = '2026-01-07'
+      const csvContent = 'District,Region,Clubs\n42,Region 1,25\n'
+
+      // Cache the CSV
+      await cacheService.setCachedCSV(date, CSVType.ALL_DISTRICTS, csvContent)
+
+      // First retrieval
+      const result1 = await cacheService.getAllDistrictsCached(date)
+      expect(result1).not.toBeNull()
+      expect(result1!.fromCache).toBe(true)
+
+      // Second retrieval
+      const result2 = await cacheService.getAllDistrictsCached(date)
+      expect(result2).not.toBeNull()
+      expect(result2!.fromCache).toBe(true)
+
+      // Third retrieval
+      const result3 = await cacheService.getAllDistrictsCached(date)
+      expect(result3).not.toBeNull()
+      expect(result3!.fromCache).toBe(true)
+    })
+
+    it('should handle different dates independently', async () => {
+      const date1 = '2026-01-07'
+      const date2 = '2026-01-08'
+      const csvContent1 = 'District,Region,Clubs\n42,Region 1,25\n'
+      const csvContent2 = 'District,Region,Clubs\n43,Region 2,30\n'
+
+      // Cache CSV for date1
+      await cacheService.setCachedCSV(date1, CSVType.ALL_DISTRICTS, csvContent1)
+
+      // Cache CSV for date2
+      await cacheService.setCachedCSV(date2, CSVType.ALL_DISTRICTS, csvContent2)
+
+      // Retrieve date1 - should get cached data
+      const result1 = await cacheService.getAllDistrictsCached(date1)
+      expect(result1).not.toBeNull()
+      expect(result1!.fromCache).toBe(true)
+      expect(result1!.data[0]?.District).toBe(42) // Parsed as number
+
+      // Retrieve date2 - should get cached data
+      const result2 = await cacheService.getAllDistrictsCached(date2)
+      expect(result2).not.toBeNull()
+      expect(result2!.fromCache).toBe(true)
+      expect(result2!.data[0]?.District).toBe(43) // Parsed as number
+
+      // Retrieve non-existent date - should return null
+      const result3 = await cacheService.getAllDistrictsCached('2026-01-09')
+      expect(result3).toBeNull()
+    })
+  })
+
+  describe('cacheAllDistricts - Cache Storage', () => {
+    it('should write CSV file with correct naming', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25 },
+        { District: 43, Region: 'Region 2', Clubs: 30 },
+      ]
+      const rawCsv = 'District,Region,Clubs\n42,Region 1,25\n43,Region 2,30\n'
+
+      // Cache the All Districts CSV
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Verify file was created with correct naming
+      const expectedPath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'all-districts.csv'
+      )
+
+      // Check file exists
+      const fileExists = await fs
+        .access(expectedPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(fileExists).toBe(true)
+
+      // Verify file content
+      const content = await fs.readFile(expectedPath, 'utf-8')
+      expect(content).toBe(rawCsv)
+    })
+
+    it('should create metadata file when caching', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25 },
+      ]
+      const rawCsv = 'District,Region,Clubs\n42,Region 1,25\n'
+
+      // Cache the All Districts CSV
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Verify metadata file was created
+      const metadataPath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'metadata.json'
+      )
+
+      const metadataExists = await fs
+        .access(metadataPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(metadataExists).toBe(true)
+
+      // Verify metadata content
+      const metadataContent = await fs.readFile(metadataPath, 'utf-8')
+      const metadata = JSON.parse(metadataContent)
+
+      expect(metadata.date).toBe(date)
+      expect(metadata.csvFiles.allDistricts).toBe(true)
+      expect(metadata.source).toBe('scraper')
+      expect(metadata.cacheVersion).toBe(1)
+      expect(metadata.integrity).toHaveProperty('fileCount')
+      expect(metadata.integrity).toHaveProperty('totalSize')
+      expect(metadata.integrity).toHaveProperty('checksums')
+    })
+
+    it('should preserve file content exactly', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25, Members: 500 },
+        { District: 43, Region: 'Region 2', Clubs: 30, Members: 600 },
+        { District: 44, Region: 'Region 3', Clubs: 35, Members: 700 },
+      ]
+      const rawCsv =
+        'District,Region,Clubs,Members\n42,Region 1,25,500\n43,Region 2,30,600\n44,Region 3,35,700\n'
+
+      // Cache the All Districts CSV
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Read back the file
+      const filePath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'all-districts.csv'
+      )
+      const content = await fs.readFile(filePath, 'utf-8')
+
+      // Verify content is exactly preserved
+      expect(content).toBe(rawCsv)
+      expect(content.length).toBe(rawCsv.length)
+
+      // Verify line-by-line
+      const originalLines = rawCsv.split('\n')
+      const cachedLines = content.split('\n')
+      expect(cachedLines.length).toBe(originalLines.length)
+
+      for (let i = 0; i < originalLines.length; i++) {
+        expect(cachedLines[i]).toBe(originalLines[i])
+      }
+    })
+
+    it('should handle CSV with special characters', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = [
+        { District: 42, Name: 'District "42"', Region: 'Region, 1' },
+      ]
+      const rawCsv = 'District,Name,Region\n42,"District ""42""","Region, 1"\n'
+
+      // Cache the All Districts CSV with special characters
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Read back the file
+      const filePath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'all-districts.csv'
+      )
+      const content = await fs.readFile(filePath, 'utf-8')
+
+      // Verify special characters are preserved
+      expect(content).toBe(rawCsv)
+      expect(content).toContain('"District ""42"""')
+      expect(content).toContain('"Region, 1"')
+    })
+
+    it('should handle CSV with Unicode characters', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = [
+        { District: 42, Name: 'Montréal', Region: 'Québec' },
+        { District: 43, Name: 'São Paulo', Region: 'Brasil' },
+      ]
+      const rawCsv =
+        'District,Name,Region\n42,Montréal,Québec\n43,São Paulo,Brasil\n'
+
+      // Cache the All Districts CSV with Unicode characters
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Read back the file
+      const filePath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'all-districts.csv'
+      )
+      const content = await fs.readFile(filePath, 'utf-8')
+
+      // Verify Unicode characters are preserved
+      expect(content).toBe(rawCsv)
+      expect(content).toContain('Montréal')
+      expect(content).toContain('Québec')
+      expect(content).toContain('São Paulo')
+      expect(content).toContain('Brasil')
+    })
+
+    it('should overwrite existing file when caching same date', async () => {
+      const date = '2026-01-07'
+      const data1: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25 },
+      ]
+      const rawCsv1 = 'District,Region,Clubs\n42,Region 1,25\n'
+
+      const data2: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25 },
+        { District: 43, Region: 'Region 2', Clubs: 30 },
+      ]
+      const rawCsv2 = 'District,Region,Clubs\n42,Region 1,25\n43,Region 2,30\n'
+
+      // Cache first version
+      await cacheService.cacheAllDistricts(date, data1, rawCsv1)
+
+      // Verify first version
+      const filePath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'all-districts.csv'
+      )
+      let content = await fs.readFile(filePath, 'utf-8')
+      expect(content).toBe(rawCsv1)
+
+      // Cache second version (overwrite)
+      await cacheService.cacheAllDistricts(date, data2, rawCsv2)
+
+      // Verify second version replaced first
+      content = await fs.readFile(filePath, 'utf-8')
+      expect(content).toBe(rawCsv2)
+      expect(content).not.toBe(rawCsv1)
+    })
+
+    it('should handle large CSV files', async () => {
+      const date = '2026-01-07'
+
+      // Generate large CSV with many districts
+      const data: ScrapedRecord[] = []
+      let rawCsv = 'District,Region,Clubs,Members\n'
+
+      for (let i = 1; i <= 200; i++) {
+        data.push({
+          District: i,
+          Region: `Region ${i % 10}`,
+          Clubs: 20 + i,
+          Members: 400 + i * 10,
+        })
+        rawCsv += `${i},Region ${i % 10},${20 + i},${400 + i * 10}\n`
+      }
+
+      // Cache the large CSV
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Verify file was created
+      const filePath = path.join(
+        testCacheDir,
+        'raw-csv',
+        date,
+        'all-districts.csv'
+      )
+      const content = await fs.readFile(filePath, 'utf-8')
+
+      // Verify content is preserved
+      expect(content).toBe(rawCsv)
+      expect(content.split('\n').length).toBe(rawCsv.split('\n').length)
+
+      // Verify metadata reflects large file
+      const metadata = await cacheService.getCacheMetadata(date)
+      expect(metadata).not.toBeNull()
+      expect(metadata!.integrity.totalSize).toBeGreaterThan(1000) // Should be several KB
+    })
+
+    it('should create directory structure if it does not exist', async () => {
+      const date = '2026-01-10' // New date that doesn't have a directory yet
+      const data: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25 },
+      ]
+      const rawCsv = 'District,Region,Clubs\n42,Region 1,25\n'
+
+      // Verify directory doesn't exist yet
+      const datePath = path.join(testCacheDir, 'raw-csv', date)
+      const dirExistsBefore = await fs
+        .access(datePath)
+        .then(() => true)
+        .catch(() => false)
+      expect(dirExistsBefore).toBe(false)
+
+      // Cache the CSV
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Verify directory was created
+      const dirExistsAfter = await fs
+        .access(datePath)
+        .then(() => true)
+        .catch(() => false)
+      expect(dirExistsAfter).toBe(true)
+
+      // Verify file was created in the new directory
+      const filePath = path.join(datePath, 'all-districts.csv')
+      const fileExists = await fs
+        .access(filePath)
+        .then(() => true)
+        .catch(() => false)
+      expect(fileExists).toBe(true)
+    })
+
+    it('should update metadata checksums correctly', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = [
+        { District: 42, Region: 'Region 1', Clubs: 25 },
+      ]
+      const rawCsv = 'District,Region,Clubs\n42,Region 1,25\n'
+
+      // Cache the CSV
+      await cacheService.cacheAllDistricts(date, data, rawCsv)
+
+      // Get metadata
+      const metadata = await cacheService.getCacheMetadata(date)
+      expect(metadata).not.toBeNull()
+
+      // Verify checksum exists for the file
+      expect(metadata!.integrity.checksums).toHaveProperty('all-districts.csv')
+      const checksum = metadata!.integrity.checksums['all-districts.csv']
+      expect(checksum).toBeTruthy()
+      expect(checksum).toHaveLength(64) // SHA-256 produces 64 hex characters
+
+      // Verify checksum is correct by recalculating
+      const crypto = await import('crypto')
+      const expectedChecksum = crypto
+        .createHash('sha256')
+        .update(rawCsv)
+        .digest('hex')
+      expect(checksum).toBe(expectedChecksum)
+    })
+
+    it('should handle empty data array gracefully', async () => {
+      const date = '2026-01-07'
+      const data: ScrapedRecord[] = []
+      const rawCsv = 'District,Region,Clubs\n' // Header only
+
+      // The service validates that CSV must have at least a header and one data row
+      // So attempting to cache header-only CSV should throw an error
+      await expect(
+        cacheService.cacheAllDistricts(date, data, rawCsv)
+      ).rejects.toThrow('CSV must have at least a header and one data row')
     })
   })
 })

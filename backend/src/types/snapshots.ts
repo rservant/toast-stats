@@ -277,3 +277,62 @@ export const CURRENT_SCHEMA_VERSION = '1.0.0'
  * derived metrics changes.
  */
 export const CURRENT_CALCULATION_VERSION = '1.0.0'
+
+/**
+ * All districts rankings data structure
+ * Contains BordaCount rankings for all districts worldwide
+ */
+export interface AllDistrictsRankingsData {
+  /** Metadata about the rankings data */
+  metadata: {
+    /** Snapshot ID this rankings data belongs to */
+    snapshotId: string
+    /** When the rankings were calculated */
+    calculatedAt: string
+    /** Schema version */
+    schemaVersion: string
+    /** Calculation version used */
+    calculationVersion: string
+    /** Ranking algorithm version */
+    rankingVersion: string
+    /** Source CSV date */
+    sourceCsvDate: string
+    /** When the source CSV was fetched */
+    csvFetchedAt: string
+    /** Total number of districts in rankings */
+    totalDistricts: number
+    /** Whether data came from cache */
+    fromCache: boolean
+  }
+
+  /** Array of district rankings */
+  rankings: DistrictRanking[]
+}
+
+/**
+ * Individual district ranking information
+ */
+export interface DistrictRanking {
+  districtId: string
+  districtName: string
+  region: string
+
+  // Performance metrics
+  paidClubs: number
+  paidClubBase: number
+  clubGrowthPercent: number
+  totalPayments: number
+  paymentBase: number
+  paymentGrowthPercent: number
+  activeClubs: number
+  distinguishedClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+  distinguishedPercent: number
+
+  // Rankings
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+  aggregateScore: number
+}

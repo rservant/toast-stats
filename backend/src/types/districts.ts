@@ -336,29 +336,12 @@ export interface BackfillResponse {
 }
 
 // District Rankings Types (for getAllDistrictsRankings API)
-export interface DistrictRanking {
-  districtId: string
-  districtName: string
-  region: string
-  paidClubs: number
-  paidClubBase: number
-  clubGrowthPercent: number
-  totalPayments: number
-  paymentBase: number
-  paymentGrowthPercent: number
-  activeClubs: number
-  distinguishedClubs: number
-  selectDistinguished: number
-  presidentsDistinguished: number
-  distinguishedPercent: number
-  clubsRank: number
-  paymentsRank: number
-  distinguishedRank: number
-  aggregateScore: number
-}
+// DistrictRanking is exported from snapshots.ts to avoid duplicate exports
+// Re-export it here for backward compatibility
+export type { DistrictRanking } from './snapshots.js'
 
 export interface DistrictRankingsResponse {
-  rankings: DistrictRanking[]
+  rankings: import('./snapshots.js').DistrictRanking[]
   date: string
 }
 

@@ -41,10 +41,14 @@ describe('RefreshService District-Scoped Data Collection', () => {
     const mockCacheService = createMockCacheService()
     mockScraper = vi.mocked(new ToastmastersScraper(mockCacheService))
 
+    // Create mock raw CSV cache service
+    const mockRawCSVCache = createMockCacheService()
+
     // Create refresh service with mocked dependencies
     refreshService = new RefreshService(
       snapshotStore,
       mockScraper,
+      mockRawCSVCache,
       new DataValidator(),
       districtConfigService
     )

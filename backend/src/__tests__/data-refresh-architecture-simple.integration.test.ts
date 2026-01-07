@@ -18,6 +18,7 @@ import { DistrictConfigurationService } from '../services/DistrictConfigurationS
 import { ProcessSeparationValidator } from '../services/ProcessSeparationValidator.js'
 import { ToastmastersScraper } from '../services/ToastmastersScraper.js'
 import { Snapshot } from '../types/snapshots.js'
+import { createMockCacheService } from './utils/mockCacheService.js'
 
 // Mock scraper interface matching ToastmastersScraper methods used by RefreshService
 interface MockScraper {
@@ -110,9 +111,11 @@ describe('Data Refresh Architecture - Integration Tests', () => {
     await districtConfigService.setConfiguredDistricts(['61'], 'test-admin')
 
     // Create test refresh service
+    const mockRawCSVCache = createMockCacheService()
     refreshService = new RefreshService(
       snapshotStore,
       mockScraper as unknown as ToastmastersScraper,
+      mockRawCSVCache,
       dataValidator,
       districtConfigService
     )
@@ -300,9 +303,11 @@ describe('Data Refresh Architecture - Integration Tests', () => {
       }
 
       // Create refresh service with failing validator
+      const mockRawCSVCache2 = createMockCacheService()
       const refreshServiceWithFailingValidator = new RefreshService(
         snapshotStore,
         mockScraper as unknown as ToastmastersScraper,
+        mockRawCSVCache2,
         mockValidator as unknown as DataValidator,
         districtConfigService
       )

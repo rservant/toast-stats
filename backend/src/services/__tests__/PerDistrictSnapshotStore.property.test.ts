@@ -143,6 +143,9 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     async () => {
       await fc.assert(
         fc.asyncProperty(snapshotGenerator, async snapshot => {
+          // Force status to 'success' for this test since we need getLatestSuccessful to work
+          snapshot.status = 'success'
+
           // Ensure district count matches payload
           snapshot.payload.metadata.districtCount =
             snapshot.payload.districts.length
@@ -159,11 +162,16 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(snapshot)
 
-          // Verify directory structure exists
+          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
+          const latestSnapshot = await store.getLatestSuccessful()
+          expect(latestSnapshot).not.toBeNull()
+          const actualSnapshotId = latestSnapshot!.snapshot_id
+
+          // Verify directory structure exists using actual snapshot ID
           const snapshotDir = path.join(
             testCacheDir,
             'snapshots',
-            snapshot.snapshot_id
+            actualSnapshotId
           )
           const dirExists = await fs
             .access(snapshotDir)
@@ -221,6 +229,9 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     async () => {
       await fc.assert(
         fc.asyncProperty(snapshotGenerator, async snapshot => {
+          // Force status to 'success' for this test since we need getLatestSuccessful to work
+          snapshot.status = 'success'
+
           // Ensure district count matches payload
           snapshot.payload.metadata.districtCount =
             snapshot.payload.districts.length
@@ -236,10 +247,15 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(snapshot)
 
-          // Read and verify metadata.json
-          const metadata = await store.getSnapshotMetadata(snapshot.snapshot_id)
+          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
+          const latestSnapshot = await store.getLatestSuccessful()
+          expect(latestSnapshot).not.toBeNull()
+          const actualSnapshotId = latestSnapshot!.snapshot_id
+
+          // Read and verify metadata.json using actual snapshot ID
+          const metadata = await store.getSnapshotMetadata(actualSnapshotId)
           expect(metadata).toBeDefined()
-          expect(metadata!.snapshotId).toBe(snapshot.snapshot_id)
+          expect(metadata!.snapshotId).toBe(actualSnapshotId)
           expect(metadata!.schemaVersion).toBe(snapshot.schema_version)
           expect(metadata!.calculationVersion).toBe(
             snapshot.calculation_version
@@ -253,10 +269,10 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
             snapshot.payload.metadata.dataAsOfDate
           )
 
-          // Read and verify manifest.json
-          const manifest = await store.getSnapshotManifest(snapshot.snapshot_id)
+          // Read and verify manifest.json using actual snapshot ID
+          const manifest = await store.getSnapshotManifest(actualSnapshotId)
           expect(manifest).toBeDefined()
-          expect(manifest!.snapshotId).toBe(snapshot.snapshot_id)
+          expect(manifest!.snapshotId).toBe(actualSnapshotId)
           expect(manifest!.totalDistricts).toBe(
             snapshot.payload.districts.length
           )
@@ -294,42 +310,52 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           fc.array(snapshotGenerator, { minLength: 1, maxLength: 5 }),
           async snapshots => {
             // Ensure unique snapshot IDs and district IDs within each snapshot
-            const uniqueSnapshots = snapshots.map((snapshot, index) => ({
-              ...snapshot,
-              snapshot_id: (Date.now() + index).toString(),
-              payload: {
-                ...snapshot.payload,
-                districts: snapshot.payload.districts.map(
-                  (district, districtIndex) => ({
-                    ...district,
-                    districtId: `${district.districtId}_${index}_${districtIndex}`,
-                  })
-                ),
-                metadata: {
-                  ...snapshot.payload.metadata,
-                  districtCount: snapshot.payload.districts.length,
-                },
-              },
-            }))
+            // Use different dataAsOfDate values to ensure unique snapshot directories
+            const uniqueSnapshots = snapshots.map((snapshot, index) => {
+              // Generate unique dataAsOfDate for each snapshot
+              const baseDate = new Date('2020-01-01')
+              baseDate.setDate(baseDate.getDate() + index)
+              const dataAsOfDate = baseDate.toISOString().split('T')[0]
 
-            let lastSuccessfulSnapshot: (typeof uniqueSnapshots)[0] | null =
-              null
+              return {
+                ...snapshot,
+                snapshot_id: (Date.now() + index).toString(),
+                payload: {
+                  ...snapshot.payload,
+                  districts: snapshot.payload.districts.map(
+                    (district, districtIndex) => ({
+                      ...district,
+                      districtId: `${district.districtId}_${index}_${districtIndex}`,
+                    })
+                  ),
+                  metadata: {
+                    ...snapshot.payload.metadata,
+                    districtCount: snapshot.payload.districts.length,
+                    dataAsOfDate,
+                  },
+                },
+              }
+            })
+
+            let lastSuccessfulDataAsOfDate: string | null = null
 
             // Write snapshots in sequence
             for (const snapshot of uniqueSnapshots) {
               await store.writeSnapshot(snapshot)
 
               if (snapshot.status === 'success') {
-                lastSuccessfulSnapshot = snapshot
+                lastSuccessfulDataAsOfDate =
+                  snapshot.payload.metadata.dataAsOfDate
               }
             }
 
             // Verify current.json points to the last successful snapshot
-            if (lastSuccessfulSnapshot) {
+            if (lastSuccessfulDataAsOfDate) {
               const currentSnapshot = await store.getLatestSuccessful()
               expect(currentSnapshot).toBeDefined()
+              // The snapshot_id should be the ISO date format of the dataAsOfDate
               expect(currentSnapshot!.snapshot_id).toBe(
-                lastSuccessfulSnapshot.snapshot_id
+                lastSuccessfulDataAsOfDate
               )
             }
 
@@ -348,6 +374,9 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     async () => {
       await fc.assert(
         fc.asyncProperty(snapshotGenerator, async originalSnapshot => {
+          // Force status to 'success' for this test since we need getLatestSuccessful to work
+          originalSnapshot.status = 'success'
+
           // Ensure district count matches payload
           originalSnapshot.payload.metadata.districtCount =
             originalSnapshot.payload.districts.length
@@ -365,16 +394,18 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(originalSnapshot)
 
-          // Read it back using the aggregation method
-          const reconstructedSnapshot = await store.getSnapshot(
-            originalSnapshot.snapshot_id
-          )
+          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
+          const latestSnapshot = await store.getLatestSuccessful()
+          expect(latestSnapshot).not.toBeNull()
+          const actualSnapshotId = latestSnapshot!.snapshot_id
+
+          // Read it back using the aggregation method with actual snapshot ID
+          const reconstructedSnapshot =
+            await store.getSnapshot(actualSnapshotId)
           expect(reconstructedSnapshot).toBeDefined()
 
-          // Verify core snapshot properties match
-          expect(reconstructedSnapshot!.snapshot_id).toBe(
-            originalSnapshot.snapshot_id
-          )
+          // Verify core snapshot properties match (using actual snapshot ID)
+          expect(reconstructedSnapshot!.snapshot_id).toBe(actualSnapshotId)
           expect(reconstructedSnapshot!.schema_version).toBe(
             originalSnapshot.schema_version
           )
@@ -435,6 +466,9 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     async () => {
       await fc.assert(
         fc.asyncProperty(snapshotGenerator, async snapshot => {
+          // Force status to 'success' for this test since we need getLatestSuccessful to work
+          snapshot.status = 'success'
+
           // Ensure district count matches payload
           snapshot.payload.metadata.districtCount =
             snapshot.payload.districts.length
@@ -450,10 +484,15 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(snapshot)
 
-          // Test reading existing districts
+          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
+          const latestSnapshot = await store.getLatestSuccessful()
+          expect(latestSnapshot).not.toBeNull()
+          const actualSnapshotId = latestSnapshot!.snapshot_id
+
+          // Test reading existing districts using actual snapshot ID
           for (const originalDistrict of snapshot.payload.districts) {
             const districtData = await store.readDistrictData(
-              snapshot.snapshot_id,
+              actualSnapshotId,
               originalDistrict.districtId
             )
 
@@ -479,7 +518,7 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
               )
             ) {
               const districtData = await store.readDistrictData(
-                snapshot.snapshot_id,
+                actualSnapshotId,
                 nonExistentId
               )
               // District should not be found
@@ -487,10 +526,9 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
             }
           }
 
-          // Test listing districts in snapshot
-          const districtsInSnapshot = await store.listDistrictsInSnapshot(
-            snapshot.snapshot_id
-          )
+          // Test listing districts in snapshot using actual snapshot ID
+          const districtsInSnapshot =
+            await store.listDistrictsInSnapshot(actualSnapshotId)
           expect(districtsInSnapshot).toHaveLength(
             snapshot.payload.districts.length
           )

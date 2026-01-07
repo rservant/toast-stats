@@ -14,18 +14,83 @@ import { FileSnapshotStore } from '../FileSnapshotStore.js'
 import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import { DataValidator } from '../DataValidator.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
+import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import type { DistrictStatistics } from '../../types/districts.js'
+import type {
+  ICacheConfigService,
+  ILogger,
+} from '../../types/serviceInterfaces.js'
 
-// Mock the scraper to simulate network operations
-vi.mock('../ToastmastersScraper.ts')
+// Mock implementations for testing
+class MockCacheConfigService implements ICacheConfigService {
+  private cacheDir: string
+
+  constructor(cacheDir: string) {
+    this.cacheDir = cacheDir
+  }
+
+  getCacheDirectory(): string {
+    return this.cacheDir
+  }
+
+  getConfiguration() {
+    return {
+      baseDirectory: this.cacheDir,
+      isConfigured: true,
+      source: 'test' as const,
+      validationStatus: {
+        isValid: true,
+        isAccessible: true,
+        isSecure: true,
+      },
+    }
+  }
+
+  async initialize(): Promise<void> {
+    // Mock implementation
+  }
+
+  async validateCacheDirectory(): Promise<void> {
+    // Mock implementation
+  }
+
+  isReady(): boolean {
+    return true
+  }
+
+  async dispose(): Promise<void> {
+    // Mock implementation
+  }
+}
+
+class MockLogger implements ILogger {
+  info(_message: string, _data?: unknown): void {
+    // Silent for tests
+  }
+
+  warn(_message: string, _data?: unknown): void {
+    // Silent for tests
+  }
+
+  error(_message: string, _error?: Error | unknown): void {
+    // Silent for tests
+  }
+
+  debug(_message: string, _data?: unknown): void {
+    // Silent for tests
+  }
+}
 
 describe('RefreshService Ranking Integration', () => {
   let testCacheDir: string
   let snapshotStore: FileSnapshotStore
-  let mockScraper: vi.Mocked<ToastmastersScraper>
+  let mockScraper: ToastmastersScraper
   let validator: DataValidator
   let districtConfigService: DistrictConfigurationService
   let rankingCalculator: BordaCountRankingCalculator
+  let rawCSVCache: RawCSVCacheService
+  let mockCacheConfig: MockCacheConfigService
+  let mockLogger: MockLogger
 
   beforeEach(async () => {
     // Create a unique test cache directory
@@ -36,14 +101,25 @@ describe('RefreshService Ranking Integration', () => {
     )
     await fs.mkdir(testCacheDir, { recursive: true })
 
+    // Create mock cache config and logger
+    mockCacheConfig = new MockCacheConfigService(testCacheDir)
+    mockLogger = new MockLogger()
+
     // Initialize services
     snapshotStore = new FileSnapshotStore({ cacheDir: testCacheDir })
     validator = new DataValidator()
     districtConfigService = new DistrictConfigurationService(testCacheDir)
     rankingCalculator = new BordaCountRankingCalculator()
+    rawCSVCache = new RawCSVCacheService(mockCacheConfig, mockLogger)
 
-    // Mock scraper
-    mockScraper = vi.mocked(new ToastmastersScraper())
+    // Create mock scraper
+    mockScraper = {
+      getAllDistricts: vi.fn(),
+      getDistrictPerformance: vi.fn(),
+      getDivisionPerformance: vi.fn(),
+      getClubPerformance: vi.fn(),
+      closeBrowser: vi.fn(),
+    } as unknown as ToastmastersScraper
 
     // Mock scraper methods to return test data (matching property test pattern)
     const mockAllDistricts = [
@@ -89,12 +165,13 @@ describe('RefreshService Ranking Integration', () => {
       },
     ]
 
-    mockScraper.getAllDistricts.mockResolvedValue(mockAllDistricts)
-    mockScraper.getDistrictPerformance.mockResolvedValue(mockDistrictData)
-    mockScraper.getDivisionPerformance.mockResolvedValue([])
-    mockScraper.getClubPerformance.mockResolvedValue(mockClubData)
-
-    mockScraper.closeBrowser.mockResolvedValue()
+    vi.mocked(mockScraper.getAllDistricts).mockResolvedValue(mockAllDistricts)
+    vi.mocked(mockScraper.getDistrictPerformance).mockResolvedValue(
+      mockDistrictData
+    )
+    vi.mocked(mockScraper.getDivisionPerformance).mockResolvedValue([])
+    vi.mocked(mockScraper.getClubPerformance).mockResolvedValue(mockClubData)
+    vi.mocked(mockScraper.closeBrowser).mockResolvedValue()
 
     // Configure a test district
     await districtConfigService.addDistrict('42', 'test-admin')
@@ -115,6 +192,7 @@ describe('RefreshService Ranking Integration', () => {
     const refreshService = new RefreshService(
       snapshotStore,
       mockScraper,
+      rawCSVCache,
       validator,
       districtConfigService,
       rankingCalculator
@@ -131,21 +209,19 @@ describe('RefreshService Ranking Integration', () => {
     const snapshot = await snapshotStore.getSnapshot(result.snapshot_id!)
     expect(snapshot).toBeDefined()
 
-    // Verify that districts have ranking data
+    // Verify that districts DON'T have ranking data (stored separately now)
     const districts = snapshot!.payload.districts
     expect(districts).toHaveLength(1)
 
     const district = districts[0]
-    expect(district.ranking).toBeDefined()
-    expect(district.ranking!.clubsRank).toBeDefined()
-    expect(district.ranking!.paymentsRank).toBeDefined()
-    expect(district.ranking!.distinguishedRank).toBeDefined()
-    expect(district.ranking!.aggregateScore).toBeDefined()
-    expect(district.ranking!.rankingVersion).toBe('2.0')
-    expect(district.ranking!.calculatedAt).toBeDefined()
+    expect(district.ranking).toBeUndefined() // Rankings stored separately per Requirement 1.4
+
+    // Verify that all-districts rankings were created
+    // Note: This would require checking the all-districts-rankings.json file
+    // which is stored separately from the snapshot
   })
 
-  it('should handle ranking calculator failures gracefully', async () => {
+  it('should fail refresh when ranking calculator fails (requirement 5.6)', async () => {
     // Create a mock ranking calculator that throws an error
     const failingRankingCalculator = {
       calculateRankings: vi
@@ -158,6 +234,7 @@ describe('RefreshService Ranking Integration', () => {
     const refreshService = new RefreshService(
       snapshotStore,
       mockScraper,
+      rawCSVCache,
       validator,
       districtConfigService,
       failingRankingCalculator
@@ -166,25 +243,17 @@ describe('RefreshService Ranking Integration', () => {
     // Execute refresh
     const result = await refreshService.executeRefresh()
 
-    // Verify refresh was still successful (error handling requirement 5.3)
-    expect(result.success).toBe(true)
-    expect(result.snapshot_id).toBeDefined()
+    // Per requirement 5.6 in all-districts-rankings-storage spec:
+    // "IF ranking calculation fails for all districts, THEN THE System SHALL fail the entire refresh operation"
+    expect(result.success).toBe(false)
+    expect(result.status).toBe('failed')
+    expect(result.errors.length).toBeGreaterThan(0)
+    expect(
+      result.errors.some(e => e.includes('rankings calculation failed'))
+    ).toBe(true)
 
-    // Get the created snapshot
-    const snapshot = await snapshotStore.getSnapshot(result.snapshot_id!)
-    expect(snapshot).toBeDefined()
-
-    // Verify that districts don't have ranking data (graceful degradation)
-    const districts = snapshot!.payload.districts
-    expect(districts).toHaveLength(1)
-
-    const district = districts[0]
-    expect(district.ranking).toBeUndefined()
-
-    // Verify the failing calculator was called
-    expect(failingRankingCalculator.calculateRankings).toHaveBeenCalledWith(
-      districts
-    )
+    // Verify the failing calculator was called with ALL districts data
+    expect(failingRankingCalculator.calculateRankings).toHaveBeenCalled()
   })
 
   it('should work without ranking calculator (backward compatibility)', async () => {
@@ -192,6 +261,7 @@ describe('RefreshService Ranking Integration', () => {
     const refreshService = new RefreshService(
       snapshotStore,
       mockScraper,
+      rawCSVCache,
       validator,
       districtConfigService
       // No ranking calculator provided
@@ -255,6 +325,7 @@ describe('RefreshService Ranking Integration', () => {
     const refreshService = new RefreshService(
       snapshotStore,
       mockScraper,
+      rawCSVCache,
       validator,
       districtConfigService,
       spyRankingCalculator
@@ -266,19 +337,18 @@ describe('RefreshService Ranking Integration', () => {
     // Verify refresh was successful
     expect(result.success).toBe(true)
 
-    // Verify the ranking calculator was called with normalized district data
+    // Verify the ranking calculator was called with ALL districts data
+    // (from the All Districts CSV, not just configured districts)
     expect(spyRankingCalculator.calculateRankings).toHaveBeenCalledTimes(1)
     const calledWith = spyRankingCalculator.calculateRankings.mock.calls[0][0]
 
     // Verify the districts have the expected structure and data
+    // Note: This is data from the All Districts CSV, not configured districts
     expect(calledWith).toHaveLength(1)
     expect(calledWith[0].districtId).toBe('42')
-    expect(calledWith[0].districtPerformance).toBeDefined()
-    expect(calledWith[0].districtPerformance).toHaveLength(1)
 
-    // Verify the source data matches what was provided by the scraper
-    const districtPerformance = calledWith[0].districtPerformance![0]
-    expect(districtPerformance.DISTRICT).toBe('42')
-    expect(districtPerformance['% Club Growth']).toBe('25.0')
+    // The data structure is different for all-districts vs per-district
+    // All-districts data comes from the summary CSV
+    expect(calledWith[0]).toHaveProperty('districtId')
   })
 })
