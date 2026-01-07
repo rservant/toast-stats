@@ -41,7 +41,7 @@ jobs:
         id: typescript
         run: |
           echo "Checking TypeScript compilation..."
-          BACKEND_ERRORS=$(npm run typecheck:backend:all 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+          BACKEND_ERRORS=$(npm run typecheck:backend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
           FRONTEND_ERRORS=$(npm run typecheck:frontend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
           TOTAL_ERRORS=$((BACKEND_ERRORS + FRONTEND_ERRORS))
 
