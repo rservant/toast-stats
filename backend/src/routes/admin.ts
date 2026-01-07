@@ -132,8 +132,19 @@ router.get('/snapshots', logAdminAccess, async (req, res) => {
  */
 router.get('/snapshots/:snapshotId', logAdminAccess, async (req, res): Promise<void> => {
   const startTime = Date.now()
-  const { snapshotId } = req.params
+  const snapshotId = req.params['snapshotId']
   const operationId = `inspect_snapshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // Validate snapshotId parameter
+  if (!snapshotId) {
+    res.status(400).json({
+      error: {
+        code: 'MISSING_SNAPSHOT_ID',
+        message: 'Snapshot ID is required',
+      },
+    })
+    return
+  }
 
   logger.info('Admin snapshot inspection requested', {
     operation: 'inspectSnapshot',
@@ -242,8 +253,19 @@ router.get(
   logAdminAccess,
   async (req, res): Promise<void> => {
     const startTime = Date.now()
-    const { snapshotId } = req.params
+    const snapshotId = req.params['snapshotId']
     const operationId = `get_payload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Validate snapshotId parameter
+    if (!snapshotId) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_SNAPSHOT_ID',
+          message: 'Snapshot ID is required',
+        },
+      })
+      return
+    }
 
     logger.info('Admin snapshot payload requested', {
       operation: 'getSnapshotPayload',
