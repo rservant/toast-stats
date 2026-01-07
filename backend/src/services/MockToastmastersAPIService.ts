@@ -19,7 +19,10 @@ export class MockToastmastersAPIService {
     }
   }
 
-  async getAllDistrictsRankings(_date?: string): Promise<unknown[]> {
+  async getAllDistrictsRankings(_date?: string): Promise<{
+    rankings: unknown[]
+    date: string
+  }> {
     try {
       const districtIds = ['1', '2', '10', '25', '46', '61', '101', '120']
       const mockData = []
@@ -66,7 +69,10 @@ export class MockToastmastersAPIService {
 
       // Ensure we have data to work with
       if (totalDistricts === 0) {
-        return []
+        return {
+          rankings: [],
+          date: _date ?? new Date().toISOString().split('T')[0]!,
+        }
       }
 
       // Create ranking maps with tie handling and Borda points
@@ -142,14 +148,20 @@ export class MockToastmastersAPIService {
         })
         .sort((a, b) => b.aggregateScore - a.aggregateScore) // Higher score is better
 
-      return rankings
+      return {
+        rankings,
+        date: _date ?? new Date().toISOString().split('T')[0]!,
+      }
     } catch (error) {
       console.error(
         'Error in MockToastmastersAPIService.getAllDistrictsRankings:',
         error
       )
-      // Return empty rankings instead of throwing
-      return []
+      // Return empty rankings with proper structure instead of throwing
+      return {
+        rankings: [],
+        date: _date ?? new Date().toISOString().split('T')[0]!,
+      }
     }
   }
 

@@ -139,7 +139,7 @@ describe('ClubsTable Property Tests', () => {
         divisionName: 'Division A',
         areaId: 'area-1',
         areaName: 'Area 1',
-        distinguishedLevel: undefined,
+        distinguishedLevel: 'NotDistinguished' as const,
         currentStatus: 'healthy' as const,
         riskFactors: [],
         membershipTrend: [{ date: new Date().toISOString(), count: 20 }],

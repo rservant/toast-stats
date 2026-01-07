@@ -363,6 +363,7 @@ export function createTestCacheCleanup(baseCachePath: string): {
   trackFile: (filePath: string) => void
   cleanup: () => Promise<void>
   getTrackedPaths: () => { directories: string[]; files: string[] }
+  getStats: () => { trackedDirectories: number; trackedFiles: number }
 } {
   const createdDirectories: string[] = []
   const createdFiles: string[] = []
@@ -435,6 +436,16 @@ export function createTestCacheCleanup(baseCachePath: string): {
       return {
         directories: [...createdDirectories],
         files: [...createdFiles],
+      }
+    },
+
+    /**
+     * Get cleanup statistics
+     */
+    getStats(): { trackedDirectories: number; trackedFiles: number } {
+      return {
+        trackedDirectories: createdDirectories.length,
+        trackedFiles: createdFiles.length,
       }
     },
   }

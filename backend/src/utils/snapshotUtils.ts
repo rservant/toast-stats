@@ -8,11 +8,23 @@ import {
 } from '../types/snapshots.js'
 
 /**
- * Generate a unique snapshot ID based on current timestamp
+ * Generate a unique snapshot ID based on current timestamp with counter for uniqueness
  * @returns Timestamp-based snapshot ID
  */
+let lastTimestamp = 0
+let counter = 0
+
 export function generateSnapshotId(): string {
-  return Date.now().toString()
+  const now = Date.now()
+
+  if (now === lastTimestamp) {
+    counter++
+  } else {
+    lastTimestamp = now
+    counter = 0
+  }
+
+  return counter === 0 ? now.toString() : `${now}-${counter}`
 }
 
 /**
@@ -30,7 +42,17 @@ export function generateSnapshotIdForTimestamp(timestamp: number): string {
  * @returns Unix timestamp in milliseconds, or null if invalid
  */
 export function parseSnapshotTimestamp(snapshotId: string): number | null {
-  const timestamp = parseInt(snapshotId, 10)
+  if (!isValidSnapshotId(snapshotId)) {
+    return null
+  }
+
+  const parts = snapshotId.split('-')
+  const firstPart = parts[0]
+  if (!firstPart) {
+    return null
+  }
+
+  const timestamp = parseInt(firstPart, 10)
   return isNaN(timestamp) ? null : timestamp
 }
 
@@ -68,8 +90,30 @@ export function isValidSnapshotId(snapshotId: string): boolean {
     return false
   }
 
-  const timestamp = parseInt(snapshotId, 10)
-  return !isNaN(timestamp) && timestamp > 0
+  // Handle both formats: "timestamp" and "timestamp-counter"
+  const parts = snapshotId.split('-')
+  const firstPart = parts[0]
+  if (!firstPart) {
+    return false
+  }
+
+  const timestamp = parseInt(firstPart, 10)
+
+  if (isNaN(timestamp) || timestamp <= 0) {
+    return false
+  }
+
+  // If there's a counter part, validate it
+  if (parts.length === 2) {
+    const secondPart = parts[1]
+    if (!secondPart) {
+      return false
+    }
+    const counter = parseInt(secondPart, 10)
+    return !isNaN(counter) && counter >= 0
+  }
+
+  return parts.length === 1
 }
 
 /**
@@ -79,9 +123,20 @@ export function isValidSnapshotId(snapshotId: string): boolean {
  */
 export function sortSnapshotIds(snapshotIds: string[]): string[] {
   return snapshotIds.filter(isValidSnapshotId).sort((a, b) => {
-    const timestampA = parseInt(a, 10)
-    const timestampB = parseInt(b, 10)
-    return timestampB - timestampA // Newest first
+    const timestampA = parseSnapshotTimestamp(a)!
+    const timestampB = parseSnapshotTimestamp(b)!
+
+    // First sort by timestamp
+    if (timestampA !== timestampB) {
+      return timestampB - timestampA // Newest first
+    }
+
+    // If timestamps are equal, sort by counter (higher counter = newer)
+    const aParts = a.split('-')
+    const bParts = b.split('-')
+    const counterA = a.includes('-') && aParts[1] ? parseInt(aParts[1], 10) : 0
+    const counterB = b.includes('-') && bParts[1] ? parseInt(bParts[1], 10) : 0
+    return counterB - counterA
   })
 }
 

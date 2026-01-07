@@ -19,8 +19,8 @@ describe('Year-Over-Year Comparison Logic', () => {
   let testCacheConfig: TestCacheConfig
 
   beforeEach(async () => {
-    // Create isolated test cache configuration with unique test name
-    const testName = `year-over-year-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+    // Create isolated test cache configuration with unique test name and process ID
+    const testName = `year-over-year-${process.pid}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
     testCacheConfig = await createTestCacheConfig(testName)
 
     // Ensure the cache directory and subdirectories exist
@@ -28,7 +28,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     const districtsDir = path.resolve(testCacheConfig.cacheDir, 'districts')
     await fs.mkdir(districtsDir, { recursive: true })
 
-    // Use the test cache directory
+    // Use the test cache directory with dependency injection
     cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
     await cacheManager.init()
     analyticsEngine = new AnalyticsEngine(cacheManager)
@@ -430,13 +430,33 @@ describe('Year-Over-Year Comparison Logic', () => {
           },
         ]
 
-        await cacheManager.cacheDistrictData(
-          districtId,
-          date,
-          [],
-          [],
-          clubPerformance
-        )
+        // Add retry logic for caching to handle race conditions
+        let retries = 3
+        while (retries > 0) {
+          try {
+            await cacheManager.cacheDistrictData(
+              districtId,
+              date,
+              [],
+              [],
+              clubPerformance
+            )
+            break
+          } catch (error) {
+            retries--
+            if (retries === 0) throw error
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 10))
+          }
+        }
+      }
+
+      // Verify data was cached correctly before proceeding
+      for (let year = 2023; year <= 2024; year++) {
+        const date = `${year}-11-22`
+        const cachedData = await cacheManager.getDistrictData(districtId, date)
+        expect(cachedData).not.toBeNull()
+        expect(cachedData!.clubPerformance).toHaveLength(1)
       }
 
       // Verify data was cached correctly

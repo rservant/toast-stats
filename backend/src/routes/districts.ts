@@ -952,9 +952,9 @@ router.get(
     },
   }),
   async (req: Request, res: Response) => {
-    const districtId = getValidDistrictId(req)
+    const rawDistrictId = req.params['districtId']
 
-    if (!districtId) {
+    if (!rawDistrictId) {
       res.status(400).json({
         error: {
           code: 'MISSING_PARAMETER',
@@ -963,6 +963,18 @@ router.get(
       })
       return
     }
+
+    if (!validateDistrictId(rawDistrictId)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_DISTRICT_ID',
+          message: 'Invalid district ID format',
+        },
+      })
+      return
+    }
+
+    const districtId = rawDistrictId
     const requestId = `district_stats_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     logger.info('Received request for district statistics', {
@@ -972,23 +984,6 @@ router.get(
       user_agent: req.get('user-agent'),
       ip: req.ip,
     })
-
-    // Validate district ID
-    if (!districtId || !validateDistrictId(districtId!)) {
-      logger.warn('Invalid district ID format in request', {
-        operation: 'GET /api/districts/:districtId/statistics',
-        request_id: requestId,
-        district_id: districtId,
-      })
-
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DISTRICT_ID',
-          message: 'Invalid district ID format',
-        },
-      })
-      return
-    }
 
     const data = await serveDistrictFromPerDistrictSnapshot(
       res,

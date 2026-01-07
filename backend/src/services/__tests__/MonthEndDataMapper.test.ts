@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { promises as fs } from 'fs'
+import { promises as fs, Dirent } from 'fs'
 import { MonthEndDataMapper } from '../MonthEndDataMapper.js'
 import type {
   ILogger,
@@ -26,8 +26,20 @@ const mockLogger: ILogger = {
 
 const mockCacheConfigService: ICacheConfigService = {
   getCacheDirectory: vi.fn().mockReturnValue('/test/cache'),
-  validateCacheDirectory: vi.fn().mockResolvedValue(true),
-  ensureCacheDirectoryExists: vi.fn().mockResolvedValue(undefined),
+  getConfiguration: vi.fn().mockReturnValue({
+    baseDirectory: '/test/cache',
+    isConfigured: true,
+    source: 'test' as const,
+    validationStatus: {
+      isValid: true,
+      isAccessible: true,
+      isSecure: true,
+    },
+  }),
+  initialize: vi.fn().mockResolvedValue(undefined),
+  validateCacheDirectory: vi.fn().mockResolvedValue(undefined),
+  isReady: vi.fn().mockReturnValue(true),
+  dispose: vi.fn().mockResolvedValue(undefined),
 }
 
 const mockRawCSVCache: IRawCSVCacheService = {
@@ -41,9 +53,16 @@ const mockRawCSVCache: IRawCSVCacheService = {
   repairMetadataIntegrity: vi.fn(),
   clearCacheForDate: vi.fn(),
   getCachedDates: vi.fn(),
-  getStatistics: vi.fn(),
+  getCacheStorageInfo: vi.fn(),
+  getConfiguration: vi.fn(),
+  updateConfiguration: vi.fn(),
+  resetConfiguration: vi.fn(),
+  getCacheStatistics: vi.fn(),
   getHealthStatus: vi.fn(),
-  cleanup: vi.fn(),
+  clearPerformanceHistory: vi.fn(),
+  getCircuitBreakerStatus: vi.fn(),
+  resetCircuitBreakerManually: vi.fn(),
+  dispose: vi.fn(),
 }
 
 describe('MonthEndDataMapper', () => {
@@ -118,10 +137,10 @@ describe('MonthEndDataMapper', () => {
   describe('getCSVDateForProcessedDate', () => {
     it('should find CSV data for normal dates', async () => {
       // Mock file system access
-      vi.spyOn(fs.promises, 'access').mockResolvedValue(undefined)
-      vi.spyOn(fs.promises, 'readdir').mockResolvedValue([
+      vi.spyOn(fs, 'access').mockResolvedValue(undefined)
+      vi.spyOn(fs, 'readdir').mockResolvedValue([
         { name: 'all-districts.csv', isFile: () => true },
-      ])
+      ] as Dirent[])
 
       const result = await mapper.getCSVDateForProcessedDate('2024-12-15')
 
@@ -130,9 +149,7 @@ describe('MonthEndDataMapper', () => {
 
     it('should return null when no CSV data is found', async () => {
       // Mock file system access to fail (no data found)
-      vi.spyOn(fs.promises, 'access').mockRejectedValue(
-        new Error('File not found')
-      )
+      vi.spyOn(fs, 'access').mockRejectedValue(new Error('File not found'))
 
       const result = await mapper.getCSVDateForProcessedDate('2025-01-05')
 
@@ -159,10 +176,10 @@ describe('MonthEndDataMapper', () => {
       ])
 
       // Mock file system access for direct date
-      vi.spyOn(fs.promises, 'access').mockResolvedValue(undefined)
-      vi.spyOn(fs.promises, 'readdir').mockResolvedValue([
+      vi.spyOn(fs, 'access').mockResolvedValue(undefined)
+      vi.spyOn(fs, 'readdir').mockResolvedValue([
         { name: 'all-districts.csv', isFile: () => true },
-      ])
+      ] as Dirent[])
 
       const result = await mapper.getMonthEndData('2024-12', 2024)
 
@@ -182,14 +199,52 @@ describe('MonthEndDataMapper', () => {
       vi.mocked(mockRawCSVCache.getCacheMetadata)
         .mockResolvedValueOnce({
           date: '2025-01-03',
+          timestamp: Date.now(),
+          programYear: '2024-2025',
           isClosingPeriod: true,
           dataMonth: '2024-12',
-        } as Partial<RawCSVCacheMetadata>)
+          csvFiles: {
+            allDistricts: true,
+            districts: {},
+          },
+          downloadStats: {
+            totalDownloads: 1,
+            cacheHits: 0,
+            cacheMisses: 1,
+            lastAccessed: Date.now(),
+          },
+          integrity: {
+            checksums: {},
+            totalSize: 1000,
+            fileCount: 1,
+          },
+          source: 'scraper' as const,
+          cacheVersion: 1,
+        })
         .mockResolvedValueOnce({
           date: '2025-01-25',
+          timestamp: Date.now(),
+          programYear: '2024-2025',
           isClosingPeriod: true,
           dataMonth: '2024-12',
-        } as Partial<RawCSVCacheMetadata>)
+          csvFiles: {
+            allDistricts: true,
+            districts: {},
+          },
+          downloadStats: {
+            totalDownloads: 1,
+            cacheHits: 0,
+            cacheMisses: 1,
+            lastAccessed: Date.now(),
+          },
+          integrity: {
+            checksums: {},
+            totalSize: 1000,
+            fileCount: 1,
+          },
+          source: 'scraper' as const,
+          cacheVersion: 1,
+        })
 
       // Test that even late in the month, we can detect closing periods
       const result = await mapper.isExpectedDataGap('2025-01-25')
