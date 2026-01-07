@@ -55,19 +55,19 @@ router.get('/snapshots', logAdminAccess, async (req, res) => {
     const snapshotStore = factory.createSnapshotStore()
 
     // Parse query parameters
-    const limit = req.query.limit
-      ? parseInt(req.query.limit as string)
+    const limit = req.query['limit']
+      ? parseInt(req.query['limit'] as string)
       : undefined
     const filters: SnapshotFilters = {}
 
-    if (req.query.status) {
-      filters.status = req.query.status as 'success' | 'partial' | 'failed'
+    if (req.query['status']) {
+      filters.status = req.query['status'] as 'success' | 'partial' | 'failed'
     }
-    if (req.query.schema_version) {
-      filters.schema_version = req.query.schema_version as string
+    if (req.query['schema_version']) {
+      filters.schema_version = req.query['schema_version'] as string
     }
-    if (req.query.calculation_version) {
-      filters.calculation_version = req.query.calculation_version as string
+    if (req.query['calculation_version']) {
+      filters.calculation_version = req.query['calculation_version'] as string
     }
     if (req.query.created_after) {
       filters.created_after = req.query.created_after as string

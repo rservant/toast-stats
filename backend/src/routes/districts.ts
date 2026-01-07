@@ -51,13 +51,17 @@ const router = Router()
 const useMockData =
   process.env['USE_MOCK_DATA'] === 'true' || process.env['NODE_ENV'] === 'test'
 
-const toastmastersAPI = useMockData
-  ? new MockToastmastersAPIService()
-  : new RealToastmastersAPIService()
-
 // Initialize cache configuration service and get cache directory
 const productionFactory = getProductionServiceFactory()
 const cacheConfig = productionFactory.createCacheConfigService()
+
+const toastmastersAPI = useMockData
+  ? new MockToastmastersAPIService()
+  : (() => {
+      const rawCSVCacheService = productionFactory.createRawCSVCacheService()
+      const scraper = new ToastmastersScraper(rawCSVCacheService)
+      return new RealToastmastersAPIService(scraper)
+    })()
 const cacheDirectory = cacheConfig.getCacheDirectory()
 
 // Initialize snapshot store for serving data from snapshots
@@ -761,6 +765,16 @@ router.get('/cache/metadata/:date', async (req: Request, res: Response) => {
   try {
     const { date } = req.params
 
+    if (!date) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETER',
+          message: 'Date parameter is required',
+        },
+      })
+      return
+    }
+
     // Validate date format
     if (!validateDateFormat(date)) {
       res.status(400).json({
@@ -916,11 +930,24 @@ router.get(
   '/:districtId/statistics',
   cacheMiddleware({
     ttl: 900, // 15 minutes
-    keyGenerator: req =>
-      generateDistrictCacheKey(req.params.districtId, 'statistics'),
+    keyGenerator: req => {
+      const districtId = req.params.districtId
+      if (!districtId) throw new Error('Missing districtId parameter')
+      return generateDistrictCacheKey(districtId, 'statistics')
+    },
   }),
   async (req: Request, res: Response) => {
     const { districtId } = req.params
+
+    if (!districtId) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETER',
+          message: 'districtId is required',
+        },
+      })
+      return
+    }
     const requestId = `district_stats_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     logger.info('Received request for district statistics', {

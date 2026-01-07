@@ -250,6 +250,17 @@ router.delete(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear, month } = req.params
 
+    // Validate required parameters
+    if (!districtId || !programYear || !month) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETERS',
+          message: 'Missing required route parameters',
+        },
+      })
+      return
+    }
+
     // Validate month to prevent unsafe path usage
     const normalizedMonth = month.toLowerCase()
     const allowedMonths = new Set([
@@ -444,6 +455,16 @@ router.put(
     const { goalId } = req.params
     const { status } = req.body
 
+    if (!goalId) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETER',
+          message: 'goalId is required',
+        },
+      })
+      return
+    }
+
     if (!status) {
       res.status(400).json({
         error: {
@@ -474,6 +495,16 @@ router.delete(
   '/goals/:goalId',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { goalId } = req.params
+
+    if (!goalId) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETER',
+          message: 'goalId is required',
+        },
+      })
+      return
+    }
 
     // Get goal to retrieve district and program year
     const goal = await districtLeaderGoalService.getGoalById(goalId)
@@ -519,6 +550,16 @@ router.get(
   '/report/:districtId/:programYear',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear } = req.params
+
+    if (!districtId || !programYear) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETERS',
+          message: 'districtId and programYear are required',
+        },
+      })
+      return
+    }
 
     const districtNumber = parseInt(districtId, 10)
 
@@ -596,6 +637,16 @@ router.get(
   '/goals/statistics/:districtId/:programYear',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { districtId, programYear } = req.params
+
+    if (!districtId || !programYear) {
+      res.status(400).json({
+        error: {
+          code: 'MISSING_PARAMETERS',
+          message: 'districtId and programYear are required',
+        },
+      })
+      return
+    }
 
     const stats = await districtLeaderGoalService.getGoalStatistics(
       parseInt(districtId, 10),
