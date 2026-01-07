@@ -1141,13 +1141,16 @@ export class RefreshService {
       const districts: DistrictStatistics[] = []
 
       // Process each district's data
+      // Use the csvDate from allDistrictsMetadata as the authoritative "as of" date
+      const dataAsOfDate = rawData.allDistrictsMetadata.csvDate
       for (const [districtId, data] of Array.from(
         rawData.districtData.entries()
       )) {
         try {
           const districtStats = await this.normalizeDistrictData(
             districtId,
-            data
+            data,
+            dataAsOfDate
           )
           districts.push(districtStats)
         } catch (error) {
@@ -1198,6 +1201,10 @@ export class RefreshService {
 
   /**
    * Normalize data for a single district
+   *
+   * @param districtId - The district ID
+   * @param data - Raw scraped data for the district
+   * @param asOfDate - The actual "as of" date from the CSV data (not today's date)
    */
   private async normalizeDistrictData(
     districtId: string,
@@ -1205,22 +1212,16 @@ export class RefreshService {
       districtPerformance: ScrapedRecord[]
       divisionPerformance: ScrapedRecord[]
       clubPerformance: ScrapedRecord[]
-    }
+    },
+    asOfDate: string
   ): Promise<DistrictStatistics> {
     // This is a simplified normalization - in a real implementation,
     // this would contain complex logic to transform the raw CSV data
     // into the structured DistrictStatistics format
 
-    // For now, create a basic structure with the raw data preserved
-    const currentDate = new Date().toISOString()
-    const dateOnly = currentDate.split('T')[0]
-    if (!dateOnly) {
-      throw new Error('Failed to extract date from ISO string')
-    }
-
     const districtStats: DistrictStatistics = {
       districtId,
-      asOfDate: dateOnly,
+      asOfDate,
       membership: {
         total: this.extractMembershipTotal(data.clubPerformance),
         change: 0,

@@ -1129,28 +1129,36 @@ export class DataSourceSelector {
       const scraper = new ToastmastersScraper(rawCSVCacheService)
 
       // Extract the date from params for historical data fetching
-      const dateString = params.date
+      // Use current date as fallback if not provided
+      const dateString =
+        params.date || new Date().toISOString().split('T')[0] || ''
 
       // Fetch and cache the all-districts CSV for this date
       // This ensures we have the summary/rankings data for historical backfill
+      // IMPORTANT: Use getAllDistrictsWithMetadata to get the actual "As of" date
+      let actualCsvDate = dateString // Default to requested date
       try {
         logger.info('Fetching all-districts CSV for backfill date', {
           date: dateString,
           operation: 'executePerDistrictCollection',
         })
 
-        const allDistrictsData = await scraper.getAllDistricts(dateString)
+        const allDistrictsResult =
+          await scraper.getAllDistrictsWithMetadata(dateString)
+        actualCsvDate = allDistrictsResult.actualDate
 
         logger.info('All-districts CSV fetched and cached successfully', {
-          date: dateString,
-          recordCount: allDistrictsData.length,
+          requestedDate: dateString,
+          actualDate: actualCsvDate,
+          recordCount: allDistrictsResult.records.length,
           operation: 'executePerDistrictCollection',
         })
       } catch (error) {
         // Log warning but continue with per-district collection
         // The all-districts CSV is useful but not strictly required for per-district data
+        // However, we should use the requested date as the asOfDate in this case
         logger.warn(
-          'Failed to fetch all-districts CSV for backfill date, continuing with per-district collection',
+          'Failed to fetch all-districts CSV for backfill date, continuing with per-district collection using requested date',
           {
             date: dateString,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -1252,11 +1260,16 @@ export class DataSourceSelector {
           }
 
           // Normalize the district data with available data
-          const districtStats = await this.normalizeDistrictData(districtId, {
-            districtPerformance: districtPerformanceData,
-            divisionPerformance: divisionPerformanceData,
-            clubPerformance: clubPerformanceData,
-          })
+          // Use the actual CSV date from the All Districts fetch
+          const districtStats = await this.normalizeDistrictData(
+            districtId,
+            {
+              districtPerformance: districtPerformanceData,
+              divisionPerformance: divisionPerformanceData,
+              clubPerformance: clubPerformanceData,
+            },
+            actualCsvDate
+          )
 
           results.push(districtStats)
 
@@ -1420,6 +1433,10 @@ export class DataSourceSelector {
   /**
    * Normalize district data from scraper results
    * Converts raw scraper data into DistrictStatistics format
+   *
+   * @param districtId - The district ID
+   * @param data - Raw scraped data for the district
+   * @param asOfDate - The actual "as of" date from the CSV data (not today's date)
    */
   private async normalizeDistrictData(
     districtId: string,
@@ -1427,13 +1444,15 @@ export class DataSourceSelector {
       districtPerformance: ScrapedRecord[]
       divisionPerformance: ScrapedRecord[]
       clubPerformance: ScrapedRecord[]
-    }
+    },
+    asOfDate: string
   ): Promise<DistrictStatistics> {
     logger.debug('Normalizing district data', {
       districtId,
       districtRecords: data.districtPerformance.length,
       divisionRecords: data.divisionPerformance.length,
       clubRecords: data.clubPerformance.length,
+      asOfDate,
       operation: 'normalizeDistrictData',
     })
 
@@ -1449,15 +1468,9 @@ export class DataSourceSelector {
         data.clubPerformance
       )
 
-      const currentDate = new Date().toISOString()
-      const dateOnly = currentDate.split('T')[0]
-      if (!dateOnly) {
-        throw new Error('Failed to extract date from ISO string')
-      }
-
       const districtStats: DistrictStatistics = {
         districtId,
-        asOfDate: dateOnly,
+        asOfDate,
         membership: {
           total: totalMembership,
           change: 0, // Historical change calculation would require previous data
