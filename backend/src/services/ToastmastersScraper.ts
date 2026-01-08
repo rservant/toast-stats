@@ -70,7 +70,55 @@ export class ToastmastersScraper {
         // Get the actual date from cache metadata
         const cacheMetadata =
           await this.rawCSVCache.getCacheMetadata(requestedDate)
-        const actualDate = cacheMetadata?.date || requestedDate
+        let actualDate = cacheMetadata?.date || requestedDate
+
+        // Always extract closing period info from CSV footer (most reliable source)
+        // This ensures we detect closing periods even if metadata was incorrectly set
+        const footerInfo = this.extractClosingPeriodFromCSV(cachedContent)
+
+        if (footerInfo && footerInfo.dataMonth) {
+          // Check if the collection date is in a different month than the data month
+          // Use the collection date from the footer if available, otherwise use actualDate
+          const collectionDateStr = footerInfo.collectionDate || actualDate
+          const collectionDateObj = new Date(collectionDateStr + 'T00:00:00')
+          const collectionMonth = `${collectionDateObj.getFullYear()}-${String(collectionDateObj.getMonth() + 1).padStart(2, '0')}`
+          const isClosingPeriod = collectionMonth !== footerInfo.dataMonth
+
+          // Check if metadata needs to be updated (missing or incorrect)
+          const metadataNeedsUpdate =
+            !cacheMetadata ||
+            cacheMetadata.isClosingPeriod !== isClosingPeriod ||
+            cacheMetadata.dataMonth !== footerInfo.dataMonth
+
+          if (metadataNeedsUpdate) {
+            // Update cache metadata with correct closing period info from CSV footer
+            await this.rawCSVCache.setCachedCSVWithMetadata(
+              requestedDate,
+              csvType,
+              cachedContent,
+              districtId,
+              {
+                requestedDate,
+                isClosingPeriod,
+                dataMonth: footerInfo.dataMonth,
+              }
+            )
+
+            logger.info(
+              'Updated cache metadata with closing period info from CSV footer',
+              {
+                csvType,
+                requestedDate,
+                actualDate,
+                dataMonth: footerInfo.dataMonth,
+                isClosingPeriod,
+                collectionDate: collectionDateStr,
+                previousIsClosingPeriod: cacheMetadata?.isClosingPeriod,
+                previousDataMonth: cacheMetadata?.dataMonth,
+              }
+            )
+          }
+        }
 
         logger.info('Cache hit - returning cached CSV content', {
           csvType,
