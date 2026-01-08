@@ -58,3 +58,4 @@ debug_*.js
 *.tmp
 *.temp
 backend/reconciliation-config.json
+logs
