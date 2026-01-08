@@ -352,6 +352,10 @@ export interface PartialSnapshotResult {
     processingTime: number
     isPartial: boolean
     backfillJobId: string
+    /** True if the snapshot was skipped because a newer one already exists */
+    skipped?: boolean
+    /** Reason why the snapshot was skipped */
+    skipReason?: string
   }
 }
 
@@ -803,11 +807,11 @@ export class DataSourceSelector {
     this.rateLimiter = RateLimiterManager.getRateLimiter(
       'data-source-selector',
       {
-        maxRequests: 15, // Slightly higher limit for data source selector
-        windowMs: 60000, // 1 minute window
+        maxRequests: 1000, // Slightly higher limit for data source selector
+        windowMs: 3000, // 3 second window
         minDelayMs: 1000, // Minimum 1 second between requests
         maxDelayMs: 20000, // Maximum 20 seconds backoff
-        backoffMultiplier: 1.5,
+        backoffMultiplier: 1.2,
       }
     )
   }
@@ -2506,6 +2510,11 @@ export class BackfillService {
    * Process a single date with district-level error handling, partial snapshot creation, and caching
    * Implements Requirements 6.1, 6.2, 6.3: Continue processing when districts fail, track errors, create partial snapshots
    * Implements Requirement 9.3: Caching for intermediate results to avoid redundant operations
+   *
+   * Month-end dates (last day of month) are SKIPPED during backfill because:
+   * - Data collected on the last day of a month is incomplete (closing period not finished)
+   * - Closing period data from the following month will naturally fill in the month-end snapshot
+   * - Example: 2026-01-06 CSV with dataMonth="2025-12" creates the 2025-12-31 snapshot
    */
   private async processDateWithErrorHandlingAndCaching(
     backfillId: string,
@@ -2513,6 +2522,26 @@ export class BackfillService {
     job: BackfillJob,
     request: BackfillRequest
   ): Promise<void> {
+    // Skip month-end dates - they will be filled by closing period data from the following month
+    if (this.isLastDayOfMonth(date)) {
+      logger.info(
+        'Skipping month-end date - will be filled by closing period data',
+        {
+          backfillId,
+          date,
+          reason:
+            'Month-end snapshots are created from closing period data collected in the following month',
+          operation: 'processDateWithErrorHandlingAndCaching',
+        }
+      )
+
+      // Update progress to reflect skipped date
+      this.jobManager.updateProgress(backfillId, {
+        completed: (job.progress.completed || 0) + 1,
+      })
+      return
+    }
+
     logger.debug(
       'Processing date with district-level error handling and caching',
       {
@@ -2851,12 +2880,10 @@ export class BackfillService {
     failedDistricts: string[],
     errors: DistrictError[]
   ): Promise<PartialSnapshotResult> {
-    const snapshotId = `${Date.parse(date)}-partial-${Date.now()}`
     const startTime = Date.now()
 
     logger.info('Creating partial snapshot', {
       backfillId,
-      snapshotId,
       date,
       successfulDistricts: successfulDistricts.length,
       failedDistricts: failedDistricts.length,
@@ -2866,15 +2893,31 @@ export class BackfillService {
     try {
       // Step 1: Fetch All Districts CSV data for ranking calculation
       // Rankings must be calculated from ALL districts, not just configured ones
+      // This also determines the correct snapshot date for closing period data
       let allDistrictsRankings: AllDistrictsRankingsData | undefined
+      let effectiveSnapshotDate = date // Default to requested date
+
       if (this.rankingCalculator) {
         try {
           allDistrictsRankings =
             await this.fetchAndCalculateAllDistrictsRankings(
               backfillId,
               date,
-              snapshotId
+              `${Date.parse(date)}-partial-${Date.now()}`
             )
+          // Use the snapshot date from rankings metadata (closing period-aware)
+          if (allDistrictsRankings?.metadata?.snapshotId) {
+            effectiveSnapshotDate = allDistrictsRankings.metadata.snapshotId
+            logger.info(
+              'Using closing period-aware snapshot date from rankings',
+              {
+                backfillId,
+                requestedDate: date,
+                effectiveSnapshotDate,
+                operation: 'createPartialSnapshot',
+              }
+            )
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
@@ -2882,7 +2925,6 @@ export class BackfillService {
             'Failed to calculate all-districts rankings, continuing without rankings',
             {
               backfillId,
-              snapshotId,
               date,
               error: errorMessage,
               operation: 'createPartialSnapshot',
@@ -2892,19 +2934,95 @@ export class BackfillService {
         }
       }
 
+      // Check if this is closing period data and if we should update the existing snapshot
+      // Requirements 2.2, 2.3, 2.4: Only update if new data is newer or equal
+      const isClosingPeriod = effectiveSnapshotDate !== date
+      const collectionDate =
+        allDistrictsRankings?.metadata?.sourceCsvDate || date
+
+      if (
+        isClosingPeriod &&
+        'shouldUpdateClosingPeriodSnapshot' in this.snapshotStore
+      ) {
+        const perDistrictStore = this.snapshotStore as {
+          shouldUpdateClosingPeriodSnapshot: (
+            snapshotDate: string,
+            newCollectionDate: string
+          ) => Promise<{
+            shouldUpdate: boolean
+            reason: string
+            existingCollectionDate?: string
+          }>
+        }
+
+        const comparisonResult =
+          await perDistrictStore.shouldUpdateClosingPeriodSnapshot(
+            effectiveSnapshotDate,
+            collectionDate
+          )
+
+        if (!comparisonResult.shouldUpdate) {
+          logger.info(
+            'Skipping closing period snapshot update - existing snapshot has newer data',
+            {
+              backfillId,
+              operation: 'createPartialSnapshot',
+              snapshot_date: effectiveSnapshotDate,
+              requested_date: date,
+              new_collection_date: collectionDate,
+              existing_collection_date: comparisonResult.existingCollectionDate,
+              reason: comparisonResult.reason,
+            }
+          )
+
+          // Return a result indicating the snapshot was skipped
+          return {
+            snapshotId: effectiveSnapshotDate,
+            successfulDistricts: successfulDistricts.map(d => d.districtId),
+            failedDistricts,
+            totalDistricts: successfulDistricts.length + failedDistricts.length,
+            successRate:
+              successfulDistricts.length /
+              (successfulDistricts.length + failedDistricts.length),
+            errors,
+            metadata: {
+              createdAt: new Date().toISOString(),
+              processingTime: Date.now() - startTime,
+              isPartial: false,
+              backfillJobId: backfillId,
+              skipped: true,
+              skipReason: comparisonResult.reason,
+            },
+          }
+        }
+
+        logger.info('Proceeding with closing period snapshot update', {
+          backfillId,
+          operation: 'createPartialSnapshot',
+          snapshot_date: effectiveSnapshotDate,
+          requested_date: date,
+          new_collection_date: collectionDate,
+          reason: comparisonResult.reason,
+        })
+      }
+
+      // Generate snapshot ID using the effective (closing period-aware) date
+      const snapshotId = `${Date.parse(effectiveSnapshotDate)}-partial-${Date.now()}`
+
       // Step 1b: The configured districts don't need individual ranking data
       // Rankings are stored separately in all-districts-rankings.json
       const rankedDistricts = successfulDistricts
 
       // Step 2: Create normalized data structure with ranked districts
       // Enhanced metadata for Requirement 5.5: data source, scope, and collection method
+      // Use effectiveSnapshotDate for dataAsOfDate to handle closing period data correctly
       const job = this.jobManager.getJob(backfillId)
       const normalizedData: NormalizedData = {
         districts: rankedDistricts,
         metadata: {
           source: 'unified-backfill-service',
           fetchedAt: new Date().toISOString(),
-          dataAsOfDate: date,
+          dataAsOfDate: effectiveSnapshotDate, // Use closing period-aware date
           districtCount: rankedDistricts.length,
           processingDurationMs: Date.now() - startTime,
           backfillJobId: backfillId,
@@ -2943,6 +3061,7 @@ export class BackfillService {
 
       // Step 4: Write snapshot with all-districts rankings (calculated from CSV, not configured districts)
       // Skip current pointer update during backfill - we'll set it at the end to the most recent date
+      // Use overrideSnapshotDate to ensure the snapshot is stored with the correct date
       if (
         allDistrictsRankings &&
         'writeAllDistrictsRankings' in this.snapshotStore
@@ -2952,11 +3071,15 @@ export class BackfillService {
           writeSnapshot: (
             snapshot: Snapshot,
             rankings?: AllDistrictsRankingsData,
-            options?: { skipCurrentPointerUpdate?: boolean }
+            options?: {
+              skipCurrentPointerUpdate?: boolean
+              overrideSnapshotDate?: string
+            }
           ) => Promise<void>
         }
         await perDistrictStore.writeSnapshot(snapshot, allDistrictsRankings, {
           skipCurrentPointerUpdate: true,
+          overrideSnapshotDate: effectiveSnapshotDate, // Use closing period-aware date
         })
 
         logger.info(
@@ -2965,6 +3088,7 @@ export class BackfillService {
             backfillId,
             snapshotId,
             date,
+            effectiveSnapshotDate,
             rankingsCount: allDistrictsRankings.rankings.length,
             configuredDistrictsCount: rankedDistricts.length,
             operation: 'createPartialSnapshot',
@@ -2977,11 +3101,15 @@ export class BackfillService {
           writeSnapshot: (
             snapshot: Snapshot,
             rankings?: AllDistrictsRankingsData,
-            options?: { skipCurrentPointerUpdate?: boolean }
+            options?: {
+              skipCurrentPointerUpdate?: boolean
+              overrideSnapshotDate?: string
+            }
           ) => Promise<void>
         }
         await perDistrictStore.writeSnapshot(snapshot, undefined, {
           skipCurrentPointerUpdate: true,
+          overrideSnapshotDate: effectiveSnapshotDate, // Use closing period-aware date
         })
       }
 
@@ -3023,7 +3151,6 @@ export class BackfillService {
 
       logger.error('Failed to create partial snapshot', {
         backfillId,
-        snapshotId,
         date,
         error: errorMessage,
         successfulDistricts: successfulDistricts.length,
@@ -3043,6 +3170,9 @@ export class BackfillService {
    *
    * This is different from the configured districts - rankings must include ALL districts
    * to be accurate, even if we only collect detailed data for configured districts.
+   *
+   * For month-end dates, this method checks if there's newer closing period data available
+   * and uses that instead of the data collected on the actual date.
    */
   private async fetchAndCalculateAllDistrictsRankings(
     backfillId: string,
@@ -3067,14 +3197,37 @@ export class BackfillService {
     const scraper = new ToastmastersScraper(rawCSVCacheService)
 
     try {
+      // Note: Month-end dates are now skipped in processDateWithErrorHandlingAndCaching
+      // so we don't need to look for closing period data here. The closing period detection
+      // from metadata will handle dates like 2026-01-06 that have closing period data.
+
       // Fetch All Districts CSV data with metadata (includes actual "As of" date)
       const allDistrictsResult = await scraper.getAllDistrictsWithMetadata(date)
+
+      // Check cache metadata for closing period information
+      // This is critical for month-end reconciliation CSVs
+      const cacheMetadata = await rawCSVCacheService.getCacheMetadata(
+        allDistrictsResult.actualDate
+      )
+
+      // Determine the correct snapshot date based on closing period detection
+      // detectClosingPeriodFromMetadata handles dates like 2026-01-06 that have closing period data
+      // and will correctly map them to the month-end date (e.g., 2025-12-31)
+      const closingPeriodInfo = this.detectClosingPeriodFromMetadata(
+        date,
+        allDistrictsResult.actualDate,
+        cacheMetadata?.dataMonth,
+        cacheMetadata?.isClosingPeriod
+      )
 
       logger.info('All Districts CSV fetched successfully', {
         backfillId,
         requestedDate: date,
         actualCsvDate: allDistrictsResult.actualDate,
         recordCount: allDistrictsResult.records.length,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
+        snapshotDate: closingPeriodInfo.snapshotDate,
+        dataMonth: closingPeriodInfo.dataMonth,
         operation: 'fetchAndCalculateAllDistrictsRankings',
       })
 
@@ -3179,12 +3332,12 @@ export class BackfillService {
 
       const allDistrictsRankings: AllDistrictsRankingsData = {
         metadata: {
-          snapshotId: date, // Use ISO date as snapshot ID
+          snapshotId: closingPeriodInfo.snapshotDate, // Use closing period-aware date as snapshot ID
           calculatedAt: new Date().toISOString(),
           schemaVersion: '2.0.0',
           calculationVersion: this.rankingCalculator.getRankingVersion(),
           rankingVersion: this.rankingCalculator.getRankingVersion(),
-          sourceCsvDate: date,
+          sourceCsvDate: closingPeriodInfo.collectionDate, // Use the actual CSV collection date
           csvFetchedAt: new Date().toISOString(),
           totalDistricts: rankings.length,
           fromCache: false,
@@ -3196,6 +3349,8 @@ export class BackfillService {
         backfillId,
         date,
         snapshotId,
+        snapshotDate: closingPeriodInfo.snapshotDate,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
         totalDistricts: rankings.length,
         rankingVersion: this.rankingCalculator.getRankingVersion(),
         operation: 'fetchAndCalculateAllDistrictsRankings',
@@ -3208,6 +3363,144 @@ export class BackfillService {
         await scraper.closeBrowser()
       } catch {
         // Ignore cleanup errors
+      }
+    }
+  }
+
+  /**
+   * Check if a date is the last day of its month
+   */
+  private isLastDayOfMonth(dateString: string): boolean {
+    const date = new Date(dateString + 'T00:00:00')
+    const nextDay = new Date(date)
+    nextDay.setUTCDate(date.getUTCDate() + 1)
+    return nextDay.getUTCMonth() !== date.getUTCMonth()
+  }
+
+  /**
+   * Detect closing period from cache metadata and determine the correct snapshot date
+   *
+   * During month-end closing periods, the Toastmasters dashboard publishes data for
+   * the prior month with an "As of" date in the current month. In these cases, the
+   * snapshot should be dated as the last day of the data month, not the "As of" date.
+   *
+   * @param requestedDate - The date that was requested for the backfill
+   * @param actualCsvDate - The actual "As of" date from the CSV
+   * @param dataMonth - The month the data represents (from cache metadata, format: YYYY-MM)
+   * @param isClosingPeriod - Whether this is closing period data (from cache metadata)
+   * @returns Closing period information including the correct snapshot date
+   */
+  private detectClosingPeriodFromMetadata(
+    requestedDate: string,
+    actualCsvDate: string,
+    dataMonth?: string,
+    isClosingPeriod?: boolean
+  ): {
+    isClosingPeriod: boolean
+    dataMonth: string
+    snapshotDate: string
+    collectionDate: string
+  } {
+    try {
+      // Parse the actual CSV date
+      const csvDateObj = new Date(actualCsvDate + 'T00:00:00')
+      const csvYear = csvDateObj.getUTCFullYear()
+      const csvMonth = csvDateObj.getUTCMonth() + 1
+
+      // If we have explicit closing period info from cache metadata, use it
+      if (isClosingPeriod && dataMonth) {
+        // Parse the data month (format: YYYY-MM)
+        const [yearStr, monthStr] = dataMonth.split('-')
+        const dataYear = parseInt(yearStr!, 10)
+        const dataMonthNum = parseInt(monthStr!, 10)
+
+        // Calculate the last day of the data month
+        const lastDay = new Date(
+          Date.UTC(dataYear, dataMonthNum, 0)
+        ).getUTCDate()
+        const snapshotDate = `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+
+        logger.info('Closing period detected from cache metadata', {
+          requestedDate,
+          actualCsvDate,
+          dataMonth,
+          snapshotDate,
+          operation: 'detectClosingPeriodFromMetadata',
+        })
+
+        return {
+          isClosingPeriod: true,
+          dataMonth,
+          snapshotDate,
+          collectionDate: actualCsvDate,
+        }
+      }
+
+      // Fallback: derive data month from the actual CSV date
+      // If no explicit closing period info, check if the requested date is in a different month
+      const requestedDateObj = new Date(requestedDate + 'T00:00:00')
+      const requestedYear = requestedDateObj.getUTCFullYear()
+      const requestedMonth = requestedDateObj.getUTCMonth() + 1
+
+      // Check if the CSV date is in a different (later) month than the requested date
+      const isImplicitClosingPeriod =
+        csvYear > requestedYear ||
+        (csvYear === requestedYear && csvMonth > requestedMonth)
+
+      if (isImplicitClosingPeriod) {
+        // The CSV was collected in a later month than requested
+        // This means the data is for the requested month (closing period)
+        const lastDay = new Date(
+          Date.UTC(requestedYear, requestedMonth, 0)
+        ).getUTCDate()
+        const snapshotDate = `${requestedYear}-${requestedMonth.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+        const derivedDataMonth = `${requestedYear}-${requestedMonth.toString().padStart(2, '0')}`
+
+        logger.info('Closing period detected from date comparison', {
+          requestedDate,
+          actualCsvDate,
+          derivedDataMonth,
+          snapshotDate,
+          operation: 'detectClosingPeriodFromMetadata',
+        })
+
+        return {
+          isClosingPeriod: true,
+          dataMonth: derivedDataMonth,
+          snapshotDate,
+          collectionDate: actualCsvDate,
+        }
+      }
+
+      // Not a closing period - use the actual CSV date as-is
+      const derivedDataMonth = `${csvYear}-${csvMonth.toString().padStart(2, '0')}`
+
+      return {
+        isClosingPeriod: false,
+        dataMonth: derivedDataMonth,
+        snapshotDate: actualCsvDate,
+        collectionDate: actualCsvDate,
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error(
+        'Error detecting closing period, using actual CSV date as snapshot date',
+        {
+          requestedDate,
+          actualCsvDate,
+          dataMonth,
+          error: errorMessage,
+          operation: 'detectClosingPeriodFromMetadata',
+        }
+      )
+
+      // Fallback to using the actual CSV date
+      return {
+        isClosingPeriod: false,
+        dataMonth: dataMonth || actualCsvDate.substring(0, 7),
+        snapshotDate: actualCsvDate,
+        collectionDate: actualCsvDate,
       }
     }
   }

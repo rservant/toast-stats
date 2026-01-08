@@ -91,10 +91,39 @@ export class ToastmastersScraper {
       // Cache miss - download and cache
       const { content: downloadedContent, actualDate } = await downloadFn()
 
+      // Extract closing period information from CSV footer if available
+      const footerInfo = this.extractClosingPeriodFromCSV(downloadedContent)
+
       // Determine if this is a month-end closing period
-      const isClosingPeriod = requestedDate !== actualDate
-      const requestedDateObj = new Date(requestedDate + 'T00:00:00')
-      const dataMonth = `${requestedDateObj.getFullYear()}-${String(requestedDateObj.getMonth() + 1).padStart(2, '0')}`
+      // Method 1: Check if requested date differs from actual date
+      const datesDiffer = requestedDate !== actualDate
+
+      // Method 2: Check if CSV footer indicates a different data month
+      let isClosingPeriod = datesDiffer
+      let dataMonth: string
+
+      if (footerInfo && footerInfo.dataMonth) {
+        // Use the data month from the CSV footer (most reliable)
+        dataMonth = footerInfo.dataMonth
+
+        // Check if the collection date is in a different month than the data month
+        const actualDateObj = new Date(actualDate + 'T00:00:00')
+        const actualMonth = `${actualDateObj.getFullYear()}-${String(actualDateObj.getMonth() + 1).padStart(2, '0')}`
+
+        if (actualMonth !== dataMonth) {
+          isClosingPeriod = true
+          logger.info('Closing period detected from CSV footer', {
+            requestedDate,
+            actualDate,
+            dataMonth,
+            actualMonth,
+          })
+        }
+      } else {
+        // Fallback: use requested date's month
+        const requestedDateObj = new Date(requestedDate + 'T00:00:00')
+        dataMonth = `${requestedDateObj.getFullYear()}-${String(requestedDateObj.getMonth() + 1).padStart(2, '0')}`
+      }
 
       // Cache the downloaded content with enhanced metadata
       await this.rawCSVCache.setCachedCSVWithMetadata(
@@ -293,6 +322,94 @@ export class ToastmastersScraper {
       throw new Error(
         `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
+    }
+  }
+
+  /**
+   * Extract closing period information from CSV footer line
+   * Footer format: "Month of Dec, As of 01/06/2026"
+   * Returns the data month and collection date if found
+   */
+  private extractClosingPeriodFromCSV(csvContent: string): {
+    dataMonth?: string
+    collectionDate?: string
+  } | null {
+    try {
+      // Look for the footer line in the last few lines of the CSV
+      const lines = csvContent.trim().split('\n')
+      const lastLine = lines[lines.length - 1]
+
+      if (!lastLine) {
+        return null
+      }
+
+      // Match pattern: "Month of MMM, As of MM/DD/YYYY"
+      const match = lastLine.match(
+        /Month of ([A-Za-z]+),\s*As of (\d{2})\/(\d{2})\/(\d{4})/
+      )
+
+      if (!match) {
+        return null
+      }
+
+      const monthName = match[1]
+      const collectionMonth = match[2]
+      const collectionDay = match[3]
+      const collectionYear = match[4]
+
+      if (!monthName || !collectionMonth || !collectionDay || !collectionYear) {
+        return null
+      }
+
+      // Convert month name to number
+      const monthMap: { [key: string]: number } = {
+        Jan: 1,
+        Feb: 2,
+        Mar: 3,
+        Apr: 4,
+        May: 5,
+        Jun: 6,
+        Jul: 7,
+        Aug: 8,
+        Sep: 9,
+        Oct: 10,
+        Nov: 11,
+        Dec: 12,
+      }
+
+      const dataMonthNum = monthMap[monthName]
+      if (!dataMonthNum) {
+        logger.warn('Could not parse month name from CSV footer', {
+          monthName,
+          lastLine,
+        })
+        return null
+      }
+
+      // Determine the year for the data month
+      // If collection is in January and data is December, year is previous year
+      const collectionMonthNum = parseInt(collectionMonth, 10)
+      const collectionYearNum = parseInt(collectionYear, 10)
+      const dataYear =
+        collectionMonthNum === 1 && dataMonthNum === 12
+          ? collectionYearNum - 1
+          : collectionYearNum
+
+      const dataMonth = `${dataYear}-${String(dataMonthNum).padStart(2, '0')}`
+      const collectionDate = `${collectionYear}-${collectionMonth}-${collectionDay}`
+
+      logger.info('Extracted closing period info from CSV footer', {
+        dataMonth,
+        collectionDate,
+        footerLine: lastLine,
+      })
+
+      return { dataMonth, collectionDate }
+    } catch (error) {
+      logger.warn('Failed to extract closing period from CSV footer', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      return null
     }
   }
 
