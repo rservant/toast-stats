@@ -148,6 +148,207 @@ function getValidDistrictId(req: Request): string | null {
 }
 
 /**
+ * Interface for fallback metadata in API responses
+ * Indicates when a different snapshot was returned than requested
+ * Requirement 4.4
+ */
+interface FallbackMetadata {
+  /** The date that was originally requested */
+  requested_date: string
+  /** The actual snapshot date returned */
+  actual_snapshot_date: string
+  /** Reason for the fallback */
+  fallback_reason: 'no_snapshot_for_date' | 'closing_period_gap' | 'future_date'
+  /** Whether this is closing period data */
+  is_closing_period_data?: boolean
+}
+
+/**
+ * Interface for snapshot metadata in API responses
+ * Includes closing period fields per Requirements 4.1, 4.2, 4.3
+ * Includes fallback fields per Requirement 4.4
+ */
+interface SnapshotResponseMetadata {
+  snapshot_id: string
+  created_at: string
+  schema_version: string
+  calculation_version: string
+  data_as_of: string
+  // Closing period fields (Requirements 4.1, 4.2, 4.3)
+  is_closing_period_data?: boolean
+  collection_date?: string
+  logical_date?: string
+  // Fallback fields (Requirement 4.4)
+  fallback?: FallbackMetadata
+}
+
+/**
+ * Build snapshot metadata for API responses, including closing period fields
+ * when applicable.
+ *
+ * Requirements:
+ * - 4.1: Include collection_date showing actual CSV date
+ * - 4.2: Include is_closing_period_data when snapshot date differs from collection date
+ * - 4.3: Include logical_date showing the date the snapshot represents
+ * - 4.4: Include fallback metadata when a different snapshot was returned than requested
+ */
+function buildSnapshotResponseMetadata(
+  snapshot: Snapshot,
+  requestedDate?: string,
+  fallbackReason?:
+    | 'no_snapshot_for_date'
+    | 'closing_period_gap'
+    | 'future_date'
+    | null
+): SnapshotResponseMetadata {
+  const metadata = snapshot.payload.metadata
+
+  const responseMetadata: SnapshotResponseMetadata = {
+    snapshot_id: snapshot.snapshot_id,
+    created_at: snapshot.created_at,
+    schema_version: snapshot.schema_version,
+    calculation_version: snapshot.calculation_version,
+    data_as_of: metadata.dataAsOfDate,
+  }
+
+  // Add closing period fields when present in snapshot metadata
+  // (Requirements 4.1, 4.2, 4.3)
+  if (metadata.isClosingPeriodData !== undefined) {
+    responseMetadata.is_closing_period_data = metadata.isClosingPeriodData
+  }
+
+  if (metadata.collectionDate !== undefined) {
+    responseMetadata.collection_date = metadata.collectionDate
+  }
+
+  if (metadata.logicalDate !== undefined) {
+    responseMetadata.logical_date = metadata.logicalDate
+  }
+
+  // Add fallback information when a different snapshot was returned (Requirement 4.4)
+  if (
+    requestedDate &&
+    fallbackReason &&
+    requestedDate !== snapshot.snapshot_id
+  ) {
+    responseMetadata.fallback = {
+      requested_date: requestedDate,
+      actual_snapshot_date: snapshot.snapshot_id,
+      fallback_reason: fallbackReason,
+      is_closing_period_data: metadata.isClosingPeriodData,
+    }
+  }
+
+  return responseMetadata
+}
+
+/**
+ * Result of finding the nearest snapshot
+ */
+interface FindNearestSnapshotResult {
+  snapshot: Snapshot | null
+  fallbackReason:
+    | 'no_snapshot_for_date'
+    | 'closing_period_gap'
+    | 'future_date'
+    | null
+}
+
+/**
+ * Find the nearest available snapshot to the requested date
+ * Returns the closest snapshot before or after the requested date
+ *
+ * Requirements:
+ * - 3.2: When requesting data for early new-month dates during closing, return most recent available
+ * - 3.3: Clearly indicate when data is from prior month's final snapshot
+ * - 4.4: Indicate the nearest available snapshot date
+ */
+async function findNearestSnapshot(
+  requestedDate: string
+): Promise<FindNearestSnapshotResult> {
+  const availableSnapshots = await perDistrictSnapshotStore.listSnapshots()
+
+  if (availableSnapshots.length === 0) {
+    return { snapshot: null, fallbackReason: null }
+  }
+
+  // Filter to only successful snapshots and sort by date (newest first)
+  const sortedSnapshots = availableSnapshots
+    .filter(s => s.status === 'success')
+    .sort((a, b) => b.snapshot_id.localeCompare(a.snapshot_id))
+
+  if (sortedSnapshots.length === 0) {
+    return { snapshot: null, fallbackReason: null }
+  }
+
+  const requestedDateObj = new Date(requestedDate)
+  const today = new Date()
+
+  // Check if requested date is in the future
+  if (requestedDateObj > today) {
+    // Return latest available snapshot
+    const latestId = sortedSnapshots[0]?.snapshot_id
+    if (latestId) {
+      const snapshot = await perDistrictSnapshotStore.getSnapshot(latestId)
+      return { snapshot, fallbackReason: 'future_date' }
+    }
+    return { snapshot: null, fallbackReason: null }
+  }
+
+  // Find the nearest snapshot (prefer earlier dates, then later)
+  let nearestBefore: string | null = null
+  let nearestAfter: string | null = null
+
+  for (const s of sortedSnapshots) {
+    const snapshotDate = new Date(s.snapshot_id)
+    if (snapshotDate <= requestedDateObj && !nearestBefore) {
+      nearestBefore = s.snapshot_id
+    }
+    if (snapshotDate > requestedDateObj) {
+      nearestAfter = s.snapshot_id
+    }
+  }
+
+  // Prefer the nearest snapshot before the requested date
+  const nearestId = nearestBefore ?? nearestAfter
+  if (nearestId) {
+    const snapshot = await perDistrictSnapshotStore.getSnapshot(nearestId)
+
+    if (!snapshot) {
+      return { snapshot: null, fallbackReason: null }
+    }
+
+    // Determine fallback reason
+    let fallbackReason: 'no_snapshot_for_date' | 'closing_period_gap' =
+      'no_snapshot_for_date'
+
+    // Check if this is a closing period gap (Requirement 3.3)
+    // A closing period gap occurs when:
+    // 1. The requested date is in a new month (e.g., Jan 1-5)
+    // 2. The nearest snapshot is from the prior month's end (closing period data)
+    if (snapshot.payload.metadata.isClosingPeriodData) {
+      const snapshotMonth = new Date(snapshot.snapshot_id).getMonth()
+      const requestedMonth = requestedDateObj.getMonth()
+      if (requestedMonth !== snapshotMonth) {
+        fallbackReason = 'closing_period_gap'
+      }
+    }
+
+    logger.info('Found nearest snapshot for fallback', {
+      operation: 'findNearestSnapshot',
+      requested_date: requestedDate,
+      nearest_snapshot_id: nearestId,
+      fallback_reason: fallbackReason,
+      is_closing_period_data: snapshot.payload.metadata.isClosingPeriodData,
+    })
+
+    return { snapshot, fallbackReason }
+  }
+
+  return { snapshot: null, fallbackReason: null }
+}
+
+/**
  * Helper function to serve data from per-district snapshots with proper error handling
  * Uses the new DistrictDataAggregator for efficient per-district file access
  */
@@ -237,16 +438,10 @@ async function serveFromPerDistrictSnapshot<T>(
 
     const data = await dataExtractor(snapshot, districtDataAggregator)
 
-    // Add snapshot metadata to the response
+    // Add snapshot metadata to the response (including closing period fields)
     const responseWithMetadata = {
       ...data,
-      _snapshot_metadata: {
-        snapshot_id: snapshot.snapshot_id,
-        created_at: snapshot.created_at,
-        schema_version: snapshot.schema_version,
-        calculation_version: snapshot.calculation_version,
-        data_as_of: snapshot.payload.metadata.dataAsOfDate,
-      },
+      _snapshot_metadata: buildSnapshotResponseMetadata(snapshot),
     }
 
     const duration = Date.now() - startTime
@@ -381,16 +576,10 @@ async function serveDistrictFromSnapshot<T>(
 
     const data = dataExtractor(district)
 
-    // Add snapshot metadata to the response
+    // Add snapshot metadata to the response (including closing period fields)
     const responseWithMetadata = {
       ...data,
-      _snapshot_metadata: {
-        snapshot_id: snapshot.snapshot_id,
-        created_at: snapshot.created_at,
-        schema_version: snapshot.schema_version,
-        calculation_version: snapshot.calculation_version,
-        data_as_of: snapshot.payload.metadata.dataAsOfDate,
-      },
+      _snapshot_metadata: buildSnapshotResponseMetadata(snapshot),
     }
 
     const duration = Date.now() - startTime
@@ -523,16 +712,10 @@ async function serveDistrictFromPerDistrictSnapshot<T>(
 
     const data = dataExtractor(district)
 
-    // Add snapshot metadata to the response
+    // Add snapshot metadata to the response (including closing period fields)
     const responseWithMetadata = {
       ...data,
-      _snapshot_metadata: {
-        snapshot_id: snapshot.snapshot_id,
-        created_at: snapshot.created_at,
-        schema_version: snapshot.schema_version,
-        calculation_version: snapshot.calculation_version,
-        data_as_of: snapshot.payload.metadata.dataAsOfDate,
-      },
+      _snapshot_metadata: buildSnapshotResponseMetadata(snapshot),
     }
 
     const duration = Date.now() - startTime
@@ -644,6 +827,12 @@ router.get(
  * Query parameters:
  * - date: Optional ISO date (YYYY-MM-DD) to fetch rankings for a specific historical snapshot
  *         If not provided, returns rankings from the latest successful snapshot
+ * - fallback: Optional boolean (default: true) to enable/disable fallback to nearest snapshot
+ *
+ * Requirements:
+ * - 3.2: Return nearest available snapshot when requested date has no data
+ * - 3.3: Indicate when data is from prior month's final snapshot
+ * - 4.4: Indicate the nearest available snapshot date
  */
 router.get(
   '/rankings',
@@ -653,11 +842,13 @@ router.get(
   async (req: Request, res: Response) => {
     const requestId = `rankings_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const requestedDate = req.query['date'] as string | undefined
+    const enableFallback = req.query['fallback'] !== 'false' // Default to true
 
     logger.info('Received request for district rankings', {
       operation: 'GET /api/districts/rankings',
       request_id: requestId,
       requested_date: requestedDate || 'latest',
+      fallback_enabled: enableFallback,
       user_agent: req.get('user-agent'),
       ip: req.ip,
     })
@@ -665,6 +856,11 @@ router.get(
     try {
       // Get snapshot - either for specific date or latest
       let snapshot: Snapshot | null
+      let fallbackReason:
+        | 'no_snapshot_for_date'
+        | 'closing_period_gap'
+        | 'future_date'
+        | null = null
 
       if (requestedDate) {
         // Validate date format (YYYY-MM-DD)
@@ -688,18 +884,34 @@ router.get(
         // Get snapshot for specific date (snapshot IDs are ISO dates)
         snapshot = await perDistrictSnapshotStore.getSnapshot(requestedDate)
 
+        // If no snapshot found and fallback is enabled, find nearest (Requirement 3.2)
+        if (!snapshot && enableFallback) {
+          logger.info('No exact snapshot found, attempting fallback', {
+            operation: 'GET /api/districts/rankings',
+            request_id: requestId,
+            requested_date: requestedDate,
+          })
+
+          const fallbackResult = await findNearestSnapshot(requestedDate)
+          snapshot = fallbackResult.snapshot
+          fallbackReason = fallbackResult.fallbackReason
+        }
+
         if (!snapshot) {
           logger.warn('No snapshot found for requested date', {
             operation: 'GET /api/districts/rankings',
             request_id: requestId,
             requested_date: requestedDate,
+            fallback_enabled: enableFallback,
           })
 
           res.status(404).json({
             error: {
               code: 'SNAPSHOT_NOT_FOUND',
               message: `No snapshot available for date ${requestedDate}`,
-              details: 'The requested date does not have cached data',
+              details: enableFallback
+                ? 'No snapshots available to fall back to'
+                : 'The requested date does not have cached data. Enable fallback with ?fallback=true',
             },
           })
           return
@@ -765,13 +977,19 @@ router.get(
         from_cache: rankingsData.metadata.fromCache,
       })
 
-      // Return rankings with metadata
+      // Build base metadata including closing period fields and fallback info (Requirement 4.4)
+      const baseMetadata = buildSnapshotResponseMetadata(
+        snapshot,
+        requestedDate,
+        fallbackReason
+      )
+
+      // Return rankings with metadata (including closing period fields and rankings-specific fields)
       res.json({
         rankings: rankingsData.rankings,
         date: rankingsData.metadata.sourceCsvDate,
         _snapshot_metadata: {
-          snapshot_id: snapshot.snapshot_id,
-          created_at: snapshot.created_at,
+          ...baseMetadata,
           data_source: 'all-districts-rankings-file',
           from_cache: rankingsData.metadata.fromCache,
           calculation_version: rankingsData.metadata.calculationVersion,
@@ -786,6 +1004,8 @@ router.get(
         snapshot_id: snapshot.snapshot_id,
         rankings_count: rankingsData.rankings.length,
         data_source: 'all-districts-rankings-file',
+        fallback_used: !!fallbackReason,
+        fallback_reason: fallbackReason,
       })
     } catch (error) {
       const errorResponse = transformErrorResponse(error)

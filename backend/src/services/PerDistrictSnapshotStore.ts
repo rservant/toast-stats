@@ -94,6 +94,68 @@ export interface PerDistrictSnapshotMetadata {
   processingDuration: number
   source: string
   dataAsOfDate: string
+
+  // Closing period tracking fields (Requirements 2.6, 4.1, 4.2, 4.3)
+
+  /**
+   * Indicates whether this snapshot contains closing period data.
+   * True when the data month differs from the "As of" date month.
+   */
+  isClosingPeriodData?: boolean
+
+  /**
+   * The actual date when the CSV data was collected (the "As of" date from the CSV).
+   * Preserved for transparency even when snapshot is dated differently.
+   * Format: YYYY-MM-DD
+   */
+  collectionDate?: string
+
+  /**
+   * The logical date this snapshot represents.
+   * For closing period data, this is the last day of the data month.
+   * For normal data, this equals the dataAsOfDate.
+   * Format: YYYY-MM-DD
+   */
+  logicalDate?: string
+}
+
+/**
+ * Options for writing snapshots
+ */
+export interface WriteSnapshotOptions {
+  /** If true, don't update current.json (useful for backfill operations) */
+  skipCurrentPointerUpdate?: boolean
+
+  /**
+   * Override the snapshot directory date.
+   * When provided, this date is used for the snapshot directory name
+   * instead of the dataAsOfDate from the snapshot metadata.
+   * Used for closing period data where the snapshot should be dated
+   * as the last day of the data month.
+   * Format: YYYY-MM-DD
+   */
+  overrideSnapshotDate?: string
+}
+
+/**
+ * Result of comparing a new snapshot's collection date against an existing snapshot
+ * Used to determine whether a closing period snapshot should be updated
+ *
+ * Requirements: 2.2, 2.3, 2.4
+ */
+export interface SnapshotComparisonResult {
+  /** Whether the snapshot should be updated with the new data */
+  shouldUpdate: boolean
+  /** Reason for the decision */
+  reason:
+    | 'no_existing'
+    | 'newer_data'
+    | 'same_day_refresh'
+    | 'existing_is_newer'
+  /** Collection date of the existing snapshot (if any) */
+  existingCollectionDate?: string
+  /** Collection date of the new data */
+  newCollectionDate: string
 }
 
 /**
@@ -156,6 +218,24 @@ export interface PerDistrictSnapshotStore {
     rankingCompatible: boolean
     warnings: string[]
   }>
+
+  /**
+   * Compare a new snapshot's collection date against an existing snapshot
+   * to determine if the snapshot should be updated.
+   *
+   * Used for closing period snapshots where we only want to update if
+   * the new data has a newer or equal collection date.
+   *
+   * Requirements: 2.2, 2.3, 2.4
+   *
+   * @param snapshotDate - The snapshot date (directory name) to check
+   * @param newCollectionDate - The collection date of the new data
+   * @returns Comparison result indicating whether to update
+   */
+  shouldUpdateClosingPeriodSnapshot(
+    snapshotDate: string,
+    newCollectionDate: string
+  ): Promise<SnapshotComparisonResult>
 }
 
 /**
@@ -187,11 +267,12 @@ export class PerDistrictFileSnapshotStore
    * @param allDistrictsRankings - Optional all-districts rankings data to include
    * @param options - Optional write options
    * @param options.skipCurrentPointerUpdate - If true, don't update current.json (useful for backfill operations)
+   * @param options.overrideSnapshotDate - If provided, use this date for the snapshot directory name instead of dataAsOfDate
    */
   override async writeSnapshot(
     snapshot: Snapshot,
     allDistrictsRankings?: AllDistrictsRankingsData,
-    options?: { skipCurrentPointerUpdate?: boolean }
+    options?: WriteSnapshotOptions
   ): Promise<void> {
     const startTime = Date.now()
     logger.info('Starting per-district snapshot write operation', {
@@ -203,15 +284,19 @@ export class PerDistrictFileSnapshotStore
       district_count: snapshot.payload.districts.length,
       error_count: snapshot.errors.length,
       has_rankings: !!allDistrictsRankings,
+      override_snapshot_date: options?.overrideSnapshotDate,
     })
 
     try {
       await fs.mkdir(this.perDistrictSnapshotsDir, { recursive: true })
 
-      // Generate ISO date-based directory name from dataAsOfDate
-      const snapshotDirName = this.generateSnapshotDirectoryName(
-        snapshot.payload.metadata.dataAsOfDate
-      )
+      // Generate ISO date-based directory name
+      // Use override date if provided (for closing period data), otherwise use dataAsOfDate
+      const snapshotDirName = options?.overrideSnapshotDate
+        ? this.generateSnapshotDirectoryName(options.overrideSnapshotDate)
+        : this.generateSnapshotDirectoryName(
+            snapshot.payload.metadata.dataAsOfDate
+          )
       const snapshotDir = path.join(
         this.perDistrictSnapshotsDir,
         snapshotDirName
@@ -381,6 +466,10 @@ export class PerDistrictFileSnapshotStore
         processingDuration: Date.now() - startTime,
         source: snapshot.payload.metadata.source,
         dataAsOfDate: snapshot.payload.metadata.dataAsOfDate,
+        // Closing period tracking fields (Requirements 2.6, 4.1, 4.2, 4.3)
+        isClosingPeriodData: snapshot.payload.metadata.isClosingPeriodData,
+        collectionDate: snapshot.payload.metadata.collectionDate,
+        logicalDate: snapshot.payload.metadata.logicalDate,
       }
 
       const metadataPath = path.join(snapshotDir, 'metadata.json')
@@ -883,6 +972,10 @@ export class PerDistrictFileSnapshotStore
           dataAsOfDate: metadata.dataAsOfDate,
           districtCount: districts.length,
           processingDurationMs: metadata.processingDuration,
+          // Restore closing period tracking fields (Requirements 2.6, 4.1, 4.2, 4.3)
+          isClosingPeriodData: metadata.isClosingPeriodData,
+          collectionDate: metadata.collectionDate,
+          logicalDate: metadata.logicalDate,
         },
       }
 
@@ -1319,6 +1412,124 @@ export class PerDistrictFileSnapshotStore
         calculationCompatible: false,
         rankingCompatible: false,
         warnings: [`Compatibility check failed: ${errorMessage}`],
+      }
+    }
+  }
+
+  /**
+   * Compare a new snapshot's collection date against an existing snapshot
+   * to determine if the snapshot should be updated.
+   *
+   * Used for closing period snapshots where we only want to update if
+   * the new data has a newer or equal collection date.
+   *
+   * Requirements: 2.2, 2.3, 2.4
+   * - 2.2: Create snapshot if no snapshot exists for that date
+   * - 2.3: Overwrite if existing snapshot has older or equal collection date
+   * - 2.4: Do NOT overwrite if existing snapshot has newer collection date
+   *
+   * @param snapshotDate - The snapshot date (directory name) to check
+   * @param newCollectionDate - The collection date of the new data
+   * @returns Comparison result indicating whether to update
+   */
+  async shouldUpdateClosingPeriodSnapshot(
+    snapshotDate: string,
+    newCollectionDate: string
+  ): Promise<SnapshotComparisonResult> {
+    try {
+      // Try to read existing snapshot metadata
+      const existingMetadata = await this.getSnapshotMetadata(snapshotDate)
+
+      if (!existingMetadata) {
+        // No existing snapshot - should create new one (Requirement 2.2)
+        logger.debug('No existing snapshot found, should create new', {
+          operation: 'shouldUpdateClosingPeriodSnapshot',
+          snapshot_date: snapshotDate,
+          new_collection_date: newCollectionDate,
+        })
+
+        return {
+          shouldUpdate: true,
+          reason: 'no_existing',
+          newCollectionDate,
+        }
+      }
+
+      // Get the existing collection date
+      // Use collectionDate if available (closing period data), otherwise fall back to dataAsOfDate
+      const existingCollectionDate =
+        existingMetadata.collectionDate ?? existingMetadata.dataAsOfDate
+
+      // Compare dates
+      const existingDate = new Date(existingCollectionDate)
+      const newDate = new Date(newCollectionDate)
+
+      if (newDate > existingDate) {
+        // New data is strictly newer - should update (Requirement 2.3)
+        logger.info('New data is newer, should update snapshot', {
+          operation: 'shouldUpdateClosingPeriodSnapshot',
+          snapshot_date: snapshotDate,
+          existing_collection_date: existingCollectionDate,
+          new_collection_date: newCollectionDate,
+        })
+
+        return {
+          shouldUpdate: true,
+          reason: 'newer_data',
+          existingCollectionDate,
+          newCollectionDate,
+        }
+      } else if (newDate.getTime() === existingDate.getTime()) {
+        // Same collection date - allow update for same-day refresh (Requirement 2.3)
+        logger.info('Same collection date, allowing same-day refresh', {
+          operation: 'shouldUpdateClosingPeriodSnapshot',
+          snapshot_date: snapshotDate,
+          existing_collection_date: existingCollectionDate,
+          new_collection_date: newCollectionDate,
+        })
+
+        return {
+          shouldUpdate: true,
+          reason: 'same_day_refresh',
+          existingCollectionDate,
+          newCollectionDate,
+        }
+      } else {
+        // Existing snapshot has newer collection date - do NOT update (Requirement 2.4)
+        logger.info('Existing snapshot has newer data, skipping update', {
+          operation: 'shouldUpdateClosingPeriodSnapshot',
+          snapshot_date: snapshotDate,
+          existing_collection_date: existingCollectionDate,
+          new_collection_date: newCollectionDate,
+        })
+
+        return {
+          shouldUpdate: false,
+          reason: 'existing_is_newer',
+          existingCollectionDate,
+          newCollectionDate,
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      // If we can't read existing metadata, treat as no existing snapshot
+      // This allows recovery from corrupted metadata
+      logger.warn(
+        'Error reading existing snapshot metadata, treating as no existing',
+        {
+          operation: 'shouldUpdateClosingPeriodSnapshot',
+          snapshot_date: snapshotDate,
+          new_collection_date: newCollectionDate,
+          error: errorMessage,
+        }
+      )
+
+      return {
+        shouldUpdate: true,
+        reason: 'no_existing',
+        newCollectionDate,
       }
     }
   }

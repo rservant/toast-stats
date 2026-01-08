@@ -63,6 +63,30 @@ export interface NormalizedData {
       /** Target districts for the operation (for RefreshService compatibility) */
       targetDistricts?: string[]
     }
+
+    // Closing period tracking fields (Requirements 2.6, 4.1, 4.2, 4.3)
+
+    /**
+     * Indicates whether this snapshot contains closing period data.
+     * True when the data month differs from the "As of" date month.
+     * Used by API to communicate data context to consumers.
+     */
+    isClosingPeriodData?: boolean
+
+    /**
+     * The actual date when the CSV data was collected (the "As of" date from the CSV).
+     * Preserved for transparency even when snapshot is dated differently.
+     * Format: YYYY-MM-DD
+     */
+    collectionDate?: string
+
+    /**
+     * The logical date this snapshot represents.
+     * For closing period data, this is the last day of the data month.
+     * For normal data, this equals the dataAsOfDate.
+     * Format: YYYY-MM-DD
+     */
+    logicalDate?: string
   }
 }
 

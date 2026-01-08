@@ -34,6 +34,10 @@ interface RawData {
     fromCache: boolean
     csvDate: string
     fetchedAt: string
+    /** Data month from cache metadata (YYYY-MM format), if available */
+    dataMonth?: string
+    /** Whether this is closing period data from cache metadata */
+    isClosingPeriod?: boolean
   }
 
   /** District-specific performance data (configured districts only) */
@@ -630,6 +634,8 @@ export class RefreshService {
         fromCache: boolean
         csvDate: string
         fetchedAt: string
+        dataMonth?: string
+        isClosingPeriod?: boolean
       }
 
       const cachedData =
@@ -639,10 +645,18 @@ export class RefreshService {
         // Cache hit - use cached data
         // IMPORTANT: Use the actual date from cache metadata, not the requested date
         allDistrictsData = cachedData.data
+
+        // Get full cache metadata to access closing period information
+        const fullCacheMetadata = await this.rawCSVCache.getCacheMetadata(
+          cachedData.metadata.date
+        )
+
         allDistrictsMetadata = {
           fromCache: true,
           csvDate: cachedData.metadata.date, // This is the actual "As of" date
           fetchedAt: cachedData.metadata.fetchedAt,
+          dataMonth: fullCacheMetadata?.dataMonth,
+          isClosingPeriod: fullCacheMetadata?.isClosingPeriod,
         }
 
         logger.info('All Districts data retrieved from cache', {
@@ -651,6 +665,8 @@ export class RefreshService {
           recordCount: allDistrictsData.length,
           fromCache: true,
           fetchedAt: allDistrictsMetadata.fetchedAt,
+          dataMonth: allDistrictsMetadata.dataMonth,
+          isClosingPeriod: allDistrictsMetadata.isClosingPeriod,
         })
       } else {
         // Cache miss - fetch from dashboard and cache it
@@ -1129,7 +1145,151 @@ export class RefreshService {
   }
 
   /**
+   * Detect if the CSV data represents a closing period
+   *
+   * A closing period occurs when the Toastmasters dashboard publishes data for a prior month
+   * (data month) with an "As of" date in the current month. During closing periods, the
+   * snapshot should be dated as the last day of the data month, not the "As of" date.
+   *
+   * @param csvDate - The "As of" date from the CSV (when the page was generated)
+   * @param dataMonth - The month the statistics actually represent (extracted from CSV content)
+   * @returns Closing period information including whether it's a closing period and the appropriate snapshot date
+   */
+  private detectClosingPeriod(
+    csvDate: string,
+    dataMonth: string
+  ): {
+    isClosingPeriod: boolean
+    dataMonth: string
+    asOfDate: string
+    snapshotDate: string
+    collectionDate: string
+  } {
+    try {
+      // Parse the CSV date (As of date)
+      // IMPORTANT: Use UTC methods to ensure consistent behavior across timezones
+      // The csvDate is in ISO format (YYYY-MM-DD), so we need UTC parsing
+      const csvDateObj = new Date(csvDate)
+      const csvYear = csvDateObj.getUTCFullYear()
+      const csvMonth = csvDateObj.getUTCMonth() + 1 // getUTCMonth() returns 0-11
+
+      // Parse the data month (format: "YYYY-MM" or just "MM")
+      let dataYear: number
+      let dataMonthNum: number
+
+      if (dataMonth.includes('-')) {
+        // Format: "YYYY-MM"
+        const [yearStr, monthStr] = dataMonth.split('-')
+        dataYear = parseInt(yearStr!, 10)
+        dataMonthNum = parseInt(monthStr!, 10)
+      } else {
+        // Format: "MM" - assume same year as CSV date initially
+        dataMonthNum = parseInt(dataMonth, 10)
+        dataYear = csvYear
+
+        // Handle cross-year scenario: if data month > CSV month, data is from previous year
+        if (dataMonthNum > csvMonth) {
+          dataYear = csvYear - 1
+        }
+      }
+
+      // Validate parsed values
+      if (
+        isNaN(dataYear) ||
+        isNaN(dataMonthNum) ||
+        dataMonthNum < 1 ||
+        dataMonthNum > 12
+      ) {
+        logger.warn(
+          'Invalid data month format, treating as non-closing period',
+          {
+            dataMonth,
+            csvDate,
+          }
+        )
+        return {
+          isClosingPeriod: false,
+          dataMonth,
+          asOfDate: csvDate,
+          snapshotDate: csvDate,
+          collectionDate: csvDate,
+        }
+      }
+
+      // Check if this is a closing period (data month < As of month, accounting for year)
+      const isClosingPeriod =
+        dataYear < csvYear || (dataYear === csvYear && dataMonthNum < csvMonth)
+
+      if (isClosingPeriod) {
+        // Calculate the last day of the data month using UTC to avoid timezone issues
+        // Day 0 of month N+1 gives the last day of month N
+        const lastDay = new Date(
+          Date.UTC(dataYear, dataMonthNum, 0)
+        ).getUTCDate()
+        const snapshotDate = `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+
+        logger.info('Closing period detected', {
+          csvDate,
+          dataMonth: `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}`,
+          snapshotDate,
+          isClosingPeriod: true,
+        })
+
+        return {
+          isClosingPeriod: true,
+          dataMonth: `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}`,
+          asOfDate: csvDate,
+          snapshotDate,
+          collectionDate: csvDate,
+        }
+      } else {
+        // Not a closing period - use CSV date as-is
+        return {
+          isClosingPeriod: false,
+          dataMonth: `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}`,
+          asOfDate: csvDate,
+          snapshotDate: csvDate,
+          collectionDate: csvDate,
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error(
+        'Error detecting closing period, treating as non-closing period',
+        {
+          csvDate,
+          dataMonth,
+          error: errorMessage,
+        }
+      )
+
+      // Fallback to non-closing period behavior
+      return {
+        isClosingPeriod: false,
+        dataMonth,
+        asOfDate: csvDate,
+        snapshotDate: csvDate,
+        collectionDate: csvDate,
+      }
+    }
+  }
+
+  /**
+   * Closing period information returned from normalizeData
+   * Used to pass closing period context to createSnapshot
+   */
+  private closingPeriodInfo?: {
+    isClosingPeriod: boolean
+    dataMonth: string
+    asOfDate: string
+    snapshotDate: string
+    collectionDate: string
+  }
+
+  /**
    * Normalize raw scraping data into structured NormalizedData format
+   * Detects closing period data and sets appropriate metadata fields
    */
   private async normalizeData(rawData: RawData): Promise<NormalizedData> {
     const startTime = Date.now()
@@ -1170,9 +1330,32 @@ export class RefreshService {
 
       const processingDurationMs = Date.now() - startTime
 
+      // Detect closing period using cache metadata or derive from csvDate
+      // dataMonth comes from cache metadata if available, otherwise derive from csvDate
+      const dataMonth =
+        rawData.allDistrictsMetadata.dataMonth ??
+        rawData.allDistrictsMetadata.csvDate.substring(0, 7) // Extract YYYY-MM from csvDate
+
+      const closingPeriodInfo = this.detectClosingPeriod(
+        rawData.allDistrictsMetadata.csvDate,
+        dataMonth
+      )
+
+      // Store closing period info for use by createSnapshot
+      this.closingPeriodInfo = closingPeriodInfo
+
+      logger.info('Closing period detection completed', {
+        csvDate: rawData.allDistrictsMetadata.csvDate,
+        dataMonth,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
+        snapshotDate: closingPeriodInfo.snapshotDate,
+        collectionDate: closingPeriodInfo.collectionDate,
+      })
+
       // CRITICAL: Use the csvDate from allDistrictsMetadata, which is the actual
       // "As of" date from the Toastmasters dashboard. This date is always 1-2 days
       // behind the current date. Snapshots MUST be stored using this date.
+      // For closing period data, we also set the closing period metadata fields.
       const normalizedData: NormalizedData = {
         districts,
         metadata: {
@@ -1181,6 +1364,10 @@ export class RefreshService {
           dataAsOfDate: rawData.allDistrictsMetadata.csvDate,
           districtCount: districts.length,
           processingDurationMs,
+          // Closing period tracking fields (Requirements 2.6, 4.1, 4.2, 4.3)
+          isClosingPeriodData: closingPeriodInfo.isClosingPeriod,
+          collectionDate: closingPeriodInfo.collectionDate,
+          logicalDate: closingPeriodInfo.snapshotDate,
         },
       }
 
@@ -1188,6 +1375,7 @@ export class RefreshService {
         inputDistricts: rawData.districtData.size,
         outputDistricts: districts.length,
         processingDurationMs,
+        isClosingPeriodData: closingPeriodInfo.isClosingPeriod,
       })
 
       return normalizedData
@@ -1489,6 +1677,7 @@ export class RefreshService {
   /**
    * Create a snapshot with proper versioning and error handling
    * Supports detailed error tracking per district for resilient processing
+   * Handles closing period data by using override date and comparison logic
    */
   private async createSnapshot(
     data: NormalizedData,
@@ -1524,6 +1713,14 @@ export class RefreshService {
       snapshot.errors = [...errors, ...detailedErrors]
     }
 
+    // Determine if this is closing period data and get the appropriate snapshot date
+    const isClosingPeriod = this.closingPeriodInfo?.isClosingPeriod ?? false
+    const overrideSnapshotDate = isClosingPeriod
+      ? this.closingPeriodInfo?.snapshotDate
+      : undefined
+    const collectionDate =
+      this.closingPeriodInfo?.collectionDate ?? data.metadata.dataAsOfDate
+
     logger.info('Creating snapshot with resilient error tracking', {
       operation: 'createSnapshot',
       snapshot_id: snapshotId,
@@ -1536,29 +1733,93 @@ export class RefreshService {
       successful_districts: scrapingMetadata?.successfulDistricts?.length || 0,
       failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
       has_all_districts_rankings: !!allDistrictsRankings,
+      is_closing_period: isClosingPeriod,
+      override_snapshot_date: overrideSnapshotDate,
+      collection_date: collectionDate,
     })
 
     try {
+      // For closing period data, check if we should update the existing snapshot
+      // Requirements 2.2, 2.3, 2.4: Only update if new data is newer or equal
+      if (
+        isClosingPeriod &&
+        overrideSnapshotDate &&
+        'shouldUpdateClosingPeriodSnapshot' in this.snapshotStore
+      ) {
+        const perDistrictStore = this.snapshotStore as {
+          shouldUpdateClosingPeriodSnapshot: (
+            snapshotDate: string,
+            newCollectionDate: string
+          ) => Promise<
+            import('./PerDistrictSnapshotStore.js').SnapshotComparisonResult
+          >
+        }
+
+        const comparisonResult =
+          await perDistrictStore.shouldUpdateClosingPeriodSnapshot(
+            overrideSnapshotDate,
+            collectionDate
+          )
+
+        if (!comparisonResult.shouldUpdate) {
+          logger.info(
+            'Skipping closing period snapshot update - existing snapshot has newer data',
+            {
+              operation: 'createSnapshot',
+              snapshot_date: overrideSnapshotDate,
+              new_collection_date: collectionDate,
+              existing_collection_date: comparisonResult.existingCollectionDate,
+              reason: comparisonResult.reason,
+            }
+          )
+
+          // Return a snapshot object with the existing snapshot date
+          // The actual snapshot was not written, but we return the info for the caller
+          return {
+            ...snapshot,
+            snapshot_id: overrideSnapshotDate,
+          }
+        }
+
+        logger.info('Proceeding with closing period snapshot update', {
+          operation: 'createSnapshot',
+          snapshot_date: overrideSnapshotDate,
+          new_collection_date: collectionDate,
+          reason: comparisonResult.reason,
+        })
+      }
+
       // Write snapshot with all-districts rankings if available
       // The PerDistrictFileSnapshotStore.writeSnapshot accepts rankings as second parameter
       if (
         allDistrictsRankings &&
         'writeAllDistrictsRankings' in this.snapshotStore
       ) {
-        // Cast to the per-district store type that supports rankings
+        // Cast to the per-district store type that supports rankings and write options
         const perDistrictStore = this.snapshotStore as {
           writeSnapshot: (
             snapshot: Snapshot,
-            rankings?: import('../types/snapshots.js').AllDistrictsRankingsData
+            rankings?: import('../types/snapshots.js').AllDistrictsRankingsData,
+            options?: import('./PerDistrictSnapshotStore.js').WriteSnapshotOptions
           ) => Promise<void>
         }
 
-        await perDistrictStore.writeSnapshot(snapshot, allDistrictsRankings)
+        // Pass override date for closing period snapshots (Requirement 2.1)
+        const writeOptions = overrideSnapshotDate
+          ? { overrideSnapshotDate }
+          : undefined
+
+        await perDistrictStore.writeSnapshot(
+          snapshot,
+          allDistrictsRankings,
+          writeOptions
+        )
 
         logger.info('Snapshot created with all-districts rankings', {
           operation: 'createSnapshot',
           snapshot_id: snapshotId,
           rankings_count: allDistrictsRankings.rankings.length,
+          override_snapshot_date: overrideSnapshotDate,
         })
       } else {
         // No rankings or store doesn't support them
