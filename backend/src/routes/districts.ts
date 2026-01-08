@@ -794,9 +794,9 @@ router.get(
           snapshot.snapshot_id
         )
 
-        // Transform to expected format
+        // Transform to expected format (frontend expects 'id' not 'districtId')
         const districts = districtSummaries.map(summary => ({
-          districtId: summary.districtId,
+          id: summary.districtId,
           name: summary.districtName,
           status: summary.status,
           lastUpdated: summary.lastUpdated,
