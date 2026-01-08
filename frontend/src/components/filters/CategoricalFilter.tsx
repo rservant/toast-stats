@@ -95,28 +95,26 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
         {/* Select All/None (only for multiple mode) */}
         {multiple && options.length > 1 && (
           <div className="pb-2 border-b border-gray-100">
-            <button
-              type="button"
+            <div
+              role="checkbox"
+              aria-checked={allSelected}
+              tabIndex={0}
               onClick={handleSelectAll}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  e.currentTarget.click()
+                  handleSelectAll()
                 }
               }}
-              className="flex items-center gap-2 text-sm text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
-              tabIndex={0}
-              aria-label={
-                allSelected ? 'Deselect all options' : 'Select all options'
-              }
+              className="flex items-center gap-2 cursor-pointer text-sm text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded px-1 py-1"
             >
               <div
-                className={`w-4 h-4 border-2 rounded flex items-center justify-center ${
+                className={`w-4 h-4 min-w-[16px] min-h-[16px] border-2 rounded-sm flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
                   allSelected
                     ? 'bg-tm-loyal-blue border-tm-loyal-blue'
                     : localSelected.length > 0
                       ? 'bg-blue-100 border-tm-loyal-blue'
-                      : 'border-gray-300'
+                      : 'bg-white border-gray-300'
                 }`}
               >
                 {allSelected && (
@@ -129,7 +127,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
+                      strokeWidth={3}
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
@@ -138,42 +136,36 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                   <div className="w-2 h-2 bg-tm-loyal-blue rounded-sm" />
                 )}
               </div>
-              {allSelected ? 'Deselect All' : 'Select All'}
-            </button>
+              <span>{allSelected ? 'Deselect All' : 'Select All'}</span>
+            </div>
           </div>
         )}
 
         {/* Options */}
-        <div className="space-y-2 max-h-60 overflow-y-auto">
+        <div className="space-y-1 max-h-60 overflow-y-auto">
           {options.map(option => {
             const isSelected = localSelected.includes(option)
             return (
-              <label
+              <div
                 key={option}
-                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 hover:shadow-sm rounded px-2 py-1 transition-all duration-200 focus-within:bg-gray-50"
+                role="checkbox"
+                aria-checked={isSelected}
+                tabIndex={0}
                 onClick={() => handleToggle(option)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleToggle(option)
+                  }
+                }}
+                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded px-2 py-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset"
               >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => handleToggle(option)}
-                  className="sr-only"
-                  tabIndex={0}
-                  aria-label={`${isSelected ? 'Unselect' : 'Select'} ${option}`}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      handleToggle(option)
-                    }
-                  }}
-                />
                 <div
-                  className={`w-4 h-4 border-2 rounded flex items-center justify-center focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
+                  className={`w-4 h-4 min-w-[16px] min-h-[16px] border-2 rounded-sm flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
                     isSelected
-                      ? 'bg-tm-loyal-blue border-tm-loyal-blue hover:bg-tm-loyal-blue hover:border-tm-loyal-blue'
-                      : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                      ? 'bg-tm-loyal-blue border-tm-loyal-blue'
+                      : 'bg-white border-gray-300 hover:border-gray-400'
                   }`}
-                  tabIndex={-1}
                 >
                   {isSelected && (
                     <svg
@@ -185,16 +177,16 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeWidth={2}
+                        strokeWidth={3}
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
                   )}
                 </div>
-                <span className="text-sm text-gray-700 capitalize hover:text-gray-900 transition-colors duration-200">
+                <span className="text-sm text-gray-700 select-none">
                   {option}
                 </span>
-              </label>
+              </div>
             )
           })}
         </div>
