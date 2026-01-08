@@ -1,20 +1,91 @@
 /**
  * Tests for Year-Over-Year Comparison Logic
  * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+ *
+ * Updated to use the new IAnalyticsDataSource interface with
+ * PerDistrictSnapshotStore and AnalyticsDataSourceAdapter.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { promises as fs } from 'fs'
-import { AnalyticsEngine } from '../AnalyticsEngine'
-import { DistrictCacheManager } from '../DistrictCacheManager'
+import path from 'path'
+import { AnalyticsEngine } from '../AnalyticsEngine.js'
+import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
+import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
 import {
   createTestCacheConfig,
   cleanupTestCacheConfig,
-} from '../../utils/test-cache-helper'
-import type { TestCacheConfig } from '../../utils/test-cache-helper'
+} from '../../utils/test-cache-helper.js'
+import type { TestCacheConfig } from '../../utils/test-cache-helper.js'
+import type { DistrictStatistics } from '../../types/districts.js'
+import type { Snapshot } from '../../types/snapshots.js'
+
+/**
+ * Helper to create a snapshot with district data for testing
+ */
+async function createTestSnapshot(
+  snapshotStore: PerDistrictFileSnapshotStore,
+  snapshotDate: string,
+  districts: DistrictStatistics[]
+): Promise<void> {
+  const snapshot: Snapshot = {
+    snapshot_id: snapshotDate,
+    created_at: new Date().toISOString(),
+    schema_version: '1.0.0',
+    calculation_version: '1.0.0',
+    status: 'success',
+    payload: {
+      metadata: {
+        dataAsOfDate: snapshotDate,
+        collectedAt: new Date().toISOString(),
+        source: 'test',
+        configuredDistricts: districts.map(d => d.districtId),
+        successfulDistricts: districts.map(d => d.districtId),
+        failedDistricts: [],
+      },
+      districts,
+    },
+    errors: [],
+  }
+
+  await snapshotStore.writeSnapshot(snapshot)
+}
+
+/**
+ * Helper to create district statistics for testing
+ */
+function createDistrictStats(
+  districtId: string,
+  clubPerformance: Array<{
+    clubNumber: string
+    clubName: string
+    membership: number
+    goalsMet: number
+    division?: string
+    area?: string
+  }>
+): DistrictStatistics {
+  return {
+    districtId,
+    asOfDate: new Date().toISOString(),
+    clubPerformance: clubPerformance.map(club => ({
+      'Club Number': club.clubNumber,
+      'Club Name': club.clubName,
+      'Active Membership': String(club.membership),
+      'Goals Met': String(club.goalsMet),
+      Division: club.division || 'A',
+      'Division Name': `Division ${club.division || 'A'}`,
+      Area: club.area || '1',
+      'Area Name': `Area ${club.area || '1'}`,
+    })),
+    districtPerformance: [],
+    divisionPerformance: [],
+  }
+}
 
 describe('Year-Over-Year Comparison Logic', () => {
-  let cacheManager: DistrictCacheManager
+  let snapshotStore: PerDistrictFileSnapshotStore
   let analyticsEngine: AnalyticsEngine
   let testCacheConfig: TestCacheConfig
 
@@ -24,14 +95,23 @@ describe('Year-Over-Year Comparison Logic', () => {
     testCacheConfig = await createTestCacheConfig(testName)
 
     // Ensure the cache directory and subdirectories exist
-    const path = await import('path')
-    const districtsDir = path.resolve(testCacheConfig.cacheDir, 'districts')
-    await fs.mkdir(districtsDir, { recursive: true })
+    const snapshotsDir = path.resolve(testCacheConfig.cacheDir, 'snapshots')
+    await fs.mkdir(snapshotsDir, { recursive: true })
 
-    // Use the test cache directory with dependency injection
-    cacheManager = new DistrictCacheManager(testCacheConfig.cacheDir)
-    await cacheManager.init()
-    analyticsEngine = new AnalyticsEngine(cacheManager)
+    // Create the new data source stack
+    snapshotStore = new PerDistrictFileSnapshotStore({
+      cacheDir: testCacheConfig.cacheDir,
+      maxSnapshots: 100,
+      maxAgeDays: 365,
+    })
+
+    const districtDataAggregator = createDistrictDataAggregator(snapshotStore)
+    const dataSource = new AnalyticsDataSourceAdapter(
+      districtDataAggregator,
+      snapshotStore
+    )
+
+    analyticsEngine = new AnalyticsEngine(dataSource)
 
     // Clear any internal caches
     analyticsEngine.clearCaches()
@@ -50,95 +130,30 @@ describe('Year-Over-Year Comparison Logic', () => {
   describe('findPreviousProgramYearDate', () => {
     it('should calculate previous year date correctly (Requirement 9.1)', async () => {
       const districtId = `test-district-${Date.now()}-5`
-      // Cache data for current year
       const currentDate = '2024-11-22'
-      const currentClubPerformance = [
-        {
-          'Club Number': '12345',
-          'Club Name': 'Test Club',
-          'Active Membership': '25',
-          'Goals Met': '5',
-        },
-      ]
-
-      // Cache data for previous year (same date, one year earlier)
       const previousDate = '2023-11-22'
-      const previousClubPerformance = [
+
+      // Create current year snapshot
+      const currentStats = createDistrictStats(districtId, [
         {
-          'Club Number': '12345',
-          'Club Name': 'Test Club',
-          'Active Membership': '20',
-          'Goals Met': '3',
+          clubNumber: '12345',
+          clubName: 'Test Club',
+          membership: 25,
+          goalsMet: 5,
         },
-      ]
+      ])
+      await createTestSnapshot(snapshotStore, currentDate, [currentStats])
 
-      // Cache data sequentially with retry logic to handle race conditions
-      let retries = 3
-      while (retries > 0) {
-        try {
-          await cacheManager.cacheDistrictData(
-            districtId,
-            currentDate,
-            [],
-            [],
-            currentClubPerformance
-          )
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) throw error
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
-
-      // Wait for file system operations to complete
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      retries = 3
-      while (retries > 0) {
-        try {
-          await cacheManager.cacheDistrictData(
-            districtId,
-            previousDate,
-            [],
-            [],
-            previousClubPerformance
-          )
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) throw error
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
-
-      // Wait for file system operations to complete
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Verify data was cached properly before calculation
-      const currentData = await cacheManager.getDistrictData(
-        districtId,
-        currentDate
-      )
-      const previousData = await cacheManager.getDistrictData(
-        districtId,
-        previousDate
-      )
-
-      if (!currentData || !previousData) {
-        console.error('Failed to cache data properly:', {
-          currentData: !!currentData,
-          previousData: !!previousData,
-          districtId,
-          currentDate,
-          previousDate,
-        })
-        // Skip this test if caching failed
-        return
-      }
-
-      expect(currentData).not.toBeNull()
-      expect(previousData).not.toBeNull()
+      // Create previous year snapshot
+      const previousStats = createDistrictStats(districtId, [
+        {
+          clubNumber: '12345',
+          clubName: 'Test Club',
+          membership: 20,
+          goalsMet: 3,
+        },
+      ])
+      await createTestSnapshot(snapshotStore, previousDate, [previousStats])
 
       // Calculate year-over-year
       const result = await analyticsEngine.calculateYearOverYear(
@@ -160,123 +175,47 @@ describe('Year-Over-Year Comparison Logic', () => {
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 
-      // Current year data
-      const currentClubPerformance = [
+      // Create current year snapshot
+      const currentStats = createDistrictStats(districtId, [
         {
-          'Club Number': '1',
-          'Club Name': 'Club 1',
-          'Active Membership': '30',
-          'Goals Met': '8',
-          Division: 'A',
-          'Division Name': 'Division A',
-          Area: '1',
-          'Area Name': 'Area 1',
+          clubNumber: '1',
+          clubName: 'Club 1',
+          membership: 30,
+          goalsMet: 8,
+          division: 'A',
+          area: '1',
         },
         {
-          'Club Number': '2',
-          'Club Name': 'Club 2',
-          'Active Membership': '25',
-          'Goals Met': '6',
-          Division: 'B',
-          'Division Name': 'Division B',
-          Area: '2',
-          'Area Name': 'Area 2',
+          clubNumber: '2',
+          clubName: 'Club 2',
+          membership: 25,
+          goalsMet: 6,
+          division: 'B',
+          area: '2',
         },
-      ]
+      ])
+      await createTestSnapshot(snapshotStore, currentDate, [currentStats])
 
-      // Previous year data
-      const previousClubPerformance = [
+      // Create previous year snapshot
+      const previousStats = createDistrictStats(districtId, [
         {
-          'Club Number': '1',
-          'Club Name': 'Club 1',
-          'Active Membership': '25',
-          'Goals Met': '5',
-          Division: 'A',
-          'Division Name': 'Division A',
-          Area: '1',
-          'Area Name': 'Area 1',
+          clubNumber: '1',
+          clubName: 'Club 1',
+          membership: 25,
+          goalsMet: 5,
+          division: 'A',
+          area: '1',
         },
         {
-          'Club Number': '2',
-          'Club Name': 'Club 2',
-          'Active Membership': '20',
-          'Goals Met': '4',
-          Division: 'B',
-          'Division Name': 'Division B',
-          Area: '2',
-          'Area Name': 'Area 2',
+          clubNumber: '2',
+          clubName: 'Club 2',
+          membership: 20,
+          goalsMet: 4,
+          division: 'B',
+          area: '2',
         },
-      ]
-
-      // Cache data sequentially with retry logic to handle race conditions
-      let retries = 3
-      while (retries > 0) {
-        try {
-          await cacheManager.cacheDistrictData(
-            districtId,
-            currentDate,
-            [],
-            [],
-            currentClubPerformance
-          )
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) throw error
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
-
-      // Wait for file system operations to complete
-      await new Promise(resolve => setTimeout(resolve, 150))
-
-      retries = 3
-      while (retries > 0) {
-        try {
-          await cacheManager.cacheDistrictData(
-            districtId,
-            previousDate,
-            [],
-            [],
-            previousClubPerformance
-          )
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) throw error
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
-
-      // Wait for file system operations to complete
-      await new Promise(resolve => setTimeout(resolve, 150))
-
-      // Verify data was cached properly before calculation
-      const currentData = await cacheManager.getDistrictData(
-        districtId,
-        currentDate
-      )
-      const previousData = await cacheManager.getDistrictData(
-        districtId,
-        previousDate
-      )
-
-      if (!currentData || !previousData) {
-        console.error('Failed to cache data properly:', {
-          currentData: !!currentData,
-          previousData: !!previousData,
-          districtId,
-          currentDate,
-          previousDate,
-        })
-        // Skip this test if caching failed
-        return
-      }
-
-      expect(currentData).not.toBeNull()
-      expect(previousData).not.toBeNull()
-      expect(currentData!.clubPerformance.length).toBe(2)
-      expect(previousData!.clubPerformance.length).toBe(2)
+      ])
+      await createTestSnapshot(snapshotStore, previousDate, [previousStats])
 
       const result = await analyticsEngine.calculateYearOverYear(
         districtId,
@@ -309,23 +248,16 @@ describe('Year-Over-Year Comparison Logic', () => {
       const districtId = `test-district-${Date.now()}-1`
       const currentDate = '2024-11-22'
 
-      // Only cache current year data
-      const currentClubPerformance = [
+      // Only create current year snapshot
+      const currentStats = createDistrictStats(districtId, [
         {
-          'Club Number': '1',
-          'Club Name': 'Club 1',
-          'Active Membership': '25',
-          'Goals Met': '5',
+          clubNumber: '1',
+          clubName: 'Club 1',
+          membership: 25,
+          goalsMet: 5,
         },
-      ]
-
-      await cacheManager.cacheDistrictData(
-        districtId,
-        currentDate,
-        [],
-        [],
-        currentClubPerformance
-      )
+      ])
+      await createTestSnapshot(snapshotStore, currentDate, [currentStats])
 
       const result = await analyticsEngine.calculateYearOverYear(
         districtId,
@@ -357,46 +289,20 @@ describe('Year-Over-Year Comparison Logic', () => {
     it('should support multi-year trends when 3+ years available (Requirement 9.5)', async () => {
       const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
 
-      // Cache data for 3 years sequentially to avoid race conditions
+      // Create snapshots for 3 years
       for (let year = 2022; year <= 2024; year++) {
         const date = `${year}-11-22`
         const membership = 40 + (year - 2022) * 5 // Growing membership
-        const clubPerformance = [
+
+        const stats = createDistrictStats(districtId, [
           {
-            'Club Number': '1',
-            'Club Name': 'Club 1',
-            'Active Membership': String(membership),
-            'Goals Met': String(5 + (year - 2022)),
+            clubNumber: '1',
+            clubName: 'Club 1',
+            membership,
+            goalsMet: 5 + (year - 2022),
           },
-        ]
-
-        // Add retry logic for caching to handle race conditions
-        let retries = 3
-        while (retries > 0) {
-          try {
-            await cacheManager.cacheDistrictData(
-              districtId,
-              date,
-              [],
-              [],
-              clubPerformance
-            )
-            break
-          } catch (error) {
-            retries--
-            if (retries === 0) throw error
-            // Wait a bit before retrying
-            await new Promise(resolve => setTimeout(resolve, 10))
-          }
-        }
-      }
-
-      // Verify all data was cached properly before proceeding
-      for (let year = 2022; year <= 2024; year++) {
-        const date = `${year}-11-22`
-        const cachedData = await cacheManager.getDistrictData(districtId, date)
-        expect(cachedData).not.toBeNull()
-        expect(cachedData!.clubPerformance).toHaveLength(1)
+        ])
+        await createTestSnapshot(snapshotStore, date, [stats])
       }
 
       const result = await analyticsEngine.calculateYearOverYear(
@@ -418,59 +324,20 @@ describe('Year-Over-Year Comparison Logic', () => {
     it('should not provide multi-year trends when less than 3 years available', async () => {
       const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
 
-      // Cache data for only 2 years
+      // Create snapshots for only 2 years
       for (let year = 2023; year <= 2024; year++) {
         const date = `${year}-11-22`
-        const clubPerformance = [
+
+        const stats = createDistrictStats(districtId, [
           {
-            'Club Number': '1',
-            'Club Name': 'Club 1',
-            'Active Membership': '25',
-            'Goals Met': '5',
+            clubNumber: '1',
+            clubName: 'Club 1',
+            membership: 25,
+            goalsMet: 5,
           },
-        ]
-
-        // Add retry logic for caching to handle race conditions
-        let retries = 3
-        while (retries > 0) {
-          try {
-            await cacheManager.cacheDistrictData(
-              districtId,
-              date,
-              [],
-              [],
-              clubPerformance
-            )
-            break
-          } catch (error) {
-            retries--
-            if (retries === 0) throw error
-            // Wait a bit before retrying
-            await new Promise(resolve => setTimeout(resolve, 10))
-          }
-        }
+        ])
+        await createTestSnapshot(snapshotStore, date, [stats])
       }
-
-      // Verify data was cached correctly before proceeding
-      for (let year = 2023; year <= 2024; year++) {
-        const date = `${year}-11-22`
-        const cachedData = await cacheManager.getDistrictData(districtId, date)
-        expect(cachedData).not.toBeNull()
-        expect(cachedData!.clubPerformance).toHaveLength(1)
-      }
-
-      // Verify data was cached correctly
-      const currentData = await cacheManager.getDistrictData(
-        districtId,
-        '2024-11-22'
-      )
-      const previousData = await cacheManager.getDistrictData(
-        districtId,
-        '2023-11-22'
-      )
-
-      expect(currentData).not.toBeNull()
-      expect(previousData).not.toBeNull()
 
       const result = await analyticsEngine.calculateYearOverYear(
         districtId,
@@ -490,210 +357,78 @@ describe('Year-Over-Year Comparison Logic', () => {
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 
-      // Ensure clean cache state for this test
-      // Remove the clearCache call as it doesn't exist
-
-      // Wait a bit to ensure unique timestamp
-      await new Promise(resolve => setTimeout(resolve, 10))
-
-      // Current year: 2 President's, 1 Select, 1 Distinguished
-      const currentClubPerformance = [
+      // Current year: 2 President's (9 goals), 1 Select (7 goals), 1 Distinguished (5 goals)
+      const currentStats = createDistrictStats(districtId, [
         {
-          'Club Number': '1',
-          'Club Name': 'Club 1',
-          Division: 'A',
-          'Division Name': 'Division A',
-          Area: '1',
-          'Area Name': 'Area 1',
-          'Active Membership': '25',
-          'Goals Met': '9',
+          clubNumber: '1',
+          clubName: 'Club 1',
+          membership: 25,
+          goalsMet: 9,
+          division: 'A',
+          area: '1',
         },
         {
-          'Club Number': '2',
-          'Club Name': 'Club 2',
-          Division: 'A',
-          'Division Name': 'Division A',
-          Area: '2',
-          'Area Name': 'Area 2',
-          'Active Membership': '25',
-          'Goals Met': '9',
+          clubNumber: '2',
+          clubName: 'Club 2',
+          membership: 25,
+          goalsMet: 9,
+          division: 'A',
+          area: '2',
         },
         {
-          'Club Number': '3',
-          'Club Name': 'Club 3',
-          Division: 'B',
-          'Division Name': 'Division B',
-          Area: '3',
-          'Area Name': 'Area 3',
-          'Active Membership': '25',
-          'Goals Met': '7',
+          clubNumber: '3',
+          clubName: 'Club 3',
+          membership: 25,
+          goalsMet: 7,
+          division: 'B',
+          area: '3',
         },
         {
-          'Club Number': '4',
-          'Club Name': 'Club 4',
-          Division: 'B',
-          'Division Name': 'Division B',
-          Area: '4',
-          'Area Name': 'Area 4',
-          'Active Membership': '25',
-          'Goals Met': '5',
+          clubNumber: '4',
+          clubName: 'Club 4',
+          membership: 25,
+          goalsMet: 5,
+          division: 'B',
+          area: '4',
         },
-      ]
+      ])
+      await createTestSnapshot(snapshotStore, currentDate, [currentStats])
 
       // Previous year: 1 President's, 1 Select, 1 Distinguished
-      const previousClubPerformance = [
+      const previousStats = createDistrictStats(districtId, [
         {
-          'Club Number': '1',
-          'Club Name': 'Club 1',
-          Division: 'A',
-          'Division Name': 'Division A',
-          Area: '1',
-          'Area Name': 'Area 1',
-          'Active Membership': '25',
-          'Goals Met': '9',
+          clubNumber: '1',
+          clubName: 'Club 1',
+          membership: 25,
+          goalsMet: 9,
+          division: 'A',
+          area: '1',
         },
         {
-          'Club Number': '2',
-          'Club Name': 'Club 2',
-          Division: 'A',
-          'Division Name': 'Division A',
-          Area: '2',
-          'Area Name': 'Area 2',
-          'Active Membership': '25',
-          'Goals Met': '7',
+          clubNumber: '2',
+          clubName: 'Club 2',
+          membership: 25,
+          goalsMet: 7,
+          division: 'A',
+          area: '2',
         },
         {
-          'Club Number': '3',
-          'Club Name': 'Club 3',
-          Division: 'B',
-          'Division Name': 'Division B',
-          Area: '3',
-          'Area Name': 'Area 3',
-          'Active Membership': '25',
-          'Goals Met': '5',
+          clubNumber: '3',
+          clubName: 'Club 3',
+          membership: 25,
+          goalsMet: 5,
+          division: 'B',
+          area: '3',
         },
-      ]
-
-      // Cache data sequentially with retry logic to handle race conditions
-      let retries = 3
-      while (retries > 0) {
-        try {
-          await cacheManager.cacheDistrictData(
-            districtId,
-            currentDate,
-            [],
-            [],
-            currentClubPerformance
-          )
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) throw error
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
-
-      // Longer delay to ensure file system operations complete
-      await new Promise(resolve => setTimeout(resolve, 150))
-
-      retries = 3
-      while (retries > 0) {
-        try {
-          await cacheManager.cacheDistrictData(
-            districtId,
-            previousDate,
-            [],
-            [],
-            previousClubPerformance
-          )
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) throw error
-          await new Promise(resolve => setTimeout(resolve, 100))
-        }
-      }
-
-      // Additional delay to ensure both cache operations are complete
-      await new Promise(resolve => setTimeout(resolve, 150))
-
-      // Verify data was cached properly before calculation
-      const currentData = await cacheManager.getDistrictData(
-        districtId,
-        currentDate
-      )
-      const previousData = await cacheManager.getDistrictData(
-        districtId,
-        previousDate
-      )
-
-      if (!currentData || !previousData) {
-        console.error('Failed to cache data properly:', {
-          currentData: !!currentData,
-          previousData: !!previousData,
-          districtId,
-          currentDate,
-          previousDate,
-        })
-        // Skip this test if caching failed
-        return
-      }
-
-      expect(currentData).not.toBeNull()
-      expect(previousData).not.toBeNull()
-      expect(currentData!.clubPerformance.length).toBe(4)
-      expect(previousData!.clubPerformance.length).toBe(3)
+      ])
+      await createTestSnapshot(snapshotStore, previousDate, [previousStats])
 
       const result = await analyticsEngine.calculateYearOverYear(
         districtId,
         currentDate
       )
 
-      // Add debugging if result is null
-      if (!result) {
-        console.error(
-          'YearOverYear result is null for distinguished clubs test'
-        )
-        console.error('Current date:', currentDate)
-        console.error('Previous date:', previousDate)
-
-        // Check if data was cached properly
-        const currentData = await cacheManager.getDistrictData(
-          districtId,
-          currentDate
-        )
-        const previousData = await cacheManager.getDistrictData(
-          districtId,
-          previousDate
-        )
-        console.error('Current data exists:', !!currentData)
-        console.error('Previous data exists:', !!previousData)
-
-        if (currentData) {
-          console.error(
-            'Current club count:',
-            currentData.clubPerformance.length
-          )
-        }
-        if (previousData) {
-          console.error(
-            'Previous club count:',
-            previousData.clubPerformance.length
-          )
-        }
-      }
-
       expect(result).not.toBeNull()
-
-      // If data is not available, skip the detailed assertions
-      if (!result!.dataAvailable) {
-        console.warn(
-          'Data not available for distinguished clubs test, skipping detailed assertions'
-        )
-        expect(result!.dataAvailable).toBe(false)
-        return
-      }
-
       expect(result!.dataAvailable).toBe(true)
       expect(result!.metrics!.distinguishedClubs.current).toBe(4)
       expect(result!.metrics!.distinguishedClubs.previous).toBe(3)

@@ -16,6 +16,7 @@ import {
   IDistrictCacheManager,
   ILogger,
   ICircuitBreakerManager,
+  IAnalyticsDataSource,
 } from '../types/serviceInterfaces.js'
 import {
   DefaultServiceContainer,
@@ -25,6 +26,7 @@ import {
 } from './ServiceContainer.js'
 import { CacheConfigService } from './CacheConfigService.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
+import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import {
@@ -35,6 +37,7 @@ import { RefreshService } from './RefreshService.js'
 import { BackfillService } from './UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
+import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
@@ -131,7 +134,12 @@ export interface TestServiceFactory {
   /**
    * Create AnalyticsEngine instance with dependency injection
    */
-  createAnalyticsEngine(cacheManager?: IDistrictCacheManager): IAnalyticsEngine
+  createAnalyticsEngine(dataSource?: IAnalyticsDataSource): IAnalyticsEngine
+
+  /**
+   * Create AnalyticsDataSource instance
+   */
+  createAnalyticsDataSource(cacheConfig?: ICacheConfigService): IAnalyticsDataSource
 
   /**
    * Create DistrictCacheManager instance
@@ -246,12 +254,32 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
    * Create AnalyticsEngine instance with dependency injection
    */
   createAnalyticsEngine(
-    cacheManager?: IDistrictCacheManager
+    dataSource?: IAnalyticsDataSource
   ): IAnalyticsEngine {
-    const manager = cacheManager || this.createDistrictCacheManager()
-    const service = new AnalyticsEngine(manager)
+    const source = dataSource || this.createAnalyticsDataSource()
+    const service = new AnalyticsEngine(source)
     this.services.push(service)
     return service
+  }
+
+  /**
+   * Create AnalyticsDataSource instance
+   */
+  createAnalyticsDataSource(
+    cacheConfig?: ICacheConfigService
+  ): IAnalyticsDataSource {
+    const config = cacheConfig || this.createCacheConfigService()
+    const cacheDir = config.getCacheDirectory()
+    const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+      cacheDir,
+      maxSnapshots: 10, // Lower limit for tests
+      maxAgeDays: 1, // Shorter retention for tests
+    })
+    const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+    return new AnalyticsDataSourceAdapter(
+      districtDataAggregator,
+      perDistrictSnapshotStore
+    )
   }
 
   /**
@@ -401,10 +429,19 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       ServiceTokens.AnalyticsEngine,
       createServiceFactory(
         (container: ServiceContainer) => {
-          const cacheManager = container.resolve(
-            ServiceTokens.DistrictCacheManager
+          const cacheConfig = container.resolve(ServiceTokens.CacheConfigService)
+          const cacheDir = cacheConfig.getCacheDirectory()
+          const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+            cacheDir,
+            maxSnapshots: 10,
+            maxAgeDays: 1,
+          })
+          const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+          const dataSource = new AnalyticsDataSourceAdapter(
+            districtDataAggregator,
+            perDistrictSnapshotStore
           )
-          return new AnalyticsEngine(cacheManager)
+          return new AnalyticsEngine(dataSource)
         },
         async (instance: AnalyticsEngine) => {
           await instance.dispose()

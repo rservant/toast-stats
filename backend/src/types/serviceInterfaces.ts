@@ -24,6 +24,7 @@ import type {
   SnapshotMetadata,
   SnapshotFilters,
 } from './snapshots.js'
+import type { PerDistrictSnapshotMetadata } from '../services/PerDistrictSnapshotStore.js'
 import type {
   CSVType,
   RawCSVCacheMetadata,
@@ -450,4 +451,77 @@ export interface IRawCSVCacheService {
 
   // Service lifecycle
   dispose(): Promise<void>
+}
+
+/**
+ * Snapshot Info for Analytics Data Source
+ * Lightweight metadata about snapshots for date range filtering
+ */
+export interface AnalyticsSnapshotInfo {
+  /** Snapshot ID (ISO date format: YYYY-MM-DD) */
+  snapshotId: string
+  /** Status of the snapshot */
+  status: 'success' | 'partial' | 'failed'
+  /** ISO timestamp when snapshot was created */
+  createdAt: string
+  /** The date the data represents (business date) */
+  dataAsOfDate: string
+}
+
+/**
+ * Analytics Data Source Interface
+ *
+ * Provides an abstraction layer for the AnalyticsEngine to access district data
+ * from the new PerDistrictSnapshotStore format. This interface enables dependency
+ * injection and supports the migration from DistrictCacheManager to the new
+ * snapshot-based data architecture.
+ *
+ * Requirements: 1.1, 2.1, 2.2, 2.3
+ */
+export interface IAnalyticsDataSource {
+  /**
+   * Get district data from a specific snapshot
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @param districtId - The district ID to retrieve
+   * @returns District statistics or null if not found
+   */
+  getDistrictData(
+    snapshotId: string,
+    districtId: string
+  ): Promise<DistrictStatistics | null>
+
+  /**
+   * Get snapshots within a date range
+   *
+   * Filters snapshots based on the provided date range parameters.
+   * Only returns successful snapshots by default.
+   *
+   * Requirements: 2.1, 2.2, 2.3
+   *
+   * @param startDate - Optional start date (inclusive, YYYY-MM-DD format)
+   * @param endDate - Optional end date (inclusive, YYYY-MM-DD format)
+   * @returns Array of snapshot info within the date range, sorted newest first
+   */
+  getSnapshotsInRange(
+    startDate?: string,
+    endDate?: string
+  ): Promise<AnalyticsSnapshotInfo[]>
+
+  /**
+   * Get the latest successful snapshot
+   *
+   * @returns The latest successful snapshot or null if none exists
+   */
+  getLatestSnapshot(): Promise<Snapshot | null>
+
+  /**
+   * Get snapshot metadata for a specific snapshot
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns Snapshot metadata or null if not found
+   */
+  getSnapshotMetadata(
+    snapshotId: string
+  ): Promise<PerDistrictSnapshotMetadata | null>
 }

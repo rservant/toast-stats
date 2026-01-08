@@ -1,11 +1,15 @@
 /**
  * Analytics Engine
  * Processes cached district data to generate insights and analytics
+ *
+ * Uses IAnalyticsDataSource for data retrieval from PerDistrictSnapshotStore.
+ *
+ * Requirements: 1.1, 1.3, 1.4
  */
 
 import {
-  IDistrictCacheManager,
   IAnalyticsEngine,
+  IAnalyticsDataSource,
 } from '../types/serviceInterfaces.js'
 import { logger } from '../utils/logger.js'
 import type {
@@ -25,18 +29,28 @@ import type {
   AreaDirectorCorrelation,
   YearOverYearComparison,
 } from '../types/analytics.js'
-import type { DistrictCacheEntry, ScrapedRecord } from '../types/districts.js'
+import type {
+  DistrictCacheEntry,
+  ScrapedRecord,
+  DistrictStatistics,
+} from '../types/districts.js'
 
 export class AnalyticsEngine implements IAnalyticsEngine {
-  private cacheManager: IDistrictCacheManager
-  private cachedDatesCache: Map<
-    string,
-    { dates: string[]; timestamp: number }
-  > = new Map()
-  private readonly CACHE_TTL = 5000 // 5 seconds
+  private dataSource: IAnalyticsDataSource
 
-  constructor(cacheManager: IDistrictCacheManager) {
-    this.cacheManager = cacheManager
+  /**
+   * Create an AnalyticsEngine instance
+   *
+   * Requirements: 1.1, 1.4
+   *
+   * @param dataSource - IAnalyticsDataSource for snapshot-based data retrieval
+   */
+  constructor(dataSource: IAnalyticsDataSource) {
+    this.dataSource = dataSource
+
+    logger.info('AnalyticsEngine initialized', {
+      operation: 'constructor',
+    })
   }
 
   /**
@@ -59,34 +73,51 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     return String(value)
   }
 
-  /**
-   * Get cached dates with in-memory caching to reduce filesystem calls
-   */
-  private async getCachedDatesWithCache(districtId: string): Promise<string[]> {
-    const now = Date.now()
-    const cached = this.cachedDatesCache.get(districtId)
-
-    // Return cached value if still valid
-    if (cached && now - cached.timestamp < this.CACHE_TTL) {
-      return cached.dates
-    }
-
-    // Fetch from filesystem and cache
-    const dates = await this.cacheManager.getCachedDatesForDistrict(districtId)
-    this.cachedDatesCache.set(districtId, { dates, timestamp: now })
-
-    return dates
-  }
 
   /**
    * Clear internal caches (for testing purposes)
    */
   public clearCaches(): void {
-    this.cachedDatesCache.clear()
+    // No internal caches to clear - data source handles caching
+  }
+
+  /**
+   * Map DistrictStatistics to DistrictCacheEntry format for compatibility
+   *
+   * This method converts the DistrictStatistics format from PerDistrictSnapshotStore
+   * to the DistrictCacheEntry format expected by existing analytics methods.
+   *
+   * Requirements: 1.1, 1.3
+   *
+   * @param stats - DistrictStatistics from the data source
+   * @param snapshotDate - The date of the snapshot
+   * @returns DistrictCacheEntry format
+   */
+  private mapDistrictStatisticsToEntry(
+    stats: DistrictStatistics,
+    snapshotDate: string
+  ): DistrictCacheEntry {
+    return {
+      districtId: stats.districtId,
+      date: snapshotDate,
+      districtPerformance: stats.districtPerformance ?? [],
+      divisionPerformance: stats.divisionPerformance ?? [],
+      clubPerformance: stats.clubPerformance ?? [],
+      fetchedAt: stats.asOfDate,
+    }
   }
 
   /**
    * Load cached data for a district within a date range
+   *
+   * Uses IAnalyticsDataSource for snapshot-based data retrieval.
+   *
+   * Requirements: 1.1, 1.3, 2.1, 2.2, 2.3
+   *
+   * @param districtId - The district ID to load data for
+   * @param startDate - Optional start date filter (inclusive)
+   * @param endDate - Optional end date filter (inclusive)
+   * @returns Array of DistrictCacheEntry objects
    */
   private async loadDistrictData(
     districtId: string,
@@ -94,46 +125,119 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     endDate?: string
   ): Promise<DistrictCacheEntry[]> {
     try {
-      const cachedDates = await this.getCachedDatesWithCache(districtId)
-
-      if (cachedDates.length === 0) {
-        logger.warn('No cached data found for district', { districtId })
-        return []
-      }
-
-      // Filter dates by range if provided
-      let filteredDates = cachedDates
-      if (startDate) {
-        filteredDates = filteredDates.filter(date => date >= startDate)
-      }
-      if (endDate) {
-        filteredDates = filteredDates.filter(date => date <= endDate)
-      }
-
-      // Load all data entries
-      const dataPromises = filteredDates.map(date =>
-        this.cacheManager.getDistrictData(districtId, date)
-      )
-      const dataEntries = await Promise.all(dataPromises)
-
-      // Filter out null entries
-      const validEntries = dataEntries.filter(
-        (entry): entry is DistrictCacheEntry => entry !== null
+      // Get snapshots in the date range (Requirements: 2.1, 2.2, 2.3)
+      const snapshots = await this.dataSource.getSnapshotsInRange(
+        startDate,
+        endDate
       )
 
-      logger.info('Loaded district data for analytics', {
+      if (snapshots.length === 0) {
+        // If no snapshots in range, try to get the latest snapshot
+        const latestSnapshot = await this.dataSource.getLatestSnapshot()
+        if (!latestSnapshot) {
+          logger.warn('No snapshot data found for district', {
+            districtId,
+            startDate,
+            endDate,
+          })
+          return []
+        }
+
+        // Load district data from the latest snapshot
+        const districtData = await this.dataSource.getDistrictData(
+          latestSnapshot.snapshot_id,
+          districtId
+        )
+
+        if (!districtData) {
+          logger.warn('No district data found in latest snapshot', {
+            districtId,
+            snapshotId: latestSnapshot.snapshot_id,
+          })
+          return []
+        }
+
+        return [
+          this.mapDistrictStatisticsToEntry(
+            districtData,
+            latestSnapshot.snapshot_id
+          ),
+        ]
+      }
+
+      // Load district data from each snapshot
+      const dataEntries: DistrictCacheEntry[] = []
+
+      for (const snapshotInfo of snapshots) {
+        const districtData = await this.dataSource.getDistrictData(
+          snapshotInfo.snapshotId,
+          districtId
+        )
+
+        if (districtData) {
+          dataEntries.push(
+            this.mapDistrictStatisticsToEntry(
+              districtData,
+              snapshotInfo.dataAsOfDate
+            )
+          )
+        }
+      }
+
+      // Sort by date ascending (oldest first) for trend analysis
+      dataEntries.sort((a, b) => a.date.localeCompare(b.date))
+
+      logger.info('Loaded district data', {
         districtId,
-        totalDates: validEntries.length,
+        totalSnapshots: snapshots.length,
+        loadedEntries: dataEntries.length,
         dateRange: {
-          start: filteredDates[0],
-          end: filteredDates[filteredDates.length - 1],
+          start: dataEntries[0]?.date,
+          end: dataEntries[dataEntries.length - 1]?.date,
         },
       })
 
-      return validEntries
+      return dataEntries
     } catch (error) {
-      logger.error('Failed to load district data', { districtId, error })
+      logger.error('Failed to load district data', {
+        districtId,
+        startDate,
+        endDate,
+        error,
+      })
       throw error
+    }
+  }
+
+  /**
+   * Get district data for a specific date
+   *
+   * This is a helper method that retrieves district data for a specific snapshot date.
+   * Used by year-over-year comparison methods.
+   *
+   * @param districtId - The district ID to load data for
+   * @param date - The specific date to get data for (YYYY-MM-DD format)
+   * @returns DistrictCacheEntry or null if not found
+   */
+  private async getDistrictDataForDate(
+    districtId: string,
+    date: string
+  ): Promise<DistrictCacheEntry | null> {
+    try {
+      const districtData = await this.dataSource.getDistrictData(date, districtId)
+
+      if (!districtData) {
+        return null
+      }
+
+      return this.mapDistrictStatisticsToEntry(districtData, date)
+    } catch (error) {
+      logger.warn('Failed to get district data for date', {
+        districtId,
+        date,
+        error,
+      })
+      return null
     }
   }
 
@@ -177,6 +281,9 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       // Analyze clubs
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
+      
+      // Requirement 3.5: Return separate, mutually exclusive arrays for each health status
+      // Each club appears in exactly one of these arrays based on assessClubHealth classification
       const atRiskClubs = clubTrends.filter(c => c.currentStatus === 'at-risk')
       const criticalClubs = clubTrends.filter(
         c => c.currentStatus === 'critical'
@@ -224,7 +331,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
         try {
-          const previousEntry = await this.cacheManager.getDistrictData(
+          const previousEntry = await this.getDistrictDataForDate(
             districtId,
             previousYearDate
           )
@@ -387,7 +494,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     date: string
   ): Promise<DivisionAnalytics[]> {
     try {
-      const entry = await this.cacheManager.getDistrictData(districtId, date)
+      const entry = await this.getDistrictDataForDate(districtId, date)
 
       if (!entry) {
         throw new Error(`No data found for district ${districtId} on ${date}`)
@@ -412,11 +519,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       // Find same date in previous program year (Requirement 9.1)
       const previousYearDate = this.findPreviousProgramYearDate(currentDate)
 
-      const currentEntry = await this.cacheManager.getDistrictData(
+      const currentEntry = await this.getDistrictDataForDate(
         districtId,
         currentDate
       )
-      const previousEntry = await this.cacheManager.getDistrictData(
+      const previousEntry = await this.getDistrictDataForDate(
         districtId,
         previousYearDate
       )
@@ -746,7 +853,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       for (let i = 0; i < 3; i++) {
         const year = currentYear - i
         const yearDate = `${year}${currentDate.substring(4)}`
-        const entry = await this.cacheManager.getDistrictData(
+        const entry = await this.getDistrictDataForDate(
           districtId,
           yearDate
         )
@@ -837,7 +944,9 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
-   * Count at-risk clubs (membership declining or zero DCP goals, but not critical)
+   * Count at-risk clubs
+   *
+   * Requirement 3.3: At-risk if membership >= 12 AND dcpGoals = 0
    */
   private countAtRiskClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
@@ -848,13 +957,15 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       )
       const dcpGoals = this.parseIntSafe(club['Goals Met'] || club['DCP Goals'])
 
-      // At-risk: membership >= 12 but has issues
+      // At-risk: membership >= 12 AND zero DCP goals
       return membership >= 12 && dcpGoals === 0
     }).length
   }
 
   /**
-   * Count critical clubs (membership < 12)
+   * Count critical clubs
+   *
+   * Requirement 3.2: Critical if membership < 12
    */
   private countCriticalClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
@@ -1161,49 +1272,41 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
   /**
    * Assess club health and identify risk factors
+   *
+   * Classification rules (Requirements 3.1, 3.2, 3.3, 3.4):
+   * - Critical: membership < 12
+   * - At-risk: membership >= 12 AND dcpGoals = 0
+   * - Healthy: membership >= 12 AND dcpGoals >= 1
+   *
+   * Each club is classified into exactly one category (Requirement 3.5).
    */
   private assessClubHealth(clubTrend: ClubTrend): void {
     const riskFactors: string[] = []
-    let status: ClubHealthStatus = 'healthy'
 
-    // Get current membership
+    // Get current membership from the latest trend data point
     const currentMembership =
-      clubTrend.membershipTrend[clubTrend.membershipTrend.length - 1]?.count ||
+      clubTrend.membershipTrend[clubTrend.membershipTrend.length - 1]?.count ??
       0
 
-    // Check for critical membership
-    if (currentMembership < 12) {
-      riskFactors.push('Membership below 12 (critical)')
-      status = 'critical'
-    }
-
-    // Check for declining membership (3+ months)
-    if (clubTrend.membershipTrend.length >= 3) {
-      const recent = clubTrend.membershipTrend.slice(-3)
-      const isDeclining = recent.every((point, i) => {
-        if (i === 0) return true
-        const previousPoint = recent[i - 1]
-        return previousPoint ? point.count < previousPoint.count : false
-      })
-
-      if (isDeclining) {
-        riskFactors.push('Declining membership for 3+ months')
-        if (status !== 'critical') {
-          status = 'at-risk'
-        }
-      }
-    }
-
-    // Check for zero DCP goals
+    // Get current DCP goals from the latest trend data point
     const currentDcpGoals =
       clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
-        ?.goalsAchieved || 0
+        ?.goalsAchieved ?? 0
 
-    if (currentDcpGoals === 0) {
+    // Apply classification rules - mutually exclusive categories
+    let status: ClubHealthStatus
+
+    if (currentMembership < 12) {
+      // Requirement 3.2: Critical if membership below 12
+      status = 'critical'
+      riskFactors.push('Membership below 12 (critical)')
+    } else if (currentDcpGoals === 0) {
+      // Requirement 3.3: At-risk if membership >= 12 but zero DCP goals
+      status = 'at-risk'
       riskFactors.push('Zero DCP goals achieved')
-      if (status !== 'critical') {
-        status = 'at-risk'
-      }
+    } else {
+      // Requirement 3.4: Healthy if membership >= 12 and at least one DCP goal
+      status = 'healthy'
     }
 
     clubTrend.riskFactors = riskFactors
@@ -1302,7 +1405,65 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
+   * Extract distinguished level from Club Distinguished Status field
+   *
+   * Parses the official distinguished status string from scraped data.
+   * Returns the level name or null if not distinguished or field is empty.
+   *
+   * Requirements: 4.1 - Extract distinguished level from DistrictStatistics
+   *
+   * @param statusField - The Club Distinguished Status field value
+   * @returns Distinguished level string or null
+   */
+  private extractDistinguishedLevelFromStatus(
+    statusField: string | number | null | undefined
+  ): 'Smedley' | 'Presidents' | 'Select' | 'Distinguished' | null {
+    if (statusField === null || statusField === undefined) {
+      return null
+    }
+
+    const status = String(statusField).toLowerCase().trim()
+
+    if (status === '' || status === 'none' || status === 'n/a') {
+      return null
+    }
+
+    // Check for Smedley Distinguished (highest level)
+    if (status.includes('smedley')) {
+      return 'Smedley'
+    }
+
+    // Check for President's Distinguished
+    if (status.includes('president')) {
+      return 'Presidents'
+    }
+
+    // Check for Select Distinguished
+    if (status.includes('select')) {
+      return 'Select'
+    }
+
+    // Check for Distinguished (base level)
+    if (status.includes('distinguished')) {
+      return 'Distinguished'
+    }
+
+    return null
+  }
+
+  /**
    * Calculate distinguished clubs from latest data
+   *
+   * This method counts clubs at each distinguished level (Smedley, President's,
+   * Select, Distinguished) and calculates the total.
+   *
+   * Requirements: 4.1, 4.2
+   * - 4.1: Count clubs at each distinguished level
+   * - 4.2: Calculate a total distinguished club count
+   *
+   * Data Extraction Strategy:
+   * 1. Primary: Use 'Club Distinguished Status' field from scraped data (official designation)
+   * 2. Fallback: Calculate based on DCP goals, membership, and net growth
    *
    * Official DCP Levels (2025-2026):
    * - Smedley Distinguished: 10 goals + 25 members
@@ -1315,9 +1476,6 @@ export class AnalyticsEngine implements IAnalyticsEngine {
    * - The "Active Members" field represents the membership count at the snapshot date
    * - For dates April 1 - June 30: membership counts are valid for official distinguished status
    * - For dates before April 1: membership counts are preliminary/in-progress tracking only
-   *
-   * Note: Net growth requirements are simplified in this implementation and only check
-   * absolute membership count. Full implementation would require comparing to base membership.
    */
   private calculateDistinguishedClubs(entry: DistrictCacheEntry): {
     smedley: number
@@ -1332,22 +1490,40 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     let distinguished = 0
 
     for (const club of entry.clubPerformance) {
-      const dcpGoals = this.parseIntSafe(club['Goals Met'])
-      const membership = this.parseIntSafe(
-        club['Active Members'] ||
-          club['Active Membership'] ||
-          club['Membership']
-      )
-      const netGrowth = this.calculateNetGrowth(club)
+      // Primary: Try to extract from Club Distinguished Status field (Requirements: 4.1)
+      const statusField = club['Club Distinguished Status']
+      let distinguishedLevel = this.extractDistinguishedLevelFromStatus(statusField)
 
-      // Use the shared distinguished level determination logic
-      const distinguishedLevel = this.determineDistinguishedLevel(
-        dcpGoals,
-        membership,
-        netGrowth
-      )
+      // Fallback: Calculate based on DCP goals, membership, and net growth
+      if (distinguishedLevel === null) {
+        const dcpGoals = this.parseIntSafe(club['Goals Met'])
+        const membership = this.parseIntSafe(
+          club['Active Members'] ||
+            club['Active Membership'] ||
+            club['Membership']
+        )
+        const netGrowth = this.calculateNetGrowth(club)
 
-      // Count clubs by distinguished level
+        // Use the shared distinguished level determination logic
+        const calculatedLevel = this.determineDistinguishedLevel(
+          dcpGoals,
+          membership,
+          netGrowth
+        )
+
+        // Map calculated level to typed level
+        if (calculatedLevel === 'Smedley') {
+          distinguishedLevel = 'Smedley'
+        } else if (calculatedLevel === 'Presidents') {
+          distinguishedLevel = 'Presidents'
+        } else if (calculatedLevel === 'Select') {
+          distinguishedLevel = 'Select'
+        } else if (calculatedLevel === 'Distinguished') {
+          distinguishedLevel = 'Distinguished'
+        }
+      }
+
+      // Count clubs by distinguished level (Requirements: 4.1, 4.2)
       if (distinguishedLevel === 'Smedley') {
         smedley++
       } else if (distinguishedLevel === 'Presidents') {
@@ -1363,15 +1539,19 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         logger.debug('Distinguished status calculation', {
           clubId: club['Club Number'],
           clubName: club['Club Name'],
-          dcpGoals,
-          membership,
-          membershipBase: this.parseIntSafe(club['Mem. Base']),
-          netGrowth,
+          statusField,
           distinguishedLevel,
+          dcpGoals: this.parseIntSafe(club['Goals Met']),
+          membership: this.parseIntSafe(
+            club['Active Members'] ||
+              club['Active Membership'] ||
+              club['Membership']
+          ),
         })
       }
     }
 
+    // Return counts at each level and total (Requirements: 4.1, 4.2)
     return {
       smedley,
       presidents,
@@ -1383,6 +1563,17 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
   /**
    * Analyze divisions
+   *
+   * Requirements: 5.1, 5.3
+   * - Rank divisions by total DCP goals and average club health
+   * - Include trend indicators (improving, stable, declining)
+   *
+   * Club health is calculated based on Requirements 3.1-3.4:
+   * - Critical (0 points): membership < 12
+   * - At-risk (0.5 points): membership >= 12 AND dcpGoals = 0
+   * - Healthy (1 point): membership >= 12 AND dcpGoals >= 1
+   *
+   * Average club health is the mean of these scores (0-1 scale)
    */
   private analyzeDivisions(
     dataEntries: DistrictCacheEntry[]
@@ -1392,7 +1583,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       return []
     }
 
-    const divisionMap = new Map<string, DivisionAnalytics>()
+    // Track division data with health scores
+    const divisionMap = new Map<
+      string,
+      DivisionAnalytics & { healthScoreSum: number }
+    >()
 
     // Aggregate data by division
     for (const club of latestEntry.clubPerformance) {
@@ -1411,6 +1606,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           averageClubHealth: 0,
           rank: 0,
           trend: 'stable',
+          healthScoreSum: 0,
         })
       }
 
@@ -1419,29 +1615,75 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       division.totalDcpGoals += isNaN(dcpGoals) ? 0 : dcpGoals
+
+      // Calculate club health score based on Requirements 3.1-3.4
+      const membership = this.parseIntSafe(
+        club['Active Members'] ||
+          club['Active Membership'] ||
+          club['Membership']
+      )
+      const clubHealthScore = this.calculateClubHealthScore(membership, dcpGoals)
+      division.healthScoreSum += clubHealthScore
     }
 
-    // Calculate average club health (simplified: based on DCP goals)
+    // Calculate average club health (0-1 scale based on health scores)
     for (const division of divisionMap.values()) {
       division.averageClubHealth =
         division.totalClubs > 0
-          ? division.totalDcpGoals / division.totalClubs
+          ? Math.round((division.healthScoreSum / division.totalClubs) * 100) /
+            100
           : 0
     }
 
-    // Rank divisions by total DCP goals
-    const divisions = Array.from(divisionMap.values())
-    divisions.sort((a, b) => b.totalDcpGoals - a.totalDcpGoals)
+    // Rank divisions by total DCP goals (primary) and average club health (secondary)
+    // Requirements 5.1: rank by total DCP goals and average club health
+    const divisions = Array.from(divisionMap.values()).map(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ({ healthScoreSum, ...division }) => division
+    )
+    divisions.sort((a, b) => {
+      // Primary sort: total DCP goals (descending)
+      const dcpDiff = b.totalDcpGoals - a.totalDcpGoals
+      if (dcpDiff !== 0) return dcpDiff
+      // Secondary sort: average club health (descending)
+      return b.averageClubHealth - a.averageClubHealth
+    })
     divisions.forEach((div, index) => {
       div.rank = index + 1
     })
 
     // Detect trends (requires multiple data points)
+    // Requirements 5.3: include trend indicators
     if (dataEntries.length >= 2) {
       this.detectDivisionTrends(divisions, dataEntries)
     }
 
     return divisions
+  }
+
+  /**
+   * Calculate club health score based on membership and DCP goals
+   *
+   * Requirements: 3.1, 3.2, 3.3, 3.4
+   * - Critical (0 points): membership < 12
+   * - At-risk (0.5 points): membership >= 12 AND dcpGoals = 0
+   * - Healthy (1 point): membership >= 12 AND dcpGoals >= 1
+   *
+   * @param membership - Club membership count
+   * @param dcpGoals - Number of DCP goals achieved
+   * @returns Health score (0, 0.5, or 1)
+   */
+  private calculateClubHealthScore(membership: number, dcpGoals: number): number {
+    if (membership < 12) {
+      // Critical: 0 points
+      return 0
+    } else if (dcpGoals === 0) {
+      // At-risk: 0.5 points
+      return 0.5
+    } else {
+      // Healthy: 1 point
+      return 1
+    }
   }
 
   /**
@@ -1491,9 +1733,22 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
   /**
    * Analyze areas
+   *
+   * Requirements: 5.2
+   * - Identify top-performing areas with normalized scores
+   *
+   * Normalized score combines:
+   * - Average club health (0-1 scale based on Requirements 3.1-3.4)
+   * - DCP goals per club (normalized to 0-1 scale, max 10 goals = 1.0)
+   *
+   * Final score = (averageClubHealth * 0.5) + (normalizedDcpGoals * 0.5)
    */
   private analyzeAreas(entry: DistrictCacheEntry): AreaAnalytics[] {
-    const areaMap = new Map<string, AreaAnalytics>()
+    // Track area data with health scores
+    const areaMap = new Map<
+      string,
+      AreaAnalytics & { healthScoreSum: number }
+    >()
 
     for (const club of entry.clubPerformance) {
       const areaId = this.ensureString(club['Area'])
@@ -1511,6 +1766,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           averageClubHealth: 0,
           totalDcpGoals: 0,
           normalizedScore: 0,
+          healthScoreSum: 0,
         })
       }
 
@@ -1519,17 +1775,45 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
       area.totalDcpGoals += isNaN(dcpGoals) ? 0 : dcpGoals
+
+      // Calculate club health score based on Requirements 3.1-3.4
+      const membership = this.parseIntSafe(
+        club['Active Members'] ||
+          club['Active Membership'] ||
+          club['Membership']
+      )
+      const clubHealthScore = this.calculateClubHealthScore(membership, dcpGoals)
+      area.healthScoreSum += clubHealthScore
     }
 
     // Calculate normalized scores
-    const areas = Array.from(areaMap.values())
-    for (const area of areas) {
-      area.averageClubHealth =
-        area.totalClubs > 0 ? area.totalDcpGoals / area.totalClubs : 0
-      area.normalizedScore = area.averageClubHealth
-    }
+    const areas = Array.from(areaMap.values()).map(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ({ healthScoreSum, ...area }) => {
+        // Calculate average club health (0-1 scale)
+        const avgHealth =
+          area.totalClubs > 0
+            ? healthScoreSum / area.totalClubs
+            : 0
 
-    // Sort by normalized score
+        // Calculate normalized DCP goals (0-1 scale, max 10 goals per club = 1.0)
+        const avgDcpGoals =
+          area.totalClubs > 0 ? area.totalDcpGoals / area.totalClubs : 0
+        const normalizedDcpGoals = Math.min(avgDcpGoals / 10, 1)
+
+        // Combined normalized score (50% health, 50% DCP goals)
+        const normalizedScore =
+          Math.round((avgHealth * 0.5 + normalizedDcpGoals * 0.5) * 100) / 100
+
+        return {
+          ...area,
+          averageClubHealth: Math.round(avgHealth * 100) / 100,
+          normalizedScore,
+        }
+      }
+    )
+
+    // Sort by normalized score (descending)
     areas.sort((a, b) => b.normalizedScore - a.normalizedScore)
 
     return areas.slice(0, 10) // Return top 10 areas
@@ -1597,6 +1881,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
   /**
    * Count healthy clubs in an entry
+   *
+   * Requirement 3.4: Healthy if membership >= 12 AND dcpGoals >= 1
    */
   private countHealthyClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
@@ -1795,7 +2081,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
     try {
-      const previousEntry = await this.cacheManager.getDistrictData(
+      const previousEntry = await this.getDistrictDataForDate(
         districtId,
         previousYearDate
       )
@@ -2040,11 +2326,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       const currentYear = parseInt(currentDate.substring(0, 4))
       const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
 
-      const currentEntry = await this.cacheManager.getDistrictData(
+      const currentEntry = await this.getDistrictDataForDate(
         districtId,
         currentDate
       )
-      const previousEntry = await this.cacheManager.getDistrictData(
+      const previousEntry = await this.getDistrictDataForDate(
         districtId,
         previousYearDate
       )

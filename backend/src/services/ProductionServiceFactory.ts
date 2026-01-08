@@ -19,11 +19,13 @@ import { CacheConfigService } from './CacheConfigService.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { ILogger, ICircuitBreakerManager } from '../types/serviceInterfaces.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
+import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
+import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { RefreshService } from './RefreshService.js'
 import { ToastmastersScraper } from './ToastmastersScraper.js'
 import {
@@ -111,7 +113,7 @@ export interface ProductionServiceFactory {
   /**
    * Create AnalyticsEngine instance with dependency injection
    */
-  createAnalyticsEngine(cacheManager?: DistrictCacheManager): AnalyticsEngine
+  createAnalyticsEngine(cacheConfig?: CacheConfigService): AnalyticsEngine
 
   /**
    * Create DistrictCacheManager instance
@@ -258,10 +260,19 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       ServiceTokens.AnalyticsEngine,
       createServiceFactory(
         (container: ServiceContainer) => {
-          const cacheManager = container.resolve(
-            ServiceTokens.DistrictCacheManager
+          const cacheConfig = container.resolve(ServiceTokens.CacheConfigService)
+          const cacheDir = cacheConfig.getCacheDirectory()
+          const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+            cacheDir,
+            maxSnapshots: 100,
+            maxAgeDays: 30,
+          })
+          const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+          const dataSource = new AnalyticsDataSourceAdapter(
+            districtDataAggregator,
+            perDistrictSnapshotStore
           )
-          return new AnalyticsEngine(cacheManager)
+          return new AnalyticsEngine(dataSource)
         },
         async (instance: AnalyticsEngine) => {
           await instance.dispose()
@@ -404,9 +415,20 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   /**
    * Create AnalyticsEngine instance with dependency injection
    */
-  createAnalyticsEngine(cacheManager?: DistrictCacheManager): AnalyticsEngine {
-    const manager = cacheManager || this.createDistrictCacheManager()
-    const service = new AnalyticsEngine(manager)
+  createAnalyticsEngine(cacheConfig?: CacheConfigService): AnalyticsEngine {
+    const config = cacheConfig || this.createCacheConfigService()
+    const cacheDir = config.getCacheDirectory()
+    const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+      cacheDir,
+      maxSnapshots: 100,
+      maxAgeDays: 30,
+    })
+    const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+    const dataSource = new AnalyticsDataSourceAdapter(
+      districtDataAggregator,
+      perDistrictSnapshotStore
+    )
+    const service = new AnalyticsEngine(dataSource)
     this.services.push(service)
     return service
   }

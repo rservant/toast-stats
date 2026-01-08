@@ -18,6 +18,7 @@ import {
   AreaAnalytics,
 } from '../types/analytics.js'
 import { AnalyticsEngine } from '../services/AnalyticsEngine.js'
+import { AnalyticsDataSourceAdapter } from '../services/AnalyticsDataSourceAdapter.js'
 import {
   DistrictDataAggregator,
   createDistrictDataAggregator,
@@ -109,7 +110,9 @@ const backfillService = new BackfillService(
   undefined, // circuitBreakerManager
   rankingCalculator
 )
-const analyticsEngine = new AnalyticsEngine(districtCacheManager)
+const analyticsEngine = new AnalyticsEngine(
+  new AnalyticsDataSourceAdapter(districtDataAggregator, perDistrictSnapshotStore)
+)
 
 // Initialize cache configuration asynchronously (validation happens lazily)
 cacheConfig.initialize().catch((error: unknown) => {
@@ -3232,22 +3235,49 @@ router.get(
           ? error.message
           : 'Failed to generate district analytics'
 
-      if (errorMessage.includes('No cached data available')) {
+      // Requirement 6.1: Return 404 with NO_DATA_AVAILABLE when no snapshot data exists
+      if (
+        errorMessage.includes('No cached data available') ||
+        errorMessage.includes('No snapshot data found') ||
+        errorMessage.includes('No district data found')
+      ) {
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
+            message: 'No cached data available for analytics',
             details: 'Consider initiating a backfill to fetch historical data',
           },
         })
         return
       }
 
+      // Requirement 6.2: Return 503 with SERVICE_UNAVAILABLE when snapshot store is unavailable
+      if (
+        errorMessage.includes('ENOENT') ||
+        errorMessage.includes('EACCES') ||
+        errorMessage.includes('snapshot store') ||
+        errorMessage.includes('Failed to read') ||
+        errorMessage.includes('Connection refused') ||
+        errorMessage.includes('timeout')
+      ) {
+        res.status(503).json({
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Snapshot store is temporarily unavailable',
+            details: 'Please try again later',
+          },
+        })
+        return
+      }
+
+      // Requirement 6.3: Include actionable details in error responses
       res.status(500).json({
         error: {
           code: errorResponse.code || 'ANALYTICS_ERROR',
           message: errorMessage,
-          details: errorResponse.details,
+          details:
+            errorResponse.details ||
+            'An unexpected error occurred while generating analytics. Please try again or contact support if the issue persists.',
         },
       })
     }
