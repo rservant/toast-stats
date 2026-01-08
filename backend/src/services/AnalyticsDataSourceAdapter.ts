@@ -187,7 +187,9 @@ export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
       }
 
       // Sort by dataAsOfDate descending (newest first)
-      filteredSnapshots.sort((a, b) => b.dataAsOfDate.localeCompare(a.dataAsOfDate))
+      filteredSnapshots.sort((a, b) =>
+        b.dataAsOfDate.localeCompare(a.dataAsOfDate)
+      )
 
       logger.info('Snapshots in range retrieved', {
         operation: 'getSnapshotsInRange',

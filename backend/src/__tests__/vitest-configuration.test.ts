@@ -141,11 +141,6 @@ describe('Vitest Configuration', () => {
     it('should exclude test directory artifacts', () => {
       expect(vitestConfig.test.exclude).toContain('**/test-dir/**')
     })
-
-    it('should exclude assessment module tests', () => {
-      expect(vitestConfig.test.exclude).toContain('**/modules/assessment/**')
-      expect(vitestConfig.test.exclude).toContain('**/assessment/**')
-    })
   })
 
   describe('Coverage Configuration', () => {

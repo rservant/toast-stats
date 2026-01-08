@@ -139,7 +139,9 @@ export interface TestServiceFactory {
   /**
    * Create AnalyticsDataSource instance
    */
-  createAnalyticsDataSource(cacheConfig?: ICacheConfigService): IAnalyticsDataSource
+  createAnalyticsDataSource(
+    cacheConfig?: ICacheConfigService
+  ): IAnalyticsDataSource
 
   /**
    * Create DistrictCacheManager instance
@@ -253,9 +255,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   /**
    * Create AnalyticsEngine instance with dependency injection
    */
-  createAnalyticsEngine(
-    dataSource?: IAnalyticsDataSource
-  ): IAnalyticsEngine {
+  createAnalyticsEngine(dataSource?: IAnalyticsDataSource): IAnalyticsEngine {
     const source = dataSource || this.createAnalyticsDataSource()
     const service = new AnalyticsEngine(source)
     this.services.push(service)
@@ -275,7 +275,9 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       maxSnapshots: 10, // Lower limit for tests
       maxAgeDays: 1, // Shorter retention for tests
     })
-    const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+    const districtDataAggregator = createDistrictDataAggregator(
+      perDistrictSnapshotStore
+    )
     return new AnalyticsDataSourceAdapter(
       districtDataAggregator,
       perDistrictSnapshotStore
@@ -429,14 +431,18 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       ServiceTokens.AnalyticsEngine,
       createServiceFactory(
         (container: ServiceContainer) => {
-          const cacheConfig = container.resolve(ServiceTokens.CacheConfigService)
+          const cacheConfig = container.resolve(
+            ServiceTokens.CacheConfigService
+          )
           const cacheDir = cacheConfig.getCacheDirectory()
           const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
             cacheDir,
             maxSnapshots: 10,
             maxAgeDays: 1,
           })
-          const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+          const districtDataAggregator = createDistrictDataAggregator(
+            perDistrictSnapshotStore
+          )
           const dataSource = new AnalyticsDataSourceAdapter(
             districtDataAggregator,
             perDistrictSnapshotStore

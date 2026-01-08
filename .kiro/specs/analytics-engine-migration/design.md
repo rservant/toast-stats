@@ -54,8 +54,14 @@ The `AnalyticsEngine` class will be modified to accept the new data sources via 
 
 ```typescript
 interface IAnalyticsDataSource {
-  getDistrictData(snapshotId: string, districtId: string): Promise<DistrictStatistics | null>
-  getSnapshotsInRange(startDate?: string, endDate?: string): Promise<SnapshotInfo[]>
+  getDistrictData(
+    snapshotId: string,
+    districtId: string
+  ): Promise<DistrictStatistics | null>
+  getSnapshotsInRange(
+    startDate?: string,
+    endDate?: string
+  ): Promise<SnapshotInfo[]>
   getLatestSnapshot(): Promise<Snapshot | null>
 }
 
@@ -88,11 +94,17 @@ class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
     private snapshotStore: PerDistrictSnapshotStore
   ) {}
 
-  async getDistrictData(snapshotId: string, districtId: string): Promise<DistrictStatistics | null> {
+  async getDistrictData(
+    snapshotId: string,
+    districtId: string
+  ): Promise<DistrictStatistics | null> {
     return this.aggregator.getDistrictData(snapshotId, districtId)
   }
 
-  async getSnapshotsInRange(startDate?: string, endDate?: string): Promise<SnapshotInfo[]> {
+  async getSnapshotsInRange(
+    startDate?: string,
+    endDate?: string
+  ): Promise<SnapshotInfo[]> {
     const snapshots = await this.snapshotStore.listSnapshots()
     return snapshots.filter(s => {
       if (startDate && s.snapshot_id < startDate) return false
@@ -141,7 +153,7 @@ interface DistrictStatistics {
 
 ```typescript
 interface SnapshotInfo {
-  snapshot_id: string  // ISO date format: YYYY-MM-DD
+  snapshot_id: string // ISO date format: YYYY-MM-DD
   status: 'success' | 'partial' | 'failed'
   created_at: string
 }
@@ -179,31 +191,32 @@ interface DistrictAnalytics {
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Data Source Usage
 
-*For any* analytics request with a valid district ID, the AnalyticsEngine SHALL retrieve data from the PerDistrictSnapshotStore (not the legacy DistrictCacheManager).
+_For any_ analytics request with a valid district ID, the AnalyticsEngine SHALL retrieve data from the PerDistrictSnapshotStore (not the legacy DistrictCacheManager).
 
 **Validates: Requirements 1.1**
 
 ### Property 2: Response Format Consistency
 
-*For any* successful analytics request, the response SHALL contain all required fields (districtId, dateRange, totalMembership, membershipChange, membershipTrend, allClubs, atRiskClubs, healthyClubs, criticalClubs, distinguishedClubs, divisionRankings, topPerformingAreas) with correct types.
+_For any_ successful analytics request, the response SHALL contain all required fields (districtId, dateRange, totalMembership, membershipChange, membershipTrend, allClubs, atRiskClubs, healthyClubs, criticalClubs, distinguishedClubs, divisionRankings, topPerformingAreas) with correct types.
 
 **Validates: Requirements 1.3, 1.4**
 
 ### Property 3: Date Range Filtering
 
-*For any* analytics request with startDate and/or endDate parameters, all data points in the response SHALL have dates within the specified range (inclusive).
+_For any_ analytics request with startDate and/or endDate parameters, all data points in the response SHALL have dates within the specified range (inclusive).
 
 **Validates: Requirements 2.1, 2.2, 2.3**
 
 ### Property 4: Club Health Classification
 
-*For any* club in the analytics response:
+_For any_ club in the analytics response:
+
 - If membership < 12, the club SHALL be in criticalClubs
-- If membership >= 12 AND dcpGoals = 0, the club SHALL be in atRiskClubs  
+- If membership >= 12 AND dcpGoals = 0, the club SHALL be in atRiskClubs
 - If membership >= 12 AND dcpGoals >= 1, the club SHALL be in healthyClubs
 - Each club SHALL appear in exactly one of these arrays
 
@@ -211,19 +224,19 @@ interface DistrictAnalytics {
 
 ### Property 5: Distinguished Club Counting
 
-*For any* analytics response, the distinguishedClubs.total SHALL equal the sum of distinguishedClubs.smedley + distinguishedClubs.presidents + distinguishedClubs.select + distinguishedClubs.distinguished.
+_For any_ analytics response, the distinguishedClubs.total SHALL equal the sum of distinguishedClubs.smedley + distinguishedClubs.presidents + distinguishedClubs.select + distinguishedClubs.distinguished.
 
 **Validates: Requirements 4.1, 4.2**
 
 ### Property 6: Division Ranking Consistency
 
-*For any* analytics response with multiple divisions, the divisionRankings array SHALL be sorted by rank in ascending order, and each division's rank SHALL be unique.
+_For any_ analytics response with multiple divisions, the divisionRankings array SHALL be sorted by rank in ascending order, and each division's rank SHALL be unique.
 
 **Validates: Requirements 5.1, 5.3**
 
 ### Property 7: Error Response Quality
 
-*For any* error response from the analytics endpoint, the response SHALL include an error object with code, message, and details fields.
+_For any_ error response from the analytics endpoint, the response SHALL include an error object with code, message, and details fields.
 
 **Validates: Requirements 6.3**
 
@@ -252,7 +265,7 @@ When the snapshot store is unavailable:
 ```typescript
 {
   error: {
-    code: 'SERVICE_UNAVAILABLE', 
+    code: 'SERVICE_UNAVAILABLE',
     message: 'Snapshot store is temporarily unavailable',
     details: 'Please try again later'
   }
@@ -282,6 +295,7 @@ HTTP Status: 400
 ### Unit Tests
 
 Unit tests will verify:
+
 - Individual calculation methods (club health classification, distinguished counting)
 - Date range filtering logic
 - Error handling for edge cases
@@ -289,12 +303,14 @@ Unit tests will verify:
 ### Property-Based Tests
 
 Property-based tests using fast-check will verify:
+
 - Club health classification is deterministic and mutually exclusive
 - Distinguished club totals are consistent
 - Date filtering is correct for any valid date range
 - Response format is always valid
 
 Configuration:
+
 - Minimum 100 iterations per property test
 - Use fast-check for TypeScript property-based testing
 - Tag format: **Feature: analytics-engine-migration, Property {number}: {property_text}**
@@ -302,6 +318,7 @@ Configuration:
 ### Integration Tests
 
 Integration tests will verify:
+
 - End-to-end flow from API request to response
 - Correct interaction with PerDistrictSnapshotStore
 - Backward compatibility with existing API consumers

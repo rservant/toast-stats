@@ -260,14 +260,18 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       ServiceTokens.AnalyticsEngine,
       createServiceFactory(
         (container: ServiceContainer) => {
-          const cacheConfig = container.resolve(ServiceTokens.CacheConfigService)
+          const cacheConfig = container.resolve(
+            ServiceTokens.CacheConfigService
+          )
           const cacheDir = cacheConfig.getCacheDirectory()
           const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
             cacheDir,
             maxSnapshots: 100,
             maxAgeDays: 30,
           })
-          const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+          const districtDataAggregator = createDistrictDataAggregator(
+            perDistrictSnapshotStore
+          )
           const dataSource = new AnalyticsDataSourceAdapter(
             districtDataAggregator,
             perDistrictSnapshotStore
@@ -423,7 +427,9 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       maxSnapshots: 100,
       maxAgeDays: 30,
     })
-    const districtDataAggregator = createDistrictDataAggregator(perDistrictSnapshotStore)
+    const districtDataAggregator = createDistrictDataAggregator(
+      perDistrictSnapshotStore
+    )
     const dataSource = new AnalyticsDataSourceAdapter(
       districtDataAggregator,
       perDistrictSnapshotStore

@@ -40,8 +40,3 @@ export interface MonthlyRouteParams extends DistrictRouteParams {
   programYear: string
   month: string
 }
-
-export interface AssessmentRouteParams extends DistrictRouteParams {
-  programYear: string
-  month: string
-}

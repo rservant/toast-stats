@@ -73,7 +73,6 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     return String(value)
   }
 
-
   /**
    * Clear internal caches (for testing purposes)
    */
@@ -224,7 +223,10 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     date: string
   ): Promise<DistrictCacheEntry | null> {
     try {
-      const districtData = await this.dataSource.getDistrictData(date, districtId)
+      const districtData = await this.dataSource.getDistrictData(
+        date,
+        districtId
+      )
 
       if (!districtData) {
         return null
@@ -281,7 +283,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       // Analyze clubs
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
-      
+
       // Requirement 3.5: Return separate, mutually exclusive arrays for each health status
       // Each club appears in exactly one of these arrays based on assessClubHealth classification
       const atRiskClubs = clubTrends.filter(c => c.currentStatus === 'at-risk')
@@ -853,10 +855,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       for (let i = 0; i < 3; i++) {
         const year = currentYear - i
         const yearDate = `${year}${currentDate.substring(4)}`
-        const entry = await this.getDistrictDataForDate(
-          districtId,
-          yearDate
-        )
+        const entry = await this.getDistrictDataForDate(districtId, yearDate)
 
         if (entry) {
           yearData.push({
@@ -1492,7 +1491,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     for (const club of entry.clubPerformance) {
       // Primary: Try to extract from Club Distinguished Status field (Requirements: 4.1)
       const statusField = club['Club Distinguished Status']
-      let distinguishedLevel = this.extractDistinguishedLevelFromStatus(statusField)
+      let distinguishedLevel =
+        this.extractDistinguishedLevelFromStatus(statusField)
 
       // Fallback: Calculate based on DCP goals, membership, and net growth
       if (distinguishedLevel === null) {
@@ -1622,7 +1622,10 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           club['Active Membership'] ||
           club['Membership']
       )
-      const clubHealthScore = this.calculateClubHealthScore(membership, dcpGoals)
+      const clubHealthScore = this.calculateClubHealthScore(
+        membership,
+        dcpGoals
+      )
       division.healthScoreSum += clubHealthScore
     }
 
@@ -1673,7 +1676,10 @@ export class AnalyticsEngine implements IAnalyticsEngine {
    * @param dcpGoals - Number of DCP goals achieved
    * @returns Health score (0, 0.5, or 1)
    */
-  private calculateClubHealthScore(membership: number, dcpGoals: number): number {
+  private calculateClubHealthScore(
+    membership: number,
+    dcpGoals: number
+  ): number {
     if (membership < 12) {
       // Critical: 0 points
       return 0
@@ -1782,7 +1788,10 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           club['Active Membership'] ||
           club['Membership']
       )
-      const clubHealthScore = this.calculateClubHealthScore(membership, dcpGoals)
+      const clubHealthScore = this.calculateClubHealthScore(
+        membership,
+        dcpGoals
+      )
       area.healthScoreSum += clubHealthScore
     }
 
@@ -1792,9 +1801,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       ({ healthScoreSum, ...area }) => {
         // Calculate average club health (0-1 scale)
         const avgHealth =
-          area.totalClubs > 0
-            ? healthScoreSum / area.totalClubs
-            : 0
+          area.totalClubs > 0 ? healthScoreSum / area.totalClubs : 0
 
         // Calculate normalized DCP goals (0-1 scale, max 10 goals per club = 1.0)
         const avgDcpGoals =

@@ -14,7 +14,7 @@ This plan migrates the `AnalyticsEngine` from the legacy `DistrictCacheManager` 
     - Implement IAnalyticsDataSource wrapping DistrictDataAggregator and PerDistrictSnapshotStore
     - Add getSnapshotsInRange method with date filtering logic
     - _Requirements: 1.1, 2.1, 2.2, 2.3_
-  - [ ]* 1.3 Write property test for date range filtering
+  - [ ]\* 1.3 Write property test for date range filtering
     - **Property 3: Date Range Filtering**
     - **Validates: Requirements 2.1, 2.2, 2.3**
 
@@ -27,7 +27,7 @@ This plan migrates the `AnalyticsEngine` from the legacy `DistrictCacheManager` 
     - Replace DistrictCacheManager calls with IAnalyticsDataSource calls
     - Map DistrictStatistics to DistrictCacheEntry format for compatibility
     - _Requirements: 1.1, 1.3_
-  - [ ]* 2.3 Write property test for response format consistency
+  - [ ]\* 2.3 Write property test for response format consistency
     - **Property 2: Response Format Consistency**
     - **Validates: Requirements 1.3, 1.4**
 
@@ -42,7 +42,7 @@ This plan migrates the `AnalyticsEngine` from the legacy `DistrictCacheManager` 
   - [x] 4.2 Update analyzeClubTrends to return separate arrays
     - Ensure atRiskClubs, criticalClubs, healthyClubs are mutually exclusive
     - _Requirements: 3.5_
-  - [ ]* 4.3 Write property test for club health classification
+  - [ ]\* 4.3 Write property test for club health classification
     - **Property 4: Club Health Classification**
     - **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
 
@@ -51,7 +51,7 @@ This plan migrates the `AnalyticsEngine` from the legacy `DistrictCacheManager` 
     - Extract distinguished level from DistrictStatistics
     - Count clubs at each level (Smedley, President's, Select, Distinguished)
     - _Requirements: 4.1, 4.2_
-  - [ ]* 5.2 Write property test for distinguished counting
+  - [ ]\* 5.2 Write property test for distinguished counting
     - **Property 5: Distinguished Club Counting**
     - **Validates: Requirements 4.1, 4.2**
 
@@ -63,7 +63,7 @@ This plan migrates the `AnalyticsEngine` from the legacy `DistrictCacheManager` 
   - [x] 6.2 Refactor analyzeAreas for new data format
     - Calculate normalized scores for areas
     - _Requirements: 5.2_
-  - [ ]* 6.3 Write property test for division ranking
+  - [ ]\* 6.3 Write property test for division ranking
     - **Property 6: Division Ranking Consistency**
     - **Validates: Requirements 5.1, 5.3**
 
@@ -79,7 +79,7 @@ This plan migrates the `AnalyticsEngine` from the legacy `DistrictCacheManager` 
     - Return proper error codes for no data (404) and service unavailable (503)
     - Include actionable details in error responses
     - _Requirements: 6.1, 6.2, 6.3_
-  - [ ]* 8.3 Write property test for error response quality
+  - [ ]\* 8.3 Write property test for error response quality
     - **Property 7: Error Response Quality**
     - **Validates: Requirements 6.3**
 
