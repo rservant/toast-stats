@@ -63,6 +63,7 @@ describe('RefreshService - Cache Integration', () => {
     mockRawCSVCache = {
       getAllDistrictsCached: vi.fn(),
       cacheAllDistricts: vi.fn(),
+      getCacheMetadata: vi.fn(),
     } as unknown as RawCSVCacheService
 
     mockDistrictConfigService = {

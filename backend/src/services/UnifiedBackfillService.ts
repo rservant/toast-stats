@@ -1984,11 +1984,11 @@ export class BackfillService {
       // between the requested date and the actual "As of" date in the CSV.
       // To prevent this confusion, we only allow historical dates (yesterday or earlier).
       const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const todayStr = today.toISOString().split('T')[0]
+      // Use local date string to avoid timezone issues
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
       const effectiveEndDate = request.endDate || request.startDate
-      if (effectiveEndDate >= todayStr!) {
+      if (effectiveEndDate >= todayStr) {
         throw new Error(
           `End date must be before today (${todayStr}). The Toastmasters dashboard data is always 1-2 days behind, so today's data is not yet available. Please use yesterday's date or earlier.`
         )

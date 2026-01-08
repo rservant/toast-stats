@@ -7,6 +7,7 @@
 
 import { promises as fs } from 'fs'
 import * as path from 'path'
+import * as os from 'os'
 import { deterministicSafeString } from './test-string-generators'
 import { getTestServiceFactory } from '../services/TestServiceFactory.js'
 
@@ -30,13 +31,10 @@ export async function createTestCacheConfig(
   )
   const testId = `${testName}-${timestamp}-${deterministicId}`
 
-  // Create test-specific cache directory in dedicated test directory
-  const testBaseDir = path.resolve('./test-dir')
-  const cacheDir = path.resolve(testBaseDir, `test-cache-${testId}`)
-
-  // Ensure test base directory and cache directory exist
-  await fs.mkdir(testBaseDir, { recursive: true })
-  await fs.mkdir(cacheDir, { recursive: true })
+  // Create test-specific cache directory in system temp directory for better isolation
+  const cacheDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), `test-cache-${testName}-`)
+  )
 
   // Store original CACHE_DIR
   const originalCacheDir = process.env['CACHE_DIR']

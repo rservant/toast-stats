@@ -10,14 +10,20 @@
  */
 
 /**
- * Parse an ISO date string (YYYY-MM-DD) as a local date.
- * This avoids the UTC midnight interpretation that causes off-by-one errors.
+ * Parse an ISO date string as a local date.
+ * Handles both date-only (YYYY-MM-DD) and full datetime (ISO 8601) formats.
+ * For date-only strings, this avoids the UTC midnight interpretation that causes off-by-one errors.
  *
- * @param dateStr - Date string in YYYY-MM-DD format
- * @returns Date object representing local midnight on that date
+ * @param dateStr - Date string in YYYY-MM-DD or ISO 8601 datetime format
+ * @returns Date object representing the date
  */
 export function parseLocalDate(dateStr: string): Date {
-  // Append T00:00:00 to force local time interpretation
+  // If the string already contains a time component (T or space separator),
+  // parse it directly without modification
+  if (dateStr.includes('T') || dateStr.includes(' ')) {
+    return new Date(dateStr)
+  }
+  // For date-only strings, append T00:00:00 to force local time interpretation
   // Without this, "2025-07-23" is parsed as UTC midnight
   return new Date(dateStr + 'T00:00:00')
 }

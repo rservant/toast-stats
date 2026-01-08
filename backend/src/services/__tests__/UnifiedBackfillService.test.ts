@@ -627,7 +627,8 @@ describe('UnifiedBackfillService', () => {
 
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      // Use local date string to match the validation logic
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
 
       const request = {
         startDate: '2024-01-01',

@@ -304,13 +304,12 @@ describe('PerDistrictSnapshotStore - Closing Period Property Tests', () => {
     async () => {
       await fc.assert(
         fc.asyncProperty(
-          // Generate a date
-          fc.date({
-            min: new Date('2020-01-01'),
-            max: new Date('2030-12-31'),
-          }),
-          async (date: Date) => {
-            const dataAsOfDate = date.toISOString().split('T')[0]!
+          // Generate year, month, day separately to avoid Invalid Date issues
+          fc.integer({ min: 2020, max: 2030 }),
+          fc.integer({ min: 1, max: 12 }),
+          fc.integer({ min: 1, max: 28 }), // Use 28 to be safe for all months
+          async (year: number, month: number, day: number) => {
+            const dataAsOfDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 
             // Create a non-closing period snapshot
             const snapshot = createTestSnapshot(
