@@ -10,6 +10,7 @@ import { BackfillProgressBar } from './components/BackfillProgressBar'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
 import DistrictConfigurationPage from './pages/DistrictConfigurationPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
 
 function Layout(): React.JSX.Element {
   const { activeBackfills, removeBackfill } = useBackfillContext()
@@ -56,6 +57,10 @@ const router = createBrowserRouter(
         {
           path: 'admin/districts',
           element: <DistrictConfigurationPage />,
+        },
+        {
+          path: 'admin/dashboard',
+          element: <AdminDashboardPage />,
         },
       ],
     },

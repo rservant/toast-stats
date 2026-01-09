@@ -53,6 +53,11 @@ The backend endpoint has been renamed from `at-risk-clubs` to `vulnerable-clubs`
 | `/districts/:districtId/backfill/:backfillId`         | `useBackfill.ts`                   | GET, DELETE | ✅ Exists      |
 | `/districts/backfill`                                 | `useBackfill.ts`                   | POST        | ✅ Exists      |
 | `/districts/backfill/:backfillId`                     | `useBackfill.ts`                   | GET, DELETE | ✅ Exists      |
+| `/admin/snapshot-store/health`                 | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshot-store/performance`            | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshot-store/performance/reset`      | `useAdminMonitoring.ts`            | POST        | ✅ Exists      |
+| `/admin/process-separation/compliance`         | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshots`                             | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
 | `/admin/districts/config`                             | `useDistrictConfiguration.ts`      | GET, POST   | ✅ Exists      |
 | `/admin/districts/config/:districtId`                 | `useDistrictConfiguration.ts`      | DELETE      | ✅ Exists      |
 
@@ -74,27 +79,27 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 | Endpoint                                   | Purpose            | Recommendation                     |
 | ------------------------------------------ | ------------------ | ---------------------------------- |
-| `GET /admin/snapshots`                     | List all snapshots | Operational - keep for admin tools |
+| `GET /admin/snapshots`                     | List all snapshots | ✅ Now used by Admin Dashboard     |
 | `GET /admin/snapshots/:snapshotId`         | Inspect snapshot   | Operational - keep for admin tools |
 | `GET /admin/snapshots/:snapshotId/payload` | Full snapshot data | Operational - keep for admin tools |
 
 ### Admin Monitoring
 
-| Endpoint                                       | Purpose              | Recommendation                    |
-| ---------------------------------------------- | -------------------- | --------------------------------- |
-| `GET /admin/snapshot-store/health`             | Health check         | Operational - keep for monitoring |
-| `GET /admin/snapshot-store/integrity`          | Integrity validation | Operational - keep for monitoring |
-| `GET /admin/snapshot-store/performance`        | Performance metrics  | Operational - keep for monitoring |
-| `POST /admin/snapshot-store/performance/reset` | Reset metrics        | Operational - keep for monitoring |
+| Endpoint                                       | Purpose              | Recommendation                     |
+| ---------------------------------------------- | -------------------- | ---------------------------------- |
+| `GET /admin/snapshot-store/health`             | Health check         | ✅ Now used by Admin Dashboard     |
+| `GET /admin/snapshot-store/integrity`          | Integrity validation | Operational - keep for monitoring  |
+| `GET /admin/snapshot-store/performance`        | Performance metrics  | ✅ Now used by Admin Dashboard     |
+| `POST /admin/snapshot-store/performance/reset` | Reset metrics        | ✅ Now used by Admin Dashboard     |
 
 ### Admin Process Separation
 
-| Endpoint                                     | Purpose                 | Recommendation                    |
-| -------------------------------------------- | ----------------------- | --------------------------------- |
-| `GET /admin/process-separation/validate`     | Validate separation     | Operational - keep for compliance |
-| `GET /admin/process-separation/monitor`      | Monitor operations      | Operational - keep for compliance |
-| `GET /admin/process-separation/compliance`   | Compliance metrics      | Operational - keep for compliance |
-| `GET /admin/process-separation/independence` | Independence validation | Operational - keep for compliance |
+| Endpoint                                     | Purpose                 | Recommendation                     |
+| -------------------------------------------- | ----------------------- | ---------------------------------- |
+| `GET /admin/process-separation/validate`     | Validate separation     | Operational - keep for compliance  |
+| `GET /admin/process-separation/monitor`      | Monitor operations      | Operational - keep for compliance  |
+| `GET /admin/process-separation/compliance`   | Compliance metrics      | ✅ Now used by Admin Dashboard     |
+| `GET /admin/process-separation/independence` | Independence validation | Operational - keep for compliance  |
 
 ### Admin District Configuration (Unused)
 
@@ -130,10 +135,11 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ### Medium-Term Enhancements (Priority 3)
 
-5. **Frontend Admin Dashboard**
-   - Consider building an admin UI that consumes the monitoring endpoints
-   - Endpoints exist: health, integrity, performance, process separation
-   - Would provide operational visibility without CLI access
+5. ~~**Frontend Admin Dashboard**~~ ✅ DONE
+   - Built admin UI at `/admin/dashboard` that consumes monitoring endpoints
+   - Displays: health status, performance metrics, process separation compliance, recent snapshots
+   - Endpoints consumed: health, performance, compliance
+   - Provides operational visibility without CLI access
 
 6. **Export Functionality**
    - The `/:districtId/export` endpoint exists but isn't used
@@ -184,6 +190,7 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ## Change Log
 
-| Date       | Author   | Change                    |
-| ---------- | -------- | ------------------------- |
-| 2026-01-09 | Analysis | Initial document creation |
+| Date       | Author   | Change                                                    |
+| ---------- | -------- | --------------------------------------------------------- |
+| 2026-01-09 | Analysis | Initial document creation                                 |
+| 2026-01-09 | Kiro     | Implemented Admin Dashboard (Recommendation #5)           |
