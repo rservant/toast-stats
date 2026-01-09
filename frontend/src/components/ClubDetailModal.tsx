@@ -419,9 +419,15 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Historical Progress */}
+                {/* Historical Progress - only show dates where goals changed */}
                 <div className="space-y-2">
                   {club.dcpGoalsTrend
+                    .filter((point, index, arr) => {
+                      // Always include first entry
+                      if (index === 0) return true
+                      // Include if goals changed from previous
+                      return point.goalsAchieved !== arr[index - 1]?.goalsAchieved
+                    })
                     .slice(-5)
                     .reverse()
                     .map((point, index) => (
