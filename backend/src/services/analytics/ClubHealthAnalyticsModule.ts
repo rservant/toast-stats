@@ -543,11 +543,24 @@ export class ClubHealthAnalyticsModule {
 
   /**
    * Identify distinguished level for a club
+   *
+   * Starting in 2025-2026, CSP submission is required for distinguished recognition.
+   * Clubs without CSP submitted cannot achieve any distinguished level.
    */
   private identifyDistinguishedLevel(
     clubTrend: ClubTrend,
     latestClubData?: ScrapedRecord
   ): void {
+    // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
+    const cspSubmitted = latestClubData
+      ? this.getCSPStatus(latestClubData)
+      : true
+
+    if (!cspSubmitted) {
+      clubTrend.distinguishedLevel = 'NotDistinguished'
+      return
+    }
+
     const currentDcpGoals =
       clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
         ?.goalsAchieved || 0

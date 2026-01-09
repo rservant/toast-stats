@@ -202,6 +202,9 @@ export class DistinguishedClubAnalyticsModule {
    * Counts clubs at each distinguished level and calculates total.
    * Primary: Use 'Club Distinguished Status' field; Fallback: Calculate from DCP goals/membership
    *
+   * Starting in 2025-2026, CSP submission is required for distinguished recognition.
+   * Clubs without CSP submitted cannot achieve any distinguished level.
+   *
    * This method is public to allow AnalyticsEngine to delegate
    * distinguished club calculations to this module.
    *
@@ -221,6 +224,13 @@ export class DistinguishedClubAnalyticsModule {
     let distinguished = 0
 
     for (const club of entry.clubPerformance) {
+      // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
+      const cspSubmitted = this.getCSPStatus(club)
+      if (!cspSubmitted) {
+        // Club cannot be distinguished without CSP
+        continue
+      }
+
       // Primary: Try to extract from Club Distinguished Status field (Requirements: 4.1)
       const statusField = club['Club Distinguished Status']
       let distinguishedLevel =
@@ -676,6 +686,58 @@ export class DistinguishedClubAnalyticsModule {
     const membershipBase = parseIntSafe(club['Mem. Base'])
 
     return currentMembers - membershipBase
+  }
+
+  /**
+   * Get CSP (Club Success Plan) submission status from club data
+   *
+   * CSP data availability by program year:
+   * - 2025-2026 and later: CSP field is guaranteed to be present
+   * - Prior to 2025-2026: CSP field did not exist, defaults to true
+   *
+   * @param club - Raw club data record
+   * @returns true if CSP is submitted or field is absent (historical data), false otherwise
+   */
+  private getCSPStatus(club: ScrapedRecord): boolean {
+    // Check for CSP field in various possible formats
+    const cspValue =
+      club['CSP'] ||
+      club['Club Success Plan'] ||
+      club['CSP Submitted'] ||
+      club['Club Success Plan Submitted']
+
+    // Historical data compatibility: if field doesn't exist (pre-2025-2026 data), assume submitted
+    if (cspValue === undefined || cspValue === null) {
+      return true
+    }
+
+    // Parse the value
+    const cspString = String(cspValue).toLowerCase().trim()
+
+    // Check for positive indicators
+    if (
+      cspString === 'yes' ||
+      cspString === 'true' ||
+      cspString === '1' ||
+      cspString === 'submitted' ||
+      cspString === 'y'
+    ) {
+      return true
+    }
+
+    // Check for negative indicators
+    if (
+      cspString === 'no' ||
+      cspString === 'false' ||
+      cspString === '0' ||
+      cspString === 'not submitted' ||
+      cspString === 'n'
+    ) {
+      return false
+    }
+
+    // Default to true for unknown values (historical data compatibility)
+    return true
   }
 
   // ========== Data Loading Methods ==========
