@@ -551,6 +551,8 @@ describe('RawCSVCacheService', () => {
     })
 
     it('should allow manual circuit breaker reset', async () => {
+      const csvContent = 'District,Region,Clubs\n42,1,25\n'
+
       // Trigger circuit breaker
       for (let i = 0; i < 6; i++) {
         try {
@@ -566,7 +568,7 @@ describe('RawCSVCacheService', () => {
           await cacheService.setCachedCSV(
             '2026-01-06',
             CSVType.DISTRICT_PERFORMANCE,
-            'test',
+            csvContent,
             '42'
           )
         } catch {

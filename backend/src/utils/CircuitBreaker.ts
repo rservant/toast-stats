@@ -153,6 +153,23 @@ export class CircuitBreaker {
   }
 
   /**
+   * Manually record a failure (for cases where execute() wrapper is not used)
+   * @param error - The error that occurred
+   * @param context - Context information for logging
+   */
+  recordFailure(error: Error, context: Record<string, unknown> = {}): void {
+    this.onFailure(error, context)
+  }
+
+  /**
+   * Manually record a success (for cases where execute() wrapper is not used)
+   * @param context - Context information for logging
+   */
+  recordSuccess(context: Record<string, unknown> = {}): void {
+    this.onSuccess(context)
+  }
+
+  /**
    * Get the circuit breaker name
    */
   getName(): string {
@@ -286,8 +303,8 @@ export class CircuitBreaker {
    */
   static createCacheCircuitBreaker(name: string): CircuitBreaker {
     return new CircuitBreaker(name, {
-      failureThreshold: 3,
-      recoveryTimeout: 30000, // 30 seconds
+      failureThreshold: 5, // Match original RawCSVCacheService threshold
+      recoveryTimeout: 60000, // 1 minute (match original)
       monitoringPeriod: 180000, // 3 minutes
       expectedErrors: (error: Error) => {
         const message = error.message.toLowerCase()
@@ -300,9 +317,14 @@ export class CircuitBreaker {
           message.includes('enfile') ||
           message.includes('ebusy') ||
           message.includes('eagain') ||
+          message.includes('enotdir') ||
+          message.includes('eexist') ||
+          message.includes('eisdir') ||
           message.includes('write') ||
           message.includes('read') ||
-          message.includes('parse')
+          message.includes('parse') ||
+          message.includes('mkdir') ||
+          message.includes('directory')
         )
       },
     })

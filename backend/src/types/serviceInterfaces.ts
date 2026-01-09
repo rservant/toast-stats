@@ -28,6 +28,108 @@ import type {
   CacheHealthStatus,
   RawCSVCacheConfig,
 } from './rawCSVCache.js'
+
+/**
+ * Integrity validation result
+ */
+export interface IntegrityValidationResult {
+  isValid: boolean
+  issues: string[]
+  actualStats: { fileCount: number; totalSize: number }
+  metadataStats: { fileCount: number; totalSize: number }
+}
+
+/**
+ * Corruption detection result
+ */
+export interface CorruptionDetectionResult {
+  isValid: boolean
+  issues: string[]
+}
+
+/**
+ * Recovery operation result
+ */
+export interface RecoveryResult {
+  success: boolean
+  actions: string[]
+  errors: string[]
+}
+
+/**
+ * Cache Integrity Validator Interface
+ *
+ * Handles metadata validation, corruption detection, and recovery operations
+ * for the raw CSV cache system.
+ */
+export interface ICacheIntegrityValidator {
+  /**
+   * Validate metadata integrity against actual files on disk
+   * @param cacheDir - Base cache directory path
+   * @param date - Date string (YYYY-MM-DD format)
+   * @param metadata - Current metadata to validate
+   * @returns Validation result with issues and statistics
+   */
+  validateMetadataIntegrity(
+    cacheDir: string,
+    date: string,
+    metadata: RawCSVCacheMetadata | null
+  ): Promise<IntegrityValidationResult>
+
+  /**
+   * Detect corruption in cached CSV content
+   * @param content - CSV content to validate
+   * @param metadata - Associated metadata for checksum verification
+   * @param filename - Filename for checksum lookup
+   * @returns Corruption detection result
+   */
+  detectCorruption(
+    content: string,
+    metadata: RawCSVCacheMetadata | null,
+    filename: string
+  ): Promise<CorruptionDetectionResult>
+
+  /**
+   * Attempt to recover from file corruption
+   * @param cacheDir - Base cache directory path
+   * @param date - Date string (YYYY-MM-DD format)
+   * @param type - CSV type
+   * @param districtId - Optional district ID
+   * @returns Recovery result with actions taken
+   */
+  attemptCorruptionRecovery(
+    cacheDir: string,
+    date: string,
+    type: CSVType,
+    districtId?: string
+  ): Promise<RecoveryResult>
+
+  /**
+   * Recalculate integrity totals from actual files
+   * @param cacheDir - Base cache directory path
+   * @param date - Date string (YYYY-MM-DD format)
+   * @param metadata - Metadata to update
+   * @returns Updated metadata with recalculated totals
+   */
+  recalculateIntegrityTotals(
+    cacheDir: string,
+    date: string,
+    metadata: RawCSVCacheMetadata
+  ): Promise<RawCSVCacheMetadata>
+
+  /**
+   * Repair metadata integrity by recalculating from actual files
+   * @param cacheDir - Base cache directory path
+   * @param date - Date string (YYYY-MM-DD format)
+   * @param existingMetadata - Existing metadata or null
+   * @returns Repair result
+   */
+  repairMetadataIntegrity(
+    cacheDir: string,
+    date: string,
+    existingMetadata: RawCSVCacheMetadata | null
+  ): Promise<RecoveryResult>
+}
 import type {
   CircuitBreakerOptions,
   CircuitBreaker,
@@ -38,6 +140,87 @@ import type {
   ConfigurationChange,
   ConfigurationValidationResult,
 } from '../services/DistrictConfigurationService.js'
+
+/**
+ * Security configuration subset for CacheSecurityManager
+ */
+export interface SecurityConfig {
+  validatePaths: boolean
+  sanitizeInputs: boolean
+  enforcePermissions: boolean
+}
+
+/**
+ * Cache Security Manager Interface
+ *
+ * Handles path safety validation, directory bounds checking, file permissions,
+ * and content security validation for the raw CSV cache system.
+ */
+export interface ICacheSecurityManager {
+  /**
+   * Validate path safety to prevent path traversal attacks
+   * @param input - Input string to validate
+   * @param inputType - Description of input type for error messages
+   * @throws Error if path contains dangerous patterns
+   */
+  validatePathSafety(input: string, inputType: string): void
+
+  /**
+   * Validate that a file path is within cache directory bounds
+   * @param filePath - File path to validate
+   * @param cacheDir - Base cache directory
+   * @throws Error if path is outside bounds
+   */
+  validateCacheDirectoryBounds(filePath: string, cacheDir: string): void
+
+  /**
+   * Set secure file permissions (owner read/write only)
+   * @param filePath - Path to file
+   */
+  setSecureFilePermissions(filePath: string): Promise<void>
+
+  /**
+   * Set secure directory permissions (owner access only)
+   * @param dirPath - Path to directory
+   */
+  setSecureDirectoryPermissions(dirPath: string): Promise<void>
+
+  /**
+   * Validate CSV content for security issues
+   * @param csvContent - CSV content to validate
+   * @throws Error if content contains malicious patterns
+   */
+  validateCSVContentSecurity(csvContent: string): void
+
+  /**
+   * Sanitize district ID by removing dangerous characters
+   * @param districtId - District ID to sanitize
+   * @returns Sanitized district ID
+   */
+  sanitizeDistrictId(districtId: string): string
+
+  /**
+   * Validate district ID format and security
+   * @param districtId - District ID to validate
+   * @throws Error if district ID is invalid
+   */
+  validateDistrictId(districtId: string): void
+
+  /**
+   * Validate date string format
+   * @param date - Date string to validate
+   * @throws Error if date format is invalid
+   */
+  validateDateString(date: string): void
+
+  /**
+   * Validate CSV content (non-empty, size limits, structure)
+   * @param csvContent - CSV content to validate
+   * @param maxSizeMB - Maximum allowed size in MB
+   * @throws Error if content is invalid
+   */
+  validateCSVContent(csvContent: string, maxSizeMB: number): void
+}
 
 /**
  * Logger interface for dependency injection

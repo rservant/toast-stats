@@ -29,8 +29,13 @@ import {
   IRawCSVCacheService,
   ILogger,
   ICacheConfigService,
+  ICacheIntegrityValidator,
+  ICacheSecurityManager,
 } from '../types/serviceInterfaces.js'
 import { ScrapedRecord } from '../types/districts.js'
+import { CircuitBreaker } from '../utils/CircuitBreaker.js'
+import { CacheIntegrityValidator } from './CacheIntegrityValidator.js'
+import { CacheSecurityManager } from './CacheSecurityManager.js'
 
 /**
  * Raw CSV Cache Service Implementation
@@ -40,36 +45,23 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   private readonly cacheDir: string
   private readonly logger: ILogger
   private readonly cacheConfigService: ICacheConfigService
+  private readonly integrityValidator: ICacheIntegrityValidator
+  private readonly securityManager: ICacheSecurityManager
+  private readonly circuitBreaker: CircuitBreaker
   private slowOperations: Array<{
     operation: string
     duration: number
     timestamp: string
   }> = []
 
-  // Circuit breaker state for error handling and recovery
-  private circuitBreaker: {
-    failures: number
-    lastFailureTime: number
-    isOpen: boolean
-    halfOpenAttempts: number
-  } = {
-    failures: 0,
-    lastFailureTime: 0,
-    isOpen: false,
-    halfOpenAttempts: 0,
-  }
-
-  // Circuit breaker configuration
-  private readonly circuitBreakerConfig = {
-    failureThreshold: 5, // Open circuit after 5 consecutive failures
-    resetTimeoutMs: 60000, // Try to close circuit after 1 minute
-    halfOpenMaxAttempts: 3, // Allow 3 attempts in half-open state
-  }
-
   constructor(
     cacheConfigService: ICacheConfigService,
     logger: ILogger,
-    config?: Partial<RawCSVCacheConfig>
+    config?: Partial<RawCSVCacheConfig>,
+    // New optional dependencies for extracted modules
+    integrityValidator?: ICacheIntegrityValidator,
+    securityManager?: ICacheSecurityManager,
+    circuitBreaker?: CircuitBreaker
   ) {
     this.cacheConfigService = cacheConfigService
     this.logger = logger
@@ -81,6 +73,15 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
     // Override config cache directory to use the resolved path
     this.config.cacheDir = this.cacheDir
+
+    // Create default instances when not provided (backward compatibility)
+    this.integrityValidator =
+      integrityValidator ?? new CacheIntegrityValidator(logger)
+    this.securityManager =
+      securityManager ?? new CacheSecurityManager(logger, this.config.security)
+    this.circuitBreaker =
+      circuitBreaker ??
+      CircuitBreaker.createCacheCircuitBreaker('raw-csv-cache')
 
     this.logger.info(
       'Raw CSV Cache Service initialized - CSV files are permanent artifacts',
@@ -105,12 +106,13 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     try {
       // Check circuit breaker state
       if (this.isCircuitBreakerOpen()) {
+        const cbStats = this.circuitBreaker.getStats()
         this.logger.warn('Circuit breaker is open, skipping cache lookup', {
           date,
           type,
           districtId,
-          failures: this.circuitBreaker.failures,
-          lastFailureTime: this.circuitBreaker.lastFailureTime,
+          failures: cbStats.failureCount,
+          lastFailureTime: cbStats.lastFailureTime?.getTime() ?? null,
         })
         return null // Fallback to download
       }
@@ -169,7 +171,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
               filePath,
               errors: recoveryResult.errors,
             })
-            this.recordCircuitBreakerFailure()
+            this.recordCircuitBreakerFailure(
+              new Error('Corruption recovery failed')
+            )
             return null // Fallback to download
           }
         }
@@ -211,7 +215,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         }
 
         // Other errors are actual problems - record for circuit breaker
-        this.recordCircuitBreakerFailure()
+        this.recordCircuitBreakerFailure(
+          error instanceof Error ? error : new Error(String(error))
+        )
         throw error
       }
     } catch (error) {
@@ -241,7 +247,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       })
 
       // Record failure for circuit breaker
-      this.recordCircuitBreakerFailure()
+      this.recordCircuitBreakerFailure(
+        error instanceof Error ? error : new Error(String(error))
+      )
 
       // Return null on error to allow fallback to download
       return null
@@ -262,12 +270,13 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     try {
       // Check circuit breaker state
       if (this.isCircuitBreakerOpen()) {
+        const cbStats = this.circuitBreaker.getStats()
         this.logger.warn('Circuit breaker is open, skipping cache write', {
           date,
           type,
           districtId,
-          failures: this.circuitBreaker.failures,
-          lastFailureTime: this.circuitBreaker.lastFailureTime,
+          failures: cbStats.failureCount,
+          lastFailureTime: cbStats.lastFailureTime?.getTime() ?? null,
         })
         throw new Error('Cache write skipped due to circuit breaker being open')
       }
@@ -335,7 +344,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         }
 
         // Record failure for circuit breaker
-        this.recordCircuitBreakerFailure()
+        this.recordCircuitBreakerFailure(
+          error instanceof Error ? error : new Error(String(error))
+        )
         throw error
       }
     } catch (error) {
@@ -354,7 +365,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         !(error instanceof Error) ||
         !error.message.includes('circuit breaker')
       ) {
-        this.recordCircuitBreakerFailure()
+        this.recordCircuitBreakerFailure(
+          error instanceof Error ? error : new Error(String(error))
+        )
       }
 
       throw error
@@ -380,12 +393,13 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     try {
       // Check circuit breaker state
       if (this.isCircuitBreakerOpen()) {
+        const cbStats = this.circuitBreaker.getStats()
         this.logger.warn('Circuit breaker is open, skipping cache write', {
           date,
           type,
           districtId,
-          failures: this.circuitBreaker.failures,
-          lastFailureTime: this.circuitBreaker.lastFailureTime,
+          failures: cbStats.failureCount,
+          lastFailureTime: cbStats.lastFailureTime?.getTime() ?? null,
         })
         throw new Error('Cache write skipped due to circuit breaker being open')
       }
@@ -460,7 +474,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         }
 
         // Record failure for circuit breaker
-        this.recordCircuitBreakerFailure()
+        this.recordCircuitBreakerFailure(
+          error instanceof Error ? error : new Error(String(error))
+        )
         throw error
       }
     } catch (error) {
@@ -482,7 +498,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         !(error instanceof Error) ||
         !error.message.includes('circuit breaker')
       ) {
-        this.recordCircuitBreakerFailure()
+        this.recordCircuitBreakerFailure(
+          error instanceof Error ? error : new Error(String(error))
+        )
       }
 
       throw error
@@ -848,13 +866,14 @@ export class RawCSVCacheService implements IRawCSVCacheService {
       diskSpaceAvailable = 1000000000 // 1GB placeholder
 
       // Check circuit breaker status
-      if (this.circuitBreaker.isOpen) {
+      const cbStats = this.circuitBreaker.getStats()
+      if (cbStats.state === 'OPEN') {
         errors.push(
-          `Circuit breaker is open due to ${this.circuitBreaker.failures} consecutive failures`
+          `Circuit breaker is open due to ${cbStats.failureCount} consecutive failures`
         )
-      } else if (this.circuitBreaker.failures > 0) {
+      } else if (cbStats.failureCount > 0) {
         warnings.push(
-          `Circuit breaker has recorded ${this.circuitBreaker.failures} recent failures`
+          `Circuit breaker has recorded ${cbStats.failureCount} recent failures`
         )
       }
 
@@ -922,6 +941,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Validate metadata integrity against actual files
+   * Delegates to CacheIntegrityValidator
    */
   async validateMetadataIntegrity(date: string): Promise<{
     isValid: boolean
@@ -929,123 +949,14 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     actualStats: { fileCount: number; totalSize: number }
     metadataStats: { fileCount: number; totalSize: number }
   }> {
-    const issues: string[] = []
-    let isValid = true
-
     try {
       this.validateDateString(date)
-
       const metadata = await this.getCacheMetadata(date)
-      if (!metadata) {
-        return {
-          isValid: false,
-          issues: ['Metadata file does not exist'],
-          actualStats: { fileCount: 0, totalSize: 0 },
-          metadataStats: { fileCount: 0, totalSize: 0 },
-        }
-      }
-
-      const datePath = this.buildDatePath(date)
-
-      // The actual stats include metadata.json, but our metadata tracks only CSV files
-      // So we need to count only CSV files for comparison
-      let actualCsvFileCount = 0
-      let actualCsvTotalSize = 0
-
-      try {
-        const entries = await fs.readdir(datePath, { withFileTypes: true })
-
-        for (const entry of entries) {
-          const fullPath = path.join(datePath, entry.name)
-
-          if (entry.isFile() && entry.name.endsWith('.csv')) {
-            const fileStat = await fs.stat(fullPath)
-            actualCsvFileCount += 1
-            actualCsvTotalSize += fileStat.size
-          } else if (
-            entry.isDirectory() &&
-            entry.name.startsWith('district-')
-          ) {
-            // Count CSV files in district subdirectories
-            const districtEntries = await fs.readdir(fullPath, {
-              withFileTypes: true,
-            })
-            for (const districtEntry of districtEntries) {
-              if (
-                districtEntry.isFile() &&
-                districtEntry.name.endsWith('.csv')
-              ) {
-                const districtFilePath = path.join(fullPath, districtEntry.name)
-                const fileStat = await fs.stat(districtFilePath)
-                actualCsvFileCount += 1
-                actualCsvTotalSize += fileStat.size
-              }
-            }
-          }
-        }
-      } catch (error) {
-        issues.push(
-          `Failed to scan directory: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-        isValid = false
-      }
-
-      const metadataFileCount = metadata.integrity.fileCount
-      const metadataTotalSize = metadata.integrity.totalSize
-
-      if (actualCsvFileCount !== metadataFileCount) {
-        issues.push(
-          `File count mismatch: actual=${actualCsvFileCount}, metadata=${metadataFileCount}`
-        )
-        isValid = false
-      }
-
-      // Allow some tolerance for size differences
-      const sizeDifference = Math.abs(actualCsvTotalSize - metadataTotalSize)
-      if (sizeDifference > 100) {
-        // 100 bytes tolerance
-        issues.push(
-          `Total size mismatch: actual=${actualCsvTotalSize}, metadata=${metadataTotalSize}`
-        )
-        isValid = false
-      }
-
-      // Validate checksums for existing files
-      for (const [filename, expectedChecksum] of Object.entries(
-        metadata.integrity.checksums
-      )) {
-        try {
-          const filePath = path.join(datePath, filename)
-          const content = await fs.readFile(filePath, 'utf-8')
-          const actualChecksum = crypto
-            .createHash('sha256')
-            .update(content)
-            .digest('hex')
-
-          if (actualChecksum !== expectedChecksum) {
-            issues.push(`Checksum mismatch for ${filename}`)
-            isValid = false
-          }
-        } catch {
-          issues.push(
-            `File ${filename} referenced in metadata but not found on disk`
-          )
-          isValid = false
-        }
-      }
-
-      return {
-        isValid,
-        issues,
-        actualStats: {
-          fileCount: actualCsvFileCount,
-          totalSize: actualCsvTotalSize,
-        },
-        metadataStats: {
-          fileCount: metadataFileCount,
-          totalSize: metadataTotalSize,
-        },
-      }
+      return await this.integrityValidator.validateMetadataIntegrity(
+        this.cacheDir,
+        date,
+        metadata
+      )
     } catch (error) {
       return {
         isValid: false,
@@ -1060,139 +971,53 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Repair metadata integrity by recalculating from actual files
+   * Delegates to CacheIntegrityValidator
    */
   async repairMetadataIntegrity(date: string): Promise<{
     success: boolean
     repairedFields: string[]
     errors: string[]
   }> {
-    const repairedFields: string[] = []
-    const errors: string[] = []
-
     try {
       this.validateDateString(date)
+      const existingMetadata = await this.getCacheMetadata(date)
+      const result = await this.integrityValidator.repairMetadataIntegrity(
+        this.cacheDir,
+        date,
+        existingMetadata
+      )
 
-      let metadata = await this.getCacheMetadata(date)
-      if (!metadata) {
-        metadata = this.createDefaultMetadata(date)
-        repairedFields.push('created missing metadata file')
-      }
-
-      const datePath = this.buildDatePath(date)
-
-      // Recalculate integrity totals
-      await this.recalculateIntegrityTotals(metadata, date)
-      repairedFields.push('recalculated file counts and sizes')
-
-      // Recalculate checksums for all files
-      const newChecksums: { [filename: string]: string } = {}
-
-      try {
-        // Check for all-districts file
-        const allDistrictsPath = path.join(datePath, 'all-districts.csv')
-        try {
-          const content = await fs.readFile(allDistrictsPath, 'utf-8')
-          newChecksums['all-districts.csv'] = crypto
-            .createHash('sha256')
-            .update(content)
-            .digest('hex')
-          metadata.csvFiles.allDistricts = true
-        } catch {
-          metadata.csvFiles.allDistricts = false
-        }
-
-        // Check for district-specific files
-        const entries = await fs.readdir(datePath, { withFileTypes: true })
-        const districtDirs = entries.filter(
-          (entry: Dirent) =>
-            entry.isDirectory() && entry.name.startsWith('district-')
+      // If repair was successful, update the metadata file
+      if (result.success) {
+        // The integrityValidator has already repaired the metadata internally,
+        // but we need to persist it. Let's recalculate and save.
+        let metadata = existingMetadata || this.createDefaultMetadata(date)
+        metadata = await this.integrityValidator.recalculateIntegrityTotals(
+          this.cacheDir,
+          date,
+          metadata
         )
-
-        for (const districtDir of districtDirs) {
-          const districtId = districtDir.name.replace('district-', '')
-          const districtPath = path.join(datePath, districtDir.name)
-
-          if (!metadata.csvFiles.districts[districtId]) {
-            metadata.csvFiles.districts[districtId] = {
-              districtPerformance: false,
-              divisionPerformance: false,
-              clubPerformance: false,
-            }
-          }
-
-          // Check each CSV type
-          for (const csvType of [
-            CSVType.DISTRICT_PERFORMANCE,
-            CSVType.DIVISION_PERFORMANCE,
-            CSVType.CLUB_PERFORMANCE,
-          ]) {
-            const csvPath = path.join(districtPath, `${csvType}.csv`)
-            try {
-              const content = await fs.readFile(csvPath, 'utf-8')
-              const filename = `district-${districtId}/${csvType}.csv`
-              newChecksums[filename] = crypto
-                .createHash('sha256')
-                .update(content)
-                .digest('hex')
-
-              switch (csvType) {
-                case CSVType.DISTRICT_PERFORMANCE:
-                  metadata.csvFiles.districts[districtId].districtPerformance =
-                    true
-                  break
-                case CSVType.DIVISION_PERFORMANCE:
-                  metadata.csvFiles.districts[districtId].divisionPerformance =
-                    true
-                  break
-                case CSVType.CLUB_PERFORMANCE:
-                  metadata.csvFiles.districts[districtId].clubPerformance = true
-                  break
-              }
-            } catch {
-              // File doesn't exist - that's fine
-            }
-          }
-        }
-
-        metadata.integrity.checksums = newChecksums
-        repairedFields.push('recalculated checksums')
-
         await this.updateCacheMetadata(date, metadata)
 
         this.logger.info('Metadata integrity repaired', {
           date,
-          repairedFields,
+          repairedFields: result.actions,
           fileCount: metadata.integrity.fileCount,
           totalSize: metadata.integrity.totalSize,
         })
+      }
 
-        return {
-          success: true,
-          repairedFields,
-          errors,
-        }
-      } catch (error) {
-        const errorMessage = `Failed to scan directory: ${error instanceof Error ? error.message : 'Unknown error'}`
-        errors.push(errorMessage)
-        this.logger.error('Failed to repair metadata integrity', {
-          date,
-          error,
-        })
-
-        return {
-          success: false,
-          repairedFields,
-          errors,
-        }
+      return {
+        success: result.success,
+        repairedFields: result.actions,
+        errors: result.errors,
       }
     } catch (error) {
       const errorMessage = `Repair failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      errors.push(errorMessage)
-
       return {
         success: false,
-        repairedFields,
-        errors,
+        repairedFields: [],
+        errors: [errorMessage],
       }
     }
   }
@@ -1242,6 +1067,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Get circuit breaker status for monitoring
+   * Delegates to CircuitBreaker class
    */
   getCircuitBreakerStatus(): {
     isOpen: boolean
@@ -1250,24 +1076,25 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     timeSinceLastFailure: number | null
     halfOpenAttempts: number
   } {
+    const stats = this.circuitBreaker.getStats()
     const now = Date.now()
+    const lastFailureTime = stats.lastFailureTime?.getTime() ?? null
     return {
-      isOpen: this.circuitBreaker.isOpen,
-      failures: this.circuitBreaker.failures,
-      lastFailureTime: this.circuitBreaker.lastFailureTime || null,
-      timeSinceLastFailure: this.circuitBreaker.lastFailureTime
-        ? now - this.circuitBreaker.lastFailureTime
-        : null,
-      halfOpenAttempts: this.circuitBreaker.halfOpenAttempts,
+      isOpen: stats.state === 'OPEN',
+      failures: stats.failureCount,
+      lastFailureTime,
+      timeSinceLastFailure: lastFailureTime ? now - lastFailureTime : null,
+      halfOpenAttempts: stats.state === 'HALF_OPEN' ? 1 : 0,
     }
   }
 
   /**
    * Manually reset circuit breaker (for administrative purposes)
+   * Delegates to CircuitBreaker class
    */
   resetCircuitBreakerManually(): void {
     const previousState = this.getCircuitBreakerState()
-    this.resetCircuitBreaker()
+    this.circuitBreaker.reset()
 
     this.logger.info('Circuit breaker manually reset', {
       previousState,
@@ -1483,6 +1310,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Detect corruption in a cached file
+   * Delegates to CacheIntegrityValidator
    */
   private async detectCorruption(
     _filePath: string,
@@ -1491,97 +1319,34 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     type: CSVType,
     districtId?: string
   ): Promise<{ isValid: boolean; issues: string[] }> {
-    const issues: string[] = []
-
-    try {
-      // Check basic CSV structure
-      if (!content || content.trim().length === 0) {
-        issues.push('File is empty')
-        return { isValid: false, issues }
-      }
-
-      // Check for minimum CSV structure
-      const lines = content.trim().split('\n')
-      if (lines.length < 2) {
-        issues.push('CSV must have at least a header and one data row')
-      }
-
-      // Check for binary content or control characters
-      // eslint-disable-next-line no-control-regex
-      if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(content)) {
-        issues.push('File contains binary or control characters')
-      }
-
-      // Verify file size consistency with metadata
-      const metadata = await this.getCacheMetadata(date)
-      if (metadata) {
-        const filename = this.getFilename(type, districtId)
-        const expectedChecksum = metadata.integrity.checksums[filename]
-
-        if (expectedChecksum) {
-          const actualChecksum = crypto
-            .createHash('sha256')
-            .update(content)
-            .digest('hex')
-          if (actualChecksum !== expectedChecksum) {
-            issues.push('Checksum mismatch - file may be corrupted')
-          }
-        }
-      }
-
-      // Check for truncated content (incomplete lines)
-      const lastLine = lines[lines.length - 1]
-      if (lastLine && !lastLine.includes(',') && lines.length > 2) {
-        // Last line doesn't contain commas but we have multiple lines - might be truncated
-        issues.push('File may be truncated - last line appears incomplete')
-      }
-
-      // Check for excessive line length that might indicate corruption
-      for (let i = 0; i < lines.length; i++) {
-        if (lines?.[i]?.length && lines[i]!.length > 50000) {
-          // 50KB per line is excessive
-          issues.push(`Line ${i + 1} is excessively long - possible corruption`)
-          break
-        }
-      }
-
-      return { isValid: issues.length === 0, issues }
-    } catch (error) {
-      issues.push(
-        `Corruption detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-      return { isValid: false, issues }
-    }
+    const metadata = await this.getCacheMetadata(date)
+    const filename = this.getFilename(type, districtId)
+    return await this.integrityValidator.detectCorruption(
+      content,
+      metadata,
+      filename
+    )
   }
 
   /**
    * Attempt to recover from file corruption
+   * Delegates to CacheIntegrityValidator
    */
   private async attemptCorruptionRecovery(
-    filePath: string,
+    _filePath: string,
     date: string,
     type: CSVType,
     districtId?: string
   ): Promise<{ success: boolean; actions: string[]; errors: string[] }> {
-    const actions: string[] = []
-    const errors: string[] = []
+    const result = await this.integrityValidator.attemptCorruptionRecovery(
+      this.cacheDir,
+      date,
+      type,
+      districtId
+    )
 
-    try {
-      // Remove the corrupted file
-      try {
-        await fs.unlink(filePath)
-        actions.push('Removed corrupted file')
-        this.logger.info('Removed corrupted cache file', { filePath })
-      } catch (error) {
-        const errorMsg = `Failed to remove corrupted file: ${error instanceof Error ? error.message : 'Unknown error'}`
-        errors.push(errorMsg)
-        this.logger.error('Failed to remove corrupted file during recovery', {
-          filePath,
-          error,
-        })
-      }
-
-      // Update metadata to reflect file removal
+    // Update metadata to reflect file removal if recovery was successful
+    if (result.success) {
       try {
         const metadata = await this.getCacheMetadata(date)
         if (metadata) {
@@ -1609,119 +1374,60 @@ export class RawCSVCacheService implements IRawCSVCacheService {
             }
           }
 
-          // Recalculate integrity totals
-          await this.recalculateIntegrityTotals(metadata, date)
-          await this.updateCacheMetadata(date, metadata)
+          // Recalculate integrity totals using the validator
+          const updatedMetadata =
+            await this.integrityValidator.recalculateIntegrityTotals(
+              this.cacheDir,
+              date,
+              metadata
+            )
+          await this.updateCacheMetadata(date, updatedMetadata)
 
-          actions.push('Updated metadata to reflect file removal')
+          result.actions.push('Updated metadata to reflect file removal')
         }
       } catch (error) {
         const errorMsg = `Failed to update metadata during recovery: ${error instanceof Error ? error.message : 'Unknown error'}`
-        errors.push(errorMsg)
+        result.errors.push(errorMsg)
         this.logger.error(
           'Failed to update metadata during corruption recovery',
           { date, error }
         )
       }
-
-      const success = errors.length === 0
-
-      this.logger.info('Corruption recovery completed', {
-        filePath,
-        date,
-        type,
-        districtId,
-        success,
-        actions,
-        errors,
-      })
-
-      return { success, actions, errors }
-    } catch (error) {
-      const errorMsg = `Recovery process failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      errors.push(errorMsg)
-
-      this.logger.error('Corruption recovery process failed', {
-        filePath,
-        date,
-        type,
-        districtId,
-        error,
-      })
-
-      return { success: false, actions, errors }
     }
+
+    return result
   }
 
   /**
    * Circuit breaker methods for handling repeated failures
+   * Delegates to CircuitBreaker class
    */
   private isCircuitBreakerOpen(): boolean {
-    const now = Date.now()
-
-    if (this.circuitBreaker.isOpen) {
-      // Check if we should try to close the circuit (half-open state)
-      if (
-        now - this.circuitBreaker.lastFailureTime >
-        this.circuitBreakerConfig.resetTimeoutMs
-      ) {
-        this.circuitBreaker.isOpen = false
-        this.circuitBreaker.halfOpenAttempts = 0
-        this.logger.info('Circuit breaker transitioning to half-open state', {
-          failures: this.circuitBreaker.failures,
-          timeSinceLastFailure: now - this.circuitBreaker.lastFailureTime,
-        })
-        return false
-      }
-      return true
-    }
-
-    return false
+    const stats = this.circuitBreaker.getStats()
+    return stats.state === 'OPEN'
   }
 
-  private recordCircuitBreakerFailure(): void {
-    this.circuitBreaker.failures += 1
-    this.circuitBreaker.lastFailureTime = Date.now()
-
-    if (
-      this.circuitBreaker.failures >= this.circuitBreakerConfig.failureThreshold
-    ) {
-      this.circuitBreaker.isOpen = true
-      this.logger.error('Circuit breaker opened due to repeated failures', {
-        failures: this.circuitBreaker.failures,
-        threshold: this.circuitBreakerConfig.failureThreshold,
-        resetTimeoutMs: this.circuitBreakerConfig.resetTimeoutMs,
-      })
-    } else {
-      this.logger.warn('Circuit breaker failure recorded', {
-        failures: this.circuitBreaker.failures,
-        threshold: this.circuitBreakerConfig.failureThreshold,
-      })
-    }
+  private recordCircuitBreakerFailure(error?: Error): void {
+    // Record failure using the CircuitBreaker's recordFailure method
+    // Pass the actual error so the expectedErrors filter can evaluate it
+    const errorToRecord = error ?? new Error('Cache operation failed')
+    this.circuitBreaker.recordFailure(errorToRecord, {
+      service: 'RawCSVCacheService',
+    })
   }
 
   private resetCircuitBreaker(): void {
-    const wasOpen = this.circuitBreaker.isOpen
-    const hadFailures = this.circuitBreaker.failures > 0
-
-    this.circuitBreaker.failures = 0
-    this.circuitBreaker.isOpen = false
-    this.circuitBreaker.halfOpenAttempts = 0
-
-    if (wasOpen || hadFailures) {
-      this.logger.info('Circuit breaker reset after successful operation', {
-        wasOpen,
-        hadFailures,
-      })
-    }
+    // Record success to reset failure count
+    this.circuitBreaker.recordSuccess({ service: 'RawCSVCacheService' })
   }
 
   private getCircuitBreakerState(): object {
+    const stats = this.circuitBreaker.getStats()
     return {
-      failures: this.circuitBreaker.failures,
-      isOpen: this.circuitBreaker.isOpen,
-      lastFailureTime: this.circuitBreaker.lastFailureTime,
-      halfOpenAttempts: this.circuitBreaker.halfOpenAttempts,
+      failures: stats.failureCount,
+      isOpen: stats.state === 'OPEN',
+      lastFailureTime: stats.lastFailureTime?.getTime() ?? 0,
+      halfOpenAttempts: stats.state === 'HALF_OPEN' ? 1 : 0,
     }
   }
 
@@ -1800,196 +1506,37 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   }
 
   /**
-   * Comprehensive path safety validation to prevent path traversal attacks
-   */
-  private validatePathSafety(input: string, inputType: string): void {
-    // Check for null bytes
-    if (input.includes('\0')) {
-      throw new Error(`${inputType} contains null bytes`)
-    }
-
-    // Check for path traversal patterns
-    const dangerousPatterns = [
-      '..', // Parent directory
-      '/', // Unix path separator
-      '\\', // Windows path separator
-      ':', // Drive separator (Windows)
-      '<', // Redirection
-      '>', // Redirection
-      '|', // Pipe
-      '?', // Wildcard
-      '*', // Wildcard
-      '"', // Quote
-      '\n', // Newline
-      '\r', // Carriage return
-      '\t', // Tab
-    ]
-
-    for (const pattern of dangerousPatterns) {
-      if (input.includes(pattern)) {
-        throw new Error(
-          `${inputType} contains dangerous character or pattern: ${pattern}`
-        )
-      }
-    }
-
-    // Check for control characters
-    // eslint-disable-next-line no-control-regex
-    if (/[\x00-\x1f\x7f-\x9f]/.test(input)) {
-      throw new Error(`${inputType} contains control characters`)
-    }
-
-    // Ensure the input doesn't start with dangerous prefixes
-    const dangerousPrefixes = ['-', '.', ' ']
-    if (dangerousPrefixes.some(prefix => input.startsWith(prefix))) {
-      throw new Error(`${inputType} starts with dangerous character`)
-    }
-  }
-
-  /**
-   * Sanitize district ID by removing or replacing dangerous characters
-   */
-  private sanitizeDistrictId(districtId: string): string {
-    // Remove any characters that aren't alphanumeric, hyphens, or underscores
-    return districtId.replace(/[^a-zA-Z0-9\-_]/g, '')
-  }
-
-  /**
-   * Validate CSV content for security issues
-   */
-  private validateCSVContentSecurity(csvContent: string): void {
-    // Check for potential script injection in CSV content
-    const dangerousPatterns = [
-      /^=.*[|!]/m, // Formula injection (Excel) - starts with = and contains | or !
-      /=\s*[+\-@]/, // Formula injection (Excel) - traditional patterns
-      /<script/i, // Script tags
-      /javascript:/i, // JavaScript URLs
-      /data:text\/html/i, // Data URLs
-      /vbscript:/i, // VBScript URLs
-      /on\w+\s*=/i, // Event handlers
-    ]
-
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(csvContent)) {
-        throw new Error('CSV content contains potentially malicious patterns')
-      }
-    }
-
-    // Check for excessive line length that might indicate malicious content
-    const lines = csvContent.split('\n')
-    const maxLineLength = 10000 // 10KB per line should be sufficient for legitimate CSV
-
-    for (let i = 0; i < lines.length; i++) {
-      if (lines?.[i]?.length && lines[i]!.length > maxLineLength) {
-        throw new Error(
-          `CSV line ${i + 1} exceeds maximum length of ${maxLineLength} characters`
-        )
-      }
-    }
-
-    // Check for suspicious binary content
-    // eslint-disable-next-line no-control-regex
-    if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(csvContent)) {
-      throw new Error('CSV content contains binary or control characters')
-    }
-  }
-
-  /**
    * Ensure all cache operations remain within the designated cache directory
+   * Delegates to CacheSecurityManager
    */
   private validateCacheDirectoryBounds(filePath: string): void {
-    if (!this.config.security.validatePaths) {
-      return
-    }
-
-    try {
-      // Resolve the absolute path to handle any relative path components
-      const resolvedPath = path.resolve(filePath)
-      const resolvedCacheDir = path.resolve(this.cacheDir)
-
-      // Check if the resolved path is within the cache directory
-      if (
-        !resolvedPath.startsWith(resolvedCacheDir + path.sep) &&
-        resolvedPath !== resolvedCacheDir
-      ) {
-        throw new Error(
-          `File path ${filePath} is outside the cache directory bounds`
-        )
-      }
-    } catch (error) {
-      throw new Error(
-        `Invalid file path: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-    }
+    this.securityManager.validateCacheDirectoryBounds(filePath, this.cacheDir)
   }
 
   /**
    * Set appropriate file permissions for cached files
+   * Delegates to CacheSecurityManager
    */
   private async setSecureFilePermissions(filePath: string): Promise<void> {
-    if (!this.config.security.enforcePermissions) {
-      return
-    }
-
-    try {
-      // Set file permissions to be readable/writable by owner only (600)
-      // This prevents other users from reading potentially sensitive data
-      await fs.chmod(filePath, 0o600)
-
-      this.logger.debug('Set secure file permissions', {
-        filePath,
-        permissions: '600',
-      })
-    } catch (error) {
-      this.logger.warn('Failed to set secure file permissions', {
-        filePath,
-        error,
-      })
-      // Don't throw - this is a security enhancement, not a critical failure
-    }
+    await this.securityManager.setSecureFilePermissions(filePath)
   }
 
   /**
    * Set appropriate directory permissions for cache directories
+   * Delegates to CacheSecurityManager
    */
   private async setSecureDirectoryPermissions(dirPath: string): Promise<void> {
-    if (!this.config.security.enforcePermissions) {
-      return
-    }
-
-    try {
-      // Set directory permissions to be accessible by owner only (700)
-      await fs.chmod(dirPath, 0o700)
-
-      this.logger.debug('Set secure directory permissions', {
-        dirPath,
-        permissions: '700',
-      })
-    } catch (error) {
-      this.logger.warn('Failed to set secure directory permissions', {
-        dirPath,
-        error,
-      })
-      // Don't throw - this is a security enhancement, not a critical failure
-    }
+    await this.securityManager.setSecureDirectoryPermissions(dirPath)
   }
 
   // Private helper methods
 
   /**
    * Validate date string format (YYYY-MM-DD) and prevent path traversal
+   * Delegates to CacheSecurityManager
    */
   private validateDateString(date: string): void {
-    if (!this.isValidDateString(date)) {
-      throw new Error(
-        `Invalid date format: ${date}. Expected YYYY-MM-DD format.`
-      )
-    }
-
-    // Enhanced security validation for path traversal prevention
-    if (this.config.security.validatePaths) {
-      this.validatePathSafety(date, 'date string')
-    }
+    this.securityManager.validateDateString(date)
   }
 
   /**
@@ -2016,63 +1563,21 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Validate district ID and sanitize for path safety
+   * Delegates to CacheSecurityManager
    */
   private validateDistrictId(districtId: string): void {
-    if (this.config.security.sanitizeInputs) {
-      // Enhanced path traversal protection
-      this.validatePathSafety(districtId, 'district ID')
-
-      // Sanitize district ID
-      const sanitized = this.sanitizeDistrictId(districtId)
-      if (sanitized !== districtId) {
-        throw new Error(
-          `District ID contains invalid characters: ${districtId}`
-        )
-      }
-    }
-
-    // Basic validation - district IDs should be alphanumeric with limited special characters
-    if (!/^[a-zA-Z0-9\-_]+$/.test(districtId)) {
-      throw new Error(
-        `Invalid district ID format: ${districtId}. Only alphanumeric characters, hyphens, and underscores are allowed.`
-      )
-    }
-
-    // Length validation
-    if (districtId.length > 50) {
-      throw new Error(
-        `District ID too long: ${districtId}. Maximum length is 50 characters.`
-      )
-    }
+    this.securityManager.validateDistrictId(districtId)
   }
 
   /**
    * Validate CSV content before caching to prevent malicious content storage
+   * Delegates to CacheSecurityManager
    */
   private validateCSVContent(csvContent: string): void {
-    if (!csvContent || csvContent.trim().length === 0) {
-      throw new Error('CSV content cannot be empty')
-    }
-
-    // Size validation to prevent excessive memory usage
-    const maxSize =
-      this.config.performanceThresholds.maxMemoryUsageMB * 1024 * 1024 // Convert MB to bytes
-    if (Buffer.byteLength(csvContent, 'utf-8') > maxSize) {
-      throw new Error(
-        `CSV content too large. Maximum size is ${this.config.performanceThresholds.maxMemoryUsageMB}MB`
-      )
-    }
-
-    // Basic CSV structure validation
-    const lines = csvContent.trim().split('\n')
-    if (lines.length < 2) {
-      throw new Error('CSV must have at least a header and one data row')
-    }
-
-    // Enhanced security validation
-    if (this.config.security.sanitizeInputs) {
-      this.validateCSVContentSecurity(csvContent)
-    }
+    this.securityManager.validateCSVContent(
+      csvContent,
+      this.config.performanceThresholds.maxMemoryUsageMB
+    )
   }
 
   /**
@@ -2274,59 +1779,21 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   /**
    * Recalculate integrity totals by scanning actual CSV files
    * This ensures accuracy when files are overwritten
+   * Delegates to CacheIntegrityValidator
    */
   private async recalculateIntegrityTotals(
     metadata: RawCSVCacheMetadata,
     date: string
   ): Promise<void> {
-    try {
-      const datePath = this.buildDatePath(date)
-
-      // Count only CSV files, not metadata.json
-      let csvFileCount = 0
-      let csvTotalSize = 0
-
-      const entries = await fs.readdir(datePath, { withFileTypes: true })
-
-      for (const entry of entries) {
-        const fullPath = path.join(datePath, entry.name)
-
-        if (entry.isFile() && entry.name.endsWith('.csv')) {
-          const fileStat = await fs.stat(fullPath)
-          csvFileCount += 1
-          csvTotalSize += fileStat.size
-        } else if (entry.isDirectory() && entry.name.startsWith('district-')) {
-          // Count CSV files in district subdirectories
-          const districtEntries = await fs.readdir(fullPath, {
-            withFileTypes: true,
-          })
-          for (const districtEntry of districtEntries) {
-            if (districtEntry.isFile() && districtEntry.name.endsWith('.csv')) {
-              const districtFilePath = path.join(fullPath, districtEntry.name)
-              const fileStat = await fs.stat(districtFilePath)
-              csvFileCount += 1
-              csvTotalSize += fileStat.size
-            }
-          }
-        }
-      }
-
-      // Update totals based on actual CSV file system state
-      metadata.integrity.totalSize = csvTotalSize
-      metadata.integrity.fileCount = csvFileCount
-
-      this.logger.debug('Recalculated integrity totals', {
+    const updatedMetadata =
+      await this.integrityValidator.recalculateIntegrityTotals(
+        this.cacheDir,
         date,
-        totalSize: csvTotalSize,
-        fileCount: csvFileCount,
-      })
-    } catch (error) {
-      this.logger.warn('Failed to recalculate integrity totals', {
-        date,
-        error,
-      })
-      // Don't throw - this is a non-critical operation
-    }
+        metadata
+      )
+    // Update the passed metadata object with the recalculated values
+    metadata.integrity.totalSize = updatedMetadata.integrity.totalSize
+    metadata.integrity.fileCount = updatedMetadata.integrity.fileCount
   }
 
   /**
