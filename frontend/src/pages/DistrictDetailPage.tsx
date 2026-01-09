@@ -30,6 +30,7 @@ import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 import { DistrictBackfillButton } from '../components/DistrictBackfillButton'
+import { DistrictExportButton } from '../components/DistrictExportButton'
 import { LazyChart } from '../components/LazyChart'
 import { useBackfillContext } from '../contexts/BackfillContext'
 
@@ -271,10 +272,19 @@ const DistrictDetailPage: React.FC = () => {
                     <label className="text-xs sm:text-sm font-tm-body font-medium text-gray-700 opacity-0 pointer-events-none hidden sm:block">
                       Actions
                     </label>
-                    <DistrictBackfillButton
-                      districtId={districtId}
-                      onBackfillStart={handleBackfillStart}
-                    />
+                    <div className="flex gap-2">
+                      <DistrictBackfillButton
+                        districtId={districtId}
+                        onBackfillStart={handleBackfillStart}
+                      />
+                      {analytics && (
+                        <DistrictExportButton
+                          districtId={districtId}
+                          startDate={selectedProgramYear.startDate}
+                          endDate={selectedDate || selectedProgramYear.endDate}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -46,6 +46,7 @@ The backend endpoint has been renamed from `at-risk-clubs` to `vulnerable-clubs`
 | `/districts/:districtId/leadership-insights`          | `useLeadershipInsights.ts`         | GET         | ✅ Exists      |
 | `/districts/:districtId/distinguished-club-analytics` | `useDistinguishedClubAnalytics.ts` | GET         | ✅ Exists      |
 | `/districts/:districtId/educational-awards`           | `useEducationalAwards.ts`          | GET         | ✅ Exists      |
+| `/districts/:districtId/export`                       | `useDistrictExport.ts`             | GET         | ✅ Exists      |
 | `/districts/:districtId/daily-reports`                | `useDailyReports.ts`               | GET         | ✅ Exists      |
 | `/districts/:districtId/daily-reports/:date`          | `useDailyReports.ts`               | GET         | ✅ Exists      |
 | `/districts/:districtId/rank-history`                 | `useRankHistory.ts`                | GET         | ✅ Exists      |
@@ -73,7 +74,7 @@ These endpoints exist in the backend but are not consumed by the current fronten
 | --------------------------------------- | ----------------------------- | ----------------------------- |
 | `GET /:districtId/membership-analytics` | Detailed membership analytics | Consider frontend integration |
 | `GET /:districtId/year-over-year/:date` | YoY comparison                | Consider frontend integration |
-| `GET /:districtId/export`               | CSV export                    | Consider frontend integration |
+| `GET /:districtId/export`               | CSV export                    | ✅ Now used by District Detail Page |
 
 ### Admin Snapshot Management
 
@@ -141,9 +142,11 @@ These endpoints exist in the backend but are not consumed by the current fronten
    - Endpoints consumed: health, performance, compliance
    - Provides operational visibility without CLI access
 
-6. **Export Functionality**
-   - The `/:districtId/export` endpoint exists but isn't used
-   - Consider adding CSV export buttons to relevant frontend views
+6. ~~**Export Functionality**~~ ✅ DONE
+   - Added `DistrictExportButton` component to district detail page
+   - Uses existing `/:districtId/export` backend endpoint
+   - Exports analytics data as CSV with date range from program year context
+   - Button appears next to backfill button when analytics data is available
 
 7. **Year-over-Year Comparison**
    - The `/:districtId/year-over-year/:date` endpoint exists
@@ -194,3 +197,4 @@ These endpoints exist in the backend but are not consumed by the current fronten
 | ---------- | -------- | --------------------------------------------------------- |
 | 2026-01-09 | Analysis | Initial document creation                                 |
 | 2026-01-09 | Kiro     | Implemented Admin Dashboard (Recommendation #5)           |
+| 2026-01-09 | Kiro     | Implemented Export Functionality (Recommendation #6)      |
