@@ -1,29 +1,55 @@
 # Active Specifications
 
-This directory contains all specifications that are currently active for maintenance or reference purposes.
+This directory contains all specifications that are currently active for development or maintenance.
 
 ## Active Specifications
 
-### 🔧 ACTIVE MAINTENANCE
+### 🚧 IN PROGRESS
 
-#### 001-assessment-worksheet-generator/
+#### analytics-engine-migration/
 
-**Status**: Complete and production-ready with active maintenance  
-**Purpose**: Generates monthly district assessment reports matching Excel workbook format  
-**Implementation**: All 46 tasks completed, >80% test coverage, 26 TypeScript files  
-**Maintenance**: Configuration updates for new program years, threshold adjustments
+**Status**: ~90% Complete  
+**Purpose**: Migrate AnalyticsEngine from legacy DistrictCacheManager to PerDistrictSnapshotStore  
+**Remaining**: Optional property tests
 
-#### month-end-data-reconciliation/
+#### data-refresh-architecture/
 
-**Status**: Production-ready with ongoing maintenance  
-**Purpose**: Ensures accurate final month-end data by monitoring Toastmasters dashboard updates  
-**Implementation**: 88.8% test pass rate, comprehensive monitoring systems  
-**Maintenance**: Configuration updates, monitoring system improvements
+**Status**: ~80% Complete  
+**Purpose**: Snapshot-based architecture separating data refresh from read operations  
+**Remaining**: Admin endpoints, performance monitoring, optional property tests
+
+#### district-scoped-data-collection/
+
+**Status**: ~70% Complete  
+**Purpose**: Configurable district selection with per-district snapshot storage  
+**Remaining**: Performance monitoring, optional property tests, final validation
+
+#### raw-csv-cache-system/
+
+**Status**: ~85% Complete  
+**Purpose**: Raw CSV caching for ToastmastersScraper with cache-first lookup  
+**Remaining**: Monitoring, performance optimization, optional property tests
+
+#### unified-backfill-service/
+
+**Status**: ~90% Complete  
+**Purpose**: Modern unified BackfillService replacing legacy services  
+**Remaining**: Final checkpoint validation
+
+### ⏳ NOT STARTED
+
+#### club-health-classification/
+
+**Status**: 0% Complete  
+**Purpose**: 2D club health classification model with health status and trajectory  
+**Notes**: Large feature spec with 17 major tasks
 
 ## Archived Specifications
 
 Completed specifications have been moved to `.kiro/specs-archive/` for historical reference:
 
+- `assessment-module-removal/` - Assessment module cleanup (complete)
+- `closing-period-api-integration/` - Closing period snapshot handling (complete)
 - `toastmasters-district-visualizer/` - Original project specification (fully implemented)
 - `district-level-data/` - District analytics features (fully implemented)
 - `dcp-goal-counting-fix/` - Analytics bug fixes (complete)
@@ -33,6 +59,7 @@ Completed specifications have been moved to `.kiro/specs-archive/` for historica
 - `cache-location-configuration/` - Unified cache configuration (complete)
 - `clubs-table-column-filtering/` - Table filtering enhancements (complete)
 - `distinguished-status-calculation-fix/` - Distinguished status logic fix (complete)
+- `001-assessment-worksheet-generator/` - Assessment worksheet generation (complete)
 
 See `.kiro/specs-archive/README.md` for details on archived specifications.
 
@@ -44,5 +71,5 @@ See `.kiro/specs-archive/README.md` for details on archived specifications.
 
 ---
 
-**Last Updated**: December 31, 2025  
+**Last Updated**: January 8, 2026  
 **Maintained By**: Development Team
