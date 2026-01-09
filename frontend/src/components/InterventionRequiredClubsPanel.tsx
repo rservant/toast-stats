@@ -330,16 +330,17 @@ export const InterventionRequiredClubsPanel: React.FC<
               )}
 
               {/* Distinguished Status */}
-              {selectedClub.distinguishedLevel && (
-                <div className="mb-6">
-                  <h4 className="font-semibold text-gray-900 mb-2 font-tm-headline">
-                    Distinguished Status
-                  </h4>
-                  <span className="px-4 py-2 bg-tm-happy-yellow-20 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body">
-                    {selectedClub.distinguishedLevel}
-                  </span>
-                </div>
-              )}
+              {selectedClub.distinguishedLevel &&
+                selectedClub.distinguishedLevel !== 'NotDistinguished' && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-2 font-tm-headline">
+                      Distinguished Status
+                    </h4>
+                    <span className="px-4 py-2 bg-tm-happy-yellow-20 text-tm-true-maroon text-sm font-medium rounded-full font-tm-body">
+                      {selectedClub.distinguishedLevel}
+                    </span>
+                  </div>
+                )}
 
               {/* Close Button */}
               <div className="mt-6 flex justify-end">

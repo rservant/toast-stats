@@ -335,7 +335,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                     {club.latestDcpGoals}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {club.distinguishedLevel ? (
+                    {club.distinguishedLevel &&
+                    club.distinguishedLevel !== 'NotDistinguished' ? (
                       <span className="px-2 py-1 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded font-tm-body">
                         {club.distinguishedLevel}
                       </span>
