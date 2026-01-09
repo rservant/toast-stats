@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Button } from './ui/Button'
 import { useDistrictConfigurationManager } from '../hooks/useDistrictConfiguration'
 import { parseLocalDate } from '../utils/dateFormatting'
@@ -14,19 +14,8 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
     data,
     isLoading,
     error,
-    editMode,
-    setEditMode,
-    localDistricts,
-    newDistrictInput,
-    setNewDistrictInput,
-    initializeLocalState,
-    addDistrictLocally,
-    removeDistrictLocally,
-    saveChanges,
-    cancelChanges,
     addDistrict,
     removeDistrict,
-    isSaving,
     isRemoving,
     saveError,
     removeError,
@@ -34,13 +23,6 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
 
   const [quickAddInput, setQuickAddInput] = useState('')
   const [quickAddError, setQuickAddError] = useState('')
-
-  // Initialize local state when data loads
-  useEffect(() => {
-    if (data && !editMode) {
-      initializeLocalState()
-    }
-  }, [data, editMode, initializeLocalState])
 
   // Handle quick add district
   const handleQuickAdd = async () => {
@@ -68,23 +50,6 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
   const handleRemove = async (districtId: string) => {
     if (window.confirm(`Remove district ${districtId} from configuration?`)) {
       await removeDistrict(districtId)
-    }
-  }
-
-  // Handle add to local state in edit mode
-  const handleAddToLocal = () => {
-    const districtId = newDistrictInput.trim().toUpperCase()
-    if (districtId && !localDistricts.includes(districtId)) {
-      addDistrictLocally(districtId)
-      setNewDistrictInput('')
-    }
-  }
-
-  // Handle save changes
-  const handleSave = async () => {
-    const success = await saveChanges()
-    if (!success && saveError) {
-      alert(`Failed to save configuration: ${saveError.message}`)
     }
   }
 
@@ -159,77 +124,28 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
   const validation = data?.validation
 
   return (
-    <div className="space-y-6">
-      {/* Configuration Overview */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-tm-black">
-              District Configuration
-            </h2>
-            <p className="text-tm-cool-gray mt-1">
-              Manage which districts are included in data snapshots
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-tm-cool-gray">
-              Last updated:{' '}
-              {configuration?.lastUpdated
-                ? parseLocalDate(configuration.lastUpdated).toLocaleDateString()
-                : 'Never'}
+    <div className="space-y-4">
+      {/* Stats + Add District Row */}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {/* Stats */}
+          <div className="flex gap-6">
+            <div>
+              <span className="text-2xl font-bold text-tm-black">{configuration?.configuredDistricts.length || 0}</span>
+              <span className="text-sm text-gray-500 ml-2">Configured</span>
             </div>
-            <div className="text-sm text-tm-cool-gray">
-              By: {configuration?.updatedBy || 'Unknown'}
+            <div>
+              <span className="text-2xl font-bold text-green-600">{validation?.validDistricts.length || 0}</span>
+              <span className="text-sm text-gray-500 ml-2">Valid</span>
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-tm-true-maroon">{validation?.invalidDistricts.length || 0}</span>
+              <span className="text-sm text-gray-500 ml-2">Invalid</span>
             </div>
           </div>
-        </div>
 
-        {/* Status Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-tm-loyal-blue bg-opacity-10 rounded-lg p-4 border border-tm-loyal-blue border-opacity-20">
-            <div className="text-2xl font-bold text-tm-loyal-blue">
-              {configuration?.configuredDistricts.length || 0}
-            </div>
-            <div className="text-sm text-tm-black">Configured Districts</div>
-          </div>
-          <div className="bg-tm-loyal-blue bg-opacity-5 rounded-lg p-4 border border-tm-loyal-blue border-opacity-10">
-            <div className="text-2xl font-bold text-tm-loyal-blue">
-              {validation?.validDistricts.length || 0}
-            </div>
-            <div className="text-sm text-tm-black">Valid Districts</div>
-          </div>
-          <div className="bg-tm-true-maroon bg-opacity-5 rounded-lg p-4 border border-tm-true-maroon border-opacity-20">
-            <div className="text-2xl font-bold text-tm-true-maroon">
-              {validation?.invalidDistricts.length || 0}
-            </div>
-            <div className="text-sm text-tm-black">Invalid Districts</div>
-          </div>
-        </div>
-
-        {/* Validation Warnings */}
-        {validation?.warnings && validation.warnings.length > 0 && (
-          <div className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow border-opacity-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-tm-black mb-2">
-              Configuration Warnings
-            </h4>
-            <ul className="space-y-1">
-              {validation.warnings.map((warning, index) => (
-                <li key={index} className="text-sm text-tm-black">
-                  • {warning}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      {/* Quick Add District */}
-      {!editMode && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-tm-black mb-4">
-            Add District
-          </h3>
-          <div className="flex gap-3">
+          {/* Add District Form */}
+          <div className="flex gap-2 items-center">
             <input
               type="text"
               value={quickAddInput}
@@ -237,8 +153,8 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                 setQuickAddInput(e.target.value)
                 setQuickAddError('')
               }}
-              placeholder="Enter district ID (e.g., 42, F)"
-              className="flex-1 px-3 py-2 border-2 border-tm-cool-gray rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue bg-tm-white text-tm-black placeholder-tm-cool-gray"
+              placeholder="District ID"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-sm text-gray-900 bg-white"
               onKeyPress={e => {
                 if (e.key === 'Enter') {
                   handleQuickAdd()
@@ -249,248 +165,90 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
               onClick={handleQuickAdd}
               disabled={!quickAddInput.trim()}
               variant="primary"
+              size="sm"
             >
-              Add District
+              Add
             </Button>
+            {quickAddError && (
+              <span className="text-red-600 text-sm">{quickAddError}</span>
+            )}
           </div>
-          {quickAddError && (
-            <p className="text-red-600 text-sm mt-2">{quickAddError}</p>
-          )}
+
+          {/* Last Updated */}
+          <div className="text-xs text-gray-400">
+            Updated: {configuration?.lastUpdated ? parseLocalDate(configuration.lastUpdated).toLocaleDateString() : 'Never'}
+          </div>
+        </div>
+      </div>
+
+      {/* Validation Warnings */}
+      {validation?.warnings && validation.warnings.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-sm">
+          {validation.warnings.map((warning, index) => (
+            <span key={index} className="text-yellow-800">{warning}</span>
+          ))}
         </div>
       )}
 
       {/* District List */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-tm-black">
-            Configured Districts
-          </h3>
-          {!editMode ? (
-            <Button
-              onClick={() => setEditMode(true)}
-              variant="secondary"
-              disabled={!configuration?.configuredDistricts.length}
-            >
-              Edit Configuration
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                variant="primary"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-              <Button
-                onClick={cancelChanges}
-                disabled={isSaving}
-                variant="secondary"
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {editMode && (
-          <div className="mb-4 p-4 bg-tm-happy-yellow bg-opacity-20 rounded-lg">
-            <div className="flex gap-3 mb-2">
-              <input
-                type="text"
-                value={newDistrictInput}
-                onChange={e => setNewDistrictInput(e.target.value)}
-                placeholder="Add district ID"
-                className="flex-1 px-3 py-2 border-2 border-tm-cool-gray rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue bg-tm-white text-tm-black placeholder-tm-cool-gray"
-                onKeyPress={e => {
-                  if (e.key === 'Enter') {
-                    handleAddToLocal()
-                  }
-                }}
-              />
-              <Button
-                onClick={handleAddToLocal}
-                disabled={!newDistrictInput.trim()}
-                variant="accent"
-                size="sm"
-              >
-                Add
-              </Button>
-            </div>
-            <p className="text-sm text-tm-black">
-              Add districts to the configuration. Changes are not saved until
-              you click "Save Changes".
-            </p>
-          </div>
-        )}
+      <div className="bg-white rounded-lg shadow-sm p-4">
+        <h3 className="font-semibold text-tm-black mb-3">Districts</h3>
 
         {/* District Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {(editMode
-            ? localDistricts
-            : configuration?.configuredDistricts || []
-          ).map(districtId => {
-            const collectionInfo = validation?.lastCollectionInfo.find(
-              info => info.districtId === districtId
-            )
-            const isValid = validation?.validDistricts.includes(districtId)
-            const isInvalid = validation?.invalidDistricts.includes(districtId)
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+          {(configuration?.configuredDistricts || []).map(districtId => {
+            const collectionInfo = validation?.lastCollectionInfo?.find(info => info.districtId === districtId)
+            const isValid = validation?.validDistricts?.includes(districtId)
+            const isInvalid = validation?.invalidDistricts?.includes(districtId)
+
+            // Determine status text
+            const statusText = collectionInfo?.lastSuccessfulCollection
+              ? parseLocalDate(collectionInfo.lastSuccessfulCollection).toLocaleDateString()
+              : isValid
+                ? 'Valid'
+                : isInvalid
+                  ? 'Invalid'
+                  : 'Pending'
 
             return (
               <div
                 key={districtId}
-                className={`relative p-3 rounded-lg border-2 ${
+                className={`relative px-3 py-2 rounded border bg-white text-sm ${
                   isInvalid
-                    ? 'border-tm-true-maroon border-opacity-50 bg-tm-true-maroon bg-opacity-5'
+                    ? 'border-l-2 border-l-tm-true-maroon border-t-gray-200 border-r-gray-200 border-b-gray-200'
                     : isValid
-                      ? 'border-tm-loyal-blue border-opacity-50 bg-tm-loyal-blue bg-opacity-5'
-                      : 'border-tm-cool-gray border-opacity-50 bg-tm-cool-gray bg-opacity-10'
+                      ? 'border-l-2 border-l-green-500 border-t-gray-200 border-r-gray-200 border-b-gray-200'
+                      : 'border-gray-200'
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-semibold text-tm-black">
-                      District {districtId}
-                    </div>
-                    {collectionInfo && (
-                      <div className="text-xs text-tm-cool-gray mt-1">
-                        {collectionInfo.lastSuccessfulCollection
-                          ? `Last: ${parseLocalDate(collectionInfo.lastSuccessfulCollection).toLocaleDateString()}`
-                          : 'Never collected'}
-                      </div>
-                    )}
-                  </div>
-                  {editMode ? (
-                    <button
-                      onClick={() => removeDistrictLocally(districtId)}
-                      className="text-tm-true-maroon hover:text-tm-black text-sm font-bold"
-                      title="Remove from configuration"
-                    >
-                      ×
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleRemove(districtId)}
-                      disabled={isRemoving}
-                      className="text-tm-true-maroon hover:text-tm-black text-sm font-bold disabled:opacity-50"
-                      title="Remove district"
-                    >
-                      ×
-                    </button>
-                  )}
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-tm-black">{districtId}</span>
+                  <button
+                    onClick={() => handleRemove(districtId)}
+                    disabled={isRemoving}
+                    className="w-5 h-5 flex items-center justify-center rounded text-gray-500 hover:text-white hover:bg-tm-true-maroon transition-colors"
+                    title="Remove"
+                  >
+                    ×
+                  </button>
                 </div>
-
-                {/* Status indicator */}
-                <div className="mt-2">
-                  {isInvalid && (
-                    <span className="inline-block px-2 py-1 text-xs bg-tm-true-maroon bg-opacity-20 text-tm-true-maroon rounded border border-tm-true-maroon border-opacity-30">
-                      Invalid
-                    </span>
-                  )}
-                  {isValid && (
-                    <span className="inline-block px-2 py-1 text-xs bg-tm-loyal-blue bg-opacity-20 text-tm-loyal-blue rounded border border-tm-loyal-blue border-opacity-30">
-                      Valid
-                    </span>
-                  )}
-                  {!isValid && !isInvalid && (
-                    <span className="inline-block px-2 py-1 text-xs bg-tm-cool-gray bg-opacity-30 text-tm-black rounded border border-tm-cool-gray border-opacity-50">
-                      Unknown
-                    </span>
-                  )}
+                <div className="text-xs text-gray-500 truncate">
+                  {statusText}
                 </div>
               </div>
             )
           })}
         </div>
 
-        {!configuration?.configuredDistricts.length && !editMode && (
-          <div className="text-center py-8 text-tm-cool-gray">
-            <p>No districts configured yet.</p>
-            <p className="text-sm mt-1">
-              Add districts to start collecting data.
-            </p>
-          </div>
-        )}
-
-        {editMode && localDistricts.length === 0 && (
-          <div className="text-center py-8 text-tm-cool-gray">
-            <p>No districts in configuration.</p>
-            <p className="text-sm mt-1">Add districts using the input above.</p>
-          </div>
+        {!configuration?.configuredDistricts.length && (
+          <p className="text-center py-4 text-gray-500 text-sm">No districts configured. Add one above.</p>
         )}
       </div>
 
-      {/* Collection History */}
-      {validation?.lastCollectionInfo &&
-        validation.lastCollectionInfo.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-tm-black mb-4">
-              Collection History
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-tm-cool-gray divide-opacity-30">
-                <thead className="bg-tm-loyal-blue bg-opacity-5">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                      District
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                      Last Collection
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                      Recent Success Count
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-tm-black uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-tm-cool-gray divide-opacity-20">
-                  {validation.lastCollectionInfo.map(info => (
-                    <tr key={info.districtId}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-tm-black">
-                        District {info.districtId}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-tm-cool-gray">
-                        {info.lastSuccessfulCollection
-                          ? new Date(
-                              info.lastSuccessfulCollection
-                            ).toLocaleString()
-                          : 'Never'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-tm-cool-gray">
-                        {info.recentSuccessCount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            info.status === 'valid'
-                              ? 'bg-tm-loyal-blue bg-opacity-20 text-tm-loyal-blue border border-tm-loyal-blue border-opacity-30'
-                              : info.status === 'invalid'
-                                ? 'bg-tm-true-maroon bg-opacity-20 text-tm-true-maroon border border-tm-true-maroon border-opacity-30'
-                                : 'bg-tm-cool-gray bg-opacity-30 text-tm-black border border-tm-cool-gray border-opacity-50'
-                          }`}
-                        >
-                          {info.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
       {/* Error Display */}
       {(saveError || removeError) && (
-        <div className="bg-tm-true-maroon bg-opacity-10 border border-tm-true-maroon border-opacity-30 rounded-lg p-4">
-          <h4 className="font-medium text-tm-true-maroon mb-2">
-            Operation Failed
-          </h4>
-          <p className="text-tm-black text-sm">
-            {saveError?.message || removeError?.message || 'An error occurred'}
-          </p>
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+          {saveError?.message || removeError?.message || 'An error occurred'}
         </div>
       )}
     </div>

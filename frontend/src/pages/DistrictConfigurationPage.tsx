@@ -22,14 +22,13 @@ const DistrictConfigurationPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-tm-black">
+      <div className="container mx-auto px-4 py-4">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-tm-black">
             District Configuration
           </h1>
-          <p className="mt-2 text-gray-600">
-            Manage which districts are included in data snapshots and monitor
-            collection status
+          <p className="text-sm text-gray-600">
+            Manage which districts are included in data snapshots
           </p>
         </div>
 

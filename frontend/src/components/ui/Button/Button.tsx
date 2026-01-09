@@ -39,10 +39,11 @@ const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses = `
-    tm-nav tm-touch-target
+    font-family: var(--tm-font-headline)
+    tm-touch-target
     inline-flex items-center justify-center
     font-semibold
-    tm-rounded-md
+    rounded-md
     transition-all duration-200
     focus-visible:outline-2 focus-visible:outline-offset-2
     disabled:opacity-50 disabled:cursor-not-allowed
@@ -53,26 +54,26 @@ const Button: React.FC<ButtonProps> = ({
 
   const variantClasses = {
     primary: `
-      tm-bg-loyal-blue tm-text-white
+      bg-tm-loyal-blue text-white
       hover:bg-opacity-90 active:bg-opacity-80
       focus-visible:outline-white
       disabled:hover:bg-opacity-100
     `,
     secondary: `
-      bg-transparent tm-text-loyal-blue
+      bg-transparent text-tm-loyal-blue
       border-2 border-current
-      hover:tm-bg-loyal-blue hover:tm-text-white
+      hover:bg-tm-loyal-blue hover:text-white
       focus-visible:outline-tm-loyal-blue
-      disabled:hover:bg-transparent disabled:hover:tm-text-loyal-blue
+      disabled:hover:bg-transparent disabled:hover:text-tm-loyal-blue
     `,
     accent: `
-      tm-bg-happy-yellow tm-text-black
+      bg-tm-happy-yellow text-tm-black
       hover:bg-opacity-90 active:bg-opacity-80
       focus-visible:outline-tm-black
       disabled:hover:bg-opacity-100
     `,
     ghost: `
-      bg-transparent tm-text-loyal-blue
+      bg-transparent text-tm-loyal-blue
       hover:bg-tm-loyal-blue hover:bg-opacity-10
       focus-visible:outline-tm-loyal-blue
       disabled:hover:bg-transparent
