@@ -1050,8 +1050,45 @@ const url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formatte
 
 - Parse dashboard's selected date from dropdown
 - Compare with requested date
-- Throw error if dates don't match
+- If dates don't match, try previous month fallback (month-end reconciliation)
+- Throw error only if both attempts fail
 - Log warnings for verification failures
+
+### Month-End Reconciliation Fallback
+
+**Problem**: During month-end reconciliation periods, dates like October 1st may appear under September's data in the dashboard, not October's. The URL `?month=10&day=10/1/2025` may return November data instead of October 1st.
+
+**Solution**: The scraper implements a fallback mechanism:
+
+1. First, try the requested month: `?month=10&day=10/1/2025`
+2. If the dashboard returns a different date, try the previous month: `?month=9&day=10/1/2025`
+3. If the previous month has the correct date, use that data
+4. If both attempts fail, the date is truly unavailable
+
+**Implementation**:
+
+```typescript
+// navigateToDateWithFallback handles this automatically
+const navResult = await this.navigateToDateWithFallback(
+  page,
+  baseUrl,
+  'Club.aspx',
+  dateString,
+  districtId
+)
+
+if (!navResult.success) {
+  throw new Error(`Date ${dateString} not available`)
+}
+
+// navResult.usedFallback indicates if previous month was used
+```
+
+**When Fallback is Used**:
+
+- Early days of a new month (e.g., Oct 1-10) during reconciliation
+- Month-end closing periods when data transitions between months
+- Historical backfill requests for dates near month boundaries
 
 ### Historical Data Use Cases
 

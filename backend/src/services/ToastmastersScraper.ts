@@ -287,6 +287,138 @@ export class ToastmastersScraper {
   }
 
   /**
+   * Try to navigate to a date with month-end reconciliation fallback.
+   * During month-end reconciliation, dates like Oct 1 may appear under September's data.
+   * This method tries the requested month first, then falls back to the previous month.
+   *
+   * @param page - Playwright page instance
+   * @param baseUrl - Base URL for the dashboard (includes program year)
+   * @param pageName - Page name (e.g., 'Club.aspx', 'Division.aspx', 'District.aspx')
+   * @param dateString - Requested date in YYYY-MM-DD format
+   * @param districtId - Optional district ID for district-specific pages
+   * @returns Object with success status, actual date string, and whether fallback was used
+   */
+  private async navigateToDateWithFallback(
+    page: Page,
+    baseUrl: string,
+    pageName: string,
+    dateString: string,
+    districtId?: string
+  ): Promise<{
+    success: boolean
+    actualDateString: string
+    usedFallback: boolean
+  }> {
+    const dateObj = new Date(dateString + 'T00:00:00')
+    const month = dateObj.getMonth() + 1 // 1-12
+    const day = dateObj.getDate()
+    const year = dateObj.getFullYear()
+    const formattedDate = `${month}/${day}/${year}`
+
+    // Build URL with district ID if provided
+    const districtParam = districtId ? `id=${districtId}&` : ''
+    const url = `${baseUrl}/${pageName}?${districtParam}month=${month}&day=${formattedDate}`
+
+    logger.info('Navigating to URL for date', { url, dateString })
+    await page.goto(url, {
+      waitUntil: 'domcontentloaded',
+      timeout: this.config.timeout,
+    })
+
+    // Verify the date
+    const actualDate = await this.getSelectedDate(page)
+    if (!actualDate) {
+      logger.warn('Could not verify date from dropdown', { dateString })
+      return { success: true, actualDateString: dateString, usedFallback: false }
+    }
+
+    const {
+      month: actualMonth,
+      day: actualDay,
+      year: actualYear,
+      dateString: dashboardDateString,
+    } = actualDate
+
+    // Check if we got the requested date
+    if (actualMonth === month && actualDay === day && actualYear === year) {
+      logger.info('Date verification successful', {
+        requested: dateString,
+        actual: dashboardDateString,
+      })
+      return {
+        success: true,
+        actualDateString: dashboardDateString,
+        usedFallback: false,
+      }
+    }
+
+    // Date mismatch - try previous month fallback for month-end reconciliation
+    logger.info(
+      'Date mismatch detected, trying previous month fallback for month-end reconciliation',
+      {
+        requested: { month, day, year, dateString },
+        actual: {
+          month: actualMonth,
+          day: actualDay,
+          year: actualYear,
+          dateString: dashboardDateString,
+        },
+      }
+    )
+
+    // Calculate previous month
+    const prevMonth = month === 1 ? 12 : month - 1
+    const fallbackUrl = `${baseUrl}/${pageName}?${districtParam}month=${prevMonth}&day=${formattedDate}`
+
+    logger.info('Trying previous month fallback URL', {
+      fallbackUrl,
+      prevMonth,
+    })
+
+    await page.goto(fallbackUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: this.config.timeout,
+    })
+
+    // Verify the date again
+    const fallbackDate = await this.getSelectedDate(page)
+    if (fallbackDate) {
+      const {
+        month: fbMonth,
+        day: fbDay,
+        year: fbYear,
+        dateString: fbDateString,
+      } = fallbackDate
+
+      if (fbMonth === month && fbDay === day && fbYear === year) {
+        logger.info(
+          'Previous month fallback successful - found date in month-end reconciliation data',
+          {
+            requested: dateString,
+            actual: fbDateString,
+            usedMonth: prevMonth,
+          }
+        )
+        return { success: true, actualDateString: fbDateString, usedFallback: true }
+      }
+    }
+
+    // Fallback also didn't work - this date truly isn't available
+    logger.warn(
+      'Previous month fallback also failed - date not available on dashboard',
+      {
+        requested: dateString,
+        dashboardReturned: dashboardDateString,
+      }
+    )
+    return {
+      success: false,
+      actualDateString: dashboardDateString,
+      usedFallback: true,
+    }
+  }
+
+  /**
    * Download CSV from a page by selecting CSV from export dropdown
    */
   private async downloadCsv(page: Page): Promise<string> {
@@ -613,6 +745,9 @@ export class ToastmastersScraper {
 
   /**
    * Helper method to download all districts data for a specific date
+   * Implements month-end reconciliation fallback: if the requested date isn't available
+   * in the current month's dropdown, tries the previous month (since month-end data
+   * often appears under the prior month during reconciliation periods).
    */
   private async downloadAllDistrictsForDate(
     page: Page,
@@ -659,10 +794,17 @@ export class ToastmastersScraper {
 
       actualDateString = dashboardDateString
 
-      // Check for month-end closing period
-      if (actualMonth !== month || actualDay !== day || actualYear !== year) {
+      // Check if we got the requested date
+      if (actualMonth === month && actualDay === day && actualYear === year) {
+        logger.info('Date verification successful', {
+          requested: dateString,
+          actual: actualDateString,
+        })
+      } else {
+        // Date mismatch - try previous month fallback for month-end reconciliation
+        // During month-end reconciliation, dates like Oct 1 may appear under September's data
         logger.info(
-          'Month-end closing period detected - dashboard returned different date',
+          'Date mismatch detected, trying previous month fallback for month-end reconciliation',
           {
             requested: { month, day, year, dateString },
             actual: {
@@ -673,11 +815,66 @@ export class ToastmastersScraper {
             },
           }
         )
-      } else {
-        logger.info('Date verification successful', {
-          requested: dateString,
-          actual: actualDateString,
+
+        // Calculate previous month
+        const prevMonth = month === 1 ? 12 : month - 1
+        const prevMonthYear = month === 1 ? year - 1 : year
+        const fallbackUrl = `${baseUrl}/Default.aspx?month=${prevMonth}&day=${formattedDate}`
+
+        logger.info('Trying previous month fallback URL', {
+          fallbackUrl,
+          prevMonth,
+          prevMonthYear,
         })
+
+        await page.goto(fallbackUrl, {
+          waitUntil: 'networkidle',
+          timeout: this.config.timeout,
+        })
+
+        // Verify the date again
+        const fallbackDate = await this.getSelectedDate(page)
+        if (fallbackDate) {
+          const {
+            month: fbMonth,
+            day: fbDay,
+            year: fbYear,
+            dateString: fbDateString,
+          } = fallbackDate
+
+          if (fbMonth === month && fbDay === day && fbYear === year) {
+            logger.info(
+              'Previous month fallback successful - found date in month-end reconciliation data',
+              {
+                requested: dateString,
+                actual: fbDateString,
+                usedMonth: prevMonth,
+              }
+            )
+            actualDateString = fbDateString
+          } else {
+            // Fallback also didn't work - this date truly isn't available
+            logger.warn(
+              'Previous month fallback also returned different date - date not available',
+              {
+                requested: { month, day, year, dateString },
+                fallbackActual: {
+                  month: fbMonth,
+                  day: fbDay,
+                  year: fbYear,
+                  dateString: fbDateString,
+                },
+              }
+            )
+            // Keep the original mismatch behavior - return what we got
+            actualDateString = dashboardDateString
+          }
+        } else {
+          logger.warn(
+            'Could not verify date after fallback attempt, using original result',
+            { dateString }
+          )
+        }
       }
     } else {
       logger.warn('Could not verify date from dropdown, proceeding anyway', {
@@ -940,77 +1137,56 @@ export class ToastmastersScraper {
       const page = await browser.newPage()
 
       try {
-        let url: string
-
-        if (dateString) {
-          // Build URL with program year and date
-          const baseUrl = this.buildBaseUrl(dateString)
-          const dateObj = new Date(dateString + 'T00:00:00')
-          const month = dateObj.getMonth() + 1 // 1-12
-          const day = dateObj.getDate()
-          const year = dateObj.getFullYear()
-          const formattedDate = `${month}/${day}/${year}`
-          url = `${baseUrl}/District.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
-        } else {
-          // No date specified, use current data
-          url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
-        }
-
-        logger.info('Fetching district performance', {
-          districtId,
-          dateString,
-          url,
-        })
-
-        await page.goto(url, {
-          waitUntil: 'domcontentloaded',
-          timeout: this.config.timeout,
-        })
-
         let actualDateString = dateString || this.getCurrentDateString()
 
-        // Verify the date if requested
         if (dateString) {
-          const dateObj = new Date(dateString + 'T00:00:00')
-          const month = dateObj.getMonth() + 1
-          const day = dateObj.getDate()
-          const year = dateObj.getFullYear()
+          // Use the fallback-enabled navigation for historical dates
+          const baseUrl = this.buildBaseUrl(dateString)
+          const navResult = await this.navigateToDateWithFallback(
+            page,
+            baseUrl,
+            'District.aspx',
+            dateString,
+            districtId
+          )
 
-          const actualDate = await this.getSelectedDate(page)
-          if (actualDate) {
-            const {
-              month: actualMonth,
-              day: actualDay,
-              year: actualYear,
-              dateString: dashboardDateString,
-            } = actualDate
+          // For district performance, we accept the data even if date doesn't match
+          // (closing period behavior) but log it
+          actualDateString = navResult.actualDateString
 
-            actualDateString = dashboardDateString
-
-            if (
-              actualMonth !== month ||
-              actualDay !== day ||
-              actualYear !== year
-            ) {
-              logger.info(
-                'Month-end closing period detected - dashboard returned different date',
-                {
-                  requested: { month, day, year, dateString },
-                  actual: {
-                    month: actualMonth,
-                    day: actualDay,
-                    year: actualYear,
-                    dateString: actualDateString,
-                  },
-                }
-              )
-            } else {
-              logger.info('Date verification successful', {
-                requested: dateString,
-                actual: actualDateString,
-              })
-            }
+          if (navResult.usedFallback) {
+            logger.info(
+              'District performance: used month-end reconciliation fallback',
+              {
+                districtId,
+                requestedDate: dateString,
+                actualDate: actualDateString,
+                success: navResult.success,
+              }
+            )
+          } else if (!navResult.success) {
+            logger.info(
+              'Month-end closing period detected - dashboard returned different date',
+              {
+                districtId,
+                requestedDate: dateString,
+                actualDate: actualDateString,
+              }
+            )
           }
+        } else {
+          // No date specified, use current data
+          const url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
+          logger.info('Fetching district performance', {
+            districtId,
+            dateString,
+            url,
+          })
+
+          await page.goto(url, {
+            waitUntil: 'domcontentloaded',
+            timeout: this.config.timeout,
+          })
         }
 
         const content = await this.downloadCsv(page)
@@ -1051,79 +1227,50 @@ export class ToastmastersScraper {
       const page = await browser.newPage()
 
       try {
-        let url: string
-
-        if (dateString) {
-          // Build URL with program year and date
-          const baseUrl = this.buildBaseUrl(dateString)
-          const dateObj = new Date(dateString + 'T00:00:00')
-          const month = dateObj.getMonth() + 1 // 1-12
-          const day = dateObj.getDate()
-          const year = dateObj.getFullYear()
-          const formattedDate = `${month}/${day}/${year}`
-          url = `${baseUrl}/Division.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
-        } else {
-          // No date specified, use current data
-          url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
-        }
-
-        logger.info('Fetching division performance', {
-          districtId,
-          dateString,
-          url,
-        })
-
-        await page.goto(url, {
-          waitUntil: 'domcontentloaded',
-          timeout: this.config.timeout,
-        })
-
         let actualDateString = dateString || this.getCurrentDateString()
 
-        // Verify the date if requested
         if (dateString) {
-          const dateObj = new Date(dateString + 'T00:00:00')
-          const month = dateObj.getMonth() + 1
-          const day = dateObj.getDate()
-          const year = dateObj.getFullYear()
+          // Use the fallback-enabled navigation for historical dates
+          const baseUrl = this.buildBaseUrl(dateString)
+          const navResult = await this.navigateToDateWithFallback(
+            page,
+            baseUrl,
+            'Division.aspx',
+            dateString,
+            districtId
+          )
 
-          const actualDate = await this.getSelectedDate(page)
-          if (actualDate) {
-            const {
-              month: actualMonth,
-              day: actualDay,
-              year: actualYear,
-              dateString: dashboardDateString,
-            } = actualDate
-
-            actualDateString = dashboardDateString
-
-            if (
-              actualMonth !== month ||
-              actualDay !== day ||
-              actualYear !== year
-            ) {
-              logger.warn(
-                'Requested date not available, dashboard returned different date',
-                {
-                  requested: { month, day, year, dateString },
-                  actual: {
-                    month: actualMonth,
-                    day: actualDay,
-                    year: actualYear,
-                    dateString: actualDateString,
-                  },
-                }
-              )
-              throw new Error(
-                `Date ${dateString} not available (dashboard returned ${actualDateString})`
-              )
-            }
-            logger.info('Date verification successful', {
-              requested: dateString,
-              actual: actualDateString,
-            })
+          if (!navResult.success) {
+            throw new Error(
+              `Date ${dateString} not available (dashboard returned ${navResult.actualDateString})`
+            )
           }
+
+          actualDateString = navResult.actualDateString
+
+          if (navResult.usedFallback) {
+            logger.info(
+              'Division performance: used month-end reconciliation fallback',
+              {
+                districtId,
+                requestedDate: dateString,
+                actualDate: actualDateString,
+              }
+            )
+          }
+        } else {
+          // No date specified, use current data
+          const url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
+          logger.info('Fetching division performance', {
+            districtId,
+            dateString,
+            url,
+          })
+
+          await page.goto(url, {
+            waitUntil: 'domcontentloaded',
+            timeout: this.config.timeout,
+          })
         }
 
         const content = await this.downloadCsv(page)
@@ -1164,79 +1311,50 @@ export class ToastmastersScraper {
       const page = await browser.newPage()
 
       try {
-        let url: string
-
-        if (dateString) {
-          // Build URL with program year and date
-          const baseUrl = this.buildBaseUrl(dateString)
-          const dateObj = new Date(dateString + 'T00:00:00')
-          const month = dateObj.getMonth() + 1 // 1-12
-          const day = dateObj.getDate()
-          const year = dateObj.getFullYear()
-          const formattedDate = `${month}/${day}/${year}`
-          url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formattedDate}`
-        } else {
-          // No date specified, use current data
-          url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
-        }
-
-        logger.info('Fetching club performance', {
-          districtId,
-          dateString,
-          url,
-        })
-
-        await page.goto(url, {
-          waitUntil: 'domcontentloaded',
-          timeout: this.config.timeout,
-        })
-
         let actualDateString = dateString || this.getCurrentDateString()
 
-        // Verify the date if requested
         if (dateString) {
-          const dateObj = new Date(dateString + 'T00:00:00')
-          const month = dateObj.getMonth() + 1
-          const day = dateObj.getDate()
-          const year = dateObj.getFullYear()
+          // Use the fallback-enabled navigation for historical dates
+          const baseUrl = this.buildBaseUrl(dateString)
+          const navResult = await this.navigateToDateWithFallback(
+            page,
+            baseUrl,
+            'Club.aspx',
+            dateString,
+            districtId
+          )
 
-          const actualDate = await this.getSelectedDate(page)
-          if (actualDate) {
-            const {
-              month: actualMonth,
-              day: actualDay,
-              year: actualYear,
-              dateString: dashboardDateString,
-            } = actualDate
-
-            actualDateString = dashboardDateString
-
-            if (
-              actualMonth !== month ||
-              actualDay !== day ||
-              actualYear !== year
-            ) {
-              logger.warn(
-                'Requested date not available, dashboard returned different date',
-                {
-                  requested: { month, day, year, dateString },
-                  actual: {
-                    month: actualMonth,
-                    day: actualDay,
-                    year: actualYear,
-                    dateString: actualDateString,
-                  },
-                }
-              )
-              throw new Error(
-                `Date ${dateString} not available (dashboard returned ${actualDateString})`
-              )
-            }
-            logger.info('Date verification successful', {
-              requested: dateString,
-              actual: actualDateString,
-            })
+          if (!navResult.success) {
+            throw new Error(
+              `Date ${dateString} not available (dashboard returned ${navResult.actualDateString})`
+            )
           }
+
+          actualDateString = navResult.actualDateString
+
+          if (navResult.usedFallback) {
+            logger.info(
+              'Club performance: used month-end reconciliation fallback',
+              {
+                districtId,
+                requestedDate: dateString,
+                actualDate: actualDateString,
+              }
+            )
+          }
+        } else {
+          // No date specified, use current data
+          const url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
+          logger.info('Fetching club performance', {
+            districtId,
+            dateString,
+            url,
+          })
+
+          await page.goto(url, {
+            waitUntil: 'domcontentloaded',
+            timeout: this.config.timeout,
+          })
         }
 
         const content = await this.downloadCsv(page)

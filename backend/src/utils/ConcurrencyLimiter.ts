@@ -212,19 +212,60 @@ export class ConcurrencyLimiter {
   /**
    * Execute functions with concurrency control, allowing some to fail
    * Returns PromiseSettledResult array
+   *
+   * IMPORTANT: This method processes functions in batches to respect the queue limit.
+   * It does NOT create all promises upfront, which would exceed the queue limit
+   * and cause silent rejections for functions beyond (maxConcurrent + queueLimit).
    */
   async executeAllSettled<T>(
     functions: Array<(slot: ConcurrencySlot) => Promise<T>>,
     context?: Record<string, unknown>
   ): Promise<PromiseSettledResult<T>[]> {
-    const promises = functions.map(fn =>
-      this.execute(fn, context).then(
-        value => ({ status: 'fulfilled' as const, value }),
-        reason => ({ status: 'rejected' as const, reason })
-      )
-    )
+    const results: PromiseSettledResult<T>[] = new Array(functions.length)
+    const maxInFlight = this.options.maxConcurrent + (this.options.queueLimit || 0)
 
-    return Promise.all(promises)
+    // Process functions in batches to avoid exceeding queue limit
+    let nextIndex = 0
+    const inFlight: Map<number, Promise<void>> = new Map()
+
+    const startNext = async (): Promise<void> => {
+      if (nextIndex >= functions.length) return
+
+      const index = nextIndex++
+      const fn = functions[index]
+
+      if (!fn) return
+
+      const promise = this.execute(fn, context)
+        .then(value => {
+          results[index] = { status: 'fulfilled' as const, value }
+        })
+        .catch(reason => {
+          results[index] = { status: 'rejected' as const, reason }
+        })
+        .finally(() => {
+          inFlight.delete(index)
+          // Start next function when this one completes
+          if (nextIndex < functions.length && inFlight.size < maxInFlight) {
+            startNext()
+          }
+        })
+
+      inFlight.set(index, promise)
+    }
+
+    // Start initial batch up to maxInFlight
+    const initialBatchSize = Math.min(maxInFlight, functions.length)
+    for (let i = 0; i < initialBatchSize; i++) {
+      startNext()
+    }
+
+    // Wait for all to complete
+    while (inFlight.size > 0) {
+      await Promise.race(inFlight.values())
+    }
+
+    return results
   }
 
   /**

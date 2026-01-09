@@ -159,6 +159,83 @@ describe('Performance Optimizations', () => {
       expect(result).toBe('success')
       expect(mockFn).toHaveBeenCalledOnce()
     })
+
+    it('should process ALL functions in executeAllSettled even when count exceeds maxConcurrent + queueLimit', async () => {
+      // This test protects against a bug where executeAllSettled would silently drop
+      // functions beyond (maxConcurrent + queueLimit) because all promises were created
+      // upfront, causing "queue limit exceeded" errors for excess functions.
+      //
+      // With maxConcurrent=3 and queueLimit=5, only 8 functions could be processed.
+      // A backfill of 67 dates would silently drop 59 dates.
+
+      vi.useRealTimers() // Need real timers for async processing
+
+      const limiter = new ConcurrencyLimiter({
+        maxConcurrent: 3,
+        queueLimit: 5,
+        timeoutMs: 30000,
+      })
+
+      const totalFunctions = 20 // More than maxConcurrent + queueLimit (8)
+      const executionOrder: number[] = []
+
+      const functions = Array.from({ length: totalFunctions }, (_, index) => {
+        return async () => {
+          executionOrder.push(index)
+          // Small delay to simulate work
+          await new Promise(resolve => setTimeout(resolve, 5))
+          return index
+        }
+      })
+
+      const results = await limiter.executeAllSettled(functions)
+
+      // ALL functions must complete - this is the critical assertion
+      expect(results).toHaveLength(totalFunctions)
+
+      // All should be fulfilled (none rejected due to queue overflow)
+      const fulfilled = results.filter(r => r.status === 'fulfilled')
+      const rejected = results.filter(r => r.status === 'rejected')
+
+      expect(fulfilled).toHaveLength(totalFunctions)
+      expect(rejected).toHaveLength(0)
+
+      // Verify all indices were processed
+      expect(executionOrder.sort((a, b) => a - b)).toEqual(
+        Array.from({ length: totalFunctions }, (_, i) => i)
+      )
+
+      // Verify results contain correct values
+      const values = fulfilled.map(r => (r as PromiseFulfilledResult<number>).value)
+      expect(values.sort((a, b) => a - b)).toEqual(
+        Array.from({ length: totalFunctions }, (_, i) => i)
+      )
+    })
+
+    it('should reject with queue limit error when using acquire() directly beyond capacity', async () => {
+      // This test documents the expected behavior of acquire() - it SHOULD throw
+      // when queue limit is exceeded. The fix is in executeAllSettled which must
+      // batch function calls to avoid triggering this error.
+
+      const limiter = new ConcurrencyLimiter({
+        maxConcurrent: 2,
+        queueLimit: 2,
+        timeoutMs: 5000,
+      })
+
+      // Fill all slots and queue
+      const slot1 = await limiter.acquire()
+      const slot2 = await limiter.acquire()
+      void limiter.acquire() // queued (intentionally not awaited)
+      void limiter.acquire() // queued (intentionally not awaited)
+
+      // Next acquire should throw - queue is full
+      await expect(limiter.acquire()).rejects.toThrow('Concurrency queue limit exceeded')
+
+      // Clean up
+      limiter.release(slot1)
+      limiter.release(slot2)
+    })
   })
 
   describe('IntermediateCache (Requirement 9.3)', () => {
