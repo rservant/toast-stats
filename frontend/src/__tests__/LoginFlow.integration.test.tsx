@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderWithProviders, testComponentVariants } from './utils'
 import LoginPage from '../pages/LoginPage'
-import { AuthProvider } from '../context/AuthContext'
+import { AuthProvider } from '../contexts/AuthContext'
 
 describe('Login Flow Integration', () => {
   // Migrate to shared utilities for consistent testing patterns

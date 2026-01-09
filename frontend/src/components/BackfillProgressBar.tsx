@@ -1,9 +1,5 @@
 import { useEffect } from 'react'
 import { useBackfillStatus, useCancelBackfill } from '../hooks/useBackfill'
-import {
-  useDistrictBackfillStatus,
-  useCancelDistrictBackfill,
-} from '../hooks/useDistrictBackfill'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface BackfillProgressBarProps {
@@ -23,24 +19,16 @@ export function BackfillProgressBar({
 }: BackfillProgressBarProps) {
   const queryClient = useQueryClient()
 
-  // Use appropriate hooks based on backfill type
-  const { data: globalBackfillStatus } = useBackfillStatus(
-    backfillId,
-    type === 'global'
-  )
-  const { data: districtBackfillStatus } = useDistrictBackfillStatus(
-    districtId || '',
-    backfillId,
-    type === 'district' && !!districtId
-  )
-  const globalCancelMutation = useCancelBackfill()
-  const districtCancelMutation = useCancelDistrictBackfill(districtId || '')
+  // Use unified hooks with optional districtId parameter
+  // When type is 'district', pass districtId to use district-specific endpoints
+  const effectiveDistrictId = type === 'district' ? districtId : undefined
 
-  // Select the appropriate status and cancel mutation
-  const backfillStatus =
-    type === 'district' ? districtBackfillStatus : globalBackfillStatus
-  const cancelMutation =
-    type === 'district' ? districtCancelMutation : globalCancelMutation
+  const { data: backfillStatus } = useBackfillStatus(
+    backfillId,
+    true,
+    effectiveDistrictId
+  )
+  const cancelMutation = useCancelBackfill(effectiveDistrictId)
 
   // Handle completion
   useEffect(() => {

@@ -5,11 +5,7 @@
  * dependency injection and mock substitution for testing.
  */
 
-import type {
-  DistrictCacheEntry,
-  CacheMetadata,
-  DistrictStatistics,
-} from './districts.js'
+import type { DistrictCacheEntry, DistrictStatistics } from './districts.js'
 import type {
   DistrictAnalytics,
   ClubTrend,
@@ -144,33 +140,6 @@ export interface IAnalyticsEngine {
     endDate?: string
   ): Promise<LeadershipInsights>
   clearCaches(): void
-  dispose(): Promise<void>
-}
-
-/**
- * Cache Manager Interface
- */
-export interface ICacheManager {
-  getCachedDates(): Promise<string[]>
-  getData(date: string): Promise<DistrictStatistics | null>
-  saveData(date: string, data: DistrictStatistics): Promise<void>
-  clearCache(): Promise<void>
-  getMetadata(date: string): Promise<CacheMetadata | null>
-  getCacheStats(): Promise<{
-    totalEntries: number
-    totalSize: number
-    oldestEntry?: string
-    newestEntry?: string
-  }>
-  dispose(): Promise<void>
-}
-
-/**
- * Toastmasters API Service Interface
- */
-export interface IToastmastersAPIService {
-  getDistricts(): Promise<{ districts: Array<{ id: string; name: string }> }>
-  getDistrictData(districtId: string): Promise<DistrictStatistics>
   dispose(): Promise<void>
 }
 

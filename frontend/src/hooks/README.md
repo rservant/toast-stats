@@ -116,32 +116,39 @@ const { data: atRiskData } = useAtRiskClubs('46')
 
 ### Backfill Hooks
 
-#### `useInitiateDistrictBackfill(districtId)`
+The backfill hooks have been consolidated into a unified interface that supports both global and district-specific backfill operations.
 
-Mutation hook to initiate a backfill operation for a district.
+#### `useInitiateBackfill(districtId?)`
+
+Mutation hook to initiate a backfill operation. When districtId is provided, uses district-specific endpoints.
 
 **Parameters:**
 
-- `districtId`: The district ID
+- `districtId`: Optional district ID for district-specific backfills
 
 **Returns:** Mutation object with `mutate` function
 
 **Example:**
 
 ```typescript
-const { mutate: startBackfill } = useInitiateDistrictBackfill('46')
+// Global backfill
+const { mutate: startBackfill } = useInitiateBackfill()
 startBackfill({ startDate: '2025-07-01', endDate: '2025-11-22' })
+
+// District-specific backfill
+const { mutate: startDistrictBackfill } = useInitiateBackfill('46')
+startDistrictBackfill({ startDate: '2025-07-01', endDate: '2025-11-22' })
 ```
 
-#### `useDistrictBackfillStatus(districtId, backfillId, enabled?)`
+#### `useBackfillStatus(backfillId, enabled?, districtId?)`
 
-Polls the status of a district backfill operation. Automatically polls every 2 seconds while processing.
+Polls the status of a backfill operation. Automatically polls every 2 seconds while processing.
 
 **Parameters:**
 
-- `districtId`: The district ID
-- `backfillId`: The backfill job ID
+- `backfillId`: The backfill job ID (or null)
 - `enabled`: Optional boolean to enable/disable polling (default: true)
+- `districtId`: Optional district ID for district-specific backfills
 
 **Returns:** Backfill status with progress information
 
@@ -150,26 +157,69 @@ Polls the status of a district backfill operation. Automatically polls every 2 s
 **Example:**
 
 ```typescript
-const { data: status } = useDistrictBackfillStatus('46', backfillId, true)
+// Global backfill status
+const { data: status } = useBackfillStatus(backfillId, true)
+
+// District-specific backfill status
+const { data: status } = useBackfillStatus(backfillId, true, '46')
 // status.progress: { total, completed, current, skipped, failed }
 ```
 
-#### `useCancelDistrictBackfill(districtId)`
+#### `useCancelBackfill(districtId?)`
 
 Mutation hook to cancel a running backfill operation.
 
 **Parameters:**
 
-- `districtId`: The district ID
+- `districtId`: Optional district ID for district-specific backfills
 
 **Returns:** Mutation object with `mutate` function
 
 **Example:**
 
 ```typescript
-const { mutate: cancelBackfill } = useCancelDistrictBackfill('46')
+// Cancel global backfill
+const { mutate: cancelBackfill } = useCancelBackfill()
 cancelBackfill(backfillId)
+
+// Cancel district-specific backfill
+const { mutate: cancelDistrictBackfill } = useCancelBackfill('46')
+cancelDistrictBackfill(backfillId)
 ```
+
+#### `useBackfill(options?, backfillId?, enabled?)`
+
+Unified hook that provides all backfill operations in a single interface.
+
+**Parameters:**
+
+- `options`: Optional object with `districtId` for district-specific backfills
+- `backfillId`: Optional backfill ID for status polling
+- `enabled`: Optional boolean to enable/disable status polling (default: true)
+
+**Returns:** Object with `initiateBackfill`, `backfillStatus`, and `cancelBackfill`
+
+**Example:**
+
+```typescript
+// Global backfill
+const { initiateBackfill, backfillStatus, cancelBackfill } = useBackfill()
+
+// District-specific backfill
+const { initiateBackfill, backfillStatus, cancelBackfill } = useBackfill(
+  { districtId: '46' },
+  backfillId,
+  true
+)
+```
+
+#### Backward Compatibility
+
+For backward compatibility, the following aliases are available (deprecated):
+
+- `useInitiateDistrictBackfill(districtId)` → Use `useInitiateBackfill(districtId)`
+- `useDistrictBackfillStatus(districtId, backfillId, enabled)` → Use `useBackfillStatus(backfillId, enabled, districtId)`
+- `useCancelDistrictBackfill(districtId)` → Use `useCancelBackfill(districtId)`
 
 ## Caching Strategy
 
@@ -191,7 +241,8 @@ Query keys are structured for optimal cache invalidation:
 - `['districtAnalytics', districtId, startDate, endDate]` - District analytics
 - `['clubTrends', districtId, clubId]` - Club trends
 - `['atRiskClubs', districtId]` - At-risk clubs
-- `['districtBackfillStatus', districtId, backfillId]` - Backfill status
+- `['backfillStatus', backfillId]` - Global backfill status
+- `['districtBackfillStatus', districtId, backfillId]` - District-specific backfill status
 
 ## Error Handling
 
@@ -217,6 +268,10 @@ if (error) {
 These hooks fulfill the following requirements from the archived district-level-data spec (now implemented):
 
 - **Requirement 1.4:** Cache district data retrieval (useDistrictData, useDistrictCachedDates)
-- **Requirement 2.2:** Backfill progress tracking (useDistrictBackfillStatus)
+- **Requirement 2.2:** Backfill progress tracking (useBackfillStatus)
 - **Requirement 3.1:** Display club performance (useDistrictAnalytics, useClubTrends)
 - **Requirement 4.4:** At-risk club identification (useAtRiskClubs)
+
+The backfill hooks also fulfill requirements from the codebase-cleanup spec:
+
+- **Requirement 3.1-3.6:** Consolidated backfill hooks (useBackfill, useInitiateBackfill, useBackfillStatus, useCancelBackfill)
