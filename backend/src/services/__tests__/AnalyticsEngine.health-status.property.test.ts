@@ -11,11 +11,15 @@
  * - Intervention Required: membership < 12 AND net growth < 3
  * - Thriving: membership requirement met AND DCP checkpoint met AND CSP submitted
  * - Vulnerable: any requirement not met (but not intervention)
+ *
+ * Note: After the analytics-engine-refactor, assessClubHealth is now on
+ * ClubHealthAnalyticsModule, not AnalyticsEngine. These tests use the module directly.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
-import { AnalyticsEngine } from '../AnalyticsEngine.js'
+import { ClubHealthAnalyticsModule } from '../analytics/ClubHealthAnalyticsModule.js'
+import { getDCPCheckpoint } from '../analytics/AnalyticsUtils.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
 import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
@@ -33,7 +37,7 @@ const VALID_HEALTH_STATUSES: ClubHealthStatus[] = [
 
 describe('AnalyticsEngine Health Status Classification - Property-Based Tests', () => {
   let testCacheDir: string
-  let analyticsEngine: AnalyticsEngine
+  let clubHealthModule: ClubHealthAnalyticsModule
 
   beforeEach(async () => {
     // Create a unique test cache directory
@@ -48,7 +52,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
     const snapshotsDir = path.join(testCacheDir, 'snapshots')
     await fs.mkdir(snapshotsDir, { recursive: true })
 
-    // Create minimal dependencies for AnalyticsEngine
+    // Create minimal dependencies for ClubHealthAnalyticsModule
     const snapshotStore = new PerDistrictFileSnapshotStore({
       cacheDir: testCacheDir,
       maxSnapshots: 100,
@@ -59,16 +63,10 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
       districtDataAggregator,
       snapshotStore
     )
-    analyticsEngine = new AnalyticsEngine(dataSource)
+    clubHealthModule = new ClubHealthAnalyticsModule(dataSource)
   })
 
   afterEach(async () => {
-    // Clean up
-    if (analyticsEngine) {
-      analyticsEngine.clearCaches()
-      await analyticsEngine.dispose()
-    }
-
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
@@ -119,24 +117,15 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
   }
 
   /**
-   * Access the private assessClubHealth method for testing
-   * We use type assertion to access the private method
+   * Call assessClubHealth on the ClubHealthAnalyticsModule
    */
   function callAssessClubHealth(
-    engine: AnalyticsEngine,
+    module: ClubHealthAnalyticsModule,
     clubTrend: ClubTrend,
     latestClubData?: ScrapedRecord,
     snapshotDate?: string
   ): void {
-    ;(
-      engine as unknown as {
-        assessClubHealth: (
-          clubTrend: ClubTrend,
-          latestClubData?: ScrapedRecord,
-          snapshotDate?: string
-        ) => void
-      }
-    ).assessClubHealth(clubTrend, latestClubData, snapshotDate)
+    module.assessClubHealth(clubTrend, latestClubData, snapshotDate)
   }
 
   /**
@@ -178,7 +167,12 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           const clubData = createClubData(membership, memBase, cspSubmitted)
 
           // Call assessClubHealth
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           // Property: The status should be exactly one of the valid statuses
           expect(VALID_HEALTH_STATUSES).toContain(clubTrend.currentStatus)
@@ -251,7 +245,12 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           const clubData = createClubData(membership, memBase, cspSubmitted)
 
           // Call assessClubHealth
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           // Property: Status should be 'intervention-required'
           expect(clubTrend.currentStatus).toBe('intervention-required')
@@ -321,7 +320,12 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           const clubData = createClubData(membership, memBase, cspSubmitted)
 
           // Call assessClubHealth
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           // Property: Status should NOT be 'intervention-required' because net growth >= 3
           // (the growth override applies)
@@ -377,7 +381,12 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           const clubData = createClubData(membership, memBase, cspSubmitted)
 
           // Call assessClubHealth
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           // If the club is thriving, verify all requirements are met
           if (clubTrend.currentStatus === 'thriving') {
@@ -387,7 +396,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
             expect(membershipRequirementMet).toBe(true)
 
             // DCP checkpoint requirement
-            const requiredCheckpoint = analyticsEngine.getDCPCheckpoint(month)
+            const requiredCheckpoint = getDCPCheckpoint(month)
             expect(dcpGoals).toBeGreaterThanOrEqual(requiredCheckpoint)
 
             // Risk factors should be empty for thriving clubs
@@ -441,7 +450,12 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           const clubData = createClubData(membership, memBase, cspSubmitted)
 
           // Call assessClubHealth
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           // Property: The status should be one of the valid new status values
           expect(validStatuses).toContain(clubTrend.currentStatus)
@@ -495,7 +509,12 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           const clubData = createClubData(membership, memBase, cspSubmitted)
 
           // Call assessClubHealth
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           // Property: If not thriving, there should be at least one risk factor
           if (clubTrend.currentStatus !== 'thriving') {

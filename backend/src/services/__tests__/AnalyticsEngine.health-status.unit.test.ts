@@ -7,10 +7,13 @@
  * - Thriving cases (Requirement 1.4)
  * - Vulnerable cases (Requirement 1.5)
  * - Month boundary cases (Requirements 2.1, 2.2, 2.3, 2.4, 2.5)
+ *
+ * Note: After the analytics-engine-refactor, assessClubHealth is now on
+ * ClubHealthAnalyticsModule, not AnalyticsEngine. These tests use the module directly.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { AnalyticsEngine } from '../AnalyticsEngine.js'
+import { ClubHealthAnalyticsModule } from '../analytics/ClubHealthAnalyticsModule.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
 import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
@@ -21,7 +24,7 @@ import path from 'path'
 
 describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
   let testCacheDir: string
-  let analyticsEngine: AnalyticsEngine
+  let clubHealthModule: ClubHealthAnalyticsModule
 
   beforeEach(async () => {
     // Create a unique test cache directory
@@ -36,7 +39,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
     const snapshotsDir = path.join(testCacheDir, 'snapshots')
     await fs.mkdir(snapshotsDir, { recursive: true })
 
-    // Create minimal dependencies for AnalyticsEngine
+    // Create minimal dependencies for ClubHealthAnalyticsModule
     const snapshotStore = new PerDistrictFileSnapshotStore({
       cacheDir: testCacheDir,
       maxSnapshots: 100,
@@ -47,16 +50,10 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       districtDataAggregator,
       snapshotStore
     )
-    analyticsEngine = new AnalyticsEngine(dataSource)
+    clubHealthModule = new ClubHealthAnalyticsModule(dataSource)
   })
 
   afterEach(async () => {
-    // Clean up
-    if (analyticsEngine) {
-      analyticsEngine.clearCaches()
-      await analyticsEngine.dispose()
-    }
-
     // Clean up test cache directory
     try {
       await fs.rm(testCacheDir, { recursive: true, force: true })
@@ -108,23 +105,15 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
   }
 
   /**
-   * Access the private assessClubHealth method for testing
+   * Call assessClubHealth on the ClubHealthAnalyticsModule
    */
   function callAssessClubHealth(
-    engine: AnalyticsEngine,
+    module: ClubHealthAnalyticsModule,
     clubTrend: ClubTrend,
     latestClubData?: ScrapedRecord,
     snapshotDate?: string
   ): void {
-    ;(
-      engine as unknown as {
-        assessClubHealth: (
-          clubTrend: ClubTrend,
-          latestClubData?: ScrapedRecord,
-          snapshotDate?: string
-        ) => void
-      }
-    ).assessClubHealth(clubTrend, latestClubData, snapshotDate)
+    module.assessClubHealth(clubTrend, latestClubData, snapshotDate)
   }
 
   /**
@@ -137,7 +126,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(8, 5, '2026-01-15') // January, DCP checkpoint = 3
       const clubData = createClubData(8, 8, true, 5)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('intervention-required')
       expect(clubTrend.riskFactors).toContain('Membership below 12 (critical)')
@@ -151,7 +140,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(11, 5, '2026-01-15')
       const clubData = createClubData(11, 9, true, 5)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('intervention-required')
       expect(clubTrend.riskFactors).toContain('Membership below 12 (critical)')
@@ -166,7 +155,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(11, 5, '2026-01-15')
       const clubData = createClubData(11, 8, true, 5)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       // Should NOT be intervention-required because net growth >= 3
       expect(clubTrend.currentStatus).not.toBe('intervention-required')
@@ -179,7 +168,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(5, 10, '2026-01-15')
       const clubData = createClubData(5, 7, true, 10)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('intervention-required')
       expect(clubTrend.riskFactors).toContain('Membership below 12 (critical)')
@@ -190,7 +179,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(0, 0, '2026-01-15')
       const clubData = createClubData(0, 0, true, 0)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('intervention-required')
     })
@@ -206,7 +195,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(20, 3, '2026-01-15')
       const clubData = createClubData(20, 15, true, 3)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('thriving')
       expect(clubTrend.riskFactors).toHaveLength(0)
@@ -219,7 +208,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(15, 4, '2026-01-15')
       const clubData = createClubData(15, 10, true, 4)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('thriving')
       expect(clubTrend.riskFactors).toHaveLength(0)
@@ -230,7 +219,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(25, 5, '2026-04-15')
       const clubData = createClubData(25, 20, true, 5)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-04-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-04-15')
 
       expect(clubTrend.currentStatus).toBe('thriving')
       expect(clubTrend.riskFactors).toHaveLength(0)
@@ -241,7 +230,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(20, 0, '2026-07-15')
       const clubData = createClubData(20, 15, true, 0)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-07-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-07-15')
 
       expect(clubTrend.currentStatus).toBe('thriving')
       expect(clubTrend.riskFactors).toHaveLength(0)
@@ -252,7 +241,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(12, 3, '2026-01-15')
       const clubData = createClubData(12, 9, true, 3)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('thriving')
       expect(clubTrend.riskFactors).toHaveLength(0)
@@ -269,7 +258,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(20, 2, '2026-01-15')
       const clubData = createClubData(20, 15, true, 2)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('vulnerable')
       expect(
@@ -286,7 +275,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(20, 5, '2026-01-15')
       const clubData = createClubData(20, 15, false, 5)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('vulnerable')
       expect(clubTrend.riskFactors).toContain('CSP not submitted')
@@ -297,7 +286,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(15, 5, '2026-01-15')
       const clubData = createClubData(15, 13, true, 5)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('vulnerable')
       expect(
@@ -312,7 +301,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(20, 4, '2026-04-15')
       const clubData = createClubData(20, 15, true, 4)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-04-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-04-15')
 
       expect(clubTrend.currentStatus).toBe('vulnerable')
       expect(
@@ -328,7 +317,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
       const clubTrend = createClubTrend(18, 1, '2026-01-15')
       const clubData = createClubData(18, 17, false, 1)
 
-      callAssessClubHealth(analyticsEngine, clubTrend, clubData, '2026-01-15')
+      callAssessClubHealth(clubHealthModule, clubTrend, clubData, '2026-01-15')
 
       expect(clubTrend.currentStatus).toBe('vulnerable')
       expect(clubTrend.riskFactors.length).toBeGreaterThanOrEqual(3)
@@ -362,7 +351,12 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
           const clubTrend = createClubTrend(20, requiredDcp, dateString)
           const clubData = createClubData(20, 15, true, requiredDcp)
 
-          callAssessClubHealth(analyticsEngine, clubTrend, clubData, dateString)
+          callAssessClubHealth(
+            clubHealthModule,
+            clubTrend,
+            clubData,
+            dateString
+          )
 
           expect(clubTrend.currentStatus).toBe('thriving')
         })
@@ -373,7 +367,7 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
             const clubData = createClubData(20, 15, true, requiredDcp - 1)
 
             callAssessClubHealth(
-              analyticsEngine,
+              clubHealthModule,
               clubTrend,
               clubData,
               dateString
@@ -435,13 +429,18 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
         // September 15 - requires 1 goal
         const septTrend = createClubTrend(20, 1, '2026-09-15')
         const septData = createClubData(20, 15, true, 1)
-        callAssessClubHealth(analyticsEngine, septTrend, septData, '2026-09-15')
+        callAssessClubHealth(
+          clubHealthModule,
+          septTrend,
+          septData,
+          '2026-09-15'
+        )
         expect(septTrend.currentStatus).toBe('thriving')
 
         // October 15 - requires 2 goals, same club with 1 goal is now vulnerable
         const octTrend = createClubTrend(20, 1, '2026-10-15')
         const octData = createClubData(20, 15, true, 1)
-        callAssessClubHealth(analyticsEngine, octTrend, octData, '2026-10-15')
+        callAssessClubHealth(clubHealthModule, octTrend, octData, '2026-10-15')
         expect(octTrend.currentStatus).toBe('vulnerable')
       })
 
@@ -449,13 +448,13 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
         // November 15 - requires 2 goals
         const novTrend = createClubTrend(20, 2, '2026-11-15')
         const novData = createClubData(20, 15, true, 2)
-        callAssessClubHealth(analyticsEngine, novTrend, novData, '2026-11-15')
+        callAssessClubHealth(clubHealthModule, novTrend, novData, '2026-11-15')
         expect(novTrend.currentStatus).toBe('thriving')
 
         // December 15 - requires 3 goals, same club with 2 goals is now vulnerable
         const decTrend = createClubTrend(20, 2, '2026-12-15')
         const decData = createClubData(20, 15, true, 2)
-        callAssessClubHealth(analyticsEngine, decTrend, decData, '2026-12-15')
+        callAssessClubHealth(clubHealthModule, decTrend, decData, '2026-12-15')
         expect(decTrend.currentStatus).toBe('vulnerable')
       })
 
@@ -463,13 +462,13 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
         // January 15 - requires 3 goals
         const janTrend = createClubTrend(20, 3, '2026-01-15')
         const janData = createClubData(20, 15, true, 3)
-        callAssessClubHealth(analyticsEngine, janTrend, janData, '2026-01-15')
+        callAssessClubHealth(clubHealthModule, janTrend, janData, '2026-01-15')
         expect(janTrend.currentStatus).toBe('thriving')
 
         // February 15 - requires 4 goals, same club with 3 goals is now vulnerable
         const febTrend = createClubTrend(20, 3, '2026-02-15')
         const febData = createClubData(20, 15, true, 3)
-        callAssessClubHealth(analyticsEngine, febTrend, febData, '2026-02-15')
+        callAssessClubHealth(clubHealthModule, febTrend, febData, '2026-02-15')
         expect(febTrend.currentStatus).toBe('vulnerable')
       })
 
@@ -477,13 +476,13 @@ describe('AnalyticsEngine Health Status Classification - Unit Tests', () => {
         // March 15 - requires 4 goals
         const marTrend = createClubTrend(20, 4, '2026-03-15')
         const marData = createClubData(20, 15, true, 4)
-        callAssessClubHealth(analyticsEngine, marTrend, marData, '2026-03-15')
+        callAssessClubHealth(clubHealthModule, marTrend, marData, '2026-03-15')
         expect(marTrend.currentStatus).toBe('thriving')
 
         // April 15 - requires 5 goals, same club with 4 goals is now vulnerable
         const aprTrend = createClubTrend(20, 4, '2026-04-15')
         const aprData = createClubData(20, 15, true, 4)
-        callAssessClubHealth(analyticsEngine, aprTrend, aprData, '2026-04-15')
+        callAssessClubHealth(clubHealthModule, aprTrend, aprData, '2026-04-15')
         expect(aprTrend.currentStatus).toBe('vulnerable')
       })
     })

@@ -53,16 +53,14 @@ describe('Functionality Preservation Property Tests', () => {
     const validDateGenerator = fc
       .integer({ min: 2020, max: 2025 })
       .chain(year =>
-        fc
-          .integer({ min: 1, max: 12 })
-          .chain(month =>
-            fc
-              .integer({ min: 1, max: 28 }) // Use 28 to avoid invalid dates
-              .map(
-                day =>
-                  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-              )
-          )
+        fc.integer({ min: 1, max: 12 }).chain(month =>
+          fc
+            .integer({ min: 1, max: 28 }) // Use 28 to avoid invalid dates
+            .map(
+              day =>
+                `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            )
+        )
       )
 
     const validBackfillIdGenerator = fc

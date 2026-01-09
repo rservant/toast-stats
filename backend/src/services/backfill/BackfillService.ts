@@ -46,7 +46,6 @@ import type {
   PartialSnapshotResult,
 } from './types.js'
 
-
 export class BackfillService {
   private jobManager: JobManager
   private dataSourceSelector: DataSourceSelector
@@ -113,7 +112,6 @@ export class BackfillService {
       }
     )
 
-
     // Initialize performance optimization components (Requirements 9.1, 9.2, 9.3)
     this.rateLimiter = RateLimiterManager.getRateLimiter('unified-backfill', {
       maxRequests: 10, // Max 10 requests per minute to protect external sources
@@ -172,7 +170,6 @@ export class BackfillService {
     )
   }
 
-
   /**
    * Initiate a backfill operation with modern API design and comprehensive error handling
    */
@@ -229,7 +226,6 @@ export class BackfillService {
         ),
         validationPassed: true,
       }
-
 
       // Log scope violations if any
       if (filterResult.invalidDistricts.length > 0) {
@@ -302,7 +298,6 @@ export class BackfillService {
     }
   }
 
-
   /**
    * Get backfill job status with comprehensive error information and performance metrics
    */
@@ -360,7 +355,9 @@ export class BackfillService {
   getPerformanceStatus(): {
     rateLimiter: ReturnType<RateLimiter['getStatus']>
     concurrencyLimiter: ReturnType<ConcurrencyLimiter['getStatus']>
-    intermediateCache: ReturnType<IntermediateCache<DistrictStatistics[]>['getStats']>
+    intermediateCache: ReturnType<
+      IntermediateCache<DistrictStatistics[]>['getStats']
+    >
   } {
     return {
       rateLimiter: this.rateLimiter.getStatus(),
@@ -368,7 +365,6 @@ export class BackfillService {
       intermediateCache: this.intermediateCache.getStats(),
     }
   }
-
 
   /**
    * Update performance optimization settings
@@ -437,7 +433,6 @@ export class BackfillService {
         operation: 'processBackfill',
       }
     )
-
 
     try {
       // Update concurrency limit if specified in request
@@ -518,7 +513,6 @@ export class BackfillService {
           })
         }
       })
-
 
       // Execute date processing with concurrency control
       await this.concurrencyLimiter.executeAllSettled(dateProcessingFunctions, {
@@ -611,7 +605,6 @@ export class BackfillService {
     }
   }
 
-
   /**
    * Process a single date with district-level error handling, partial snapshot creation, and caching
    */
@@ -676,7 +669,6 @@ export class BackfillService {
         failedDistricts.push(districtId)
         continue
       }
-
 
       try {
         // Update district status
@@ -781,7 +773,6 @@ export class BackfillService {
       }
     }
 
-
     // Create snapshot if we have any successful districts
     if (successfulDistricts.length > 0) {
       try {
@@ -846,7 +837,6 @@ export class BackfillService {
       })
     }
   }
-
 
   /**
    * Collect data for a single district with error handling and caching support
@@ -932,7 +922,6 @@ export class BackfillService {
       throw error
     }
   }
-
 
   /**
    * Map enhanced error types to snapshot error types
@@ -1022,7 +1011,6 @@ export class BackfillService {
         }
       }
 
-
       // Check if this is closing period data and if we should update the existing snapshot
       const isClosingPeriod = effectiveSnapshotDate !== date
       const collectionDate =
@@ -1097,7 +1085,6 @@ export class BackfillService {
       const snapshotId = `${Date.parse(effectiveSnapshotDate)}-partial-${Date.now()}`
 
       const rankedDistricts = successfulDistricts
-
 
       // Step 2: Create normalized data structure with ranked districts
       const job = this.jobManager.getJob(backfillId)
@@ -1239,7 +1226,6 @@ export class BackfillService {
     }
   }
 
-
   /**
    * Fetch All Districts CSV and calculate rankings for ALL districts
    */
@@ -1357,7 +1343,6 @@ export class BackfillService {
         operation: 'fetchAndCalculateAllDistrictsRankings',
       })
 
-
       // Build AllDistrictsRankingsData structure
       const rankings: DistrictRanking[] = rankedDistricts
         .filter(d => d.ranking)
@@ -1430,7 +1415,6 @@ export class BackfillService {
     nextDay.setUTCDate(date.getUTCDate() + 1)
     return nextDay.getUTCMonth() !== date.getUTCMonth()
   }
-
 
   /**
    * Detect closing period from cache metadata and determine the correct snapshot date

@@ -10,7 +10,10 @@ import { RetryManager } from '../../utils/RetryManager.js'
 import { RateLimiter, RateLimiterManager } from '../../utils/RateLimiter.js'
 import { RefreshService } from '../RefreshService.js'
 import type { RankingCalculator } from '../RankingCalculator.js'
-import type { DistrictStatistics, ScrapedRecord } from '../../types/districts.js'
+import type {
+  DistrictStatistics,
+  ScrapedRecord,
+} from '../../types/districts.js'
 import type { SnapshotStore } from '../../types/snapshots.js'
 import type {
   BackfillRequest,
