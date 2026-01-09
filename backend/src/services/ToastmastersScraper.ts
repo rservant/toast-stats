@@ -366,13 +366,33 @@ export class ToastmastersScraper {
       }
     )
 
-    // Calculate previous month
+    // Calculate previous month and handle program year boundary
+    // When falling back from July (month 7) to June (month 6), we cross the program year boundary
+    // June belongs to the previous program year (e.g., July 2025 is in 2025-2026, but June 2025 is in 2024-2025)
     const prevMonth = month === 1 ? 12 : month - 1
-    const fallbackUrl = `${baseUrl}/${pageName}?${districtParam}month=${prevMonth}&day=${formattedDate}`
+    const prevMonthYear = month === 1 ? year - 1 : year
+    const crossesProgramYearBoundary = month === 7 // July to June crosses program year boundary
+
+    // Build fallback URL - use previous program year's base URL if crossing boundary
+    let fallbackBaseUrl = baseUrl
+    if (crossesProgramYearBoundary) {
+      // Construct date string for previous month to get correct program year
+      const prevMonthDateString = `${prevMonthYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      fallbackBaseUrl = this.buildBaseUrl(prevMonthDateString)
+      logger.info('Crossing program year boundary - using previous program year URL', {
+        originalBaseUrl: baseUrl,
+        fallbackBaseUrl,
+        prevMonthDateString,
+      })
+    }
+
+    const fallbackUrl = `${fallbackBaseUrl}/${pageName}?${districtParam}month=${prevMonth}&day=${formattedDate}`
 
     logger.info('Trying previous month fallback URL', {
       fallbackUrl,
       prevMonth,
+      prevMonthYear,
+      crossesProgramYearBoundary,
     })
 
     await page.goto(fallbackUrl, {
@@ -816,15 +836,33 @@ export class ToastmastersScraper {
           }
         )
 
-        // Calculate previous month
+        // Calculate previous month and handle program year boundary
+        // When falling back from July (month 7) to June (month 6), we cross the program year boundary
+        // June belongs to the previous program year (e.g., July 2025 is in 2025-2026, but June 2025 is in 2024-2025)
         const prevMonth = month === 1 ? 12 : month - 1
         const prevMonthYear = month === 1 ? year - 1 : year
-        const fallbackUrl = `${baseUrl}/Default.aspx?month=${prevMonth}&day=${formattedDate}`
+        const crossesProgramYearBoundary = month === 7 // July to June crosses program year boundary
+
+        // Build fallback URL - use previous program year's base URL if crossing boundary
+        let fallbackBaseUrl = baseUrl
+        if (crossesProgramYearBoundary) {
+          // Construct date string for previous month to get correct program year
+          const prevMonthDateString = `${prevMonthYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          fallbackBaseUrl = this.buildBaseUrl(prevMonthDateString)
+          logger.info('Crossing program year boundary - using previous program year URL', {
+            originalBaseUrl: baseUrl,
+            fallbackBaseUrl,
+            prevMonthDateString,
+          })
+        }
+
+        const fallbackUrl = `${fallbackBaseUrl}/Default.aspx?month=${prevMonth}&day=${formattedDate}`
 
         logger.info('Trying previous month fallback URL', {
           fallbackUrl,
           prevMonth,
           prevMonthYear,
+          crossesProgramYearBoundary,
         })
 
         await page.goto(fallbackUrl, {
@@ -1240,17 +1278,23 @@ export class ToastmastersScraper {
             districtId
           )
 
-          if (!navResult.success) {
-            throw new Error(
-              `Date ${dateString} not available (dashboard returned ${navResult.actualDateString})`
-            )
-          }
-
+          // Accept the data even if date doesn't match (closing period behavior)
+          // The dashboard may return a different date during month-end reconciliation
           actualDateString = navResult.actualDateString
 
           if (navResult.usedFallback) {
             logger.info(
               'Division performance: used month-end reconciliation fallback',
+              {
+                districtId,
+                requestedDate: dateString,
+                actualDate: actualDateString,
+                success: navResult.success,
+              }
+            )
+          } else if (!navResult.success) {
+            logger.info(
+              'Division performance: month-end closing period detected - dashboard returned different date',
               {
                 districtId,
                 requestedDate: dateString,
@@ -1324,17 +1368,23 @@ export class ToastmastersScraper {
             districtId
           )
 
-          if (!navResult.success) {
-            throw new Error(
-              `Date ${dateString} not available (dashboard returned ${navResult.actualDateString})`
-            )
-          }
-
+          // Accept the data even if date doesn't match (closing period behavior)
+          // The dashboard may return a different date during month-end reconciliation
           actualDateString = navResult.actualDateString
 
           if (navResult.usedFallback) {
             logger.info(
               'Club performance: used month-end reconciliation fallback',
+              {
+                districtId,
+                requestedDate: dateString,
+                actualDate: actualDateString,
+                success: navResult.success,
+              }
+            )
+          } else if (!navResult.success) {
+            logger.info(
+              'Club performance: month-end closing period detected - dashboard returned different date',
               {
                 districtId,
                 requestedDate: dateString,
