@@ -13,13 +13,19 @@
  * 2. Route handlers are properly composed from modules
  * 3. Middleware execution order is preserved
  * 4. Response formatting is consistent
+ *
+ * Test Isolation:
+ * - Each test uses a fresh Express app instance
+ * - Cache is cleared before each test to prevent cross-test pollution
+ * - Uses deterministic seeds for property tests to ensure reproducibility
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import * as fc from 'fast-check'
 import express, { type Express } from 'express'
 import request from 'supertest'
 import districtRoutes from '../index.js'
+import { cacheService } from '../../../services/CacheService.js'
 
 describe('Route Module Composition Property Tests', () => {
   let app: Express
@@ -30,8 +36,15 @@ describe('Route Module Composition Property Tests', () => {
     app.use('/api/districts', districtRoutes)
   })
 
+  beforeEach(() => {
+    // Clear cache before each test to ensure test isolation
+    // This prevents cached responses from one test affecting another
+    cacheService.clear()
+  })
+
   afterAll(() => {
-    // Cleanup if needed
+    // Final cleanup
+    cacheService.clear()
   })
 
   /**
@@ -41,124 +54,6 @@ describe('Route Module Composition Property Tests', () => {
    * SHALL respond with appropriate status codes and response structure.
    */
   describe('Property 3: Route Module Composition', () => {
-    // Define the expected routes that should be registered
-    const expectedRoutes = [
-      // Core routes
-      { method: 'GET', path: '/', description: 'List districts' },
-      {
-        method: 'GET',
-        path: '/rankings',
-        description: 'Get district rankings',
-      },
-      { method: 'GET', path: '/cache/dates', description: 'Get cached dates' },
-
-      // District-specific core routes (use placeholder :districtId)
-      {
-        method: 'GET',
-        path: '/:districtId/statistics',
-        description: 'Get district statistics',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/clubs',
-        description: 'Get district clubs',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/membership-history',
-        description: 'Get membership history',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/educational-awards',
-        description: 'Get educational awards',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/rank-history',
-        description: 'Get rank history',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/cached-dates',
-        description: 'Get district cached dates',
-      },
-
-      // Analytics routes
-      {
-        method: 'GET',
-        path: '/:districtId/analytics',
-        description: 'Get district analytics',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/membership-analytics',
-        description: 'Get membership analytics',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/at-risk-clubs',
-        description: 'Get at-risk clubs',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/leadership-insights',
-        description: 'Get leadership insights',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/distinguished-club-analytics',
-        description: 'Get distinguished club analytics',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/year-over-year/:date',
-        description: 'Get year-over-year comparison',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/export',
-        description: 'Export district data',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/clubs/:clubId/trends',
-        description: 'Get club trends',
-      },
-
-      // Backfill routes
-      {
-        method: 'POST',
-        path: '/backfill',
-        description: 'Initiate global backfill',
-      },
-      {
-        method: 'GET',
-        path: '/backfill/:backfillId',
-        description: 'Get backfill status',
-      },
-      {
-        method: 'DELETE',
-        path: '/backfill/:backfillId',
-        description: 'Cancel backfill',
-      },
-      {
-        method: 'POST',
-        path: '/:districtId/backfill',
-        description: 'Initiate district backfill',
-      },
-      {
-        method: 'GET',
-        path: '/:districtId/backfill/:backfillId',
-        description: 'Get district backfill status',
-      },
-      {
-        method: 'DELETE',
-        path: '/:districtId/backfill/:backfillId',
-        description: 'Cancel district backfill',
-      },
-    ]
-
     it('should have all expected routes registered', () => {
       // This is a structural test to verify route registration
       // We test that the router has the expected structure
@@ -172,6 +67,10 @@ describe('Route Module Composition Property Tests', () => {
       // Verify the router is properly composed
       expect(districtRoutes).toBeDefined()
       expect(typeof districtRoutes).toBe('function')
+
+      // Verify we have a reasonable number of route handlers
+      // (4 sub-routers: snapshots, backfill, core, analytics)
+      expect(routerStack.length).toBeGreaterThanOrEqual(4)
     })
 
     it('should respond with proper error format for invalid district IDs', async () => {
@@ -205,7 +104,10 @@ describe('Route Module Composition Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 20 } // Limit runs since we're making HTTP requests
+        {
+          numRuns: 20, // Limit runs since we're making HTTP requests
+          seed: 12345, // Deterministic seed for reproducibility
+        }
       )
     })
 
@@ -235,7 +137,10 @@ describe('Route Module Composition Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 20 } // Limit runs since we're making HTTP requests
+        {
+          numRuns: 20, // Limit runs since we're making HTTP requests
+          seed: 23456, // Deterministic seed for reproducibility
+        }
       )
     })
 
@@ -267,7 +172,10 @@ describe('Route Module Composition Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 20 } // Limit runs since we're making HTTP requests
+        {
+          numRuns: 20, // Limit runs since we're making HTTP requests
+          seed: 34567, // Deterministic seed for reproducibility
+        }
       )
     })
 
@@ -295,8 +203,6 @@ describe('Route Module Composition Property Tests', () => {
             // Check response structure based on whether it's an error or success
             // An error response has an 'error' property, success has '_snapshot_metadata'
             const hasError = response.body.error !== undefined
-            const hasSnapshotMetadata =
-              response.body._snapshot_metadata !== undefined
 
             if (response.status === 200 && !hasError) {
               // Success response should have data
@@ -309,7 +215,10 @@ describe('Route Module Composition Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 20 } // Limit runs since we're making HTTP requests
+        {
+          numRuns: 20, // Limit runs since we're making HTTP requests
+          seed: 45678, // Deterministic seed for reproducibility
+        }
       )
     })
 
@@ -360,7 +269,10 @@ describe('Route Module Composition Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 15 } // Limit runs since we're making HTTP requests
+        {
+          numRuns: 15, // Limit runs since we're making HTTP requests
+          seed: 56789, // Deterministic seed for reproducibility
+        }
       )
     })
   })

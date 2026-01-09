@@ -13,6 +13,12 @@ import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { DataValidator } from './DataValidator.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
+import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
+import {
+  DataNormalizer,
+  type RawData,
+  type DistrictError,
+} from './DataNormalizer.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type {
   SnapshotStore,
@@ -22,66 +28,7 @@ import type {
 } from '../types/snapshots.js'
 import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
 
-/**
- * Raw data collected from scraping operations
- */
-interface RawData {
-  /** All districts summary data */
-  allDistricts: ScrapedRecord[]
-
-  /** Metadata about all districts data source */
-  allDistrictsMetadata: {
-    fromCache: boolean
-    csvDate: string
-    fetchedAt: string
-    /** Data month from cache metadata (YYYY-MM format), if available */
-    dataMonth?: string
-    /** Whether this is closing period data from cache metadata */
-    isClosingPeriod?: boolean
-  }
-
-  /** District-specific performance data (configured districts only) */
-  /** For each configured district, we fetch 3 CSV files: */
-  /** 1. District performance, 2. Division performance, 3. Club performance */
-  districtData: Map<
-    string,
-    {
-      districtPerformance: ScrapedRecord[]
-      divisionPerformance: ScrapedRecord[]
-      clubPerformance: ScrapedRecord[]
-    }
-  >
-  /** Metadata about the scraping operation */
-  scrapingMetadata: {
-    startTime: string
-    endTime: string
-    durationMs: number
-    districtCount: number
-    errors: string[]
-    /** Per-district error tracking */
-    districtErrors: Map<string, DistrictError[]>
-    /** Successfully processed districts */
-    successfulDistricts: string[]
-    /** Failed districts */
-    failedDistricts: string[]
-  }
-}
-
-/**
- * Error information for a specific district
- */
-interface DistrictError {
-  /** District ID that failed */
-  districtId: string
-  /** Type of operation that failed */
-  operation: 'districtPerformance' | 'divisionPerformance' | 'clubPerformance'
-  /** Error message */
-  error: string
-  /** Timestamp when error occurred */
-  timestamp: string
-  /** Whether this district should be retried in next refresh */
-  shouldRetry: boolean
-}
+// RawData and DistrictError are imported from DataNormalizer.js
 
 /**
  * Result of a complete refresh operation
@@ -122,6 +69,8 @@ export class RefreshService {
   private readonly districtConfigService: DistrictConfigurationService
   private readonly rankingCalculator?: RankingCalculator
   private readonly rawCSVCache: RawCSVCacheService
+  private readonly closingPeriodDetector: ClosingPeriodDetector
+  private readonly dataNormalizer: DataNormalizer
   private readonly retryOptions = RetryManager.getDashboardRetryOptions()
   private readonly scrapingCircuitBreaker: CircuitBreaker
 
@@ -131,7 +80,9 @@ export class RefreshService {
     rawCSVCache: RawCSVCacheService,
     validator?: DataValidator,
     districtConfigService?: DistrictConfigurationService,
-    rankingCalculator?: RankingCalculator
+    rankingCalculator?: RankingCalculator,
+    closingPeriodDetector?: ClosingPeriodDetector,
+    dataNormalizer?: DataNormalizer
   ) {
     this.snapshotStore = snapshotStore
     this.scraper = scraper
@@ -142,6 +93,18 @@ export class RefreshService {
     if (rankingCalculator !== undefined) {
       this.rankingCalculator = rankingCalculator
     }
+    // Initialize ClosingPeriodDetector - use provided instance or create default
+    this.closingPeriodDetector =
+      closingPeriodDetector || new ClosingPeriodDetector({ logger })
+
+    // Initialize DataNormalizer - use provided instance or create default
+    // Inject the ClosingPeriodDetector into DataNormalizer
+    this.dataNormalizer =
+      dataNormalizer ||
+      new DataNormalizer({
+        logger,
+        closingPeriodDetector: this.closingPeriodDetector,
+      })
 
     // Initialize circuit breaker for scraping operations
     this.scrapingCircuitBreaker =
@@ -1145,137 +1108,6 @@ export class RefreshService {
   }
 
   /**
-   * Detect if the CSV data represents a closing period
-   *
-   * A closing period occurs when the Toastmasters dashboard publishes data for a prior month
-   * (data month) with an "As of" date in the current month. During closing periods, the
-   * snapshot should be dated as the last day of the data month, not the "As of" date.
-   *
-   * @param csvDate - The "As of" date from the CSV (when the page was generated)
-   * @param dataMonth - The month the statistics actually represent (extracted from CSV content)
-   * @returns Closing period information including whether it's a closing period and the appropriate snapshot date
-   */
-  private detectClosingPeriod(
-    csvDate: string,
-    dataMonth: string
-  ): {
-    isClosingPeriod: boolean
-    dataMonth: string
-    asOfDate: string
-    snapshotDate: string
-    collectionDate: string
-  } {
-    try {
-      // Parse the CSV date (As of date)
-      // IMPORTANT: Use UTC methods to ensure consistent behavior across timezones
-      // The csvDate is in ISO format (YYYY-MM-DD), so we need UTC parsing
-      const csvDateObj = new Date(csvDate)
-      const csvYear = csvDateObj.getUTCFullYear()
-      const csvMonth = csvDateObj.getUTCMonth() + 1 // getUTCMonth() returns 0-11
-
-      // Parse the data month (format: "YYYY-MM" or just "MM")
-      let dataYear: number
-      let dataMonthNum: number
-
-      if (dataMonth.includes('-')) {
-        // Format: "YYYY-MM"
-        const [yearStr, monthStr] = dataMonth.split('-')
-        dataYear = parseInt(yearStr!, 10)
-        dataMonthNum = parseInt(monthStr!, 10)
-      } else {
-        // Format: "MM" - assume same year as CSV date initially
-        dataMonthNum = parseInt(dataMonth, 10)
-        dataYear = csvYear
-
-        // Handle cross-year scenario: if data month > CSV month, data is from previous year
-        if (dataMonthNum > csvMonth) {
-          dataYear = csvYear - 1
-        }
-      }
-
-      // Validate parsed values
-      if (
-        isNaN(dataYear) ||
-        isNaN(dataMonthNum) ||
-        dataMonthNum < 1 ||
-        dataMonthNum > 12
-      ) {
-        logger.warn(
-          'Invalid data month format, treating as non-closing period',
-          {
-            dataMonth,
-            csvDate,
-          }
-        )
-        return {
-          isClosingPeriod: false,
-          dataMonth,
-          asOfDate: csvDate,
-          snapshotDate: csvDate,
-          collectionDate: csvDate,
-        }
-      }
-
-      // Check if this is a closing period (data month < As of month, accounting for year)
-      const isClosingPeriod =
-        dataYear < csvYear || (dataYear === csvYear && dataMonthNum < csvMonth)
-
-      if (isClosingPeriod) {
-        // Calculate the last day of the data month using UTC to avoid timezone issues
-        // Day 0 of month N+1 gives the last day of month N
-        const lastDay = new Date(
-          Date.UTC(dataYear, dataMonthNum, 0)
-        ).getUTCDate()
-        const snapshotDate = `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
-
-        logger.info('Closing period detected', {
-          csvDate,
-          dataMonth: `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}`,
-          snapshotDate,
-          isClosingPeriod: true,
-        })
-
-        return {
-          isClosingPeriod: true,
-          dataMonth: `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}`,
-          asOfDate: csvDate,
-          snapshotDate,
-          collectionDate: csvDate,
-        }
-      } else {
-        // Not a closing period - use CSV date as-is
-        return {
-          isClosingPeriod: false,
-          dataMonth: `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}`,
-          asOfDate: csvDate,
-          snapshotDate: csvDate,
-          collectionDate: csvDate,
-        }
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error(
-        'Error detecting closing period, treating as non-closing period',
-        {
-          csvDate,
-          dataMonth,
-          error: errorMessage,
-        }
-      )
-
-      // Fallback to non-closing period behavior
-      return {
-        isClosingPeriod: false,
-        dataMonth,
-        asOfDate: csvDate,
-        snapshotDate: csvDate,
-        collectionDate: csvDate,
-      }
-    }
-  }
-
-  /**
    * Closing period information returned from normalizeData
    * Used to pass closing period context to createSnapshot
    */
@@ -1289,228 +1121,16 @@ export class RefreshService {
 
   /**
    * Normalize raw scraping data into structured NormalizedData format
-   * Detects closing period data and sets appropriate metadata fields
+   * Delegates to DataNormalizer for the actual transformation logic
    */
   private async normalizeData(rawData: RawData): Promise<NormalizedData> {
-    const startTime = Date.now()
-    logger.info('Starting data normalization', {
-      districtCount: rawData.districtData.size,
-    })
+    // Delegate to DataNormalizer
+    const result = await this.dataNormalizer.normalize(rawData)
 
-    try {
-      const districts: DistrictStatistics[] = []
+    // Store closing period info for use by createSnapshot
+    this.closingPeriodInfo = result.closingPeriodInfo
 
-      // Process each district's data
-      // Use the csvDate from allDistrictsMetadata as the authoritative "as of" date
-      const dataAsOfDate = rawData.allDistrictsMetadata.csvDate
-      for (const [districtId, data] of Array.from(
-        rawData.districtData.entries()
-      )) {
-        try {
-          const districtStats = await this.normalizeDistrictData(
-            districtId,
-            data,
-            dataAsOfDate
-          )
-          districts.push(districtStats)
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          logger.warn('Failed to normalize district data', {
-            districtId,
-            error: errorMessage,
-          })
-          // Continue with other districts rather than failing completely
-        }
-      }
-
-      if (districts.length === 0) {
-        throw new Error('No districts were successfully normalized')
-      }
-
-      const processingDurationMs = Date.now() - startTime
-
-      // Detect closing period using cache metadata or derive from csvDate
-      // dataMonth comes from cache metadata if available, otherwise derive from csvDate
-      const dataMonth =
-        rawData.allDistrictsMetadata.dataMonth ??
-        rawData.allDistrictsMetadata.csvDate.substring(0, 7) // Extract YYYY-MM from csvDate
-
-      const closingPeriodInfo = this.detectClosingPeriod(
-        rawData.allDistrictsMetadata.csvDate,
-        dataMonth
-      )
-
-      // Store closing period info for use by createSnapshot
-      this.closingPeriodInfo = closingPeriodInfo
-
-      logger.info('Closing period detection completed', {
-        csvDate: rawData.allDistrictsMetadata.csvDate,
-        dataMonth,
-        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
-        snapshotDate: closingPeriodInfo.snapshotDate,
-        collectionDate: closingPeriodInfo.collectionDate,
-      })
-
-      // CRITICAL: Use the csvDate from allDistrictsMetadata, which is the actual
-      // "As of" date from the Toastmasters dashboard. This date is always 1-2 days
-      // behind the current date. Snapshots MUST be stored using this date.
-      // For closing period data, we also set the closing period metadata fields.
-      const normalizedData: NormalizedData = {
-        districts,
-        metadata: {
-          source: 'toastmasters-dashboard',
-          fetchedAt: rawData.scrapingMetadata.startTime,
-          dataAsOfDate: rawData.allDistrictsMetadata.csvDate,
-          districtCount: districts.length,
-          processingDurationMs,
-          // Closing period tracking fields (Requirements 2.6, 4.1, 4.2, 4.3)
-          isClosingPeriodData: closingPeriodInfo.isClosingPeriod,
-          collectionDate: closingPeriodInfo.collectionDate,
-          logicalDate: closingPeriodInfo.snapshotDate,
-        },
-      }
-
-      logger.info('Completed data normalization', {
-        inputDistricts: rawData.districtData.size,
-        outputDistricts: districts.length,
-        processingDurationMs,
-        isClosingPeriodData: closingPeriodInfo.isClosingPeriod,
-      })
-
-      return normalizedData
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Data normalization failed', { error: errorMessage })
-      throw new Error(`Normalization failed: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Normalize data for a single district
-   *
-   * @param districtId - The district ID
-   * @param data - Raw scraped data for the district
-   * @param asOfDate - The actual "as of" date from the CSV data (not today's date)
-   */
-  private async normalizeDistrictData(
-    districtId: string,
-    data: {
-      districtPerformance: ScrapedRecord[]
-      divisionPerformance: ScrapedRecord[]
-      clubPerformance: ScrapedRecord[]
-    },
-    asOfDate: string
-  ): Promise<DistrictStatistics> {
-    // This is a simplified normalization - in a real implementation,
-    // this would contain complex logic to transform the raw CSV data
-    // into the structured DistrictStatistics format
-
-    const districtStats: DistrictStatistics = {
-      districtId,
-      asOfDate,
-      membership: {
-        total: this.extractMembershipTotal(data.clubPerformance),
-        change: 0,
-        changePercent: 0,
-        byClub: this.extractClubMembership(data.clubPerformance),
-      },
-      clubs: {
-        total: data.clubPerformance.length,
-        active: this.countActiveClubs(data.clubPerformance),
-        suspended: 0,
-        ineligible: 0,
-        low: 0,
-        distinguished: this.countDistinguishedClubs(data.clubPerformance),
-      },
-      education: {
-        totalAwards: 0,
-        byType: [],
-        topClubs: [],
-      },
-      // Preserve raw data for caching purposes
-      districtPerformance: data.districtPerformance,
-      divisionPerformance: data.divisionPerformance,
-      clubPerformance: data.clubPerformance,
-    }
-
-    return districtStats
-  }
-
-  /**
-   * Extract total membership from club performance data
-   */
-  private extractMembershipTotal(clubPerformance: ScrapedRecord[]): number {
-    let total = 0
-    for (const club of clubPerformance) {
-      const members =
-        club['Active Members'] || club['Membership'] || club['Members']
-      if (typeof members === 'string') {
-        const parsed = parseInt(members, 10)
-        if (!isNaN(parsed)) {
-          total += parsed
-        }
-      } else if (typeof members === 'number') {
-        total += members
-      }
-    }
-    return total
-  }
-
-  /**
-   * Extract club membership data
-   */
-  private extractClubMembership(clubPerformance: ScrapedRecord[]): Array<{
-    clubId: string
-    clubName: string
-    memberCount: number
-  }> {
-    return clubPerformance
-      .map(club => ({
-        clubId: String(club['Club Number'] || club['ClubId'] || ''),
-        clubName: String(club['Club Name'] || club['ClubName'] || ''),
-        memberCount: this.parseNumber(
-          club['Active Members'] || club['Membership'] || club['Members'] || 0
-        ),
-      }))
-      .filter(club => club.clubId && club.clubName)
-  }
-
-  /**
-   * Count active clubs from performance data
-   */
-  private countActiveClubs(clubPerformance: ScrapedRecord[]): number {
-    return clubPerformance.filter(club => {
-      const status = club['Club Status'] || club['Status']
-      return !status || String(status).toLowerCase() !== 'suspended'
-    }).length
-  }
-
-  /**
-   * Count distinguished clubs from performance data
-   */
-  private countDistinguishedClubs(clubPerformance: ScrapedRecord[]): number {
-    return clubPerformance.filter(club => {
-      const distinguished =
-        club['Club Distinguished Status'] || club['Distinguished']
-      return (
-        distinguished &&
-        String(distinguished).toLowerCase().includes('distinguished')
-      )
-    }).length
-  }
-
-  /**
-   * Parse a number from various input types
-   */
-  private parseNumber(value: unknown): number {
-    if (typeof value === 'number') return value
-    if (typeof value === 'string') {
-      const parsed = parseInt(value, 10)
-      return isNaN(parsed) ? 0 : parsed
-    }
-    return 0
+    return result.normalizedData
   }
 
   /**

@@ -9,44 +9,30 @@
  * This test verifies that when closing period data is detected, the system
  * does NOT create a snapshot dated in the new month (the month of the "As of" date).
  * Instead, the snapshot should be dated as the last day of the data month.
+ *
+ * Note: These tests now use ClosingPeriodDetector directly since the
+ * closing period detection logic has been extracted from RefreshService
+ * as part of the refresh-service-refactor spec.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import fc from 'fast-check'
-import fs from 'fs/promises'
-import path from 'path'
-import { RefreshService } from '../RefreshService.js'
-import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
-import { ToastmastersScraper } from '../ToastmastersScraper.js'
-import { DataValidator } from '../DataValidator.js'
-import type { RawCSVCacheService } from '../RawCSVCacheService.js'
-import { createMockCacheService } from '../../__tests__/utils/mockCacheService.js'
+import { ClosingPeriodDetector } from '../ClosingPeriodDetector.js'
 
-// Mock the scraper to simulate network operations
-vi.mock('../ToastmastersScraper.ts')
+// Create a simple logger for testing
+const testLogger = {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+}
 
 describe('RefreshService - No New-Month Snapshots Property Tests', () => {
-  let testCacheDir: string
+  let closingPeriodDetector: ClosingPeriodDetector
 
-  beforeEach(async () => {
-    // Create a unique test cache directory
-    testCacheDir = path.join(
-      process.cwd(),
-      'test-cache',
-      `refresh-service-no-new-month-pbt-${Date.now()}`
-    )
-    await fs.mkdir(testCacheDir, { recursive: true })
-  })
-
-  afterEach(async () => {
-    // Clean up test cache directory
-    try {
-      await fs.rm(testCacheDir, { recursive: true, force: true })
-    } catch {
-      // Ignore cleanup errors
-    }
-    vi.clearAllMocks()
+  beforeEach(() => {
+    // Create ClosingPeriodDetector instance for testing
+    closingPeriodDetector = new ClosingPeriodDetector({ logger: testLogger })
   })
 
   /**
@@ -82,101 +68,41 @@ describe('RefreshService - No New-Month Snapshots Property Tests', () => {
         // Generate a day for the CSV date (1-28 to be safe)
         fc.integer({ min: 1, max: 28 }),
         async (year: number, csvMonth: number, csvDay: number) => {
-          // Create a fresh test cache directory for this property test run
-          const propertyTestCacheDir = path.join(
-            process.cwd(),
-            'test-cache',
-            `refresh-service-no-new-month-pbt-property4-${Date.now()}-${Math.random()}`
-          )
-          await fs.mkdir(propertyTestCacheDir, { recursive: true })
+          // Create CSV date (As of date) - this is in the "new month"
+          const csvDate = `${year}-${csvMonth.toString().padStart(2, '0')}-${csvDay.toString().padStart(2, '0')}`
 
-          try {
-            // Create fresh service instances for this test
-            const testConfigService = new DistrictConfigurationService(
-              propertyTestCacheDir
-            )
-            const testSnapshotStore = new PerDistrictFileSnapshotStore({
-              cacheDir: propertyTestCacheDir,
-            })
-            const testMockRawCSVCache =
-              createMockCacheService() as unknown as RawCSVCacheService
-            const testMockScraper = vi.mocked(
-              new ToastmastersScraper(testMockRawCSVCache)
-            )
-            const testRefreshService = new RefreshService(
-              testSnapshotStore,
-              testMockScraper,
-              testMockRawCSVCache,
-              new DataValidator(),
-              testConfigService
-            )
+          // Create data month (previous month) - this is the "closing month"
+          const dataMonthNum = csvMonth - 1
+          const dataMonth = `${year}-${dataMonthNum.toString().padStart(2, '0')}`
 
-            // Configure at least one district
-            await testConfigService.addDistrict('42', 'test-admin')
+          // Test the closing period detection using ClosingPeriodDetector
+          const result = closingPeriodDetector.detect(csvDate, dataMonth)
 
-            // Create CSV date (As of date) - this is in the "new month"
-            const csvDate = `${year}-${csvMonth.toString().padStart(2, '0')}-${csvDay.toString().padStart(2, '0')}`
+          // PROPERTY ASSERTION: This MUST be detected as a closing period
+          expect(result.isClosingPeriod).toBe(true)
 
-            // Create data month (previous month) - this is the "closing month"
-            const dataMonthNum = csvMonth - 1
-            const dataMonth = `${year}-${dataMonthNum.toString().padStart(2, '0')}`
+          // PROPERTY ASSERTION: The snapshot date MUST NOT be in the new month (csvMonth)
+          // Parse the snapshot date to check its month
+          const snapshotDateParts = result.snapshotDate.split('-')
+          const snapshotYear = parseInt(snapshotDateParts[0]!, 10)
+          const snapshotMonth = parseInt(snapshotDateParts[1]!, 10)
 
-            // Access the private detectClosingPeriod method
-            const refreshServiceWithPrivate = testRefreshService as unknown as {
-              detectClosingPeriod: (
-                csvDate: string,
-                dataMonth: string
-              ) => {
-                isClosingPeriod: boolean
-                dataMonth: string
-                asOfDate: string
-                snapshotDate: string
-                collectionDate: string
-              }
-            }
+          // The snapshot month should be the data month, NOT the CSV month
+          expect(snapshotMonth).toBe(dataMonthNum)
+          expect(snapshotMonth).not.toBe(csvMonth)
 
-            // Test the closing period detection
-            const result = refreshServiceWithPrivate.detectClosingPeriod(
-              csvDate,
-              dataMonth
-            )
+          // PROPERTY ASSERTION: The snapshot date should be the last day of the data month
+          const expectedSnapshotDate = getLastDayOfMonth(year, dataMonthNum)
+          expect(result.snapshotDate).toBe(expectedSnapshotDate)
 
-            // PROPERTY ASSERTION: This MUST be detected as a closing period
-            expect(result.isClosingPeriod).toBe(true)
+          // PROPERTY ASSERTION: The snapshot year should match the data year
+          expect(snapshotYear).toBe(year)
 
-            // PROPERTY ASSERTION: The snapshot date MUST NOT be in the new month (csvMonth)
-            // Parse the snapshot date to check its month
-            const snapshotDateParts = result.snapshotDate.split('-')
-            const snapshotYear = parseInt(snapshotDateParts[0]!, 10)
-            const snapshotMonth = parseInt(snapshotDateParts[1]!, 10)
+          // Verify the collection date is preserved as the original CSV date
+          expect(result.collectionDate).toBe(csvDate)
+          expect(result.asOfDate).toBe(csvDate)
 
-            // The snapshot month should be the data month, NOT the CSV month
-            expect(snapshotMonth).toBe(dataMonthNum)
-            expect(snapshotMonth).not.toBe(csvMonth)
-
-            // PROPERTY ASSERTION: The snapshot date should be the last day of the data month
-            const expectedSnapshotDate = getLastDayOfMonth(year, dataMonthNum)
-            expect(result.snapshotDate).toBe(expectedSnapshotDate)
-
-            // PROPERTY ASSERTION: The snapshot year should match the data year
-            expect(snapshotYear).toBe(year)
-
-            // Verify the collection date is preserved as the original CSV date
-            expect(result.collectionDate).toBe(csvDate)
-            expect(result.asOfDate).toBe(csvDate)
-
-            return true
-          } finally {
-            // Clean up property test cache directory
-            try {
-              await fs.rm(propertyTestCacheDir, {
-                recursive: true,
-                force: true,
-              })
-            } catch {
-              // Ignore cleanup errors
-            }
-          }
+          return true
         }
       ),
       { numRuns: 100 }
@@ -199,97 +125,37 @@ describe('RefreshService - No New-Month Snapshots Property Tests', () => {
         // Generate a day in January (1-31)
         fc.integer({ min: 1, max: 31 }),
         async (januaryYear: number, januaryDay: number) => {
-          // Create a fresh test cache directory for this property test run
-          const propertyTestCacheDir = path.join(
-            process.cwd(),
-            'test-cache',
-            `refresh-service-no-new-month-pbt-property4b-${Date.now()}-${Math.random()}`
-          )
-          await fs.mkdir(propertyTestCacheDir, { recursive: true })
+          // Create January CSV date (As of date) - this is in the "new month"
+          const csvDate = `${januaryYear}-01-${januaryDay.toString().padStart(2, '0')}`
 
-          try {
-            // Create fresh service instances for this test
-            const testConfigService = new DistrictConfigurationService(
-              propertyTestCacheDir
-            )
-            const testSnapshotStore = new PerDistrictFileSnapshotStore({
-              cacheDir: propertyTestCacheDir,
-            })
-            const testMockRawCSVCache =
-              createMockCacheService() as unknown as RawCSVCacheService
-            const testMockScraper = vi.mocked(
-              new ToastmastersScraper(testMockRawCSVCache)
-            )
-            const testRefreshService = new RefreshService(
-              testSnapshotStore,
-              testMockScraper,
-              testMockRawCSVCache,
-              new DataValidator(),
-              testConfigService
-            )
+          // Data month is December of the previous year
+          const dataMonth = `${januaryYear - 1}-12`
 
-            // Configure at least one district
-            await testConfigService.addDistrict('42', 'test-admin')
+          // Test the closing period detection using ClosingPeriodDetector
+          const result = closingPeriodDetector.detect(csvDate, dataMonth)
 
-            // Create January CSV date (As of date) - this is in the "new month"
-            const csvDate = `${januaryYear}-01-${januaryDay.toString().padStart(2, '0')}`
+          // PROPERTY ASSERTION: This MUST be detected as a closing period
+          expect(result.isClosingPeriod).toBe(true)
 
-            // Data month is December of the previous year
-            const dataMonth = `${januaryYear - 1}-12`
+          // PROPERTY ASSERTION: The snapshot date MUST NOT be in January
+          const snapshotDateParts = result.snapshotDate.split('-')
+          const snapshotYear = parseInt(snapshotDateParts[0]!, 10)
+          const snapshotMonth = parseInt(snapshotDateParts[1]!, 10)
 
-            // Access the private detectClosingPeriod method
-            const refreshServiceWithPrivate = testRefreshService as unknown as {
-              detectClosingPeriod: (
-                csvDate: string,
-                dataMonth: string
-              ) => {
-                isClosingPeriod: boolean
-                dataMonth: string
-                asOfDate: string
-                snapshotDate: string
-                collectionDate: string
-              }
-            }
+          // The snapshot should be in December of the previous year, NOT January
+          expect(snapshotMonth).toBe(12)
+          expect(snapshotMonth).not.toBe(1)
+          expect(snapshotYear).toBe(januaryYear - 1)
 
-            // Test the closing period detection
-            const result = refreshServiceWithPrivate.detectClosingPeriod(
-              csvDate,
-              dataMonth
-            )
+          // PROPERTY ASSERTION: The snapshot date should be December 31 of the prior year
+          const expectedSnapshotDate = `${januaryYear - 1}-12-31`
+          expect(result.snapshotDate).toBe(expectedSnapshotDate)
 
-            // PROPERTY ASSERTION: This MUST be detected as a closing period
-            expect(result.isClosingPeriod).toBe(true)
+          // Verify the collection date is preserved as the original CSV date
+          expect(result.collectionDate).toBe(csvDate)
+          expect(result.asOfDate).toBe(csvDate)
 
-            // PROPERTY ASSERTION: The snapshot date MUST NOT be in January
-            const snapshotDateParts = result.snapshotDate.split('-')
-            const snapshotYear = parseInt(snapshotDateParts[0]!, 10)
-            const snapshotMonth = parseInt(snapshotDateParts[1]!, 10)
-
-            // The snapshot should be in December of the previous year, NOT January
-            expect(snapshotMonth).toBe(12)
-            expect(snapshotMonth).not.toBe(1)
-            expect(snapshotYear).toBe(januaryYear - 1)
-
-            // PROPERTY ASSERTION: The snapshot date should be December 31 of the prior year
-            const expectedSnapshotDate = `${januaryYear - 1}-12-31`
-            expect(result.snapshotDate).toBe(expectedSnapshotDate)
-
-            // Verify the collection date is preserved as the original CSV date
-            expect(result.collectionDate).toBe(csvDate)
-            expect(result.asOfDate).toBe(csvDate)
-
-            return true
-          } finally {
-            // Clean up property test cache directory
-            try {
-              await fs.rm(propertyTestCacheDir, {
-                recursive: true,
-                force: true,
-              })
-            } catch {
-              // Ignore cleanup errors
-            }
-          }
+          return true
         }
       ),
       { numRuns: 50 }
@@ -317,89 +183,29 @@ describe('RefreshService - No New-Month Snapshots Property Tests', () => {
         // Generate a day (1-28 to be safe)
         fc.integer({ min: 1, max: 28 }),
         async (year: number, month: number, day: number) => {
-          // Create a fresh test cache directory for this property test run
-          const propertyTestCacheDir = path.join(
-            process.cwd(),
-            'test-cache',
-            `refresh-service-no-new-month-pbt-property4c-${Date.now()}-${Math.random()}`
-          )
-          await fs.mkdir(propertyTestCacheDir, { recursive: true })
+          // Create CSV date
+          const csvDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 
-          try {
-            // Create fresh service instances for this test
-            const testConfigService = new DistrictConfigurationService(
-              propertyTestCacheDir
-            )
-            const testSnapshotStore = new PerDistrictFileSnapshotStore({
-              cacheDir: propertyTestCacheDir,
-            })
-            const testMockRawCSVCache =
-              createMockCacheService() as unknown as RawCSVCacheService
-            const testMockScraper = vi.mocked(
-              new ToastmastersScraper(testMockRawCSVCache)
-            )
-            const testRefreshService = new RefreshService(
-              testSnapshotStore,
-              testMockScraper,
-              testMockRawCSVCache,
-              new DataValidator(),
-              testConfigService
-            )
+          // Data month is the SAME as CSV month (non-closing period)
+          const dataMonth = `${year}-${month.toString().padStart(2, '0')}`
 
-            // Configure at least one district
-            await testConfigService.addDistrict('42', 'test-admin')
+          // Test the closing period detection using ClosingPeriodDetector
+          const result = closingPeriodDetector.detect(csvDate, dataMonth)
 
-            // Create CSV date
-            const csvDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+          // PROPERTY ASSERTION: This should NOT be detected as a closing period
+          expect(result.isClosingPeriod).toBe(false)
 
-            // Data month is the SAME as CSV month (non-closing period)
-            const dataMonth = `${year}-${month.toString().padStart(2, '0')}`
+          // PROPERTY ASSERTION: The snapshot date should be the same as the CSV date
+          expect(result.snapshotDate).toBe(csvDate)
 
-            // Access the private detectClosingPeriod method
-            const refreshServiceWithPrivate = testRefreshService as unknown as {
-              detectClosingPeriod: (
-                csvDate: string,
-                dataMonth: string
-              ) => {
-                isClosingPeriod: boolean
-                dataMonth: string
-                asOfDate: string
-                snapshotDate: string
-                collectionDate: string
-              }
-            }
+          // Parse the snapshot date to verify it's in the same month
+          const snapshotDateParts = result.snapshotDate.split('-')
+          const snapshotMonth = parseInt(snapshotDateParts[1]!, 10)
 
-            // Test the closing period detection
-            const result = refreshServiceWithPrivate.detectClosingPeriod(
-              csvDate,
-              dataMonth
-            )
+          // The snapshot month should be the same as the CSV month
+          expect(snapshotMonth).toBe(month)
 
-            // PROPERTY ASSERTION: This should NOT be detected as a closing period
-            expect(result.isClosingPeriod).toBe(false)
-
-            // PROPERTY ASSERTION: The snapshot date should be the same as the CSV date
-            expect(result.snapshotDate).toBe(csvDate)
-
-            // Parse the snapshot date to verify it's in the same month
-            const snapshotDateParts = result.snapshotDate.split('-')
-            const snapshotMonth = parseInt(snapshotDateParts[1]!, 10)
-
-            // The snapshot month should be the same as the CSV month
-            expect(snapshotMonth).toBe(month)
-
-            return true
-          } finally {
-            // Clean up property test cache directory
-            try {
-              await fs.rm(propertyTestCacheDir, {
-                recursive: true,
-                force: true,
-              })
-            } catch {
-              // Ignore cleanup errors
-            }
-          }
+          return true
         }
       ),
       { numRuns: 100 }
