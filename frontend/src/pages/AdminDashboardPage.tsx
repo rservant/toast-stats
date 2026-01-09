@@ -71,13 +71,13 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <div
-      className={`bg-white rounded-lg shadow p-4 border-l-4 ${borderColor}`}
+      className={`bg-white rounded-lg shadow p-3 border-l-4 ${borderColor}`}
       role="region"
       aria-label={title}
     >
       <p className="text-sm text-gray-600">{title}</p>
-      <p className="text-2xl font-bold text-tm-black mt-1">{value}</p>
-      {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+      <p className="text-xl font-bold text-tm-black mt-0.5">{value}</p>
+      {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
     </div>
   )
 }
@@ -95,10 +95,10 @@ const Section: React.FC<SectionProps> = ({
   isLoading,
   error,
 }) => (
-  <section className="bg-white rounded-lg shadow p-6 mb-6" aria-labelledby={`section-${title.toLowerCase().replace(/\s/g, '-')}`}>
+  <section className="bg-white rounded-lg shadow p-4 mb-4" aria-labelledby={`section-${title.toLowerCase().replace(/\s/g, '-')}`}>
     <h2
       id={`section-${title.toLowerCase().replace(/\s/g, '-')}`}
-      className="text-xl font-semibold text-tm-black mb-4"
+      className="text-lg font-semibold text-tm-black mb-3"
     >
       {title}
     </h2>
@@ -142,12 +142,12 @@ const AdminDashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-tm-black">Admin Dashboard</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-2xl font-bold text-tm-black">Admin Dashboard</h1>
+            <p className="text-sm text-gray-600">
               System health, performance metrics, and operational monitoring
             </p>
           </div>
@@ -167,7 +167,7 @@ const AdminDashboardPage: React.FC = () => {
         >
           {healthQuery.data && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <MetricCard
                   title="Store Status"
                   value={healthQuery.data.health.is_ready ? 'Ready' : 'Not Ready'}
@@ -206,11 +206,11 @@ const AdminDashboardPage: React.FC = () => {
               </div>
 
               {healthQuery.data.health.current_snapshot && (
-                <div className="bg-gray-50 rounded p-4">
-                  <h3 className="font-medium text-tm-black mb-2">
+                <div className="bg-gray-50 rounded p-3">
+                  <h3 className="font-medium text-sm text-tm-black mb-2">
                     Current Snapshot Details
                   </h3>
-                  <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                  <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                     <div>
                       <dt className="text-gray-500">ID</dt>
                       <dd className="font-mono text-xs truncate">
@@ -255,7 +255,7 @@ const AdminDashboardPage: React.FC = () => {
         >
           {performanceQuery.data && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                 <MetricCard
                   title="Total Reads"
                   value={performanceQuery.data.performance.totalReads.toLocaleString()}
@@ -284,7 +284,7 @@ const AdminDashboardPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-gray-50 rounded p-4">
+              <div className="flex items-center justify-between bg-gray-50 rounded p-3">
                 <div className="text-sm text-gray-600">
                   <span className="font-medium">Cache Hits:</span>{' '}
                   {performanceQuery.data.performance.cacheHits} |{' '}
@@ -313,7 +313,7 @@ const AdminDashboardPage: React.FC = () => {
         >
           {complianceQuery.data && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                 <MetricCard
                   title="Compliance Score"
                   value={`${complianceQuery.data.compliance.processSeparationScore}/100`}
@@ -326,25 +326,25 @@ const AdminDashboardPage: React.FC = () => {
                         : 'error'
                   }
                 />
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-l-tm-loyal-blue">
+                <div className="bg-white rounded-lg shadow p-3 border-l-4 border-l-tm-loyal-blue">
                   <p className="text-sm text-gray-600">Compliance Status</p>
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <StatusBadge
                       status={complianceQuery.data.compliance.complianceStatus}
                     />
                   </div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-l-tm-loyal-blue">
+                <div className="bg-white rounded-lg shadow p-3 border-l-4 border-l-tm-loyal-blue">
                   <p className="text-sm text-gray-600">Read Operations</p>
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <StatusBadge
                       status={complianceQuery.data.compliance.readOperationHealth}
                     />
                   </div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 border-l-4 border-l-tm-loyal-blue">
+                <div className="bg-white rounded-lg shadow p-3 border-l-4 border-l-tm-loyal-blue">
                   <p className="text-sm text-gray-600">Refresh Operations</p>
-                  <div className="mt-2">
+                  <div className="mt-1">
                     <StatusBadge
                       status={
                         complianceQuery.data.compliance.refreshOperationHealth
@@ -354,7 +354,7 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded p-4 text-sm text-gray-600">
+              <div className="bg-gray-50 rounded p-3 text-sm text-gray-600">
                 Last validation:{' '}
                 {formatDate(complianceQuery.data.compliance.lastValidationTime)}
               </div>
@@ -375,31 +375,31 @@ const AdminDashboardPage: React.FC = () => {
                   <tr>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Snapshot ID
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Created
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Status
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Districts
                     </th>
                     <th
                       scope="col"
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Schema
                     </th>
@@ -409,19 +409,19 @@ const AdminDashboardPage: React.FC = () => {
                   {snapshotsQuery.data.snapshots.map(
                     (snapshot: SnapshotMetadata) => (
                       <tr key={snapshot.snapshot_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap font-mono text-xs">
+                        <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">
                           {snapshot.snapshot_id.substring(0, 12)}...
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
                           {formatDate(snapshot.created_at)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <StatusBadge status={snapshot.status} size="sm" />
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
                           {snapshot.district_count ?? '-'}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
                           {snapshot.schema_version}
                         </td>
                       </tr>
@@ -431,12 +431,12 @@ const AdminDashboardPage: React.FC = () => {
               </table>
 
               {snapshotsQuery.data.snapshots.length === 0 && (
-                <p className="text-center py-8 text-gray-500">
+                <p className="text-center py-4 text-gray-500">
                   No snapshots found
                 </p>
               )}
 
-              <div className="mt-4 text-sm text-gray-500">
+              <div className="mt-2 text-sm text-gray-500">
                 Showing {snapshotsQuery.data.snapshots.length} of{' '}
                 {snapshotsQuery.data.metadata.total_count} snapshots
               </div>
@@ -445,11 +445,11 @@ const AdminDashboardPage: React.FC = () => {
         </Section>
 
         {/* Quick Links */}
-        <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-tm-black mb-4">
+        <section className="bg-white rounded-lg shadow p-4">
+          <h2 className="text-lg font-semibold text-tm-black mb-3">
             Admin Quick Links
           </h2>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3">
             <Link
               to="/admin/districts"
               className="px-4 py-2 bg-tm-loyal-blue text-white rounded hover:bg-opacity-90 transition-colors min-h-[44px] flex items-center"
