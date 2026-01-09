@@ -4,7 +4,7 @@
 **Applies to:** Toastmasters Statistics Application Backend  
 **Audience:** Developers, System Architects, Future Maintainers  
 **Owner:** Development Team  
-**Last Updated:** January 6, 2026
+**Last Updated:** January 9, 2026
 
 ---
 
@@ -353,6 +353,9 @@ The backend implements a **modular, dependency-injected service architecture** w
 
 - **Purpose**: Coordinates the complete refresh workflow with circuit breaker protection
 - **Dependencies**: ToastmastersScraper, DataValidator, SnapshotStore, DistrictConfigurationService, RankingCalculator
+- **Extracted Modules**:
+  - `ClosingPeriodDetector`: Month-end closing period detection logic
+  - `DataNormalizer`: Raw data transformation to normalized snapshot format
 - **Features**: Four-phase workflow (scraping → normalization → validation → snapshot creation)
 - **Error Handling**: District-level error tracking with partial snapshot creation
 - **Integration**: Works with both FileSnapshotStore and PerDistrictSnapshotStore
@@ -408,11 +411,39 @@ The backend implements a **modular, dependency-injected service architecture** w
 
 #### Analytics & Caching Services
 
-**AnalyticsEngine** (Data Processing)
+**AnalyticsEngine** (Analytics Orchestration)
 
-- **Purpose**: Processes cached district data to generate insights and analytics
-- **Features**: Club trends, division analytics, membership analytics, leadership insights
+- **Purpose**: Orchestrates analytics processing by delegating to specialized modules
+- **Architecture**: Modular design with 5 specialized analytics modules
+- **Modules**:
+  - `MembershipAnalyticsModule`: Membership trends, growth analysis, year-over-year comparisons
+  - `DistinguishedClubAnalyticsModule`: Distinguished club tracking, projections, DCP goal analysis
+  - `ClubHealthAnalyticsModule`: At-risk club identification, club trends, health scoring
+  - `DivisionAreaAnalyticsModule`: Division comparisons, area analysis, trend detection
+  - `LeadershipAnalyticsModule`: Leadership effectiveness, best practices identification
+- **Shared Utilities**: `AnalyticsUtils.ts` provides common functions (parseIntSafe, getDCPCheckpoint, etc.)
 - **Performance**: In-memory caching with TTL, optimized data access patterns
+
+**RawCSVCacheService** (CSV Data Caching)
+
+- **Purpose**: Caches raw CSV data from Toastmasters dashboard to reduce scraping load
+- **Extracted Modules**:
+  - `CacheSecurityManager`: Path validation, directory bounds checking, content security
+  - `CacheIntegrityValidator`: Metadata validation, corruption detection, recovery operations
+- **Features**: Circuit breaker integration, integrity validation, secure file operations
+- **Performance**: Reduces dashboard load by caching frequently accessed CSV data
+
+**CacheSecurityManager** (Security Validation)
+
+- **Purpose**: Validates cache operations for security compliance
+- **Features**: Path traversal prevention, directory bounds validation, content security checks
+- **Integration**: Used by RawCSVCacheService for all file operations
+
+**CacheIntegrityValidator** (Integrity Validation)
+
+- **Purpose**: Validates cache metadata and detects corruption
+- **Features**: Metadata validation, corruption detection, automatic recovery
+- **Integration**: Used by RawCSVCacheService for integrity checks
 
 **CacheManager** & **DistrictCacheManager**
 
@@ -1238,21 +1269,43 @@ backend/
 │   ├── config/                  # Configuration management
 │   │   └── index.ts            # Environment-based configuration
 │   ├── routes/                  # API route handlers
-│   │   ├── districts.ts         # District data endpoints
-│   │   ├── admin.ts            # Admin and debugging endpoints
-│   │   ├── reconciliation.ts   # Reconciliation job management
-│   │   └── assessment.ts       # Assessment module endpoints
+│   │   ├── admin/              # Admin routes (refactored modular structure)
+│   │   │   ├── index.ts        # Router composition
+│   │   │   ├── shared.ts       # Shared middleware and utilities
+│   │   │   ├── snapshots.ts    # Snapshot management routes
+│   │   │   ├── district-config.ts # District configuration routes
+│   │   │   ├── monitoring.ts   # Health, integrity, performance routes
+│   │   │   └── process-separation.ts # Process separation routes
+│   │   ├── districts/          # District data endpoints (modular)
+│   │   │   ├── index.ts        # Router composition
+│   │   │   ├── core.ts         # Core district endpoints
+│   │   │   ├── analytics.ts    # Analytics endpoints
+│   │   │   ├── backfill.ts     # Backfill endpoints
+│   │   │   └── shared.ts       # Shared utilities
+│   │   └── admin.ts            # Re-exports from admin/index.ts
 │   ├── services/               # Core business logic
+│   │   ├── analytics/          # Analytics modules (refactored)
+│   │   │   ├── index.ts        # Module exports
+│   │   │   ├── AnalyticsUtils.ts # Shared utility functions
+│   │   │   ├── MembershipAnalyticsModule.ts # Membership analytics
+│   │   │   ├── DistinguishedClubAnalyticsModule.ts # Distinguished club analytics
+│   │   │   ├── ClubHealthAnalyticsModule.ts # Club health analytics
+│   │   │   ├── DivisionAreaAnalyticsModule.ts # Division/area analytics
+│   │   │   └── LeadershipAnalyticsModule.ts # Leadership analytics
 │   │   ├── RefreshService.ts   # Refresh orchestration
+│   │   ├── ClosingPeriodDetector.ts # Month-end closing period detection
+│   │   ├── DataNormalizer.ts   # Raw data normalization
 │   │   ├── ToastmastersScraper.ts # Data acquisition
 │   │   ├── DataValidator.ts    # Data validation
 │   │   ├── FileSnapshotStore.ts # Legacy snapshot persistence
 │   │   ├── PerDistrictSnapshotStore.ts # Modern per-district storage
 │   │   ├── DistrictDataAggregator.ts # Efficient data access
 │   │   ├── RankingCalculator.ts # Borda count ranking algorithm
-│   │   ├── AnalyticsEngine.ts  # Data processing and insights
+│   │   ├── AnalyticsEngine.ts  # Analytics orchestration (delegates to modules)
+│   │   ├── RawCSVCacheService.ts # Raw CSV caching
+│   │   ├── CacheSecurityManager.ts # Cache security validation
+│   │   ├── CacheIntegrityValidator.ts # Cache integrity validation
 │   │   ├── UnifiedBackfillService.ts # Historical data collection
-│   │   ├── ReconciliationOrchestrator.ts # Month-end processing
 │   │   ├── CacheConfigService.ts # Cache configuration
 │   │   ├── ServiceContainer.ts # Dependency injection
 │   │   ├── ProductionServiceFactory.ts # Service factory
@@ -1456,4 +1509,4 @@ The architecture successfully balances the needs of a single-user deployment wit
 
 ---
 
-**Document Maintenance**: This document reflects the current implementation as of January 6, 2026. It should be updated when significant architectural changes are made, new services are added, or major refactoring occurs. The document serves as the authoritative reference for understanding the system architecture and should be consulted before making structural changes.
+**Document Maintenance**: This document reflects the current implementation as of January 9, 2026. It should be updated when significant architectural changes are made, new services are added, or major refactoring occurs. The document serves as the authoritative reference for understanding the system architecture and should be consulted before making structural changes.

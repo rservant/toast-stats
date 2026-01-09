@@ -139,10 +139,23 @@ For detailed project status and implementation information, see [PROJECT_STATUS.
 
 ## Project History
 
-This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs-archive/` for historical reference:
+This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs/archive/` for historical reference:
 
-- **toastmasters-district-visualizer**: Original project specification (fully implemented)
-- **district-level-data**: District analytics features (fully implemented)
+**Archived Specifications:**
+- **toastmasters-district-visualizer**: Original project specification
+- **district-level-data**: District analytics features
+- **data-refresh-architecture**: Snapshot-based data architecture
+- **unified-backfill-service**: Historical data collection
+- **raw-csv-cache-system**: CSV caching infrastructure
+- **club-health-classification**: Club health scoring
+- **district-scoped-data-collection**: Per-district data collection
+- **codebase-cleanup**: Code quality improvements
+- **remove-district-cache-manager**: Legacy cache removal
+- **analytics-engine-migration**: Analytics module extraction
+- **analytics-engine-refactor**: Analytics modular architecture (5 specialized modules)
+- **raw-csv-cache-refactor**: Cache security and integrity extraction
+- **refresh-service-refactor**: Closing period and normalization extraction
+- **admin-routes-refactor**: Admin routes modular architecture
 
 Active specifications for ongoing maintenance are located in `.kiro/specs/`.
 
