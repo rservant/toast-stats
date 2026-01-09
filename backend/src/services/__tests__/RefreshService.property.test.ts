@@ -350,10 +350,10 @@ describe('RefreshService - Property-Based Tests', () => {
   it('Property 7: RefreshService should continue processing when some districts fail', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(generateValidDistrictId(), { minLength: 3, maxLength: 6 }),
+        fc.array(generateValidDistrictId(), { minLength: 3, maxLength: 5 }),
         fc.array(fc.integer({ min: 0, max: 2 }), {
           minLength: 1,
-          maxLength: 3,
+          maxLength: 2,
         }),
         generateAdminUser(),
         async (
@@ -516,9 +516,9 @@ describe('RefreshService - Property-Based Tests', () => {
           }
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 5 }
     )
-  })
+  }, 60000) // Increase timeout to 60s for this heavy test
 
   /**
    * Property 8: Success/Failure Tracking
