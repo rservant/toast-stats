@@ -21,7 +21,9 @@ const generateLargeClubDataset = (size: number): ClubTrend[] => {
     distinguishedLevel: (
       ['Distinguished', 'Select', 'President', 'Smedley', undefined] as const
     )[i % 5],
-    currentStatus: (['healthy', 'at-risk', 'critical'] as const)[i % 3],
+    currentStatus: (
+      ['thriving', 'vulnerable', 'intervention-required'] as const
+    )[i % 3],
     riskFactors: [],
     membershipTrend: [
       {

@@ -3,67 +3,67 @@ import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { LoadingSkeleton } from './LoadingSkeleton'
 
 /**
- * Props for the CriticalClubsPanel component
+ * Props for the VulnerableClubsPanel component
  */
-interface CriticalClubsPanelProps {
-  /** Array of critical club trends to display (should contain only critical clubs) */
+interface VulnerableClubsPanelProps {
+  /** Array of vulnerable club trends to display (should contain only vulnerable clubs, not intervention-required) */
   clubs: ClubTrend[]
   /** Whether the data is currently loading */
   isLoading?: boolean
 }
 
 /**
- * CriticalClubsPanel Component
+ * VulnerableClubsPanel Component
  *
- * Displays a prominent panel highlighting clubs that are in critical status.
- * Critical clubs are those with membership below 12 members (charter risk).
- * These clubs are shown with red styling to emphasize urgency.
+ * Displays a panel highlighting clubs that are vulnerable but not intervention-required.
+ * Vulnerable clubs are those with some but not all requirements met
+ * (membership, DCP checkpoint, or CSP submission).
  *
  * Features:
- * - Visual status indicators with red color-coded badges
+ * - Visual status indicators with yellow color-coded badges
  * - Risk factor tags for each club
  * - Click-to-view detailed modal with membership trends and DCP progress
- * - Empty state when no clubs are critical
+ * - Empty state when no clubs are vulnerable
  * - Loading skeleton during data fetch
  *
  * Risk Criteria:
- * - Critical: Membership below 12 members (charter risk)
+ * - Vulnerable: Some but not all requirements met (membership, DCP checkpoint, CSP)
  *
  * @component
  * @example
  * ```tsx
- * <CriticalClubsPanel
- *   clubs={criticalClubs}
+ * <VulnerableClubsPanel
+ *   clubs={vulnerableClubs}
  *   isLoading={false}
  * />
  * ```
  */
-export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
+export const VulnerableClubsPanel: React.FC<VulnerableClubsPanelProps> = ({
   clubs,
   isLoading = false,
 }) => {
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // clubs prop now contains only critical clubs
-  const criticalClubs = clubs
+  // clubs prop now contains only vulnerable clubs (not intervention-required)
+  const vulnerableClubs = clubs
 
-  // Get status badge styling for critical clubs
+  // Get status badge styling
   const getStatusBadge = () => {
-    return 'bg-red-100 text-red-800 border-red-300'
+    return 'bg-yellow-100 text-yellow-800 border-yellow-300'
   }
 
-  // Get status icon for critical clubs
+  // Get status icon
   const getStatusIcon = () => {
     return (
       <svg
-        className="w-5 h-5 text-red-600"
+        className="w-5 h-5 text-yellow-600"
         fill="currentColor"
         viewBox="0 0 20 20"
       >
         <path
           fillRule="evenodd"
-          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
           clipRule="evenodd"
         />
       </svg>
@@ -81,28 +81,28 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
+    <div className="bg-white rounded-lg shadow-md p-6">
       <div
         className="flex items-center justify-between mb-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
           <svg
-            className="w-6 h-6 text-red-600"
+            className="w-6 h-6 text-yellow-600"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
             <path
               fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
               clipRule="evenodd"
             />
           </svg>
-          <h3 className="text-xl font-bold text-red-900 font-tm-headline">
-            Critical Clubs
+          <h3 className="text-xl font-bold text-gray-900 font-tm-headline">
+            Vulnerable Clubs
           </h3>
           <svg
-            className={`w-5 h-5 text-red-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-yellow-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -116,24 +116,27 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
           </svg>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
-            {criticalClubs.length} Critical
-          </span>
+          {vulnerableClubs.length > 0 && (
+            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+              {vulnerableClubs.length} Vulnerable
+            </span>
+          )}
         </div>
       </div>
 
       {isExpanded && (
         <>
           {/* Subtitle */}
-          <p className="text-sm text-red-700 mb-4 font-tm-body">
-            Clubs with membership below 12 members (charter risk)
+          <p className="text-sm text-yellow-700 mb-4 font-tm-body">
+            Clubs with some requirements not met (membership, DCP checkpoint, or
+            CSP)
           </p>
 
           {/* Loading State */}
           {isLoading && <LoadingSkeleton variant="card" count={3} />}
 
-          {/* No Critical Clubs */}
-          {!isLoading && criticalClubs.length === 0 && (
+          {/* No Vulnerable Clubs */}
+          {!isLoading && vulnerableClubs.length === 0 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
               <svg
                 className="w-12 h-12 text-green-600 mx-auto mb-2"
@@ -149,22 +152,23 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                 />
               </svg>
               <p className="text-green-800 font-medium font-tm-headline">
-                No critical clubs!
+                No vulnerable clubs!
               </p>
               <p className="text-green-700 text-sm mt-1 font-tm-body">
-                All clubs have sufficient membership to maintain their charter.
+                All clubs are meeting their requirements and performing well.
               </p>
             </div>
           )}
 
-          {/* Critical Clubs List */}
-          {!isLoading && criticalClubs.length > 0 && (
+          {/* Vulnerable Clubs List */}
+          {!isLoading && vulnerableClubs.length > 0 && (
             <div className="space-y-3">
-              {criticalClubs.map(club => (
+              {/* Vulnerable Clubs */}
+              {vulnerableClubs.map(club => (
                 <div
                   key={club.clubId}
                   onClick={() => handleClubClick(club)}
-                  className="border-2 border-red-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-red-50"
+                  className="border-2 border-yellow-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-yellow-50"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
@@ -180,7 +184,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                           {club.riskFactors.map((factor, index) => (
                             <span
                               key={index}
-                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded font-tm-body"
+                              className="text-xs px-2 py-1 bg-white border border-yellow-300 text-yellow-800 rounded font-tm-body"
                             >
                               {factor}
                             </span>
@@ -191,7 +195,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                     <span
                       className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge()}`}
                     >
-                      CRITICAL
+                      VULNERABLE
                     </span>
                   </div>
                 </div>
@@ -247,7 +251,7 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                 <span
                   className={`px-4 py-2 text-sm font-medium rounded-full border ${getStatusBadge()}`}
                 >
-                  CRITICAL
+                  VULNERABLE
                 </span>
               </div>
 
@@ -260,13 +264,13 @@ export const CriticalClubsPanel: React.FC<CriticalClubsPanelProps> = ({
                   {selectedClub.riskFactors.map((factor, index) => (
                     <div key={index} className="flex items-start gap-2">
                       <svg
-                        className="w-5 h-5 text-red-600 mt-0.5"
+                        className="w-5 h-5 text-yellow-600 mt-0.5"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
                         <path
                           fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
                           clipRule="evenodd"
                         />
                       </svg>

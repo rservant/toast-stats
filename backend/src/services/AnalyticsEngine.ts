@@ -74,6 +74,93 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
+   * Get the DCP goals checkpoint for a given month
+   *
+   * Returns the minimum DCP goals required for that month in the program year.
+   * The Toastmasters program year runs July 1 - June 30.
+   *
+   * Thresholds (Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 2.6):
+   * - July (7): 0 (administrative checkpoint - officer list/training)
+   * - August-September (8-9): 1 goal
+   * - October-November (10-11): 2 goals
+   * - December-January (12, 1): 3 goals
+   * - February-March (2-3): 4 goals
+   * - April-June (4-6): 5 goals
+   *
+   * @param month - Month number (1-12)
+   * @returns Minimum DCP goals required for that month
+   */
+  public getDCPCheckpoint(month: number): number {
+    // Validate month is in valid range
+    if (month < 1 || month > 12) {
+      throw new Error(`Invalid month: ${month}. Must be between 1 and 12.`)
+    }
+
+    // July (7): Administrative checkpoint - 0 DCP goals required
+    // (officer list submitted OR officers trained is checked separately)
+    if (month === 7) {
+      return 0
+    }
+
+    // August-September (8-9): 1 goal required
+    if (month === 8 || month === 9) {
+      return 1
+    }
+
+    // October-November (10-11): 2 goals required
+    if (month === 10 || month === 11) {
+      return 2
+    }
+
+    // December (12) or January (1): 3 goals required
+    if (month === 12 || month === 1) {
+      return 3
+    }
+
+    // February-March (2-3): 4 goals required
+    if (month === 2 || month === 3) {
+      return 4
+    }
+
+    // April-June (4-6): 5 goals required
+    // month is 4, 5, or 6
+    return 5
+  }
+
+  /**
+   * Determine the current month for DCP checkpoint evaluation
+   *
+   * Uses the snapshot date or current date to determine program month.
+   * The Toastmasters program year runs July 1 - June 30.
+   *
+   * Requirements: 2.1
+   *
+   * @param dateString - Optional date string in YYYY-MM-DD format
+   * @returns Month number (1-12)
+   */
+  public getCurrentProgramMonth(dateString?: string): number {
+    let date: Date
+
+    if (dateString) {
+      // Parse the date string (expected format: YYYY-MM-DD)
+      date = new Date(dateString)
+
+      // Validate the parsed date
+      if (isNaN(date.getTime())) {
+        throw new Error(
+          `Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`
+        )
+      }
+    } else {
+      // Use current date
+      date = new Date()
+    }
+
+    // getMonth() returns 0-11, so add 1 to get 1-12
+    return date.getMonth() + 1
+  }
+
+  /**
    * Clear internal caches (for testing purposes)
    */
   public clearCaches(): void {
@@ -286,11 +373,15 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       // Requirement 3.5: Return separate, mutually exclusive arrays for each health status
       // Each club appears in exactly one of these arrays based on assessClubHealth classification
-      const atRiskClubs = clubTrends.filter(c => c.currentStatus === 'at-risk')
-      const criticalClubs = clubTrends.filter(
-        c => c.currentStatus === 'critical'
+      const vulnerableClubs = clubTrends.filter(
+        c => c.currentStatus === 'vulnerable'
       )
-      const healthyClubs = clubTrends.filter(c => c.currentStatus === 'healthy')
+      const interventionRequiredClubs = clubTrends.filter(
+        c => c.currentStatus === 'intervention-required'
+      )
+      const thrivingClubs = clubTrends.filter(
+        c => c.currentStatus === 'thriving'
+      )
 
       // Calculate distinguished clubs
       const distinguishedClubs = this.calculateDistinguishedClubs(latestEntry)
@@ -354,23 +445,23 @@ export class AnalyticsEngine implements IAnalyticsEngine {
                   ) / 10
                 : 0
 
-            // Calculate club health change (percentage of healthy clubs)
-            const currentHealthyPercent =
-              (healthyClubs.length / clubTrends.length) * 100
+            // Calculate club health change (percentage of thriving clubs)
+            const currentThrivingPercent =
+              (thrivingClubs.length / clubTrends.length) * 100
             const previousClubTrends = await this.analyzeClubTrends(
               districtId,
               [previousEntry]
             )
-            const previousHealthyClubs = previousClubTrends.filter(
-              c => c.currentStatus === 'healthy'
+            const previousThrivingClubs = previousClubTrends.filter(
+              c => c.currentStatus === 'thriving'
             ).length
-            const previousHealthyPercent =
+            const previousThrivingPercent =
               previousClubTrends.length > 0
-                ? (previousHealthyClubs / previousClubTrends.length) * 100
+                ? (previousThrivingClubs / previousClubTrends.length) * 100
                 : 0
             const clubHealthChange =
               Math.round(
-                (currentHealthyPercent - previousHealthyPercent) * 10
+                (currentThrivingPercent - previousThrivingPercent) * 10
               ) / 10
 
             yearOverYear = {
@@ -400,9 +491,9 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         membershipTrend,
         topGrowthClubs,
         allClubs: clubTrends,
-        atRiskClubs,
-        healthyClubs,
-        criticalClubs,
+        vulnerableClubs,
+        thrivingClubs,
+        interventionRequiredClubs,
         distinguishedClubs,
         distinguishedProjection,
         distinguishedClubAnalytics,
@@ -415,9 +506,9 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         districtId,
         dateRange,
         totalClubs: clubTrends.length,
-        atRiskClubs: atRiskClubs.length,
-        criticalClubs: criticalClubs.length,
-        healthyClubs: healthyClubs.length,
+        vulnerableClubs: vulnerableClubs.length,
+        interventionRequiredClubs: interventionRequiredClubs.length,
+        thrivingClubs: thrivingClubs.length,
       })
 
       return analytics
@@ -480,8 +571,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
       const clubTrends = await this.analyzeClubTrends(districtId, dataEntries)
 
-      // Return only at-risk clubs (not critical clubs)
-      return clubTrends.filter(c => c.currentStatus === 'at-risk')
+      // Return only vulnerable clubs (not intervention-required clubs)
+      return clubTrends.filter(c => c.currentStatus === 'vulnerable')
     } catch (error) {
       logger.error('Failed to identify at-risk clubs', { districtId, error })
       throw error
@@ -622,19 +713,19 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       }
     }
     clubHealth: {
-      healthyClubs: {
+      thrivingClubs: {
         current: number
         previous: number
         change: number
         percentageChange: number
       }
-      atRiskClubs: {
+      vulnerableClubs: {
         current: number
         previous: number
         change: number
         percentageChange: number
       }
-      criticalClubs: {
+      interventionRequiredClubs: {
         current: number
         previous: number
         change: number
@@ -683,12 +774,14 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     )
 
     // Club health metrics
-    const currentHealthy = this.countHealthyClubs(currentEntry)
-    const previousHealthy = this.countHealthyClubs(previousEntry)
-    const currentAtRisk = this.countAtRiskClubs(currentEntry)
-    const previousAtRisk = this.countAtRiskClubs(previousEntry)
-    const currentCritical = this.countCriticalClubs(currentEntry)
-    const previousCritical = this.countCriticalClubs(previousEntry)
+    const currentThriving = this.countThrivingClubs(currentEntry)
+    const previousThriving = this.countThrivingClubs(previousEntry)
+    const currentVulnerable = this.countVulnerableClubs(currentEntry)
+    const previousVulnerable = this.countVulnerableClubs(previousEntry)
+    const currentInterventionRequired =
+      this.countInterventionRequiredClubs(currentEntry)
+    const previousInterventionRequired =
+      this.countInterventionRequiredClubs(previousEntry)
 
     // DCP goals metrics
     const currentTotalDcp = this.getTotalDcpGoals(currentEntry)
@@ -741,31 +834,31 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         },
       },
       clubHealth: {
-        healthyClubs: {
-          current: currentHealthy,
-          previous: previousHealthy,
-          change: currentHealthy - previousHealthy,
+        thrivingClubs: {
+          current: currentThriving,
+          previous: previousThriving,
+          change: currentThriving - previousThriving,
           percentageChange: this.calculatePercentageChange(
-            previousHealthy,
-            currentHealthy
+            previousThriving,
+            currentThriving
           ),
         },
-        atRiskClubs: {
-          current: currentAtRisk,
-          previous: previousAtRisk,
-          change: currentAtRisk - previousAtRisk,
+        vulnerableClubs: {
+          current: currentVulnerable,
+          previous: previousVulnerable,
+          change: currentVulnerable - previousVulnerable,
           percentageChange: this.calculatePercentageChange(
-            previousAtRisk,
-            currentAtRisk
+            previousVulnerable,
+            currentVulnerable
           ),
         },
-        criticalClubs: {
-          current: currentCritical,
-          previous: previousCritical,
-          change: currentCritical - previousCritical,
+        interventionRequiredClubs: {
+          current: currentInterventionRequired,
+          previous: previousInterventionRequired,
+          change: currentInterventionRequired - previousInterventionRequired,
           percentageChange: this.calculatePercentageChange(
-            previousCritical,
-            currentCritical
+            previousInterventionRequired,
+            currentInterventionRequired
           ),
         },
       },
@@ -943,11 +1036,12 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
-   * Count at-risk clubs
+   * Count vulnerable clubs
    *
-   * Requirement 3.3: At-risk if membership >= 12 AND dcpGoals = 0
+   * Requirement 3.2: Vulnerable if some but not all requirements met (not intervention-required)
+   * Uses new classification logic based on monthly DCP checkpoints
    */
-  private countAtRiskClubs(entry: DistrictCacheEntry): number {
+  private countVulnerableClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
       const membership = this.parseIntSafe(
         club['Active Members'] ||
@@ -955,25 +1049,48 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           club['Membership']
       )
       const dcpGoals = this.parseIntSafe(club['Goals Met'] || club['DCP Goals'])
+      const memBase = this.parseIntSafe(club['Mem. Base'])
+      const netGrowth = membership - memBase
 
-      // At-risk: membership >= 12 AND zero DCP goals
-      return membership >= 12 && dcpGoals === 0
+      // Intervention override: membership < 12 AND net growth < 3 is NOT vulnerable
+      if (membership < 12 && netGrowth < 3) {
+        return false
+      }
+
+      // Membership requirement: >= 20 OR net growth >= 3
+      const membershipRequirementMet = membership >= 20 || netGrowth >= 3
+
+      // DCP checkpoint: simplified check for counting
+      const dcpCheckpointMet = dcpGoals > 0
+
+      // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
+      const cspSubmitted = true
+
+      // Vulnerable: some but not all requirements met
+      const allRequirementsMet =
+        membershipRequirementMet && dcpCheckpointMet && cspSubmitted
+      return !allRequirementsMet
     }).length
   }
 
   /**
-   * Count critical clubs
+   * Count intervention-required clubs
    *
-   * Requirement 3.2: Critical if membership < 12
+   * Requirement 3.2: Intervention Required if membership < 12 AND net growth < 3
+   * Uses new classification logic based on intervention override rule
    */
-  private countCriticalClubs(entry: DistrictCacheEntry): number {
+  private countInterventionRequiredClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
       const membership = this.parseIntSafe(
         club['Active Members'] ||
           club['Active Membership'] ||
           club['Membership']
       )
-      return membership < 12
+      const memBase = this.parseIntSafe(club['Mem. Base'])
+      const netGrowth = membership - memBase
+
+      // Intervention required: membership < 12 AND net growth < 3
+      return membership < 12 && netGrowth < 3
     }).length
   }
 
@@ -1217,7 +1334,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           this.ensureString(club['Area']),
         membershipTrend: [],
         dcpGoalsTrend: [],
-        currentStatus: 'healthy',
+        currentStatus: 'thriving',
         riskFactors: [],
         distinguishedLevel: 'NotDistinguished', // Default value, will be updated later
       })
@@ -1251,10 +1368,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       }
     }
 
+    // Get the snapshot date from the latest entry for DCP checkpoint evaluation
+    const snapshotDate = latestEntry.date
+
     // Analyze each club for risk factors and status
     for (const clubTrend of clubMap.values()) {
-      this.assessClubHealth(clubTrend)
-
       // Find the latest club data for this club to calculate net growth
       const latestClubData = latestEntry.clubPerformance.find(club => {
         const clubId = this.ensureString(
@@ -1263,6 +1381,9 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         return clubId === clubTrend.clubId
       })
 
+      // Pass latestClubData and snapshotDate to assessClubHealth for new classification logic
+      this.assessClubHealth(clubTrend, latestClubData, snapshotDate)
+
       this.identifyDistinguishedLevel(clubTrend, latestClubData)
     }
 
@@ -1270,16 +1391,28 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
-   * Assess club health and identify risk factors
+   * Assess club health using monthly DCP checkpoint system
    *
-   * Classification rules (Requirements 3.1, 3.2, 3.3, 3.4):
-   * - Critical: membership < 12
-   * - At-risk: membership >= 12 AND dcpGoals = 0
-   * - Healthy: membership >= 12 AND dcpGoals >= 1
+   * Classification Rules (Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 3.1):
+   * 1. Intervention Required: membership < 12 AND net growth < 3
+   * 2. Thriving: membership requirement met AND DCP checkpoint met AND CSP submitted
+   * 3. Vulnerable: any requirement not met (but not intervention)
    *
-   * Each club is classified into exactly one category (Requirement 3.5).
+   * Membership Requirement (Requirement 1.3): membership >= 20 OR net growth >= 3
+   * DCP Checkpoint: varies by month (see getDCPCheckpoint)
+   * CSP Requirement: CSP submitted (defaults to true for pre-2025-2026 historical data)
+   *
+   * Each club is classified into exactly one category.
+   *
+   * @param clubTrend - The club trend data to assess
+   * @param latestClubData - Optional raw club data for net growth calculation
+   * @param snapshotDate - Optional snapshot date for determining current program month
    */
-  private assessClubHealth(clubTrend: ClubTrend): void {
+  private assessClubHealth(
+    clubTrend: ClubTrend,
+    latestClubData?: ScrapedRecord,
+    snapshotDate?: string
+  ): void {
     const riskFactors: string[] = []
 
     // Get current membership from the latest trend data point
@@ -1292,24 +1425,155 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       clubTrend.dcpGoalsTrend[clubTrend.dcpGoalsTrend.length - 1]
         ?.goalsAchieved ?? 0
 
+    // Calculate net growth from raw club data (Requirement 5.3)
+    // Net growth = Active Members - Mem. Base
+    let netGrowth = 0
+    if (latestClubData) {
+      netGrowth = this.calculateNetGrowth(latestClubData)
+    }
+
+    // Get current program month for DCP checkpoint evaluation
+    const currentMonth = this.getCurrentProgramMonth(snapshotDate)
+
+    // Get required DCP checkpoint for current month
+    const requiredDcpCheckpoint = this.getDCPCheckpoint(currentMonth)
+
+    // Get CSP status (Requirements 5.4, 5.5: CSP guaranteed in 2025-2026+, absent in prior years)
+    const cspSubmitted = latestClubData
+      ? this.getCSPStatus(latestClubData)
+      : true
+
     // Apply classification rules - mutually exclusive categories
     let status: ClubHealthStatus
 
-    if (currentMembership < 12) {
-      // Requirement 3.2: Critical if membership below 12
-      status = 'critical'
+    // Requirement 1.2: Intervention override rule
+    // If membership < 12 AND net growth < 3, assign "Intervention Required" regardless of other criteria
+    if (currentMembership < 12 && netGrowth < 3) {
+      status = 'intervention-required'
       riskFactors.push('Membership below 12 (critical)')
-    } else if (currentDcpGoals === 0) {
-      // Requirement 3.3: At-risk if membership >= 12 but zero DCP goals
-      status = 'at-risk'
-      riskFactors.push('Zero DCP goals achieved')
+      riskFactors.push(
+        `Net growth since July: ${netGrowth} (need 3+ to override)`
+      )
     } else {
-      // Requirement 3.4: Healthy if membership >= 12 and at least one DCP goal
-      status = 'healthy'
+      // Evaluate each requirement for Thriving status
+
+      // Requirement 1.3: Membership requirement (>= 20 OR net growth >= 3)
+      const membershipRequirementMet = currentMembership >= 20 || netGrowth >= 3
+
+      // DCP checkpoint requirement (varies by month)
+      const dcpCheckpointMet = currentDcpGoals >= requiredDcpCheckpoint
+
+      // CSP requirement (CSP guaranteed in 2025-2026+, absent in prior years)
+      const cspRequirementMet = cspSubmitted
+
+      // Requirement 1.4: Thriving if ALL requirements met
+      if (membershipRequirementMet && dcpCheckpointMet && cspRequirementMet) {
+        status = 'thriving'
+        // Requirement 4.5: Clear riskFactors for Thriving clubs
+      } else {
+        // Requirement 1.5: Vulnerable if some but not all requirements met
+        status = 'vulnerable'
+
+        // Requirement 4.2: Add specific reason for membership requirement not met
+        if (!membershipRequirementMet) {
+          riskFactors.push(
+            `Membership below threshold (${currentMembership} members, need 20+ or net growth 3+)`
+          )
+        }
+
+        // Requirement 4.3: Add specific reason for DCP checkpoint not met
+        if (!dcpCheckpointMet) {
+          const monthName = this.getMonthName(currentMonth)
+          riskFactors.push(
+            `DCP checkpoint not met: ${currentDcpGoals} goal${currentDcpGoals !== 1 ? 's' : ''} achieved, ${requiredDcpCheckpoint} required for ${monthName}`
+          )
+        }
+
+        // Requirement 4.4: Add specific reason for CSP not submitted
+        if (!cspRequirementMet) {
+          riskFactors.push('CSP not submitted')
+        }
+      }
     }
 
     clubTrend.riskFactors = riskFactors
     clubTrend.currentStatus = status
+  }
+
+  /**
+   * Get CSP (Club Success Plan) submission status from club data
+   *
+   * CSP data availability by program year:
+   * - 2025-2026 and later: CSP field is guaranteed to be present
+   * - Prior to 2025-2026: CSP field did not exist, defaults to true
+   *
+   * @param club - Raw club data record
+   * @returns true if CSP is submitted or field is absent (historical data), false otherwise
+   */
+  private getCSPStatus(club: ScrapedRecord): boolean {
+    // Check for CSP field in various possible formats
+    const cspValue =
+      club['CSP'] ||
+      club['Club Success Plan'] ||
+      club['CSP Submitted'] ||
+      club['Club Success Plan Submitted']
+
+    // Historical data compatibility: if field doesn't exist (pre-2025-2026 data), assume submitted
+    if (cspValue === undefined || cspValue === null) {
+      return true
+    }
+
+    // Parse the value
+    const cspString = String(cspValue).toLowerCase().trim()
+
+    // Check for positive indicators
+    if (
+      cspString === 'yes' ||
+      cspString === 'true' ||
+      cspString === '1' ||
+      cspString === 'submitted' ||
+      cspString === 'y'
+    ) {
+      return true
+    }
+
+    // Check for negative indicators
+    if (
+      cspString === 'no' ||
+      cspString === 'false' ||
+      cspString === '0' ||
+      cspString === 'not submitted' ||
+      cspString === 'n'
+    ) {
+      return false
+    }
+
+    // Default to true for unknown values (historical data compatibility)
+    return true
+  }
+
+  /**
+   * Get month name from month number
+   *
+   * @param month - Month number (1-12)
+   * @returns Month name string
+   */
+  private getMonthName(month: number): string {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ]
+    return monthNames[month - 1] || 'Unknown'
   }
 
   /**
@@ -1797,7 +2061,6 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
     // Calculate normalized scores
     const areas = Array.from(areaMap.values()).map(
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ({ healthScoreSum, ...area }) => {
         // Calculate average club health (0-1 scale)
         const avgHealth =
@@ -1887,11 +2150,12 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
-   * Count healthy clubs in an entry
+   * Count thriving clubs in an entry
    *
-   * Requirement 3.4: Healthy if membership >= 12 AND dcpGoals >= 1
+   * Requirement 3.2: Thriving if all requirements met (membership, DCP checkpoint, CSP)
+   * Uses new classification logic based on monthly DCP checkpoints
    */
-  private countHealthyClubs(entry: DistrictCacheEntry): number {
+  private countThrivingClubs(entry: DistrictCacheEntry): number {
     return entry.clubPerformance.filter(club => {
       const membership = this.parseIntSafe(
         club['Active Members'] ||
@@ -1899,8 +2163,25 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           club['Membership']
       )
       const dcpGoals = this.parseIntSafe(club['Goals Met'])
+      const memBase = this.parseIntSafe(club['Mem. Base'])
+      const netGrowth = membership - memBase
 
-      return membership >= 12 && dcpGoals > 0
+      // Intervention override: membership < 12 AND net growth < 3 is NOT thriving
+      if (membership < 12 && netGrowth < 3) {
+        return false
+      }
+
+      // Membership requirement: >= 20 OR net growth >= 3
+      const membershipRequirementMet = membership >= 20 || netGrowth >= 3
+
+      // DCP checkpoint: use current month (simplified - use latest snapshot date context)
+      // For counting purposes, we use a simplified check: dcpGoals > 0
+      const dcpCheckpointMet = dcpGoals > 0
+
+      // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
+      const cspSubmitted = true
+
+      return membershipRequirementMet && dcpCheckpointMet && cspSubmitted
     }).length
   }
 

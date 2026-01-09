@@ -2,6 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 
 /**
+ * Type for club health status values
+ */
+export type ClubHealthStatus =
+  | 'thriving'
+  | 'vulnerable'
+  | 'intervention-required'
+
+/**
  * Interface for club trend data
  */
 export interface ClubTrend {
@@ -13,7 +21,7 @@ export interface ClubTrend {
   areaName: string
   membershipTrend: Array<{ date: string; count: number }>
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
-  currentStatus: 'healthy' | 'at-risk' | 'critical'
+  currentStatus: ClubHealthStatus
   riskFactors: string[]
   distinguishedLevel?: 'President' | 'Select' | 'Distinguished'
 }
@@ -53,37 +61,37 @@ export const useClubTrends = (
 }
 
 /**
- * Hook to fetch at-risk clubs for a district
- * Returns list of clubs that are at-risk or critical based on various factors
+ * Hook to fetch vulnerable clubs for a district
+ * Returns list of clubs that are vulnerable or intervention-required based on various factors
  *
- * @param districtId - The district ID to fetch at-risk clubs for
+ * @param districtId - The district ID to fetch vulnerable clubs for
  * @param enabled - Whether the query should be enabled (default: true)
- * @returns Query result with at-risk clubs data
+ * @returns Query result with vulnerable clubs data
  *
- * Requirements: 4.4
+ * Requirements: 3.2, 3.3
  */
-export const useAtRiskClubs = (
+export const useVulnerableClubs = (
   districtId: string | null,
   enabled: boolean = true
 ) => {
   return useQuery<
     {
       districtId: string
-      totalAtRiskClubs: number
-      criticalClubs: number
-      atRiskClubs: number
+      totalVulnerableClubs: number
+      interventionRequiredClubs: number
+      vulnerableClubs: number
       clubs: ClubTrend[]
     },
     Error
   >({
-    queryKey: ['atRiskClubs', districtId],
+    queryKey: ['vulnerableClubs', districtId],
     queryFn: async () => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
 
       const response = await apiClient.get(
-        `/districts/${districtId}/at-risk-clubs`
+        `/districts/${districtId}/vulnerable-clubs`
       )
       return response.data
     },

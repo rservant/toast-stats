@@ -14,8 +14,8 @@ import {
 } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { DistrictOverview } from '../components/DistrictOverview'
-import { AtRiskClubsPanel } from '../components/AtRiskClubsPanel'
-import { CriticalClubsPanel } from '../components/CriticalClubsPanel'
+import { VulnerableClubsPanel } from '../components/VulnerableClubsPanel'
+import { InterventionRequiredClubsPanel } from '../components/InterventionRequiredClubsPanel'
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
 import { ClubDetailModal } from '../components/ClubDetailModal'
@@ -127,14 +127,14 @@ const DistrictDetailPage: React.FC = () => {
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || []
 
-  // Separate critical and at-risk clubs - now they come as separate arrays
-  const criticalClubs = React.useMemo(() => {
-    return analytics?.criticalClubs || []
-  }, [analytics?.criticalClubs])
+  // Separate intervention-required and vulnerable clubs - now they come as separate arrays
+  const interventionRequiredClubs = React.useMemo(() => {
+    return analytics?.interventionRequiredClubs || []
+  }, [analytics?.interventionRequiredClubs])
 
-  const atRiskClubs = React.useMemo(() => {
-    return analytics?.atRiskClubs || []
-  }, [analytics?.atRiskClubs])
+  const vulnerableClubs = React.useMemo(() => {
+    return analytics?.vulnerableClubs || []
+  }, [analytics?.vulnerableClubs])
 
   // Get available dates sorted in descending order (filtered by program year)
   const availableDates = cachedDatesInProgramYear.sort((a, b) =>
@@ -357,18 +357,18 @@ const DistrictDetailPage: React.FC = () => {
                   programYearStartDate={selectedProgramYear.startDate}
                 />
 
-                {/* Critical Clubs Panel */}
+                {/* Intervention Required Clubs Panel */}
                 {analytics && (
-                  <CriticalClubsPanel
-                    clubs={criticalClubs}
+                  <InterventionRequiredClubsPanel
+                    clubs={interventionRequiredClubs}
                     isLoading={isLoadingAnalytics}
                   />
                 )}
 
-                {/* At-Risk Clubs Panel */}
+                {/* Vulnerable Clubs Panel */}
                 {analytics && (
-                  <AtRiskClubsPanel
-                    clubs={atRiskClubs}
+                  <VulnerableClubsPanel
+                    clubs={vulnerableClubs}
                     isLoading={isLoadingAnalytics}
                   />
                 )}
@@ -448,7 +448,7 @@ const DistrictDetailPage: React.FC = () => {
                       currentYear={{
                         totalMembership: analytics.totalMembership,
                         distinguishedClubs: analytics.distinguishedClubs.total,
-                        healthyClubs: analytics.healthyClubs.length,
+                        thrivingClubs: analytics.thrivingClubs.length,
                         totalClubs: analytics.allClubs.length,
                       }}
                       isLoading={isLoadingAnalytics}

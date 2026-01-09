@@ -3383,36 +3383,46 @@ router.get(
         return
       }
 
-      // Identify at-risk clubs
-      const atRiskClubs = await analyticsEngine.identifyAtRiskClubs(districtId!)
+      // Identify vulnerable clubs (formerly at-risk)
+      const vulnerableClubs = await analyticsEngine.identifyAtRiskClubs(
+        districtId!
+      )
 
-      // Get critical clubs separately - only if we have at-risk clubs data
-      let criticalClubsCount = 0
-      let allClubs: ClubTrend[] = [...atRiskClubs]
+      // Get intervention-required clubs separately - only if we have vulnerable clubs data
+      let interventionRequiredCount = 0
+      let allClubs: ClubTrend[] = [...vulnerableClubs]
 
-      if (atRiskClubs.length > 0) {
+      if (vulnerableClubs.length > 0) {
         try {
           const analytics =
             await analyticsEngine.generateDistrictAnalytics(districtId)
-          criticalClubsCount = analytics.criticalClubs.length
-          allClubs = [...atRiskClubs, ...analytics.criticalClubs]
+          interventionRequiredCount = analytics.interventionRequiredClubs.length
+          allClubs = [
+            ...vulnerableClubs,
+            ...analytics.interventionRequiredClubs,
+          ]
         } catch (error) {
-          // If analytics fails, just use at-risk clubs
-          logger.warn('Failed to get critical clubs, using at-risk only', {
-            districtId,
-            error,
-          })
+          // If analytics fails, just use vulnerable clubs
+          logger.warn(
+            'Failed to get intervention-required clubs, using vulnerable only',
+            {
+              districtId,
+              error,
+            }
+          )
         }
       }
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
+      // Note: API response maintains backward compatibility with old field names
+      // while internally using new terminology
       res.json({
         districtId,
-        totalAtRiskClubs: atRiskClubs.length,
-        criticalClubs: criticalClubsCount,
-        atRiskClubs: atRiskClubs.length,
+        totalAtRiskClubs: vulnerableClubs.length,
+        criticalClubs: interventionRequiredCount,
+        atRiskClubs: vulnerableClubs.length,
         clubs: allClubs,
       })
     } catch (error) {
@@ -3946,9 +3956,11 @@ function generateDistrictAnalyticsCSV(
   lines.push('Metric,Value')
   lines.push(`Total Membership,${analytics.totalMembership}`)
   lines.push(`Membership Change,${analytics.membershipChange}`)
-  lines.push(`Healthy Clubs,${analytics.healthyClubs}`)
-  lines.push(`At-Risk Clubs,${analytics.atRiskClubs.length}`)
-  lines.push(`Critical Clubs,${analytics.criticalClubs}`)
+  lines.push(`Thriving Clubs,${analytics.thrivingClubs.length}`)
+  lines.push(`Vulnerable Clubs,${analytics.vulnerableClubs.length}`)
+  lines.push(
+    `Intervention Required Clubs,${analytics.interventionRequiredClubs.length}`
+  )
   lines.push(
     `Distinguished Clubs (Total),${analytics.distinguishedClubs.total}`
   )
@@ -3988,13 +4000,13 @@ function generateDistrictAnalyticsCSV(
     lines.push('')
   }
 
-  // At-risk clubs
-  if (analytics.atRiskClubs && analytics.atRiskClubs.length > 0) {
-    lines.push('At-Risk Clubs')
+  // Vulnerable clubs (formerly at-risk)
+  if (analytics.vulnerableClubs && analytics.vulnerableClubs.length > 0) {
+    lines.push('Vulnerable Clubs')
     lines.push(
       'Club ID,Club Name,Status,Current Membership,Current DCP Goals,Risk Factors'
     )
-    analytics.atRiskClubs.forEach((club: ClubTrend) => {
+    analytics.vulnerableClubs.forEach((club: ClubTrend) => {
       const currentMembership =
         club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
       const currentDcpGoals =

@@ -198,6 +198,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     sortable: true,
     filterable: true,
     filterType: 'categorical',
-    filterOptions: ['healthy', 'at-risk', 'critical'],
+    filterOptions: ['thriving', 'vulnerable', 'intervention-required'],
   },
 ]

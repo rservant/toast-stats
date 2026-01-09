@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 
+export type ClubHealthStatus =
+  | 'thriving'
+  | 'vulnerable'
+  | 'intervention-required'
+
 export interface ClubTrend {
   clubId: string
   clubName: string
@@ -10,7 +15,7 @@ export interface ClubTrend {
   areaName: string
   membershipTrend: Array<{ date: string; count: number }>
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
-  currentStatus: 'healthy' | 'at-risk' | 'critical'
+  currentStatus: ClubHealthStatus
   riskFactors: string[]
   distinguishedLevel:
     | 'NotDistinguished'
@@ -48,9 +53,9 @@ export interface DistrictAnalytics {
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
   allClubs: ClubTrend[]
-  atRiskClubs: ClubTrend[] // Contains only at-risk clubs (not critical)
-  healthyClubs: ClubTrend[]
-  criticalClubs: ClubTrend[]
+  vulnerableClubs: ClubTrend[] // Contains only vulnerable clubs (not intervention-required)
+  thrivingClubs: ClubTrend[]
+  interventionRequiredClubs: ClubTrend[]
   distinguishedClubs: {
     smedley: number
     presidents: number

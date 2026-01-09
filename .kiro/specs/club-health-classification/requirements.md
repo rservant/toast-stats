@@ -89,6 +89,6 @@ This is a refactoring of existing functionality in the AnalyticsEngine, not a ne
 1. WHEN evaluating membership, THE AnalyticsEngine SHALL use the existing "Active Members" or equivalent field
 2. WHEN evaluating DCP goals, THE AnalyticsEngine SHALL use the existing "Goals Met" field
 3. WHEN evaluating net growth, THE AnalyticsEngine SHALL calculate from "Active Members" minus "Mem. Base"
-4. WHEN CSP data is unavailable, THE AnalyticsEngine SHALL treat CSP as submitted (graceful degradation)
-5. WHEN officer training data is unavailable for July checkpoint, THE AnalyticsEngine SHALL use DCP goals as fallback
-
+4. WHEN evaluating data from the 2025-2026 program year or later, THE AnalyticsEngine SHALL use the CSP field which is guaranteed to be present
+5. WHEN evaluating data from prior program years (before 2025-2026), THE AnalyticsEngine SHALL treat CSP as submitted since the field did not exist
+6. WHEN officer training data is unavailable for July checkpoint, THE AnalyticsEngine SHALL use DCP goals as fallback

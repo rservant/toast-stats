@@ -2,7 +2,10 @@
  * Type definitions for analytics data structures
  */
 
-export type ClubHealthStatus = 'healthy' | 'at-risk' | 'critical'
+export type ClubHealthStatus =
+  | 'thriving'
+  | 'vulnerable'
+  | 'intervention-required'
 export type TrendDirection = 'improving' | 'stable' | 'declining'
 export type DistinguishedLevel =
   | 'NotDistinguished'
@@ -220,19 +223,19 @@ export interface YearOverYearComparison {
       }
     }
     clubHealth: {
-      healthyClubs: {
+      thrivingClubs: {
         current: number
         previous: number
         change: number
         percentageChange: number
       }
-      atRiskClubs: {
+      vulnerableClubs: {
         current: number
         previous: number
         change: number
         percentageChange: number
       }
-      criticalClubs: {
+      interventionRequiredClubs: {
         current: number
         previous: number
         change: number
@@ -290,9 +293,9 @@ export interface DistrictAnalytics {
 
   // Club health
   allClubs: ClubTrend[]
-  atRiskClubs: ClubTrend[] // Contains only at-risk clubs (not critical)
-  healthyClubs: ClubTrend[]
-  criticalClubs: ClubTrend[]
+  vulnerableClubs: ClubTrend[] // Contains only vulnerable clubs (not intervention-required)
+  thrivingClubs: ClubTrend[]
+  interventionRequiredClubs: ClubTrend[]
 
   // Distinguished status
   distinguishedClubs: {

@@ -14,11 +14,13 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
   if (!club) return null
 
   // Get status badge styling
-  const getStatusBadge = (status: 'healthy' | 'at-risk' | 'critical') => {
+  const getStatusBadge = (
+    status: 'thriving' | 'vulnerable' | 'intervention-required'
+  ) => {
     switch (status) {
-      case 'critical':
+      case 'intervention-required':
         return 'bg-red-100 text-red-800 border-red-300'
-      case 'at-risk':
+      case 'vulnerable':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       default:
         return 'bg-green-100 text-green-800 border-green-300'

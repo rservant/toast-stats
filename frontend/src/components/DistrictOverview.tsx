@@ -28,13 +28,13 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   } = useDistrictAnalytics(districtId, programYearStartDate, selectedDate)
 
   // Get club counts from the new separate arrays
-  const criticalClubsCount = React.useMemo(() => {
-    return analytics?.criticalClubs?.length || 0
-  }, [analytics?.criticalClubs])
+  const interventionRequiredClubsCount = React.useMemo(() => {
+    return analytics?.interventionRequiredClubs?.length || 0
+  }, [analytics?.interventionRequiredClubs])
 
-  const atRiskClubsCount = React.useMemo(() => {
-    return analytics?.atRiskClubs?.length || 0
-  }, [analytics?.atRiskClubs])
+  const vulnerableClubsCount = React.useMemo(() => {
+    return analytics?.vulnerableClubs?.length || 0
+  }, [analytics?.vulnerableClubs])
 
   const isLoading = isLoadingAnalytics
 
@@ -152,16 +152,16 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
-                {analytics.healthyClubs.length} Healthy
+                {analytics.thrivingClubs.length} Thriving
               </span>
-              {atRiskClubsCount > 0 && (
+              {vulnerableClubsCount > 0 && (
                 <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                  {atRiskClubsCount} At-Risk
+                  {vulnerableClubsCount} Vulnerable
                 </span>
               )}
-              {criticalClubsCount > 0 && (
+              {interventionRequiredClubsCount > 0 && (
                 <span className="text-xs text-red-700 bg-red-100 px-2 py-1 rounded">
-                  {criticalClubsCount} Critical
+                  {interventionRequiredClubsCount} Intervention Required
                 </span>
               )}
             </div>

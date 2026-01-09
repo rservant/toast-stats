@@ -21,9 +21,9 @@ const distinguishedLevelArb = fc.oneof(
 
 // Generator for club status
 const clubStatusArb = fc.oneof(
-  fc.constant('healthy' as const),
-  fc.constant('at-risk' as const),
-  fc.constant('critical' as const)
+  fc.constant('thriving' as const),
+  fc.constant('vulnerable' as const),
+  fc.constant('intervention-required' as const)
 )
 
 // Generator for club trend data

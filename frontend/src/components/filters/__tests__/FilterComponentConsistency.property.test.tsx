@@ -168,9 +168,9 @@ describe('Filter Component Consistency Properties', () => {
     // Test Status column has correct options
     const statusConfig = COLUMN_CONFIGS.find(col => col.field === 'status')
     expect(statusConfig?.filterOptions).toEqual([
-      'healthy',
-      'at-risk',
-      'critical',
+      'thriving',
+      'vulnerable',
+      'intervention-required',
     ])
 
     // Verify these options render correctly

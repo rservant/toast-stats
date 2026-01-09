@@ -76,11 +76,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   } = useColumnFilters(clubs)
 
   // Get status badge styling
-  const getStatusBadge = (status: 'healthy' | 'at-risk' | 'critical') => {
+  const getStatusBadge = (
+    status: 'thriving' | 'vulnerable' | 'intervention-required'
+  ) => {
     switch (status) {
-      case 'critical':
+      case 'intervention-required':
         return 'bg-red-100 text-red-800 border-red-300'
-      case 'at-risk':
+      case 'vulnerable':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       default:
         return 'bg-green-100 text-green-800 border-green-300'
@@ -88,14 +90,30 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   }
 
   // Get row background color based on status
-  const getRowColor = (status: 'healthy' | 'at-risk' | 'critical') => {
+  const getRowColor = (
+    status: 'thriving' | 'vulnerable' | 'intervention-required'
+  ) => {
     switch (status) {
-      case 'critical':
+      case 'intervention-required':
         return 'bg-red-50 hover:bg-red-100'
-      case 'at-risk':
+      case 'vulnerable':
         return 'bg-yellow-50 hover:bg-yellow-100'
       default:
         return 'bg-white hover:bg-gray-50'
+    }
+  }
+
+  // Get display label for status
+  const getStatusLabel = (
+    status: 'thriving' | 'vulnerable' | 'intervention-required'
+  ) => {
+    switch (status) {
+      case 'intervention-required':
+        return 'INTERVENTION REQUIRED'
+      case 'vulnerable':
+        return 'VULNERABLE'
+      default:
+        return 'THRIVING'
     }
   }
 
@@ -119,7 +137,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           bValue = b.latestDcpGoals
           break
         case 'status': {
-          const statusOrder = { critical: 0, 'at-risk': 1, healthy: 2 }
+          const statusOrder = {
+            'intervention-required': 0,
+            vulnerable: 1,
+            thriving: 2,
+          }
           aValue = statusOrder[a.currentStatus]
           bValue = statusOrder[b.currentStatus]
           break
@@ -325,7 +347,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                     <span
                       className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
                     >
-                      {club.currentStatus.toUpperCase()}
+                      {getStatusLabel(club.currentStatus)}
                     </span>
                   </td>
                 </tr>

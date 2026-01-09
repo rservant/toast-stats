@@ -3,97 +3,70 @@ import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { LoadingSkeleton } from './LoadingSkeleton'
 
 /**
- * Props for the AtRiskClubsPanel component
+ * Props for the InterventionRequiredClubsPanel component
  */
-interface AtRiskClubsPanelProps {
-  /** Array of at-risk club trends to display (should contain only at-risk clubs, not critical) */
+interface InterventionRequiredClubsPanelProps {
+  /** Array of intervention-required club trends to display */
   clubs: ClubTrend[]
   /** Whether the data is currently loading */
   isLoading?: boolean
 }
 
 /**
- * AtRiskClubsPanel Component
+ * InterventionRequiredClubsPanel Component
  *
- * Displays a panel highlighting clubs that are at-risk but not critical.
- * At-risk clubs are those with declining membership or zero DCP goals achieved
- * but still have sufficient membership to maintain their charter.
+ * Displays a prominent panel highlighting clubs that require intervention.
+ * Intervention-required clubs are those with membership below 12 AND net growth < 3.
+ * These clubs are shown with red styling to emphasize urgency.
  *
  * Features:
- * - Visual status indicators with yellow color-coded badges
+ * - Visual status indicators with red color-coded badges
  * - Risk factor tags for each club
  * - Click-to-view detailed modal with membership trends and DCP progress
- * - Empty state when no clubs are at-risk
+ * - Empty state when no clubs require intervention
  * - Loading skeleton during data fetch
  *
  * Risk Criteria:
- * - At-Risk: Declining membership for 3+ months OR zero DCP goals achieved
+ * - Intervention Required: Membership below 12 AND net growth since July < 3
  *
  * @component
  * @example
  * ```tsx
- * <AtRiskClubsPanel
- *   clubs={atRiskClubs}
+ * <InterventionRequiredClubsPanel
+ *   clubs={interventionRequiredClubs}
  *   isLoading={false}
  * />
  * ```
  */
-export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
-  clubs,
-  isLoading = false,
-}) => {
+export const InterventionRequiredClubsPanel: React.FC<
+  InterventionRequiredClubsPanelProps
+> = ({ clubs, isLoading = false }) => {
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // clubs prop now contains only at-risk clubs (not critical)
-  const atRiskClubs = clubs
+  // clubs prop now contains only intervention-required clubs
+  const interventionRequiredClubs = clubs
 
-  // Get status badge styling
-  const getStatusBadge = (status: 'healthy' | 'at-risk' | 'critical') => {
-    switch (status) {
-      case 'critical':
-        return 'bg-red-100 text-red-800 border-red-300'
-      case 'at-risk':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
-      default:
-        return 'bg-green-100 text-green-800 border-green-300'
-    }
+  // Get status badge styling for intervention-required clubs
+  const getStatusBadge = () => {
+    return 'bg-red-100 text-red-800 border-red-300'
   }
 
-  // Get status icon
-  const getStatusIcon = (status: 'healthy' | 'at-risk' | 'critical') => {
-    switch (status) {
-      case 'critical':
-        return (
-          <svg
-            className="w-5 h-5 text-red-600"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )
-      case 'at-risk':
-        return (
-          <svg
-            className="w-5 h-5 text-yellow-600"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )
-      default:
-        return null
-    }
+  // Get status icon for intervention-required clubs
+  const getStatusIcon = () => {
+    return (
+      <svg
+        className="w-5 h-5 text-red-600"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
+        <path
+          fillRule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+          clipRule="evenodd"
+        />
+      </svg>
+    )
   }
 
   // Handle club click
@@ -107,28 +80,28 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
       <div
         className="flex items-center justify-between mb-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
           <svg
-            className="w-6 h-6 text-yellow-600"
+            className="w-6 h-6 text-red-600"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
             <path
               fillRule="evenodd"
-              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
               clipRule="evenodd"
             />
           </svg>
-          <h3 className="text-xl font-bold text-gray-900 font-tm-headline">
-            At-Risk Clubs
+          <h3 className="text-xl font-bold text-red-900 font-tm-headline">
+            Intervention Required
           </h3>
           <svg
-            className={`w-5 h-5 text-yellow-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-red-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -142,26 +115,25 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
           </svg>
         </div>
         <div className="flex items-center gap-2">
-          {atRiskClubs.length > 0 && (
-            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
-              {atRiskClubs.length} At-Risk
-            </span>
-          )}
+          <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
+            {interventionRequiredClubs.length} Intervention Required
+          </span>
         </div>
       </div>
 
       {isExpanded && (
         <>
           {/* Subtitle */}
-          <p className="text-sm text-yellow-700 mb-4 font-tm-body">
-            Clubs with declining membership or low DCP goal achievement
+          <p className="text-sm text-red-700 mb-4 font-tm-body">
+            Clubs with membership below 12 and insufficient growth (need
+            immediate attention)
           </p>
 
           {/* Loading State */}
           {isLoading && <LoadingSkeleton variant="card" count={3} />}
 
-          {/* No At-Risk Clubs */}
-          {!isLoading && atRiskClubs.length === 0 && (
+          {/* No Intervention Required Clubs */}
+          {!isLoading && interventionRequiredClubs.length === 0 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
               <svg
                 className="w-12 h-12 text-green-600 mx-auto mb-2"
@@ -177,28 +149,27 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
                 />
               </svg>
               <p className="text-green-800 font-medium font-tm-headline">
-                No at-risk clubs!
+                No clubs require intervention!
               </p>
               <p className="text-green-700 text-sm mt-1 font-tm-body">
-                All clubs are performing well with stable membership and DCP
-                progress.
+                All clubs have sufficient membership or growth to maintain their
+                charter.
               </p>
             </div>
           )}
 
-          {/* At-Risk Clubs List */}
-          {!isLoading && atRiskClubs.length > 0 && (
+          {/* Intervention Required Clubs List */}
+          {!isLoading && interventionRequiredClubs.length > 0 && (
             <div className="space-y-3">
-              {/* At-Risk Clubs */}
-              {atRiskClubs.map(club => (
+              {interventionRequiredClubs.map(club => (
                 <div
                   key={club.clubId}
                   onClick={() => handleClubClick(club)}
-                  className="border-2 border-yellow-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-yellow-50"
+                  className="border-2 border-red-300 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-red-50"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
-                      {getStatusIcon(club.currentStatus)}
+                      {getStatusIcon()}
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900 font-tm-headline">
                           {club.clubName}
@@ -210,7 +181,7 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
                           {club.riskFactors.map((factor, index) => (
                             <span
                               key={index}
-                              className="text-xs px-2 py-1 bg-white border border-yellow-300 text-yellow-800 rounded font-tm-body"
+                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded font-tm-body"
                             >
                               {factor}
                             </span>
@@ -219,9 +190,9 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
                       </div>
                     </div>
                     <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge()}`}
                     >
-                      {club.currentStatus.toUpperCase()}
+                      INTERVENTION REQUIRED
                     </span>
                   </div>
                 </div>
@@ -275,9 +246,9 @@ export const AtRiskClubsPanel: React.FC<AtRiskClubsPanelProps> = ({
               {/* Status Badge */}
               <div className="mb-4">
                 <span
-                  className={`px-4 py-2 text-sm font-medium rounded-full border ${getStatusBadge(selectedClub.currentStatus)}`}
+                  className={`px-4 py-2 text-sm font-medium rounded-full border ${getStatusBadge()}`}
                 >
-                  {selectedClub.currentStatus.toUpperCase()}
+                  INTERVENTION REQUIRED
                 </span>
               </div>
 

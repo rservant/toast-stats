@@ -23,7 +23,7 @@ interface YearOverYearComparisonProps {
   currentYear: {
     totalMembership: number
     distinguishedClubs: number
-    healthyClubs: number
+    thrivingClubs: number
     totalClubs: number
   }
   isLoading?: boolean
@@ -63,7 +63,7 @@ const CustomTooltip = ({
               Previous:{' '}
               <span className="font-semibold">
                 {comparisonItem.previous.toFixed(
-                  metric === 'Club Health %' ? 1 : 0
+                  metric === 'Thriving Clubs %' ? 1 : 0
                 )}
               </span>
             </p>
@@ -71,7 +71,7 @@ const CustomTooltip = ({
               Current:{' '}
               <span className="font-semibold">
                 {comparisonItem.current.toFixed(
-                  metric === 'Club Health %' ? 1 : 0
+                  metric === 'Thriving Clubs %' ? 1 : 0
                 )}
               </span>
             </p>
@@ -82,7 +82,7 @@ const CustomTooltip = ({
             >
               {comparisonItem.change >= 0 ? '+' : ''}
               {comparisonItem.change.toFixed(
-                metric === 'Club Health %' ? 1 : 0
+                metric === 'Thriving Clubs %' ? 1 : 0
               )}{' '}
               ({comparisonItem.percentChange}%)
             </p>
@@ -119,13 +119,13 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
       currentYear.totalMembership - yearOverYear.membershipChange,
     distinguishedClubs:
       currentYear.distinguishedClubs - yearOverYear.distinguishedChange,
-    healthyClubsPercent:
-      (currentYear.healthyClubs / currentYear.totalClubs) * 100 -
+    thrivingClubsPercent:
+      (currentYear.thrivingClubs / currentYear.totalClubs) * 100 -
       yearOverYear.clubHealthChange,
   }
 
-  const currentHealthPercent =
-    (currentYear.healthyClubs / currentYear.totalClubs) * 100
+  const currentThrivingPercent =
+    (currentYear.thrivingClubs / currentYear.totalClubs) * 100
 
   // Prepare data for side-by-side comparison
   const comparisonData = [
@@ -154,15 +154,15 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
           : 'N/A',
     },
     {
-      metric: 'Club Health %',
-      previous: previousYear.healthyClubsPercent,
-      current: currentHealthPercent,
+      metric: 'Thriving Clubs %',
+      previous: previousYear.thrivingClubsPercent,
+      current: currentThrivingPercent,
       change: yearOverYear.clubHealthChange,
       percentChange:
-        previousYear.healthyClubsPercent > 0
+        previousYear.thrivingClubsPercent > 0
           ? (
               (yearOverYear.clubHealthChange /
-                previousYear.healthyClubsPercent) *
+                previousYear.thrivingClubsPercent) *
               100
             ).toFixed(1)
           : 'N/A',
@@ -325,7 +325,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600">Previous Year:</span>
                   <span className="text-lg font-bold text-gray-700">
-                    {item.metric === 'Club Health %'
+                    {item.metric === 'Thriving Clubs %'
                       ? `${item.previous.toFixed(1)}%`
                       : item.previous.toLocaleString()}
                   </span>
@@ -335,7 +335,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600">Current Year:</span>
                   <span className="text-lg font-bold text-gray-900">
-                    {item.metric === 'Club Health %'
+                    {item.metric === 'Thriving Clubs %'
                       ? `${item.current.toFixed(1)}%`
                       : item.current.toLocaleString()}
                   </span>
@@ -388,7 +388,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                         }`}
                       >
                         {item.change >= 0 ? '+' : ''}
-                        {item.metric === 'Club Health %'
+                        {item.metric === 'Thriving Clubs %'
                           ? item.change.toFixed(1)
                           : item.change}
                       </span>

@@ -20,7 +20,7 @@ const createTestClubs = (): ClubTrend[] => [
     areaId: 'area-1',
     areaName: 'Area 1',
     distinguishedLevel: 'Distinguished',
-    currentStatus: 'healthy',
+    currentStatus: 'thriving',
     riskFactors: [],
     membershipTrend: [{ date: '2024-01-01', count: 25 }],
     dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: 8 }],
@@ -33,8 +33,8 @@ const createTestClubs = (): ClubTrend[] => [
     areaId: 'area-2',
     areaName: 'Area 2',
     distinguishedLevel: 'Select',
-    currentStatus: 'at-risk',
-    riskFactors: ['low-membership'],
+    currentStatus: 'vulnerable',
+    riskFactors: ['DCP checkpoint not met'],
     membershipTrend: [{ date: '2024-01-01', count: 15 }],
     dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: 5 }],
   },
@@ -46,8 +46,8 @@ const createTestClubs = (): ClubTrend[] => [
     areaId: 'area-3',
     areaName: 'Area 3',
     distinguishedLevel: 'President',
-    currentStatus: 'critical',
-    riskFactors: ['low-membership', 'low-goals'],
+    currentStatus: 'intervention-required',
+    riskFactors: ['Membership below 12', 'Net growth below 3'],
     membershipTrend: [{ date: '2024-01-01', count: 10 }],
     dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: 2 }],
   },
@@ -59,7 +59,7 @@ const createTestClubs = (): ClubTrend[] => [
     areaId: 'area-4',
     areaName: 'Area 4',
     distinguishedLevel: 'Smedley',
-    currentStatus: 'healthy',
+    currentStatus: 'thriving',
     riskFactors: [],
     membershipTrend: [{ date: '2024-01-01', count: 30 }],
     dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: 9 }],
@@ -72,7 +72,7 @@ const createTestClubs = (): ClubTrend[] => [
     areaId: 'area-1',
     areaName: 'Area 1',
     distinguishedLevel: 'NotDistinguished',
-    currentStatus: 'healthy',
+    currentStatus: 'thriving',
     riskFactors: [],
     membershipTrend: [{ date: '2024-01-01', count: 20 }],
     dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: 6 }],
@@ -347,10 +347,13 @@ describe('ClubsTable Integration Tests', () => {
           ] as const
         )[i % 5],
         currentStatus: (i % 3 === 0
-          ? 'healthy'
+          ? 'thriving'
           : i % 3 === 1
-            ? 'at-risk'
-            : 'critical') as 'healthy' | 'at-risk' | 'critical',
+            ? 'vulnerable'
+            : 'intervention-required') as
+          | 'thriving'
+          | 'vulnerable'
+          | 'intervention-required',
         riskFactors: [],
         membershipTrend: [{ date: '2024-01-01', count: 20 + i }],
         dcpGoalsTrend: [{ date: '2024-01-01', goalsAchieved: i % 11 }],

@@ -57,10 +57,12 @@ describe('RefreshService - Closing Period Property Tests', () => {
   it('Property 1: Closing Period Detection Accuracy', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.date({
-          min: new Date('2020-01-01'),
-          max: new Date('2030-12-31'),
-        }),
+        fc
+          .date({
+            min: new Date('2020-01-01'),
+            max: new Date('2030-12-31'),
+          })
+          .filter(d => !isNaN(d.getTime())), // Filter out invalid dates
         fc.boolean(), // Whether to create a closing period scenario
         async (baseDate: Date, shouldBeClosingPeriod: boolean) => {
           // Create a fresh test cache directory for this property test run
