@@ -546,25 +546,32 @@ a[href],
 /* Focus management for keyboard navigation */
 .tm-skip-link {
   position: absolute;
-  top: -40px;
-  left: 6px;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 1000;
   background: var(--tm-loyal-blue);
   color: var(--tm-white);
   padding: 12px 24px;
   text-decoration: none;
   border-radius: var(--tm-radius-sm);
-  z-index: 1000;
   font-family: var(--tm-font-headline);
   font-weight: 600;
   font-size: 14px;
   line-height: 1.4;
-  min-height: var(--tm-touch-target);
-  display: flex;
-  align-items: center;
-  transition: top 0.2s ease;
   
   &:focus {
+    position: fixed;
     top: 6px;
+    left: 6px;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    min-height: var(--tm-touch-target);
+    display: flex;
+    align-items: center;
   }
   
   &:hover {
