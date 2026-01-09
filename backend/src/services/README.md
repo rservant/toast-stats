@@ -9,21 +9,26 @@ The backend services implement a modular, dependency-injected architecture with 
 ### Core Services
 
 #### RefreshService
+
 **Purpose**: Orchestrates the complete data refresh workflow
 
 **Extracted Modules**:
+
 - `ClosingPeriodDetector` (234 lines): Month-end closing period detection
 - `DataNormalizer` (364 lines): Raw data transformation to normalized format
 
 **Responsibilities**:
+
 - Coordinate scraping with circuit breaker protection
 - Implement retry logic with exponential backoff
 - Four-phase workflow: scraping → normalization → validation → snapshot creation
 
 #### AnalyticsEngine
+
 **Purpose**: Orchestrates analytics processing by delegating to specialized modules
 
 **Extracted Modules** (in `analytics/` directory):
+
 - `MembershipAnalyticsModule` (635 lines): Membership trends and year-over-year analysis
 - `DistinguishedClubAnalyticsModule` (814 lines): Distinguished club tracking and projections
 - `ClubHealthAnalyticsModule` (699 lines): At-risk club identification and health scoring
@@ -32,9 +37,11 @@ The backend services implement a modular, dependency-injected architecture with 
 - `AnalyticsUtils` (245 lines): Shared utility functions
 
 #### RawCSVCacheService
+
 **Purpose**: Caches raw CSV data from Toastmasters dashboard
 
 **Extracted Modules**:
+
 - `CacheSecurityManager` (281 lines): Path validation and security checks
 - `CacheIntegrityValidator` (444 lines): Metadata validation and corruption detection
 
@@ -55,6 +62,7 @@ The backend services implement a modular, dependency-injected architecture with 
 The CacheService provides in-memory caching using `node-cache`:
 
 ### Features
+
 - 15-minute default TTL
 - Custom TTL per entry
 - Cache bypass support
@@ -101,11 +109,13 @@ X-Bypass-Cache: true
 ## Testing
 
 All services have comprehensive test coverage:
+
 - Unit tests for core logic
 - Integration tests for workflows
 - Property-based tests for correctness properties
 
 Run tests:
+
 ```bash
 npm test
 ```

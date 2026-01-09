@@ -222,7 +222,8 @@ export class ConcurrencyLimiter {
     context?: Record<string, unknown>
   ): Promise<PromiseSettledResult<T>[]> {
     const results: PromiseSettledResult<T>[] = new Array(functions.length)
-    const maxInFlight = this.options.maxConcurrent + (this.options.queueLimit || 0)
+    const maxInFlight =
+      this.options.maxConcurrent + (this.options.queueLimit || 0)
 
     // Process functions in batches to avoid exceeding queue limit
     let nextIndex = 0

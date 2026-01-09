@@ -329,7 +329,11 @@ export class ToastmastersScraper {
     const actualDate = await this.getSelectedDate(page)
     if (!actualDate) {
       logger.warn('Could not verify date from dropdown', { dateString })
-      return { success: true, actualDateString: dateString, usedFallback: false }
+      return {
+        success: true,
+        actualDateString: dateString,
+        usedFallback: false,
+      }
     }
 
     const {
@@ -379,11 +383,14 @@ export class ToastmastersScraper {
       // Construct date string for previous month to get correct program year
       const prevMonthDateString = `${prevMonthYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       fallbackBaseUrl = this.buildBaseUrl(prevMonthDateString)
-      logger.info('Crossing program year boundary - using previous program year URL', {
-        originalBaseUrl: baseUrl,
-        fallbackBaseUrl,
-        prevMonthDateString,
-      })
+      logger.info(
+        'Crossing program year boundary - using previous program year URL',
+        {
+          originalBaseUrl: baseUrl,
+          fallbackBaseUrl,
+          prevMonthDateString,
+        }
+      )
     }
 
     const fallbackUrl = `${fallbackBaseUrl}/${pageName}?${districtParam}month=${prevMonth}&day=${formattedDate}`
@@ -419,7 +426,11 @@ export class ToastmastersScraper {
             usedMonth: prevMonth,
           }
         )
-        return { success: true, actualDateString: fbDateString, usedFallback: true }
+        return {
+          success: true,
+          actualDateString: fbDateString,
+          usedFallback: true,
+        }
       }
     }
 
@@ -849,11 +860,14 @@ export class ToastmastersScraper {
           // Construct date string for previous month to get correct program year
           const prevMonthDateString = `${prevMonthYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           fallbackBaseUrl = this.buildBaseUrl(prevMonthDateString)
-          logger.info('Crossing program year boundary - using previous program year URL', {
-            originalBaseUrl: baseUrl,
-            fallbackBaseUrl,
-            prevMonthDateString,
-          })
+          logger.info(
+            'Crossing program year boundary - using previous program year URL',
+            {
+              originalBaseUrl: baseUrl,
+              fallbackBaseUrl,
+              prevMonthDateString,
+            }
+          )
         }
 
         const fallbackUrl = `${fallbackBaseUrl}/Default.aspx?month=${prevMonth}&day=${formattedDate}`

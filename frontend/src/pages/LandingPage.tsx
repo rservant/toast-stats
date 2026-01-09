@@ -116,6 +116,8 @@ const LandingPage: React.FC = () => {
     error: rankHistoryError,
   } = useRankHistory({
     districtIds: selectedDistricts,
+    startDate: selectedProgramYear.startDate,
+    endDate: selectedProgramYear.endDate,
   })
 
   // Get unique regions for filter

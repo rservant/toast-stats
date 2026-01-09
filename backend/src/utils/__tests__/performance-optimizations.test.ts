@@ -206,7 +206,9 @@ describe('Performance Optimizations', () => {
       )
 
       // Verify results contain correct values
-      const values = fulfilled.map(r => (r as PromiseFulfilledResult<number>).value)
+      const values = fulfilled.map(
+        r => (r as PromiseFulfilledResult<number>).value
+      )
       expect(values.sort((a, b) => a - b)).toEqual(
         Array.from({ length: totalFunctions }, (_, i) => i)
       )
@@ -230,7 +232,9 @@ describe('Performance Optimizations', () => {
       void limiter.acquire() // queued (intentionally not awaited)
 
       // Next acquire should throw - queue is full
-      await expect(limiter.acquire()).rejects.toThrow('Concurrency queue limit exceeded')
+      await expect(limiter.acquire()).rejects.toThrow(
+        'Concurrency queue limit exceeded'
+      )
 
       // Clean up
       limiter.release(slot1)

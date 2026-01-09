@@ -794,9 +794,25 @@ coreRouter.get(
     const operationId = `rank_history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     try {
+      // Get optional date range from query params
+      const startDateParam =
+        typeof req.query['startDate'] === 'string'
+          ? req.query['startDate']
+          : undefined
+      const endDateParam =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+
       // Determine program year boundaries (July 1 to June 30)
-      const now = new Date().toISOString().split('T')[0] ?? '2025-01-01'
-      const programYear = getProgramYearInfo(now)
+      // Use provided startDate to determine program year, or fall back to current date
+      const referenceDate =
+        startDateParam ?? new Date().toISOString().split('T')[0] ?? '2025-01-01'
+      const programYear = getProgramYearInfo(referenceDate)
+
+      // If explicit date range provided, use those instead of computed program year boundaries
+      const effectiveStartDate = startDateParam ?? programYear.startDate
+      const effectiveEndDate = endDateParam ?? programYear.endDate
 
       // Get all successful snapshots
       const allSnapshots = await perDistrictSnapshotStore.listSnapshots(
@@ -836,9 +852,10 @@ coreRouter.get(
       // Process snapshots (already sorted newest first by listSnapshots)
       for (const snapshotMeta of allSnapshots) {
         try {
-          const rankings = await perDistrictSnapshotStore.readAllDistrictsRankings(
-            snapshotMeta.snapshot_id
-          )
+          const rankings =
+            await perDistrictSnapshotStore.readAllDistrictsRankings(
+              snapshotMeta.snapshot_id
+            )
 
           if (!rankings) {
             continue
@@ -847,8 +864,8 @@ coreRouter.get(
           // Use the source CSV date as the history date
           const date = rankings.metadata.sourceCsvDate
 
-          // Filter to current program year only
-          if (date < programYear.startDate || date > programYear.endDate) {
+          // Filter to effective date range (from query params or program year)
+          if (date < effectiveStartDate || date > effectiveEndDate) {
             continue
           }
 
@@ -914,19 +931,19 @@ coreRouter.get(
         return
       }
 
-      logger.info(
-        'Successfully served rank history from multiple snapshots',
-        {
-          operation: 'GET /api/districts/:districtId/rank-history',
-          operation_id: operationId,
-          district_id: districtId,
-          district_name: districtName,
-          history_points: history.length,
-          snapshots_checked: allSnapshots.length,
-          program_year: programYear.year,
-          date_range: history.length > 0 ? `${history[0]?.date} to ${history[history.length - 1]?.date}` : 'none',
-        }
-      )
+      logger.info('Successfully served rank history from multiple snapshots', {
+        operation: 'GET /api/districts/:districtId/rank-history',
+        operation_id: operationId,
+        district_id: districtId,
+        district_name: districtName,
+        history_points: history.length,
+        snapshots_checked: allSnapshots.length,
+        program_year: programYear.year,
+        date_range:
+          history.length > 0
+            ? `${history[0]?.date} to ${history[history.length - 1]?.date}`
+            : 'none',
+      })
 
       // Return response in RankHistoryResponse format expected by frontend
       res.json({

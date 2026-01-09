@@ -142,6 +142,7 @@ For detailed project status and implementation information, see [PROJECT_STATUS.
 This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs/archive/` for historical reference:
 
 **Archived Specifications:**
+
 - **toastmasters-district-visualizer**: Original project specification
 - **district-level-data**: District analytics features
 - **data-refresh-architecture**: Snapshot-based data architecture
