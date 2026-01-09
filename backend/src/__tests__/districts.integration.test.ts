@@ -436,7 +436,7 @@ function createIsolatedTestApp(cacheDirectory: string): Express {
     })
   })
 
-  router.get('/:districtId/at-risk-clubs', (req, res) => {
+  router.get('/:districtId/vulnerable-clubs', (req, res) => {
     const districtId = req.params['districtId']
     if (!districtId || !/^[A-Za-z0-9]+$/.test(districtId)) {
       return res.status(400).json({
@@ -448,7 +448,7 @@ function createIsolatedTestApp(cacheDirectory: string): Express {
 
     res.status(200).json({
       clubs: [],
-      totalAtRiskClubs: 0,
+      totalVulnerableClubs: 0,
     })
   })
 
@@ -1213,10 +1213,10 @@ describe('Districts API Integration Tests', () => {
       })
     })
 
-    describe('GET /api/districts/:districtId/at-risk-clubs', () => {
+    describe('GET /api/districts/:districtId/vulnerable-clubs', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)
-          .get('/api/districts/invalid@id/at-risk-clubs')
+          .get('/api/districts/invalid@id/vulnerable-clubs')
           .expect(400)
 
         expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
@@ -1224,11 +1224,11 @@ describe('Districts API Integration Tests', () => {
 
       it('should return empty array when no cached data exists', async () => {
         const response = await request(app)
-          .get('/api/districts/D999/at-risk-clubs')
+          .get('/api/districts/D999/vulnerable-clubs')
           .expect(200)
 
         expect(response.body.clubs).toEqual([])
-        expect(response.body.totalAtRiskClubs).toBe(0)
+        expect(response.body.totalVulnerableClubs).toBe(0)
       })
     })
 

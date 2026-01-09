@@ -22,7 +22,6 @@ const LandingPage: React.FC = () => {
     'aggregate' | 'clubs' | 'payments' | 'distinguished'
   >('aggregate')
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
-  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   // Use global backfill context
   const { addBackfill } = useBackfillContext()
@@ -361,12 +360,6 @@ const LandingPage: React.FC = () => {
                   addBackfill({ backfillId: id, type: 'global' })
                 }
               />
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-              >
-                Clear Cache
-              </button>
             </div>
           </div>
 
@@ -423,43 +416,6 @@ const LandingPage: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* Clear Cache Confirmation Dialog */}
-        {showClearConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">
-                Clear Cache?
-              </h3>
-              <p className="text-gray-600 mb-6">
-                This will delete all cached district data. The next data fetch
-                will download fresh data from the Toastmasters dashboard.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => setShowClearConfirm(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await apiClient.delete('/districts/cache')
-                      setShowClearConfirm(false)
-                      refetch()
-                    } catch (err) {
-                      console.error('Failed to clear cache:', err)
-                    }
-                  }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                >
-                  Clear Cache
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Historical Rank Tracking Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">

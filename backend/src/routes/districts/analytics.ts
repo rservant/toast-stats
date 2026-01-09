@@ -386,18 +386,21 @@ analyticsRouter.get(
 )
 
 /**
- * GET /api/districts/:districtId/at-risk-clubs
- * Get list of at-risk clubs for a district
+ * GET /api/districts/:districtId/vulnerable-clubs
+ * Get list of vulnerable clubs for a district
  * Requirements: 4.4
+ *
+ * Note: Renamed from at-risk-clubs to vulnerable-clubs to align with
+ * internal terminology shift documented in the codebase.
  */
 analyticsRouter.get(
-  '/:districtId/at-risk-clubs',
+  '/:districtId/vulnerable-clubs',
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req => {
       const districtId = req.params['districtId']
       if (!districtId) throw new Error('Missing districtId parameter')
-      return generateDistrictCacheKey(districtId, 'at-risk-clubs')
+      return generateDistrictCacheKey(districtId, 'vulnerable-clubs')
     },
   }),
   async (req: Request, res: Response) => {
@@ -449,13 +452,12 @@ analyticsRouter.get(
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
-      // Note: API response maintains backward compatibility with old field names
-      // while internally using new terminology
+      // Response uses new terminology aligned with frontend expectations
       res.json({
         districtId,
-        totalAtRiskClubs: vulnerableClubs.length,
-        criticalClubs: interventionRequiredCount,
-        atRiskClubs: vulnerableClubs.length,
+        totalVulnerableClubs: vulnerableClubs.length,
+        interventionRequiredClubs: interventionRequiredCount,
+        vulnerableClubs: vulnerableClubs.length,
         clubs: allClubs,
       })
     } catch (error) {
@@ -465,7 +467,7 @@ analyticsRouter.get(
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to identify at-risk clubs'
+          : 'Failed to identify vulnerable clubs'
 
       if (errorMessage.includes('No cached data available')) {
         res.status(404).json({

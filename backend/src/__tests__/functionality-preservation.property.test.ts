@@ -126,18 +126,20 @@ describe('Functionality Preservation Property Tests', () => {
             expect(analyticsResponse.body.error).toHaveProperty('code')
           }
 
-          // Test at-risk-clubs endpoint
-          const atRiskResponse = await request(app).get(
-            `/api/districts/${districtId}/at-risk-clubs`
+          // Test vulnerable-clubs endpoint
+          const vulnerableResponse = await request(app).get(
+            `/api/districts/${districtId}/vulnerable-clubs`
           )
 
-          expect(atRiskResponse.body).toBeDefined()
-          if (atRiskResponse.status === 200) {
-            // Should have clubs array and totalAtRiskClubs
-            expect(atRiskResponse.body).toHaveProperty('clubs')
-            expect(atRiskResponse.body).toHaveProperty('totalAtRiskClubs')
+          expect(vulnerableResponse.body).toBeDefined()
+          if (vulnerableResponse.status === 200) {
+            // Should have clubs array and totalVulnerableClubs
+            expect(vulnerableResponse.body).toHaveProperty('clubs')
+            expect(vulnerableResponse.body).toHaveProperty(
+              'totalVulnerableClubs'
+            )
           } else {
-            expect(atRiskResponse.body).toHaveProperty('error')
+            expect(vulnerableResponse.body).toHaveProperty('error')
           }
 
           return true

@@ -14,83 +14,47 @@ This document analyzes the alignment between frontend API consumption and backen
 
 ## Critical Issues
 
-### 1. Missing Backend Endpoint: `DELETE /api/districts/cache`
+### 1. ~~Missing Backend Endpoint: `DELETE /api/districts/cache`~~ ✅ REMOVED
 
-**Severity:** High  
-**Impact:** Frontend functionality broken
+**Status:** Removed (2026-01-09)
 
-The `LandingPage.tsx` component calls `DELETE /api/districts/cache` to clear cached data, but no corresponding backend route exists.
+The "Clear Cache" functionality has been removed from both frontend and backend. Clearing all historical snapshots is too destructive an action - historical data is valuable for trend analysis and comparisons.
 
-**Frontend Location:**
+### 2. ~~Endpoint Name Mismatch: `vulnerable-clubs` vs `at-risk-clubs`~~ ✅ FIXED
 
-```typescript
-// frontend/src/pages/LandingPage.tsx (line ~446)
-await apiClient.delete('/districts/cache')
-```
+**Status:** Resolved (2026-01-09)
 
-**Recommendation:** Either:
-
-- (A) Implement the endpoint in `backend/src/routes/districts/snapshots.ts`, or
-- (B) Remove the clear cache functionality from the frontend if it's no longer needed
-
-### 2. Endpoint Name Mismatch: `vulnerable-clubs` vs `at-risk-clubs`
-
-**Severity:** High  
-**Impact:** Frontend functionality broken
-
-The frontend calls `/api/districts/:districtId/vulnerable-clubs`, but the backend implements `/api/districts/:districtId/at-risk-clubs`.
-
-**Frontend Location:**
-
-```typescript
-// frontend/src/hooks/useClubTrends.ts (line ~93)
-const response = await apiClient.get(
-  `/districts/${districtId}/vulnerable-clubs`
-)
-```
-
-**Backend Location:**
-
-```typescript
-// backend/src/routes/districts/analytics.ts
-analyticsRouter.get('/:districtId/at-risk-clubs', ...)
-```
-
-**Recommendation:** Align naming by either:
-
-- (A) Rename the backend endpoint to `vulnerable-clubs` (preferred - matches internal terminology shift), or
-- (B) Update the frontend to call `at-risk-clubs`, or
-- (C) Support both endpoints with one aliasing the other
+The backend endpoint has been renamed from `at-risk-clubs` to `vulnerable-clubs` to align with frontend expectations and internal terminology. Response fields also updated to use `totalVulnerableClubs` and `vulnerableClubs` instead of the old naming.
 
 ---
 
 ## Frontend API Usage (Complete List)
 
-| Endpoint                                              | Hook/Component                     | Method      | Backend Status   |
-| ----------------------------------------------------- | ---------------------------------- | ----------- | ---------------- |
-| `/districts`                                          | `useDistricts.ts`                  | GET         | ✅ Exists        |
-| `/districts/cache/dates`                              | `LandingPage.tsx`                  | GET         | ✅ Exists        |
-| `/districts/rankings`                                 | `LandingPage.tsx`                  | GET         | ✅ Exists        |
-| `/districts/cache`                                    | `LandingPage.tsx`                  | DELETE      | ❌ Missing       |
-| `/districts/:districtId/statistics`                   | `useMembershipData.ts`             | GET         | ✅ Exists        |
-| `/districts/:districtId/membership-history`           | `useMembershipData.ts`             | GET         | ✅ Exists        |
-| `/districts/:districtId/clubs`                        | `useClubs.ts`                      | GET         | ✅ Exists        |
-| `/districts/:districtId/clubs/:clubId/trends`         | `useClubTrends.ts`                 | GET         | ✅ Exists        |
-| `/districts/:districtId/vulnerable-clubs`             | `useClubTrends.ts`                 | GET         | ❌ Name mismatch |
-| `/districts/:districtId/cached-dates`                 | `useDistrictData.ts`               | GET         | ✅ Exists        |
-| `/districts/:districtId/analytics`                    | `useDistrictAnalytics.ts`          | GET         | ✅ Exists        |
-| `/districts/:districtId/leadership-insights`          | `useLeadershipInsights.ts`         | GET         | ✅ Exists        |
-| `/districts/:districtId/distinguished-club-analytics` | `useDistinguishedClubAnalytics.ts` | GET         | ✅ Exists        |
-| `/districts/:districtId/educational-awards`           | `useEducationalAwards.ts`          | GET         | ✅ Exists        |
-| `/districts/:districtId/daily-reports`                | `useDailyReports.ts`               | GET         | ✅ Exists        |
-| `/districts/:districtId/daily-reports/:date`          | `useDailyReports.ts`               | GET         | ✅ Exists        |
-| `/districts/:districtId/rank-history`                 | `useRankHistory.ts`                | GET         | ✅ Exists        |
-| `/districts/:districtId/backfill`                     | `useBackfill.ts`                   | POST        | ✅ Exists        |
-| `/districts/:districtId/backfill/:backfillId`         | `useBackfill.ts`                   | GET, DELETE | ✅ Exists        |
-| `/districts/backfill`                                 | `useBackfill.ts`                   | POST        | ✅ Exists        |
-| `/districts/backfill/:backfillId`                     | `useBackfill.ts`                   | GET, DELETE | ✅ Exists        |
-| `/admin/districts/config`                             | `useDistrictConfiguration.ts`      | GET, POST   | ✅ Exists        |
-| `/admin/districts/config/:districtId`                 | `useDistrictConfiguration.ts`      | DELETE      | ✅ Exists        |
+| Endpoint                                              | Hook/Component                     | Method      | Backend Status |
+| ----------------------------------------------------- | ---------------------------------- | ----------- | -------------- |
+| `/districts`                                          | `useDistricts.ts`                  | GET         | ✅ Exists      |
+| `/districts/cache/dates`                              | `LandingPage.tsx`                  | GET         | ✅ Exists      |
+| `/districts/rankings`                                 | `LandingPage.tsx`                  | GET         | ✅ Exists      |
+| `/districts/cache`                                    | `LandingPage.tsx`                  | DELETE      | ❌ Removed     |
+| `/districts/:districtId/statistics`                   | `useMembershipData.ts`             | GET         | ✅ Exists      |
+| `/districts/:districtId/membership-history`           | `useMembershipData.ts`             | GET         | ✅ Exists      |
+| `/districts/:districtId/clubs`                        | `useClubs.ts`                      | GET         | ✅ Exists      |
+| `/districts/:districtId/clubs/:clubId/trends`         | `useClubTrends.ts`                 | GET         | ✅ Exists      |
+| `/districts/:districtId/vulnerable-clubs`             | `useClubTrends.ts`                 | GET         | ✅ Exists      |
+| `/districts/:districtId/cached-dates`                 | `useDistrictData.ts`               | GET         | ✅ Exists      |
+| `/districts/:districtId/analytics`                    | `useDistrictAnalytics.ts`          | GET         | ✅ Exists      |
+| `/districts/:districtId/leadership-insights`          | `useLeadershipInsights.ts`         | GET         | ✅ Exists      |
+| `/districts/:districtId/distinguished-club-analytics` | `useDistinguishedClubAnalytics.ts` | GET         | ✅ Exists      |
+| `/districts/:districtId/educational-awards`           | `useEducationalAwards.ts`          | GET         | ✅ Exists      |
+| `/districts/:districtId/daily-reports`                | `useDailyReports.ts`               | GET         | ✅ Exists      |
+| `/districts/:districtId/daily-reports/:date`          | `useDailyReports.ts`               | GET         | ✅ Exists      |
+| `/districts/:districtId/rank-history`                 | `useRankHistory.ts`                | GET         | ✅ Exists      |
+| `/districts/:districtId/backfill`                     | `useBackfill.ts`                   | POST        | ✅ Exists      |
+| `/districts/:districtId/backfill/:backfillId`         | `useBackfill.ts`                   | GET, DELETE | ✅ Exists      |
+| `/districts/backfill`                                 | `useBackfill.ts`                   | POST        | ✅ Exists      |
+| `/districts/backfill/:backfillId`                     | `useBackfill.ts`                   | GET, DELETE | ✅ Exists      |
+| `/admin/districts/config`                             | `useDistrictConfiguration.ts`      | GET, POST   | ✅ Exists      |
+| `/admin/districts/config/:districtId`                 | `useDistrictConfiguration.ts`      | DELETE      | ✅ Exists      |
 
 ---
 
@@ -100,12 +64,11 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ### District Analytics (Unused)
 
-| Endpoint                                | Purpose                       | Recommendation                  |
-| --------------------------------------- | ----------------------------- | ------------------------------- |
-| `GET /:districtId/membership-analytics` | Detailed membership analytics | Consider frontend integration   |
-| `GET /:districtId/at-risk-clubs`        | At-risk club identification   | Fix naming mismatch (see above) |
-| `GET /:districtId/year-over-year/:date` | YoY comparison                | Consider frontend integration   |
-| `GET /:districtId/export`               | CSV export                    | Consider frontend integration   |
+| Endpoint                                | Purpose                       | Recommendation                |
+| --------------------------------------- | ----------------------------- | ----------------------------- |
+| `GET /:districtId/membership-analytics` | Detailed membership analytics | Consider frontend integration |
+| `GET /:districtId/year-over-year/:date` | YoY comparison                | Consider frontend integration |
+| `GET /:districtId/export`               | CSV export                    | Consider frontend integration |
 
 ### Admin Snapshot Management
 
@@ -146,13 +109,12 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ### Immediate Actions (Priority 1)
 
-1. **Fix `DELETE /api/districts/cache`**
-   - Implement the endpoint or remove the frontend call
-   - This is blocking user functionality
+1. ~~**Fix `DELETE /api/districts/cache`**~~ ✅ REMOVED
+   - Functionality removed - clearing all historical data is too destructive
 
-2. **Fix `vulnerable-clubs` naming**
-   - Rename backend endpoint from `at-risk-clubs` to `vulnerable-clubs`
-   - This aligns with the internal terminology shift documented in the codebase
+2. ~~**Fix `vulnerable-clubs` naming**~~ ✅ DONE
+   - Renamed backend endpoint from `at-risk-clubs` to `vulnerable-clubs`
+   - Updated response fields to match frontend expectations
 
 ### Short-Term Improvements (Priority 2)
 
