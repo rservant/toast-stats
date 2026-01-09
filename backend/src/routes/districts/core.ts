@@ -766,8 +766,8 @@ coreRouter.get(
 
 /**
  * GET /api/districts/:districtId/rank-history
- * Fetch historical rank data for a district from all-districts-rankings.json
- * Query params: startDate (optional), endDate (optional) - currently ignored
+ * Fetch historical rank data for a district from all-districts-rankings.json across all snapshots
+ * Query params: startDate (optional), endDate (optional) - filter snapshots by date range
  *
  * Returns RankHistoryResponse format expected by frontend:
  * - districtId: string
@@ -794,114 +794,146 @@ coreRouter.get(
     const operationId = `rank_history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     try {
-      // Get the latest successful snapshot
-      const snapshot = await perDistrictSnapshotStore.getLatestSuccessful()
+      // Determine program year boundaries (July 1 to June 30)
+      const now = new Date().toISOString().split('T')[0] ?? '2025-01-01'
+      const programYear = getProgramYearInfo(now)
 
-      if (!snapshot) {
-        // No snapshot available - return empty response with default program year
-        logger.warn('No snapshot available for rank history request', {
+      // Get all successful snapshots
+      const allSnapshots = await perDistrictSnapshotStore.listSnapshots(
+        undefined,
+        { status: 'success' }
+      )
+
+      if (allSnapshots.length === 0) {
+        // No snapshots available - return empty response with default program year
+        logger.warn('No snapshots available for rank history request', {
           operation: 'GET /api/districts/:districtId/rank-history',
           operation_id: operationId,
           district_id: districtId,
         })
 
-        const now = new Date().toISOString().split('T')[0]
         res.json({
           districtId,
           districtName: `District ${districtId}`,
           history: [],
-          programYear: getProgramYearInfo(now ?? '2025-01-01'),
+          programYear,
         })
         return
       }
 
-      // Read all-districts rankings from the snapshot
-      const allDistrictsRankings =
-        await perDistrictSnapshotStore.readAllDistrictsRankings(
-          snapshot.snapshot_id
-        )
+      // Build history by reading rankings from each snapshot
+      interface HistoryEntry {
+        date: string
+        aggregateScore: number
+        clubsRank: number
+        paymentsRank: number
+        distinguishedRank: number
+      }
+      const history: HistoryEntry[] = []
+      let districtName = `District ${districtId}`
+      const seenDates = new Set<string>()
 
-      if (!allDistrictsRankings) {
-        // Rankings file not available - return empty history
+      // Process snapshots (already sorted newest first by listSnapshots)
+      for (const snapshotMeta of allSnapshots) {
+        try {
+          const rankings = await perDistrictSnapshotStore.readAllDistrictsRankings(
+            snapshotMeta.snapshot_id
+          )
+
+          if (!rankings) {
+            continue
+          }
+
+          // Use the source CSV date as the history date
+          const date = rankings.metadata.sourceCsvDate
+
+          // Filter to current program year only
+          if (date < programYear.startDate || date > programYear.endDate) {
+            continue
+          }
+
+          // Skip duplicate dates (keep the first/newest one)
+          if (seenDates.has(date)) {
+            continue
+          }
+          seenDates.add(date)
+
+          const districtRanking = rankings.rankings.find(
+            r => r.districtId === districtId
+          )
+
+          if (!districtRanking) {
+            continue
+          }
+
+          // Capture district name from the first found entry
+          if (districtName === `District ${districtId}`) {
+            districtName = districtRanking.districtName
+          }
+
+          history.push({
+            date,
+            aggregateScore: districtRanking.aggregateScore,
+            clubsRank: districtRanking.clubsRank,
+            paymentsRank: districtRanking.paymentsRank,
+            distinguishedRank: districtRanking.distinguishedRank,
+          })
+        } catch (error) {
+          // Log but continue processing other snapshots
+          logger.warn('Failed to read rankings from snapshot', {
+            operation: 'GET /api/districts/:districtId/rank-history',
+            operation_id: operationId,
+            snapshot_id: snapshotMeta.snapshot_id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
+        }
+      }
+
+      // Sort history chronologically (oldest first for chart display)
+      history.sort((a, b) => a.date.localeCompare(b.date))
+
+      if (history.length === 0) {
+        // District not found in any snapshot within program year
         logger.info(
-          'All-districts rankings not found in snapshot, returning empty rank history',
+          'District not found in any snapshot rankings for current program year, returning empty rank history',
           {
             operation: 'GET /api/districts/:districtId/rank-history',
             operation_id: operationId,
             district_id: districtId,
-            snapshot_id: snapshot.snapshot_id,
+            snapshots_checked: allSnapshots.length,
+            program_year: programYear.year,
           }
         )
 
-        const dataDate = snapshot.payload.metadata.dataAsOfDate
         res.json({
           districtId,
-          districtName: `District ${districtId}`,
+          districtName,
           history: [],
-          programYear: getProgramYearInfo(dataDate),
+          programYear,
         })
         return
-      }
-
-      // Find the specific district in the rankings array
-      const districtRanking = allDistrictsRankings.rankings.find(
-        r => r.districtId === districtId
-      )
-
-      if (!districtRanking) {
-        // District not in rankings - return empty history
-        logger.info(
-          'District not found in all-districts rankings, returning empty rank history',
-          {
-            operation: 'GET /api/districts/:districtId/rank-history',
-            operation_id: operationId,
-            district_id: districtId,
-            snapshot_id: snapshot.snapshot_id,
-            total_districts_in_rankings: allDistrictsRankings.rankings.length,
-          }
-        )
-
-        const dataDate = allDistrictsRankings.metadata.sourceCsvDate
-        res.json({
-          districtId,
-          districtName: `District ${districtId}`,
-          history: [],
-          programYear: getProgramYearInfo(dataDate),
-        })
-        return
-      }
-
-      // Build history entry from the district ranking data
-      // Currently returns a single entry from the latest snapshot
-      // Future: aggregate across multiple historical snapshots
-      const historyEntry = {
-        date: allDistrictsRankings.metadata.sourceCsvDate,
-        aggregateScore: districtRanking.aggregateScore,
-        clubsRank: districtRanking.clubsRank,
-        paymentsRank: districtRanking.paymentsRank,
-        distinguishedRank: districtRanking.distinguishedRank,
       }
 
       logger.info(
-        'Successfully served rank history from all-districts rankings',
+        'Successfully served rank history from multiple snapshots',
         {
           operation: 'GET /api/districts/:districtId/rank-history',
           operation_id: operationId,
           district_id: districtId,
-          snapshot_id: snapshot.snapshot_id,
-          district_name: districtRanking.districtName,
-          aggregate_score: districtRanking.aggregateScore,
+          district_name: districtName,
+          history_points: history.length,
+          snapshots_checked: allSnapshots.length,
+          program_year: programYear.year,
+          date_range: history.length > 0 ? `${history[0]?.date} to ${history[history.length - 1]?.date}` : 'none',
         }
       )
 
       // Return response in RankHistoryResponse format expected by frontend
       res.json({
-        districtId: districtRanking.districtId,
-        districtName: districtRanking.districtName,
-        history: [historyEntry],
-        programYear: getProgramYearInfo(
-          allDistrictsRankings.metadata.sourceCsvDate
-        ),
+        districtId,
+        districtName,
+        history,
+        programYear,
       })
     } catch (error) {
       const errorMessage =
