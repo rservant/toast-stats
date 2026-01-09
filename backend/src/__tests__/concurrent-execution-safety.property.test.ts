@@ -53,7 +53,6 @@ describe('Property 4: Concurrent Test Execution Safety', () => {
               const cacheConfigService = testFactory.createCacheConfigService({
                 cacheDirectory,
               })
-              testFactory.createDistrictCacheManager(cacheConfigService)
 
               // Initialize services
               await cacheConfigService.initialize()
@@ -233,8 +232,6 @@ describe('Property 4: Concurrent Test Execution Safety', () => {
                 cacheDirectory,
               })
               await cacheConfigService.initialize()
-
-              testFactory.createDistrictCacheManager(cacheConfigService)
 
               // Verify service state
               expect(cacheConfigService.isReady()).toBe(true)

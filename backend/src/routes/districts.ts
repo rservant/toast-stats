@@ -6,7 +6,6 @@ import { RealToastmastersAPIService } from '../services/RealToastmastersAPIServi
 import { MockToastmastersAPIService } from '../services/MockToastmastersAPIService.js'
 import { BackfillService } from '../services/UnifiedBackfillService.js'
 import { CacheManager } from '../services/CacheManager.js'
-import { DistrictCacheManager } from '../services/DistrictCacheManager.js'
 import { RefreshService } from '../services/RefreshService.js'
 import { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../services/ProductionServiceFactory.js'
@@ -80,7 +79,6 @@ const districtDataAggregator = createDistrictDataAggregator(
 
 // Initialize services with configured cache directory
 const cacheManager = new CacheManager(cacheDirectory)
-const districtCacheManager = new DistrictCacheManager(cacheDirectory)
 
 // Initialize services using the production service factory
 const serviceFactory = getProductionServiceFactory()
@@ -2670,67 +2668,13 @@ router.delete('/backfill/:backfillId', async (req: Request, res: Response) => {
 })
 
 /**
- * GET /api/districts/:districtId/data/:date
- * Retrieve cached district data for a specific date
- */
-router.get('/:districtId/data/:date', async (req: Request, res: Response) => {
-  try {
-    const districtId = getValidDistrictId(req)
-    const date = req.params['date']
-
-    // Validate district ID
-    if (!districtId) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DISTRICT_ID',
-          message: 'Invalid district ID format',
-        },
-      })
-      return
-    }
-
-    // Validate date format
-    if (!date || !validateDateFormat(date)) {
-      res.status(400).json({
-        error: {
-          code: 'INVALID_DATE_FORMAT',
-          message: 'Date must be in YYYY-MM-DD format',
-        },
-      })
-      return
-    }
-
-    // Get cached district data
-    const data = await districtCacheManager.getDistrictData(districtId!, date)
-
-    if (!data) {
-      res.status(404).json({
-        error: {
-          code: 'DATA_NOT_FOUND',
-          message: 'No cached data found for the specified district and date',
-          details: 'Consider initiating a backfill to fetch historical data',
-        },
-      })
-      return
-    }
-
-    res.json(data)
-  } catch (error) {
-    const errorResponse = transformErrorResponse(error)
-
-    res.status(500).json({
-      error: {
-        code: errorResponse.code || 'FETCH_ERROR',
-        message: 'Failed to retrieve district data',
-        details: errorResponse.details,
-      },
-    })
-  }
-})
-
-/**
  * GET /api/districts/:districtId/cached-dates
  * List all available cached dates for a district
+ *
+ * Migrated to use PerDistrictSnapshotStore instead of legacy DistrictCacheManager.
+ * Queries snapshots and filters to find those containing the requested district.
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.4
  */
 router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
   try {
@@ -2747,21 +2691,39 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
       return
     }
 
-    // Get cached dates
-    const dates = await districtCacheManager.getCachedDatesForDistrict(
-      districtId!
-    )
+    // Get all snapshots from PerDistrictSnapshotStore
+    const snapshots = await perDistrictSnapshotStore.listSnapshots()
 
-    // Get date range if dates exist
+    // Filter to snapshots that contain this district and are successful
+    const districtDates: string[] = []
+    for (const snapshot of snapshots) {
+      if (snapshot.status !== 'success') continue
+
+      // Check if district exists in this snapshot
+      const districts = await perDistrictSnapshotStore.listDistrictsInSnapshot(
+        snapshot.snapshot_id
+      )
+      if (districts.includes(districtId)) {
+        districtDates.push(snapshot.snapshot_id) // snapshot_id is YYYY-MM-DD format
+      }
+    }
+
+    // Sort dates ascending
+    const sortedDates = districtDates.sort()
+
+    // Calculate date range
     const dateRange =
-      dates.length > 0
-        ? await districtCacheManager.getDistrictDataRange(districtId!)
+      sortedDates.length > 0
+        ? {
+            startDate: sortedDates[0],
+            endDate: sortedDates[sortedDates.length - 1],
+          }
         : null
 
     res.json({
       districtId,
-      dates,
-      count: dates.length,
+      dates: sortedDates,
+      count: sortedDates.length,
       dateRange,
     })
   } catch (error) {
@@ -2769,7 +2731,7 @@ router.get('/:districtId/cached-dates', async (req: Request, res: Response) => {
 
     res.status(500).json({
       error: {
-        code: errorResponse.code || 'FETCH_ERROR',
+        code: errorResponse.code || 'SNAPSHOT_ERROR',
         message: 'Failed to retrieve cached dates',
         details: errorResponse.details,
       },

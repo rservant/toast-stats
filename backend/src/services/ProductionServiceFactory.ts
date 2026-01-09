@@ -20,7 +20,6 @@ import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { ILogger, ICircuitBreakerManager } from '../types/serviceInterfaces.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
-import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
@@ -114,13 +113,6 @@ export interface ProductionServiceFactory {
    * Create AnalyticsEngine instance with dependency injection
    */
   createAnalyticsEngine(cacheConfig?: CacheConfigService): AnalyticsEngine
-
-  /**
-   * Create DistrictCacheManager instance
-   */
-  createDistrictCacheManager(
-    cacheConfig?: CacheConfigService
-  ): DistrictCacheManager
 
   /**
    * Create CircuitBreakerManager instance
@@ -235,22 +227,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
         },
         async (instance: RawCSVCacheService) => {
           await instance.dispose()
-        }
-      )
-    )
-
-    // Register DistrictCacheManager
-    container.register(
-      ServiceTokens.DistrictCacheManager,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const cacheConfig = container.resolve(
-            ServiceTokens.CacheConfigService
-          )
-          return new DistrictCacheManager(cacheConfig.getCacheDirectory())
-        },
-        async () => {
-          // DistrictCacheManager doesn't have dispose method
         }
       )
     )
@@ -440,19 +416,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
-   * Create DistrictCacheManager instance
-   */
-  createDistrictCacheManager(
-    cacheConfig?: CacheConfigService
-  ): DistrictCacheManager {
-    const config = cacheConfig || this.createCacheConfigService()
-    const cacheDir = config.getCacheDirectory()
-    const service = new DistrictCacheManager(cacheDir)
-    // DistrictCacheManager doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager {
@@ -601,10 +564,6 @@ export const ServiceTokens = {
     RawCSVCacheService
   ),
   AnalyticsEngine: createServiceToken('AnalyticsEngine', AnalyticsEngine),
-  DistrictCacheManager: createServiceToken(
-    'DistrictCacheManager',
-    DistrictCacheManager
-  ),
   CircuitBreakerManager: createServiceToken(
     'CircuitBreakerManager',
     CircuitBreakerManager

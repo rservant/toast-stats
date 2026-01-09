@@ -13,7 +13,6 @@ import {
 import {
   ICacheConfigService,
   IAnalyticsEngine,
-  IDistrictCacheManager,
   ILogger,
   ICircuitBreakerManager,
   IAnalyticsDataSource,
@@ -27,7 +26,6 @@ import {
 import { CacheConfigService } from './CacheConfigService.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
-import { DistrictCacheManager } from './DistrictCacheManager.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import {
   BordaCountRankingCalculator,
@@ -142,13 +140,6 @@ export interface TestServiceFactory {
   createAnalyticsDataSource(
     cacheConfig?: ICacheConfigService
   ): IAnalyticsDataSource
-
-  /**
-   * Create DistrictCacheManager instance
-   */
-  createDistrictCacheManager(
-    cacheConfig?: ICacheConfigService
-  ): IDistrictCacheManager
 
   /**
    * Create CircuitBreakerManager instance
@@ -285,19 +276,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
-   * Create DistrictCacheManager instance
-   */
-  createDistrictCacheManager(
-    cacheConfig?: ICacheConfigService
-  ): IDistrictCacheManager {
-    const config = cacheConfig || this.createCacheConfigService()
-    const cacheDir = config.getCacheDirectory()
-    const service = new DistrictCacheManager(cacheDir)
-    // DistrictCacheManager doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager {
@@ -406,22 +384,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         },
         async (instance: CacheConfigService) => {
           await instance.dispose()
-        }
-      )
-    )
-
-    // Register DistrictCacheManager
-    container.register(
-      ServiceTokens.DistrictCacheManager,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const cacheConfig = container.resolve(
-            ServiceTokens.CacheConfigService
-          )
-          return new DistrictCacheManager(cacheConfig.getCacheDirectory())
-        },
-        async () => {
-          // DistrictCacheManager doesn't have dispose method
         }
       )
     )
@@ -608,17 +570,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register IDistrictCacheManager
-    container.registerInterface(
-      'IDistrictCacheManager',
-      createServiceFactory(
-        () => this.createDistrictCacheManager(),
-        async _instance => {
-          // DistrictCacheManager doesn't have dispose method
-        }
-      )
-    )
-
     // Register ICircuitBreakerManager
     container.registerInterface(
       'ICircuitBreakerManager',
@@ -709,10 +660,6 @@ export const ServiceTokens = {
     CacheConfigService
   ),
   AnalyticsEngine: createServiceToken('AnalyticsEngine', AnalyticsEngine),
-  DistrictCacheManager: createServiceToken(
-    'DistrictCacheManager',
-    DistrictCacheManager
-  ),
   CircuitBreakerManager: createServiceToken(
     'CircuitBreakerManager',
     CircuitBreakerManager
@@ -735,9 +682,6 @@ export const InterfaceTokens = {
     'ICacheConfigService'
   ),
   IAnalyticsEngine: createInterfaceToken<IAnalyticsEngine>('IAnalyticsEngine'),
-  IDistrictCacheManager: createInterfaceToken<IDistrictCacheManager>(
-    'IDistrictCacheManager'
-  ),
   ICircuitBreakerManager: createInterfaceToken<ICircuitBreakerManager>(
     'ICircuitBreakerManager'
   ),

@@ -148,40 +148,6 @@ export interface IAnalyticsEngine {
 }
 
 /**
- * District Cache Manager Interface
- */
-export interface IDistrictCacheManager {
-  getCachedDatesForDistrict(districtId: string): Promise<string[]>
-  getDistrictData(
-    districtId: string,
-    date: string
-  ): Promise<DistrictCacheEntry | null>
-  saveDistrictData(
-    districtId: string,
-    date: string,
-    data: DistrictCacheEntry
-  ): Promise<void>
-  getDistrictDataRange(
-    districtId: string
-  ): Promise<{ startDate: string; endDate: string } | null>
-  cacheDistrictData(
-    districtId: string,
-    date: string,
-    districtPerformance: unknown[],
-    divisionPerformance: unknown[],
-    clubPerformance: unknown[]
-  ): Promise<void>
-  clearDistrictCache(districtId: string): Promise<void>
-  getCacheStats(): Promise<{
-    totalEntries: number
-    totalSize: number
-    oldestEntry?: string
-    newestEntry?: string
-  }>
-  dispose(): Promise<void>
-}
-
-/**
  * Cache Manager Interface
  */
 export interface ICacheManager {

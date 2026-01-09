@@ -254,33 +254,6 @@ function createIsolatedTestApp(cacheDirectory: string): Express {
   })
 
   // District-Level Data Endpoints
-  router.get('/:districtId/data/:date', (req, res) => {
-    const districtId = req.params['districtId']
-    if (!districtId || !/^[A-Za-z0-9]+$/.test(districtId)) {
-      return res.status(400).json({
-        error: {
-          code: 'INVALID_DISTRICT_ID',
-        },
-      })
-    }
-
-    const dateStr = req.params['date']
-    const date = new Date(dateStr!)
-    if (isNaN(date.getTime())) {
-      return res.status(400).json({
-        error: {
-          code: 'INVALID_DATE_FORMAT',
-        },
-      })
-    }
-
-    res.status(404).json({
-      error: {
-        code: 'DATA_NOT_FOUND',
-      },
-    })
-  })
-
   router.get('/:districtId/cached-dates', (req, res) => {
     const districtId = req.params['districtId']
     if (!districtId || !/^[A-Za-z0-9]+$/.test(districtId)) {
@@ -1059,32 +1032,6 @@ describe('Districts API Integration Tests', () => {
   })
 
   describe('District-Level Data Endpoints', () => {
-    describe('GET /api/districts/:districtId/data/:date', () => {
-      it('should return 400 for invalid district ID format', async () => {
-        const response = await request(app)
-          .get('/api/districts/invalid@id/data/2024-01-01')
-          .expect(400)
-
-        expect(response.body.error.code).toBe('INVALID_DISTRICT_ID')
-      })
-
-      it('should return 400 for invalid date format', async () => {
-        const response = await request(app)
-          .get('/api/districts/D123/data/invalid-date')
-          .expect(400)
-
-        expect(response.body.error.code).toBe('INVALID_DATE_FORMAT')
-      })
-
-      it('should return 404 when no cached data exists', async () => {
-        const response = await request(app)
-          .get('/api/districts/D123/data/2024-01-01')
-          .expect(404)
-
-        expect(response.body.error.code).toBe('DATA_NOT_FOUND')
-      })
-    })
-
     describe('GET /api/districts/:districtId/cached-dates', () => {
       it('should return 400 for invalid district ID format', async () => {
         const response = await request(app)

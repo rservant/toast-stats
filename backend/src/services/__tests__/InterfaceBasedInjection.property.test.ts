@@ -18,7 +18,6 @@ import { DefaultTestServiceFactory } from '../TestServiceFactory.js'
 import {
   ICacheConfigService,
   IAnalyticsEngine,
-  IDistrictCacheManager,
 } from '../../types/serviceInterfaces.js'
 import { ServiceConfiguration } from '../../types/serviceContainer.js'
 
@@ -49,7 +48,6 @@ describe('Interface-Based Dependency Injection Properties', () => {
           interfaceName: fc.constantFrom(
             'ICacheConfigService',
             'IAnalyticsEngine',
-            'IDistrictCacheManager',
             'ILogger'
           ),
           mockValue: fc.record({
@@ -143,8 +141,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
         fc.record({
           interfaceName: fc.constantFrom(
             'ICacheConfigService',
-            'IAnalyticsEngine',
-            'IDistrictCacheManager'
+            'IAnalyticsEngine'
           ),
           configOverrides: fc.record({
             cacheDirectory: fc
@@ -225,8 +222,6 @@ describe('Interface-Based Dependency Injection Properties', () => {
             const cacheConfigService =
               testFactory.createCacheConfigService(config)
             const analyticsEngine = testFactory.createAnalyticsEngine()
-            const districtCacheManager =
-              testFactory.createDistrictCacheManager()
 
             // Verify they implement the expected interfaces
             expect(typeof cacheConfigService.getCacheDirectory).toBe('function')
@@ -239,11 +234,6 @@ describe('Interface-Based Dependency Injection Properties', () => {
             expect(typeof analyticsEngine.clearCaches).toBe('function')
             expect(typeof analyticsEngine.dispose).toBe('function')
 
-            expect(typeof districtCacheManager.getCachedDatesForDistrict).toBe(
-              'function'
-            )
-            expect(typeof districtCacheManager.getDistrictData).toBe('function')
-
             // Test that interface-based creation returns compatible objects
             const interfaceCacheService =
               testFactory.createServiceByInterface<ICacheConfigService>(
@@ -252,10 +242,6 @@ describe('Interface-Based Dependency Injection Properties', () => {
             const interfaceAnalyticsEngine =
               testFactory.createServiceByInterface<IAnalyticsEngine>(
                 'IAnalyticsEngine'
-              )
-            const interfaceDistrictManager =
-              testFactory.createServiceByInterface<IDistrictCacheManager>(
-                'IDistrictCacheManager'
               )
 
             // Should have the same interface methods
@@ -270,13 +256,6 @@ describe('Interface-Based Dependency Injection Properties', () => {
             ).toBe('function')
             expect(typeof interfaceAnalyticsEngine.clearCaches).toBe('function')
             expect(typeof interfaceAnalyticsEngine.dispose).toBe('function')
-
-            expect(
-              typeof interfaceDistrictManager.getCachedDatesForDistrict
-            ).toBe('function')
-            expect(typeof interfaceDistrictManager.getDistrictData).toBe(
-              'function'
-            )
           } catch (error) {
             // If cache directory validation fails, that's expected for edge cases
             if (
