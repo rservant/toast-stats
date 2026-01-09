@@ -2,150 +2,93 @@
 
 ## Introduction
 
-The Club Health Classification system is a comprehensive 2D evaluation model for Toastmasters clubs that assesses both current health status and trajectory trends. The system classifies clubs using Health Status (Thriving/Vulnerable/Intervention Required) and Trajectory (Recovering/Stable/Declining) based on membership data, Distinguished Club Program (DCP) progress, and Club Success Plan (CSP) submission status.
+This feature replaces the existing simple club health classification (Healthy/At-Risk/Critical) with a more sophisticated monthly DCP checkpoint-based system. The new classification evaluates clubs against monthly DCP thresholds, membership requirements, and CSP submission status to determine health status (Thriving/Vulnerable/Intervention Required).
+
+This is a refactoring of existing functionality in the AnalyticsEngine, not a new feature. The goal is to provide more actionable health classifications that reflect where clubs should be in their Distinguished Club Program journey at any given point in the year.
 
 ## Glossary
 
-- **Club_Health_System**: The backend service that processes club data and applies classification rules
-- **Health_Status**: Primary classification dimension with values Thriving, Vulnerable, or Intervention Required
-- **Trajectory**: Secondary classification dimension indicating trend direction (Recovering, Stable, Declining)
+- **AnalyticsEngine**: The existing backend service that processes district data and generates analytics including club health classification
+- **Health_Status**: Classification with values Thriving, Vulnerable, or Intervention Required (replaces Healthy/At-Risk/Critical)
 - **DCP_Goals**: Distinguished Club Program objectives tracked cumulatively year-to-date
-- **CSP**: Club Success Plan submission requirement for club health assessment
-- **MoM_Delta**: Month-over-month change calculation for membership and DCP metrics
-- **Growth_Override**: Exception rule allowing clubs with 3+ net growth since July to avoid intervention status
-- **Admin_Checkpoint**: Special July evaluation using officer list submission and training status
-- **Visualization_Dashboard**: Frontend interface displaying club health classifications and trends
-- **Classification_Engine**: Core algorithm that applies business rules to determine health and trajectory
-- **Health_Matrix**: 2D grid visualization showing clubs positioned by health status and trajectory
+- **CSP**: Club Success Plan submission requirement
+- **Monthly_DCP_Checkpoint**: The minimum DCP goals a club should have achieved by a given month
+- **Growth_Override**: Exception rule allowing clubs with 3+ net growth since July to meet membership requirement
+- **Admin_Checkpoint**: Special July evaluation using officer list submission or training status
 
 ## Requirements
 
-### Requirement 1: Core Classification Engine
+### Requirement 1: Health Status Classification
 
-**User Story:** As a district leader, I want clubs automatically classified by health status and trajectory, so that I can prioritize support and intervention efforts effectively.
+**User Story:** As a district leader, I want clubs classified by health status based on monthly DCP checkpoints, so that I can identify clubs falling behind their Distinguished Club Program journey.
 
 #### Acceptance Criteria
 
-1. WHEN club data is processed, THE Classification_Engine SHALL determine health status using membership, DCP progress, and CSP submission
-2. WHEN membership is below 12 AND net growth since July is less than 3, THE Classification_Engine SHALL assign "Intervention Required" status
-3. WHEN membership is 20+ OR net growth since July is 3+, THE Classification_Engine SHALL consider membership requirement met
-4. WHEN all requirements are met (membership, DCP checkpoint, CSP), THE Classification_Engine SHALL assign "Thriving" status
-5. WHEN some but not all requirements are met, THE Classification_Engine SHALL assign "Vulnerable" status
-6. FOR ALL club evaluations, THE Classification_Engine SHALL provide detailed reasoning for the assigned classification
+1. WHEN club data is processed, THE AnalyticsEngine SHALL determine health status using membership, DCP checkpoint progress, and CSP submission
+2. WHEN membership is below 12 AND net growth since July is less than 3, THE AnalyticsEngine SHALL assign "Intervention Required" status regardless of other criteria
+3. WHEN membership is 20+ OR net growth since July is 3+, THE AnalyticsEngine SHALL consider the membership requirement met
+4. WHEN all requirements are met (membership, DCP checkpoint, CSP), THE AnalyticsEngine SHALL assign "Thriving" status
+5. WHEN some but not all requirements are met, THE AnalyticsEngine SHALL assign "Vulnerable" status
+6. FOR ALL club evaluations, THE AnalyticsEngine SHALL provide a list of reasons explaining the assigned classification
 
-### Requirement 2: Monthly DCP Checkpoint System
+### Requirement 2: Monthly DCP Checkpoint Thresholds
 
 **User Story:** As a club performance analyst, I want DCP progress evaluated against monthly thresholds, so that clubs receive timely feedback on their Distinguished Club Program journey.
 
 #### Acceptance Criteria
 
-1. WHEN evaluating August or September, THE Classification_Engine SHALL require 1+ DCP goals achieved year-to-date
-2. WHEN evaluating October or November, THE Classification_Engine SHALL require 2+ DCP goals achieved year-to-date
-3. WHEN evaluating December through January, THE Classification_Engine SHALL require 3+ DCP goals achieved year-to-date
-4. WHEN evaluating February through March, THE Classification_Engine SHALL require 4+ DCP goals achieved year-to-date
-5. WHEN evaluating April through June, THE Classification_Engine SHALL require 5+ DCP goals achieved year-to-date
-6. WHEN evaluating July, THE Classification_Engine SHALL use administrative checkpoint (officer list submission OR officer training completion)
+1. WHEN evaluating August or September, THE AnalyticsEngine SHALL require 1+ DCP goals achieved year-to-date
+2. WHEN evaluating October or November, THE AnalyticsEngine SHALL require 2+ DCP goals achieved year-to-date
+3. WHEN evaluating December or January, THE AnalyticsEngine SHALL require 3+ DCP goals achieved year-to-date
+4. WHEN evaluating February or March, THE AnalyticsEngine SHALL require 4+ DCP goals achieved year-to-date
+5. WHEN evaluating April, May, or June, THE AnalyticsEngine SHALL require 5+ DCP goals achieved year-to-date
+6. WHEN evaluating July, THE AnalyticsEngine SHALL use administrative checkpoint (officer list submitted OR officers trained)
 
-### Requirement 3: Trajectory Analysis System
+### Requirement 3: API and Type Updates
 
-**User Story:** As a district leader, I want to understand club trajectory trends, so that I can identify clubs that are improving, stable, or declining over time.
-
-#### Acceptance Criteria
-
-1. WHEN health status improves from previous month, THE Classification_Engine SHALL assign "Recovering" trajectory
-2. WHEN health status worsens from previous month, THE Classification_Engine SHALL assign "Declining" trajectory
-3. WHEN health status remains unchanged, THE Classification_Engine SHALL analyze month-over-month metrics for trajectory determination
-4. WHEN vulnerable club gains 2+ members month-over-month, THE Classification_Engine SHALL upgrade trajectory from "Stable" to "Recovering"
-5. WHEN vulnerable club loses members OR DCP goals month-over-month, THE Classification_Engine SHALL assign "Declining" trajectory
-6. FOR ALL trajectory assignments, THE Classification_Engine SHALL provide detailed reasoning explaining the trajectory determination
-
-### Requirement 4: Data Processing and Storage
-
-**User Story:** As a system administrator, I want club health data processed and stored efficiently, so that the system can handle district-wide evaluations and historical tracking.
+**User Story:** As a frontend developer, I want the API and types to use the new terminology, so that the codebase is consistent and clear.
 
 #### Acceptance Criteria
 
-1. WHEN club data is received, THE Club_Health_System SHALL validate all required input fields
-2. WHEN processing club evaluations, THE Club_Health_System SHALL calculate month-over-month deltas for membership and DCP goals
-3. WHEN storing results, THE Club_Health_System SHALL persist health status, trajectory, reasoning, and composite classifications
-4. WHEN retrieving historical data, THE Club_Health_System SHALL provide previous month data for trajectory calculations
-5. THE Club_Health_System SHALL generate composite keys and labels for visualization purposes
-6. THE Club_Health_System SHALL handle batch processing for multiple clubs efficiently
+1. WHEN returning club health data, THE AnalyticsEngine SHALL use new status values: "thriving", "vulnerable", "intervention-required"
+2. WHEN generating district analytics, THE AnalyticsEngine SHALL provide thrivingClubs, vulnerableClubs, and interventionRequiredClubs arrays
+3. THE ClubTrend type SHALL update currentStatus to use the new status values
+4. WHEN calculating year-over-year metrics, THE AnalyticsEngine SHALL use the new classification logic consistently
 
-### Requirement 5: REST API Interface
+### Requirement 6: Frontend Terminology Updates
 
-**User Story:** As a frontend developer, I want a comprehensive REST API, so that I can build responsive user interfaces for club health visualization.
+**User Story:** As a district leader, I want the UI to display the new health terminology, so that I understand the classification system being used.
 
 #### Acceptance Criteria
 
-1. WHEN requesting club classification, THE Club_Health_System SHALL provide POST endpoint accepting all required club data
-2. WHEN returning classification results, THE Club_Health_System SHALL include health status, trajectory, reasoning arrays, and composite labels
-3. WHEN requesting bulk evaluations, THE Club_Health_System SHALL provide batch processing endpoint for multiple clubs
-4. WHEN querying historical data, THE Club_Health_System SHALL provide endpoints for time-series club health data
-5. THE Club_Health_System SHALL validate input data and return descriptive error messages for invalid requests
-6. THE Club_Health_System SHALL return results in consistent JSON format with proper HTTP status codes
+1. WHEN displaying club status, THE Frontend SHALL show "Thriving", "Vulnerable", or "Intervention Required" labels
+2. THE AtRiskClubsPanel component SHALL be renamed to VulnerableClubsPanel with updated labels
+3. THE CriticalClubsPanel component SHALL be renamed to InterventionRequiredClubsPanel with updated labels
+4. THE ClubsTable component SHALL display new status labels and use appropriate styling
+5. THE YearOverYearComparison component SHALL use "Thriving Clubs" instead of "Healthy Clubs"
+6. THE DistrictDetailPage SHALL use the renamed panel components and updated terminology
 
-### Requirement 6: Health Matrix Visualization
+### Requirement 4: Classification Reasoning
 
-**User Story:** As a district leader, I want to see clubs positioned on a 2D health matrix, so that I can quickly identify which clubs need attention and their trajectory trends.
-
-#### Acceptance Criteria
-
-1. WHEN displaying the health matrix, THE Visualization_Dashboard SHALL show a 3x3 grid with health status on Y-axis and trajectory on X-axis
-2. WHEN positioning clubs, THE Visualization_Dashboard SHALL place club markers in appropriate grid cells based on their classification
-3. WHEN hovering over club markers, THE Visualization_Dashboard SHALL display detailed information including reasoning
-4. WHEN filtering clubs, THE Visualization_Dashboard SHALL allow selection by district, division, or specific health/trajectory combinations
-5. THE Visualization_Dashboard SHALL use distinct colors and symbols for each health status following Toastmasters brand guidelines
-6. THE Visualization_Dashboard SHALL provide responsive design supporting both desktop and mobile viewing
-
-### Requirement 7: Club Detail Views
-
-**User Story:** As a club mentor, I want detailed views of individual club health assessments, so that I can understand specific areas needing improvement and track progress over time.
+**User Story:** As a club mentor, I want to understand why a club received its classification, so that I can provide targeted guidance for improvement.
 
 #### Acceptance Criteria
 
-1. WHEN viewing club details, THE Visualization_Dashboard SHALL display current health status with complete reasoning
-2. WHEN showing trajectory information, THE Visualization_Dashboard SHALL explain month-over-month changes and trend analysis
-3. WHEN displaying metrics, THE Visualization_Dashboard SHALL show membership count, DCP progress, and CSP status clearly
-4. WHEN viewing historical trends, THE Visualization_Dashboard SHALL provide time-series charts showing health status changes
-5. THE Visualization_Dashboard SHALL highlight specific requirements not met and provide actionable recommendations
-6. THE Visualization_Dashboard SHALL allow export of club health reports in PDF format
+1. WHEN a club is classified, THE AnalyticsEngine SHALL populate the riskFactors array with specific reasons
+2. WHEN membership requirement is not met, THE AnalyticsEngine SHALL include "Membership below threshold" in reasons
+3. WHEN DCP checkpoint is not met, THE AnalyticsEngine SHALL include the specific checkpoint requirement in reasons
+4. WHEN CSP is not submitted, THE AnalyticsEngine SHALL include "CSP not submitted" in reasons
+5. WHEN a club is Thriving, THE AnalyticsEngine SHALL indicate all requirements are met
 
-### Requirement 8: Dashboard Analytics
+### Requirement 5: Data Requirements
 
-**User Story:** As a district governor, I want aggregate analytics across all clubs, so that I can understand overall district health and identify systemic issues.
-
-#### Acceptance Criteria
-
-1. WHEN viewing district analytics, THE Visualization_Dashboard SHALL display distribution of clubs across health status categories
-2. WHEN analyzing trajectories, THE Visualization_Dashboard SHALL show counts of recovering, stable, and declining clubs
-3. WHEN tracking trends, THE Visualization_Dashboard SHALL provide month-over-month changes in district health metrics
-4. WHEN identifying patterns, THE Visualization_Dashboard SHALL highlight clubs consistently in intervention or vulnerable status
-5. THE Visualization_Dashboard SHALL provide drill-down capabilities from aggregate views to individual club details
-6. THE Visualization_Dashboard SHALL support data export for further analysis and reporting
-
-### Requirement 9: Real-time Data Integration
-
-**User Story:** As a data analyst, I want the system to integrate with existing Toastmasters data sources, so that club health classifications reflect current and accurate information.
+**User Story:** As a system administrator, I want the classification to use available data fields, so that no new data collection is required.
 
 #### Acceptance Criteria
 
-1. WHEN integrating membership data, THE Club_Health_System SHALL connect to existing member management systems
-2. WHEN retrieving DCP progress, THE Club_Health_System SHALL access current Distinguished Club Program tracking data
-3. WHEN checking CSP status, THE Club_Health_System SHALL verify Club Success Plan submissions from official records
-4. WHEN processing updates, THE Club_Health_System SHALL handle incremental data changes and recalculate classifications
-5. THE Club_Health_System SHALL maintain data consistency and handle integration errors gracefully
-6. THE Club_Health_System SHALL provide audit trails for all data updates and classification changes
+1. WHEN evaluating membership, THE AnalyticsEngine SHALL use the existing "Active Members" or equivalent field
+2. WHEN evaluating DCP goals, THE AnalyticsEngine SHALL use the existing "Goals Met" field
+3. WHEN evaluating net growth, THE AnalyticsEngine SHALL calculate from "Active Members" minus "Mem. Base"
+4. WHEN CSP data is unavailable, THE AnalyticsEngine SHALL treat CSP as submitted (graceful degradation)
+5. WHEN officer training data is unavailable for July checkpoint, THE AnalyticsEngine SHALL use DCP goals as fallback
 
-### Requirement 10: Performance and Scalability
-
-**User Story:** As a system architect, I want the club health system to perform efficiently at scale, so that it can handle district-wide and international-level deployments.
-
-#### Acceptance Criteria
-
-1. WHEN processing individual club evaluations, THE Club_Health_System SHALL complete classification within 100ms
-2. WHEN handling batch requests, THE Club_Health_System SHALL process 1000+ clubs within 10 seconds
-3. WHEN serving dashboard requests, THE Visualization_Dashboard SHALL load initial views within 2 seconds
-4. WHEN updating data, THE Club_Health_System SHALL support concurrent processing without data corruption
-5. THE Club_Health_System SHALL implement caching strategies for frequently accessed club data
-6. THE Club_Health_System SHALL provide horizontal scaling capabilities for increased load
