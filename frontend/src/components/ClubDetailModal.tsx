@@ -267,10 +267,19 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
 
                 {/* Simple Line Chart */}
                 <div className="relative h-48 bg-white rounded border border-gray-200 p-4">
+                  {/* Y-axis labels */}
+                  <div className="absolute left-0 top-4 bottom-4 w-10 flex flex-col justify-between text-xs text-gray-500 font-tm-body">
+                    <span>{maxMembership}</span>
+                    <span>{Math.round(minMembership + membershipRange * 0.75)}</span>
+                    <span>{Math.round(minMembership + membershipRange * 0.5)}</span>
+                    <span>{Math.round(minMembership + membershipRange * 0.25)}</span>
+                    <span>{minMembership}</span>
+                  </div>
                   <svg
-                    className="w-full h-full"
+                    className="w-full h-full ml-8"
                     viewBox="0 0 800 160"
                     preserveAspectRatio="none"
+                    aria-label={`Membership trend from ${minMembership} to ${maxMembership} members`}
                   >
                     {/* Grid lines */}
                     <line
