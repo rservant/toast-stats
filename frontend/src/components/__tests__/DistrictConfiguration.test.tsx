@@ -93,15 +93,11 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('District Configuration')).toBeInTheDocument()
+        expect(screen.getByText('Districts')).toBeInTheDocument()
       })
 
-      expect(
-        screen.getByRole('heading', { name: 'Configured Districts' })
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole('button', { name: 'Add District' })
-      ).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('District ID')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
     })
   })
 
@@ -115,23 +111,13 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('District Configuration')).toBeInTheDocument()
+        expect(screen.getByText('Districts')).toBeInTheDocument()
       })
 
-      // Check the statistics cards more specifically using getAllByText and checking context
-      const configuredDistrictsElements = screen.getAllByText(
-        'Configured Districts'
-      )
-      expect(configuredDistrictsElements).toHaveLength(2) // One in stats card, one as heading
-
-      expect(screen.getByText('Valid Districts')).toBeInTheDocument()
-      expect(screen.getByText('Invalid Districts')).toBeInTheDocument()
-      // Check for the date format that toLocaleDateString() produces
-      const expectedDate = new Date('2025-01-05T10:00:00Z').toLocaleDateString()
-      expect(
-        screen.getByText(`Last updated: ${expectedDate}`)
-      ).toBeInTheDocument()
-      expect(screen.getByText('By: admin')).toBeInTheDocument()
+      // Check the statistics - use getAllByText since "Valid" appears multiple times
+      expect(screen.getByText('Configured')).toBeInTheDocument()
+      expect(screen.getAllByText('Valid').length).toBeGreaterThan(0)
+      expect(screen.getByText('Invalid')).toBeInTheDocument()
     })
 
     it('should display configured districts in grid format', async () => {
@@ -143,38 +129,11 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getAllByText(/District 42/)).toHaveLength(2) // Grid + table
+        expect(screen.getByText('42')).toBeInTheDocument()
       })
 
-      expect(screen.getAllByText(/District 7/)).toHaveLength(2) // Grid + table
-      expect(screen.getAllByText(/District F/)).toHaveLength(2) // Grid + table
-
-      // Check for status indicators
-      const validBadges = screen.getAllByText('Valid')
-      expect(validBadges).toHaveLength(3)
-    })
-
-    it('should display collection history table', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-      apiClient.get.mockResolvedValueOnce({
-        data: mockConfigurationResponse,
-      })
-
-      renderWithProviders(<DistrictConfiguration isAdmin={true} />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Collection History')).toBeInTheDocument()
-      })
-
-      // Check table headers
-      expect(screen.getByText('District')).toBeInTheDocument()
-      expect(screen.getByText('Last Collection')).toBeInTheDocument()
-      expect(screen.getByText('Recent Success Count')).toBeInTheDocument()
-
-      // Check table data - use getAllByText since districts appear in both grid and table
-      expect(screen.getAllByText(/District 42/)).toHaveLength(2)
-      expect(screen.getByText('5')).toBeInTheDocument() // Recent success count for district 42
-      expect(screen.getByText('Never')).toBeInTheDocument() // District F has no collections
+      expect(screen.getByText('7')).toBeInTheDocument()
+      expect(screen.getByText('F')).toBeInTheDocument()
     })
   })
 
@@ -200,12 +159,10 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(screen.getByText('Configuration Warnings')).toBeInTheDocument()
+        expect(
+          screen.getByText(/District ID "99" not found in Toastmasters system/)
+        ).toBeInTheDocument()
       })
-
-      expect(
-        screen.getByText(/District ID "99" not found in Toastmasters system/)
-      ).toBeInTheDocument()
     })
   })
 
@@ -224,15 +181,11 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: 'Add District' })
-        ).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
       })
 
-      const input = screen.getByPlaceholderText(
-        'Enter district ID (e.g., 42, F)'
-      )
-      const addButton = screen.getByRole('button', { name: 'Add District' })
+      const input = screen.getByPlaceholderText('District ID')
+      const addButton = screen.getByRole('button', { name: 'Add' })
 
       fireEvent.change(input, { target: { value: '123' } })
       fireEvent.click(addButton)
@@ -254,15 +207,11 @@ describe('DistrictConfiguration', () => {
       renderWithProviders(<DistrictConfiguration isAdmin={true} />)
 
       await waitFor(() => {
-        expect(
-          screen.getByRole('button', { name: 'Add District' })
-        ).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
       })
 
-      const input = screen.getByPlaceholderText(
-        'Enter district ID (e.g., 42, F)'
-      )
-      const addButton = screen.getByRole('button', { name: 'Add District' })
+      const input = screen.getByPlaceholderText('District ID')
+      const addButton = screen.getByRole('button', { name: 'Add' })
 
       fireEvent.change(input, { target: { value: '42' } }) // District already exists
       fireEvent.click(addButton)
@@ -275,66 +224,6 @@ describe('DistrictConfiguration', () => {
 
       // Should not make API call for duplicate
       expect(apiClient.post).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Edit Mode', () => {
-    it('should enter edit mode and allow local modifications', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-      apiClient.get.mockResolvedValueOnce({
-        data: mockConfigurationResponse,
-      })
-
-      renderWithProviders(<DistrictConfiguration isAdmin={true} />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Edit Configuration')).toBeInTheDocument()
-      })
-
-      const editButton = screen.getByRole('button', {
-        name: 'Edit Configuration',
-      })
-      fireEvent.click(editButton)
-
-      // Should show edit mode UI
-      expect(screen.getByText('Save Changes')).toBeInTheDocument()
-      expect(screen.getByText('Cancel')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText('Add district ID')).toBeInTheDocument()
-    })
-
-    it('should save changes when in edit mode', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-      apiClient.get.mockResolvedValueOnce({
-        data: mockConfigurationResponse,
-      })
-
-      // Mock successful save response
-      apiClient.post.mockResolvedValueOnce({
-        data: { success: true },
-      })
-
-      renderWithProviders(<DistrictConfiguration isAdmin={true} />)
-
-      await waitFor(() => {
-        expect(screen.getByText('Edit Configuration')).toBeInTheDocument()
-      })
-
-      // Enter edit mode
-      const editButton = screen.getByRole('button', {
-        name: 'Edit Configuration',
-      })
-      fireEvent.click(editButton)
-
-      // Save changes
-      const saveButton = screen.getByRole('button', { name: 'Save Changes' })
-      fireEvent.click(saveButton)
-
-      await waitFor(() => {
-        expect(apiClient.post).toHaveBeenCalledWith('/admin/districts/config', {
-          districtIds: ['42', '7', 'F'], // Original districts
-          replace: true,
-        })
-      })
     })
   })
 
@@ -394,13 +283,9 @@ describe('DistrictConfiguration', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText('No districts configured yet.')
+          screen.getByText('No districts configured. Add one above.')
         ).toBeInTheDocument()
       })
-
-      expect(
-        screen.getByText('Add districts to start collecting data.')
-      ).toBeInTheDocument()
     })
   })
 })

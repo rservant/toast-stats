@@ -21,25 +21,25 @@ describe('Button Component', () => {
       name: 'primary (default)',
       props: { children: 'Primary Button' },
       expectedText: 'Primary Button',
-      expectedClass: 'tm-bg-loyal-blue',
+      expectedClass: 'bg-tm-loyal-blue',
     },
     {
       name: 'secondary',
       props: { children: 'Secondary Button', variant: 'secondary' },
       expectedText: 'Secondary Button',
-      expectedClass: 'tm-text-loyal-blue',
+      expectedClass: 'text-tm-loyal-blue',
     },
     {
       name: 'accent',
       props: { children: 'Accent Button', variant: 'accent' },
       expectedText: 'Accent Button',
-      expectedClass: 'tm-bg-happy-yellow',
+      expectedClass: 'bg-tm-happy-yellow',
     },
     {
       name: 'ghost',
       props: { children: 'Ghost Button', variant: 'ghost' },
       expectedText: 'Ghost Button',
-      expectedClass: 'tm-text-loyal-blue',
+      expectedClass: 'text-tm-loyal-blue',
     },
   ]
 
@@ -158,7 +158,7 @@ describe('Button Component', () => {
     )
     const button = screen.getByRole('button', { name: 'Custom label' })
     expect(button).toHaveClass('custom')
-    expect(button).toHaveClass('tm-bg-loyal-blue') // Preserves variant classes
+    expect(button).toHaveClass('bg-tm-loyal-blue') // Preserves variant classes
   })
 
   it('passes through additional props', () => {

@@ -283,9 +283,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       // Calculate top growth clubs from club trends
       const topGrowthClubs = this.calculateTopGrowthClubs(clubTrends)
 
-      // Calculate distinguished projection
-      const distinguishedProjection =
-        this.projectDistinguishedClubs(dataEntries)
+      // Calculate distinguished projection (equals thriving clubs count)
+      const distinguishedProjection = this.projectDistinguishedClubs(
+        dataEntries,
+        thrivingClubs.length
+      )
 
       // Use DistinguishedClubAnalyticsModule for comprehensive distinguished club analytics
       const distinguishedClubAnalytics =
@@ -894,39 +896,26 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
-   * Project distinguished clubs based on trend
+   * Project distinguished clubs based on thriving clubs count
    * Helper method for generateDistrictAnalytics
+   *
+   * Projected year-end distinguished clubs equals the current thriving clubs count,
+   * as thriving clubs are on track to achieve distinguished status by year end.
    */
-  private projectDistinguishedClubs(dataEntries: DistrictCacheEntry[]): number {
-    if (dataEntries.length < 2) {
-      const latestEntry = dataEntries[dataEntries.length - 1]
-      if (!latestEntry) return 0
-      return this.distinguishedModule.calculateDistinguishedClubs(latestEntry)
-        .total
+  private projectDistinguishedClubs(
+    dataEntries: DistrictCacheEntry[],
+    thrivingClubsCount?: number
+  ): number {
+    // If thriving clubs count is provided, use it directly as the projection
+    if (thrivingClubsCount !== undefined) {
+      return thrivingClubsCount
     }
 
-    const distinguishedCounts = dataEntries.map(
-      entry => this.distinguishedModule.calculateDistinguishedClubs(entry).total
-    )
+    // Fallback: calculate from latest entry if no thriving count provided
+    const latestEntry = dataEntries[dataEntries.length - 1]
+    if (!latestEntry) return 0
 
-    // Simple linear projection
-    const n = distinguishedCounts.length
-    const sumX = (n * (n - 1)) / 2
-    const sumY = distinguishedCounts.reduce((sum, val) => sum + val, 0)
-    const sumXY = distinguishedCounts.reduce(
-      (sum, val, idx) => sum + idx * val,
-      0
-    )
-    const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6
-
-    const denominator = n * sumX2 - sumX * sumX
-    if (denominator === 0) return distinguishedCounts[n - 1] ?? 0
-
-    const slope = (n * sumXY - sumX * sumY) / denominator
-    const intercept = (sumY - slope * sumX) / n
-
-    // Project to end of program year (approximately 12 months from start)
-    const projectedValue = Math.round(intercept + slope * (n + 6))
-    return Math.max(0, projectedValue)
+    return this.distinguishedModule.calculateDistinguishedClubs(latestEntry)
+      .total
   }
 }

@@ -147,7 +147,10 @@ export const useAdminSnapshots = (
       if (filters?.created_before)
         params.append('created_before', filters.created_before)
       if (filters?.min_district_count)
-        params.append('min_district_count', filters.min_district_count.toString())
+        params.append(
+          'min_district_count',
+          filters.min_district_count.toString()
+        )
 
       const url = `/admin/snapshots${params.toString() ? `?${params.toString()}` : ''}`
       const response = await apiClient.get<SnapshotsListResponse>(url)

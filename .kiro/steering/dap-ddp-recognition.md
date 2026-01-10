@@ -30,20 +30,22 @@ If this condition is false, the Area is **ineligible**, regardless of all other 
 Once eligible, recognition is determined by two independent percentage thresholds:
 
 #### Paid Clubs Percentage
+
 - ≥ 75% of clubs in the Area must be paid clubs
 - A "paid club" is a club in good standing with Toastmasters International (dues paid)
 
 #### Distinguished Clubs Percentage
+
 - Percentage is calculated **only against paid clubs**
 - Required thresholds vary by recognition level (see below)
 
 ### 2.3 Recognition Levels (Area)
 
-| Recognition Level | Paid Clubs | Distinguished Clubs (of paid clubs) |
-|-------------------|------------|-------------------------------------|
-| Distinguished Area | ≥ 75% paid | ≥ 50% Distinguished |
-| Select Distinguished Area | ≥ 75% paid | ≥ 75% Distinguished |
-| President's Distinguished Area | ≥ 75% paid | 100% Distinguished |
+| Recognition Level              | Paid Clubs | Distinguished Clubs (of paid clubs) |
+| ------------------------------ | ---------- | ----------------------------------- |
+| Distinguished Area             | ≥ 75% paid | ≥ 50% Distinguished                 |
+| Select Distinguished Area      | ≥ 75% paid | ≥ 75% Distinguished                 |
+| President's Distinguished Area | ≥ 75% paid | 100% Distinguished                  |
 
 ---
 
@@ -62,20 +64,22 @@ If this condition is false, the Division is **ineligible**, regardless of all ot
 Once eligible, recognition is determined by two independent percentage thresholds:
 
 #### Paid Areas Percentage
+
 - ≥ 85% of Areas in the Division must be paid Areas
 - A "paid Area" is an Area not suspended due to unpaid clubs
 
 #### Distinguished Areas Percentage
+
 - Percentage is calculated **only against paid Areas**
 - Required thresholds vary by recognition level (see below)
 
 ### 3.3 Recognition Levels (Division)
 
-| Recognition Level | Paid Areas | Distinguished Areas (of paid areas) |
-|-------------------|------------|-------------------------------------|
-| Distinguished Division | ≥ 85% paid | ≥ 50% Distinguished |
-| Select Distinguished Division | ≥ 85% paid | ≥ 75% Distinguished |
-| President's Distinguished Division | ≥ 85% paid | 100% Distinguished |
+| Recognition Level                  | Paid Areas | Distinguished Areas (of paid areas) |
+| ---------------------------------- | ---------- | ----------------------------------- |
+| Distinguished Division             | ≥ 85% paid | ≥ 50% Distinguished                 |
+| Select Distinguished Division      | ≥ 85% paid | ≥ 75% Distinguished                 |
+| President's Distinguished Division | ≥ 85% paid | 100% Distinguished                  |
 
 ---
 
@@ -93,11 +97,13 @@ These rules MUST be enforced:
 ## 5. Data Availability Notes
 
 ### Club Visit Data
+
 - Club visit completion data is **not currently available** from the Toastmasters dashboard CSV exports
 - Until this data becomes available, eligibility gates based on club visits **cannot be evaluated**
 - Implementation SHOULD track eligibility as "unknown" when visit data is unavailable
 
 ### Paid Status
+
 - Club paid status can be inferred from club status fields in dashboard data
 - A club with status "Active" is considered paid
 - Clubs with status "Suspended", "Ineligible", or "Low" are not considered paid

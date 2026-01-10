@@ -131,15 +131,21 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
           {/* Stats */}
           <div className="flex gap-6">
             <div>
-              <span className="text-2xl font-bold text-tm-black">{configuration?.configuredDistricts.length || 0}</span>
+              <span className="text-2xl font-bold text-tm-black">
+                {configuration?.configuredDistricts.length || 0}
+              </span>
               <span className="text-sm text-gray-500 ml-2">Configured</span>
             </div>
             <div>
-              <span className="text-2xl font-bold text-green-600">{validation?.validDistricts.length || 0}</span>
+              <span className="text-2xl font-bold text-green-600">
+                {validation?.validDistricts.length || 0}
+              </span>
               <span className="text-sm text-gray-500 ml-2">Valid</span>
             </div>
             <div>
-              <span className="text-2xl font-bold text-tm-true-maroon">{validation?.invalidDistricts.length || 0}</span>
+              <span className="text-2xl font-bold text-tm-true-maroon">
+                {validation?.invalidDistricts.length || 0}
+              </span>
               <span className="text-sm text-gray-500 ml-2">Invalid</span>
             </div>
           </div>
@@ -176,7 +182,10 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
 
           {/* Last Updated */}
           <div className="text-xs text-gray-400">
-            Updated: {configuration?.lastUpdated ? parseLocalDate(configuration.lastUpdated).toLocaleDateString() : 'Never'}
+            Updated:{' '}
+            {configuration?.lastUpdated
+              ? parseLocalDate(configuration.lastUpdated).toLocaleDateString()
+              : 'Never'}
           </div>
         </div>
       </div>
@@ -185,7 +194,9 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
       {validation?.warnings && validation.warnings.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-sm">
           {validation.warnings.map((warning, index) => (
-            <span key={index} className="text-yellow-800">{warning}</span>
+            <span key={index} className="text-yellow-800">
+              {warning}
+            </span>
           ))}
         </div>
       )}
@@ -197,13 +208,17 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
         {/* District Grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
           {(configuration?.configuredDistricts || []).map(districtId => {
-            const collectionInfo = validation?.lastCollectionInfo?.find(info => info.districtId === districtId)
+            const collectionInfo = validation?.lastCollectionInfo?.find(
+              info => info.districtId === districtId
+            )
             const isValid = validation?.validDistricts?.includes(districtId)
             const isInvalid = validation?.invalidDistricts?.includes(districtId)
 
             // Determine status text
             const statusText = collectionInfo?.lastSuccessfulCollection
-              ? parseLocalDate(collectionInfo.lastSuccessfulCollection).toLocaleDateString()
+              ? parseLocalDate(
+                  collectionInfo.lastSuccessfulCollection
+                ).toLocaleDateString()
               : isValid
                 ? 'Valid'
                 : isInvalid
@@ -222,7 +237,9 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-tm-black">{districtId}</span>
+                  <span className="font-medium text-tm-black">
+                    {districtId}
+                  </span>
                   <button
                     onClick={() => handleRemove(districtId)}
                     disabled={isRemoving}
@@ -241,7 +258,9 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
         </div>
 
         {!configuration?.configuredDistricts.length && (
-          <p className="text-center py-4 text-gray-500 text-sm">No districts configured. Add one above.</p>
+          <p className="text-center py-4 text-gray-500 text-sm">
+            No districts configured. Add one above.
+          </p>
         )}
       </div>
 

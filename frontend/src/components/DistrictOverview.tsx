@@ -277,7 +277,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                   <p className="text-sm font-medium text-amber-700">
                     Projected Year-End
                   </p>
-                  <Tooltip content="Estimated number of distinguished clubs by end of program year based on current trends">
+                  <Tooltip content="Number of thriving clubs projected to achieve distinguished status by end of program year">
                     <InfoIcon />
                   </Tooltip>
                 </div>

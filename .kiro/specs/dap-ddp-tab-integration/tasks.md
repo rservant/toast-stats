@@ -56,7 +56,7 @@ This plan implements the integration of Distinguished Area Program (DAP) and Dis
 - [ ] 4. Create ThresholdProgress Component
   - [ ] 4.1 Implement ThresholdProgress component
     - Create `frontend/src/components/ThresholdProgress.tsx`
-    - Calculate fill percentage as (current / threshold) * 100, capped at 100%
+    - Calculate fill percentage as (current / threshold) \* 100, capped at 100%
     - Apply green color when threshold met
     - Apply amber color when >= 75% of threshold
     - Apply red color when < 75% of threshold

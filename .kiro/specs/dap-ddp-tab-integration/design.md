@@ -5,6 +5,7 @@
 This design integrates Distinguished Area Program (DAP) and Distinguished Division Program (DDP) recognition data into the existing Divisions & Areas tab on the District Detail page. The backend recognition calculation module (`AreaDivisionRecognitionModule`) already exists; this design covers the API endpoint, React hooks, and UI component enhancements.
 
 The integration follows a layered approach:
+
 1. **API Layer**: New REST endpoint exposing recognition calculations
 2. **Data Layer**: React Query hook for fetching and caching recognition data
 3. **UI Layer**: Enhanced components with recognition badges, progress bars, and tooltips
@@ -20,13 +21,13 @@ flowchart TB
         TP[ThresholdProgress Component]
         Hook[useRecognitionData Hook]
     end
-    
+
     subgraph Backend
         API[/api/districts/:id/recognition]
         Module[AreaDivisionRecognitionModule]
         Store[PerDistrictSnapshotStore]
     end
-    
+
     DR --> Hook
     AP --> Hook
     DR --> RB
@@ -45,9 +46,11 @@ flowchart TB
 **Route**: `GET /api/districts/:districtId/recognition`
 
 **Query Parameters**:
+
 - `date` (optional): ISO date string for snapshot date. Defaults to current snapshot.
 
 **Response Schema**:
+
 ```typescript
 interface RecognitionResponse {
   districtId: string
@@ -57,6 +60,7 @@ interface RecognitionResponse {
 ```
 
 **Error Responses**:
+
 - `404 Not Found`: District has no data for the specified date
 - `400 Bad Request`: Invalid date format
 
@@ -76,10 +80,13 @@ interface UseRecognitionDataResult {
   error: Error | null
 }
 
-function useRecognitionData(options: UseRecognitionDataOptions): UseRecognitionDataResult
+function useRecognitionData(
+  options: UseRecognitionDataOptions
+): UseRecognitionDataResult
 ```
 
 The hook:
+
 - Fetches recognition data via React Query
 - Flattens nested area data for easy access
 - Caches with 10-minute stale time (matching existing analytics)
@@ -115,6 +122,7 @@ interface ThresholdProgressProps {
 ```
 
 Color logic:
+
 - `current >= threshold`: Green (success)
 - `current >= threshold * 0.75`: Amber (warning)
 - `current < threshold * 0.75`: Red (danger)
@@ -130,8 +138,6 @@ interface EligibilityIndicatorProps {
 
 Displays an info icon with tooltip when eligibility is "unknown", explaining that club visit data is unavailable from the dashboard.
 
-
-
 ## Data Models
 
 ### Existing Types (from backend)
@@ -139,7 +145,11 @@ Displays an info icon with tooltip when eligibility is "unknown", explaining tha
 The following types are already defined in `backend/src/types/analytics.ts` and mirrored in `frontend/src/hooks/useDistrictAnalytics.ts`:
 
 ```typescript
-type AreaDivisionRecognitionLevel = 'NotDistinguished' | 'Distinguished' | 'Select' | 'Presidents'
+type AreaDivisionRecognitionLevel =
+  | 'NotDistinguished'
+  | 'Distinguished'
+  | 'Select'
+  | 'Presidents'
 
 type RecognitionEligibility = 'eligible' | 'ineligible' | 'unknown'
 
@@ -180,16 +190,16 @@ interface DivisionRecognition {
 
 ```typescript
 // DAP Thresholds
-const DAP_PAID_CLUBS_THRESHOLD = 75      // ≥75% of clubs must be paid
-const DAP_DISTINGUISHED_THRESHOLD = 50   // ≥50% for Distinguished
-const DAP_SELECT_THRESHOLD = 75          // ≥75% for Select
-const DAP_PRESIDENTS_THRESHOLD = 100     // 100% for President's
+const DAP_PAID_CLUBS_THRESHOLD = 75 // ≥75% of clubs must be paid
+const DAP_DISTINGUISHED_THRESHOLD = 50 // ≥50% for Distinguished
+const DAP_SELECT_THRESHOLD = 75 // ≥75% for Select
+const DAP_PRESIDENTS_THRESHOLD = 100 // 100% for President's
 
 // DDP Thresholds
-const DDP_PAID_AREAS_THRESHOLD = 85      // ≥85% of areas must be paid
-const DDP_DISTINGUISHED_THRESHOLD = 50   // ≥50% for Distinguished
-const DDP_SELECT_THRESHOLD = 75          // ≥75% for Select
-const DDP_PRESIDENTS_THRESHOLD = 100     // 100% for President's
+const DDP_PAID_AREAS_THRESHOLD = 85 // ≥85% of areas must be paid
+const DDP_DISTINGUISHED_THRESHOLD = 50 // ≥50% for Distinguished
+const DDP_SELECT_THRESHOLD = 75 // ≥75% for Select
+const DDP_PRESIDENTS_THRESHOLD = 100 // 100% for President's
 ```
 
 ### Extended Component Props
@@ -198,14 +208,14 @@ const DDP_PRESIDENTS_THRESHOLD = 100     // 100% for President's
 // Enhanced DivisionRankings props
 interface DivisionRankingsProps {
   divisions: DivisionAnalytics[]
-  recognition?: DivisionRecognition[]  // New: recognition data
+  recognition?: DivisionRecognition[] // New: recognition data
   isLoading?: boolean
 }
 
 // Enhanced AreaPerformanceChart props
 interface AreaPerformanceChartProps {
   areas: AreaAnalytics[]
-  recognition?: AreaRecognition[]  // New: recognition data
+  recognition?: AreaRecognition[] // New: recognition data
   isLoading?: boolean
 }
 ```
@@ -222,87 +232,84 @@ const RECOGNITION_LEVEL_ORDER: Record<AreaDivisionRecognitionLevel, number> = {
 }
 ```
 
-
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: API Returns Valid Recognition Structure
 
-*For any* valid district with snapshot data, the recognition API response SHALL contain an array of DivisionRecognition objects, each containing a nested array of AreaRecognition objects, and all objects SHALL conform to their respective type schemas.
+_For any_ valid district with snapshot data, the recognition API response SHALL contain an array of DivisionRecognition objects, each containing a nested array of AreaRecognition objects, and all objects SHALL conform to their respective type schemas.
 
 **Validates: Requirements 1.1, 1.5**
 
 ### Property 2: API Date Parameter Selects Correct Snapshot
 
-*For any* district with multiple snapshots and any valid date parameter, the recognition API SHALL return recognition data calculated from the snapshot corresponding to that date.
+_For any_ district with multiple snapshots and any valid date parameter, the recognition API SHALL return recognition data calculated from the snapshot corresponding to that date.
 
 **Validates: Requirements 1.2**
 
 ### Property 3: Recognition Badge Renders Correctly for Level
 
-*For any* recognition level in {Distinguished, Select, Presidents}, the RecognitionBadge component SHALL render a visible badge with the correct color and label text. *For* NotDistinguished, the component SHALL render nothing.
+_For any_ recognition level in {Distinguished, Select, Presidents}, the RecognitionBadge component SHALL render a visible badge with the correct color and label text. _For_ NotDistinguished, the component SHALL render nothing.
 
 **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5**
 
 ### Property 4: Tooltip Displays Correct Percentages
 
-*For any* division or area with recognition data, hovering over the element SHALL display a tooltip containing the exact paid percentage and distinguished percentage values from the recognition data.
+_For any_ division or area with recognition data, hovering over the element SHALL display a tooltip containing the exact paid percentage and distinguished percentage values from the recognition data.
 
 **Validates: Requirements 2.6, 3.6, 4.3**
 
 ### Property 5: Progress Bar Renders Correct Percentage
 
-*For any* percentage value and threshold, the ThresholdProgress component SHALL render a progress bar where the filled portion represents `(current / threshold) * 100%`, capped at 100%.
+_For any_ percentage value and threshold, the ThresholdProgress component SHALL render a progress bar where the filled portion represents `(current / threshold) * 100%`, capped at 100%.
 
 **Validates: Requirements 2.7, 3.7, 5.1, 5.2, 5.3, 5.4**
 
 ### Property 6: Progress Bar Color Reflects Threshold Status
 
-*For any* current percentage and threshold:
+_For any_ current percentage and threshold:
+
 - IF current >= threshold, THEN the progress bar SHALL be green (success)
-- IF current >= threshold * 0.75, THEN the progress bar SHALL be amber (warning)
-- IF current < threshold * 0.75, THEN the progress bar SHALL be red (danger)
+- IF current >= threshold \* 0.75, THEN the progress bar SHALL be amber (warning)
+- IF current < threshold \* 0.75, THEN the progress bar SHALL be red (danger)
 
 **Validates: Requirements 5.5, 5.6**
 
 ### Property 7: Eligibility Indicator Consistency
 
-*For any* recognition data with eligibility="unknown", the system SHALL display an eligibility indicator AND still display the calculated recognition level. The indicator style SHALL be identical for both division and area displays.
+_For any_ recognition data with eligibility="unknown", the system SHALL display an eligibility indicator AND still display the calculated recognition level. The indicator style SHALL be identical for both division and area displays.
 
 **Validates: Requirements 4.1, 4.2, 4.4**
 
 ### Property 8: Sorting Uses Ordinal Recognition Order
 
-*For any* list of divisions sorted by recognition level, the resulting order SHALL satisfy: all NotDistinguished items appear before all Distinguished items, which appear before all Select items, which appear before all Presidents items.
+_For any_ list of divisions sorted by recognition level, the resulting order SHALL satisfy: all NotDistinguished items appear before all Distinguished items, which appear before all Select items, which appear before all Presidents items.
 
 **Validates: Requirements 7.1, 7.4**
 
 ### Property 9: Filtering by Recognition Level
 
-*For any* filter level L and list of divisions/areas, the filtered result SHALL contain only items where `RECOGNITION_LEVEL_ORDER[item.recognitionLevel] >= RECOGNITION_LEVEL_ORDER[L]`.
+_For any_ filter level L and list of divisions/areas, the filtered result SHALL contain only items where `RECOGNITION_LEVEL_ORDER[item.recognitionLevel] >= RECOGNITION_LEVEL_ORDER[L]`.
 
 **Validates: Requirements 7.2, 7.3**
 
 ### Property 10: Accessibility Attributes Present
 
-*For any* rendered RecognitionBadge, the element SHALL have an aria-label describing the recognition level. *For any* rendered ThresholdProgress, the element SHALL have role="progressbar" and aria-valuenow, aria-valuemin, aria-valuemax attributes.
+_For any_ rendered RecognitionBadge, the element SHALL have an aria-label describing the recognition level. _For any_ rendered ThresholdProgress, the element SHALL have role="progressbar" and aria-valuenow, aria-valuemin, aria-valuemax attributes.
 
 **Validates: Requirements 8.1, 8.3, 8.5**
-
-
 
 ## Error Handling
 
 ### API Layer
 
-| Error Condition | HTTP Status | Response Body |
-|-----------------|-------------|---------------|
-| District not found | 404 | `{ error: "District not found", districtId: string }` |
-| No data for date | 404 | `{ error: "No data for date", districtId: string, date: string }` |
-| Invalid date format | 400 | `{ error: "Invalid date format", provided: string }` |
-| Internal error | 500 | `{ error: "Internal server error" }` |
+| Error Condition     | HTTP Status | Response Body                                                     |
+| ------------------- | ----------- | ----------------------------------------------------------------- |
+| District not found  | 404         | `{ error: "District not found", districtId: string }`             |
+| No data for date    | 404         | `{ error: "No data for date", districtId: string, date: string }` |
+| Invalid date format | 400         | `{ error: "Invalid date format", provided: string }`              |
+| Internal error      | 500         | `{ error: "Internal server error" }`                              |
 
 ### Frontend Layer
 
@@ -319,7 +326,7 @@ const { data, isError, error } = useQuery({
       return false
     }
     return failureCount < 2
-  }
+  },
 })
 ```
 
@@ -409,4 +416,3 @@ Property tests verify universal properties across generated inputs:
 - **Property Testing**: fast-check
 - **Minimum iterations**: 100 per property test
 - **Component Testing**: React Testing Library
-

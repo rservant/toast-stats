@@ -13,8 +13,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { AreaDivisionRecognitionModule, DAP_THRESHOLDS, DDP_THRESHOLDS } from '../analytics/AreaDivisionRecognitionModule.js'
-import type { DistrictCacheEntry, ScrapedRecord } from '../../types/districts.js'
+import {
+  AreaDivisionRecognitionModule,
+  DAP_THRESHOLDS,
+  DDP_THRESHOLDS,
+} from '../analytics/AreaDivisionRecognitionModule.js'
+import type {
+  DistrictCacheEntry,
+  ScrapedRecord,
+} from '../../types/districts.js'
 import type { IAnalyticsDataSource } from '../../types/serviceInterfaces.js'
 
 describe('AreaDivisionRecognitionModule - Unit Tests', () => {
@@ -50,9 +57,9 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     return {
       'Club Number': options.clubId,
       'Club Name': `Club ${options.clubId}`,
-      'Division': options.division,
+      Division: options.division,
       'Division Name': `Division ${options.division}`,
-      'Area': options.area,
+      Area: options.area,
       'Area Name': `Area ${options.area}`,
       'Club Status': options.status ?? 'Active',
       'Club Distinguished Status': options.distinguishedStatus ?? '',
@@ -135,7 +142,12 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should NOT count Suspended clubs as paid', () => {
       const entry = createEntry([
         createClub({ clubId: '1', division: 'A', area: '1', status: 'Active' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Suspended' }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -149,7 +161,12 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should NOT count Ineligible clubs as paid', () => {
       const entry = createEntry([
         createClub({ clubId: '1', division: 'A', area: '1', status: 'Active' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Ineligible' }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Ineligible',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -172,12 +189,23 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     })
   })
 
-
   describe('Area Recognition - Distinguished Clubs Calculation', () => {
     it('should count Distinguished clubs (only from paid clubs)', () => {
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -189,8 +217,20 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should count Select Distinguished clubs', () => {
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Select Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Select Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -201,8 +241,20 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should count Presidents Distinguished clubs', () => {
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Presidents Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Presidents Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -213,8 +265,20 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should count Smedley Distinguished clubs', () => {
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Smedley Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Smedley Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -225,8 +289,20 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should NOT count distinguished clubs that are not paid', () => {
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Suspended', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -240,10 +316,34 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should calculate distinguished percentage against paid clubs only', () => {
       // 4 clubs total: 3 paid (2 distinguished), 1 suspended (distinguished)
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Select Distinguished' }),
-        createClub({ clubId: '3', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Suspended', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Select Distinguished',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+          distinguishedStatus: 'Distinguished',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -264,7 +364,12 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
         createClub({ clubId: '1', division: 'A', area: '1', status: 'Active' }),
         createClub({ clubId: '2', division: 'A', area: '1', status: 'Active' }),
         createClub({ clubId: '3', division: 'A', area: '1', status: 'Active' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Suspended' }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -279,8 +384,18 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       const entry = createEntry([
         createClub({ clubId: '1', division: 'A', area: '1', status: 'Active' }),
         createClub({ clubId: '2', division: 'A', area: '1', status: 'Active' }),
-        createClub({ clubId: '3', division: 'A', area: '1', status: 'Suspended' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Suspended' }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -295,8 +410,19 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should be NotDistinguished when paid threshold not met', () => {
       // 50% paid, 100% distinguished of paid
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Suspended' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -309,10 +435,34 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should be Distinguished at 50% distinguished clubs', () => {
       // 4 clubs: 4 paid (75%+), 2 distinguished = 50%
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '3', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -326,10 +476,34 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should be Select at 75% distinguished clubs', () => {
       // 4 clubs: 4 paid, 3 distinguished = 75%
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '3', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -342,10 +516,34 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should be Presidents at 100% distinguished clubs', () => {
       // 4 clubs: 4 paid, 4 distinguished = 100%
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Select Distinguished' }),
-        createClub({ clubId: '3', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Presidents Distinguished' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Smedley Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Select Distinguished',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Presidents Distinguished',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Smedley Distinguished',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -358,10 +556,34 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should be NotDistinguished below 50% distinguished', () => {
       // 4 clubs: 4 paid, 1 distinguished = 25%
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '3', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '4', division: 'A', area: '1', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -386,7 +608,6 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     })
   })
 
-
   // ========== Division Recognition Tests ==========
 
   describe('Division Recognition - Area Aggregation', () => {
@@ -406,7 +627,7 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       const results = module.analyzeDivisionRecognition(entry)
 
       expect(results).toHaveLength(2)
-      
+
       const divA = results.find(d => d.divisionId === 'A')
       expect(divA?.totalAreas).toBe(2)
       expect(divA?.areas).toHaveLength(2)
@@ -439,8 +660,18 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
         // Area 1: has paid clubs
         createClub({ clubId: '1', division: 'A', area: '1', status: 'Active' }),
         // Area 2: no paid clubs (all suspended)
-        createClub({ clubId: '2', division: 'A', area: '2', status: 'Suspended' }),
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Suspended' }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '2',
+          status: 'Suspended',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -456,11 +687,35 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should count distinguished areas (only from paid areas)', () => {
       const entry = createEntry([
         // Area 1: Distinguished (100% paid, 100% distinguished)
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 2: Not distinguished (100% paid, 0% distinguished)
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '4', division: 'A', area: '2', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -474,11 +729,35 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should calculate distinguished areas percentage against paid areas only', () => {
       const entry = createEntry([
         // Area 1: Distinguished (paid)
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 2: Not paid (all suspended)
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Suspended', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '4', division: 'A', area: '2', status: 'Suspended', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Suspended',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '2',
+          status: 'Suspended',
+          distinguishedStatus: 'Distinguished',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -497,10 +776,24 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       // Create 20 areas: 17 paid = 85%
       const clubs: ScrapedRecord[] = []
       for (let i = 1; i <= 17; i++) {
-        clubs.push(createClub({ clubId: `${i}`, division: 'A', area: `${i}`, status: 'Active' }))
+        clubs.push(
+          createClub({
+            clubId: `${i}`,
+            division: 'A',
+            area: `${i}`,
+            status: 'Active',
+          })
+        )
       }
       for (let i = 18; i <= 20; i++) {
-        clubs.push(createClub({ clubId: `${i}`, division: 'A', area: `${i}`, status: 'Suspended' }))
+        clubs.push(
+          createClub({
+            clubId: `${i}`,
+            division: 'A',
+            area: `${i}`,
+            status: 'Suspended',
+          })
+        )
       }
 
       const entry = createEntry(clubs)
@@ -515,10 +808,24 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       // Create 20 areas: 16 paid = 80%
       const clubs: ScrapedRecord[] = []
       for (let i = 1; i <= 16; i++) {
-        clubs.push(createClub({ clubId: `${i}`, division: 'A', area: `${i}`, status: 'Active' }))
+        clubs.push(
+          createClub({
+            clubId: `${i}`,
+            division: 'A',
+            area: `${i}`,
+            status: 'Active',
+          })
+        )
       }
       for (let i = 17; i <= 20; i++) {
-        clubs.push(createClub({ clubId: `${i}`, division: 'A', area: `${i}`, status: 'Suspended' }))
+        clubs.push(
+          createClub({
+            clubId: `${i}`,
+            division: 'A',
+            area: `${i}`,
+            status: 'Suspended',
+          })
+        )
       }
 
       const entry = createEntry(clubs)
@@ -534,9 +841,26 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
     it('should be NotDistinguished when paid threshold not met', () => {
       // 2 areas: 1 paid (50%), 1 distinguished
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Suspended' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -550,11 +874,35 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       // 2 areas: 2 paid (100%), 1 distinguished = 50%
       const entry = createEntry([
         // Area 1: Distinguished
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 2: Not distinguished
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '4', division: 'A', area: '2', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -569,17 +917,65 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       // 4 areas: 4 paid, 3 distinguished = 75%
       const entry = createEntry([
         // Area 1: Distinguished
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 2: Distinguished
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '4', division: 'A', area: '2', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 3: Distinguished
-        createClub({ clubId: '5', division: 'A', area: '3', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '6', division: 'A', area: '3', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '5',
+          division: 'A',
+          area: '3',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '6',
+          division: 'A',
+          area: '3',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 4: Not distinguished
-        createClub({ clubId: '7', division: 'A', area: '4', status: 'Active', distinguishedStatus: '' }),
-        createClub({ clubId: '8', division: 'A', area: '4', status: 'Active', distinguishedStatus: '' }),
+        createClub({
+          clubId: '7',
+          division: 'A',
+          area: '4',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
+        createClub({
+          clubId: '8',
+          division: 'A',
+          area: '4',
+          status: 'Active',
+          distinguishedStatus: '',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -593,11 +989,35 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       // 2 areas: 2 paid, 2 distinguished = 100%
       const entry = createEntry([
         // Area 1: Distinguished
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '2', division: 'A', area: '1', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '1',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
         // Area 2: Distinguished
-        createClub({ clubId: '3', division: 'A', area: '2', status: 'Active', distinguishedStatus: 'Distinguished' }),
-        createClub({ clubId: '4', division: 'A', area: '2', status: 'Active', distinguishedStatus: 'Distinguished' }),
+        createClub({
+          clubId: '3',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
+        createClub({
+          clubId: '4',
+          division: 'A',
+          area: '2',
+          status: 'Active',
+          distinguishedStatus: 'Distinguished',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -618,7 +1038,9 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
       const division = results.find(d => d.divisionId === 'A')
 
       expect(division?.eligibility).toBe('unknown')
-      expect(division?.eligibilityReason).toContain('club visit data not available')
+      expect(division?.eligibilityReason).toContain(
+        'club visit data not available'
+      )
     })
   })
 
@@ -647,8 +1069,18 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should handle division with zero paid areas', () => {
       const entry = createEntry([
-        createClub({ clubId: '1', division: 'A', area: '1', status: 'Suspended' }),
-        createClub({ clubId: '2', division: 'A', area: '2', status: 'Suspended' }),
+        createClub({
+          clubId: '1',
+          division: 'A',
+          area: '1',
+          status: 'Suspended',
+        }),
+        createClub({
+          clubId: '2',
+          division: 'A',
+          area: '2',
+          status: 'Suspended',
+        }),
       ])
 
       const results = module.analyzeDivisionRecognition(entry)
@@ -662,7 +1094,10 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should handle clubs with missing status (default to Active)', () => {
       const entry = createEntry([
-        { ...createClub({ clubId: '1', division: 'A', area: '1' }), 'Club Status': '' },
+        {
+          ...createClub({ clubId: '1', division: 'A', area: '1' }),
+          'Club Status': '',
+        },
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -674,9 +1109,18 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should handle case-insensitive status matching', () => {
       const entry = createEntry([
-        { ...createClub({ clubId: '1', division: 'A', area: '1' }), 'Club Status': 'ACTIVE' },
-        { ...createClub({ clubId: '2', division: 'A', area: '1' }), 'Club Status': 'active' },
-        { ...createClub({ clubId: '3', division: 'A', area: '1' }), 'Club Status': 'Active' },
+        {
+          ...createClub({ clubId: '1', division: 'A', area: '1' }),
+          'Club Status': 'ACTIVE',
+        },
+        {
+          ...createClub({ clubId: '2', division: 'A', area: '1' }),
+          'Club Status': 'active',
+        },
+        {
+          ...createClub({ clubId: '3', division: 'A', area: '1' }),
+          'Club Status': 'Active',
+        },
       ])
 
       const results = module.analyzeAreaRecognition(entry)
@@ -687,8 +1131,24 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
 
     it('should handle case-insensitive distinguished status matching', () => {
       const entry = createEntry([
-        { ...createClub({ clubId: '1', division: 'A', area: '1', status: 'Active' }), 'Club Distinguished Status': 'DISTINGUISHED' },
-        { ...createClub({ clubId: '2', division: 'A', area: '1', status: 'Active' }), 'Club Distinguished Status': 'distinguished' },
+        {
+          ...createClub({
+            clubId: '1',
+            division: 'A',
+            area: '1',
+            status: 'Active',
+          }),
+          'Club Distinguished Status': 'DISTINGUISHED',
+        },
+        {
+          ...createClub({
+            clubId: '2',
+            division: 'A',
+            area: '1',
+            status: 'Active',
+          }),
+          'Club Distinguished Status': 'distinguished',
+        },
       ])
 
       const results = module.analyzeAreaRecognition(entry)

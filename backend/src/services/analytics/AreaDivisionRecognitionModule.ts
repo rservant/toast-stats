@@ -17,7 +17,10 @@ import type {
   AreaDivisionRecognitionLevel,
   RecognitionEligibility,
 } from '../../types/analytics.js'
-import type { DistrictCacheEntry, ScrapedRecord } from '../../types/districts.js'
+import type {
+  DistrictCacheEntry,
+  ScrapedRecord,
+} from '../../types/districts.js'
 import { ensureString } from './AnalyticsUtils.js'
 import { logger } from '../../utils/logger.js'
 
@@ -60,7 +63,11 @@ export class AreaDivisionRecognitionModule {
       }
       return this.analyzeAreaRecognition(entry)
     } catch (error) {
-      logger.error('Failed to calculate area recognition', { districtId, date, error })
+      logger.error('Failed to calculate area recognition', {
+        districtId,
+        date,
+        error,
+      })
       throw error
     }
   }
@@ -79,11 +86,14 @@ export class AreaDivisionRecognitionModule {
       }
       return this.analyzeDivisionRecognition(entry)
     } catch (error) {
-      logger.error('Failed to calculate division recognition', { districtId, date, error })
+      logger.error('Failed to calculate division recognition', {
+        districtId,
+        date,
+        error,
+      })
       throw error
     }
   }
-
 
   // ========== Area Recognition Analysis ==========
 
@@ -92,12 +102,15 @@ export class AreaDivisionRecognitionModule {
    */
   analyzeAreaRecognition(entry: DistrictCacheEntry): AreaRecognition[] {
     // Group clubs by area
-    const areaMap = new Map<string, {
-      areaId: string
-      areaName: string
-      divisionId: string
-      clubs: ScrapedRecord[]
-    }>()
+    const areaMap = new Map<
+      string,
+      {
+        areaId: string
+        areaName: string
+        divisionId: string
+        clubs: ScrapedRecord[]
+      }
+    >()
 
     for (const club of entry.clubPerformance) {
       const areaId = ensureString(club['Area'])
@@ -115,8 +128,13 @@ export class AreaDivisionRecognitionModule {
     }
 
     // Calculate recognition for each area
-    return Array.from(areaMap.values()).map(area => 
-      this.calculateSingleAreaRecognition(area.areaId, area.areaName, area.divisionId, area.clubs)
+    return Array.from(areaMap.values()).map(area =>
+      this.calculateSingleAreaRecognition(
+        area.areaId,
+        area.areaName,
+        area.divisionId,
+        area.clubs
+      )
     )
   }
 
@@ -131,17 +149,19 @@ export class AreaDivisionRecognitionModule {
   ): AreaRecognition {
     const totalClubs = clubs.length
     const paidClubs = clubs.filter(club => this.isClubPaid(club)).length
-    const distinguishedClubs = clubs.filter(club => 
-      this.isClubPaid(club) && this.isClubDistinguished(club)
+    const distinguishedClubs = clubs.filter(
+      club => this.isClubPaid(club) && this.isClubDistinguished(club)
     ).length
 
     // Calculate percentages
-    const paidClubsPercent = totalClubs > 0 
-      ? Math.round((paidClubs / totalClubs) * 100 * 100) / 100 
-      : 0
-    const distinguishedClubsPercent = paidClubs > 0 
-      ? Math.round((distinguishedClubs / paidClubs) * 100 * 100) / 100 
-      : 0
+    const paidClubsPercent =
+      totalClubs > 0
+        ? Math.round((paidClubs / totalClubs) * 100 * 100) / 100
+        : 0
+    const distinguishedClubsPercent =
+      paidClubs > 0
+        ? Math.round((distinguishedClubs / paidClubs) * 100 * 100) / 100
+        : 0
 
     // Check thresholds
     const meetsPaidThreshold = paidClubsPercent >= DAP_PAID_CLUBS_THRESHOLD
@@ -214,11 +234,14 @@ export class AreaDivisionRecognitionModule {
     const areaRecognitions = this.analyzeAreaRecognition(entry)
 
     // Group areas by division
-    const divisionMap = new Map<string, {
-      divisionId: string
-      divisionName: string
-      areas: AreaRecognition[]
-    }>()
+    const divisionMap = new Map<
+      string,
+      {
+        divisionId: string
+        divisionName: string
+        areas: AreaRecognition[]
+      }
+    >()
 
     for (const area of areaRecognitions) {
       if (!divisionMap.has(area.divisionId)) {
@@ -228,7 +251,8 @@ export class AreaDivisionRecognitionModule {
         )
         divisionMap.set(area.divisionId, {
           divisionId: area.divisionId,
-          divisionName: ensureString(divisionClub?.['Division Name']) || area.divisionId,
+          divisionName:
+            ensureString(divisionClub?.['Division Name']) || area.divisionId,
           areas: [],
         })
       }
@@ -255,24 +279,28 @@ export class AreaDivisionRecognitionModule {
   ): DivisionRecognition {
     const totalAreas = areas.length
     const paidAreas = areas.filter(area => this.isAreaPaid(area)).length
-    const distinguishedAreas = areas.filter(area =>
-      this.isAreaPaid(area) && area.recognitionLevel !== 'NotDistinguished'
+    const distinguishedAreas = areas.filter(
+      area =>
+        this.isAreaPaid(area) && area.recognitionLevel !== 'NotDistinguished'
     ).length
 
     // Calculate percentages
-    const paidAreasPercent = totalAreas > 0
-      ? Math.round((paidAreas / totalAreas) * 100 * 100) / 100
-      : 0
-    const distinguishedAreasPercent = paidAreas > 0
-      ? Math.round((distinguishedAreas / paidAreas) * 100 * 100) / 100
-      : 0
+    const paidAreasPercent =
+      totalAreas > 0
+        ? Math.round((paidAreas / totalAreas) * 100 * 100) / 100
+        : 0
+    const distinguishedAreasPercent =
+      paidAreas > 0
+        ? Math.round((distinguishedAreas / paidAreas) * 100 * 100) / 100
+        : 0
 
     // Check thresholds
     const meetsPaidThreshold = paidAreasPercent >= DDP_PAID_AREAS_THRESHOLD
 
     // Determine eligibility (club visits not available from dashboard)
     const eligibility: RecognitionEligibility = 'unknown'
-    const eligibilityReason = 'Area club visit data not available from dashboard'
+    const eligibilityReason =
+      'Area club visit data not available from dashboard'
 
     // Determine recognition level based on thresholds
     const recognitionLevel = this.determineDivisionRecognitionLevel(
@@ -327,7 +355,6 @@ export class AreaDivisionRecognitionModule {
 
     return 'NotDistinguished'
   }
-
 
   // ========== Helper Methods ==========
 
@@ -399,7 +426,10 @@ export class AreaDivisionRecognitionModule {
     date: string
   ): Promise<DistrictCacheEntry | null> {
     try {
-      const districtData = await this.dataSource.getDistrictData(date, districtId)
+      const districtData = await this.dataSource.getDistrictData(
+        date,
+        districtId
+      )
       if (!districtData) {
         return null
       }
@@ -413,7 +443,11 @@ export class AreaDivisionRecognitionModule {
         fetchedAt: districtData.asOfDate,
       }
     } catch (error) {
-      logger.warn('Failed to get district data for date', { districtId, date, error })
+      logger.warn('Failed to get district data for date', {
+        districtId,
+        date,
+        error,
+      })
       return null
     }
   }

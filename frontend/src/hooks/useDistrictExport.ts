@@ -54,14 +54,18 @@ export const useDistrictExport = (
         const contentDisposition = response.headers['content-disposition']
         let filename = `district_${districtId}_analytics.csv`
         if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="?([^";\n]+)"?/)
+          const filenameMatch = contentDisposition.match(
+            /filename="?([^";\n]+)"?/
+          )
           if (filenameMatch?.[1]) {
             filename = filenameMatch[1]
           }
         }
 
         // Create blob and trigger download
-        const blob = new Blob([response.data as BlobPart], { type: 'text/csv;charset=utf-8' })
+        const blob = new Blob([response.data], {
+          type: 'text/csv;charset=utf-8',
+        })
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url

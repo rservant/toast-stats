@@ -54,11 +54,11 @@ The backend endpoint has been renamed from `at-risk-clubs` to `vulnerable-clubs`
 | `/districts/:districtId/backfill/:backfillId`         | `useBackfill.ts`                   | GET, DELETE | ✅ Exists      |
 | `/districts/backfill`                                 | `useBackfill.ts`                   | POST        | ✅ Exists      |
 | `/districts/backfill/:backfillId`                     | `useBackfill.ts`                   | GET, DELETE | ✅ Exists      |
-| `/admin/snapshot-store/health`                 | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
-| `/admin/snapshot-store/performance`            | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
-| `/admin/snapshot-store/performance/reset`      | `useAdminMonitoring.ts`            | POST        | ✅ Exists      |
-| `/admin/process-separation/compliance`         | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
-| `/admin/snapshots`                             | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshot-store/health`                        | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshot-store/performance`                   | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshot-store/performance/reset`             | `useAdminMonitoring.ts`            | POST        | ✅ Exists      |
+| `/admin/process-separation/compliance`                | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
+| `/admin/snapshots`                                    | `useAdminMonitoring.ts`            | GET         | ✅ Exists      |
 | `/admin/districts/config`                             | `useDistrictConfiguration.ts`      | GET, POST   | ✅ Exists      |
 | `/admin/districts/config/:districtId`                 | `useDistrictConfiguration.ts`      | DELETE      | ✅ Exists      |
 
@@ -70,10 +70,10 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ### District Analytics (Unused)
 
-| Endpoint                                | Purpose                       | Recommendation                |
-| --------------------------------------- | ----------------------------- | ----------------------------- |
-| `GET /:districtId/membership-analytics` | Detailed membership analytics | Consider frontend integration |
-| `GET /:districtId/year-over-year/:date` | YoY comparison                | Consider frontend integration |
+| Endpoint                                | Purpose                       | Recommendation                      |
+| --------------------------------------- | ----------------------------- | ----------------------------------- |
+| `GET /:districtId/membership-analytics` | Detailed membership analytics | Consider frontend integration       |
+| `GET /:districtId/year-over-year/:date` | YoY comparison                | Consider frontend integration       |
 | `GET /:districtId/export`               | CSV export                    | ✅ Now used by District Detail Page |
 
 ### Admin Snapshot Management
@@ -86,21 +86,21 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ### Admin Monitoring
 
-| Endpoint                                       | Purpose              | Recommendation                     |
-| ---------------------------------------------- | -------------------- | ---------------------------------- |
-| `GET /admin/snapshot-store/health`             | Health check         | ✅ Now used by Admin Dashboard     |
-| `GET /admin/snapshot-store/integrity`          | Integrity validation | Operational - keep for monitoring  |
-| `GET /admin/snapshot-store/performance`        | Performance metrics  | ✅ Now used by Admin Dashboard     |
-| `POST /admin/snapshot-store/performance/reset` | Reset metrics        | ✅ Now used by Admin Dashboard     |
+| Endpoint                                       | Purpose              | Recommendation                    |
+| ---------------------------------------------- | -------------------- | --------------------------------- |
+| `GET /admin/snapshot-store/health`             | Health check         | ✅ Now used by Admin Dashboard    |
+| `GET /admin/snapshot-store/integrity`          | Integrity validation | Operational - keep for monitoring |
+| `GET /admin/snapshot-store/performance`        | Performance metrics  | ✅ Now used by Admin Dashboard    |
+| `POST /admin/snapshot-store/performance/reset` | Reset metrics        | ✅ Now used by Admin Dashboard    |
 
 ### Admin Process Separation
 
-| Endpoint                                     | Purpose                 | Recommendation                     |
-| -------------------------------------------- | ----------------------- | ---------------------------------- |
-| `GET /admin/process-separation/validate`     | Validate separation     | Operational - keep for compliance  |
-| `GET /admin/process-separation/monitor`      | Monitor operations      | Operational - keep for compliance  |
-| `GET /admin/process-separation/compliance`   | Compliance metrics      | ✅ Now used by Admin Dashboard     |
-| `GET /admin/process-separation/independence` | Independence validation | Operational - keep for compliance  |
+| Endpoint                                     | Purpose                 | Recommendation                    |
+| -------------------------------------------- | ----------------------- | --------------------------------- |
+| `GET /admin/process-separation/validate`     | Validate separation     | Operational - keep for compliance |
+| `GET /admin/process-separation/monitor`      | Monitor operations      | Operational - keep for compliance |
+| `GET /admin/process-separation/compliance`   | Compliance metrics      | ✅ Now used by Admin Dashboard    |
+| `GET /admin/process-separation/independence` | Independence validation | Operational - keep for compliance |
 
 ### Admin District Configuration (Unused)
 
@@ -193,8 +193,8 @@ These endpoints exist in the backend but are not consumed by the current fronten
 
 ## Change Log
 
-| Date       | Author   | Change                                                    |
-| ---------- | -------- | --------------------------------------------------------- |
-| 2026-01-09 | Analysis | Initial document creation                                 |
-| 2026-01-09 | Kiro     | Implemented Admin Dashboard (Recommendation #5)           |
-| 2026-01-09 | Kiro     | Implemented Export Functionality (Recommendation #6)      |
+| Date       | Author   | Change                                               |
+| ---------- | -------- | ---------------------------------------------------- |
+| 2026-01-09 | Analysis | Initial document creation                            |
+| 2026-01-09 | Kiro     | Implemented Admin Dashboard (Recommendation #5)      |
+| 2026-01-09 | Kiro     | Implemented Export Functionality (Recommendation #6) |

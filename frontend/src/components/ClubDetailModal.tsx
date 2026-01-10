@@ -270,9 +270,15 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   {/* Y-axis labels */}
                   <div className="absolute left-0 top-4 bottom-4 w-10 flex flex-col justify-between text-xs text-gray-500 font-tm-body">
                     <span>{maxMembership}</span>
-                    <span>{Math.round(minMembership + membershipRange * 0.75)}</span>
-                    <span>{Math.round(minMembership + membershipRange * 0.5)}</span>
-                    <span>{Math.round(minMembership + membershipRange * 0.25)}</span>
+                    <span>
+                      {Math.round(minMembership + membershipRange * 0.75)}
+                    </span>
+                    <span>
+                      {Math.round(minMembership + membershipRange * 0.5)}
+                    </span>
+                    <span>
+                      {Math.round(minMembership + membershipRange * 0.25)}
+                    </span>
                     <span>{minMembership}</span>
                   </div>
                   <svg
@@ -426,7 +432,9 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                       // Always include first entry
                       if (index === 0) return true
                       // Include if goals changed from previous
-                      return point.goalsAchieved !== arr[index - 1]?.goalsAchieved
+                      return (
+                        point.goalsAchieved !== arr[index - 1]?.goalsAchieved
+                      )
                     })
                     .slice(-5)
                     .reverse()

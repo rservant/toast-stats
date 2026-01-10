@@ -95,7 +95,10 @@ const Section: React.FC<SectionProps> = ({
   isLoading,
   error,
 }) => (
-  <section className="bg-white rounded-lg shadow p-4 mb-4" aria-labelledby={`section-${title.toLowerCase().replace(/\s/g, '-')}`}>
+  <section
+    className="bg-white rounded-lg shadow p-4 mb-4"
+    aria-labelledby={`section-${title.toLowerCase().replace(/\s/g, '-')}`}
+  >
     <h2
       id={`section-${title.toLowerCase().replace(/\s/g, '-')}`}
       className="text-lg font-semibold text-tm-black mb-3"
@@ -146,7 +149,9 @@ const AdminDashboardPage: React.FC = () => {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-tm-black">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold text-tm-black">
+              Admin Dashboard
+            </h1>
             <p className="text-sm text-gray-600">
               System health, performance metrics, and operational monitoring
             </p>
@@ -170,8 +175,12 @@ const AdminDashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <MetricCard
                   title="Store Status"
-                  value={healthQuery.data.health.is_ready ? 'Ready' : 'Not Ready'}
-                  status={healthQuery.data.health.is_ready ? 'success' : 'error'}
+                  value={
+                    healthQuery.data.health.is_ready ? 'Ready' : 'Not Ready'
+                  }
+                  status={
+                    healthQuery.data.health.is_ready ? 'success' : 'error'
+                  }
                 />
                 <MetricCard
                   title="Current Snapshot"
@@ -186,17 +195,23 @@ const AdminDashboardPage: React.FC = () => {
                       : undefined
                   }
                   status={
-                    healthQuery.data.health.current_snapshot ? 'success' : 'warning'
+                    healthQuery.data.health.current_snapshot
+                      ? 'success'
+                      : 'warning'
                   }
                 />
                 <MetricCard
                   title="Recent Snapshots"
-                  value={healthQuery.data.health.recent_activity.total_snapshots}
+                  value={
+                    healthQuery.data.health.recent_activity.total_snapshots
+                  }
                   subtitle={`${healthQuery.data.health.recent_activity.successful_snapshots} successful`}
                 />
                 <MetricCard
                   title="Failed Snapshots"
-                  value={healthQuery.data.health.recent_activity.failed_snapshots}
+                  value={
+                    healthQuery.data.health.recent_activity.failed_snapshots
+                  }
                   status={
                     healthQuery.data.health.recent_activity.failed_snapshots > 0
                       ? 'warning'
@@ -228,14 +243,19 @@ const AdminDashboardPage: React.FC = () => {
                     <div>
                       <dt className="text-gray-500">Schema Version</dt>
                       <dd>
-                        {healthQuery.data.health.current_snapshot.schema_version}
+                        {
+                          healthQuery.data.health.current_snapshot
+                            .schema_version
+                        }
                       </dd>
                     </div>
                     <div>
                       <dt className="text-gray-500">Status</dt>
                       <dd>
                         <StatusBadge
-                          status={healthQuery.data.health.current_snapshot.status}
+                          status={
+                            healthQuery.data.health.current_snapshot.status
+                          }
                           size="sm"
                         />
                       </dd>
@@ -264,10 +284,11 @@ const AdminDashboardPage: React.FC = () => {
                   title="Cache Hit Rate"
                   value={`${performanceQuery.data.performance.cache_hit_rate_percent}%`}
                   status={
-                    performanceQuery.data.performance.cache_hit_rate_percent >= 80
+                    performanceQuery.data.performance.cache_hit_rate_percent >=
+                    80
                       ? 'success'
-                      : performanceQuery.data.performance.cache_hit_rate_percent >=
-                          50
+                      : performanceQuery.data.performance
+                            .cache_hit_rate_percent >= 50
                         ? 'warning'
                         : 'error'
                   }
@@ -320,8 +341,8 @@ const AdminDashboardPage: React.FC = () => {
                   status={
                     complianceQuery.data.compliance.processSeparationScore >= 80
                       ? 'success'
-                      : complianceQuery.data.compliance.processSeparationScore >=
-                          60
+                      : complianceQuery.data.compliance
+                            .processSeparationScore >= 60
                         ? 'warning'
                         : 'error'
                   }
@@ -338,7 +359,9 @@ const AdminDashboardPage: React.FC = () => {
                   <p className="text-sm text-gray-600">Read Operations</p>
                   <div className="mt-1">
                     <StatusBadge
-                      status={complianceQuery.data.compliance.readOperationHealth}
+                      status={
+                        complianceQuery.data.compliance.readOperationHealth
+                      }
                     />
                   </div>
                 </div>
@@ -408,7 +431,10 @@ const AdminDashboardPage: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {snapshotsQuery.data.snapshots.map(
                     (snapshot: SnapshotMetadata) => (
-                      <tr key={snapshot.snapshot_id} className="hover:bg-gray-50">
+                      <tr
+                        key={snapshot.snapshot_id}
+                        className="hover:bg-gray-50"
+                      >
                         <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">
                           {snapshot.snapshot_id.substring(0, 12)}...
                         </td>
