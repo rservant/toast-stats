@@ -527,9 +527,9 @@ export const exportClubPerformance = (
     currentStatus: string
     distinguishedLevel?: string
     riskFactors?: string[]
-    octoberRenewals?: number
-    aprilRenewals?: number
-    newMembers?: number
+    octoberRenewals?: number | undefined
+    aprilRenewals?: number | undefined
+    newMembers?: number | undefined
   }>,
   districtId: string
 ): void => {

@@ -194,8 +194,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       }
 
       // Both values are defined - compare normally
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      // TypeScript needs explicit assertion after undefined checks
+      const aVal = aValue as string | number
+      const bVal = bValue as string | number
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
 
       // Equal values - use secondary sort by club name
       return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
