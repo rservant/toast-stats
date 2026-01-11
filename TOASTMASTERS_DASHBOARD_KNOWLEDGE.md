@@ -22,6 +22,7 @@
 10. [Caching Strategy](#caching-strategy)
 11. [Error Handling](#error-handling)
 12. [Historical Data Access](#historical-data-access)
+13. [Distinguished Area and Division Recognition Programs](#distinguished-area-and-division-recognition-programs)
 
 ---
 
@@ -1318,6 +1319,103 @@ const apiService = new RealToastmastersAPIService(scraper)
 - Improved failure detection and classification
 - Enhanced retry strategies with better backoff
 - More sophisticated fallback mechanisms
+
+---
+
+## Distinguished Area and Division Recognition Programs
+
+### Overview
+
+Toastmasters International recognizes Areas and Divisions that achieve specific performance thresholds through the Distinguished Area Program (DAP) and Distinguished Division Program (DDP). These programs have formal eligibility requirements and scoring criteria.
+
+### Distinguished Area Program (DAP)
+
+#### Eligibility Requirements
+
+An Area is eligible for recognition **only if ALL** of the following are true:
+
+1. **Club Visits**: At least two club visits per club are completed and submitted using the official Area Director Club Visit Report.
+
+If this condition is false, the Area is **ineligible**, regardless of all other metrics.
+
+#### Scored Metrics
+
+Once eligible, recognition is determined by two independent percentage thresholds:
+
+**Paid Clubs Percentage**:
+- ≥ 75% of clubs in the Area must be paid clubs
+- A "paid club" is a club in good standing with Toastmasters International (dues paid)
+
+**Distinguished Clubs Percentage**:
+- Percentage is calculated **only against paid clubs**
+- Required thresholds vary by recognition level
+
+#### Recognition Levels (Area)
+
+| Recognition Level              | Paid Clubs | Distinguished Clubs (of paid clubs) |
+| ------------------------------ | ---------- | ----------------------------------- |
+| Distinguished Area             | ≥ 75% paid | ≥ 50% Distinguished                 |
+| Select Distinguished Area      | ≥ 75% paid | ≥ 75% Distinguished                 |
+| President's Distinguished Area | ≥ 75% paid | 100% Distinguished                  |
+
+### Distinguished Division Program (DDP)
+
+#### Eligibility Requirements
+
+A Division is eligible for recognition **only if ALL** of the following are true:
+
+1. **Area Club Visits**: Areas in the Division have completed required Area Director club visits (two per club).
+
+If this condition is false, the Division is **ineligible**, regardless of all other metrics.
+
+#### Scored Metrics
+
+Once eligible, recognition is determined by two independent percentage thresholds:
+
+**Paid Areas Percentage**:
+- ≥ 85% of Areas in the Division must be paid Areas
+- A "paid Area" is an Area not suspended due to unpaid clubs
+
+**Distinguished Areas Percentage**:
+- Percentage is calculated **only against paid Areas**
+- Required thresholds vary by recognition level
+
+#### Recognition Levels (Division)
+
+| Recognition Level                  | Paid Areas | Distinguished Areas (of paid areas) |
+| ---------------------------------- | ---------- | ----------------------------------- |
+| Distinguished Division             | ≥ 85% paid | ≥ 50% Distinguished                 |
+| Select Distinguished Division      | ≥ 85% paid | ≥ 75% Distinguished                 |
+| President's Distinguished Division | ≥ 85% paid | 100% Distinguished                  |
+
+### Canonical Dependency Rules
+
+These rules govern DAP/DDP calculations:
+
+1. **Paid status is a prerequisite**, not a score multiplier
+2. **Distinguished percentages are always calculated against paid units only**
+3. **Eligibility gates hard-block recognition**
+4. **Recognition levels are ordinal**: Distinguished < Select Distinguished < President's Distinguished
+
+### Data Availability Notes
+
+**Club Visit Data**:
+- Club visit completion data is **not currently available** from the Toastmasters dashboard CSV exports
+- Until this data becomes available, eligibility gates based on club visits **cannot be evaluated**
+- Implementation should track eligibility as "unknown" when visit data is unavailable
+
+**Paid Status**:
+- Club paid status can be inferred from club status fields in dashboard data
+- A club with status "Active" is considered paid
+- Clubs with status "Suspended", "Ineligible", or "Low" are not considered paid
+
+### Implementation Considerations
+
+1. Recognition calculations must follow the exact thresholds specified
+2. Percentage calculations must use the correct denominator (paid units only for distinguished %)
+3. Eligibility gates must be evaluated before scoring metrics
+4. Recognition level must be the highest level for which all criteria are met
+5. When eligibility cannot be determined, recognition should be marked as "Unknown"
 
 ---
 
