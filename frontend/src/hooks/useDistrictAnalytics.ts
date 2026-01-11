@@ -23,6 +23,10 @@ export interface ClubTrend {
     | 'President'
     | 'Select'
     | 'Distinguished'
+  // Membership payment fields
+  octoberRenewals?: number
+  aprilRenewals?: number
+  newMembers?: number
 }
 
 export interface DivisionAnalytics {

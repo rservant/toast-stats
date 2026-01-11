@@ -345,7 +345,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         ref={buttonRef}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         onKeyDown={handleKeyDown}
-        className="group flex items-center gap-2 px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer"
+        className="group flex items-center gap-1 px-2 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer"
         tabIndex={0}
         aria-expanded={isDropdownOpen}
         aria-haspopup="true"

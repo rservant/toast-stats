@@ -15,6 +15,9 @@ export type SortField =
   | 'division'
   | 'area'
   | 'distinguished'
+  | 'octoberRenewals'
+  | 'aprilRenewals'
+  | 'newMembers'
 
 /**
  * Sort direction types
@@ -199,5 +202,26 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     filterable: true,
     filterType: 'categorical',
     filterOptions: ['thriving', 'vulnerable', 'intervention-required'],
+  },
+  {
+    field: 'octoberRenewals',
+    label: 'Oct Ren',
+    sortable: true,
+    filterable: true,
+    filterType: 'numeric',
+  },
+  {
+    field: 'aprilRenewals',
+    label: 'Apr Ren',
+    sortable: true,
+    filterable: true,
+    filterType: 'numeric',
+  },
+  {
+    field: 'newMembers',
+    label: 'New',
+    sortable: true,
+    filterable: true,
+    filterType: 'numeric',
   },
 ]

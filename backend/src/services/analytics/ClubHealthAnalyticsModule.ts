@@ -24,6 +24,38 @@ import {
 import { logger } from '../../utils/logger.js'
 
 /**
+ * Parse an integer value, returning undefined for missing/invalid data
+ *
+ * Unlike parseIntSafe which returns a default value, this function returns
+ * undefined when the value cannot be parsed. This is used for optional
+ * numeric fields where we need to distinguish between "0" and "missing".
+ *
+ * Requirements: 8.5, 8.6, 8.7
+ *
+ * @param value - Value to parse (string, number, null, or undefined)
+ * @returns Parsed integer value or undefined if parsing fails
+ */
+function parseIntOrUndefined(
+  value: string | number | null | undefined
+): number | undefined {
+  if (value === null || value === undefined || value === '') {
+    return undefined
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? undefined : Math.floor(value)
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      return undefined
+    }
+    const parsed = parseInt(trimmed, 10)
+    return isNaN(parsed) ? undefined : parsed
+  }
+  return undefined
+}
+
+/**
  * ClubHealthAnalyticsModule
  *
  * Specialized module for club health-related analytics calculations.
@@ -145,6 +177,9 @@ export class ClubHealthAnalyticsModule {
       if (!clubId) continue
       const clubName = ensureString(club['Club Name'] || club['ClubName'])
 
+      // Extract membership payment data (Requirements 8.5, 8.6, 8.7)
+      const membershipPayments = this.extractMembershipPayments(club)
+
       clubMap.set(clubId, {
         clubId,
         clubName,
@@ -158,6 +193,10 @@ export class ClubHealthAnalyticsModule {
         currentStatus: 'thriving',
         riskFactors: [],
         distinguishedLevel: 'NotDistinguished', // Default value, will be updated later
+        // Membership payment tracking fields (Requirements 8.1, 8.5, 8.6, 8.7)
+        octoberRenewals: membershipPayments.octoberRenewals,
+        aprilRenewals: membershipPayments.aprilRenewals,
+        newMembers: membershipPayments.newMembers,
       })
     }
 
@@ -505,6 +544,29 @@ export class ClubHealthAnalyticsModule {
     const membershipBase = parseIntSafe(club['Mem. Base'])
 
     return currentMembers - membershipBase
+  }
+
+  /**
+   * Extract membership payment data from a club record
+   *
+   * Parses the "Oct. Ren", "Apr. Ren", and "New Members" fields from the
+   * Toastmasters dashboard CSV data. Returns undefined for missing/invalid data.
+   *
+   * Requirements: 8.5, 8.6, 8.7
+   *
+   * @param club - Raw club data record from CSV
+   * @returns Object with octoberRenewals, aprilRenewals, and newMembers fields
+   */
+  extractMembershipPayments(club: ScrapedRecord): {
+    octoberRenewals?: number
+    aprilRenewals?: number
+    newMembers?: number
+  } {
+    return {
+      octoberRenewals: parseIntOrUndefined(club['Oct. Ren']),
+      aprilRenewals: parseIntOrUndefined(club['Apr. Ren']),
+      newMembers: parseIntOrUndefined(club['New Members']),
+    }
   }
 
   // ========== Distinguished Level Helper ==========

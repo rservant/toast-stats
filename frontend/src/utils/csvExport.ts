@@ -527,6 +527,9 @@ export const exportClubPerformance = (
     currentStatus: string
     distinguishedLevel?: string
     riskFactors?: string[]
+    octoberRenewals?: number
+    aprilRenewals?: number
+    newMembers?: number
   }>,
   districtId: string
 ): void => {
@@ -539,6 +542,9 @@ export const exportClubPerformance = (
     'Current DCP Goals',
     'Status',
     'Distinguished Level',
+    'Oct Ren',
+    'Apr Ren',
+    'New',
     'Risk Factors',
   ]
 
@@ -558,6 +564,9 @@ export const exportClubPerformance = (
       currentDcpGoals,
       club.currentStatus,
       club.distinguishedLevel || 'None',
+      club.octoberRenewals ?? '',
+      club.aprilRenewals ?? '',
+      club.newMembers ?? '',
       riskFactors,
     ]
   })

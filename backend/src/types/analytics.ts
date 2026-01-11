@@ -26,6 +26,12 @@ export interface ClubTrend {
   currentStatus: ClubHealthStatus
   riskFactors: string[]
   distinguishedLevel: DistinguishedLevel
+
+  // Membership payment tracking fields (Requirements 8.1, 8.5, 8.6, 8.7)
+  // Derived from Toastmasters dashboard CSV: "Oct. Ren", "Apr. Ren", "New Members"
+  octoberRenewals?: number // Count of October renewals
+  aprilRenewals?: number // Count of April renewals
+  newMembers?: number // Count of new members
 }
 
 export interface DivisionAnalytics {

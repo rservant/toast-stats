@@ -109,19 +109,19 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   ) => {
     switch (status) {
       case 'intervention-required':
-        return 'INTERVENTION REQUIRED'
+        return 'Intervention Required'
       case 'vulnerable':
-        return 'VULNERABLE'
+        return 'Vulnerable'
       default:
-        return 'THRIVING'
+        return 'Thriving'
     }
   }
 
   // Sort the filtered clubs
   const sortedClubs = useMemo(() => {
     const sorted = [...filteredClubs].sort((a, b) => {
-      let aValue: string | number
-      let bValue: string | number
+      let aValue: string | number | undefined
+      let bValue: string | number | undefined
 
       switch (sortField) {
         case 'name':
@@ -160,13 +160,45 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           bValue = b.distinguishedOrder
           break
         }
+        case 'octoberRenewals':
+          aValue = a.octoberRenewals
+          bValue = b.octoberRenewals
+          break
+        case 'aprilRenewals':
+          aValue = a.aprilRenewals
+          bValue = b.aprilRenewals
+          break
+        case 'newMembers':
+          aValue = a.newMembers
+          bValue = b.newMembers
+          break
         default:
           return 0
       }
 
+      // Handle undefined values - treat as lowest value (sort to end)
+      const aIsUndefined = aValue === undefined
+      const bIsUndefined = bValue === undefined
+
+      if (aIsUndefined && bIsUndefined) {
+        // Both undefined - use secondary sort by club name
+        return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+      }
+      if (aIsUndefined) {
+        // a is undefined, sort to end regardless of direction
+        return 1
+      }
+      if (bIsUndefined) {
+        // b is undefined, sort to end regardless of direction
+        return -1
+      }
+
+      // Both values are defined - compare normally
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
-      return 0
+
+      // Equal values - use secondary sort by club name
+      return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
     })
 
     return sorted
@@ -215,6 +247,9 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   currentStatus: club.currentStatus,
                   distinguishedLevel: club.distinguishedLevel,
                   riskFactors: club.riskFactors,
+                  octoberRenewals: club.octoberRenewals,
+                  aprilRenewals: club.aprilRenewals,
+                  newMembers: club.newMembers,
                 })),
                 districtId
               )
@@ -284,7 +319,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {/* Table */}
       {!isLoading && sortedClubs.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-auto">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {COLUMN_CONFIGS.map(config => (
@@ -317,39 +352,84 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   onClick={() => onClubClick?.(club)}
                   className={`${getRowColor(club.currentStatus)} cursor-pointer transition-colors`}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">
+                  <td className="px-2 py-3 whitespace-nowrap">
+                    <div className="font-medium text-gray-900 text-sm">
                       {club.clubName}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-600 text-center">
                     {club.divisionName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-600 text-center">
                     {club.areaName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center text-gray-900">
                     {club.latestMembership}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center text-gray-900">
                     {club.latestDcpGoals}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3 whitespace-nowrap text-center">
                     {club.distinguishedLevel &&
                     club.distinguishedLevel !== 'NotDistinguished' ? (
-                      <span className="px-2 py-1 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded font-tm-body">
+                      <span className="px-1.5 py-0.5 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded font-tm-body">
                         {club.distinguishedLevel}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3 whitespace-nowrap text-center">
                     <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
+                      className={`px-1.5 py-0.5 text-xs font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
                     >
                       {getStatusLabel(club.currentStatus)}
                     </span>
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center">
+                    {club.octoberRenewals !== undefined ? (
+                      <span
+                        className={
+                          club.octoberRenewals === 0
+                            ? 'text-gray-500'
+                            : 'text-gray-900'
+                        }
+                      >
+                        {club.octoberRenewals}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center">
+                    {club.aprilRenewals !== undefined ? (
+                      <span
+                        className={
+                          club.aprilRenewals === 0
+                            ? 'text-gray-500'
+                            : 'text-gray-900'
+                        }
+                      >
+                        {club.aprilRenewals}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center">
+                    {club.newMembers !== undefined ? (
+                      <span
+                        className={
+                          club.newMembers === 0
+                            ? 'text-gray-500'
+                            : 'text-gray-900'
+                        }
+                      >
+                        {club.newMembers}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

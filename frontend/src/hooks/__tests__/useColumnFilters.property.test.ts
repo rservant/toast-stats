@@ -1071,3 +1071,567 @@ describe('Property 5: Filter clearing restores state', () => {
     )
   })
 })
+
+
+/**
+ * Property 2: Numeric Range Filtering for Membership Payment Columns
+ * For any list of clubs and any numeric range filter (min, max) applied to a membership
+ * payment column, all clubs in the filtered result SHALL have payment counts satisfying:
+ * min <= count <= max (where undefined bounds are treated as unbounded).
+ * Undefined values do not match any range.
+ *
+ * **Feature: april-renewal-status, Property 2: Numeric Range Filtering**
+ * **Validates: Requirements 4.2, 4.3**
+ */
+describe('Property 2: Numeric Range Filtering for Membership Payment Columns', () => {
+  // Generator for clubs with membership payment fields
+  const clubTrendWithPaymentsGenerator = fc.record({
+    clubId: fc
+      .string({ minLength: 1, maxLength: 10 })
+      .filter(s => s.trim().length > 0)
+      .map(s => s.trim()),
+    clubName: fc
+      .string({ minLength: 2, maxLength: 50 })
+      .filter(s => s.trim().length > 1)
+      .map(s => s.trim()),
+    divisionId: fc
+      .string({ minLength: 1, maxLength: 5 })
+      .filter(s => s.trim().length > 0)
+      .map(s => s.trim()),
+    divisionName: fc
+      .string({ minLength: 2, maxLength: 20 })
+      .filter(s => s.trim().length > 1)
+      .map(s => s.trim()),
+    areaId: fc
+      .string({ minLength: 1, maxLength: 5 })
+      .filter(s => s.trim().length > 0)
+      .map(s => s.trim()),
+    areaName: fc
+      .string({ minLength: 2, maxLength: 20 })
+      .filter(s => s.trim().length > 1)
+      .map(s => s.trim()),
+    membershipTrend: fc.array(
+      fc.record({
+        date: fc.constant('2024-01-01'),
+        count: fc.integer({ min: 0, max: 100 }),
+      }),
+      { minLength: 1, maxLength: 10 }
+    ),
+    dcpGoalsTrend: fc.array(
+      fc.record({
+        date: fc.constant('2024-01-01'),
+        goalsAchieved: fc.integer({ min: 0, max: 10 }),
+      }),
+      { minLength: 1, maxLength: 10 }
+    ),
+    currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
+    riskFactors: fc.array(fc.string(), { maxLength: 5 }),
+    distinguishedLevel: fc.constantFrom(
+      'NotDistinguished',
+      'Smedley',
+      'President',
+      'Select',
+      'Distinguished'
+    ),
+    // Membership payment fields - can be undefined, 0, or positive
+    octoberRenewals: fc.oneof(
+      fc.constant(undefined),
+      fc.integer({ min: 0, max: 50 })
+    ),
+    aprilRenewals: fc.oneof(
+      fc.constant(undefined),
+      fc.integer({ min: 0, max: 50 })
+    ),
+    newMembers: fc.oneof(
+      fc.constant(undefined),
+      fc.integer({ min: 0, max: 50 })
+    ),
+  }) as fc.Arbitrary<ClubTrend>
+
+  // Generator for numeric filter on membership payment columns
+  const membershipPaymentFilterGenerator = (
+    field: 'octoberRenewals' | 'aprilRenewals' | 'newMembers'
+  ) =>
+    fc.record({
+      field: fc.constant(field),
+      type: fc.constant('numeric' as const),
+      value: fc.oneof(
+        // Min only filter
+        fc.tuple(fc.integer({ min: 0, max: 25 }), fc.constant(null)),
+        // Max only filter
+        fc.tuple(fc.constant(null), fc.integer({ min: 26, max: 50 })),
+        // Range filter
+        fc.tuple(
+          fc.integer({ min: 0, max: 20 }),
+          fc.integer({ min: 21, max: 50 })
+        )
+      ),
+      operator: fc.constant('range' as const),
+    }) as fc.Arbitrary<ColumnFilter>
+
+  it('should filter octoberRenewals column correctly with numeric range', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        membershipPaymentFilterGenerator('octoberRenewals'),
+        (clubs, filter) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply the filter
+          act(() => {
+            result.current.setFilter(filter.field, filter)
+          })
+
+          // Get filtered results
+          const filteredClubs = result.current.filteredClubs
+
+          // Verify all results match the filter criteria
+          const [min, max] = filter.value as [number | null, number | null]
+
+          return filteredClubs.every(club => {
+            const value = club.octoberRenewals
+            // Undefined values should not match any range
+            if (value === undefined) return false
+            if (min !== null && value < min) return false
+            if (max !== null && value > max) return false
+            return true
+          })
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should filter aprilRenewals column correctly with numeric range', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        membershipPaymentFilterGenerator('aprilRenewals'),
+        (clubs, filter) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply the filter
+          act(() => {
+            result.current.setFilter(filter.field, filter)
+          })
+
+          // Get filtered results
+          const filteredClubs = result.current.filteredClubs
+
+          // Verify all results match the filter criteria
+          const [min, max] = filter.value as [number | null, number | null]
+
+          return filteredClubs.every(club => {
+            const value = club.aprilRenewals
+            // Undefined values should not match any range
+            if (value === undefined) return false
+            if (min !== null && value < min) return false
+            if (max !== null && value > max) return false
+            return true
+          })
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should filter newMembers column correctly with numeric range', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        membershipPaymentFilterGenerator('newMembers'),
+        (clubs, filter) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply the filter
+          act(() => {
+            result.current.setFilter(filter.field, filter)
+          })
+
+          // Get filtered results
+          const filteredClubs = result.current.filteredClubs
+
+          // Verify all results match the filter criteria
+          const [min, max] = filter.value as [number | null, number | null]
+
+          return filteredClubs.every(club => {
+            const value = club.newMembers
+            // Undefined values should not match any range
+            if (value === undefined) return false
+            if (min !== null && value < min) return false
+            if (max !== null && value > max) return false
+            return true
+          })
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should exclude clubs with undefined payment values from filtered results', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.constantFrom(
+          'octoberRenewals',
+          'aprilRenewals',
+          'newMembers'
+        ) as fc.Arbitrary<'octoberRenewals' | 'aprilRenewals' | 'newMembers'>,
+        (clubs, field) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply a filter that should match some values
+          const filter: ColumnFilter = {
+            field,
+            type: 'numeric',
+            value: [0, 50], // Range that includes all defined values
+            operator: 'range',
+          }
+
+          act(() => {
+            result.current.setFilter(field, filter)
+          })
+
+          // Get filtered results
+          const filteredClubs = result.current.filteredClubs
+
+          // Verify no clubs with undefined values are in the results
+          return filteredClubs.every(club => club[field] !== undefined)
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should return all clubs when filter range is null/null (no filtering)', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.constantFrom(
+          'octoberRenewals',
+          'aprilRenewals',
+          'newMembers'
+        ) as fc.Arbitrary<'octoberRenewals' | 'aprilRenewals' | 'newMembers'>,
+        (clubs, field) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply a filter with null/null range (should not filter)
+          const filter: ColumnFilter = {
+            field,
+            type: 'numeric',
+            value: [null, null],
+            operator: 'range',
+          }
+
+          act(() => {
+            result.current.setFilter(field, filter)
+          })
+
+          // Get filtered results
+          const filteredClubs = result.current.filteredClubs
+
+          // Should return all clubs when both min and max are null
+          return filteredClubs.length === clubs.length
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+})
+
+/**
+ * Property 3: Filter Clearing Restores Full List for Membership Payment Columns
+ * For any filtered club list, clearing all filters SHALL result in the full
+ * original club list being displayed.
+ *
+ * **Feature: april-renewal-status, Property 3: Filter Clearing Restores Full List**
+ * **Validates: Requirements 4.4**
+ */
+describe('Property 3: Filter Clearing Restores Full List for Membership Payment Columns', () => {
+  // Generator for clubs with membership payment fields
+  const clubTrendWithPaymentsGenerator = fc.record({
+    clubId: fc
+      .string({ minLength: 1, maxLength: 10 })
+      .filter(s => s.trim().length > 0)
+      .map(s => s.trim()),
+    clubName: fc
+      .string({ minLength: 2, maxLength: 50 })
+      .filter(s => s.trim().length > 1)
+      .map(s => s.trim()),
+    divisionId: fc
+      .string({ minLength: 1, maxLength: 5 })
+      .filter(s => s.trim().length > 0)
+      .map(s => s.trim()),
+    divisionName: fc
+      .string({ minLength: 2, maxLength: 20 })
+      .filter(s => s.trim().length > 1)
+      .map(s => s.trim()),
+    areaId: fc
+      .string({ minLength: 1, maxLength: 5 })
+      .filter(s => s.trim().length > 0)
+      .map(s => s.trim()),
+    areaName: fc
+      .string({ minLength: 2, maxLength: 20 })
+      .filter(s => s.trim().length > 1)
+      .map(s => s.trim()),
+    membershipTrend: fc.array(
+      fc.record({
+        date: fc.constant('2024-01-01'),
+        count: fc.integer({ min: 0, max: 100 }),
+      }),
+      { minLength: 1, maxLength: 10 }
+    ),
+    dcpGoalsTrend: fc.array(
+      fc.record({
+        date: fc.constant('2024-01-01'),
+        goalsAchieved: fc.integer({ min: 0, max: 10 }),
+      }),
+      { minLength: 1, maxLength: 10 }
+    ),
+    currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
+    riskFactors: fc.array(fc.string(), { maxLength: 5 }),
+    distinguishedLevel: fc.constantFrom(
+      'NotDistinguished',
+      'Smedley',
+      'President',
+      'Select',
+      'Distinguished'
+    ),
+    // Membership payment fields - can be undefined, 0, or positive
+    octoberRenewals: fc.oneof(
+      fc.constant(undefined),
+      fc.integer({ min: 0, max: 50 })
+    ),
+    aprilRenewals: fc.oneof(
+      fc.constant(undefined),
+      fc.integer({ min: 0, max: 50 })
+    ),
+    newMembers: fc.oneof(
+      fc.constant(undefined),
+      fc.integer({ min: 0, max: 50 })
+    ),
+  }) as fc.Arbitrary<ClubTrend>
+
+  it('should restore all clubs when clearing a membership payment filter', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.constantFrom(
+          'octoberRenewals',
+          'aprilRenewals',
+          'newMembers'
+        ) as fc.Arbitrary<'octoberRenewals' | 'aprilRenewals' | 'newMembers'>,
+        (clubs, field) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Initially should show all clubs
+          const initialCount = result.current.filteredClubs.length
+
+          // Apply a filter
+          const filter: ColumnFilter = {
+            field,
+            type: 'numeric',
+            value: [5, 30], // Some range that will filter out some clubs
+            operator: 'range',
+          }
+
+          act(() => {
+            result.current.setFilter(field, filter)
+          })
+
+          // Clear the filter
+          act(() => {
+            result.current.clearFilter(field)
+          })
+          const clearedCount = result.current.filteredClubs.length
+
+          // Should restore to original count
+          return clearedCount === initialCount && clearedCount === clubs.length
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should restore all clubs when clearing all membership payment filters', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        clubs => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Initially should show all clubs
+          const initialCount = result.current.filteredClubs.length
+
+          // Apply filters to all three membership payment columns
+          const octFilter: ColumnFilter = {
+            field: 'octoberRenewals',
+            type: 'numeric',
+            value: [5, 30],
+            operator: 'range',
+          }
+          const aprFilter: ColumnFilter = {
+            field: 'aprilRenewals',
+            type: 'numeric',
+            value: [5, 30],
+            operator: 'range',
+          }
+          const newFilter: ColumnFilter = {
+            field: 'newMembers',
+            type: 'numeric',
+            value: [5, 30],
+            operator: 'range',
+          }
+
+          act(() => {
+            result.current.setFilter('octoberRenewals', octFilter)
+          })
+          act(() => {
+            result.current.setFilter('aprilRenewals', aprFilter)
+          })
+          act(() => {
+            result.current.setFilter('newMembers', newFilter)
+          })
+
+          // Verify filters are active
+          const hasActiveFilters = result.current.hasActiveFilters
+
+          // Clear all filters
+          act(() => {
+            result.current.clearAllFilters()
+          })
+
+          // Should restore to original count
+          const clearedCount = result.current.filteredClubs.length
+          const noActiveFilters = !result.current.hasActiveFilters
+
+          return (
+            hasActiveFilters &&
+            noActiveFilters &&
+            clearedCount === initialCount &&
+            clearedCount === clubs.length
+          )
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should maintain filter state consistency when clearing membership payment filters', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.constantFrom(
+          'octoberRenewals',
+          'aprilRenewals',
+          'newMembers'
+        ) as fc.Arbitrary<'octoberRenewals' | 'aprilRenewals' | 'newMembers'>,
+        (clubs, field) => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply filter
+          const filter: ColumnFilter = {
+            field,
+            type: 'numeric',
+            value: [5, 30],
+            operator: 'range',
+          }
+
+          act(() => {
+            result.current.setFilter(field, filter)
+          })
+
+          // Verify filter is active
+          const filterIsActive = result.current.getFilter(field) !== null
+          const hasActiveFilters = result.current.hasActiveFilters
+
+          // Clear the filter
+          act(() => {
+            result.current.clearFilter(field)
+          })
+
+          // Verify filter is cleared
+          const filterIsCleared = result.current.getFilter(field) === null
+          const noActiveFilters = !result.current.hasActiveFilters
+          const zeroActiveFilters = result.current.activeFilterCount === 0
+
+          return (
+            filterIsActive &&
+            hasActiveFilters &&
+            filterIsCleared &&
+            noActiveFilters &&
+            zeroActiveFilters
+          )
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  it('should preserve other filters when clearing one membership payment filter', () => {
+    fc.assert(
+      fc.property(
+        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        clubs => {
+          const { result } = renderHook(() => useColumnFilters(clubs))
+
+          // Apply filters to all three membership payment columns
+          const octFilter: ColumnFilter = {
+            field: 'octoberRenewals',
+            type: 'numeric',
+            value: [0, 50],
+            operator: 'range',
+          }
+          const aprFilter: ColumnFilter = {
+            field: 'aprilRenewals',
+            type: 'numeric',
+            value: [0, 50],
+            operator: 'range',
+          }
+          const newFilter: ColumnFilter = {
+            field: 'newMembers',
+            type: 'numeric',
+            value: [0, 50],
+            operator: 'range',
+          }
+
+          act(() => {
+            result.current.setFilter('octoberRenewals', octFilter)
+          })
+          act(() => {
+            result.current.setFilter('aprilRenewals', aprFilter)
+          })
+          act(() => {
+            result.current.setFilter('newMembers', newFilter)
+          })
+
+          // Verify all filters are active
+          const allFiltersActive = result.current.activeFilterCount === 3
+
+          // Clear only the octoberRenewals filter
+          act(() => {
+            result.current.clearFilter('octoberRenewals')
+          })
+
+          // Should have 2 active filters remaining
+          const twoFiltersRemaining = result.current.activeFilterCount === 2
+          const octFilterCleared =
+            result.current.getFilter('octoberRenewals') === null
+          const aprFilterRemains =
+            result.current.getFilter('aprilRenewals') !== null
+          const newFilterRemains =
+            result.current.getFilter('newMembers') !== null
+
+          return (
+            allFiltersActive &&
+            twoFiltersRemaining &&
+            octFilterCleared &&
+            aprFilterRemains &&
+            newFilterRemains
+          )
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+})

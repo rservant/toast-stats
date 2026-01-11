@@ -26,6 +26,14 @@ const clubStatusArb = fc.oneof(
   fc.constant('intervention-required' as const)
 )
 
+// Generator for optional membership payment fields
+// Can be undefined, 0, or a positive number
+const optionalPaymentCountArb = fc.oneof(
+  fc.constant(undefined),
+  fc.constant(0),
+  fc.integer({ min: 1, max: 100 })
+)
+
 // Generator for club trend data
 const clubTrendArb = fc.record({
   clubId: fc
@@ -55,6 +63,9 @@ const clubTrendArb = fc.record({
     }),
     { minLength: 1, maxLength: 5 }
   ),
+  octoberRenewals: optionalPaymentCountArb,
+  aprilRenewals: optionalPaymentCountArb,
+  newMembers: optionalPaymentCountArb,
 }) as fc.Arbitrary<ClubTrend>
 
 /**
@@ -327,6 +338,325 @@ describe('ClubsTable Property Tests', () => {
           }
         ),
         { numRuns: 5 }
+      )
+    })
+  })
+
+  describe('Property 1: Membership Payment Column Display', () => {
+    /**
+     * **Feature: april-renewal-status, Property 1: Membership Payment Column Display**
+     * **Validates: Requirements 1.1-1.4, 2.1-2.4, 3.1-3.4**
+     *
+     * For any club data with membership payment fields (octoberRenewals, aprilRenewals, newMembers),
+     * the ClubsTable SHALL render all three columns with values matching the source data:
+     * - positive numbers display as-is
+     * - zero displays as "0"
+     * - undefined/null displays as "—"
+     */
+    it('should display membership payment columns with correct values for any club data', () => {
+      fc.assert(
+        fc.property(
+          fc.array(clubTrendArb, { minLength: 1, maxLength: 10 }),
+          clubs => {
+            // Clean up any previous renders before this iteration
+            cleanup()
+
+            // Render the ClubsTable with generated clubs
+            render(
+              <ClubsTable
+                clubs={clubs}
+                districtId="test-district"
+                isLoading={false}
+              />
+            )
+
+            // Get all table rows (excluding header)
+            const tableRows = screen.getAllByRole('row')
+            // First row is header, rest are data rows
+            const dataRows = tableRows.slice(1)
+
+            // For each club (up to 25 due to pagination), verify the display
+            const displayedClubs = clubs.slice(0, 25)
+            expect(dataRows.length).toBe(displayedClubs.length)
+
+            // Verify each row has the correct number of cells (10 columns)
+            dataRows.forEach(row => {
+              const cells = row.querySelectorAll('td')
+              expect(cells.length).toBe(10) // 7 original + 3 new columns
+            })
+
+            // Verify the column headers include the new columns
+            const headerRow = tableRows[0]
+            const headerCells = headerRow.querySelectorAll('th')
+            expect(headerCells.length).toBe(10)
+
+            // Verify the header labels
+            const headerTexts = Array.from(headerCells).map(
+              cell => cell.textContent
+            )
+            expect(headerTexts).toContain('Oct Ren')
+            expect(headerTexts).toContain('Apr Ren')
+            expect(headerTexts).toContain('New')
+          }
+        ),
+        { numRuns: 10 }
+      )
+    })
+
+    it('should display "—" for undefined payment values and numeric values for defined values', () => {
+      fc.assert(
+        fc.property(
+          // Generate a single club with specific payment values
+          fc.record({
+            octoberRenewals: optionalPaymentCountArb,
+            aprilRenewals: optionalPaymentCountArb,
+            newMembers: optionalPaymentCountArb,
+          }),
+          paymentValues => {
+            // Clean up any previous renders before this iteration
+            cleanup()
+
+            // Create a club with the generated payment values
+            const club: ClubTrend = {
+              clubId: 'test-club-1',
+              clubName: 'Test Club',
+              divisionId: 'div-1',
+              divisionName: 'Division A',
+              areaId: 'area-1',
+              areaName: 'Area 1',
+              distinguishedLevel: 'NotDistinguished',
+              currentStatus: 'thriving',
+              riskFactors: [],
+              membershipTrend: [
+                { date: new Date().toISOString(), count: 20 },
+              ],
+              dcpGoalsTrend: [
+                { date: new Date().toISOString(), goalsAchieved: 5 },
+              ],
+              ...paymentValues,
+            }
+
+            // Render the ClubsTable with the single club
+            render(
+              <ClubsTable
+                clubs={[club]}
+                districtId="test-district"
+                isLoading={false}
+              />
+            )
+
+            // Get the data row
+            const tableRows = screen.getAllByRole('row')
+            const dataRow = tableRows[1] // First data row
+            const cells = dataRow.querySelectorAll('td')
+
+            // Columns 7, 8, 9 are Oct Ren, Apr Ren, New (0-indexed)
+            const octRenCell = cells[7]
+            const aprRenCell = cells[8]
+            const newMembersCell = cells[9]
+
+            // Helper function to get expected display value
+            const getExpectedDisplay = (value: number | undefined): string => {
+              return value !== undefined ? String(value) : '—'
+            }
+
+            // Verify each cell displays the correct value
+            expect(octRenCell.textContent).toBe(
+              getExpectedDisplay(paymentValues.octoberRenewals)
+            )
+            expect(aprRenCell.textContent).toBe(
+              getExpectedDisplay(paymentValues.aprilRenewals)
+            )
+            expect(newMembersCell.textContent).toBe(
+              getExpectedDisplay(paymentValues.newMembers)
+            )
+          }
+        ),
+        { numRuns: 100 }
+      )
+    })
+  })
+
+  describe('Property 4: Sorting Invariant', () => {
+    /**
+     * **Feature: april-renewal-status, Property 4: Sorting Invariant**
+     * **Validates: Requirements 5.1, 5.2, 5.3**
+     *
+     * For any list of clubs sorted by a membership payment column, the resulting list SHALL be
+     * correctly ordered: ascending order means each element's count is <= the next element's count;
+     * descending order means each element's count is >= the next element's count.
+     * Undefined values are treated as lowest value (sorted to end).
+     */
+    it('should maintain correct sort order for membership payment columns', () => {
+      // Test the sorting logic directly without UI interaction
+      // This tests the core sorting invariant that the ClubsTable implements
+      fc.assert(
+        fc.property(
+          fc.array(clubTrendArb, { minLength: 2, maxLength: 15 }),
+          fc.constantFrom(
+            'octoberRenewals',
+            'aprilRenewals',
+            'newMembers'
+          ) as fc.Arbitrary<'octoberRenewals' | 'aprilRenewals' | 'newMembers'>,
+          fc.constantFrom('asc', 'desc') as fc.Arbitrary<'asc' | 'desc'>,
+          (clubs, sortField, sortDirection) => {
+            // Apply the same sorting logic as ClubsTable
+            const sorted = [...clubs].sort((a, b) => {
+              const aValue = a[sortField]
+              const bValue = b[sortField]
+
+              // Handle undefined values - treat as lowest value (sort to end)
+              const aIsUndefined = aValue === undefined
+              const bIsUndefined = bValue === undefined
+
+              if (aIsUndefined && bIsUndefined) {
+                // Both undefined - use secondary sort by club name
+                return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+              }
+              if (aIsUndefined) {
+                // a is undefined, sort to end regardless of direction
+                return 1
+              }
+              if (bIsUndefined) {
+                // b is undefined, sort to end regardless of direction
+                return -1
+              }
+
+              // Both values are defined - compare normally
+              if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+              if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+
+              // Equal values - use secondary sort by club name
+              return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+            })
+
+            // Verify the sort invariant
+            // Undefined values should be at the end
+            let foundUndefined = false
+            for (let i = 0; i < sorted.length - 1; i++) {
+              const current = sorted[i][sortField]
+              const next = sorted[i + 1][sortField]
+
+              if (current === undefined) {
+                foundUndefined = true
+              }
+
+              // Once we've seen undefined, all remaining should be undefined
+              if (foundUndefined) {
+                expect(current).toBeUndefined()
+              }
+
+              // For defined values, check sort order
+              if (current !== undefined && next !== undefined) {
+                if (sortDirection === 'asc') {
+                  expect(current).toBeLessThanOrEqual(next)
+                } else {
+                  expect(current).toBeGreaterThanOrEqual(next)
+                }
+              }
+
+              // Undefined should come after defined values
+              if (current === undefined && next !== undefined) {
+                // This should not happen - undefined should be at the end
+                expect(current).not.toBeUndefined()
+              }
+            }
+          }
+        ),
+        { numRuns: 100 }
+      )
+    })
+  })
+
+  describe('Property 5: Secondary Sort Stability', () => {
+    /**
+     * **Feature: april-renewal-status, Property 5: Secondary Sort Stability**
+     * **Validates: Requirements 5.4**
+     *
+     * For any list of clubs with equal payment counts, sorting by that payment column
+     * SHALL maintain alphabetical ordering by club name as a secondary sort key.
+     */
+    it('should sort alphabetically by club name when payment counts are equal', () => {
+      fc.assert(
+        fc.property(
+          // Generate a payment value that will be shared by all clubs
+          fc.oneof(fc.constant(undefined), fc.integer({ min: 0, max: 50 })),
+          // Generate unique club names
+          fc.array(
+            fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0),
+            { minLength: 3, maxLength: 10 }
+          ).filter(names => new Set(names).size === names.length), // Ensure unique names
+          fc.constantFrom(
+            'octoberRenewals',
+            'aprilRenewals',
+            'newMembers'
+          ) as fc.Arbitrary<'octoberRenewals' | 'aprilRenewals' | 'newMembers'>,
+          (sharedPaymentValue, clubNames, sortField) => {
+            // Create clubs with the same payment value but different names
+            const clubs: ClubTrend[] = clubNames.map((name, index) => ({
+              clubId: `club-${index}`,
+              clubName: name,
+              divisionId: 'div-1',
+              divisionName: 'Division A',
+              areaId: 'area-1',
+              areaName: 'Area 1',
+              distinguishedLevel: 'NotDistinguished' as const,
+              currentStatus: 'thriving' as const,
+              riskFactors: [],
+              membershipTrend: [
+                { date: new Date().toISOString(), count: 20 },
+              ],
+              dcpGoalsTrend: [
+                { date: new Date().toISOString(), goalsAchieved: 5 },
+              ],
+              octoberRenewals:
+                sortField === 'octoberRenewals' ? sharedPaymentValue : 0,
+              aprilRenewals:
+                sortField === 'aprilRenewals' ? sharedPaymentValue : 0,
+              newMembers: sortField === 'newMembers' ? sharedPaymentValue : 0,
+            }))
+
+            // Apply the same sorting logic as ClubsTable
+            const sorted = [...clubs].sort((a, b) => {
+              const aValue = a[sortField]
+              const bValue = b[sortField]
+
+              // Handle undefined values - treat as lowest value (sort to end)
+              const aIsUndefined = aValue === undefined
+              const bIsUndefined = bValue === undefined
+
+              if (aIsUndefined && bIsUndefined) {
+                // Both undefined - use secondary sort by club name
+                return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+              }
+              if (aIsUndefined) {
+                return 1
+              }
+              if (bIsUndefined) {
+                return -1
+              }
+
+              // Both values are defined - compare normally
+              if (aValue < bValue) return -1
+              if (aValue > bValue) return 1
+
+              // Equal values - use secondary sort by club name
+              return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+            })
+
+            // Extract club names from the sorted list
+            const sortedNames = sorted.map(club => club.clubName)
+
+            // Verify that clubs are sorted alphabetically by name (case-insensitive)
+            // since all payment values are equal
+            const expectedNames = [...sortedNames].sort((a, b) =>
+              a.toLowerCase().localeCompare(b.toLowerCase())
+            )
+
+            expect(sortedNames).toEqual(expectedNames)
+          }
+        ),
+        { numRuns: 100 }
       )
     })
   })

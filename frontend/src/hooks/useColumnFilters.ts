@@ -174,6 +174,60 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
           }
           break
 
+        case 'octoberRenewals':
+          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
+            const [min, max] = filter.value as [number | null, number | null]
+            // Handle case where both min and max are null (no filtering)
+            if (min === null && max === null) {
+              return clubs
+            }
+            return clubs.filter(club => {
+              const value = club.octoberRenewals
+              // Undefined values do not match any range
+              if (value === undefined) return false
+              if (min !== null && value < min) return false
+              if (max !== null && value > max) return false
+              return true
+            })
+          }
+          break
+
+        case 'aprilRenewals':
+          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
+            const [min, max] = filter.value as [number | null, number | null]
+            // Handle case where both min and max are null (no filtering)
+            if (min === null && max === null) {
+              return clubs
+            }
+            return clubs.filter(club => {
+              const value = club.aprilRenewals
+              // Undefined values do not match any range
+              if (value === undefined) return false
+              if (min !== null && value < min) return false
+              if (max !== null && value > max) return false
+              return true
+            })
+          }
+          break
+
+        case 'newMembers':
+          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
+            const [min, max] = filter.value as [number | null, number | null]
+            // Handle case where both min and max are null (no filtering)
+            if (min === null && max === null) {
+              return clubs
+            }
+            return clubs.filter(club => {
+              const value = club.newMembers
+              // Undefined values do not match any range
+              if (value === undefined) return false
+              if (min !== null && value < min) return false
+              if (max !== null && value > max) return false
+              return true
+            })
+          }
+          break
+
         default:
           return clubs
       }
