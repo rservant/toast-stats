@@ -53,11 +53,11 @@ The feature follows a layered architecture:
 // frontend/src/hooks/useDistrictAnalytics.ts
 export interface ClubTrend {
   // ... existing fields ...
-  
+
   // New membership payment fields
-  octoberRenewals?: number  // Count of October renewals
-  aprilRenewals?: number    // Count of April renewals
-  newMembers?: number       // Count of new members
+  octoberRenewals?: number // Count of October renewals
+  aprilRenewals?: number // Count of April renewals
+  newMembers?: number // Count of new members
 }
 ```
 
@@ -73,9 +73,9 @@ export type SortField =
   | 'division'
   | 'area'
   | 'distinguished'
-  | 'octoberRenewals'   // New
-  | 'aprilRenewals'     // New
-  | 'newMembers'        // New
+  | 'octoberRenewals' // New
+  | 'aprilRenewals' // New
+  | 'newMembers' // New
 
 // New column configurations
 const MEMBERSHIP_PAYMENT_COLUMNS: ColumnConfig[] = [
@@ -109,7 +109,7 @@ const MEMBERSHIP_PAYMENT_COLUMNS: ColumnConfig[] = [
 // backend/src/types/analytics.ts
 export interface ClubTrend {
   // ... existing fields ...
-  
+
   // New membership payment fields
   octoberRenewals?: number
   aprilRenewals?: number
@@ -138,63 +138,63 @@ private extractMembershipPayments(club: ScrapedRecord): {
 
 ### CSV Field Mapping
 
-| CSV Field | TypeScript Field | Type | Description |
-|-----------|------------------|------|-------------|
-| `Oct. Ren` | `octoberRenewals` | `number \| undefined` | October renewal count |
-| `Apr. Ren` | `aprilRenewals` | `number \| undefined` | April renewal count |
-| `New Members` | `newMembers` | `number \| undefined` | New member count |
+| CSV Field     | TypeScript Field  | Type                  | Description           |
+| ------------- | ----------------- | --------------------- | --------------------- |
+| `Oct. Ren`    | `octoberRenewals` | `number \| undefined` | October renewal count |
+| `Apr. Ren`    | `aprilRenewals`   | `number \| undefined` | April renewal count   |
+| `New Members` | `newMembers`      | `number \| undefined` | New member count      |
 
 ### Display Logic
 
-| Field Value | Display |
-|-------------|---------|
+| Field Value           | Display       |
+| --------------------- | ------------- |
 | `undefined` or `null` | `—` (em dash) |
-| `0` | `0` |
-| Positive number | The number |
+| `0`                   | `0`           |
+| Positive number       | The number    |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Membership Payment Column Display
 
-*For any* club data with membership payment fields (octoberRenewals, aprilRenewals, newMembers), the ClubsTable SHALL render all three columns with values matching the source data: positive numbers display as-is, zero displays as "0", and undefined/null displays as "—".
+_For any_ club data with membership payment fields (octoberRenewals, aprilRenewals, newMembers), the ClubsTable SHALL render all three columns with values matching the source data: positive numbers display as-is, zero displays as "0", and undefined/null displays as "—".
 
 **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4**
 
 ### Property 2: Numeric Range Filtering
 
-*For any* list of clubs and any numeric range filter (min, max) applied to a membership payment column, all clubs in the filtered result SHALL have payment counts satisfying: `min <= count <= max` (where undefined bounds are treated as unbounded).
+_For any_ list of clubs and any numeric range filter (min, max) applied to a membership payment column, all clubs in the filtered result SHALL have payment counts satisfying: `min <= count <= max` (where undefined bounds are treated as unbounded).
 
 **Validates: Requirements 4.2, 4.3**
 
 ### Property 3: Filter Clearing Restores Full List
 
-*For any* filtered club list, clearing all filters SHALL result in the full original club list being displayed.
+_For any_ filtered club list, clearing all filters SHALL result in the full original club list being displayed.
 
 **Validates: Requirements 4.4**
 
 ### Property 4: Sorting Invariant
 
-*For any* list of clubs sorted by a membership payment column, the resulting list SHALL be correctly ordered: ascending order means each element's count is <= the next element's count; descending order means each element's count is >= the next element's count.
+_For any_ list of clubs sorted by a membership payment column, the resulting list SHALL be correctly ordered: ascending order means each element's count is <= the next element's count; descending order means each element's count is >= the next element's count.
 
 **Validates: Requirements 5.1, 5.2, 5.3**
 
 ### Property 5: Secondary Sort Stability
 
-*For any* list of clubs with equal payment counts, sorting by that payment column SHALL maintain alphabetical ordering by club name as a secondary sort key.
+_For any_ list of clubs with equal payment counts, sorting by that payment column SHALL maintain alphabetical ordering by club name as a secondary sort key.
 
 **Validates: Requirements 5.4**
 
 ### Property 6: CSV Export Contains Payment Columns
 
-*For any* club data export, the resulting CSV SHALL contain columns for Oct Ren, Apr Ren, and New with numeric values matching the source data.
+_For any_ club data export, the resulting CSV SHALL contain columns for Oct Ren, Apr Ren, and New with numeric values matching the source data.
 
 **Validates: Requirements 6.1, 6.2**
 
 ### Property 7: CSV Field Parsing Round-Trip
 
-*For any* valid CSV data containing "Oct. Ren", "Apr. Ren", and "New Members" fields, parsing SHALL produce ClubTrend objects with corresponding numeric values that, when exported back to CSV, produce equivalent values.
+_For any_ valid CSV data containing "Oct. Ren", "Apr. Ren", and "New Members" fields, parsing SHALL produce ClubTrend objects with corresponding numeric values that, when exported back to CSV, produce equivalent values.
 
 **Validates: Requirements 8.5, 8.6, 8.7**
 
