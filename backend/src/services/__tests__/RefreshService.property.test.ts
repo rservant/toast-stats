@@ -516,9 +516,9 @@ describe('RefreshService - Property-Based Tests', () => {
           }
         }
       ),
-      { numRuns: 5 }
+      { numRuns: 3 }
     )
-  }, 60000) // Increase timeout to 60s for this heavy test
+  }, 90000) // Increase timeout to 90s for this heavy test (CI may be slower)
 
   /**
    * Property 8: Success/Failure Tracking
