@@ -427,9 +427,7 @@ describe('ClubsTable Property Tests', () => {
               distinguishedLevel: 'NotDistinguished',
               currentStatus: 'thriving',
               riskFactors: [],
-              membershipTrend: [
-                { date: new Date().toISOString(), count: 20 },
-              ],
+              membershipTrend: [{ date: new Date().toISOString(), count: 20 }],
               dcpGoalsTrend: [
                 { date: new Date().toISOString(), goalsAchieved: 5 },
               ],
@@ -511,7 +509,9 @@ describe('ClubsTable Property Tests', () => {
 
               if (aIsUndefined && bIsUndefined) {
                 // Both undefined - use secondary sort by club name
-                return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+                return a.clubName
+                  .toLowerCase()
+                  .localeCompare(b.clubName.toLowerCase())
               }
               if (aIsUndefined) {
                 // a is undefined, sort to end regardless of direction
@@ -527,7 +527,9 @@ describe('ClubsTable Property Tests', () => {
               if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
 
               // Equal values - use secondary sort by club name
-              return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+              return a.clubName
+                .toLowerCase()
+                .localeCompare(b.clubName.toLowerCase())
             })
 
             // Verify the sort invariant
@@ -582,10 +584,14 @@ describe('ClubsTable Property Tests', () => {
           // Generate a payment value that will be shared by all clubs
           fc.oneof(fc.constant(undefined), fc.integer({ min: 0, max: 50 })),
           // Generate unique club names
-          fc.array(
-            fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0),
-            { minLength: 3, maxLength: 10 }
-          ).filter(names => new Set(names).size === names.length), // Ensure unique names
+          fc
+            .array(
+              fc
+                .string({ minLength: 1, maxLength: 20 })
+                .filter(s => s.trim().length > 0),
+              { minLength: 3, maxLength: 10 }
+            )
+            .filter(names => new Set(names).size === names.length), // Ensure unique names
           fc.constantFrom(
             'octoberRenewals',
             'aprilRenewals',
@@ -603,9 +609,7 @@ describe('ClubsTable Property Tests', () => {
               distinguishedLevel: 'NotDistinguished' as const,
               currentStatus: 'thriving' as const,
               riskFactors: [],
-              membershipTrend: [
-                { date: new Date().toISOString(), count: 20 },
-              ],
+              membershipTrend: [{ date: new Date().toISOString(), count: 20 }],
               dcpGoalsTrend: [
                 { date: new Date().toISOString(), goalsAchieved: 5 },
               ],
@@ -627,7 +631,9 @@ describe('ClubsTable Property Tests', () => {
 
               if (aIsUndefined && bIsUndefined) {
                 // Both undefined - use secondary sort by club name
-                return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+                return a.clubName
+                  .toLowerCase()
+                  .localeCompare(b.clubName.toLowerCase())
               }
               if (aIsUndefined) {
                 return 1
@@ -641,7 +647,9 @@ describe('ClubsTable Property Tests', () => {
               if (aValue > bValue) return 1
 
               // Equal values - use secondary sort by club name
-              return a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
+              return a.clubName
+                .toLowerCase()
+                .localeCompare(b.clubName.toLowerCase())
             })
 
             // Extract club names from the sorted list

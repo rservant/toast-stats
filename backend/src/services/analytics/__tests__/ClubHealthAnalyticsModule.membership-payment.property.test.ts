@@ -372,7 +372,8 @@ describe('ClubHealthAnalyticsModule - Membership Payment Property Tests', () => 
             'New Members': null,
           }
 
-          const result1 = clubHealthModule.extractMembershipPayments(clubRecord1)
+          const result1 =
+            clubHealthModule.extractMembershipPayments(clubRecord1)
           expect(result1.octoberRenewals).toBe(validValue)
           expect(result1.aprilRenewals).toBeUndefined()
           expect(result1.newMembers).toBeUndefined()
@@ -388,7 +389,8 @@ describe('ClubHealthAnalyticsModule - Membership Payment Property Tests', () => 
             'New Members': validValue,
           }
 
-          const result2 = clubHealthModule.extractMembershipPayments(clubRecord2)
+          const result2 =
+            clubHealthModule.extractMembershipPayments(clubRecord2)
           expect(result2.octoberRenewals).toBeUndefined()
           expect(result2.aprilRenewals).toBeUndefined()
           expect(result2.newMembers).toBe(validValue)
@@ -404,7 +406,8 @@ describe('ClubHealthAnalyticsModule - Membership Payment Property Tests', () => 
             'New Members': invalidValue,
           }
 
-          const result3 = clubHealthModule.extractMembershipPayments(clubRecord3)
+          const result3 =
+            clubHealthModule.extractMembershipPayments(clubRecord3)
           expect(result3.octoberRenewals).toBeUndefined()
           expect(result3.aprilRenewals).toBe(validValue)
           expect(result3.newMembers).toBeUndefined()

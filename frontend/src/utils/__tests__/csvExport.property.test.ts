@@ -28,20 +28,29 @@ describe('CSV Export Property Tests', () => {
       style: { visibility: '' },
     }
 
-    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-      if (tagName === 'a') {
-        return mockLink as unknown as HTMLAnchorElement
+    vi.spyOn(document, 'createElement').mockImplementation(
+      (tagName: string) => {
+        if (tagName === 'a') {
+          return mockLink as unknown as HTMLAnchorElement
+        }
+        return document.createElement(tagName)
       }
-      return document.createElement(tagName)
-    })
+    )
 
-    vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as unknown as HTMLElement)
-    vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as unknown as HTMLElement)
+    vi.spyOn(document.body, 'appendChild').mockImplementation(
+      () => null as unknown as HTMLElement
+    )
+    vi.spyOn(document.body, 'removeChild').mockImplementation(
+      () => null as unknown as HTMLElement
+    )
 
     // Capture the Blob content using a class mock
     const OriginalBlob = globalThis.Blob
     globalThis.Blob = class MockBlob {
-      constructor(parts?: BlobPart[], options?: BlobPropertyBag) {
+      constructor(
+        parts?: (string | Blob | ArrayBuffer | ArrayBufferView)[],
+        options?: { type?: string; endings?: 'transparent' | 'native' }
+      ) {
         if (parts && parts.length > 0) {
           capturedCSVContent = parts[0] as string
         }
@@ -82,17 +91,45 @@ describe('CSV Export Property Tests', () => {
   )
 
   // Generator for valid ISO date strings (using integer timestamps to avoid invalid date issues)
-  const validDateStringArb = fc.integer({
-    min: new Date('2020-01-01').getTime(),
-    max: new Date('2030-12-31').getTime(),
-  }).map(timestamp => new Date(timestamp).toISOString())
+  const validDateStringArb = fc
+    .integer({
+      min: new Date('2020-01-01').getTime(),
+      max: new Date('2030-12-31').getTime(),
+    })
+    .map(timestamp => new Date(timestamp).toISOString())
 
   // Generator for club data suitable for export
   const exportClubArb = fc.record({
-    clubId: fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0 && !s.includes(',') && !s.includes('"') && !s.includes('\n')),
-    clubName: fc.string({ minLength: 1, maxLength: 30 }).filter(s => s.trim().length > 0 && !s.includes(',') && !s.includes('"') && !s.includes('\n')),
-    divisionName: fc.option(fc.string({ minLength: 1, maxLength: 20 }).filter(s => !s.includes(',') && !s.includes('"') && !s.includes('\n')), { nil: undefined }),
-    areaName: fc.option(fc.string({ minLength: 1, maxLength: 20 }).filter(s => !s.includes(',') && !s.includes('"') && !s.includes('\n')), { nil: undefined }),
+    clubId: fc
+      .string({ minLength: 1, maxLength: 10 })
+      .filter(
+        s =>
+          s.trim().length > 0 &&
+          !s.includes(',') &&
+          !s.includes('"') &&
+          !s.includes('\n')
+      ),
+    clubName: fc
+      .string({ minLength: 1, maxLength: 30 })
+      .filter(
+        s =>
+          s.trim().length > 0 &&
+          !s.includes(',') &&
+          !s.includes('"') &&
+          !s.includes('\n')
+      ),
+    divisionName: fc.option(
+      fc
+        .string({ minLength: 1, maxLength: 20 })
+        .filter(s => !s.includes(',') && !s.includes('"') && !s.includes('\n')),
+      { nil: undefined }
+    ),
+    areaName: fc.option(
+      fc
+        .string({ minLength: 1, maxLength: 20 })
+        .filter(s => !s.includes(',') && !s.includes('"') && !s.includes('\n')),
+      { nil: undefined }
+    ),
     membershipTrend: fc.array(
       fc.record({
         date: validDateStringArb,
@@ -109,7 +146,12 @@ describe('CSV Export Property Tests', () => {
     ),
     currentStatus: clubStatusArb,
     distinguishedLevel: distinguishedLevelArb,
-    riskFactors: fc.array(fc.string({ minLength: 1, maxLength: 20 }).filter(s => !s.includes(',') && !s.includes('"') && !s.includes('\n')), { minLength: 0, maxLength: 3 }),
+    riskFactors: fc.array(
+      fc
+        .string({ minLength: 1, maxLength: 20 })
+        .filter(s => !s.includes(',') && !s.includes('"') && !s.includes('\n')),
+      { minLength: 0, maxLength: 3 }
+    ),
     octoberRenewals: optionalPaymentCountArb,
     aprilRenewals: optionalPaymentCountArb,
     newMembers: optionalPaymentCountArb,
@@ -127,7 +169,9 @@ describe('CSV Export Property Tests', () => {
       fc.assert(
         fc.property(
           fc.array(exportClubArb, { minLength: 1, maxLength: 5 }),
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0),
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0),
           (clubs, districtId) => {
             // Export the clubs
             exportClubPerformance(clubs, districtId)
@@ -177,7 +221,9 @@ describe('CSV Export Property Tests', () => {
       fc.assert(
         fc.property(
           exportClubArb,
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0),
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0),
           (club, districtId) => {
             // Export a single club
             exportClubPerformance([club], districtId)
@@ -206,13 +252,19 @@ describe('CSV Export Property Tests', () => {
             const exportedNew = values[newIndex]
 
             // Helper function to get expected export value
-            const getExpectedExportValue = (value: number | undefined): string => {
+            const getExpectedExportValue = (
+              value: number | undefined
+            ): string => {
               return value !== undefined ? String(value) : ''
             }
 
             // Verify the exported values match the source data
-            expect(exportedOctRen).toBe(getExpectedExportValue(club.octoberRenewals))
-            expect(exportedAprRen).toBe(getExpectedExportValue(club.aprilRenewals))
+            expect(exportedOctRen).toBe(
+              getExpectedExportValue(club.octoberRenewals)
+            )
+            expect(exportedAprRen).toBe(
+              getExpectedExportValue(club.aprilRenewals)
+            )
             expect(exportedNew).toBe(getExpectedExportValue(club.newMembers))
           }
         ),
@@ -224,7 +276,9 @@ describe('CSV Export Property Tests', () => {
       fc.assert(
         fc.property(
           fc.array(exportClubArb, { minLength: 2, maxLength: 10 }),
-          fc.string({ minLength: 1, maxLength: 10 }).filter(s => s.trim().length > 0),
+          fc
+            .string({ minLength: 1, maxLength: 10 })
+            .filter(s => s.trim().length > 0),
           (clubs, districtId) => {
             // Export the clubs
             exportClubPerformance(clubs, districtId)
@@ -256,13 +310,19 @@ describe('CSV Export Property Tests', () => {
               const exportedNew = values[newIndex]
 
               // Helper function to get expected export value
-              const getExpectedExportValue = (value: number | undefined): string => {
+              const getExpectedExportValue = (
+                value: number | undefined
+              ): string => {
                 return value !== undefined ? String(value) : ''
               }
 
               // Verify the exported values match the source data
-              expect(exportedOctRen).toBe(getExpectedExportValue(club.octoberRenewals))
-              expect(exportedAprRen).toBe(getExpectedExportValue(club.aprilRenewals))
+              expect(exportedOctRen).toBe(
+                getExpectedExportValue(club.octoberRenewals)
+              )
+              expect(exportedAprRen).toBe(
+                getExpectedExportValue(club.aprilRenewals)
+              )
               expect(exportedNew).toBe(getExpectedExportValue(club.newMembers))
             }
           }

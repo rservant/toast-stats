@@ -1072,7 +1072,6 @@ describe('Property 5: Filter clearing restores state', () => {
   })
 })
 
-
 /**
  * Property 2: Numeric Range Filtering for Membership Payment Columns
  * For any list of clubs and any numeric range filter (min, max) applied to a membership
@@ -1124,7 +1123,11 @@ describe('Property 2: Numeric Range Filtering for Membership Payment Columns', (
       }),
       { minLength: 1, maxLength: 10 }
     ),
-    currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
+    currentStatus: fc.constantFrom(
+      'thriving',
+      'vulnerable',
+      'intervention-required'
+    ),
     riskFactors: fc.array(fc.string(), { maxLength: 5 }),
     distinguishedLevel: fc.constantFrom(
       'NotDistinguished',
@@ -1172,7 +1175,10 @@ describe('Property 2: Numeric Range Filtering for Membership Payment Columns', (
   it('should filter octoberRenewals column correctly with numeric range', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         membershipPaymentFilterGenerator('octoberRenewals'),
         (clubs, filter) => {
           const { result } = renderHook(() => useColumnFilters(clubs))
@@ -1205,7 +1211,10 @@ describe('Property 2: Numeric Range Filtering for Membership Payment Columns', (
   it('should filter aprilRenewals column correctly with numeric range', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         membershipPaymentFilterGenerator('aprilRenewals'),
         (clubs, filter) => {
           const { result } = renderHook(() => useColumnFilters(clubs))
@@ -1238,7 +1247,10 @@ describe('Property 2: Numeric Range Filtering for Membership Payment Columns', (
   it('should filter newMembers column correctly with numeric range', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         membershipPaymentFilterGenerator('newMembers'),
         (clubs, filter) => {
           const { result } = renderHook(() => useColumnFilters(clubs))
@@ -1271,7 +1283,10 @@ describe('Property 2: Numeric Range Filtering for Membership Payment Columns', (
   it('should exclude clubs with undefined payment values from filtered results', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         fc.constantFrom(
           'octoberRenewals',
           'aprilRenewals',
@@ -1306,7 +1321,10 @@ describe('Property 2: Numeric Range Filtering for Membership Payment Columns', (
   it('should return all clubs when filter range is null/null (no filtering)', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         fc.constantFrom(
           'octoberRenewals',
           'aprilRenewals',
@@ -1388,7 +1406,11 @@ describe('Property 3: Filter Clearing Restores Full List for Membership Payment 
       }),
       { minLength: 1, maxLength: 10 }
     ),
-    currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
+    currentStatus: fc.constantFrom(
+      'thriving',
+      'vulnerable',
+      'intervention-required'
+    ),
     riskFactors: fc.array(fc.string(), { maxLength: 5 }),
     distinguishedLevel: fc.constantFrom(
       'NotDistinguished',
@@ -1415,7 +1437,10 @@ describe('Property 3: Filter Clearing Restores Full List for Membership Payment 
   it('should restore all clubs when clearing a membership payment filter', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         fc.constantFrom(
           'octoberRenewals',
           'aprilRenewals',
@@ -1456,7 +1481,10 @@ describe('Property 3: Filter Clearing Restores Full List for Membership Payment 
   it('should restore all clubs when clearing all membership payment filters', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         clubs => {
           const { result } = renderHook(() => useColumnFilters(clubs))
 
@@ -1520,7 +1548,10 @@ describe('Property 3: Filter Clearing Restores Full List for Membership Payment 
   it('should maintain filter state consistency when clearing membership payment filters', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         fc.constantFrom(
           'octoberRenewals',
           'aprilRenewals',
@@ -1571,7 +1602,10 @@ describe('Property 3: Filter Clearing Restores Full List for Membership Payment 
   it('should preserve other filters when clearing one membership payment filter', () => {
     fc.assert(
       fc.property(
-        fc.array(clubTrendWithPaymentsGenerator, { minLength: 5, maxLength: 20 }),
+        fc.array(clubTrendWithPaymentsGenerator, {
+          minLength: 5,
+          maxLength: 20,
+        }),
         clubs => {
           const { result } = renderHook(() => useColumnFilters(clubs))
 
