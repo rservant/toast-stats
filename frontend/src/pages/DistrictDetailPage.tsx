@@ -420,6 +420,9 @@ const DistrictDetailPage: React.FC = () => {
                 {analytics && (
                   <DivisionRankings
                     divisions={analytics.divisionRankings}
+                    {...(analytics.divisionRecognition && {
+                      recognition: analytics.divisionRecognition,
+                    })}
                     isLoading={isLoadingAnalytics}
                   />
                 )}

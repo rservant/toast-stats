@@ -125,6 +125,7 @@ export interface DistrictAnalytics {
   distinguishedProjection: number
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: AreaAnalytics[]
+  divisionRecognition?: DivisionRecognition[]
   yearOverYear?: {
     membershipChange: number
     distinguishedChange: number

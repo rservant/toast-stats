@@ -30,6 +30,7 @@ import { DistinguishedClubAnalyticsModule } from './analytics/DistinguishedClubA
 import { ClubHealthAnalyticsModule } from './analytics/ClubHealthAnalyticsModule.js'
 import { DivisionAreaAnalyticsModule } from './analytics/DivisionAreaAnalyticsModule.js'
 import { LeadershipAnalyticsModule } from './analytics/LeadershipAnalyticsModule.js'
+import { AreaDivisionRecognitionModule } from './analytics/AreaDivisionRecognitionModule.js'
 import {
   getDCPCheckpoint,
   getCurrentProgramMonth,
@@ -45,6 +46,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   private readonly clubHealthModule: ClubHealthAnalyticsModule
   private readonly divisionAreaModule: DivisionAreaAnalyticsModule
   private readonly leadershipModule: LeadershipAnalyticsModule
+  private readonly recognitionModule: AreaDivisionRecognitionModule
 
   /**
    * Create an AnalyticsEngine instance
@@ -60,6 +62,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     this.clubHealthModule = new ClubHealthAnalyticsModule(dataSource)
     this.divisionAreaModule = new DivisionAreaAnalyticsModule(dataSource)
     this.leadershipModule = new LeadershipAnalyticsModule(dataSource)
+    this.recognitionModule = new AreaDivisionRecognitionModule(dataSource)
 
     logger.info('AnalyticsEngine initialized', {
       operation: 'constructor',
@@ -280,6 +283,10 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       const topPerformingAreas =
         this.divisionAreaModule.analyzeAreas(latestEntry)
 
+      // Use AreaDivisionRecognitionModule for DAP/DDP recognition
+      const divisionRecognition =
+        this.recognitionModule.analyzeDivisionRecognition(latestEntry)
+
       // Calculate top growth clubs from club trends
       const topGrowthClubs = this.calculateTopGrowthClubs(clubTrends)
 
@@ -391,6 +398,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         distinguishedClubAnalytics,
         divisionRankings,
         topPerformingAreas,
+        divisionRecognition,
         yearOverYear,
       }
 

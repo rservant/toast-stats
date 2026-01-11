@@ -1,15 +1,61 @@
 import React, { useState, useMemo } from 'react'
-import { DivisionAnalytics } from '../hooks/useDistrictAnalytics'
+import {
+  DivisionAnalytics,
+  DivisionRecognition,
+  AreaDivisionRecognitionLevel,
+} from '../hooks/useDistrictAnalytics'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
 
 interface DivisionRankingsProps {
   divisions: DivisionAnalytics[]
+  recognition?: DivisionRecognition[]
   isLoading?: boolean
 }
 
-type SortField = 'rank' | 'name' | 'clubs' | 'dcpGoals' | 'health' | 'trend'
+type SortField =
+  | 'rank'
+  | 'name'
+  | 'clubs'
+  | 'dcpGoals'
+  | 'health'
+  | 'trend'
+  | 'recognition'
 type SortDirection = 'asc' | 'desc'
+
+// Recognition level ordinal values for sorting
+const RECOGNITION_LEVEL_ORDER: Record<AreaDivisionRecognitionLevel, number> = {
+  NotDistinguished: 0,
+  Distinguished: 1,
+  Select: 2,
+  Presidents: 3,
+}
+
+// Get recognition badge styling and label
+const getRecognitionBadge = (
+  level: AreaDivisionRecognitionLevel
+): { className: string; label: string } | null => {
+  switch (level) {
+    case 'Presidents':
+      return {
+        className:
+          'bg-tm-happy-yellow text-gray-900 border-yellow-500 font-semibold',
+        label: "President's Distinguished",
+      }
+    case 'Select':
+      return {
+        className: 'bg-tm-cool-gray text-gray-900 border-gray-400',
+        label: 'Select Distinguished',
+      }
+    case 'Distinguished':
+      return {
+        className: 'bg-tm-true-maroon text-white border-tm-true-maroon',
+        label: 'Distinguished',
+      }
+    default:
+      return null
+  }
+}
 
 // Sort icon component moved outside render
 const SortIcon: React.FC<{
@@ -67,10 +113,17 @@ const SortIcon: React.FC<{
 
 export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
   divisions,
+  recognition,
   isLoading = false,
 }) => {
   const [sortField, setSortField] = useState<SortField>('rank')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  // Create a map of division recognition for quick lookup
+  const recognitionMap = useMemo(() => {
+    if (!recognition) return new Map<string, DivisionRecognition>()
+    return new Map(recognition.map(r => [r.divisionId, r]))
+  }, [recognition])
 
   // Get trend icon and color
   const getTrendIcon = (trend: 'improving' | 'stable' | 'declining') => {
@@ -190,6 +243,17 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
           bValue = trendOrder[b.trend]
           break
         }
+        case 'recognition': {
+          const aRecog = recognitionMap.get(a.divisionId)
+          const bRecog = recognitionMap.get(b.divisionId)
+          aValue = aRecog
+            ? RECOGNITION_LEVEL_ORDER[aRecog.recognitionLevel]
+            : -1
+          bValue = bRecog
+            ? RECOGNITION_LEVEL_ORDER[bRecog.recognitionLevel]
+            : -1
+          break
+        }
         default:
           return 0
       }
@@ -200,7 +264,7 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
     })
 
     return sorted
-  }, [divisions, sortField, sortDirection])
+  }, [divisions, sortField, sortDirection, recognitionMap])
 
   // Handle sort
   const handleSort = (field: SortField) => {
@@ -338,14 +402,28 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                     />
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Recognition
+                <th
+                  onClick={() => handleSort('recognition')}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    Recognition
+                    <SortIcon
+                      field="recognition"
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                    />
+                  </div>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {sortedDivisions.map(division => {
                 const bestPractice = isBestPractice(division)
+                const divRecognition = recognitionMap.get(division.divisionId)
+                const badge = divRecognition
+                  ? getRecognitionBadge(divRecognition.recognitionLevel)
+                  : null
                 return (
                   <tr
                     key={division.divisionId}
@@ -423,9 +501,16 @@ export const DivisionRankings: React.FC<DivisionRankingsProps> = ({
                       {getTrendIcon(division.trend)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {bestPractice ? (
-                        <span className="px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">
-                          Best Practice
+                      {badge ? (
+                        <span
+                          className={`px-3 py-1 text-xs font-medium rounded-full border ${badge.className}`}
+                          title={
+                            divRecognition
+                              ? `${divRecognition.paidAreasPercent.toFixed(0)}% paid areas, ${divRecognition.distinguishedAreasPercent.toFixed(0)}% distinguished`
+                              : ''
+                          }
+                        >
+                          {badge.label}
                         </span>
                       ) : (
                         <span className="text-sm text-gray-400">—</span>

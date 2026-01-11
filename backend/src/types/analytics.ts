@@ -408,6 +408,9 @@ export interface DistrictAnalytics {
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: AreaAnalytics[]
 
+  // DAP/DDP Recognition (optional - may not be available for all data)
+  divisionRecognition?: DivisionRecognition[]
+
   // Year-over-year comparison (if data available)
   yearOverYear?: {
     membershipChange: number
