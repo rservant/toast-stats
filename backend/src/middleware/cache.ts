@@ -51,9 +51,11 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
 
     // Override res.json to cache the response
     res.json = function (body: unknown) {
-      // Cache the response body
-      const ttl = options.ttl
-      cacheService.set(cacheKey, body, ttl)
+      // Only cache successful responses (2xx status codes)
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        const ttl = options.ttl
+        cacheService.set(cacheKey, body, ttl)
+      }
 
       // Call original json function
       return originalJson(body)
