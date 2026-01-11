@@ -169,6 +169,21 @@ export class ClubHealthAnalyticsModule {
 
     const clubMap = new Map<string, ClubTrend>()
 
+    // Build a lookup map from districtPerformance for membership payment data
+    // The districtPerformance array contains club-level data with Oct. Ren., Apr. Ren., New fields
+    const districtPerformanceByClub = new Map<string, ScrapedRecord>()
+    for (const record of latestEntry.districtPerformance) {
+      // Club ID in districtPerformance may be in 'Club' field (with leading zeros)
+      const clubId = ensureString(
+        record['Club'] || record['Club Number'] || record['Club ID']
+      )
+      if (clubId) {
+        // Normalize club ID by removing leading zeros for matching
+        const normalizedClubId = clubId.replace(/^0+/, '') || clubId
+        districtPerformanceByClub.set(normalizedClubId, record)
+      }
+    }
+
     // Initialize club trends from latest data
     for (const club of latestEntry.clubPerformance) {
       const clubId = ensureString(
@@ -177,8 +192,15 @@ export class ClubHealthAnalyticsModule {
       if (!clubId) continue
       const clubName = ensureString(club['Club Name'] || club['ClubName'])
 
-      // Extract membership payment data (Requirements 8.5, 8.6, 8.7)
-      const membershipPayments = this.extractMembershipPayments(club)
+      // Normalize club ID for lookup in districtPerformance
+      const normalizedClubId = clubId.replace(/^0+/, '') || clubId
+
+      // Try to get membership payment data from districtPerformance first,
+      // then fall back to clubPerformance
+      const districtRecord = districtPerformanceByClub.get(normalizedClubId)
+      const membershipPayments = this.extractMembershipPayments(
+        districtRecord ?? club
+      )
 
       clubMap.set(clubId, {
         clubId,
@@ -549,8 +571,9 @@ export class ClubHealthAnalyticsModule {
   /**
    * Extract membership payment data from a club record
    *
-   * Parses the "Oct. Ren", "Apr. Ren", and "New Members" fields from the
-   * Toastmasters dashboard CSV data. Returns undefined for missing/invalid data.
+   * Parses the "Oct. Ren." / "Oct. Ren", "Apr. Ren." / "Apr. Ren", and 
+   * "New Members" / "New" fields from the Toastmasters dashboard CSV data.
+   * Returns undefined for missing/invalid data.
    *
    * Requirements: 8.5, 8.6, 8.7
    *
@@ -563,9 +586,18 @@ export class ClubHealthAnalyticsModule {
     newMembers?: number
   } {
     return {
-      octoberRenewals: parseIntOrUndefined(club['Oct. Ren']),
-      aprilRenewals: parseIntOrUndefined(club['Apr. Ren']),
-      newMembers: parseIntOrUndefined(club['New Members']),
+      // Handle both "Oct. Ren." (with trailing period) and "Oct. Ren" (without)
+      octoberRenewals: parseIntOrUndefined(
+        club['Oct. Ren.'] ?? club['Oct. Ren']
+      ),
+      // Handle both "Apr. Ren." (with trailing period) and "Apr. Ren" (without)
+      aprilRenewals: parseIntOrUndefined(
+        club['Apr. Ren.'] ?? club['Apr. Ren']
+      ),
+      // Handle both "New Members" and "New"
+      newMembers: parseIntOrUndefined(
+        club['New Members'] ?? club['New']
+      ),
     }
   }
 
