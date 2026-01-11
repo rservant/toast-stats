@@ -496,9 +496,36 @@ export class FileSnapshotStore implements SnapshotStore {
   }
 
   /**
+   * Validate a snapshot ID to ensure it is safe to use in file paths.
+   *
+   * Restricts the ID to a conservative set of characters to prevent
+   * directory traversal or injection of unexpected path segments.
+   */
+  private validateSnapshotId(snapshotId: string): void {
+    // Basic type/emptiness check
+    if (typeof snapshotId !== 'string' || snapshotId.length === 0) {
+      throw new Error('Invalid snapshot ID: empty or non-string value')
+    }
+
+    // Allow only alphanumeric characters, underscore, and hyphen.
+    // This prevents use of "/", "\", ".", and other path-related characters.
+    const SNAPSHOT_ID_PATTERN = /^[A-Za-z0-9_-]+$/
+    if (!SNAPSHOT_ID_PATTERN.test(snapshotId)) {
+      logger.warn('Rejected snapshot ID with invalid characters', {
+        operation: 'validateSnapshotId',
+        snapshot_id: snapshotId,
+      })
+      throw new Error('Invalid snapshot ID format')
+    }
+  }
+
+  /**
    * Get a specific snapshot by ID with performance optimizations
    */
   async getSnapshot(snapshotId: string): Promise<Snapshot | null> {
+    // Validate snapshotId before using it to construct any file paths
+    this.validateSnapshotId(snapshotId)
+
     const startTime = Date.now()
     const operationId = `read_specific_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
