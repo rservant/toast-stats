@@ -33,11 +33,9 @@ describe('Service Factory Integration', () => {
       expect(refreshService).toBeDefined()
       expect(refreshService.constructor.name).toBe('RefreshService')
 
-      // Verify it has ranking calculator (check via private property access)
-      const hasRankingCalculator =
-        (refreshService as RefreshService & { rankingCalculator: unknown })
-          .rankingCalculator !== undefined
-      expect(hasRankingCalculator).toBe(true)
+      // RefreshService now delegates to SnapshotBuilder which has the ranking calculator
+      // We verify the service was created successfully - the ranking calculator is internal
+      expect(typeof refreshService.executeRefresh).toBe('function')
     })
 
     it('should create BackfillService with RankingCalculator dependency', () => {
@@ -94,11 +92,8 @@ describe('Service Factory Integration', () => {
       expect(refreshService).toBeDefined()
       expect(backfillService).toBeDefined()
 
-      // Verify dependency injection worked
-      expect(
-        (refreshService as RefreshService & { rankingCalculator: unknown })
-          .rankingCalculator
-      ).toBeDefined()
+      // Verify services have expected interfaces
+      expect(typeof refreshService.executeRefresh).toBe('function')
       expect(
         (backfillService as BackfillService & { rankingCalculator: unknown })
           .rankingCalculator
@@ -115,11 +110,9 @@ describe('Service Factory Integration', () => {
       expect(refreshService).toBeDefined()
       expect(refreshService.constructor.name).toBe('RefreshService')
 
-      // Verify it has ranking calculator (check via private property access)
-      const hasRankingCalculator =
-        (refreshService as RefreshService & { rankingCalculator: unknown })
-          .rankingCalculator !== undefined
-      expect(hasRankingCalculator).toBe(true)
+      // RefreshService now delegates to SnapshotBuilder which has the ranking calculator
+      // We verify the service was created successfully - the ranking calculator is internal
+      expect(typeof refreshService.executeRefresh).toBe('function')
     })
 
     it('should create BackfillService with RankingCalculator dependency', () => {
@@ -176,11 +169,8 @@ describe('Service Factory Integration', () => {
       expect(refreshService).toBeDefined()
       expect(backfillService).toBeDefined()
 
-      // Verify dependency injection worked
-      expect(
-        (refreshService as RefreshService & { rankingCalculator: unknown })
-          .rankingCalculator
-      ).toBeDefined()
+      // Verify services have expected interfaces
+      expect(typeof refreshService.executeRefresh).toBe('function')
       expect(
         (backfillService as BackfillService & { rankingCalculator: unknown })
           .rankingCalculator
@@ -246,15 +236,9 @@ describe('Service Factory Integration', () => {
       // Both should have the same constructor
       expect(prodRefresh.constructor.name).toBe(testRefresh.constructor.name)
 
-      // Both should have ranking calculator
-      expect(
-        (prodRefresh as RefreshService & { rankingCalculator: unknown })
-          .rankingCalculator
-      ).toBeDefined()
-      expect(
-        (testRefresh as RefreshService & { rankingCalculator: unknown })
-          .rankingCalculator
-      ).toBeDefined()
+      // Both should have the same interface
+      expect(typeof prodRefresh.executeRefresh).toBe('function')
+      expect(typeof testRefresh.executeRefresh).toBe('function')
     })
   })
 })

@@ -9,7 +9,6 @@ import { BackfillService } from '../../services/UnifiedBackfillService.js'
 import { RefreshService } from '../../services/RefreshService.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../../services/ProductionServiceFactory.js'
-import { ToastmastersScraper } from '../../services/ToastmastersScraper.js'
 import { AnalyticsEngine } from '../../services/AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from '../../services/AnalyticsDataSourceAdapter.js'
 import {
@@ -48,7 +47,6 @@ export const districtDataAggregator = createDistrictDataAggregator(
 // Initialize services using the production service factory
 const serviceFactory = getProductionServiceFactory()
 export const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
-export const scraper = new ToastmastersScraper(rawCSVCacheService)
 export const districtConfigService = new DistrictConfigurationService(
   cacheDirectory
 )
@@ -73,9 +71,7 @@ async function initializeServices(): Promise<void> {
 
   _refreshService = new RefreshService(
     snapshotStore,
-    scraper,
     rawCSVCacheService,
-    undefined, // validator - use default
     districtConfigService,
     _rankingCalculator
   )

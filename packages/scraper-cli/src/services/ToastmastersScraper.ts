@@ -1,14 +1,23 @@
 /**
  * Toastmasters Dashboard Scraper
+ *
+ * Standalone scraper for the Scraper CLI package.
  * Uses Playwright to scrape data from https://dashboards.toastmasters.org
+ *
+ * Requirements:
+ * - 8.3: THE ToastmastersScraper class SHALL be moved to the Scraper_CLI package
+ * - 5.1: THE Scraper_CLI SHALL operate without requiring the backend to be running
  */
 
 import { chromium, Browser, Page } from 'playwright'
 import { parse } from 'csv-parse/sync'
 import { logger } from '../utils/logger.js'
-import { ScrapedRecord, DistrictInfo } from '../types/districts.js'
-import { IRawCSVCacheService } from '../types/serviceInterfaces.js'
-import { CSVType } from '../types/rawCSVCache.js'
+import type {
+  ScrapedRecord,
+  DistrictInfo,
+  CSVType,
+  IScraperCache,
+} from '../types/scraper.js'
 
 interface ScraperConfig {
   baseUrl: string
@@ -19,19 +28,21 @@ interface ScraperConfig {
 export class ToastmastersScraper {
   private config: ScraperConfig
   private browser: Browser | null = null
-  private rawCSVCache: IRawCSVCacheService
+  private cache: IScraperCache | null
 
-  constructor(rawCSVCache: IRawCSVCacheService) {
+  constructor(cache?: IScraperCache) {
     this.config = {
       baseUrl:
         process.env['TOASTMASTERS_DASHBOARD_URL'] ||
         'https://dashboards.toastmasters.org',
-      headless: true, // Always run in headless mode
+      headless: true,
       timeout: 30000,
     }
-    this.rawCSVCache = rawCSVCache
+    this.cache = cache ?? null
 
-    logger.debug('ToastmastersScraper initialized with cache service')
+    logger.debug('ToastmastersScraper initialized', {
+      hasCache: !!cache,
+    })
   }
 
   /**
@@ -58,9 +69,19 @@ export class ToastmastersScraper {
   ): Promise<{ content: string; actualDate: string }> {
     const requestedDate = dateString || this.getCurrentDateString()
 
+    // If no cache is configured, just download
+    if (!this.cache) {
+      logger.info('No cache configured - downloading directly', {
+        csvType,
+        date: requestedDate,
+        districtId,
+      })
+      return downloadFn()
+    }
+
     try {
       // Check cache first
-      const cachedContent = await this.rawCSVCache.getCachedCSV(
+      const cachedContent = await this.cache.getCachedCSV(
         requestedDate,
         csvType,
         districtId
@@ -68,31 +89,25 @@ export class ToastmastersScraper {
 
       if (cachedContent) {
         // Get the actual date from cache metadata
-        const cacheMetadata =
-          await this.rawCSVCache.getCacheMetadata(requestedDate)
-        let actualDate = cacheMetadata?.date || requestedDate
+        const cacheMetadata = await this.cache.getCacheMetadata(requestedDate)
+        const actualDate = cacheMetadata?.date || requestedDate
 
         // Always extract closing period info from CSV footer (most reliable source)
-        // This ensures we detect closing periods even if metadata was incorrectly set
         const footerInfo = this.extractClosingPeriodFromCSV(cachedContent)
 
         if (footerInfo && footerInfo.dataMonth) {
-          // Check if the collection date is in a different month than the data month
-          // Use the collection date from the footer if available, otherwise use actualDate
           const collectionDateStr = footerInfo.collectionDate || actualDate
           const collectionDateObj = new Date(collectionDateStr + 'T00:00:00')
           const collectionMonth = `${collectionDateObj.getFullYear()}-${String(collectionDateObj.getMonth() + 1).padStart(2, '0')}`
           const isClosingPeriod = collectionMonth !== footerInfo.dataMonth
 
-          // Check if metadata needs to be updated (missing or incorrect)
           const metadataNeedsUpdate =
             !cacheMetadata ||
             cacheMetadata.isClosingPeriod !== isClosingPeriod ||
             cacheMetadata.dataMonth !== footerInfo.dataMonth
 
           if (metadataNeedsUpdate) {
-            // Update cache metadata with correct closing period info from CSV footer
-            await this.rawCSVCache.setCachedCSVWithMetadata(
+            await this.cache.setCachedCSVWithMetadata(
               requestedDate,
               csvType,
               cachedContent,
@@ -112,9 +127,6 @@ export class ToastmastersScraper {
                 actualDate,
                 dataMonth: footerInfo.dataMonth,
                 isClosingPeriod,
-                collectionDate: collectionDateStr,
-                previousIsClosingPeriod: cacheMetadata?.isClosingPeriod,
-                previousDataMonth: cacheMetadata?.dataMonth,
               }
             )
           }
@@ -143,18 +155,14 @@ export class ToastmastersScraper {
       const footerInfo = this.extractClosingPeriodFromCSV(downloadedContent)
 
       // Determine if this is a month-end closing period
-      // Method 1: Check if requested date differs from actual date
       const datesDiffer = requestedDate !== actualDate
 
-      // Method 2: Check if CSV footer indicates a different data month
       let isClosingPeriod = datesDiffer
       let dataMonth: string
 
       if (footerInfo && footerInfo.dataMonth) {
-        // Use the data month from the CSV footer (most reliable)
         dataMonth = footerInfo.dataMonth
 
-        // Check if the collection date is in a different month than the data month
         const actualDateObj = new Date(actualDate + 'T00:00:00')
         const actualMonth = `${actualDateObj.getFullYear()}-${String(actualDateObj.getMonth() + 1).padStart(2, '0')}`
 
@@ -168,14 +176,13 @@ export class ToastmastersScraper {
           })
         }
       } else {
-        // Fallback: use requested date's month
         const requestedDateObj = new Date(requestedDate + 'T00:00:00')
         dataMonth = `${requestedDateObj.getFullYear()}-${String(requestedDateObj.getMonth() + 1).padStart(2, '0')}`
       }
 
       // Cache the downloaded content with enhanced metadata
-      await this.rawCSVCache.setCachedCSVWithMetadata(
-        actualDate, // Store by actual dashboard date
+      await this.cache.setCachedCSVWithMetadata(
+        actualDate,
         csvType,
         downloadedContent,
         districtId,
@@ -198,7 +205,6 @@ export class ToastmastersScraper {
 
       return { content: downloadedContent, actualDate }
     } catch (cacheError) {
-      // Cache operation failed - log error and fallback to direct download
       logger.warn('Cache operation failed, falling back to direct download', {
         csvType,
         date: requestedDate,
@@ -234,15 +240,12 @@ export class ToastmastersScraper {
   /**
    * Determine the program year for a given date
    * Toastmasters program year runs from July 1 to June 30
-   * Returns format like "2024-2025" for dates between July 1, 2024 and June 30, 2025
    */
   private getProgramYear(dateString: string): string {
     const date = new Date(dateString + 'T00:00:00')
     const year = date.getFullYear()
-    const month = date.getMonth() + 1 // 1-12
+    const month = date.getMonth() + 1
 
-    // If month is July (7) or later, program year starts this year
-    // If month is June (6) or earlier, program year started last year
     if (month >= 7) {
       return `${year}-${year + 1}`
     } else {
@@ -252,8 +255,6 @@ export class ToastmastersScraper {
 
   /**
    * Build the base URL with program year
-   * Format: https://dashboards.toastmasters.org/YYYY-YYYY/
-   * This format works for all program years including the current one
    */
   private buildBaseUrl(dateString: string): string {
     const programYear = this.getProgramYear(dateString)
@@ -288,15 +289,6 @@ export class ToastmastersScraper {
 
   /**
    * Try to navigate to a date with month-end reconciliation fallback.
-   * During month-end reconciliation, dates like Oct 1 may appear under September's data.
-   * This method tries the requested month first, then falls back to the previous month.
-   *
-   * @param page - Playwright page instance
-   * @param baseUrl - Base URL for the dashboard (includes program year)
-   * @param pageName - Page name (e.g., 'Club.aspx', 'Division.aspx', 'District.aspx')
-   * @param dateString - Requested date in YYYY-MM-DD format
-   * @param districtId - Optional district ID for district-specific pages
-   * @returns Object with success status, actual date string, and whether fallback was used
    */
   private async navigateToDateWithFallback(
     page: Page,
@@ -310,12 +302,11 @@ export class ToastmastersScraper {
     usedFallback: boolean
   }> {
     const dateObj = new Date(dateString + 'T00:00:00')
-    const month = dateObj.getMonth() + 1 // 1-12
+    const month = dateObj.getMonth() + 1
     const day = dateObj.getDate()
     const year = dateObj.getFullYear()
     const formattedDate = `${month}/${day}/${year}`
 
-    // Build URL with district ID if provided
     const districtParam = districtId ? `id=${districtId}&` : ''
     const url = `${baseUrl}/${pageName}?${districtParam}month=${month}&day=${formattedDate}`
 
@@ -325,7 +316,6 @@ export class ToastmastersScraper {
       timeout: this.config.timeout,
     })
 
-    // Verify the date
     const actualDate = await this.getSelectedDate(page)
     if (!actualDate) {
       logger.warn('Could not verify date from dropdown', { dateString })
@@ -343,7 +333,6 @@ export class ToastmastersScraper {
       dateString: dashboardDateString,
     } = actualDate
 
-    // Check if we got the requested date
     if (actualMonth === month && actualDay === day && actualYear === year) {
       logger.info('Date verification successful', {
         requested: dateString,
@@ -356,7 +345,6 @@ export class ToastmastersScraper {
       }
     }
 
-    // Date mismatch - try previous month fallback for month-end reconciliation
     logger.info(
       'Date mismatch detected, trying previous month fallback for month-end reconciliation',
       {
@@ -370,17 +358,12 @@ export class ToastmastersScraper {
       }
     )
 
-    // Calculate previous month and handle program year boundary
-    // When falling back from July (month 7) to June (month 6), we cross the program year boundary
-    // June belongs to the previous program year (e.g., July 2025 is in 2025-2026, but June 2025 is in 2024-2025)
     const prevMonth = month === 1 ? 12 : month - 1
     const prevMonthYear = month === 1 ? year - 1 : year
-    const crossesProgramYearBoundary = month === 7 // July to June crosses program year boundary
+    const crossesProgramYearBoundary = month === 7
 
-    // Build fallback URL - use previous program year's base URL if crossing boundary
     let fallbackBaseUrl = baseUrl
     if (crossesProgramYearBoundary) {
-      // Construct date string for previous month to get correct program year
       const prevMonthDateString = `${prevMonthYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       fallbackBaseUrl = this.buildBaseUrl(prevMonthDateString)
       logger.info(
@@ -407,7 +390,6 @@ export class ToastmastersScraper {
       timeout: this.config.timeout,
     })
 
-    // Verify the date again
     const fallbackDate = await this.getSelectedDate(page)
     if (fallbackDate) {
       const {
@@ -434,7 +416,6 @@ export class ToastmastersScraper {
       }
     }
 
-    // Fallback also didn't work - this date truly isn't available
     logger.warn(
       'Previous month fallback also failed - date not available on dashboard',
       {
@@ -454,12 +435,10 @@ export class ToastmastersScraper {
    */
   private async downloadCsv(page: Page): Promise<string> {
     try {
-      // Wait for page to be fully loaded
       await page.waitForLoadState('networkidle', {
         timeout: this.config.timeout,
       })
 
-      // Look for the export dropdown (select element with id containing 'Export')
       const exportSelect = await page.waitForSelector(
         'select[id*="Export"], select[id*="export"]',
         {
@@ -473,13 +452,11 @@ export class ToastmastersScraper {
 
       logger.info('Found export dropdown')
 
-      // Select the CSV option and wait for download
       const [download] = await Promise.all([
         page.waitForEvent('download', { timeout: this.config.timeout }),
         exportSelect.selectOption({ label: 'CSV' }),
       ])
 
-      // Read the downloaded file content
       const stream = await download.createReadStream()
       const chunks: Buffer[] = []
 
@@ -508,13 +485,11 @@ export class ToastmastersScraper {
         columns: true,
         skip_empty_lines: true,
         trim: true,
-        relax_column_count: true, // Allow inconsistent column counts
-        relax_quotes: true, // Be lenient with quotes
+        relax_column_count: true,
+        relax_quotes: true,
       }) as ScrapedRecord[]
 
-      // Filter out "Month of" rows (summary/aggregate rows)
       const filteredRecords = records.filter((record: ScrapedRecord) => {
-        // Check if any field contains "Month of"
         const hasMonthOf = Object.values(record).some(
           value => typeof value === 'string' && value.includes('Month of')
         )
@@ -538,15 +513,12 @@ export class ToastmastersScraper {
 
   /**
    * Extract closing period information from CSV footer line
-   * Footer format: "Month of Dec, As of 01/06/2026"
-   * Returns the data month and collection date if found
    */
   private extractClosingPeriodFromCSV(csvContent: string): {
     dataMonth?: string
     collectionDate?: string
   } | null {
     try {
-      // Look for the footer line in the last few lines of the CSV
       const lines = csvContent.trim().split('\n')
       const lastLine = lines[lines.length - 1]
 
@@ -554,7 +526,6 @@ export class ToastmastersScraper {
         return null
       }
 
-      // Match pattern: "Month of MMM, As of MM/DD/YYYY"
       const match = lastLine.match(
         /Month of ([A-Za-z]+),\s*As of (\d{2})\/(\d{2})\/(\d{4})/
       )
@@ -572,7 +543,6 @@ export class ToastmastersScraper {
         return null
       }
 
-      // Convert month name to number
       const monthMap: { [key: string]: number } = {
         Jan: 1,
         Feb: 2,
@@ -597,8 +567,6 @@ export class ToastmastersScraper {
         return null
       }
 
-      // Determine the year for the data month
-      // If collection is in January and data is December, year is previous year
       const collectionMonthNum = parseInt(collectionMonth, 10)
       const collectionYearNum = parseInt(collectionYear, 10)
       const dataYear =
@@ -638,27 +606,29 @@ export class ToastmastersScraper {
         timeout: this.config.timeout,
       })
 
-      // Find the district dropdown/select element
       const districtOptions = await page.$$eval(
-        'select option, option',
-        options =>
+        'select option',
+        (options: Element[]) =>
           options
-            .map(opt => opt.textContent?.trim() || '')
-            .filter(text => text.match(/^District\s+(\d+|[A-Z])$/i))
+            .map(
+              (opt: Element) =>
+                (opt as HTMLOptionElement).textContent?.trim() || ''
+            )
+            .filter((text: string) => text.match(/^District\s+(\d+|[A-Z])$/i))
       )
 
       const districts = districtOptions
-        .map(text => {
+        .map((text: string) => {
           const match = text.match(/^District\s+(\d+|[A-Z])$/i)
           if (match) {
             return {
-              id: match[1],
+              id: match[1] ?? '',
               name: text,
             }
           }
           return null
         })
-        .filter(d => d !== null)
+        .filter((d): d is DistrictInfo => d !== null)
 
       logger.info('Districts fetched from dropdown', {
         count: districts.length,
@@ -682,10 +652,8 @@ export class ToastmastersScraper {
 
       try {
         if (dateString) {
-          // Use the existing getAllDistrictsForDate logic for specific dates
           return await this.downloadAllDistrictsForDate(page, dateString)
         } else {
-          // Use current data logic
           logger.info('Fetching all districts summary with performance data')
           await page.goto(this.config.baseUrl, {
             waitUntil: 'networkidle',
@@ -702,7 +670,7 @@ export class ToastmastersScraper {
     }
 
     const csvContent = await this.getCachedOrDownload(
-      CSVType.ALL_DISTRICTS,
+      'all-districts' as CSVType,
       downloadFn,
       dateString
     )
@@ -718,10 +686,6 @@ export class ToastmastersScraper {
   /**
    * Fetch all districts with performance data from CSV export
    * Returns both the records and the actual "As of" date from the dashboard
-   *
-   * IMPORTANT: The actualDate is the date the dashboard data represents,
-   * which is always 1-2 days behind the current date. Snapshots MUST be
-   * stored using this actualDate, not the date the refresh was run.
    */
   async getAllDistrictsWithMetadata(dateString?: string): Promise<{
     records: ScrapedRecord[]
@@ -736,17 +700,14 @@ export class ToastmastersScraper {
 
       try {
         if (dateString) {
-          // Use the existing getAllDistrictsForDate logic for specific dates
           return await this.downloadAllDistrictsForDate(page, dateString)
         } else {
-          // Use current data logic - get the actual date from the dashboard
           logger.info('Fetching all districts summary with performance data')
           await page.goto(this.config.baseUrl, {
             waitUntil: 'networkidle',
             timeout: this.config.timeout,
           })
 
-          // Get the actual "As of" date from the dashboard dropdown
           const selectedDate = await this.getSelectedDate(page)
           const actualDate =
             selectedDate?.dateString || this.getCurrentDateString()
@@ -760,7 +721,7 @@ export class ToastmastersScraper {
     }
 
     const { content, actualDate } = await this.getCachedOrDownloadWithDate(
-      CSVType.ALL_DISTRICTS,
+      'all-districts' as CSVType,
       downloadFn,
       dateString
     )
@@ -776,21 +737,15 @@ export class ToastmastersScraper {
 
   /**
    * Helper method to download all districts data for a specific date
-   * Implements month-end reconciliation fallback: if the requested date isn't available
-   * in the current month's dropdown, tries the previous month (since month-end data
-   * often appears under the prior month during reconciliation periods).
    */
   private async downloadAllDistrictsForDate(
     page: Page,
     dateString: string
   ): Promise<{ content: string; actualDate: string }> {
-    // Parse the date string (YYYY-MM-DD)
     const dateObj = new Date(dateString + 'T00:00:00')
-    const month = dateObj.getMonth() + 1 // 1-12
+    const month = dateObj.getMonth() + 1
     const day = dateObj.getDate()
     const year = dateObj.getFullYear()
-
-    // Format as mm/dd/yyyy (no zero padding for month/day)
     const formattedDate = `${month}/${day}/${year}`
 
     logger.info('Fetching all districts summary for specific date', {
@@ -798,7 +753,6 @@ export class ToastmastersScraper {
       formattedDate,
     })
 
-    // Build URL with program year and date (no id = all districts)
     const baseUrl = this.buildBaseUrl(dateString)
     const url = `${baseUrl}/Default.aspx?month=${month}&day=${formattedDate}`
     logger.info('Navigating to URL', { url })
@@ -807,13 +761,11 @@ export class ToastmastersScraper {
       timeout: this.config.timeout,
     })
 
-    // Log the page title for debugging
     const title = await page.title()
     logger.info('Page loaded', { title, url: page.url() })
 
-    // Try to verify the date, but don't fail if we can't
     const actualDate = await this.getSelectedDate(page)
-    let actualDateString = dateString // Default to requested date
+    let actualDateString = dateString
 
     if (actualDate) {
       const {
@@ -825,15 +777,12 @@ export class ToastmastersScraper {
 
       actualDateString = dashboardDateString
 
-      // Check if we got the requested date
       if (actualMonth === month && actualDay === day && actualYear === year) {
         logger.info('Date verification successful', {
           requested: dateString,
           actual: actualDateString,
         })
       } else {
-        // Date mismatch - try previous month fallback for month-end reconciliation
-        // During month-end reconciliation, dates like Oct 1 may appear under September's data
         logger.info(
           'Date mismatch detected, trying previous month fallback for month-end reconciliation',
           {
@@ -847,17 +796,12 @@ export class ToastmastersScraper {
           }
         )
 
-        // Calculate previous month and handle program year boundary
-        // When falling back from July (month 7) to June (month 6), we cross the program year boundary
-        // June belongs to the previous program year (e.g., July 2025 is in 2025-2026, but June 2025 is in 2024-2025)
         const prevMonth = month === 1 ? 12 : month - 1
         const prevMonthYear = month === 1 ? year - 1 : year
-        const crossesProgramYearBoundary = month === 7 // July to June crosses program year boundary
+        const crossesProgramYearBoundary = month === 7
 
-        // Build fallback URL - use previous program year's base URL if crossing boundary
         let fallbackBaseUrl = baseUrl
         if (crossesProgramYearBoundary) {
-          // Construct date string for previous month to get correct program year
           const prevMonthDateString = `${prevMonthYear}-${String(prevMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           fallbackBaseUrl = this.buildBaseUrl(prevMonthDateString)
           logger.info(
@@ -884,7 +828,6 @@ export class ToastmastersScraper {
           timeout: this.config.timeout,
         })
 
-        // Verify the date again
         const fallbackDate = await this.getSelectedDate(page)
         if (fallbackDate) {
           const {
@@ -905,7 +848,6 @@ export class ToastmastersScraper {
             )
             actualDateString = fbDateString
           } else {
-            // Fallback also didn't work - this date truly isn't available
             logger.warn(
               'Previous month fallback also returned different date - date not available',
               {
@@ -918,7 +860,6 @@ export class ToastmastersScraper {
                 },
               }
             )
-            // Keep the original mismatch behavior - return what we got
             actualDateString = dashboardDateString
           }
         } else {
@@ -934,27 +875,22 @@ export class ToastmastersScraper {
       })
     }
 
-    // Download CSV with the selected date
     const content = await this.downloadCsv(page)
     return { content, actualDate: actualDateString }
   }
 
   /**
    * Fetch all districts with performance data for a specific date
-   * @param dateString Date in YYYY-MM-DD format
    */
   async getAllDistrictsForDate(dateString: string): Promise<ScrapedRecord[]> {
     const browser = await this.initBrowser()
     const page = await browser.newPage()
 
     try {
-      // Parse the date string (YYYY-MM-DD)
       const dateObj = new Date(dateString + 'T00:00:00')
-      const month = dateObj.getMonth() + 1 // 1-12
+      const month = dateObj.getMonth() + 1
       const day = dateObj.getDate()
       const year = dateObj.getFullYear()
-
-      // Format as mm/dd/yyyy (no zero padding for month/day)
       const formattedDate = `${month}/${day}/${year}`
 
       logger.info('Fetching all districts summary for specific date', {
@@ -962,7 +898,6 @@ export class ToastmastersScraper {
         formattedDate,
       })
 
-      // Build URL with program year and date (no id = all districts)
       const baseUrl = this.buildBaseUrl(dateString)
       const url = `${baseUrl}/Default.aspx?month=${month}&day=${formattedDate}`
       logger.info('Navigating to URL', { url })
@@ -971,11 +906,9 @@ export class ToastmastersScraper {
         timeout: this.config.timeout,
       })
 
-      // Log the page title for debugging
       const title = await page.title()
       logger.info('Page loaded', { title, url: page.url() })
 
-      // Try to verify the date, but don't fail if we can't
       const actualDate = await this.getSelectedDate(page)
       if (actualDate) {
         const {
@@ -1011,7 +944,6 @@ export class ToastmastersScraper {
         })
       }
 
-      // Download CSV with the selected date
       const csvContent = await this.downloadCsv(page)
       const records = this.parseCsv(csvContent)
 
@@ -1027,7 +959,6 @@ export class ToastmastersScraper {
 
   /**
    * Get the currently selected date from the dashboard
-   * Returns the date that's actually displayed (e.g., "As of 27-Jul-2025")
    */
   private async getSelectedDate(page: Page): Promise<{
     month: number
@@ -1036,20 +967,14 @@ export class ToastmastersScraper {
     dateString: string
   } | null> {
     try {
-      // Get all select elements on the page
       const allSelects = await page.$$('select')
       logger.info('Found select elements on page', { count: allSelects.length })
 
-      // The date dropdown is typically the last select element (after district, year, month)
-      // Try to find it by looking for "As of" in the selected option text
       let daySelect = null
 
       for (const select of allSelects) {
         const selectedText = await select.evaluate(el => {
-          const selectElement = el as {
-            options: Array<{ text: string }>
-            selectedIndex: number
-          }
+          const selectElement = el as HTMLSelectElement
           const selectedOption =
             selectElement.options[selectElement.selectedIndex]
           return selectedOption ? selectedOption.text : null
@@ -1067,12 +992,8 @@ export class ToastmastersScraper {
         return null
       }
 
-      // Get the selected option text (e.g., "As of 10-Oct-2025")
       const selectedText = await daySelect.evaluate(select => {
-        const selectElement = select as {
-          options: Array<{ text: string }>
-          selectedIndex: number
-        }
+        const selectElement = select as HTMLSelectElement
         const selectedOption =
           selectElement.options[selectElement.selectedIndex]
         return selectedOption ? selectedOption.text : null
@@ -1085,18 +1006,13 @@ export class ToastmastersScraper {
 
       logger.info('Day dropdown selected text', { selectedText })
 
-      // Parse the date from "As of dd-MMM-yyyy" format
-      // Try multiple patterns to be more flexible
       let match = selectedText.match(/As of (\d+)-([A-Za-z]+)-(\d{4})/)
       if (!match) {
-        // Try without "As of" prefix
         match = selectedText.match(/(\d+)-([A-Za-z]+)-(\d{4})/)
       }
       if (!match) {
-        // Try with slashes
         match = selectedText.match(/(\d+)\/(\d+)\/(\d{4})/)
         if (match) {
-          // This is mm/dd/yyyy format
           const monthStr = match[1]
           const dayStr = match[2]
           const yearStr = match[3]
@@ -1109,7 +1025,6 @@ export class ToastmastersScraper {
           const month = parseInt(monthStr, 10)
           const day = parseInt(dayStr, 10)
           const year = parseInt(yearStr, 10)
-          // Format as ISO date string (YYYY-MM-DD)
           const isoDateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           return { month, day, year, dateString: isoDateString }
         }
@@ -1132,7 +1047,6 @@ export class ToastmastersScraper {
       const day = parseInt(dayStr, 10)
       const year = parseInt(yearStr, 10)
 
-      // Convert month name to number
       const monthMap: { [key: string]: number } = {
         Jan: 1,
         Feb: 2,
@@ -1157,7 +1071,6 @@ export class ToastmastersScraper {
         return null
       }
 
-      // Format as ISO date string (YYYY-MM-DD)
       const isoDateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
       logger.info('Successfully parsed date', {
@@ -1192,7 +1105,6 @@ export class ToastmastersScraper {
         let actualDateString = dateString || this.getCurrentDateString()
 
         if (dateString) {
-          // Use the fallback-enabled navigation for historical dates
           const baseUrl = this.buildBaseUrl(dateString)
           const navResult = await this.navigateToDateWithFallback(
             page,
@@ -1202,8 +1114,6 @@ export class ToastmastersScraper {
             districtId
           )
 
-          // For district performance, we accept the data even if date doesn't match
-          // (closing period behavior) but log it
           actualDateString = navResult.actualDateString
 
           if (navResult.usedFallback) {
@@ -1227,7 +1137,6 @@ export class ToastmastersScraper {
             )
           }
         } else {
-          // No date specified, use current data
           const url = `${this.config.baseUrl}/District.aspx?id=${districtId}`
           logger.info('Fetching district performance', {
             districtId,
@@ -1249,7 +1158,7 @@ export class ToastmastersScraper {
     }
 
     const csvContent = await this.getCachedOrDownload(
-      CSVType.DISTRICT_PERFORMANCE,
+      'district-performance' as CSVType,
       downloadFn,
       dateString,
       districtId
@@ -1282,7 +1191,6 @@ export class ToastmastersScraper {
         let actualDateString = dateString || this.getCurrentDateString()
 
         if (dateString) {
-          // Use the fallback-enabled navigation for historical dates
           const baseUrl = this.buildBaseUrl(dateString)
           const navResult = await this.navigateToDateWithFallback(
             page,
@@ -1292,8 +1200,6 @@ export class ToastmastersScraper {
             districtId
           )
 
-          // Accept the data even if date doesn't match (closing period behavior)
-          // The dashboard may return a different date during month-end reconciliation
           actualDateString = navResult.actualDateString
 
           if (navResult.usedFallback) {
@@ -1317,7 +1223,6 @@ export class ToastmastersScraper {
             )
           }
         } else {
-          // No date specified, use current data
           const url = `${this.config.baseUrl}/Division.aspx?id=${districtId}`
           logger.info('Fetching division performance', {
             districtId,
@@ -1339,7 +1244,7 @@ export class ToastmastersScraper {
     }
 
     const csvContent = await this.getCachedOrDownload(
-      CSVType.DIVISION_PERFORMANCE,
+      'division-performance' as CSVType,
       downloadFn,
       dateString,
       districtId
@@ -1372,7 +1277,6 @@ export class ToastmastersScraper {
         let actualDateString = dateString || this.getCurrentDateString()
 
         if (dateString) {
-          // Use the fallback-enabled navigation for historical dates
           const baseUrl = this.buildBaseUrl(dateString)
           const navResult = await this.navigateToDateWithFallback(
             page,
@@ -1382,8 +1286,6 @@ export class ToastmastersScraper {
             districtId
           )
 
-          // Accept the data even if date doesn't match (closing period behavior)
-          // The dashboard may return a different date during month-end reconciliation
           actualDateString = navResult.actualDateString
 
           if (navResult.usedFallback) {
@@ -1407,7 +1309,6 @@ export class ToastmastersScraper {
             )
           }
         } else {
-          // No date specified, use current data
           const url = `${this.config.baseUrl}/Club.aspx?id=${districtId}`
           logger.info('Fetching club performance', {
             districtId,
@@ -1429,7 +1330,7 @@ export class ToastmastersScraper {
     }
 
     const csvContent = await this.getCachedOrDownload(
-      CSVType.CLUB_PERFORMANCE,
+      'club-performance' as CSVType,
       downloadFn,
       dateString,
       districtId

@@ -1,8 +1,8 @@
 /**
  * Raw CSV Cache System Types
  *
- * Type definitions for the raw CSV caching system that intercepts CSV downloads
- * in the ToastmastersScraper and provides cache-first lookup with automatic fallback.
+ * Type definitions for the raw CSV caching system that stores CSV downloads
+ * from the scraper-cli and provides cache-first lookup for the backend.
  */
 
 /**

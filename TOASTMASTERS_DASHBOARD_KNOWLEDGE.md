@@ -1343,10 +1343,12 @@ If this condition is false, the Area is **ineligible**, regardless of all other 
 Once eligible, recognition is determined by two independent percentage thresholds:
 
 **Paid Clubs Percentage**:
+
 - ≥ 75% of clubs in the Area must be paid clubs
 - A "paid club" is a club in good standing with Toastmasters International (dues paid)
 
 **Distinguished Clubs Percentage**:
+
 - Percentage is calculated **only against paid clubs**
 - Required thresholds vary by recognition level
 
@@ -1373,10 +1375,12 @@ If this condition is false, the Division is **ineligible**, regardless of all ot
 Once eligible, recognition is determined by two independent percentage thresholds:
 
 **Paid Areas Percentage**:
+
 - ≥ 85% of Areas in the Division must be paid Areas
 - A "paid Area" is an Area not suspended due to unpaid clubs
 
 **Distinguished Areas Percentage**:
+
 - Percentage is calculated **only against paid Areas**
 - Required thresholds vary by recognition level
 
@@ -1400,11 +1404,13 @@ These rules govern DAP/DDP calculations:
 ### Data Availability Notes
 
 **Club Visit Data**:
+
 - Club visit completion data is **not currently available** from the Toastmasters dashboard CSV exports
 - Until this data becomes available, eligibility gates based on club visits **cannot be evaluated**
 - Implementation should track eligibility as "unknown" when visit data is unavailable
 
 **Paid Status**:
+
 - Club paid status can be inferred from club status fields in dashboard data
 - A club with status "Active" is considered paid
 - Clubs with status "Suspended", "Ineligible", or "Low" are not considered paid

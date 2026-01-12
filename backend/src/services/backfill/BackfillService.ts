@@ -1227,59 +1227,68 @@ export class BackfillService {
   }
 
   /**
-   * Fetch All Districts CSV and calculate rankings for ALL districts
+   * Fetch All Districts CSV from cache and calculate rankings for ALL districts
+   *
+   * Note: This method now reads from cached data only. If data is not in the cache,
+   * the scraper-cli tool must be run first to populate the cache.
    */
   private async fetchAndCalculateAllDistrictsRankings(
     backfillId: string,
     date: string,
     snapshotId: string
   ): Promise<AllDistrictsRankingsData> {
-    logger.info('Fetching All Districts CSV for rankings calculation', {
-      backfillId,
-      date,
-      snapshotId,
-      operation: 'fetchAndCalculateAllDistrictsRankings',
-    })
+    logger.info(
+      'Reading All Districts CSV from cache for rankings calculation',
+      {
+        backfillId,
+        date,
+        snapshotId,
+        operation: 'fetchAndCalculateAllDistrictsRankings',
+      }
+    )
 
-    const { ToastmastersScraper } = await import('../ToastmastersScraper.js')
     const { getProductionServiceFactory } =
       await import('../ProductionServiceFactory.js')
 
     const serviceFactory = getProductionServiceFactory()
     const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
-    const scraper = new ToastmastersScraper(rawCSVCacheService)
 
     try {
-      const allDistrictsResult = await scraper.getAllDistrictsWithMetadata(date)
+      // Read from cache using getAllDistrictsCached which returns parsed records
+      const cachedResult = await rawCSVCacheService.getAllDistrictsCached(date)
 
-      const cacheMetadata = await rawCSVCacheService.getCacheMetadata(
-        allDistrictsResult.actualDate
-      )
+      if (
+        !cachedResult ||
+        !cachedResult.fromCache ||
+        cachedResult.data.length === 0
+      ) {
+        throw new Error(
+          `No cached All Districts CSV available for date ${date}. Please run scraper-cli to collect data first: npx scraper-cli scrape --date ${date}`
+        )
+      }
+
+      const cacheMetadata = await rawCSVCacheService.getCacheMetadata(date)
+      const actualCsvDate = cacheMetadata?.date || date
 
       const closingPeriodInfo = this.detectClosingPeriodFromMetadata(
         date,
-        allDistrictsResult.actualDate,
+        actualCsvDate,
         cacheMetadata?.dataMonth,
         cacheMetadata?.isClosingPeriod
       )
 
-      logger.info('All Districts CSV fetched successfully', {
+      const allDistrictsData = cachedResult.data
+
+      logger.info('All Districts CSV read from cache successfully', {
         backfillId,
         requestedDate: date,
-        actualCsvDate: allDistrictsResult.actualDate,
-        recordCount: allDistrictsResult.records.length,
+        actualCsvDate,
+        recordCount: allDistrictsData.length,
         isClosingPeriod: closingPeriodInfo.isClosingPeriod,
         snapshotDate: closingPeriodInfo.snapshotDate,
         dataMonth: closingPeriodInfo.dataMonth,
         operation: 'fetchAndCalculateAllDistrictsRankings',
       })
-
-      if (allDistrictsResult.records.length === 0) {
-        throw new Error('No districts found in All Districts CSV')
-      }
-
-      const allDistrictsData = allDistrictsResult.records
-      const actualCsvDate = allDistrictsResult.actualDate
 
       // Convert CSV records to DistrictStatistics format for ranking calculation
       const districtStats: DistrictStatistics[] = allDistrictsData.map(
@@ -1397,12 +1406,20 @@ export class BackfillService {
       })
 
       return allDistrictsRankings
-    } finally {
-      try {
-        await scraper.closeBrowser()
-      } catch {
-        // Ignore cleanup errors
-      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error(
+        'Failed to fetch and calculate all districts rankings from cache',
+        {
+          backfillId,
+          date,
+          snapshotId,
+          error: errorMessage,
+          operation: 'fetchAndCalculateAllDistrictsRankings',
+        }
+      )
+      throw error
     }
   }
 

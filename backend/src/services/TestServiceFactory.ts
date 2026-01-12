@@ -38,7 +38,6 @@ import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { SnapshotStore } from '../types/snapshots.js'
-import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
 import path from 'path'
@@ -306,14 +305,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     const store = snapshotStore || this.createSnapshotStore()
     const rankingCalculator = this.createRankingCalculator()
     const mockCacheService = createMockCacheService()
-    const scraper = new ToastmastersScraper(mockCacheService)
+
+    // RefreshService now uses SnapshotBuilder internally (no scraping)
     const service = new RefreshService(
       store,
-      scraper,
-      mockCacheService as unknown as RawCSVCacheService, // Cast mock to concrete type for testing
-      undefined, // 4th parameter: validator
-      undefined, // 5th parameter: districtConfigService
-      rankingCalculator // 6th parameter: rankingCalculator
+      mockCacheService as unknown as RawCSVCacheService,
+      undefined, // districtConfigService
+      rankingCalculator
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service
@@ -470,14 +468,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
             ServiceTokens.RankingCalculator
           )
           const mockCacheService = createMockCacheService()
-          const scraper = new ToastmastersScraper(mockCacheService)
+
+          // RefreshService now uses SnapshotBuilder internally (no scraping)
           return new RefreshService(
             snapshotStore,
-            scraper,
-            mockCacheService as unknown as RawCSVCacheService, // Cast mock to concrete type for testing
-            undefined, // 4th parameter: validator
-            undefined, // 5th parameter: districtConfigService
-            rankingCalculator // 6th parameter: rankingCalculator
+            mockCacheService as unknown as RawCSVCacheService,
+            undefined, // districtConfigService
+            rankingCalculator
           )
         },
         async () => {

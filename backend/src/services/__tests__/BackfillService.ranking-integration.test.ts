@@ -3,6 +3,9 @@
  *
  * Tests that the BackfillService correctly integrates with the RankingCalculator
  * and includes ranking data in snapshots created during backfill operations.
+ *
+ * Note: ToastmastersScraper has been moved to the scraper-cli package.
+ * RefreshService now uses SnapshotBuilder to create snapshots from cached data.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -13,9 +16,6 @@ import { RefreshService } from '../RefreshService.js'
 import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { BordaCountRankingCalculator } from '../RankingCalculator.js'
-
-// Mock the scraper
-vi.mock('../ToastmastersScraper.ts')
 
 describe('BackfillService Ranking Integration', () => {
   let testCacheDir: string

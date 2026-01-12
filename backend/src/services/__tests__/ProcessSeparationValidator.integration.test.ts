@@ -1,35 +1,64 @@
 /**
  * Integration tests for ProcessSeparationValidator
  * Tests real-world scenarios with actual refresh and read operations
+ *
+ * Note: ToastmastersScraper has been moved to the scraper-cli package.
+ * RefreshService now uses SnapshotBuilder to create snapshots from cached data.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ProcessSeparationValidator } from '../ProcessSeparationValidator.js'
 import { FileSnapshotStore } from '../FileSnapshotStore.js'
 import { RefreshService } from '../RefreshService.js'
-import { DataValidator } from '../DataValidator.js'
+import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { Snapshot } from '../../types/snapshots.js'
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
+import type {
+  ICacheConfigService,
+  ILogger,
+} from '../../types/serviceInterfaces.js'
 
-// Mock scraper interface matching ToastmastersScraper methods used by RefreshService
-interface MockScraper {
-  getAllDistricts: () => Promise<{
-    success: boolean
-    result: unknown[]
-    attempts: number
-  }>
-  getDistrictPerformance: (
-    districtId: string
-  ) => Promise<{ success: boolean; result: unknown[]; attempts: number }>
-  getDivisionPerformance: (
-    districtId: string
-  ) => Promise<{ success: boolean; result: unknown[]; attempts: number }>
-  getClubPerformance: (
-    districtId: string
-  ) => Promise<{ success: boolean; result: unknown[]; attempts: number }>
-  closeBrowser: () => Promise<void>
+// Mock CacheConfigService for testing
+class MockCacheConfigService implements ICacheConfigService {
+  private cacheDir: string
+
+  constructor(cacheDir: string) {
+    this.cacheDir = cacheDir
+  }
+
+  getCacheDirectory(): string {
+    return this.cacheDir
+  }
+
+  getConfiguration() {
+    return {
+      baseDirectory: this.cacheDir,
+      isConfigured: true,
+      source: 'test' as const,
+      validationStatus: {
+        isValid: true,
+        isAccessible: true,
+        isSecure: true,
+      },
+    }
+  }
+
+  async initialize(): Promise<void> {}
+  async validateCacheDirectory(): Promise<void> {}
+  isReady(): boolean {
+    return true
+  }
+  async dispose(): Promise<void> {}
+}
+
+// Mock Logger for testing
+class MockLogger implements ILogger {
+  info(_message: string, _data?: unknown): void {}
+  warn(_message: string, _data?: unknown): void {}
+  error(_message: string, _error?: Error | unknown): void {}
+  debug(_message: string, _data?: unknown): void {}
 }
 
 // Performance metrics interface matching FileSnapshotStore
@@ -46,6 +75,7 @@ describe('ProcessSeparationValidator Integration Tests', () => {
   let validator: ProcessSeparationValidator
   let snapshotStore: FileSnapshotStore
   let refreshService: RefreshService
+  let rawCSVCache: RawCSVCacheService
   let tempDir: string
 
   beforeEach(async () => {
@@ -61,43 +91,13 @@ describe('ProcessSeparationValidator Integration Tests', () => {
       enableCompression: false,
     })
 
-    // Create refresh service with mocked dependencies for controlled testing
-    const mockScraper: MockScraper = {
-      getAllDistricts: vi.fn().mockResolvedValue({
-        success: true,
-        result: [{ DISTRICT: '61', 'District Name': 'Test District' }],
-        attempts: 1,
-      }),
-      getDistrictPerformance: vi.fn().mockResolvedValue({
-        success: true,
-        result: [{ District: '61', 'Club Count': '5', Membership: '100' }],
-        attempts: 1,
-      }),
-      getDivisionPerformance: vi.fn().mockResolvedValue({
-        success: true,
-        result: [{ Division: 'A', 'Club Count': '2', Membership: '40' }],
-        attempts: 1,
-      }),
-      getClubPerformance: vi.fn().mockResolvedValue({
-        success: true,
-        result: [
-          {
-            'Club Number': '123',
-            'Club Name': 'Test Club',
-            'Active Members': '20',
-          },
-        ],
-        attempts: 1,
-      }),
-      closeBrowser: vi.fn().mockResolvedValue(undefined),
-    }
+    // Create RawCSVCacheService with mock dependencies
+    const mockCacheConfig = new MockCacheConfigService(tempDir)
+    const mockLogger = new MockLogger()
+    rawCSVCache = new RawCSVCacheService(mockCacheConfig, mockLogger)
 
-    const dataValidator = new DataValidator()
-    refreshService = new RefreshService(
-      snapshotStore,
-      mockScraper as MockScraper,
-      dataValidator
-    )
+    // Create refresh service with cache-based dependencies
+    refreshService = new RefreshService(snapshotStore, rawCSVCache)
     validator = new ProcessSeparationValidator(snapshotStore, refreshService)
   })
 

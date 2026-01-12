@@ -1,34 +1,23 @@
 /**
  * RefreshService orchestrates the complete refresh workflow
  *
- * This service coordinates scraping, normalization, validation, and snapshot creation
- * to implement the snapshot-based data architecture. It separates refresh operations
- * from read operations, ensuring consistent performance and reliability.
+ * This service coordinates snapshot creation from cached CSV data.
+ * It uses SnapshotBuilder to create snapshots without performing any scraping.
+ * Scraping is handled separately by the scraper-cli tool.
+ *
+ * Requirements: 4.1, 4.2, 4.3, 4.4, 8.1, 8.2
  */
 
 import { logger } from '../utils/logger.js'
-import { RetryManager } from '../utils/RetryManager.js'
-import { CircuitBreaker, CircuitBreakerError } from '../utils/CircuitBreaker.js'
-import { ToastmastersScraper } from './ToastmastersScraper.js'
 import { DataValidator } from './DataValidator.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
-import {
-  DataNormalizer,
-  type RawData,
-  type DistrictError,
-} from './DataNormalizer.js'
+import { DataNormalizer } from './DataNormalizer.js'
+import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { RankingCalculator } from './RankingCalculator.js'
-import type {
-  SnapshotStore,
-  Snapshot,
-  NormalizedData,
-  SnapshotStatus,
-} from '../types/snapshots.js'
-import type { DistrictStatistics, ScrapedRecord } from '../types/districts.js'
-
-// RawData and DistrictError are imported from DataNormalizer.js
+import type { SnapshotStore } from '../types/snapshots.js'
+import type { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 
 /**
  * Result of a complete refresh operation
@@ -60,75 +49,82 @@ export interface RefreshResult {
 }
 
 /**
- * RefreshService orchestrates the complete refresh workflow
+ * RefreshService orchestrates the complete refresh workflow using cached data
+ *
+ * Requirements:
+ * - 4.1: Use SnapshotBuilder to create snapshots from cached CSV data
+ * - 4.2: Do not perform any scraping operations
+ * - 4.3: Check for available cached data before attempting snapshot creation
+ * - 4.4: Return informative error when cache is missing
+ * - 8.1: Remove all scraping-related code from RefreshService
+ * - 8.2: Exclusively use SnapshotBuilder to create snapshots
  */
 export class RefreshService {
-  private readonly scraper: ToastmastersScraper
-  private readonly validator: DataValidator
-  private readonly snapshotStore: SnapshotStore
+  private readonly snapshotBuilder: SnapshotBuilder
   private readonly districtConfigService: DistrictConfigurationService
-  private readonly rankingCalculator?: RankingCalculator
-  private readonly rawCSVCache: RawCSVCacheService
-  private readonly closingPeriodDetector: ClosingPeriodDetector
-  private readonly dataNormalizer: DataNormalizer
-  private readonly retryOptions = RetryManager.getDashboardRetryOptions()
-  private readonly scrapingCircuitBreaker: CircuitBreaker
+  private readonly snapshotStore: SnapshotStore
 
   constructor(
     snapshotStore: SnapshotStore,
-    scraper: ToastmastersScraper,
     rawCSVCache: RawCSVCacheService,
-    validator?: DataValidator,
     districtConfigService?: DistrictConfigurationService,
     rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,
-    dataNormalizer?: DataNormalizer
+    dataNormalizer?: DataNormalizer,
+    validator?: DataValidator
   ) {
     this.snapshotStore = snapshotStore
-    this.scraper = scraper
-    this.rawCSVCache = rawCSVCache
-    this.validator = validator || new DataValidator()
     this.districtConfigService =
-      districtConfigService || new DistrictConfigurationService()
-    if (rankingCalculator !== undefined) {
-      this.rankingCalculator = rankingCalculator
-    }
-    // Initialize ClosingPeriodDetector - use provided instance or create default
-    this.closingPeriodDetector =
-      closingPeriodDetector || new ClosingPeriodDetector({ logger })
+      districtConfigService ?? new DistrictConfigurationService()
 
-    // Initialize DataNormalizer - use provided instance or create default
-    // Inject the ClosingPeriodDetector into DataNormalizer
-    this.dataNormalizer =
-      dataNormalizer ||
+    // Initialize ClosingPeriodDetector
+    const detector =
+      closingPeriodDetector ?? new ClosingPeriodDetector({ logger })
+
+    // Initialize DataNormalizer with ClosingPeriodDetector
+    const normalizer =
+      dataNormalizer ??
       new DataNormalizer({
         logger,
-        closingPeriodDetector: this.closingPeriodDetector,
+        closingPeriodDetector: detector,
       })
 
-    // Initialize circuit breaker for scraping operations
-    this.scrapingCircuitBreaker =
-      CircuitBreaker.createDashboardCircuitBreaker('refresh-scraping')
+    // Initialize SnapshotBuilder with all dependencies
+    this.snapshotBuilder = new SnapshotBuilder(
+      rawCSVCache,
+      this.districtConfigService,
+      snapshotStore as PerDistrictFileSnapshotStore,
+      validator ?? new DataValidator(),
+      rankingCalculator,
+      detector,
+      normalizer
+    )
 
-    logger.debug('RefreshService initialized with circuit breaker', {
-      circuitBreakerName: this.scrapingCircuitBreaker.getName(),
-      retryOptions: this.retryOptions,
-      hasRankingCalculator: !!this.rankingCalculator,
+    logger.debug('RefreshService initialized with SnapshotBuilder', {
+      hasRankingCalculator: !!rankingCalculator,
     })
   }
 
   /**
-   * Execute a complete refresh cycle
-   * Coordinates scraping, normalization, validation, and snapshot creation
+   * Execute a complete refresh cycle using cached data
+   *
+   * Requirements:
+   * - 4.1: Use SnapshotBuilder to create snapshots from cached CSV data
+   * - 4.3: Check for available cached data before attempting snapshot creation
+   * - 4.4: Return informative error when cache is missing
+   *
+   * @param date - Optional date to build snapshot for (YYYY-MM-DD format)
    */
-  async executeRefresh(): Promise<RefreshResult> {
+  async executeRefresh(date?: string): Promise<RefreshResult> {
     const startTime = Date.now()
     const startedAt = new Date().toISOString()
+    const targetDate = date ?? this.getCurrentDateString()
     const refreshId = `refresh_${startTime}`
 
-    logger.info('Starting refresh operation', {
+    logger.info('Starting refresh operation from cached data', {
       refreshId,
       startedAt,
+      targetDate,
       schemaVersion: this.getCurrentSchemaVersion(),
       calculationVersion: this.getCurrentCalculationVersion(),
       operation: 'executeRefresh',
@@ -153,47 +149,7 @@ export class RefreshService {
           errors: configValidationResult.warnings,
         })
 
-        // Create failed snapshot with configuration errors
-        const currentDate = new Date().toISOString()
-        const dateOnly = currentDate.split('T')[0]
-        if (!dateOnly) {
-          throw new Error('Failed to extract date from ISO string')
-        }
-
-        const minimalData: NormalizedData = {
-          districts: [],
-          metadata: {
-            source: 'toastmasters-dashboard',
-            fetchedAt: currentDate,
-            dataAsOfDate: dateOnly,
-            districtCount: 0,
-            processingDurationMs: Date.now() - startTime,
-          },
-        }
-
-        const failedSnapshot = await this.createSnapshot(
-          minimalData,
-          'failed',
-          [errorMessage]
-        )
-
-        const duration_ms = Date.now() - startTime
-        const completedAt = new Date().toISOString()
-
-        return {
-          success: false,
-          snapshot_id: failedSnapshot.snapshot_id,
-          duration_ms,
-          errors: [errorMessage],
-          status: 'failed',
-          metadata: {
-            districtCount: 0,
-            startedAt,
-            completedAt,
-            schemaVersion: this.getCurrentSchemaVersion(),
-            calculationVersion: this.getCurrentCalculationVersion(),
-          },
-        }
+        return this.createFailedResult(startTime, startedAt, [errorMessage], 0)
       }
 
       logger.info('District configuration validated successfully', {
@@ -205,251 +161,58 @@ export class RefreshService {
         warnings: configValidationResult.warnings.length,
       })
 
-      // Step 1: Scrape raw data from dashboard
-      logger.info('Starting data scraping phase', {
+      // Step 1: Check cache availability (Requirement 4.3)
+      logger.info('Checking cache availability', {
         refreshId,
         operation: 'executeRefresh',
-        phase: 'scraping',
-      })
-      const rawData = await this.scrapeData()
-
-      logger.info('Data scraping completed successfully', {
-        refreshId,
-        operation: 'executeRefresh',
-        phase: 'scraping',
-        districtCount: rawData.districtData.size,
-        scrapingDurationMs: rawData.scrapingMetadata.durationMs,
-        errors: rawData.scrapingMetadata.errors.length,
+        phase: 'cache_check',
+        targetDate,
       })
 
-      // Step 2: Normalize raw data into structured format
-      logger.info('Starting data normalization phase', {
-        refreshId,
-        operation: 'executeRefresh',
-        phase: 'normalization',
-        inputDistrictCount: rawData.districtData.size,
-      })
-      const normalizedData = await this.normalizeData(rawData)
+      const cacheAvailability =
+        await this.snapshotBuilder.getCacheAvailability(targetDate)
 
-      logger.info('Data normalization completed successfully', {
-        refreshId,
-        operation: 'executeRefresh',
-        phase: 'normalization',
-        outputDistrictCount: normalizedData.districts.length,
-        processingDurationMs: normalizedData.metadata.processingDurationMs,
-      })
-
-      // Step 2.5: Calculate all-districts rankings (NEW STEP)
-      let allDistrictsRankings:
-        | import('../types/snapshots.js').AllDistrictsRankingsData
-        | undefined
-      if (this.rankingCalculator) {
-        logger.info('Starting all-districts rankings calculation phase', {
+      if (!cacheAvailability.available) {
+        // Requirement 4.4: Return informative error when cache is missing
+        const errorMessage = `No cached data available for date ${targetDate}. Please run scraper-cli to collect data first.`
+        logger.error('Refresh failed: no cached data available', {
           refreshId,
           operation: 'executeRefresh',
-          phase: 'all_districts_rankings',
-          districtCount: rawData.allDistricts.length,
-          fromCache: rawData.allDistrictsMetadata.fromCache,
+          phase: 'cache_check',
+          targetDate,
+          configuredDistricts: cacheAvailability.configuredDistricts,
+          missingDistricts: cacheAvailability.missingDistricts,
         })
 
-        try {
-          allDistrictsRankings = await this.calculateAllDistrictsRankings(
-            rawData.allDistricts,
-            rawData.allDistrictsMetadata
-          )
-
-          // Set the snapshot ID (will be updated with actual ID later)
-          allDistrictsRankings.metadata.snapshotId = refreshId
-
-          logger.info(
-            'All-districts rankings calculation completed successfully',
-            {
-              refreshId,
-              operation: 'executeRefresh',
-              phase: 'all_districts_rankings',
-              totalDistricts: allDistrictsRankings.rankings.length,
-              rankingVersion: allDistrictsRankings.metadata.rankingVersion,
-              fromCache: allDistrictsRankings.metadata.fromCache,
-            }
-          )
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          logger.error('All-districts rankings calculation failed', {
-            refreshId,
-            operation: 'executeRefresh',
-            phase: 'all_districts_rankings',
-            error: errorMessage,
-            districtCount: rawData.allDistricts.length,
-          })
-          // Per requirement 5.6 in all-districts-rankings-storage spec:
-          // "IF ranking calculation fails for all districts, THEN THE System SHALL fail the entire refresh operation"
-          throw new Error(
-            `All-districts rankings calculation failed: ${errorMessage}`
-          )
-        }
-      } else {
-        logger.debug(
-          'No ranking calculator provided, skipping all-districts rankings calculation',
-          {
-            refreshId,
-            operation: 'executeRefresh',
-            phase: 'all_districts_rankings',
-          }
-        )
+        return this.createFailedResult(startTime, startedAt, [errorMessage], 0)
       }
 
-      // Step 2.6: Use normalized data as-is (rankings are stored separately)
-      // Note: Rankings are calculated in Step 2.5 for all districts and stored
-      // in all-districts-rankings.json. Individual district files do not include
-      // ranking data as per Requirement 1.4.
-      const finalNormalizedData: NormalizedData = {
-        ...normalizedData,
-        districts: normalizedData.districts,
-      }
-
-      // Step 3: Validate normalized data
-      logger.info('Starting data validation phase', {
+      logger.info('Cache data available', {
         refreshId,
         operation: 'executeRefresh',
-        phase: 'validation',
-        districtCount: finalNormalizedData.districts.length,
+        phase: 'cache_check',
+        targetDate,
+        cachedDistricts: cacheAvailability.cachedDistricts.length,
+        missingDistricts: cacheAvailability.missingDistricts.length,
       })
-      const validationResult =
-        await this.validator.validate(finalNormalizedData)
 
-      logger.info('Data validation completed', {
+      // Step 2: Build snapshot from cached data (Requirements 4.1, 8.2)
+      logger.info('Building snapshot from cached data', {
         refreshId,
         operation: 'executeRefresh',
-        phase: 'validation',
-        isValid: validationResult.isValid,
-        errorCount: validationResult.errors.length,
-        warningCount: validationResult.warnings.length,
+        phase: 'snapshot_build',
+        targetDate,
       })
 
-      if (!validationResult.isValid) {
-        // Create failed snapshot with validation errors
-        logger.info('Creating failed snapshot due to validation errors', {
-          refreshId,
-          operation: 'executeRefresh',
-          phase: 'snapshot_creation',
-          status: 'failed',
-          validationErrors: validationResult.errors,
-        })
+      const buildResult = await this.snapshotBuilder.build({ date: targetDate })
 
-        const failedSnapshot = await this.createSnapshot(
-          finalNormalizedData,
-          'failed',
-          validationResult.errors
-        )
-
-        const duration_ms = Date.now() - startTime
-        const completedAt = new Date().toISOString()
-
-        logger.error('Refresh failed due to validation errors', {
-          refreshId,
-          snapshot_id: failedSnapshot.snapshot_id,
-          operation: 'executeRefresh',
-          status: 'failed',
-          errors: validationResult.errors,
-          duration_ms,
-          completedAt,
-        })
-
-        return {
-          success: false,
-          snapshot_id: failedSnapshot.snapshot_id,
-          duration_ms,
-          errors: validationResult.errors,
-          status: 'failed',
-          metadata: {
-            districtCount: finalNormalizedData.districts.length,
-            startedAt,
-            completedAt,
-            schemaVersion: this.getCurrentSchemaVersion(),
-            calculationVersion: this.getCurrentCalculationVersion(),
-          },
-        }
-      }
-
-      // Step 4: Create successful snapshot
-      logger.info('Creating successful snapshot', {
-        refreshId,
-        operation: 'executeRefresh',
-        phase: 'snapshot_creation',
-        status: 'success',
-        districtCount: finalNormalizedData.districts.length,
-        warningCount: validationResult.warnings.length,
-        hasAllDistrictsRankings: !!allDistrictsRankings,
-      })
-
-      // Determine snapshot status based on scraping results
-      let snapshotStatus: SnapshotStatus = 'success'
-      const allErrors: string[] = [...validationResult.warnings]
-
-      // Check if we had any district failures during scraping
-      if (rawData.scrapingMetadata.failedDistricts.length > 0) {
-        snapshotStatus = 'partial'
-        allErrors.push(
-          `Partial snapshot: ${rawData.scrapingMetadata.failedDistricts.length} districts failed during data collection: ${rawData.scrapingMetadata.failedDistricts.join(', ')}`
-        )
-
-        logger.info('Creating partial snapshot due to district failures', {
-          refreshId,
-          operation: 'executeRefresh',
-          phase: 'snapshot_creation',
-          status: 'partial',
-          successfulDistricts:
-            rawData.scrapingMetadata.successfulDistricts.length,
-          failedDistricts: rawData.scrapingMetadata.failedDistricts.length,
-          failedDistrictIds: rawData.scrapingMetadata.failedDistricts,
-        })
-      }
-
-      const successSnapshot = await this.createSnapshot(
-        finalNormalizedData,
-        snapshotStatus,
-        allErrors,
-        rawData.scrapingMetadata, // Pass scraping metadata for detailed error tracking
-        allDistrictsRankings // Pass all-districts rankings data
+      // Convert BuildResult to RefreshResult
+      return this.convertBuildResultToRefreshResult(
+        buildResult,
+        startTime,
+        startedAt
       )
-
-      const duration_ms = Date.now() - startTime
-      const completedAt = new Date().toISOString()
-
-      logger.info('Refresh completed successfully', {
-        refreshId,
-        snapshot_id: successSnapshot.snapshot_id,
-        operation: 'executeRefresh',
-        status: snapshotStatus,
-        duration_ms,
-        districtCount: finalNormalizedData.districts.length,
-        warnings: validationResult.warnings.length,
-        completedAt,
-        schemaVersion: successSnapshot.schema_version,
-        calculationVersion: successSnapshot.calculation_version,
-        successfulDistricts:
-          rawData.scrapingMetadata.successfulDistricts.length,
-        failedDistricts: rawData.scrapingMetadata.failedDistricts.length,
-      })
-
-      return {
-        success: true,
-        snapshot_id: successSnapshot.snapshot_id,
-        duration_ms,
-        errors: allErrors,
-        status: snapshotStatus,
-        metadata: {
-          districtCount: finalNormalizedData.districts.length,
-          startedAt,
-          completedAt,
-          schemaVersion: this.getCurrentSchemaVersion(),
-          calculationVersion: this.getCurrentCalculationVersion(),
-        },
-      }
     } catch (error) {
-      const duration_ms = Date.now() - startTime
-      const completedAt = new Date().toISOString()
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
 
@@ -457,618 +220,11 @@ export class RefreshService {
         refreshId,
         operation: 'executeRefresh',
         error: errorMessage,
-        duration_ms,
-        completedAt,
+        targetDate,
       })
 
-      // Try to create a failed snapshot with minimal data
-      try {
-        logger.info('Attempting to create failed snapshot with minimal data', {
-          refreshId,
-          operation: 'executeRefresh',
-          phase: 'error_recovery',
-        })
-
-        const currentDate = new Date().toISOString()
-        const dateOnly = currentDate.split('T')[0]
-        if (!dateOnly) {
-          throw new Error('Failed to extract date from ISO string')
-        }
-
-        const minimalData: NormalizedData = {
-          districts: [],
-          metadata: {
-            source: 'toastmasters-dashboard',
-            fetchedAt: currentDate,
-            dataAsOfDate: dateOnly,
-            districtCount: 0,
-            processingDurationMs: duration_ms,
-          },
-        }
-
-        const failedSnapshot = await this.createSnapshot(
-          minimalData,
-          'failed',
-          [errorMessage]
-        )
-
-        logger.info(
-          'Failed snapshot created successfully during error recovery',
-          {
-            refreshId,
-            snapshot_id: failedSnapshot.snapshot_id,
-            operation: 'executeRefresh',
-            phase: 'error_recovery',
-          }
-        )
-
-        return {
-          success: false,
-          snapshot_id: failedSnapshot.snapshot_id,
-          duration_ms,
-          errors: [errorMessage],
-          status: 'failed',
-          metadata: {
-            districtCount: 0,
-            startedAt,
-            completedAt,
-            schemaVersion: this.getCurrentSchemaVersion(),
-            calculationVersion: this.getCurrentCalculationVersion(),
-          },
-        }
-      } catch (snapshotError) {
-        // Even snapshot creation failed
-        const snapshotErrorMessage =
-          snapshotError instanceof Error
-            ? snapshotError.message
-            : 'Unknown error'
-        logger.error('Failed to create failed snapshot during error recovery', {
-          refreshId,
-          operation: 'executeRefresh',
-          phase: 'error_recovery',
-          originalError: errorMessage,
-          snapshotError: snapshotErrorMessage,
-        })
-
-        return {
-          success: false,
-          duration_ms,
-          errors: [errorMessage, 'Failed to create snapshot'],
-          status: 'failed',
-          metadata: {
-            districtCount: 0,
-            startedAt,
-            completedAt,
-            schemaVersion: this.getCurrentSchemaVersion(),
-            calculationVersion: this.getCurrentCalculationVersion(),
-          },
-        }
-      }
-    } finally {
-      // Always close the browser to free resources
-      try {
-        await this.scraper.closeBrowser()
-        logger.debug('Browser closed successfully', {
-          operation: 'executeRefresh',
-          phase: 'cleanup',
-        })
-      } catch (error) {
-        logger.warn('Failed to close browser during cleanup', {
-          operation: 'executeRefresh',
-          phase: 'cleanup',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
+      return this.createFailedResult(startTime, startedAt, [errorMessage], 0)
     }
-  }
-
-  /**
-   * Scrape raw data from Toastmasters dashboard
-   * Integrates with existing ToastmastersScraper with retry logic and circuit breaker
-   * Only processes configured districts instead of all districts
-   * Implements resilient processing with detailed error tracking per district
-   */
-  private async scrapeData(): Promise<RawData> {
-    const startTime = Date.now()
-    const startTimeIso = new Date().toISOString()
-    const errors: string[] = []
-    const districtErrors = new Map<string, DistrictError[]>()
-    const successfulDistricts: string[] = []
-    const failedDistricts: string[] = []
-
-    logger.info(
-      'Starting data scraping operation with circuit breaker protection'
-    )
-
-    try {
-      // Determine the date for cache lookup (use current date)
-      const currentDate = new Date().toISOString().split('T')[0]
-      if (!currentDate) {
-        throw new Error('Failed to extract date from ISO string')
-      }
-
-      // Step 1: Check Raw CSV Cache for All Districts data
-      logger.info('Checking Raw CSV Cache for All Districts data', {
-        date: currentDate,
-      })
-
-      let allDistrictsData: ScrapedRecord[]
-      let allDistrictsMetadata: {
-        fromCache: boolean
-        csvDate: string
-        fetchedAt: string
-        dataMonth?: string
-        isClosingPeriod?: boolean
-      }
-
-      const cachedData =
-        await this.rawCSVCache.getAllDistrictsCached(currentDate)
-
-      if (cachedData) {
-        // Cache hit - use cached data
-        // IMPORTANT: Use the actual date from cache metadata, not the requested date
-        allDistrictsData = cachedData.data
-
-        // Get full cache metadata to access closing period information
-        const fullCacheMetadata = await this.rawCSVCache.getCacheMetadata(
-          cachedData.metadata.date
-        )
-
-        allDistrictsMetadata = {
-          fromCache: true,
-          csvDate: cachedData.metadata.date, // This is the actual "As of" date
-          fetchedAt: cachedData.metadata.fetchedAt,
-          dataMonth: fullCacheMetadata?.dataMonth,
-          isClosingPeriod: fullCacheMetadata?.isClosingPeriod,
-        }
-
-        logger.info('All Districts data retrieved from cache', {
-          requestedDate: currentDate,
-          actualDate: allDistrictsMetadata.csvDate,
-          recordCount: allDistrictsData.length,
-          fromCache: true,
-          fetchedAt: allDistrictsMetadata.fetchedAt,
-          dataMonth: allDistrictsMetadata.dataMonth,
-          isClosingPeriod: allDistrictsMetadata.isClosingPeriod,
-        })
-      } else {
-        // Cache miss - fetch from dashboard and cache it
-        logger.info('Cache miss - fetching All Districts data from dashboard', {
-          date: currentDate,
-        })
-
-        // Try getAllDistrictsWithMetadata first (preferred - returns actual "As of" date)
-        // Fall back to getAllDistricts for backward compatibility with tests
-        const fetchResult =
-          await this.fetchAllDistrictsFromDashboard(currentDate)
-        allDistrictsData = fetchResult.data
-        allDistrictsMetadata = fetchResult.metadata
-
-        // Note: Caching happens automatically inside scraper methods
-        // via getCachedOrDownload() which calls setCachedCSVWithMetadata()
-      }
-
-      logger.info('Fetched all districts summary', {
-        count: allDistrictsData.length,
-        fromCache: allDistrictsMetadata.fromCache,
-        circuitBreakerState: this.scrapingCircuitBreaker.getStats().state,
-      })
-
-      // Step 2: Get configured district IDs instead of extracting all
-      const districtIds = await this.getConfiguredDistrictIds(allDistrictsData)
-      logger.info('Using configured district IDs', {
-        count: districtIds.length,
-        districtIds,
-      })
-
-      // Step 3: Check for previously failed districts that should be retried
-      const previouslyFailedDistricts =
-        await this.getPreviouslyFailedDistricts()
-      const districtsToRetry = previouslyFailedDistricts.filter(
-        d => districtIds.includes(d.districtId) && d.shouldRetry
-      )
-
-      if (districtsToRetry.length > 0) {
-        logger.info('Retrying previously failed districts', {
-          retryCount: districtsToRetry.length,
-          retryDistricts: districtsToRetry.map(d => d.districtId),
-        })
-      }
-
-      // Step 4: Fetch detailed data for each configured district with circuit breaker and retry
-      const districtData = new Map<
-        string,
-        {
-          districtPerformance: ScrapedRecord[]
-          divisionPerformance: ScrapedRecord[]
-          clubPerformance: ScrapedRecord[]
-        }
-      >()
-
-      for (const districtId of districtIds) {
-        const districtStartTime = Date.now()
-        logger.debug('Processing district with resilient error handling', {
-          districtId,
-          isRetry: districtsToRetry.some(d => d.districtId === districtId),
-        })
-
-        try {
-          // Attempt to fetch all three data types for this district
-          const districtResults =
-            await this.fetchDistrictDataResilient(districtId)
-
-          if (districtResults.success) {
-            districtData.set(districtId, {
-              districtPerformance: districtResults.districtPerformance,
-              divisionPerformance: districtResults.divisionPerformance,
-              clubPerformance: districtResults.clubPerformance,
-            })
-
-            successfulDistricts.push(districtId)
-
-            logger.debug('Successfully fetched district data', {
-              districtId,
-              districtRecords: districtResults.districtPerformance.length,
-              divisionRecords: districtResults.divisionPerformance.length,
-              clubRecords: districtResults.clubPerformance.length,
-              processingTimeMs: Date.now() - districtStartTime,
-              circuitBreakerState: this.scrapingCircuitBreaker.getStats().state,
-            })
-          } else {
-            // District failed - record detailed errors
-            failedDistricts.push(districtId)
-            districtErrors.set(districtId, districtResults.errors)
-
-            // Add summary error message
-            const errorSummary = `District ${districtId} failed: ${districtResults.errors.map(e => e.operation + ' - ' + e.error).join('; ')}`
-            errors.push(errorSummary)
-
-            logger.warn('Failed to fetch district data', {
-              districtId,
-              errorCount: districtResults.errors.length,
-              errors: districtResults.errors,
-              processingTimeMs: Date.now() - districtStartTime,
-            })
-          }
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-
-          // Record district-level error
-          failedDistricts.push(districtId)
-          const districtError: DistrictError = {
-            districtId,
-            operation: 'districtPerformance', // Default to first operation
-            error: errorMessage,
-            timestamp: new Date().toISOString(),
-            shouldRetry: !(error instanceof CircuitBreakerError), // Don't retry circuit breaker errors immediately
-          }
-          districtErrors.set(districtId, [districtError])
-
-          // Check if this is a circuit breaker error
-          if (error instanceof CircuitBreakerError) {
-            errors.push(
-              `Circuit breaker is open for district ${districtId}: ${errorMessage}`
-            )
-            logger.warn('Circuit breaker prevented scraping attempt', {
-              districtId,
-              error: errorMessage,
-              circuitBreakerStats: this.scrapingCircuitBreaker.getStats(),
-            })
-
-            // When circuit breaker is open, we should fail fast for remaining districts
-            // to avoid wasting time on operations that will likely fail
-            logger.info(
-              'Circuit breaker is open, stopping district processing early',
-              {
-                processedDistricts: districtData.size,
-                remainingDistricts:
-                  districtIds.length -
-                  Array.from(districtData.keys()).length -
-                  1,
-                circuitBreakerStats: this.scrapingCircuitBreaker.getStats(),
-              }
-            )
-            break
-          } else {
-            errors.push(
-              `Failed to fetch data for district ${districtId}: ${errorMessage}`
-            )
-            logger.warn('Failed to fetch district data', {
-              districtId,
-              error: errorMessage,
-              processingTimeMs: Date.now() - districtStartTime,
-            })
-          }
-        }
-      }
-
-      const endTime = Date.now()
-      const durationMs = endTime - startTime
-      const circuitBreakerStats = this.scrapingCircuitBreaker.getStats()
-
-      logger.info(
-        'Completed data scraping operation with resilient processing',
-        {
-          totalDistricts: districtIds.length,
-          successfulDistricts: successfulDistricts.length,
-          failedDistricts: failedDistricts.length,
-          errors: errors.length,
-          durationMs,
-          circuitBreakerState: circuitBreakerStats.state,
-          circuitBreakerFailures: circuitBreakerStats.failureCount,
-          successfulDistrictIds: successfulDistricts,
-          failedDistrictIds: failedDistricts,
-        }
-      )
-
-      // Create partial snapshot if we have some successful districts
-      // Don't fail completely unless we have zero successful districts
-      if (successfulDistricts.length === 0) {
-        const circuitBreakerInfo =
-          circuitBreakerStats.state === 'OPEN'
-            ? ` Circuit breaker is open (next retry: ${circuitBreakerStats.nextRetryTime?.toISOString()}).`
-            : ''
-        throw new Error(
-          `Failed to fetch data for any configured districts.${circuitBreakerInfo} Errors: ${errors.join('; ')}`
-        )
-      }
-
-      return {
-        allDistricts: allDistrictsData,
-        allDistrictsMetadata,
-        districtData,
-        scrapingMetadata: {
-          startTime: startTimeIso,
-          endTime: new Date().toISOString(),
-          durationMs,
-          districtCount: districtData.size,
-          errors,
-          districtErrors,
-          successfulDistricts,
-          failedDistricts,
-        },
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      const circuitBreakerStats = this.scrapingCircuitBreaker.getStats()
-
-      logger.error('Data scraping failed', {
-        error: errorMessage,
-        errors,
-        successfulDistricts: successfulDistricts.length,
-        failedDistricts: failedDistricts.length,
-        circuitBreakerState: circuitBreakerStats.state,
-        circuitBreakerFailures: circuitBreakerStats.failureCount,
-      })
-
-      throw new Error(`Scraping failed: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Fetch all districts data from the dashboard
-   * Tries getAllDistrictsWithMetadata first (preferred - returns actual "As of" date)
-   * Falls back to getAllDistricts for backward compatibility with tests
-   */
-  private async fetchAllDistrictsFromDashboard(currentDate: string): Promise<{
-    data: ScrapedRecord[]
-    metadata: { fromCache: boolean; csvDate: string; fetchedAt: string }
-  }> {
-    // Try getAllDistrictsWithMetadata first if available
-    if (typeof this.scraper.getAllDistrictsWithMetadata === 'function') {
-      try {
-        const allDistricts = await this.scrapingCircuitBreaker.execute(
-          async () => {
-            const retryResult = await RetryManager.executeWithRetry(
-              () => this.scraper.getAllDistrictsWithMetadata(),
-              this.retryOptions,
-              { operation: 'getAllDistrictsWithMetadata' }
-            )
-
-            if (!retryResult.success) {
-              throw retryResult.error || new Error('Retry operation failed')
-            }
-
-            // Check if result has the expected shape
-            if (
-              !retryResult.result ||
-              !('records' in retryResult.result) ||
-              !('actualDate' in retryResult.result)
-            ) {
-              throw new Error(
-                'getAllDistrictsWithMetadata returned invalid result'
-              )
-            }
-
-            return retryResult
-          },
-          { operation: 'getAllDistrictsWithMetadata' }
-        )
-
-        if (!allDistricts.success || !allDistricts.result) {
-          throw new Error(
-            `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
-          )
-        }
-
-        const { records, actualDate } = allDistricts.result
-
-        logger.info('All Districts data fetched from dashboard with metadata', {
-          requestedDate: currentDate,
-          actualDate,
-          recordCount: records.length,
-          fromCache: false,
-          attempts: allDistricts.attempts,
-        })
-
-        return {
-          data: records,
-          metadata: {
-            fromCache: false,
-            csvDate: actualDate,
-            fetchedAt: new Date().toISOString(),
-          },
-        }
-      } catch (metadataError) {
-        logger.warn(
-          'getAllDistrictsWithMetadata failed, falling back to getAllDistricts',
-          {
-            error:
-              metadataError instanceof Error
-                ? metadataError.message
-                : 'Unknown error',
-          }
-        )
-        // Fall through to legacy method
-      }
-    }
-
-    // Fallback to getAllDistricts (for backward compatibility with tests)
-    // WARNING: This path uses currentDate which may be incorrect
-    logger.warn('Using legacy getAllDistricts - actualDate may be incorrect')
-
-    const allDistricts = await this.scrapingCircuitBreaker.execute(
-      async () => {
-        const retryResult = await RetryManager.executeWithRetry(
-          () => this.scraper.getAllDistricts(),
-          this.retryOptions,
-          { operation: 'getAllDistricts' }
-        )
-
-        if (!retryResult.success) {
-          throw retryResult.error || new Error('Retry operation failed')
-        }
-
-        return retryResult
-      },
-      { operation: 'getAllDistricts' }
-    )
-
-    if (!allDistricts.success || !allDistricts.result) {
-      throw new Error(
-        `Failed to fetch all districts: ${allDistricts.error?.message || 'Unknown error'}`
-      )
-    }
-
-    logger.info('All Districts data fetched from dashboard (legacy)', {
-      date: currentDate,
-      recordCount: allDistricts.result.length,
-      fromCache: false,
-      attempts: allDistricts.attempts,
-    })
-
-    return {
-      data: allDistricts.result,
-      metadata: {
-        fromCache: false,
-        csvDate: currentDate,
-        fetchedAt: new Date().toISOString(),
-      },
-    }
-  }
-
-  /**
-   * Get configured district IDs and validate them against all districts data
-   * This replaces the old extractDistrictIds method to use configured districts instead of all districts
-   */
-  private async getConfiguredDistrictIds(
-    allDistricts: ScrapedRecord[]
-  ): Promise<string[]> {
-    // Get configured districts from the configuration service
-    const configuredDistricts =
-      await this.districtConfigService.getConfiguredDistricts()
-
-    if (configuredDistricts.length === 0) {
-      throw new Error(
-        'No districts configured for data collection. Please configure at least one district.'
-      )
-    }
-
-    // Extract all available district IDs from the summary data for validation
-    const availableDistrictIds = this.extractDistrictIds(allDistricts)
-
-    // Validate configured districts against available districts
-    const validDistricts: string[] = []
-    const invalidDistricts: string[] = []
-
-    for (const districtId of configuredDistricts) {
-      if (availableDistrictIds.includes(districtId)) {
-        validDistricts.push(districtId)
-      } else {
-        invalidDistricts.push(districtId)
-        logger.warn('Configured district not found in all-districts summary', {
-          districtId,
-          availableDistricts: availableDistrictIds,
-        })
-      }
-    }
-
-    if (invalidDistricts.length > 0) {
-      logger.warn(
-        'Some configured districts were not found in the Toastmasters system',
-        {
-          invalidDistricts,
-          validDistricts,
-          totalConfigured: configuredDistricts.length,
-        }
-      )
-    }
-
-    if (validDistricts.length === 0) {
-      throw new Error(
-        `None of the configured districts were found in the Toastmasters system. Configured: [${configuredDistricts.join(', ')}], Available: [${availableDistrictIds.join(', ')}]`
-      )
-    }
-
-    logger.info('Using configured districts for data collection', {
-      configuredCount: configuredDistricts.length,
-      validCount: validDistricts.length,
-      invalidCount: invalidDistricts.length,
-      validDistricts,
-      invalidDistricts,
-    })
-
-    return validDistricts
-  }
-
-  /**
-   * Extract district IDs from all districts summary data
-   * This method is now used internally for validation purposes
-   */
-  private extractDistrictIds(allDistricts: ScrapedRecord[]): string[] {
-    const districtIds = new Set<string>()
-
-    for (const record of allDistricts) {
-      // Try different possible field names for district ID
-      const possibleFields = [
-        'DISTRICT',
-        'District',
-        'district',
-        'District ID',
-        'DistrictId',
-      ]
-
-      for (const field of possibleFields) {
-        const value = record[field]
-        if (value && typeof value === 'string' && value.trim()) {
-          // Clean up the district ID (remove "District " prefix if present)
-          const cleanId = value.replace(/^District\s+/i, '').trim()
-          if (cleanId) {
-            districtIds.add(cleanId)
-            break
-          }
-        }
-      }
-    }
-
-    const result = Array.from(districtIds).sort()
-    logger.debug('Extracted district IDs from all-districts summary', {
-      count: result.length,
-      ids: result,
-    })
-    return result
   }
 
   /**
@@ -1108,630 +264,111 @@ export class RefreshService {
   }
 
   /**
-   * Closing period information returned from normalizeData
-   * Used to pass closing period context to createSnapshot
-   */
-  private closingPeriodInfo?: {
-    isClosingPeriod: boolean
-    dataMonth: string
-    asOfDate: string
-    snapshotDate: string
-    collectionDate: string
-  }
-
-  /**
-   * Normalize raw scraping data into structured NormalizedData format
-   * Delegates to DataNormalizer for the actual transformation logic
-   */
-  private async normalizeData(rawData: RawData): Promise<NormalizedData> {
-    // Delegate to DataNormalizer
-    const result = await this.dataNormalizer.normalize(rawData)
-
-    // Store closing period info for use by createSnapshot
-    this.closingPeriodInfo = result.closingPeriodInfo
-
-    return result.normalizedData
-  }
-
-  /**
-   * Calculate all-districts rankings from All Districts CSV data
-   * Converts ScrapedRecord array to DistrictStatistics format and calculates rankings
+   * Check if cached data is available for a specific date
    *
-   * @param allDistricts - Array of scraped records from All Districts CSV
-   * @param metadata - Metadata about the data source (cache info, dates, etc.)
-   * @returns AllDistrictsRankingsData with rankings and metadata
+   * @param date - Target date (YYYY-MM-DD format), defaults to current date
+   * @returns Cache availability information
    */
-  private async calculateAllDistrictsRankings(
-    allDistricts: ScrapedRecord[],
-    metadata: { csvDate: string; fetchedAt: string; fromCache: boolean }
-  ): Promise<import('../types/snapshots.js').AllDistrictsRankingsData> {
-    const startTime = Date.now()
-    const calculatedAt = new Date().toISOString()
+  async checkCacheAvailability(date?: string): Promise<{
+    available: boolean
+    date: string
+    cachedDistricts: string[]
+    missingDistricts: string[]
+  }> {
+    const targetDate = date ?? this.getCurrentDateString()
+    const availability =
+      await this.snapshotBuilder.getCacheAvailability(targetDate)
 
-    logger.info('Starting all-districts rankings calculation', {
-      operation: 'calculateAllDistrictsRankings',
-      districtCount: allDistricts.length,
-      csvDate: metadata.csvDate,
-      fromCache: metadata.fromCache,
-    })
-
-    try {
-      if (!this.rankingCalculator) {
-        throw new Error(
-          'Ranking calculator not available for all-districts rankings calculation'
-        )
-      }
-
-      if (allDistricts.length === 0) {
-        throw new Error('No districts provided for rankings calculation')
-      }
-
-      // Convert ScrapedRecord array to DistrictStatistics format
-      // Each ScrapedRecord from All Districts CSV needs to be converted to DistrictStatistics
-      const districtStats: DistrictStatistics[] = allDistricts.map(record => {
-        const districtId = String(
-          record['DISTRICT'] || record['District'] || ''
-        )
-          .replace(/^District\s+/i, '')
-          .trim()
-
-        return {
-          districtId,
-          asOfDate: metadata.csvDate,
-          membership: {
-            total: 0,
-            change: 0,
-            changePercent: 0,
-            byClub: [],
-          },
-          clubs: {
-            total: 0,
-            active: 0,
-            suspended: 0,
-            ineligible: 0,
-            low: 0,
-            distinguished: 0,
-          },
-          education: {
-            totalAwards: 0,
-            byType: [],
-            topClubs: [],
-          },
-          // Store the raw All Districts CSV record for ranking calculation
-          districtPerformance: [record],
-          divisionPerformance: [],
-          clubPerformance: [],
-        }
-      })
-
-      logger.debug('Converted ScrapedRecords to DistrictStatistics', {
-        operation: 'calculateAllDistrictsRankings',
-        inputCount: allDistricts.length,
-        outputCount: districtStats.length,
-      })
-
-      // Calculate rankings using the ranking calculator
-      const rankedDistricts =
-        await this.rankingCalculator.calculateRankings(districtStats)
-
-      logger.debug('Rankings calculated successfully', {
-        operation: 'calculateAllDistrictsRankings',
-        rankedCount: rankedDistricts.length,
-        rankingVersion: this.rankingCalculator.getRankingVersion(),
-      })
-
-      // Build AllDistrictsRankingsData structure
-      const rankings: import('../types/snapshots.js').DistrictRanking[] =
-        rankedDistricts
-          .filter(d => d.ranking) // Only include districts with ranking data
-          .map(d => {
-            const ranking = d.ranking!
-
-            return {
-              districtId: d.districtId,
-              districtName: ranking.districtName,
-              region: ranking.region,
-              paidClubs: ranking.paidClubs,
-              paidClubBase: ranking.paidClubBase,
-              clubGrowthPercent: ranking.clubGrowthPercent,
-              totalPayments: ranking.totalPayments,
-              paymentBase: ranking.paymentBase,
-              paymentGrowthPercent: ranking.paymentGrowthPercent,
-              activeClubs: ranking.activeClubs,
-              distinguishedClubs: ranking.distinguishedClubs,
-              selectDistinguished: ranking.selectDistinguished,
-              presidentsDistinguished: ranking.presidentsDistinguished,
-              distinguishedPercent: ranking.distinguishedPercent,
-              clubsRank: ranking.clubsRank,
-              paymentsRank: ranking.paymentsRank,
-              distinguishedRank: ranking.distinguishedRank,
-              aggregateScore: ranking.aggregateScore,
-            }
-          })
-
-      const duration = Date.now() - startTime
-
-      const rankingsData: import('../types/snapshots.js').AllDistrictsRankingsData =
-        {
-          metadata: {
-            snapshotId: '', // Will be set by caller
-            calculatedAt,
-            schemaVersion: this.getCurrentSchemaVersion(),
-            calculationVersion: this.getCurrentCalculationVersion(),
-            rankingVersion: this.rankingCalculator.getRankingVersion(),
-            sourceCsvDate: metadata.csvDate,
-            csvFetchedAt: metadata.fetchedAt,
-            totalDistricts: rankings.length,
-            fromCache: metadata.fromCache,
-          },
-          rankings,
-        }
-
-      logger.info('All-districts rankings calculation completed successfully', {
-        operation: 'calculateAllDistrictsRankings',
-        totalDistricts: rankings.length,
-        durationMs: duration,
-        rankingVersion: this.rankingCalculator.getRankingVersion(),
-        fromCache: metadata.fromCache,
-      })
-
-      return rankingsData
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-
-      logger.error('All-districts rankings calculation failed', {
-        operation: 'calculateAllDistrictsRankings',
-        error: errorMessage,
-        districtCount: allDistricts.length,
-        durationMs: duration,
-      })
-
-      throw new Error(
-        `Failed to calculate all-districts rankings: ${errorMessage}`
-      )
+    return {
+      available: availability.available,
+      date: availability.date,
+      cachedDistricts: availability.cachedDistricts,
+      missingDistricts: availability.missingDistricts,
     }
   }
 
   /**
-   * Create a snapshot with proper versioning and error handling
-   * Supports detailed error tracking per district for resilient processing
-   * Handles closing period data by using override date and comparison logic
+   * Convert SnapshotBuilder BuildResult to RefreshResult
    */
-  private async createSnapshot(
-    data: NormalizedData,
-    status: SnapshotStatus,
-    errors: string[] = [],
-    scrapingMetadata?: RawData['scrapingMetadata'],
-    allDistrictsRankings?: import('../types/snapshots.js').AllDistrictsRankingsData
-  ): Promise<Snapshot> {
-    const snapshotId = Date.now().toString()
-    const createdAt = new Date().toISOString()
+  private convertBuildResultToRefreshResult(
+    buildResult: BuildResult,
+    startTime: number,
+    startedAt: string
+  ): RefreshResult {
+    const completedAt = new Date().toISOString()
+    const duration_ms = Date.now() - startTime
 
-    const snapshot: Snapshot = {
-      snapshot_id: snapshotId,
-      created_at: createdAt,
-      schema_version: this.getCurrentSchemaVersion(),
-      calculation_version: this.getCurrentCalculationVersion(),
-      status,
-      errors,
-      payload: data,
-    }
-
-    // Add detailed error tracking to snapshot metadata if available
-    if (scrapingMetadata && 'districtErrors' in scrapingMetadata) {
-      // Store district-level error information in the snapshot for future retry logic
-      const detailedErrors = Array.from(
-        scrapingMetadata.districtErrors.entries()
-      ).flatMap(([districtId, districtErrors]) =>
-        districtErrors.map(
-          error => `${districtId}: ${error.operation} - ${error.error}`
-        )
-      )
-
-      snapshot.errors = [...errors, ...detailedErrors]
-    }
-
-    // Determine if this is closing period data and get the appropriate snapshot date
-    const isClosingPeriod = this.closingPeriodInfo?.isClosingPeriod ?? false
-    const overrideSnapshotDate = isClosingPeriod
-      ? this.closingPeriodInfo?.snapshotDate
-      : undefined
-    const collectionDate =
-      this.closingPeriodInfo?.collectionDate ?? data.metadata.dataAsOfDate
-
-    logger.info('Creating snapshot with resilient error tracking', {
-      operation: 'createSnapshot',
-      snapshot_id: snapshotId,
-      status,
-      schema_version: snapshot.schema_version,
-      calculation_version: snapshot.calculation_version,
-      district_count: data.districts.length,
-      error_count: snapshot.errors.length,
-      created_at: createdAt,
-      successful_districts: scrapingMetadata?.successfulDistricts?.length || 0,
-      failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
-      has_all_districts_rankings: !!allDistrictsRankings,
-      is_closing_period: isClosingPeriod,
-      override_snapshot_date: overrideSnapshotDate,
-      collection_date: collectionDate,
+    logger.info('Refresh completed', {
+      operation: 'executeRefresh',
+      success: buildResult.success,
+      status: buildResult.status,
+      snapshotId: buildResult.snapshotId,
+      districtsIncluded: buildResult.districtsIncluded.length,
+      districtsMissing: buildResult.districtsMissing.length,
+      duration_ms,
     })
 
-    try {
-      // For closing period data, check if we should update the existing snapshot
-      // Requirements 2.2, 2.3, 2.4: Only update if new data is newer or equal
-      if (
-        isClosingPeriod &&
-        overrideSnapshotDate &&
-        'shouldUpdateClosingPeriodSnapshot' in this.snapshotStore
-      ) {
-        const perDistrictStore = this.snapshotStore as {
-          shouldUpdateClosingPeriodSnapshot: (
-            snapshotDate: string,
-            newCollectionDate: string
-          ) => Promise<
-            import('./PerDistrictSnapshotStore.js').SnapshotComparisonResult
-          >
-        }
-
-        const comparisonResult =
-          await perDistrictStore.shouldUpdateClosingPeriodSnapshot(
-            overrideSnapshotDate,
-            collectionDate
-          )
-
-        if (!comparisonResult.shouldUpdate) {
-          logger.info(
-            'Skipping closing period snapshot update - existing snapshot has newer data',
-            {
-              operation: 'createSnapshot',
-              snapshot_date: overrideSnapshotDate,
-              new_collection_date: collectionDate,
-              existing_collection_date: comparisonResult.existingCollectionDate,
-              reason: comparisonResult.reason,
-            }
-          )
-
-          // Return a snapshot object with the existing snapshot date
-          // The actual snapshot was not written, but we return the info for the caller
-          return {
-            ...snapshot,
-            snapshot_id: overrideSnapshotDate,
-          }
-        }
-
-        logger.info('Proceeding with closing period snapshot update', {
-          operation: 'createSnapshot',
-          snapshot_date: overrideSnapshotDate,
-          new_collection_date: collectionDate,
-          reason: comparisonResult.reason,
-        })
-      }
-
-      // Write snapshot with all-districts rankings if available
-      // The PerDistrictFileSnapshotStore.writeSnapshot accepts rankings as second parameter
-      if (
-        allDistrictsRankings &&
-        'writeAllDistrictsRankings' in this.snapshotStore
-      ) {
-        // Cast to the per-district store type that supports rankings and write options
-        const perDistrictStore = this.snapshotStore as {
-          writeSnapshot: (
-            snapshot: Snapshot,
-            rankings?: import('../types/snapshots.js').AllDistrictsRankingsData,
-            options?: import('./PerDistrictSnapshotStore.js').WriteSnapshotOptions
-          ) => Promise<void>
-        }
-
-        // Pass override date for closing period snapshots (Requirement 2.1)
-        const writeOptions = overrideSnapshotDate
-          ? { overrideSnapshotDate }
-          : undefined
-
-        await perDistrictStore.writeSnapshot(
-          snapshot,
-          allDistrictsRankings,
-          writeOptions
-        )
-
-        logger.info('Snapshot created with all-districts rankings', {
-          operation: 'createSnapshot',
-          snapshot_id: snapshotId,
-          rankings_count: allDistrictsRankings.rankings.length,
-          override_snapshot_date: overrideSnapshotDate,
-        })
-      } else {
-        // No rankings or store doesn't support them
-        await this.snapshotStore.writeSnapshot(snapshot)
-      }
-
-      // Get the actual snapshot that was written (may have different ID due to ISO date conversion)
-      // For failed/partial snapshots, use getLatest() since getLatestSuccessful() only returns success status
-      const writtenSnapshot =
-        status === 'success'
-          ? await this.snapshotStore.getLatestSuccessful()
-          : await this.snapshotStore.getLatest()
-
-      // For failed snapshots, the snapshot may not be retrievable if it's the first snapshot
-      // In that case, return the original snapshot with its ID
-      const actualSnapshotId = writtenSnapshot?.snapshot_id || snapshotId
-
-      logger.info('Snapshot created successfully with error tracking', {
-        operation: 'createSnapshot',
-        snapshot_id: actualSnapshotId,
-        original_snapshot_id: snapshotId,
-        status,
-        district_count: data.districts.length,
-        successful_districts:
-          scrapingMetadata?.successfulDistricts?.length || 0,
-        failed_districts: scrapingMetadata?.failedDistricts?.length || 0,
-        has_all_districts_rankings: !!allDistrictsRankings,
-      })
-
-      // Return the snapshot with the actual written ID
-      return {
-        ...snapshot,
-        snapshot_id: actualSnapshotId,
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to write snapshot', {
-        operation: 'createSnapshot',
-        snapshot_id: snapshotId,
-        status,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to create snapshot: ${errorMessage}`)
+    return {
+      success: buildResult.success,
+      snapshot_id: buildResult.snapshotId,
+      duration_ms,
+      errors: buildResult.errors,
+      status: buildResult.status,
+      metadata: {
+        districtCount: buildResult.districtsIncluded.length,
+        startedAt,
+        completedAt,
+        schemaVersion: this.getCurrentSchemaVersion(),
+        calculationVersion: this.getCurrentCalculationVersion(),
+      },
     }
+  }
+
+  /**
+   * Create a failed RefreshResult
+   */
+  private createFailedResult(
+    startTime: number,
+    startedAt: string,
+    errors: string[],
+    districtCount: number
+  ): RefreshResult {
+    const completedAt = new Date().toISOString()
+    const duration_ms = Date.now() - startTime
+
+    return {
+      success: false,
+      duration_ms,
+      errors,
+      status: 'failed',
+      metadata: {
+        districtCount,
+        startedAt,
+        completedAt,
+        schemaVersion: this.getCurrentSchemaVersion(),
+        calculationVersion: this.getCurrentCalculationVersion(),
+      },
+    }
+  }
+
+  /**
+   * Get current date as YYYY-MM-DD string
+   */
+  private getCurrentDateString(): string {
+    return new Date().toISOString().split('T')[0] ?? ''
   }
 
   /**
    * Get current schema version
    */
   private getCurrentSchemaVersion(): string {
-    // Import the constant at runtime to avoid circular dependencies
-    return '1.0.0' // This should match CURRENT_SCHEMA_VERSION
+    return '1.0.0'
   }
 
   /**
    * Get current calculation version
    */
   private getCurrentCalculationVersion(): string {
-    // Import the constant at runtime to avoid circular dependencies
-    return '1.0.0' // This should match CURRENT_CALCULATION_VERSION
-  }
-
-  /**
-   * Get circuit breaker statistics for monitoring and debugging
-   */
-  getCircuitBreakerStats(): { scraping: unknown } {
-    return {
-      scraping: this.scrapingCircuitBreaker.getStats(),
-    }
-  }
-
-  /**
-   * Reset circuit breaker to allow immediate retry attempts
-   * Useful for manual recovery after resolving external issues
-   */
-  resetCircuitBreaker(): void {
-    logger.info('Manually resetting scraping circuit breaker')
-    this.scrapingCircuitBreaker.reset()
-  }
-
-  /**
-   * Fetch all data types for a single district with resilient error handling
-   * Returns success/failure status with detailed error information per operation
-   */
-  private async fetchDistrictDataResilient(districtId: string): Promise<{
-    success: boolean
-    districtPerformance: ScrapedRecord[]
-    divisionPerformance: ScrapedRecord[]
-    clubPerformance: ScrapedRecord[]
-    errors: DistrictError[]
-  }> {
-    const errors: DistrictError[] = []
-    let districtPerformance: ScrapedRecord[] = []
-    let divisionPerformance: ScrapedRecord[] = []
-    let clubPerformance: ScrapedRecord[] = []
-
-    // Attempt to fetch district performance data
-    try {
-      const districtPerformanceResult =
-        await this.scrapingCircuitBreaker.execute(
-          async () => {
-            const retryResult = await RetryManager.executeWithRetry(
-              () => this.scraper.getDistrictPerformance(districtId),
-              this.retryOptions,
-              { operation: 'getDistrictPerformance', districtId }
-            )
-
-            if (!retryResult.success) {
-              throw retryResult.error || new Error('Retry operation failed')
-            }
-
-            return retryResult
-          },
-          { operation: 'getDistrictPerformance', districtId }
-        )
-
-      if (
-        districtPerformanceResult.success &&
-        districtPerformanceResult.result
-      ) {
-        districtPerformance = districtPerformanceResult.result
-      } else {
-        errors.push({
-          districtId,
-          operation: 'districtPerformance',
-          error: districtPerformanceResult.error?.message || 'Unknown error',
-          timestamp: new Date().toISOString(),
-          shouldRetry: true,
-        })
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      errors.push({
-        districtId,
-        operation: 'districtPerformance',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        shouldRetry: !(error instanceof CircuitBreakerError),
-      })
-    }
-
-    // Attempt to fetch division performance data
-    try {
-      const divisionPerformanceResult =
-        await this.scrapingCircuitBreaker.execute(
-          async () => {
-            const retryResult = await RetryManager.executeWithRetry(
-              () => this.scraper.getDivisionPerformance(districtId),
-              this.retryOptions,
-              { operation: 'getDivisionPerformance', districtId }
-            )
-
-            if (!retryResult.success) {
-              throw retryResult.error || new Error('Retry operation failed')
-            }
-
-            return retryResult
-          },
-          { operation: 'getDivisionPerformance', districtId }
-        )
-
-      if (
-        divisionPerformanceResult.success &&
-        divisionPerformanceResult.result
-      ) {
-        divisionPerformance = divisionPerformanceResult.result
-      } else {
-        errors.push({
-          districtId,
-          operation: 'divisionPerformance',
-          error: divisionPerformanceResult.error?.message || 'Unknown error',
-          timestamp: new Date().toISOString(),
-          shouldRetry: true,
-        })
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      errors.push({
-        districtId,
-        operation: 'divisionPerformance',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        shouldRetry: !(error instanceof CircuitBreakerError),
-      })
-    }
-
-    // Attempt to fetch club performance data
-    try {
-      const clubPerformanceResult = await this.scrapingCircuitBreaker.execute(
-        async () => {
-          const retryResult = await RetryManager.executeWithRetry(
-            () => this.scraper.getClubPerformance(districtId),
-            this.retryOptions,
-            { operation: 'getClubPerformance', districtId }
-          )
-
-          if (!retryResult.success) {
-            throw retryResult.error || new Error('Retry operation failed')
-          }
-
-          return retryResult
-        },
-        { operation: 'getClubPerformance', districtId }
-      )
-
-      if (clubPerformanceResult.success && clubPerformanceResult.result) {
-        clubPerformance = clubPerformanceResult.result
-      } else {
-        errors.push({
-          districtId,
-          operation: 'clubPerformance',
-          error: clubPerformanceResult.error?.message || 'Unknown error',
-          timestamp: new Date().toISOString(),
-          shouldRetry: true,
-        })
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      errors.push({
-        districtId,
-        operation: 'clubPerformance',
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-        shouldRetry: !(error instanceof CircuitBreakerError),
-      })
-    }
-
-    // Consider district successful if we got at least one data type
-    // This allows partial data collection for districts with some failing endpoints
-    const success =
-      districtPerformance.length > 0 ||
-      divisionPerformance.length > 0 ||
-      clubPerformance.length > 0
-
-    return {
-      success,
-      districtPerformance,
-      divisionPerformance,
-      clubPerformance,
-      errors,
-    }
-  }
-
-  /**
-   * Get previously failed districts from the latest snapshot for retry logic
-   */
-  private async getPreviouslyFailedDistricts(): Promise<DistrictError[]> {
-    try {
-      const latestSnapshot = await this.snapshotStore.getLatest()
-      if (!latestSnapshot) {
-        return []
-      }
-
-      // Check if this is a per-district snapshot store with metadata
-      if ('getSnapshotMetadata' in this.snapshotStore) {
-        const perDistrictStore = this.snapshotStore as {
-          getSnapshotMetadata: (id: string) => Promise<{
-            failedDistricts?: string[]
-            createdAt?: string
-          } | null>
-        }
-        const metadata = await perDistrictStore.getSnapshotMetadata(
-          latestSnapshot.snapshot_id
-        )
-
-        if (
-          metadata &&
-          metadata.failedDistricts &&
-          Array.isArray(metadata.failedDistricts) &&
-          metadata.failedDistricts.length > 0
-        ) {
-          // Create retry entries for previously failed districts
-          return metadata.failedDistricts.map((districtId: string) => ({
-            districtId,
-            operation: 'districtPerformance' as const,
-            error: 'Previously failed district',
-            timestamp: metadata.createdAt || new Date().toISOString(),
-            shouldRetry: true,
-          }))
-        }
-      }
-
-      return []
-    } catch (error) {
-      logger.warn('Failed to get previously failed districts for retry', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-      return []
-    }
+    return '1.0.0'
   }
 }

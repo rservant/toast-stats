@@ -10,10 +10,7 @@ import { RetryManager } from '../../utils/RetryManager.js'
 import { RateLimiter, RateLimiterManager } from '../../utils/RateLimiter.js'
 import { RefreshService } from '../RefreshService.js'
 import type { RankingCalculator } from '../RankingCalculator.js'
-import type {
-  DistrictStatistics,
-  ScrapedRecord,
-} from '../../types/districts.js'
+import type { DistrictStatistics } from '../../types/districts.js'
 import type { SnapshotStore } from '../../types/snapshots.js'
 import type {
   BackfillRequest,
@@ -345,13 +342,16 @@ export class DataSourceSelector {
   }
 
   /**
-   * Execute per-district collection using RefreshService methods
-   * Uses RefreshService's district-specific scraping capabilities
+   * Execute per-district collection using cached data
+   * Reads from the Raw CSV Cache and builds snapshots using RefreshService
+   *
+   * Note: This method now reads from cached data only. If data is not in the cache,
+   * the scraper-cli tool must be run first to populate the cache.
    */
   private async executePerDistrictCollection(
     params: RefreshParams
   ): Promise<DistrictStatistics[]> {
-    logger.info('Executing per-district collection via RefreshService', {
+    logger.info('Executing per-district collection from cached data', {
       params,
       districtIds: params.districtIds?.length || 0,
       operation: 'executePerDistrictCollection',
@@ -362,203 +362,76 @@ export class DataSourceSelector {
     }
 
     try {
-      const results: DistrictStatistics[] = []
-
-      // Create our own scraper instance for per-district collection
-      // BackfillService should be independent and not rely on RefreshService internals
-      const { ToastmastersScraper } = await import('../ToastmastersScraper.js')
-      const { getProductionServiceFactory } =
-        await import('../ProductionServiceFactory.js')
-
-      // Get cache service from production factory
-      const serviceFactory = getProductionServiceFactory()
-      const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
-      const scraper = new ToastmastersScraper(rawCSVCacheService)
-
       // Extract the date from params for historical data fetching
       // Use current date as fallback if not provided
       const dateString =
         params.date || new Date().toISOString().split('T')[0] || ''
 
-      // Fetch and cache the all-districts CSV for this date
-      // This ensures we have the summary/rankings data for historical backfill
-      // IMPORTANT: Use getAllDistrictsWithMetadata to get the actual "As of" date
-      let actualCsvDate = dateString // Default to requested date
-      try {
-        logger.info('Fetching all-districts CSV for backfill date', {
+      // Use RefreshService to build a snapshot from cached data for the specified date
+      // RefreshService now uses SnapshotBuilder which reads from the cache
+      logger.info(
+        'Building snapshot from cached data for per-district collection',
+        {
           date: dateString,
+          targetDistricts: params.districtIds,
           operation: 'executePerDistrictCollection',
-        })
-
-        const allDistrictsResult =
-          await scraper.getAllDistrictsWithMetadata(dateString)
-        actualCsvDate = allDistrictsResult.actualDate
-
-        logger.info('All-districts CSV fetched and cached successfully', {
-          requestedDate: dateString,
-          actualDate: actualCsvDate,
-          recordCount: allDistrictsResult.records.length,
-          operation: 'executePerDistrictCollection',
-        })
-      } catch (error) {
-        // Log warning but continue with per-district collection
-        // The all-districts CSV is useful but not strictly required for per-district data
-        // However, we should use the requested date as the asOfDate in this case
-        logger.warn(
-          'Failed to fetch all-districts CSV for backfill date, continuing with per-district collection using requested date',
-          {
-            date: dateString,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            operation: 'executePerDistrictCollection',
-          }
-        )
-      }
-
-      for (const districtId of params.districtIds) {
-        try {
-          logger.debug('Collecting data for district', {
-            districtId,
-            date: dateString,
-            operation: 'executePerDistrictCollection',
-          })
-
-          // Fetch district-specific data using the scraper with proper error handling
-          // Pass the date parameter to fetch historical data for backfill operations
-          let districtPerformanceData: ScrapedRecord[] = []
-          let divisionPerformanceData: ScrapedRecord[] = []
-          let clubPerformanceData: ScrapedRecord[] = []
-
-          try {
-            districtPerformanceData = await scraper.getDistrictPerformance(
-              districtId,
-              dateString
-            )
-            logger.debug('District performance data fetched successfully', {
-              districtId,
-              date: dateString,
-              recordCount: districtPerformanceData.length,
-              operation: 'executePerDistrictCollection',
-            })
-          } catch (error) {
-            logger.warn(
-              'District performance data not available, using empty data',
-              {
-                districtId,
-                date: dateString,
-                error: error instanceof Error ? error.message : 'Unknown error',
-                operation: 'executePerDistrictCollection',
-              }
-            )
-          }
-
-          try {
-            divisionPerformanceData = await scraper.getDivisionPerformance(
-              districtId,
-              dateString
-            )
-            logger.debug('Division performance data fetched successfully', {
-              districtId,
-              date: dateString,
-              recordCount: divisionPerformanceData.length,
-              operation: 'executePerDistrictCollection',
-            })
-          } catch (error) {
-            logger.warn(
-              'Division performance data not available, using empty data',
-              {
-                districtId,
-                date: dateString,
-                error: error instanceof Error ? error.message : 'Unknown error',
-                operation: 'executePerDistrictCollection',
-              }
-            )
-          }
-
-          try {
-            clubPerformanceData = await scraper.getClubPerformance(
-              districtId,
-              dateString
-            )
-            logger.debug('Club performance data fetched successfully', {
-              districtId,
-              date: dateString,
-              recordCount: clubPerformanceData.length,
-              operation: 'executePerDistrictCollection',
-            })
-          } catch (error) {
-            logger.warn('Failed to fetch club performance data for district', {
-              districtId,
-              date: dateString,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              operation: 'executePerDistrictCollection',
-            })
-            // Continue to next district if club data fails - club data is most important
-            continue
-          }
-
-          // Check if we have at least some club data (most important)
-          if (!clubPerformanceData || clubPerformanceData.length === 0) {
-            logger.warn('No club performance data available for district', {
-              districtId,
-              date: dateString,
-              operation: 'executePerDistrictCollection',
-            })
-            continue
-          }
-
-          // Normalize the district data with available data
-          // Use the actual CSV date from the All Districts fetch
-          const districtStats = await this.normalizeDistrictData(
-            districtId,
-            {
-              districtPerformance: districtPerformanceData,
-              divisionPerformance: divisionPerformanceData,
-              clubPerformance: clubPerformanceData,
-            },
-            actualCsvDate
-          )
-
-          results.push(districtStats)
-
-          logger.debug('Successfully collected district data', {
-            districtId,
-            date: dateString,
-            districtRecords: districtPerformanceData.length,
-            divisionRecords: divisionPerformanceData.length,
-            clubRecords: clubPerformanceData.length,
-            operation: 'executePerDistrictCollection',
-          })
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          logger.warn('Failed to collect data for district', {
-            districtId,
-            date: dateString,
-            error: errorMessage,
-            operation: 'executePerDistrictCollection',
-          })
-          // Continue with other districts
         }
+      )
+
+      const refreshResult = await this.refreshService.executeRefresh(dateString)
+
+      if (!refreshResult.success) {
+        // If cache data is not available, provide a helpful error message
+        const errorMessage = refreshResult.errors.join('; ')
+        if (
+          errorMessage.includes('No cached data available') ||
+          errorMessage.includes('cache')
+        ) {
+          throw new Error(
+            `No cached data available for date ${dateString}. Please run scraper-cli to collect data first: npx scraper-cli scrape --date ${dateString}`
+          )
+        }
+        throw new Error(`RefreshService execution failed: ${errorMessage}`)
       }
 
-      logger.info('Per-district collection completed', {
+      // Get the created snapshot to extract district data
+      if (!refreshResult.snapshot_id) {
+        throw new Error('RefreshService did not create a snapshot')
+      }
+
+      const snapshot = await this.snapshotStore.getSnapshot(
+        refreshResult.snapshot_id
+      )
+      if (!snapshot) {
+        throw new Error(`Snapshot ${refreshResult.snapshot_id} not found`)
+      }
+
+      // Filter to only the requested districts
+      const filteredDistricts = snapshot.payload.districts.filter(
+        (district: DistrictStatistics) =>
+          params.districtIds!.includes(district.districtId)
+      )
+
+      logger.info('Per-district collection from cache completed', {
         date: dateString,
         requestedDistricts: params.districtIds.length,
-        successfulDistricts: results.length,
+        availableDistricts: snapshot.payload.districts.length,
+        filteredDistricts: filteredDistricts.length,
+        snapshotId: refreshResult.snapshot_id,
         operation: 'executePerDistrictCollection',
       })
 
-      // Apply ranking calculation if ranking calculator is available
-      if (this.rankingCalculator && results.length > 0) {
+      // Apply ranking calculation if ranking calculator is available and we have results
+      if (this.rankingCalculator && filteredDistricts.length > 0) {
         logger.info('Applying ranking calculation to collected districts', {
-          districtCount: results.length,
+          districtCount: filteredDistricts.length,
           rankingVersion: this.rankingCalculator.getRankingVersion(),
           operation: 'executePerDistrictCollection',
         })
 
         try {
           const rankedResults =
-            await this.rankingCalculator.calculateRankings(results)
+            await this.rankingCalculator.calculateRankings(filteredDistricts)
 
           logger.info('Ranking calculation completed successfully', {
             districtCount: rankedResults.length,
@@ -577,7 +450,7 @@ export class DataSourceSelector {
             'Ranking calculation failed, continuing without rankings',
             {
               error: errorMessage,
-              districtCount: results.length,
+              districtCount: filteredDistricts.length,
               operation: 'executePerDistrictCollection',
             }
           )
@@ -589,13 +462,13 @@ export class DataSourceSelector {
           {
             hasRankingCalculator: !!this.rankingCalculator,
             rankingCalculatorType: this.rankingCalculator?.constructor?.name,
-            districtCount: results.length,
+            districtCount: filteredDistricts.length,
             operation: 'executePerDistrictCollection',
           }
         )
       }
 
-      return results
+      return filteredDistricts
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
@@ -675,181 +548,5 @@ export class DataSourceSelector {
       })
       throw new Error(`Targeted collection failed: ${errorMessage}`)
     }
-  }
-
-  /**
-   * Normalize district data from scraper results
-   * Converts raw scraper data into DistrictStatistics format
-   *
-   * @param districtId - The district ID
-   * @param data - Raw scraped data for the district
-   * @param asOfDate - The actual "as of" date from the CSV data (not today's date)
-   */
-  private async normalizeDistrictData(
-    districtId: string,
-    data: {
-      districtPerformance: ScrapedRecord[]
-      divisionPerformance: ScrapedRecord[]
-      clubPerformance: ScrapedRecord[]
-    },
-    asOfDate: string
-  ): Promise<DistrictStatistics> {
-    logger.debug('Normalizing district data', {
-      districtId,
-      districtRecords: data.districtPerformance.length,
-      divisionRecords: data.divisionPerformance.length,
-      clubRecords: data.clubPerformance.length,
-      asOfDate,
-      operation: 'normalizeDistrictData',
-    })
-
-    try {
-      // Extract membership data from club performance
-      const totalMembership = this.extractMembershipTotal(data.clubPerformance)
-      const clubMembership = this.extractClubMembership(data.clubPerformance)
-
-      // Count club statistics
-      const totalClubs = data.clubPerformance.length
-      const activeClubs = this.countActiveClubs(data.clubPerformance)
-      const distinguishedClubs = this.countDistinguishedClubs(
-        data.clubPerformance
-      )
-
-      const districtStats: DistrictStatistics = {
-        districtId,
-        asOfDate,
-        membership: {
-          total: totalMembership,
-          change: 0, // Historical change calculation would require previous data
-          changePercent: 0,
-          byClub: clubMembership,
-        },
-        clubs: {
-          total: totalClubs,
-          active: activeClubs,
-          suspended: totalClubs - activeClubs,
-          ineligible: 0, // Would need specific status field
-          low: 0, // Would need membership threshold logic
-          distinguished: distinguishedClubs,
-        },
-        education: {
-          totalAwards: 0, // Would need education data extraction
-          byType: [],
-          topClubs: [],
-        },
-        // Preserve raw data for compatibility
-        districtPerformance: data.districtPerformance,
-        divisionPerformance: data.divisionPerformance,
-        clubPerformance: data.clubPerformance,
-      }
-
-      logger.debug('District data normalized successfully', {
-        districtId,
-        totalMembership,
-        totalClubs,
-        activeClubs,
-        distinguishedClubs,
-        operation: 'normalizeDistrictData',
-      })
-
-      return districtStats
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to normalize district data', {
-        districtId,
-        error: errorMessage,
-        operation: 'normalizeDistrictData',
-      })
-      throw new Error(
-        `Failed to normalize district data for ${districtId}: ${errorMessage}`
-      )
-    }
-  }
-
-  /**
-   * Extract total membership from club performance data
-   */
-  private extractMembershipTotal(clubPerformance: ScrapedRecord[]): number {
-    let total = 0
-    for (const club of clubPerformance) {
-      const members =
-        club['Active Members'] ||
-        club['Membership'] ||
-        club['Members'] ||
-        club['Base Members']
-      if (typeof members === 'string') {
-        const parsed = parseInt(members, 10)
-        if (!isNaN(parsed)) {
-          total += parsed
-        }
-      } else if (typeof members === 'number') {
-        total += members
-      }
-    }
-    return total
-  }
-
-  /**
-   * Extract club membership data with proper typing
-   */
-  private extractClubMembership(clubPerformance: ScrapedRecord[]): Array<{
-    clubId: string
-    clubName: string
-    memberCount: number
-  }> {
-    return clubPerformance
-      .map(club => ({
-        clubId: String(
-          club['Club Number'] || club['ClubId'] || club['Club ID'] || ''
-        ),
-        clubName: String(club['Club Name'] || club['ClubName'] || ''),
-        memberCount: this.parseNumber(
-          club['Active Members'] ||
-            club['Membership'] ||
-            club['Members'] ||
-            club['Base Members'] ||
-            0
-        ),
-      }))
-      .filter(club => club.clubId && club.clubName)
-  }
-
-  /**
-   * Count active clubs from performance data
-   */
-  private countActiveClubs(clubPerformance: ScrapedRecord[]): number {
-    return clubPerformance.filter(club => {
-      const status = club['Club Status'] || club['Status']
-      return !status || String(status).toLowerCase() !== 'suspended'
-    }).length
-  }
-
-  /**
-   * Count distinguished clubs from performance data
-   */
-  private countDistinguishedClubs(clubPerformance: ScrapedRecord[]): number {
-    return clubPerformance.filter(club => {
-      const distinguished =
-        club['Club Distinguished Status'] ||
-        club['Distinguished'] ||
-        club['DCP Status']
-      return (
-        distinguished &&
-        String(distinguished).toLowerCase().includes('distinguished')
-      )
-    }).length
-  }
-
-  /**
-   * Parse a number from various input types
-   */
-  private parseNumber(value: unknown): number {
-    if (typeof value === 'number') return value
-    if (typeof value === 'string') {
-      const parsed = parseInt(value.replace(/[^\d]/g, ''), 10)
-      return isNaN(parsed) ? 0 : parsed
-    }
-    return 0
   }
 }

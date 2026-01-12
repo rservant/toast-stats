@@ -26,7 +26,6 @@ import { FileSnapshotStore } from './FileSnapshotStore.js'
 import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
 import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { RefreshService } from './RefreshService.js'
-import { ToastmastersScraper } from './ToastmastersScraper.js'
 import {
   BordaCountRankingCalculator,
   type RankingCalculator,
@@ -316,16 +315,12 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
             ServiceTokens.RankingCalculator
           )
 
-          // Create ToastmastersScraper with injected cache service
-          const scraper = new ToastmastersScraper(rawCSVCacheService)
-
+          // RefreshService now uses SnapshotBuilder internally (no scraping)
           return new RefreshService(
             snapshotStore,
-            scraper,
-            rawCSVCacheService, // 3rd parameter: rawCSVCache
-            undefined, // 4th parameter: validator
-            undefined, // 5th parameter: districtConfigService
-            rankingCalculator // 6th parameter: rankingCalculator
+            rawCSVCacheService,
+            undefined, // districtConfigService
+            rankingCalculator
           )
         },
         async () => {
@@ -447,16 +442,12 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const rawCSVCacheService = this.createRawCSVCacheService()
     const rankingCalculator = this.createRankingCalculator()
 
-    // Create ToastmastersScraper with injected cache service
-    const scraper = new ToastmastersScraper(rawCSVCacheService)
-
+    // RefreshService now uses SnapshotBuilder internally (no scraping)
     const service = new RefreshService(
       store,
-      scraper,
-      rawCSVCacheService, // 3rd parameter: rawCSVCache
-      undefined, // 4th parameter: validator
-      undefined, // 5th parameter: districtConfigService
-      rankingCalculator // 6th parameter: rankingCalculator
+      rawCSVCacheService,
+      undefined, // districtConfigService
+      rankingCalculator
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service

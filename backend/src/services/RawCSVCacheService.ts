@@ -1651,7 +1651,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   }
 
   /**
-   * Get program year for a date (same logic as ToastmastersScraper)
+   * Get program year for a date (same logic as scraper-cli)
    */
   private getProgramYear(dateString: string): string {
     const date = new Date(dateString + 'T00:00:00')

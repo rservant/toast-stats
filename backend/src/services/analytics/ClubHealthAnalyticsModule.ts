@@ -571,7 +571,7 @@ export class ClubHealthAnalyticsModule {
   /**
    * Extract membership payment data from a club record
    *
-   * Parses the "Oct. Ren." / "Oct. Ren", "Apr. Ren." / "Apr. Ren", and 
+   * Parses the "Oct. Ren." / "Oct. Ren", "Apr. Ren." / "Apr. Ren", and
    * "New Members" / "New" fields from the Toastmasters dashboard CSV data.
    * Returns undefined for missing/invalid data.
    *
@@ -591,13 +591,9 @@ export class ClubHealthAnalyticsModule {
         club['Oct. Ren.'] ?? club['Oct. Ren']
       ),
       // Handle both "Apr. Ren." (with trailing period) and "Apr. Ren" (without)
-      aprilRenewals: parseIntOrUndefined(
-        club['Apr. Ren.'] ?? club['Apr. Ren']
-      ),
+      aprilRenewals: parseIntOrUndefined(club['Apr. Ren.'] ?? club['Apr. Ren']),
       // Handle both "New Members" and "New"
-      newMembers: parseIntOrUndefined(
-        club['New Members'] ?? club['New']
-      ),
+      newMembers: parseIntOrUndefined(club['New Members'] ?? club['New']),
     }
   }
 

@@ -4,15 +4,18 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "packages/scraper-cli"
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
+    "build:scraper-cli": "npm run build --workspace=@toastmasters/scraper-cli",
     "test:frontend": "npm run test --workspace=frontend",
     "test:backend": "npm run test --workspace=backend",
+    "test:scraper-cli": "npm run test --workspace=@toastmasters/scraper-cli",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "lint:yaml": "yamllint -c .yamllint.yml .github/ docs/",

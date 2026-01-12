@@ -1,8 +1,11 @@
 /**
  * Service Container Integration Tests
  *
- * Tests the integration of RawCSVCacheService with ToastmastersScraper
+ * Tests the integration of RawCSVCacheService with RefreshService
  * through the service container dependency injection system.
+ *
+ * Note: ToastmastersScraper has been moved to the scraper-cli package.
+ * RefreshService now uses SnapshotBuilder to create snapshots from cached data.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -12,7 +15,6 @@ import {
 } from '../ProductionServiceFactory.js'
 import { ServiceContainer } from '../../types/serviceContainer.js'
 import { RefreshService } from '../RefreshService.js'
-import { ToastmastersScraper } from '../ToastmastersScraper.js'
 import {
   createTestSelfCleanup,
   TestSelfCleanup,
@@ -54,30 +56,12 @@ describe('Service Container Integration', () => {
   })
 
   it('should inject RawCSVCacheService into RefreshService', () => {
-    // Resolve RefreshService which should have ToastmastersScraper with injected cache service
+    // Resolve RefreshService which should have SnapshotBuilder with injected cache service
     const refreshService = container.resolve(ServiceTokens.RefreshService)
 
     // Verify RefreshService is created
     expect(refreshService).toBeDefined()
     expect(refreshService).toBeInstanceOf(RefreshService)
-  })
-
-  it('should create ToastmastersScraper with RawCSVCacheService through factory', () => {
-    // Create ToastmastersScraper through factory method
-    const rawCSVCacheService = factory.createRawCSVCacheService()
-
-    // Create scraper with cache service
-    const scraper = new ToastmastersScraper(rawCSVCacheService)
-
-    // Verify scraper is created with cache service
-    expect(scraper).toBeDefined()
-
-    // Verify the cache service is injected (we can't directly access private field,
-    // but we can verify the scraper was constructed successfully)
-    expect(typeof scraper.getAllDistricts).toBe('function')
-    expect(typeof scraper.getDistrictPerformance).toBe('function')
-    expect(typeof scraper.getDivisionPerformance).toBe('function')
-    expect(typeof scraper.getClubPerformance).toBe('function')
   })
 
   it('should maintain service lifecycle management', async () => {
