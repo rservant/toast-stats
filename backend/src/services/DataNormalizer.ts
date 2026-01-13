@@ -253,9 +253,9 @@ export class DataNormalizer {
       clubs: {
         total: data.clubPerformance.length,
         active: this.countActiveClubs(data.clubPerformance),
-        suspended: 0,
-        ineligible: 0,
-        low: 0,
+        suspended: this.countSuspendedClubs(data.clubPerformance),
+        ineligible: this.countIneligibleClubs(data.clubPerformance),
+        low: this.countLowClubs(data.clubPerformance),
         distinguished: this.countDistinguishedClubs(data.clubPerformance),
       },
       education: {
@@ -319,6 +319,7 @@ export class DataNormalizer {
 
   /**
    * Count active clubs from performance data
+   * Active clubs are those with "Active" status (or no status specified)
    *
    * @param clubPerformance - Array of club performance records
    * @returns Count of active clubs
@@ -326,7 +327,48 @@ export class DataNormalizer {
   countActiveClubs(clubPerformance: ScrapedRecord[]): number {
     return clubPerformance.filter(club => {
       const status = club['Club Status'] || club['Status']
-      return !status || String(status).toLowerCase() !== 'suspended'
+      if (!status) return true // No status means active
+      const statusLower = String(status).toLowerCase()
+      return statusLower === 'active' || statusLower === ''
+    }).length
+  }
+
+  /**
+   * Count suspended clubs from performance data
+   *
+   * @param clubPerformance - Array of club performance records
+   * @returns Count of suspended clubs
+   */
+  countSuspendedClubs(clubPerformance: ScrapedRecord[]): number {
+    return clubPerformance.filter(club => {
+      const status = club['Club Status'] || club['Status']
+      return status && String(status).toLowerCase() === 'suspended'
+    }).length
+  }
+
+  /**
+   * Count ineligible clubs from performance data
+   *
+   * @param clubPerformance - Array of club performance records
+   * @returns Count of ineligible clubs
+   */
+  countIneligibleClubs(clubPerformance: ScrapedRecord[]): number {
+    return clubPerformance.filter(club => {
+      const status = club['Club Status'] || club['Status']
+      return status && String(status).toLowerCase() === 'ineligible'
+    }).length
+  }
+
+  /**
+   * Count low membership clubs from performance data
+   *
+   * @param clubPerformance - Array of club performance records
+   * @returns Count of low membership clubs
+   */
+  countLowClubs(clubPerformance: ScrapedRecord[]): number {
+    return clubPerformance.filter(club => {
+      const status = club['Club Status'] || club['Status']
+      return status && String(status).toLowerCase() === 'low'
     }).length
   }
 
