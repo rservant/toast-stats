@@ -4,7 +4,7 @@
 **Applies to:** Toastmasters Statistics Application Backend  
 **Audience:** Developers, System Architects, Future Maintainers  
 **Owner:** Development Team  
-**Last Updated:** January 9, 2026
+**Last Updated:** January 12, 2026
 
 ---
 
@@ -12,18 +12,19 @@
 
 1. [Overview](#overview)
 2. [Core Architectural Pattern](#core-architectural-pattern)
-3. [Service Architecture](#service-architecture)
-4. [Data Flow Architecture](#data-flow-architecture)
-5. [Storage Layer](#storage-layer)
-6. [API Layer](#api-layer)
-7. [Data Model](#data-model)
-8. [Dependency Injection System](#dependency-injection-system)
-9. [Performance Optimizations](#performance-optimizations)
-10. [Error Handling & Resilience](#error-handling--resilience)
-11. [Testing Infrastructure](#testing-infrastructure)
-12. [Technology Stack](#technology-stack)
-13. [Directory Structure](#directory-structure)
-14. [Operational Characteristics](#operational-characteristics)
+3. [Two-Process Architecture](#two-process-architecture)
+4. [Service Architecture](#service-architecture)
+5. [Data Flow Architecture](#data-flow-architecture)
+6. [Storage Layer](#storage-layer)
+7. [API Layer](#api-layer)
+8. [Data Model](#data-model)
+9. [Dependency Injection System](#dependency-injection-system)
+10. [Performance Optimizations](#performance-optimizations)
+11. [Error Handling & Resilience](#error-handling--resilience)
+12. [Testing Infrastructure](#testing-infrastructure)
+13. [Technology Stack](#technology-stack)
+14. [Directory Structure](#directory-structure)
+15. [Operational Characteristics](#operational-characteristics)
 
 ---
 
@@ -33,7 +34,7 @@ The Toastmasters Statistics backend implements a **snapshot-based data architect
 
 ### Key Design Principles
 
-1. **Process Separation**: Refresh and read operations are completely independent
+1. **Process Separation**: Scraping (scraper-cli) and serving (backend) are completely independent processes
 2. **Immutability**: Snapshots are immutable once created
 3. **Versioning**: Schema and calculation versions enable safe evolution
 4. **Resilience**: Circuit breakers, retry logic, and error recovery
@@ -48,55 +49,112 @@ The Toastmasters Statistics backend implements a **snapshot-based data architect
 
 The system operates on two completely independent processes that never interfere with each other:
 
-### Refresh Operations (Asynchronous)
+### Scraper CLI (Separate Process)
 
-- Scrape data from Toastmasters dashboard
-- Normalize and validate the data
-- Create immutable snapshots
-- **Never block read operations**
+- Scrapes data from Toastmasters dashboard using Playwright
+- Writes raw CSV data to the shared Raw CSV Cache
+- Operates independently on its own schedule
+- **Located in `packages/scraper-cli/`**
 
-### Read Operations (Synchronous)
+### Backend (API Server)
 
-- Serve data from the latest successful snapshot
-- Provide consistent sub-10ms response times
-- **Independent of refresh status or failures**
+- Reads from the Raw CSV Cache (no scraping)
+- Uses SnapshotBuilder to create snapshots from cached data
+- Serves data from the latest successful snapshot
+- Provides consistent sub-10ms response times
+- **Independent of scraper status or failures**
 
 ```mermaid
 graph TB
-    subgraph "Refresh Process (Async)"
-        A[ToastmastersScraper] --> B[RefreshService]
-        B --> C[DataValidator]
-        C --> D[FileSnapshotStore]
-        D --> E[Snapshot Created]
+    subgraph "Scraper CLI Process (packages/scraper-cli)"
+        A[ToastmastersScraper] --> B[ScraperOrchestrator]
+        B --> C[Raw CSV Cache]
     end
 
-    subgraph "Read Process (Sync)"
-        F[API Request] --> G[Route Handler]
-        G --> H[FileSnapshotStore Cache]
-        H --> I[Response with Metadata]
+    subgraph "Backend Process (backend)"
+        D[RefreshService] --> E[SnapshotBuilder]
+        E --> F[Read from Cache]
+        F --> C
+        E --> G[DataValidator]
+        G --> H[FileSnapshotStore]
+        H --> I[Snapshot Created]
+    end
+
+    subgraph "Read Operations"
+        J[API Request] --> K[Route Handler]
+        K --> L[FileSnapshotStore Cache]
+        L --> M[Response with Metadata]
     end
 
     subgraph "Storage Layer"
-        J[(Snapshot Files)]
-        K[current.json pointer]
+        N[(Snapshot Files)]
+        O[current.json pointer]
     end
 
-    D --> J
-    D --> K
-    H --> K
-    H --> J
+    H --> N
+    H --> O
+    L --> O
+    L --> N
 ```
+
+---
+
+## Two-Process Architecture
+
+The system uses a **two-process architecture** that completely separates data acquisition from data serving:
+
+### Scraper CLI (`packages/scraper-cli/`)
+
+**Purpose**: Standalone CLI tool for scraping Toastmasters dashboard data
+
+**Components**:
+- **ToastmastersScraper**: Playwright-based browser automation for dashboard scraping
+- **ScraperOrchestrator**: Coordinates scraping across multiple districts
+- **CircuitBreaker**: Protects against cascading failures
+- **RetryManager**: Exponential backoff retry logic
+
+**Output**: Writes raw CSV data to the shared Raw CSV Cache
+
+**Usage**:
+```bash
+# Scrape all configured districts
+scraper-cli scrape
+
+# Scrape specific date
+scraper-cli scrape --date 2025-01-10
+
+# Check cache status
+scraper-cli status
+```
+
+### Backend (`backend/`)
+
+**Purpose**: API server that serves data from cached snapshots
+
+**Key Change**: The backend **no longer performs any scraping**. Instead:
+- **SnapshotBuilder** reads from the Raw CSV Cache
+- **RefreshService** orchestrates snapshot creation from cached data
+- If cache is missing, returns informative error directing user to run scraper-cli
+
+**Benefits**:
+- Backend remains responsive during scraping operations
+- Scraping failures don't affect data serving
+- Independent scheduling and scaling of scraping
+- Easier testing (no browser automation in backend tests)
 
 ---
 
 ## Data Flow Architecture
 
-### 1. Data Acquisition Layer
+### 1. Data Acquisition Layer (Scraper CLI)
 
-#### ToastmastersScraper
+> **Note**: Data acquisition is handled by the **scraper-cli** package (`packages/scraper-cli/`), not the backend. The backend only reads from the Raw CSV Cache.
+
+#### ToastmastersScraper (in scraper-cli)
 
 **Purpose**: Primary data source integration  
 **Technology**: Playwright for browser automation  
+**Location**: `packages/scraper-cli/src/services/ToastmastersScraper.ts`
 **Responsibilities**:
 
 - Automate browser interactions with Toastmasters dashboard
@@ -112,6 +170,18 @@ getDistrictPerformance(districtId: string): Promise<ScrapedRecord[]>
 getDivisionPerformance(districtId: string): Promise<ScrapedRecord[]>
 getClubPerformance(districtId: string): Promise<ScrapedRecord[]>
 ```
+
+#### ScraperOrchestrator (in scraper-cli)
+
+**Purpose**: Coordinates scraping across multiple districts
+**Location**: `packages/scraper-cli/src/ScraperOrchestrator.ts`
+**Responsibilities**:
+
+- Load district configuration
+- Process districts sequentially with error isolation
+- Continue on individual district failures
+- Write results to Raw CSV Cache
+- Produce JSON summary output
 
 #### CSV Data Sources and Flow
 
@@ -206,43 +276,45 @@ The scraper automatically calculates the correct program year for URLs:
 - **Logic**: If current month ≥ July, use current year; otherwise use previous year
 - **Historical Data**: Supports fetching data for specific dates with `dateString` parameter
 
-#### RefreshService
+#### RefreshService (in backend)
 
-**Purpose**: Orchestrates the complete refresh workflow  
+**Purpose**: Orchestrates snapshot creation from cached data  
+**Location**: `backend/src/services/RefreshService.ts`
 **Responsibilities**:
 
-- Integrate scraping with circuit breaker protection
-- Implement retry logic with exponential backoff
-- Coordinate four phases: scraping → normalization → validation → snapshot creation
-- Record comprehensive metadata about each refresh attempt
+- Check cache availability before attempting snapshot creation
+- Use SnapshotBuilder to create snapshots from cached CSV data
+- **Does NOT perform any scraping operations**
+- Return informative error when cache is missing
+
+**Key Change**: RefreshService no longer uses ToastmastersScraper. Instead, it delegates to SnapshotBuilder which reads from the Raw CSV Cache.
 
 **Workflow Phases**:
 
-1. **Scraping Phase**: Fetch raw data with circuit breaker protection
-   - Calls `getAllDistricts()` to get district overview and extract district IDs
-   - For each district ID, calls:
-     - `getDistrictPerformance(districtId)` - District-level metrics
-     - `getDivisionPerformance(districtId)` - Division/area breakdown
-     - `getClubPerformance(districtId)` - Individual club details
-   - Each call protected by circuit breaker and retry logic
-   - Results stored as `RawData` with separate CSV record arrays
+1. **Configuration Validation**: Validate district configuration
+2. **Cache Availability Check**: Verify cached data exists for target date
+3. **Snapshot Building**: Delegate to SnapshotBuilder to create snapshot from cache
+4. **Result Conversion**: Convert BuildResult to RefreshResult
 
-2. **Normalization Phase**: Transform raw CSV data into structured DistrictStatistics
-   - Processes each district's four CSV datasets
-   - Parses string values to numbers, handles missing data
-   - Combines related data (e.g., club counts from multiple sources)
-   - Calculates derived metrics and performance indicators
-   - Creates structured `DistrictStatistics[]` array
+#### SnapshotBuilder (in backend)
 
-3. **Validation Phase**: Validate normalized data against Zod schemas
-   - Ensures data integrity and business rule compliance
-   - Validates cross-references between clubs, divisions, and districts
-   - Checks for reasonable value ranges and consistency
+**Purpose**: Creates snapshots from cached CSV data  
+**Location**: `backend/src/services/SnapshotBuilder.ts`
+**Responsibilities**:
 
-4. **Snapshot Creation Phase**: Persist validated data as immutable snapshots
-   - Creates versioned snapshot with metadata
-   - Atomically updates current pointer if successful
-   - Records errors and warnings for debugging
+- Read CSV data from Raw CSV Cache for specified date
+- Normalize data using DataNormalizer
+- Validate data using DataValidator
+- Calculate rankings using RankingCalculator
+- Create snapshot using SnapshotStore
+- Handle partial snapshots when some districts are missing
+
+**Key Methods**:
+
+```typescript
+build(options: BuildOptions): Promise<BuildResult>
+getCacheAvailability(date: string): Promise<CacheAvailability>
+```
 
 ### 2. Data Processing Pipeline
 
@@ -349,30 +421,36 @@ The backend implements a **modular, dependency-injected service architecture** w
 
 #### Data Acquisition & Processing Services
 
+> **Note**: ToastmastersScraper has been moved to the scraper-cli package. The backend no longer performs scraping.
+
 **RefreshService** (Orchestration Hub)
 
-- **Purpose**: Coordinates the complete refresh workflow with circuit breaker protection
-- **Dependencies**: ToastmastersScraper, DataValidator, SnapshotStore, DistrictConfigurationService, RankingCalculator
+- **Purpose**: Coordinates snapshot creation from cached CSV data
+- **Dependencies**: SnapshotBuilder, SnapshotStore, DistrictConfigurationService
+- **Key Change**: No longer uses ToastmastersScraper - delegates to SnapshotBuilder
 - **Extracted Modules**:
   - `ClosingPeriodDetector`: Month-end closing period detection logic
   - `DataNormalizer`: Raw data transformation to normalized snapshot format
-- **Features**: Four-phase workflow (scraping → normalization → validation → snapshot creation)
-- **Error Handling**: District-level error tracking with partial snapshot creation
+- **Features**: Cache availability checking, informative error messages when cache missing
 - **Integration**: Works with both FileSnapshotStore and PerDistrictSnapshotStore
 
-**ToastmastersScraper** (Data Source Integration)
+**SnapshotBuilder** (Cache-Based Snapshot Creation)
 
-- **Purpose**: Browser automation for Toastmasters dashboard data acquisition
-- **Technology**: Playwright for reliable browser automation
-- **Data Sources**: Four distinct CSV exports (All Districts, District Performance, Division Performance, Club Performance)
-- **Features**: Program year calculation, URL generation, browser lifecycle management
+- **Purpose**: Creates snapshots from cached CSV data without scraping
+- **Dependencies**: RawCSVCacheService, DistrictConfigurationService, SnapshotStore, DataValidator, RankingCalculator
+- **Features**: 
+  - Reads from Raw CSV Cache (no network requests)
+  - Handles partial snapshots when some districts missing
+  - Cache integrity validation with checksums
+  - Metadata preservation (closing period, collection date)
+- **Key Methods**: `build()`, `getCacheAvailability()`
 
 **DataValidator** (Quality Assurance)
 
 - **Purpose**: Ensures data integrity using Zod schemas
 - **Validation**: Business rules, consistency checks, format validation
 - **Error Handling**: Distinguishes critical errors from warnings
-- **Integration**: Used by RefreshService before snapshot creation
+- **Integration**: Used by SnapshotBuilder before snapshot creation
 
 **RankingCalculator** (BordaCountRankingCalculator)
 
@@ -1229,14 +1307,22 @@ const serviceUnderTest = testContainer.resolve(ServiceToken)
 
 ## Technology Stack
 
-### Core Technologies
+### Backend Core Technologies
 
 - **Runtime**: Node.js with TypeScript (ES modules)
 - **Web Framework**: Express.js with middleware support
-- **Web Scraping**: Playwright (headless browser automation)
 - **Validation**: Zod (schema validation and type safety)
 - **Testing**: Vitest (unit, integration, and property-based tests)
 - **Property Testing**: fast-check for universal correctness properties
+
+> **Note**: Playwright (browser automation) has been moved to the scraper-cli package. The backend no longer has Playwright as a dependency.
+
+### Scraper CLI Technologies
+
+- **Runtime**: Node.js with TypeScript (ES modules)
+- **CLI Framework**: Commander.js for command-line interface
+- **Web Scraping**: Playwright (headless browser automation)
+- **Testing**: Vitest with fast-check for property-based tests
 
 ### Supporting Libraries
 
@@ -1263,88 +1349,67 @@ const serviceUnderTest = testContainer.resolve(ServiceToken)
 ## Directory Structure
 
 ```
-backend/
-├── src/
-│   ├── index.ts                 # Express server entry point
-│   ├── config/                  # Configuration management
-│   │   └── index.ts            # Environment-based configuration
-│   ├── routes/                  # API route handlers
-│   │   ├── admin/              # Admin routes (refactored modular structure)
-│   │   │   ├── index.ts        # Router composition
-│   │   │   ├── shared.ts       # Shared middleware and utilities
-│   │   │   ├── snapshots.ts    # Snapshot management routes
-│   │   │   ├── district-config.ts # District configuration routes
-│   │   │   ├── monitoring.ts   # Health, integrity, performance routes
-│   │   │   └── process-separation.ts # Process separation routes
-│   │   ├── districts/          # District data endpoints (modular)
-│   │   │   ├── index.ts        # Router composition
-│   │   │   ├── core.ts         # Core district endpoints
-│   │   │   ├── analytics.ts    # Analytics endpoints
-│   │   │   ├── backfill.ts     # Backfill endpoints
-│   │   │   └── shared.ts       # Shared utilities
-│   │   └── admin.ts            # Re-exports from admin/index.ts
-│   ├── services/               # Core business logic
-│   │   ├── analytics/          # Analytics modules (refactored)
-│   │   │   ├── index.ts        # Module exports
-│   │   │   ├── AnalyticsUtils.ts # Shared utility functions
-│   │   │   ├── MembershipAnalyticsModule.ts # Membership analytics
-│   │   │   ├── DistinguishedClubAnalyticsModule.ts # Distinguished club analytics
-│   │   │   ├── ClubHealthAnalyticsModule.ts # Club health analytics
-│   │   │   ├── DivisionAreaAnalyticsModule.ts # Division/area analytics
-│   │   │   └── LeadershipAnalyticsModule.ts # Leadership analytics
-│   │   ├── RefreshService.ts   # Refresh orchestration
-│   │   ├── ClosingPeriodDetector.ts # Month-end closing period detection
-│   │   ├── DataNormalizer.ts   # Raw data normalization
-│   │   ├── ToastmastersScraper.ts # Data acquisition
-│   │   ├── DataValidator.ts    # Data validation
-│   │   ├── FileSnapshotStore.ts # Legacy snapshot persistence
-│   │   ├── PerDistrictSnapshotStore.ts # Modern per-district storage
-│   │   ├── DistrictDataAggregator.ts # Efficient data access
-│   │   ├── RankingCalculator.ts # Borda count ranking algorithm
-│   │   ├── AnalyticsEngine.ts  # Analytics orchestration (delegates to modules)
-│   │   ├── RawCSVCacheService.ts # Raw CSV caching
-│   │   ├── CacheSecurityManager.ts # Cache security validation
-│   │   ├── CacheIntegrityValidator.ts # Cache integrity validation
-│   │   ├── UnifiedBackfillService.ts # Historical data collection
-│   │   ├── CacheConfigService.ts # Cache configuration
-│   │   ├── ServiceContainer.ts # Dependency injection
-│   │   ├── ProductionServiceFactory.ts # Service factory
-│   │   └── TestServiceFactory.ts # Test service factory
-│   ├── types/                  # TypeScript type definitions
-│   │   ├── snapshots.ts        # Snapshot-related types
-│   │   ├── districts.ts        # District data types
-│   │   ├── analytics.ts        # Analytics types
-│   │   ├── serviceContainer.ts # DI container types
-│   │   └── serviceInterfaces.ts # Service interface definitions
-│   ├── utils/                  # Shared utilities
-│   │   ├── logger.ts           # Structured logging
-│   │   ├── RetryManager.ts     # Retry logic
-│   │   ├── CircuitBreaker.ts   # Circuit breaker pattern
-│   │   ├── AlertManager.ts     # Alert management
-│   │   ├── transformers.ts     # Data transformation
-│   │   └── cacheKeys.ts        # Cache key generation
-│   ├── middleware/             # Express middleware
-│   │   └── cache.ts           # Caching middleware
-│   ├── scripts/               # Utility scripts
-│   │   ├── refresh-cli.ts     # Manual refresh script
-│   │   ├── validate-snapshot-integrity.ts # Snapshot validation
-│   │   └── snapshot-debug.ts  # Snapshot debugging
-│   └── __tests__/             # Test files
-│       ├── vitest.setup.ts    # Test setup configuration
-│       ├── integration/        # Integration tests
-│       ├── unit/              # Unit tests
-│       └── property/          # Property-based tests
-├── cache/                     # Default snapshot storage
-│   ├── snapshots/            # Snapshot files/directories
-│   ├── current.json          # Current snapshot pointer
-│   └── config/               # Configuration files
-├── scripts/                  # Build and utility scripts
-│   └── cleanup-test-dirs.sh  # Test cleanup script
-├── package.json              # Dependencies and scripts
-├── tsconfig.json            # TypeScript configuration
-├── tsconfig.all.json        # Extended TypeScript configuration
-├── vitest.config.ts         # Test configuration
-└── eslint.config.js         # Linting configuration
+toast-stats/
+├── backend/                   # Backend API server
+│   ├── src/
+│   │   ├── index.ts                 # Express server entry point
+│   │   ├── config/                  # Configuration management
+│   │   ├── routes/                  # API route handlers
+│   │   │   ├── admin/              # Admin routes (modular structure)
+│   │   │   └── districts/          # District data endpoints
+│   │   ├── services/               # Core business logic
+│   │   │   ├── analytics/          # Analytics modules
+│   │   │   ├── RefreshService.ts   # Refresh orchestration (uses SnapshotBuilder)
+│   │   │   ├── SnapshotBuilder.ts  # Creates snapshots from cached data
+│   │   │   ├── ClosingPeriodDetector.ts # Month-end detection
+│   │   │   ├── DataNormalizer.ts   # Raw data normalization
+│   │   │   ├── DataValidator.ts    # Data validation
+│   │   │   ├── FileSnapshotStore.ts # Legacy snapshot persistence
+│   │   │   ├── PerDistrictSnapshotStore.ts # Modern per-district storage
+│   │   │   ├── RawCSVCacheService.ts # Raw CSV caching
+│   │   │   └── ...                 # Other services
+│   │   ├── types/                  # TypeScript type definitions
+│   │   ├── utils/                  # Shared utilities
+│   │   ├── middleware/             # Express middleware
+│   │   ├── scripts/               # Utility scripts
+│   │   │   └── refresh-cli.ts     # Manual refresh script (uses cached data)
+│   │   └── __tests__/             # Test files
+│   ├── cache/                     # Default snapshot storage
+│   └── package.json
+│
+├── packages/
+│   └── scraper-cli/              # Standalone scraper CLI
+│       ├── src/
+│       │   ├── cli.ts            # CLI entry point
+│       │   ├── ScraperOrchestrator.ts # Scraping coordination
+│       │   ├── services/
+│       │   │   └── ToastmastersScraper.ts # Browser automation
+│       │   ├── utils/
+│       │   │   ├── CircuitBreaker.ts # Failure protection
+│       │   │   ├── RetryManager.ts   # Retry logic
+│       │   │   └── logger.ts         # Logging
+│       │   └── __tests__/        # Property-based tests
+│       ├── bin/
+│       │   └── scraper-cli.js    # Executable entry point
+│       └── package.json
+│
+├── frontend/                     # React frontend
+└── docs/                         # Documentation
+```
+
+### Key Architectural Change
+
+**Before (scraper in backend)**:
+```
+backend/src/services/ToastmastersScraper.ts  # Scraper was in backend
+backend/src/services/RefreshService.ts       # RefreshService called scraper directly
+```
+
+**After (scraper-cli separation)**:
+```
+packages/scraper-cli/src/services/ToastmastersScraper.ts  # Scraper moved to CLI
+backend/src/services/SnapshotBuilder.ts                    # New: reads from cache
+backend/src/services/RefreshService.ts                     # Uses SnapshotBuilder
 ```
 
 ---
@@ -1498,15 +1563,17 @@ The Toastmasters Statistics backend architecture provides a robust, maintainable
 
 Key architectural achievements:
 
-- **Complete Process Separation**: Refresh and read operations are fully independent, ensuring reliable user experience
+- **Complete Process Separation**: Scraping (scraper-cli) and serving (backend) are fully independent processes
+- **Two-Process Architecture**: Scraper CLI writes to cache, backend reads from cache - no direct coupling
 - **Comprehensive Service Architecture**: Modular design with proper dependency injection and lifecycle management
 - **Advanced Storage Patterns**: Both legacy and modern per-district snapshot storage implementations
 - **Robust Error Handling**: Circuit breakers, retry logic, and automatic recovery ensure system resilience
 - **Extensive Testing Infrastructure**: Property-based testing, integration tests, and proper test isolation
 - **Performance Optimization**: Multi-level caching, concurrent read optimization, and built-in monitoring
+- **Simplified Backend**: No Playwright dependency in backend - cleaner, faster tests, smaller deployment
 
 The architecture successfully balances the needs of a single-user deployment with the flexibility to evolve toward more complex deployment scenarios, while maintaining the operational simplicity and low overhead emphasized in the production maintenance steering document.
 
 ---
 
-**Document Maintenance**: This document reflects the current implementation as of January 9, 2026. It should be updated when significant architectural changes are made, new services are added, or major refactoring occurs. The document serves as the authoritative reference for understanding the system architecture and should be consulted before making structural changes.
+**Document Maintenance**: This document reflects the current implementation as of January 12, 2026. It should be updated when significant architectural changes are made, new services are added, or major refactoring occurs. The document serves as the authoritative reference for understanding the system architecture and should be consulted before making structural changes.

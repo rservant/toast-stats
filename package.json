@@ -13,6 +13,7 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
     "build:scraper-cli": "npm run build --workspace=@toastmasters/scraper-cli",
+    "scraper-cli": "npm run start --workspace=@toastmasters/scraper-cli --",
     "test:frontend": "npm run test --workspace=frontend",
     "test:backend": "npm run test --workspace=backend",
     "test:scraper-cli": "npm run test --workspace=@toastmasters/scraper-cli",

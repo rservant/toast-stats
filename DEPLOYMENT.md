@@ -39,6 +39,7 @@ npm ci
 # Build applications
 npm run build:backend
 npm run build:frontend
+npm run build:scraper-cli
 
 # Start backend with PM2
 cd backend
@@ -58,6 +59,58 @@ pm2 status
 ```
 
 ## Individual Service Deployment
+
+### Scraper CLI Deployment
+
+The scraper-cli is a standalone tool that collects data from Toastmasters dashboards and writes to the Raw CSV Cache. The backend reads from this cache to create snapshots.
+
+#### Build and Install
+
+```bash
+# Build the scraper-cli
+npm run build:scraper-cli
+
+# The CLI is available at packages/scraper-cli/dist/
+```
+
+#### Running the Scraper
+
+```bash
+# Scrape all configured districts for today
+npm run scraper-cli -- scrape
+
+# Scrape for a specific date
+npm run scraper-cli -- scrape --date 2025-01-10
+
+# Scrape specific districts
+npm run scraper-cli -- scrape --districts 57,58,59
+
+# Force re-scrape even if cache exists
+npm run scraper-cli -- scrape --force
+
+# Check cache status
+npm run scraper-cli -- status
+```
+
+#### Scheduled Scraping with Cron
+
+Set up a cron job to run the scraper daily:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add daily scrape at 6 AM
+0 6 * * * cd /path/to/toast-stats && npm run scraper-cli -- scrape >> /var/log/scraper.log 2>&1
+```
+
+#### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All districts scraped successfully |
+| 1 | Some districts failed (partial success) |
+| 2 | All districts failed or fatal error |
 
 ### Backend Deployment
 

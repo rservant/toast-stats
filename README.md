@@ -8,6 +8,7 @@ This is a monorepo containing:
 
 - `frontend/` - React + TypeScript + Vite application
 - `backend/` - Node.js + Express + TypeScript API server
+- `packages/scraper-cli/` - Standalone CLI tool for scraping Toastmasters dashboard data
 
 ## Prerequisites
 
@@ -109,18 +110,54 @@ npm run lint
 
 ## Data Source
 
-The application can fetch data from the public Toastmasters dashboards at https://dashboards.toastmasters.org using a Playwright-based web scraper.
+The application fetches data from the public Toastmasters dashboards at https://dashboards.toastmasters.org.
+
+### Architecture Overview
+
+The system uses a **two-process architecture** that separates data acquisition from data serving:
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Scraper CLI    │────▶│  Raw CSV Cache  │◀────│    Backend      │
+│  (scrapes data) │     │  (shared cache) │     │ (serves data)   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+1. **Scraper CLI** (`packages/scraper-cli/`): Standalone tool that scrapes Toastmasters dashboard and writes to the Raw CSV Cache
+2. **Backend** (`backend/`): Reads from the cache and creates snapshots using SnapshotBuilder (no scraping)
+
+This separation enables:
+- Independent scheduling of scraping operations
+- Backend remains responsive during scraping
+- Scraping failures don't affect data serving
+- Easier testing and maintenance
+
+### Running the Scraper
+
+```bash
+# Scrape all configured districts for today
+npm run scraper-cli -- scrape
+
+# Scrape for a specific date
+npm run scraper-cli -- scrape --date 2025-01-10
+
+# Scrape specific districts
+npm run scraper-cli -- scrape --districts 57,58,59
+
+# Check cache status
+npm run scraper-cli -- status
+```
 
 ### Mock Data vs Real Data
 
 - **Mock Data** (default): Fast, fake data for development
-- **Real Data**: Scrapes live data from Toastmasters dashboards
+- **Real Data**: Uses scraper-cli to collect live data from Toastmasters dashboards
 
 Toggle between them in `backend/.env`:
 
 ```bash
 USE_MOCK_DATA=true   # Use mock data (fast)
-USE_MOCK_DATA=false  # Use real scraping (slower, requires Playwright)
+USE_MOCK_DATA=false  # Use real data from cache (requires scraper-cli to populate cache)
 ```
 
 ## Features
@@ -157,6 +194,7 @@ This project has evolved through multiple phases of development. Completed speci
 - **raw-csv-cache-refactor**: Cache security and integrity extraction
 - **refresh-service-refactor**: Closing period and normalization extraction
 - **admin-routes-refactor**: Admin routes modular architecture
+- **scraper-cli-separation**: Separated scraping into standalone CLI tool
 
 Active specifications for ongoing maintenance are located in `.kiro/specs/`.
 
@@ -187,6 +225,9 @@ npm run test:frontend
 
 # Backend tests
 npm run test:backend
+
+# Scraper CLI tests
+npm run test:scraper-cli
 ```
 
 ## License
