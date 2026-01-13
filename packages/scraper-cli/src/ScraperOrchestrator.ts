@@ -28,6 +28,7 @@ import type {
   ConfigValidationResult,
   CacheStatus,
 } from './types/index.js'
+import * as crypto from 'crypto'
 import { CSVType, IScraperCache, CacheMetadata } from './types/scraper.js'
 
 /**
@@ -54,11 +55,49 @@ interface DistrictScrapeResult {
 }
 
 /**
+ * Full metadata format matching backend's RawCSVCacheMetadata
+ * This ensures the backend can read files written by the scraper-cli
+ */
+interface FullCacheMetadata {
+  date: string
+  requestedDate?: string
+  timestamp: number
+  programYear: string
+  dataMonth?: string
+  isClosingPeriod?: boolean
+  csvFiles: {
+    allDistricts: boolean
+    districts: {
+      [districtId: string]: {
+        districtPerformance: boolean
+        divisionPerformance: boolean
+        clubPerformance: boolean
+      }
+    }
+  }
+  downloadStats: {
+    totalDownloads: number
+    cacheHits: number
+    cacheMisses: number
+    lastAccessed: number
+  }
+  integrity: {
+    checksums: { [filename: string]: string }
+    totalSize: number
+    fileCount: number
+  }
+  source: 'scraper'
+  cacheVersion: number
+}
+
+/**
  * Simple cache adapter that implements IScraperCache for the orchestrator
+ * Writes metadata in the full format expected by the backend
  */
 class OrchestratorCacheAdapter implements IScraperCache {
   private readonly cacheDir: string
   private readonly metadataCache: Map<string, CacheMetadata> = new Map()
+  private readonly fullMetadataCache: Map<string, FullCacheMetadata> = new Map()
 
   constructor(cacheDir: string) {
     this.cacheDir = cacheDir
@@ -90,6 +129,33 @@ class OrchestratorCacheAdapter implements IScraperCache {
 
   private buildMetadataPath(date: string): string {
     return path.join(this.cacheDir, 'raw-csv', date, 'metadata.json')
+  }
+
+  /**
+   * Get the filename key for checksums (matches backend convention)
+   */
+  private getChecksumFilename(type: CSVType, districtId?: string): string {
+    if (type === CSVType.ALL_DISTRICTS) {
+      return `${type}.csv`
+    }
+    return `district-${districtId}/${type}.csv`
+  }
+
+  /**
+   * Calculate SHA256 checksum of content
+   */
+  private calculateChecksum(content: string): string {
+    return crypto.createHash('sha256').update(content).digest('hex')
+  }
+
+  /**
+   * Calculate program year from date (July starts new year)
+   */
+  private calculateProgramYear(date: string): string {
+    const dateObj = new Date(date + 'T00:00:00')
+    const year = dateObj.getFullYear()
+    const month = dateObj.getMonth() + 1
+    return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
   }
 
   async getCachedCSV(
@@ -132,8 +198,8 @@ class OrchestratorCacheAdapter implements IScraperCache {
     await fs.writeFile(tempFilePath, csvContent, 'utf-8')
     await fs.rename(tempFilePath, filePath)
 
-    // Update metadata
-    await this.updateMetadata(date, csvContent, additionalMetadata)
+    // Update metadata with checksum
+    await this.updateFullMetadata(date, type, csvContent, districtId, additionalMetadata)
 
     logger.debug('CSV cached successfully', {
       date,
@@ -154,9 +220,16 @@ class OrchestratorCacheAdapter implements IScraperCache {
     const metadataPath = this.buildMetadataPath(date)
     try {
       const content = await fs.readFile(metadataPath, 'utf-8')
-      const metadata = JSON.parse(content) as CacheMetadata
-      this.metadataCache.set(date, metadata)
-      return metadata
+      const fullMetadata = JSON.parse(content) as FullCacheMetadata
+      // Convert to simple CacheMetadata for IScraperCache interface
+      const simpleMetadata: CacheMetadata = {
+        date: fullMetadata.date,
+        isClosingPeriod: fullMetadata.isClosingPeriod,
+        dataMonth: fullMetadata.dataMonth,
+      }
+      this.metadataCache.set(date, simpleMetadata)
+      this.fullMetadataCache.set(date, fullMetadata)
+      return simpleMetadata
     } catch (error) {
       const err = error as { code?: string }
       if (err.code === 'ENOENT') {
@@ -166,9 +239,66 @@ class OrchestratorCacheAdapter implements IScraperCache {
     }
   }
 
-  private async updateMetadata(
+  /**
+   * Get or create full metadata for a date
+   */
+  private async getOrCreateFullMetadata(date: string): Promise<FullCacheMetadata> {
+    // Check in-memory cache
+    const cached = this.fullMetadataCache.get(date)
+    if (cached) {
+      return cached
+    }
+
+    // Try to read from disk
+    const metadataPath = this.buildMetadataPath(date)
+    try {
+      const content = await fs.readFile(metadataPath, 'utf-8')
+      const metadata = JSON.parse(content) as FullCacheMetadata
+      this.fullMetadataCache.set(date, metadata)
+      return metadata
+    } catch (error) {
+      const err = error as { code?: string }
+      if (err.code !== 'ENOENT') {
+        throw error
+      }
+    }
+
+    // Create new metadata
+    const newMetadata: FullCacheMetadata = {
+      date,
+      timestamp: Date.now(),
+      programYear: this.calculateProgramYear(date),
+      isClosingPeriod: false,
+      csvFiles: {
+        allDistricts: false,
+        districts: {},
+      },
+      downloadStats: {
+        totalDownloads: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
+        lastAccessed: Date.now(),
+      },
+      integrity: {
+        checksums: {},
+        totalSize: 0,
+        fileCount: 0,
+      },
+      source: 'scraper',
+      cacheVersion: 1,
+    }
+    this.fullMetadataCache.set(date, newMetadata)
+    return newMetadata
+  }
+
+  /**
+   * Update full metadata with checksum and file tracking
+   */
+  private async updateFullMetadata(
     date: string,
-    _csvContent: string,
+    type: CSVType,
+    csvContent: string,
+    districtId?: string,
     additionalMetadata?: {
       requestedDate?: string
       isClosingPeriod?: boolean
@@ -180,32 +310,107 @@ class OrchestratorCacheAdapter implements IScraperCache {
 
     await fs.mkdir(dirPath, { recursive: true })
 
-    let existingMetadata = await this.getCacheMetadata(date)
-    if (!existingMetadata) {
-      existingMetadata = {
-        date,
-        isClosingPeriod: false,
-        dataMonth: undefined,
+    const metadata = await this.getOrCreateFullMetadata(date)
+
+    // Update basic fields
+    if (additionalMetadata?.requestedDate) {
+      metadata.requestedDate = additionalMetadata.requestedDate
+    }
+    if (additionalMetadata?.isClosingPeriod !== undefined) {
+      metadata.isClosingPeriod = additionalMetadata.isClosingPeriod
+    }
+    if (additionalMetadata?.dataMonth) {
+      metadata.dataMonth = additionalMetadata.dataMonth
+    }
+
+    // Update file tracking
+    if (type === CSVType.ALL_DISTRICTS) {
+      metadata.csvFiles.allDistricts = true
+    } else if (districtId) {
+      if (!metadata.csvFiles.districts[districtId]) {
+        metadata.csvFiles.districts[districtId] = {
+          districtPerformance: false,
+          divisionPerformance: false,
+          clubPerformance: false,
+        }
+      }
+      if (type === CSVType.DISTRICT_PERFORMANCE) {
+        metadata.csvFiles.districts[districtId]!.districtPerformance = true
+      } else if (type === CSVType.DIVISION_PERFORMANCE) {
+        metadata.csvFiles.districts[districtId]!.divisionPerformance = true
+      } else if (type === CSVType.CLUB_PERFORMANCE) {
+        metadata.csvFiles.districts[districtId]!.clubPerformance = true
       }
     }
 
-    const updatedMetadata: CacheMetadata = {
-      ...existingMetadata,
-      date,
-      isClosingPeriod:
-        additionalMetadata?.isClosingPeriod ?? existingMetadata.isClosingPeriod,
-      dataMonth: additionalMetadata?.dataMonth ?? existingMetadata.dataMonth,
-    }
+    // Update checksum
+    const checksumFilename = this.getChecksumFilename(type, districtId)
+    const checksum = this.calculateChecksum(csvContent)
+    metadata.integrity.checksums[checksumFilename] = checksum
 
+    // Recalculate integrity totals
+    await this.recalculateIntegrityTotals(date, metadata)
+
+    // Update timestamp
+    metadata.timestamp = Date.now()
+    metadata.downloadStats.lastAccessed = Date.now()
+    metadata.downloadStats.totalDownloads += 1
+    metadata.downloadStats.cacheMisses += 1
+
+    // Write metadata atomically
     const tempPath = `${metadataPath}.tmp.${Date.now()}`
-    await fs.writeFile(
-      tempPath,
-      JSON.stringify(updatedMetadata, null, 2),
-      'utf-8'
-    )
+    await fs.writeFile(tempPath, JSON.stringify(metadata, null, 2), 'utf-8')
     await fs.rename(tempPath, metadataPath)
 
-    this.metadataCache.set(date, updatedMetadata)
+    // Update caches
+    this.fullMetadataCache.set(date, metadata)
+    this.metadataCache.set(date, {
+      date: metadata.date,
+      isClosingPeriod: metadata.isClosingPeriod,
+      dataMonth: metadata.dataMonth,
+    })
+  }
+
+  /**
+   * Recalculate integrity totals by scanning actual files
+   */
+  private async recalculateIntegrityTotals(
+    date: string,
+    metadata: FullCacheMetadata
+  ): Promise<void> {
+    const datePath = path.join(this.cacheDir, 'raw-csv', date)
+    let fileCount = 0
+    let totalSize = 0
+
+    try {
+      const entries = await fs.readdir(datePath, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(datePath, entry.name)
+        if (entry.isFile() && entry.name.endsWith('.csv')) {
+          const stat = await fs.stat(fullPath)
+          fileCount += 1
+          totalSize += stat.size
+        } else if (entry.isDirectory() && entry.name.startsWith('district-')) {
+          const districtEntries = await fs.readdir(fullPath, { withFileTypes: true })
+          for (const districtEntry of districtEntries) {
+            if (districtEntry.isFile() && districtEntry.name.endsWith('.csv')) {
+              const districtFilePath = path.join(fullPath, districtEntry.name)
+              const stat = await fs.stat(districtFilePath)
+              fileCount += 1
+              totalSize += stat.size
+            }
+          }
+        }
+      }
+    } catch (error) {
+      const err = error as { code?: string }
+      if (err.code !== 'ENOENT') {
+        logger.warn('Failed to recalculate integrity totals', { date, error })
+      }
+    }
+
+    metadata.integrity.fileCount = fileCount
+    metadata.integrity.totalSize = totalSize
   }
 
   /**
@@ -446,6 +651,117 @@ export class ScraperOrchestrator {
       await this.scraper.closeBrowser()
       this.scraper = null
       logger.debug('Scraper resources released')
+    }
+  }
+
+  /**
+   * Scrape all-districts summary data
+   * This provides the overview/rankings data for all districts
+   */
+  private async scrapeAllDistricts(
+    scraper: ToastmastersScraper,
+    date: string,
+    force: boolean
+  ): Promise<DistrictScrapeResult> {
+    const startTime = Date.now()
+    const timestamp = new Date().toISOString()
+    const cacheLocations: string[] = []
+
+    logger.info('Starting all-districts scrape', { date, force })
+
+    try {
+      // Check if cache already exists (unless force is true)
+      if (!force) {
+        const hasCached = await this.cacheAdapter.hasCachedCSV(
+          date,
+          CSVType.ALL_DISTRICTS
+        )
+
+        if (hasCached) {
+          logger.info('All-districts cache already exists, skipping scrape', {
+            date,
+          })
+
+          return {
+            districtId: 'all-districts',
+            success: true,
+            cacheLocations: [],
+            timestamp,
+            duration_ms: Date.now() - startTime,
+          }
+        }
+      }
+
+      // Execute scraping with retry logic
+      const retryResult = await RetryManager.executeWithRetry(
+        async () => {
+          const { records, actualDate } = await scraper.getAllDistrictsWithMetadata(date)
+          
+          // Log if actual date differs from requested
+          if (actualDate !== date) {
+            logger.info('All-districts: actual date differs from requested', {
+              requestedDate: date,
+              actualDate,
+            })
+          }
+
+          cacheLocations.push(
+            path.join(
+              this.config.cacheDir,
+              'raw-csv',
+              date,
+              `${CSVType.ALL_DISTRICTS}.csv`
+            )
+          )
+
+          return {
+            recordCount: records.length,
+            actualDate,
+          }
+        },
+        RetryManager.getDashboardRetryOptions(),
+        { date, operation: 'scrapeAllDistricts' }
+      )
+
+      if (!retryResult.success) {
+        throw retryResult.error ?? new Error('All-districts scraping failed after retries')
+      }
+
+      const duration_ms = Date.now() - startTime
+
+      logger.info('All-districts scrape completed successfully', {
+        date,
+        duration_ms,
+        attempts: retryResult.attempts,
+        recordCount: retryResult.result?.recordCount,
+      })
+
+      return {
+        districtId: 'all-districts',
+        success: true,
+        cacheLocations,
+        timestamp,
+        duration_ms,
+      }
+    } catch (error) {
+      const duration_ms = Date.now() - startTime
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      logger.error('All-districts scrape failed', {
+        date,
+        duration_ms,
+        error: errorMessage,
+      })
+
+      return {
+        districtId: 'all-districts',
+        success: false,
+        cacheLocations: [],
+        error: errorMessage,
+        timestamp,
+        duration_ms,
+      }
     }
   }
 
@@ -717,6 +1033,18 @@ export class ScraperOrchestrator {
       timestamp: string
     }> = []
     const allCacheLocations: string[] = []
+
+    // Scrape all-districts summary first
+    const allDistrictsResult = await this.scrapeAllDistricts(scraper, date, force)
+    if (allDistrictsResult.success) {
+      allCacheLocations.push(...allDistrictsResult.cacheLocations)
+    } else if (allDistrictsResult.error) {
+      errors.push({
+        districtId: 'all-districts',
+        error: allDistrictsResult.error,
+        timestamp: allDistrictsResult.timestamp,
+      })
+    }
 
     for (const districtId of districtsToScrape) {
       // Check circuit breaker before each district

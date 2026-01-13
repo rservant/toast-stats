@@ -23,6 +23,7 @@ let mockScraperInstance: {
   getClubPerformance: ReturnType<typeof vi.fn>
   getDivisionPerformance: ReturnType<typeof vi.fn>
   getDistrictPerformance: ReturnType<typeof vi.fn>
+  getAllDistrictsWithMetadata: ReturnType<typeof vi.fn>
   closeBrowser: ReturnType<typeof vi.fn>
 } | null = null
 
@@ -39,6 +40,7 @@ vi.mock('../services/ToastmastersScraper.js', () => {
       getClubPerformance = vi.fn()
       getDivisionPerformance = vi.fn()
       getDistrictPerformance = vi.fn()
+      getAllDistrictsWithMetadata = vi.fn()
       closeBrowser = vi.fn().mockResolvedValue(undefined)
     },
   }
@@ -215,6 +217,14 @@ describe('ScraperOrchestrator - Property-Based Tests', () => {
                   )
                 }
                 return [{ District: districtId, 'Total Clubs': '50' }]
+              }),
+            getAllDistrictsWithMetadata: vi
+              .fn()
+              .mockImplementation(async (date: string) => {
+                return {
+                  records: [{ District: '1', 'Total Clubs': '100' }],
+                  actualDate: date,
+                }
               }),
             closeBrowser: vi.fn().mockResolvedValue(undefined),
           }

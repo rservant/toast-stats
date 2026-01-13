@@ -1221,6 +1221,9 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   /**
    * Parse CSV content into ScrapedRecord array
    * Simple CSV parser for cached content
+   *
+   * Filters out footer rows that contain "Month of" (e.g., "Month of Jan, As of 01/11/2026")
+   * which are metadata lines from the Toastmasters dashboard, not actual data records.
    */
   private parseCSVContent(csvContent: string): ScrapedRecord[] {
     const lines = csvContent.trim().split('\n')
@@ -1243,6 +1246,13 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         continue
       }
 
+      // Skip footer rows containing "Month of" (e.g., "Month of Jan, As of 01/11/2026")
+      // These are metadata lines from the Toastmasters dashboard, not actual data records
+      if (line.includes('Month of')) {
+        this.logger.debug('Skipping CSV footer row', { line })
+        continue
+      }
+
       const values = this.parseCSVLine(line)
       const record: ScrapedRecord = {}
 
@@ -1250,8 +1260,11 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         const header = headers[j]
         const value = values[j]
         if (header) {
-          // Try to parse as number if possible
-          if (value !== undefined && value !== null && value !== '') {
+          // Keep REGION as string to preserve leading zeros (e.g., "01", "09")
+          if (header === 'REGION') {
+            record[header] = value ?? null
+          } else if (value !== undefined && value !== null && value !== '') {
+            // Try to parse as number if possible for other fields
             const numValue = Number(value)
             record[header] = isNaN(numValue) ? value : numValue
           } else {
