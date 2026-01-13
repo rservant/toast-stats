@@ -69,8 +69,23 @@ class OrchestratorCacheAdapter implements IScraperCache {
     type: CSVType,
     districtId?: string
   ): string {
-    const fileName = districtId ? `${type}_${districtId}.csv` : `${type}.csv`
-    return path.join(this.cacheDir, 'raw-csv', date, fileName)
+    // Match backend's RawCSVCacheService file path convention:
+    // - ALL_DISTRICTS: raw-csv/{date}/all-districts.csv
+    // - District-specific: raw-csv/{date}/district-{districtId}/{type}.csv
+    if (type === CSVType.ALL_DISTRICTS) {
+      return path.join(this.cacheDir, 'raw-csv', date, `${type}.csv`)
+    } else {
+      if (!districtId) {
+        throw new Error(`District ID required for CSV type: ${type}`)
+      }
+      const districtPath = path.join(
+        this.cacheDir,
+        'raw-csv',
+        date,
+        `district-${districtId}`
+      )
+      return path.join(districtPath, `${type}.csv`)
+    }
   }
 
   private buildMetadataPath(date: string): string {
@@ -215,9 +230,32 @@ class OrchestratorCacheAdapter implements IScraperCache {
    */
   async getCachedFilesForDate(date: string): Promise<string[]> {
     const datePath = path.join(this.cacheDir, 'raw-csv', date)
+    const csvFiles: string[] = []
+
     try {
-      const entries = await fs.readdir(datePath)
-      return entries.filter(f => f.endsWith('.csv'))
+      const entries = await fs.readdir(datePath, { withFileTypes: true })
+
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith('.csv')) {
+          // Top-level CSV files (e.g., all-districts.csv)
+          csvFiles.push(entry.name)
+        } else if (entry.isDirectory() && entry.name.startsWith('district-')) {
+          // District subdirectories - list CSV files within
+          const districtPath = path.join(datePath, entry.name)
+          try {
+            const districtFiles = await fs.readdir(districtPath)
+            for (const file of districtFiles) {
+              if (file.endsWith('.csv')) {
+                csvFiles.push(path.join(entry.name, file))
+              }
+            }
+          } catch {
+            // Ignore errors reading district subdirectories
+          }
+        }
+      }
+
+      return csvFiles
     } catch (error) {
       const err = error as { code?: string }
       if (err.code === 'ENOENT') {
@@ -462,7 +500,8 @@ export class ScraperOrchestrator {
               this.config.cacheDir,
               'raw-csv',
               date,
-              `${CSVType.CLUB_PERFORMANCE}_${districtId}.csv`
+              `district-${districtId}`,
+              `${CSVType.CLUB_PERFORMANCE}.csv`
             )
           )
 
@@ -476,7 +515,8 @@ export class ScraperOrchestrator {
               this.config.cacheDir,
               'raw-csv',
               date,
-              `${CSVType.DIVISION_PERFORMANCE}_${districtId}.csv`
+              `district-${districtId}`,
+              `${CSVType.DIVISION_PERFORMANCE}.csv`
             )
           )
 
@@ -490,7 +530,8 @@ export class ScraperOrchestrator {
               this.config.cacheDir,
               'raw-csv',
               date,
-              `${CSVType.DISTRICT_PERFORMANCE}_${districtId}.csv`
+              `district-${districtId}`,
+              `${CSVType.DISTRICT_PERFORMANCE}.csv`
             )
           )
 
