@@ -12,7 +12,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'fs'
 import path from 'path'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 
 describe('ISO Date-based Snapshot Migration', () => {

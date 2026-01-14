@@ -7,7 +7,7 @@
  * operations of the snapshot system.
  */
 
-import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../services/SnapshotStore.js'
 import {
   Snapshot,
   CURRENT_SCHEMA_VERSION,

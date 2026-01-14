@@ -22,8 +22,7 @@ import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
-import { FileSnapshotStore } from './FileSnapshotStore.js'
-import { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
+import { FileSnapshotStore } from './SnapshotStore.js'
 import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { RefreshService } from './RefreshService.js'
 import {
@@ -239,17 +238,16 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
             ServiceTokens.CacheConfigService
           )
           const cacheDir = cacheConfig.getCacheDirectory()
-          const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+          const snapshotStore = new FileSnapshotStore({
             cacheDir,
             maxSnapshots: 100,
             maxAgeDays: 30,
           })
-          const districtDataAggregator = createDistrictDataAggregator(
-            perDistrictSnapshotStore
-          )
+          const districtDataAggregator =
+            createDistrictDataAggregator(snapshotStore)
           const dataSource = new AnalyticsDataSourceAdapter(
             districtDataAggregator,
-            perDistrictSnapshotStore
+            snapshotStore
           )
           return new AnalyticsEngine(dataSource)
         },
@@ -270,7 +268,7 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
-    // Register SnapshotStore
+    // Register SnapshotStore - using FileSnapshotStore for date-based folder structure
     container.register(
       ServiceTokens.SnapshotStore,
       createServiceFactory(
@@ -282,7 +280,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
             cacheDir: cacheConfig.getCacheDirectory(),
             maxSnapshots: config.snapshots.maxSnapshots,
             maxAgeDays: config.snapshots.maxAgeDays,
-            enableCompression: config.snapshots.enableCompression,
           })
         },
         async () => {
@@ -343,7 +340,7 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
 
           return new BackfillService(
             refreshService,
-            snapshotStore as PerDistrictFileSnapshotStore, // Cast to PerDistrictFileSnapshotStore - they're compatible
+            snapshotStore as FileSnapshotStore,
             configService,
             undefined, // alertManager
             undefined, // circuitBreakerManager
@@ -393,17 +390,15 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   createAnalyticsEngine(cacheConfig?: CacheConfigService): AnalyticsEngine {
     const config = cacheConfig || this.createCacheConfigService()
     const cacheDir = config.getCacheDirectory()
-    const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+    const snapshotStore = new FileSnapshotStore({
       cacheDir,
       maxSnapshots: 100,
       maxAgeDays: 30,
     })
-    const districtDataAggregator = createDistrictDataAggregator(
-      perDistrictSnapshotStore
-    )
+    const districtDataAggregator = createDistrictDataAggregator(snapshotStore)
     const dataSource = new AnalyticsDataSourceAdapter(
       districtDataAggregator,
-      perDistrictSnapshotStore
+      snapshotStore
     )
     const service = new AnalyticsEngine(dataSource)
     this.services.push(service)
@@ -428,7 +423,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       cacheDir: config.getCacheDirectory(),
       maxSnapshots: 100,
       maxAgeDays: 30,
-      enableCompression: false,
     })
     // FileSnapshotStore doesn't have dispose method, so we don't track it
     return service
@@ -505,7 +499,7 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
 
     const service = new BackfillService(
       refresh,
-      store as PerDistrictFileSnapshotStore, // Cast to PerDistrictFileSnapshotStore - they're compatible
+      store as FileSnapshotStore,
       config,
       undefined, // alertManager
       undefined, // circuitBreakerManager

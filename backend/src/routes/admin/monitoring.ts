@@ -17,7 +17,7 @@ import {
   getServiceFactory,
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
-import { FileSnapshotStore } from '../../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../../services/SnapshotStore.js'
 
 export const monitoringRouter = Router()
 

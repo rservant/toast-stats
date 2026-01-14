@@ -6,7 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import fs from 'fs/promises'

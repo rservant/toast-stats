@@ -12,7 +12,7 @@
 import { logger } from '../utils/logger.js'
 import type { SnapshotStore } from '../types/snapshots.js'
 import type { RefreshService } from './RefreshService.js'
-import type { FileSnapshotStore } from './FileSnapshotStore.js'
+import type { FileSnapshotStore } from './SnapshotStore.js'
 
 /**
  * Result of process separation validation

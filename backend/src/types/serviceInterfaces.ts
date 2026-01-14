@@ -20,7 +20,7 @@ import type {
   SnapshotMetadata,
   SnapshotFilters,
 } from './snapshots.js'
-import type { PerDistrictSnapshotMetadata } from '../services/PerDistrictSnapshotStore.js'
+import type { PerDistrictSnapshotMetadata } from '../services/SnapshotStore.js'
 import type {
   CSVType,
   RawCSVCacheMetadata,

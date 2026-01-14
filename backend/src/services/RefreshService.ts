@@ -17,7 +17,7 @@ import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type { SnapshotStore } from '../types/snapshots.js'
-import type { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
+import type { FileSnapshotStore } from './SnapshotStore.js'
 
 /**
  * Result of a complete refresh operation
@@ -93,7 +93,7 @@ export class RefreshService {
     this.snapshotBuilder = new SnapshotBuilder(
       rawCSVCache,
       this.districtConfigService,
-      snapshotStore as PerDistrictFileSnapshotStore,
+      snapshotStore as FileSnapshotStore,
       validator ?? new DataValidator(),
       rankingCalculator,
       detector,

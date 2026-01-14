@@ -158,4 +158,3 @@ A commit created without proper authorization is considered unauthorized regardl
 > **No commit without explicit user authorization.**  
 > **Authorization is never implied.**  
 > **The commit action is always distinct from the changes it records.**
-

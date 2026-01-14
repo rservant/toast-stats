@@ -15,7 +15,7 @@ import {
   DistrictDataAggregator,
   createDistrictDataAggregator,
 } from '../../services/DistrictDataAggregator.js'
-import { PerDistrictFileSnapshotStore } from '../../services/PerDistrictSnapshotStore.js'
+import { FileSnapshotStore } from '../../services/SnapshotStore.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type { Snapshot } from '../../types/snapshots.js'
@@ -30,19 +30,18 @@ const cacheConfig = productionFactory.createCacheConfigService()
 
 export const cacheDirectory = cacheConfig.getCacheDirectory()
 
-// Initialize snapshot store for serving data from snapshots
-export const snapshotStore = productionFactory.createSnapshotStore(cacheConfig)
-
-// Initialize per-district snapshot store and aggregator for new format
-export const perDistrictSnapshotStore = new PerDistrictFileSnapshotStore({
+// Initialize snapshot store and aggregator
+export const snapshotStore = new FileSnapshotStore({
   cacheDir: cacheDirectory,
   maxSnapshots: 100,
   maxAgeDays: 30,
 })
 
-export const districtDataAggregator = createDistrictDataAggregator(
-  perDistrictSnapshotStore
-)
+// Backward compatibility alias
+export const perDistrictSnapshotStore = snapshotStore
+
+export const districtDataAggregator =
+  createDistrictDataAggregator(snapshotStore)
 
 // Initialize services using the production service factory
 const serviceFactory = getProductionServiceFactory()

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import request from 'supertest'
 import express, { type Express } from 'express'
 import { Router } from 'express'
-import { PerDistrictFileSnapshotStore } from '../../services/PerDistrictSnapshotStore.js'
+import { FileSnapshotStore } from '../../services/SnapshotStore.js'
 import type { AllDistrictsRankingsData } from '../../types/snapshots.js'
 import type { Snapshot } from '../../types/snapshots.js'
 import {

@@ -9,7 +9,10 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { RefreshService } from '../RefreshService.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { BordaCountRankingCalculator } from '../RankingCalculator.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import {
   createTestSelfCleanup,
   type TestSelfCleanup,

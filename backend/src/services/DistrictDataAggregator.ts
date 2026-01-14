@@ -8,7 +8,7 @@
 
 import { logger } from '../utils/logger.js'
 import { DistrictStatistics } from '../types/districts.js'
-import { PerDistrictSnapshotStore } from './PerDistrictSnapshotStore.js'
+import { PerDistrictSnapshotStoreInterface as PerDistrictSnapshotStore } from './SnapshotStore.js'
 
 /**
  * Configuration for the district data aggregator

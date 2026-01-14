@@ -1,7 +1,7 @@
 /**
  * Analytics Data Source Adapter
  *
- * Provides an adapter that wraps DistrictDataAggregator and PerDistrictSnapshotStore
+ * Provides an adapter that wraps DistrictDataAggregator and FileSnapshotStore
  * to implement the IAnalyticsDataSource interface. This enables the AnalyticsEngine
  * to use the new snapshot-based data architecture while maintaining a clean abstraction.
  *
@@ -17,9 +17,9 @@ import type {
 } from '../types/serviceInterfaces.js'
 import type { DistrictDataAggregator } from './DistrictDataAggregator.js'
 import type {
-  PerDistrictFileSnapshotStore,
+  FileSnapshotStore,
   PerDistrictSnapshotMetadata,
-} from './PerDistrictSnapshotStore.js'
+} from './SnapshotStore.js'
 
 /**
  * Configuration for the AnalyticsDataSourceAdapter
@@ -32,17 +32,17 @@ export interface AnalyticsDataSourceAdapterConfig {
 /**
  * Analytics Data Source Adapter
  *
- * Wraps DistrictDataAggregator and PerDistrictSnapshotStore to provide
+ * Wraps DistrictDataAggregator and FileSnapshotStore to provide
  * the IAnalyticsDataSource interface for the AnalyticsEngine.
  */
 export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
   private readonly aggregator: DistrictDataAggregator
-  private readonly snapshotStore: PerDistrictFileSnapshotStore
+  private readonly snapshotStore: FileSnapshotStore
   private readonly config: Required<AnalyticsDataSourceAdapterConfig>
 
   constructor(
     aggregator: DistrictDataAggregator,
-    snapshotStore: PerDistrictFileSnapshotStore,
+    snapshotStore: FileSnapshotStore,
     config: AnalyticsDataSourceAdapterConfig = {}
   ) {
     this.aggregator = aggregator
@@ -313,7 +313,7 @@ export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
  */
 export function createAnalyticsDataSourceAdapter(
   aggregator: DistrictDataAggregator,
-  snapshotStore: PerDistrictFileSnapshotStore,
+  snapshotStore: FileSnapshotStore,
   config?: AnalyticsDataSourceAdapterConfig
 ): AnalyticsDataSourceAdapter {
   return new AnalyticsDataSourceAdapter(aggregator, snapshotStore, config)

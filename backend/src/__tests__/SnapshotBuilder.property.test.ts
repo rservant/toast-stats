@@ -26,7 +26,10 @@ import crypto from 'crypto'
 import { SnapshotBuilder } from '../services/SnapshotBuilder.js'
 import type { IRawCSVCacheService } from '../types/serviceInterfaces.js'
 import type { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
-import type { PerDistrictFileSnapshotStore } from '../services/PerDistrictSnapshotStore.js'
+import type {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../services/SnapshotStore.js'
 import { CSVType, type RawCSVCacheMetadata } from '../types/rawCSVCache.js'
 import { TestLogger } from '../services/TestServiceFactory.js'
 

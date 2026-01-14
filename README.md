@@ -127,6 +127,7 @@ The system uses a **two-process architecture** that separates data acquisition f
 2. **Backend** (`backend/`): Reads from the cache and creates snapshots using SnapshotBuilder (no scraping)
 
 This separation enables:
+
 - Independent scheduling of scraping operations
 - Backend remains responsive during scraping
 - Scraping failures don't affect data serving

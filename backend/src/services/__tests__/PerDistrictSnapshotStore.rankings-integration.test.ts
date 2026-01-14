@@ -12,7 +12,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import {
   Snapshot,
   AllDistrictsRankingsData,

@@ -28,7 +28,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import adminRoutes from '../index.js'
-import { FileSnapshotStore } from '../../../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
 
 // Test snapshot store instance
@@ -131,14 +131,14 @@ describe('API Path Preservation Property Tests', () => {
   })
 
   /**
-   * Helper to create a test snapshot
+   * Helper to create a test snapshot with ISO date format
    */
   const createTestSnapshot = (
-    id: string,
+    dateStr: string,
     status: 'success' | 'partial' | 'failed' = 'success'
   ): Snapshot => ({
-    snapshot_id: id,
-    created_at: new Date(parseInt(id)).toISOString(),
+    snapshot_id: dateStr,
+    created_at: new Date().toISOString(),
     schema_version: '1.0.0',
     calculation_version: '1.0.0',
     status,
@@ -147,7 +147,7 @@ describe('API Path Preservation Property Tests', () => {
       districts: [
         {
           districtId: '123',
-          asOfDate: '2024-01-01',
+          asOfDate: dateStr,
           membership: {
             total: 100,
             change: 5,
@@ -176,8 +176,8 @@ describe('API Path Preservation Property Tests', () => {
       ],
       metadata: {
         source: 'test',
-        fetchedAt: new Date(parseInt(id)).toISOString(),
-        dataAsOfDate: '2024-01-01',
+        fetchedAt: new Date().toISOString(),
+        dataAsOfDate: dateStr,
         districtCount: 1,
         processingDurationMs: 1000,
       },
@@ -213,7 +213,7 @@ describe('API Path Preservation Property Tests', () => {
     it('should respond with consistent structure for snapshot list endpoint', async () => {
       // Create test snapshot
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704067200000', 'success')
+        createTestSnapshot('2024-01-01', 'success')
       )
 
       // Property: For any valid limit parameter, response structure should be consistent
@@ -274,7 +274,7 @@ describe('API Path Preservation Property Tests', () => {
 
     it('should respond with consistent structure for snapshot detail endpoint', async () => {
       // Create test snapshots with different IDs
-      const snapshotIds = ['1704067200000', '1704153600000', '1704240000000']
+      const snapshotIds = ['2024-01-01', '2024-01-02', '2024-01-03']
       for (const id of snapshotIds) {
         await testSnapshotStore.writeSnapshot(createTestSnapshot(id, 'success'))
       }
@@ -308,7 +308,7 @@ describe('API Path Preservation Property Tests', () => {
 
     it('should respond with consistent structure for snapshot payload endpoint', async () => {
       // Create test snapshot
-      const snapshotId = '1704067200000'
+      const snapshotId = '2024-01-01'
       await testSnapshotStore.writeSnapshot(
         createTestSnapshot(snapshotId, 'success')
       )
@@ -333,7 +333,7 @@ describe('API Path Preservation Property Tests', () => {
     it('should respond with consistent structure for health endpoint', async () => {
       // Create test snapshot for health check
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704067200000', 'success')
+        createTestSnapshot('2024-01-01', 'success')
       )
 
       const response = await request(app).get(
@@ -472,10 +472,10 @@ describe('API Path Preservation Property Tests', () => {
     it('should filter snapshots by status consistently', async () => {
       // Create snapshots with different statuses
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704067200000', 'success')
+        createTestSnapshot('2024-01-01', 'success')
       )
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704153600000', 'failed')
+        createTestSnapshot('2024-01-02', 'failed')
       )
 
       // Property: For any valid status filter, response should only contain matching snapshots

@@ -9,7 +9,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
 import fs from 'fs/promises'
 import path from 'path'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 
 // Test configuration
 const TEST_ITERATIONS = 100

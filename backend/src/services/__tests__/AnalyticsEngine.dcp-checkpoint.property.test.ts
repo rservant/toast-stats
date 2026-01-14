@@ -19,7 +19,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
 import { AnalyticsEngine } from '../AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
 import fs from 'fs/promises'
 import path from 'path'

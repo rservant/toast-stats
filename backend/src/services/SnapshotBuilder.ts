@@ -21,7 +21,7 @@ import {
 import type { RankingCalculator } from './RankingCalculator.js'
 import type { IRawCSVCacheService } from '../types/serviceInterfaces.js'
 import type { DistrictConfigurationService } from './DistrictConfigurationService.js'
-import type { PerDistrictFileSnapshotStore } from './PerDistrictSnapshotStore.js'
+import type { FileSnapshotStore } from './SnapshotStore.js'
 import type {
   Snapshot,
   NormalizedData,
@@ -135,7 +135,7 @@ export interface ILogger {
 export class SnapshotBuilder {
   private readonly rawCSVCache: IRawCSVCacheService
   private readonly districtConfigService: DistrictConfigurationService
-  private readonly snapshotStore: PerDistrictFileSnapshotStore
+  private readonly snapshotStore: FileSnapshotStore
   private readonly validator: DataValidator
   private readonly closingPeriodDetector: ClosingPeriodDetector
   private readonly dataNormalizer: DataNormalizer
@@ -145,7 +145,7 @@ export class SnapshotBuilder {
   constructor(
     rawCSVCache: IRawCSVCacheService,
     districtConfigService: DistrictConfigurationService,
-    snapshotStore: PerDistrictFileSnapshotStore,
+    snapshotStore: FileSnapshotStore,
     validator?: DataValidator,
     rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,

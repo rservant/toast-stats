@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
-import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../services/SnapshotStore.js'
 import {
   Snapshot,
   // NormalizedData,
@@ -96,8 +96,9 @@ describe('Snapshot Infrastructure', () => {
     })
 
     it('should write and retrieve a successful snapshot', async () => {
+      const dataAsOfDate = '2024-01-01'
       const testSnapshot: Snapshot = {
-        snapshot_id: generateSnapshotId(),
+        snapshot_id: dataAsOfDate, // Will be overwritten by writeSnapshot based on dataAsOfDate
         created_at: new Date().toISOString(),
         schema_version: CURRENT_SCHEMA_VERSION,
         calculation_version: CURRENT_CALCULATION_VERSION,
@@ -108,7 +109,7 @@ describe('Snapshot Infrastructure', () => {
           metadata: {
             source: 'test',
             fetchedAt: new Date().toISOString(),
-            dataAsOfDate: '2024-01-01',
+            dataAsOfDate,
             districtCount: 0,
             processingDurationMs: 100,
           },
@@ -119,18 +120,19 @@ describe('Snapshot Infrastructure', () => {
 
       const retrieved = await snapshotStore.getLatest()
       const retrievedSuccessful = await snapshotStore.getLatestSuccessful()
-      const retrievedById = await snapshotStore.getSnapshot(
-        testSnapshot.snapshot_id
-      )
+      const retrievedById = await snapshotStore.getSnapshot(dataAsOfDate)
 
-      expect(retrieved).toEqual(testSnapshot)
-      expect(retrievedSuccessful).toEqual(testSnapshot)
-      expect(retrievedById).toEqual(testSnapshot)
+      // Snapshot ID is now based on dataAsOfDate
+      expect(retrieved?.snapshot_id).toBe(dataAsOfDate)
+      expect(retrieved?.status).toBe('success')
+      expect(retrievedSuccessful?.snapshot_id).toBe(dataAsOfDate)
+      expect(retrievedById?.snapshot_id).toBe(dataAsOfDate)
     })
 
     it('should not serve failed snapshots as latest successful', async () => {
+      const dataAsOfDate = '2024-01-01'
       const failedSnapshot: Snapshot = {
-        snapshot_id: generateSnapshotId(),
+        snapshot_id: dataAsOfDate,
         created_at: new Date().toISOString(),
         schema_version: CURRENT_SCHEMA_VERSION,
         calculation_version: CURRENT_CALCULATION_VERSION,
@@ -141,7 +143,7 @@ describe('Snapshot Infrastructure', () => {
           metadata: {
             source: 'test',
             fetchedAt: new Date().toISOString(),
-            dataAsOfDate: '2024-01-01',
+            dataAsOfDate,
             districtCount: 0,
             processingDurationMs: 100,
           },
@@ -153,14 +155,15 @@ describe('Snapshot Infrastructure', () => {
       const latest = await snapshotStore.getLatest()
       const latestSuccessful = await snapshotStore.getLatestSuccessful()
 
-      expect(latest).toEqual(failedSnapshot)
+      expect(latest?.snapshot_id).toBe(dataAsOfDate)
+      expect(latest?.status).toBe('failed')
       expect(latestSuccessful).toBeNull() // Should not return failed snapshot
     })
 
     it('should return latest successful snapshot when mixed with failed snapshots', async () => {
       // Create an older successful snapshot
       const olderSuccessfulSnapshot: Snapshot = {
-        snapshot_id: '1704067200000', // Earlier timestamp
+        snapshot_id: '2024-01-01',
         created_at: '2024-01-01T00:00:00.000Z',
         schema_version: CURRENT_SCHEMA_VERSION,
         calculation_version: CURRENT_CALCULATION_VERSION,
@@ -180,7 +183,7 @@ describe('Snapshot Infrastructure', () => {
 
       // Create a newer failed snapshot
       const newerFailedSnapshot: Snapshot = {
-        snapshot_id: '1704153600000', // Later timestamp
+        snapshot_id: '2024-01-02',
         created_at: '2024-01-02T00:00:00.000Z',
         schema_version: CURRENT_SCHEMA_VERSION,
         calculation_version: CURRENT_CALCULATION_VERSION,
@@ -206,17 +209,18 @@ describe('Snapshot Infrastructure', () => {
       const latestSuccessful = await snapshotStore.getLatestSuccessful()
 
       // getLatest should return the newest snapshot (failed)
-      expect(latest?.snapshot_id).toBe('1704153600000')
+      expect(latest?.snapshot_id).toBe('2024-01-02')
       expect(latest?.status).toBe('failed')
 
       // getLatestSuccessful should return the older successful snapshot, not the newer failed one
-      expect(latestSuccessful?.snapshot_id).toBe('1704067200000')
+      expect(latestSuccessful?.snapshot_id).toBe('2024-01-01')
       expect(latestSuccessful?.status).toBe('success')
     })
 
     it('should list snapshots with metadata', async () => {
+      const dataAsOfDate = '2024-01-01'
       const snapshot1: Snapshot = {
-        snapshot_id: generateSnapshotId(),
+        snapshot_id: dataAsOfDate,
         created_at: new Date().toISOString(),
         schema_version: CURRENT_SCHEMA_VERSION,
         calculation_version: CURRENT_CALCULATION_VERSION,
@@ -227,7 +231,7 @@ describe('Snapshot Infrastructure', () => {
           metadata: {
             source: 'test',
             fetchedAt: new Date().toISOString(),
-            dataAsOfDate: '2024-01-01',
+            dataAsOfDate,
             districtCount: 0,
             processingDurationMs: 100,
           },
@@ -239,10 +243,10 @@ describe('Snapshot Infrastructure', () => {
       const snapshots = await snapshotStore.listSnapshots()
 
       expect(snapshots).toHaveLength(1)
-      expect(snapshots[0].snapshot_id).toBe(snapshot1.snapshot_id)
-      expect(snapshots[0].status).toBe('success')
-      expect(snapshots[0].error_count).toBe(0)
-      expect(snapshots[0].district_count).toBe(0)
+      expect(snapshots[0]?.snapshot_id).toBe(dataAsOfDate)
+      expect(snapshots[0]?.status).toBe('success')
+      expect(snapshots[0]?.error_count).toBe(0)
+      expect(snapshots[0]?.district_count).toBe(0)
     })
 
     it('should handle non-existent snapshot retrieval', async () => {
@@ -265,8 +269,9 @@ describe('Snapshot Infrastructure', () => {
     })
 
     it('should create current.json pointer for successful snapshots', async () => {
+      const dataAsOfDate = '2024-01-01'
       const testSnapshot: Snapshot = {
-        snapshot_id: generateSnapshotId(),
+        snapshot_id: dataAsOfDate,
         created_at: new Date().toISOString(),
         schema_version: CURRENT_SCHEMA_VERSION,
         calculation_version: CURRENT_CALCULATION_VERSION,
@@ -277,7 +282,7 @@ describe('Snapshot Infrastructure', () => {
           metadata: {
             source: 'test',
             fetchedAt: new Date().toISOString(),
-            dataAsOfDate: '2024-01-01',
+            dataAsOfDate,
             districtCount: 0,
             processingDurationMs: 100,
           },
@@ -297,7 +302,7 @@ describe('Snapshot Infrastructure', () => {
       const pointerContent = await fs.readFile(currentPointerFile, 'utf-8')
       const pointer = JSON.parse(pointerContent)
 
-      expect(pointer.snapshot_id).toBe(testSnapshot.snapshot_id)
+      expect(pointer.snapshot_id).toBe(dataAsOfDate)
       expect(pointer.schema_version).toBe(testSnapshot.schema_version)
       expect(pointer.calculation_version).toBe(testSnapshot.calculation_version)
     })

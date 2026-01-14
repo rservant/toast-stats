@@ -106,11 +106,11 @@ crontab -e
 
 #### Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | All districts scraped successfully |
-| 1 | Some districts failed (partial success) |
-| 2 | All districts failed or fatal error |
+| Code | Meaning                                 |
+| ---- | --------------------------------------- |
+| 0    | All districts scraped successfully      |
+| 1    | Some districts failed (partial success) |
+| 2    | All districts failed or fatal error     |
 
 ### Backend Deployment
 

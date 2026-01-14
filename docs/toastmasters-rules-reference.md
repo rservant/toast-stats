@@ -40,7 +40,7 @@ Kiro MUST treat this document as the **primary source of truth** for all Toastma
 function getProgramYear(date: Date): string {
   const year = date.getFullYear()
   const month = date.getMonth() + 1 // 1-12
-  
+
   if (month >= 7) {
     return `${year}-${year + 1}`
   } else {
@@ -57,27 +57,27 @@ function getProgramYear(date: Date): string {
 
 The DCP consists of **10 goals** that clubs work toward during the program year:
 
-| Goal | Description | Requirement |
-|------|-------------|-------------|
-| 1 | Level 1 Awards | 4 or more |
-| 2 | Level 2 Awards | 2 or more |
-| 3 | Additional Level 2 Awards | 2 additional (4 total) |
-| 4 | Level 3 Awards | 2 or more |
-| 5 | Level 4/Path Completion/DTM Awards | 1 or more |
-| 6 | Additional Level 4/Path Completion/DTM | 1 additional (2 total) |
-| 7 | New Members | 4 or more |
-| 8 | Additional New Members | 4 additional (8 total) |
-| 9 | Officer Training | 4+ officers trained in each round |
-| 10 | Administrative Excellence | Officer list on time + dues on time |
+| Goal | Description                            | Requirement                         |
+| ---- | -------------------------------------- | ----------------------------------- |
+| 1    | Level 1 Awards                         | 4 or more                           |
+| 2    | Level 2 Awards                         | 2 or more                           |
+| 3    | Additional Level 2 Awards              | 2 additional (4 total)              |
+| 4    | Level 3 Awards                         | 2 or more                           |
+| 5    | Level 4/Path Completion/DTM Awards     | 1 or more                           |
+| 6    | Additional Level 4/Path Completion/DTM | 1 additional (2 total)              |
+| 7    | New Members                            | 4 or more                           |
+| 8    | Additional New Members                 | 4 additional (8 total)              |
+| 9    | Officer Training                       | 4+ officers trained in each round   |
+| 10   | Administrative Excellence              | Officer list on time + dues on time |
 
 ### 3.2 Distinguished Club Levels
 
-| Level | DCP Goals Required | Membership Requirement | Alternative |
-|-------|-------------------|----------------------|-------------|
-| Distinguished | 5 goals | 20 members | OR net growth ≥ 3 |
-| Select Distinguished | 7 goals | 20 members | OR net growth ≥ 5 |
-| President's Distinguished | 9 goals | 20 members | — |
-| Smedley Distinguished | 10 goals | 25 members | — |
+| Level                     | DCP Goals Required | Membership Requirement | Alternative       |
+| ------------------------- | ------------------ | ---------------------- | ----------------- |
+| Distinguished             | 5 goals            | 20 members             | OR net growth ≥ 3 |
+| Select Distinguished      | 7 goals            | 20 members             | OR net growth ≥ 5 |
+| President's Distinguished | 9 goals            | 20 members             | —                 |
+| Smedley Distinguished     | 10 goals           | 25 members             | —                 |
 
 ### 3.3 CSP Requirement (2025-2026 and later)
 
@@ -112,13 +112,13 @@ A club is NOT considered paid when status is:
 
 ### 4.2 Membership Thresholds
 
-| Threshold | Count | Purpose |
-|-----------|-------|---------|
-| Minimum for Charter | 20 members | New club formation |
-| Distinguished Minimum | 20 members | Base distinguished qualification |
-| Smedley Minimum | 25 members | Smedley distinguished qualification |
-| Low Membership Warning | < 12 members | Club health concern |
-| Intervention Required | < 12 members + net growth < 3 | Critical club health |
+| Threshold              | Count                         | Purpose                             |
+| ---------------------- | ----------------------------- | ----------------------------------- |
+| Minimum for Charter    | 20 members                    | New club formation                  |
+| Distinguished Minimum  | 20 members                    | Base distinguished qualification    |
+| Smedley Minimum        | 25 members                    | Smedley distinguished qualification |
+| Low Membership Warning | < 12 members                  | Club health concern                 |
+| Intervention Required  | < 12 members + net growth < 3 | Critical club health                |
 
 ### 4.3 Net Growth Calculation
 
@@ -137,11 +137,11 @@ netGrowth = currentActiveMembers - membershipBase
 
 Clubs are classified into exactly one of three categories:
 
-| Status | Criteria |
-|--------|----------|
-| **Intervention Required** | Membership < 12 AND net growth < 3 |
-| **Thriving** | Membership requirement met AND DCP checkpoint met AND CSP submitted |
-| **Vulnerable** | Any requirement not met (but not intervention required) |
+| Status                    | Criteria                                                            |
+| ------------------------- | ------------------------------------------------------------------- |
+| **Intervention Required** | Membership < 12 AND net growth < 3                                  |
+| **Thriving**              | Membership requirement met AND DCP checkpoint met AND CSP submitted |
+| **Vulnerable**            | Any requirement not met (but not intervention required)             |
 
 ### 5.2 Membership Requirement for Thriving
 
@@ -152,20 +152,20 @@ A club meets the membership requirement if:
 
 ### 5.3 DCP Checkpoint by Month
 
-| Month | Minimum DCP Goals |
-|-------|------------------|
-| July | 0 (administrative) |
-| August | 0 |
-| September | 1 |
-| October | 1 |
-| November | 2 |
-| December | 2 |
-| January | 3 |
-| February | 4 |
-| March | 4 |
-| April | 5 |
-| May | 5 |
-| June | 5 |
+| Month     | Minimum DCP Goals  |
+| --------- | ------------------ |
+| July      | 0 (administrative) |
+| August    | 0                  |
+| September | 1                  |
+| October   | 1                  |
+| November  | 2                  |
+| December  | 2                  |
+| January   | 3                  |
+| February  | 4                  |
+| March     | 4                  |
+| April     | 5                  |
+| May       | 5                  |
+| June      | 5                  |
 
 ---
 
@@ -185,11 +185,11 @@ An Area is eligible for recognition **only if**:
 
 ### 6.3 Recognition Levels
 
-| Level | Paid Clubs | Distinguished Clubs (of paid) |
-|-------|------------|------------------------------|
-| Distinguished Area | ≥ 75% | ≥ 50% |
-| Select Distinguished Area | ≥ 75% | ≥ 75% |
-| President's Distinguished Area | ≥ 75% | 100% |
+| Level                          | Paid Clubs | Distinguished Clubs (of paid) |
+| ------------------------------ | ---------- | ----------------------------- |
+| Distinguished Area             | ≥ 75%      | ≥ 50%                         |
+| Select Distinguished Area      | ≥ 75%      | ≥ 75%                         |
+| President's Distinguished Area | ≥ 75%      | 100%                          |
 
 ---
 
@@ -210,11 +210,11 @@ A Division is eligible for recognition **only if**:
 
 ### 7.3 Recognition Levels
 
-| Level | Paid Areas | Distinguished Areas (of paid) |
-|-------|------------|------------------------------|
-| Distinguished Division | ≥ 85% | ≥ 50% |
-| Select Distinguished Division | ≥ 85% | ≥ 75% |
-| President's Distinguished Division | ≥ 85% | 100% |
+| Level                              | Paid Areas | Distinguished Areas (of paid) |
+| ---------------------------------- | ---------- | ----------------------------- |
+| Distinguished Division             | ≥ 85%      | ≥ 50%                         |
+| Select Distinguished Division      | ≥ 85%      | ≥ 75%                         |
+| President's Distinguished Division | ≥ 85%      | 100%                          |
 
 ---
 
@@ -237,14 +237,14 @@ A Division is eligible for recognition **only if**:
 
 This section documents differences between legacy report assumptions and current official rules.
 
-| Legacy PDF Assumption | Current Official Rule | Application Rule |
-|----------------------|----------------------|------------------|
-| No CSP requirement | CSP required for Distinguished (2025-2026+) | Check CSP field; default true for historical data |
-| Distinguished valid year-round | Distinguished valid from April 1 | Apply April 1 cutoff for recognition |
-| Fixed membership thresholds | Net growth alternative allowed | Check both membership AND net growth |
-| No club visit requirement for DAP | Club visits required for DAP eligibility | Mark eligibility "Unknown" when data unavailable |
-| Simple percentage calculations | Distinguished % uses paid clubs as denominator | Always calculate against paid clubs only |
-| No Smedley level mentioned | Smedley Distinguished exists (10 goals + 25 members) | Include Smedley in all calculations |
+| Legacy PDF Assumption             | Current Official Rule                                | Application Rule                                  |
+| --------------------------------- | ---------------------------------------------------- | ------------------------------------------------- |
+| No CSP requirement                | CSP required for Distinguished (2025-2026+)          | Check CSP field; default true for historical data |
+| Distinguished valid year-round    | Distinguished valid from April 1                     | Apply April 1 cutoff for recognition              |
+| Fixed membership thresholds       | Net growth alternative allowed                       | Check both membership AND net growth              |
+| No club visit requirement for DAP | Club visits required for DAP eligibility             | Mark eligibility "Unknown" when data unavailable  |
+| Simple percentage calculations    | Distinguished % uses paid clubs as denominator       | Always calculate against paid clubs only          |
+| No Smedley level mentioned        | Smedley Distinguished exists (10 goals + 25 members) | Include Smedley in all calculations               |
 
 ---
 
@@ -252,32 +252,32 @@ This section documents differences between legacy report assumptions and current
 
 ### 10.1 Dashboard CSV Fields
 
-| Concept | Primary Field | Alternative Fields |
-|---------|--------------|-------------------|
-| Club ID | `Club Number` | `Club ID`, `ClubID` |
-| Membership | `Active Members` | `Membership`, `Active Membership` |
-| DCP Goals | `Goals Met` | — |
-| Club Status | `Club Status` | `Status` |
-| Distinguished Status | `Club Distinguished Status` | — |
-| Membership Base | `Mem. Base` | — |
-| CSP Status | `CSP` | `Club Success Plan`, `CSP Submitted` |
-| Division | `Division` | `Div` |
-| Area | `Area` | — |
+| Concept              | Primary Field               | Alternative Fields                   |
+| -------------------- | --------------------------- | ------------------------------------ |
+| Club ID              | `Club Number`               | `Club ID`, `ClubID`                  |
+| Membership           | `Active Members`            | `Membership`, `Active Membership`    |
+| DCP Goals            | `Goals Met`                 | —                                    |
+| Club Status          | `Club Status`               | `Status`                             |
+| Distinguished Status | `Club Distinguished Status` | —                                    |
+| Membership Base      | `Mem. Base`                 | —                                    |
+| CSP Status           | `CSP`                       | `Club Success Plan`, `CSP Submitted` |
+| Division             | `Division`                  | `Div`                                |
+| Area                 | `Area`                      | —                                    |
 
 ### 10.2 Goal-Specific Fields
 
-| Goal | Field Name | Threshold |
-|------|-----------|-----------|
-| 1 | `Level 1s` | ≥ 4 |
-| 2 | `Level 2s` | ≥ 2 |
-| 3 | `Add. Level 2s` | ≥ 2 (with Goal 2 met) |
-| 4 | `Level 3s` | ≥ 2 |
-| 5 | `Level 4s, Path Completions, or DTM Awards` | ≥ 1 |
-| 6 | `Add. Level 4s, Path Completions, or DTM award` | ≥ 1 (with Goal 5 met) |
-| 7 | `New Members` | ≥ 4 |
-| 8 | `Add. New Members` | ≥ 4 (with Goal 7 met) |
-| 9 | `Off. Trained Round 1` + `Off. Trained Round 2` | ≥ 4 each |
-| 10 | `Off. List On Time` + (`Mem. dues on time Oct` OR `Mem. dues on time Apr`) | ≥ 1 each |
+| Goal | Field Name                                                                 | Threshold             |
+| ---- | -------------------------------------------------------------------------- | --------------------- |
+| 1    | `Level 1s`                                                                 | ≥ 4                   |
+| 2    | `Level 2s`                                                                 | ≥ 2                   |
+| 3    | `Add. Level 2s`                                                            | ≥ 2 (with Goal 2 met) |
+| 4    | `Level 3s`                                                                 | ≥ 2                   |
+| 5    | `Level 4s, Path Completions, or DTM Awards`                                | ≥ 1                   |
+| 6    | `Add. Level 4s, Path Completions, or DTM award`                            | ≥ 1 (with Goal 5 met) |
+| 7    | `New Members`                                                              | ≥ 4                   |
+| 8    | `Add. New Members`                                                         | ≥ 4 (with Goal 7 met) |
+| 9    | `Off. Trained Round 1` + `Off. Trained Round 2`                            | ≥ 4 each              |
+| 10   | `Off. List On Time` + (`Mem. dues on time Oct` OR `Mem. dues on time Apr`) | ≥ 1 each              |
 
 ---
 
@@ -306,9 +306,9 @@ When calculating recognition status, apply rules in this order:
 
 ## 13. Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | January 2026 | Initial canonical rules reference |
+| Version | Date         | Changes                           |
+| ------- | ------------ | --------------------------------- |
+| 1.0     | January 2026 | Initial canonical rules reference |
 
 ---
 

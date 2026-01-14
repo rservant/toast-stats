@@ -9,7 +9,7 @@
 
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../services/SnapshotStore.js'
 import type {
   SnapshotStoreIntegrityResult,
   SnapshotIntegrityResult,

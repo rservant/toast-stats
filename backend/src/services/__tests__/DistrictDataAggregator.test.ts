@@ -9,9 +9,9 @@ import {
 } from '../DistrictDataAggregator.js'
 import { DistrictStatistics } from '../../types/districts.js'
 import {
-  PerDistrictSnapshotStore,
+  PerDistrictSnapshotStoreInterface as PerDistrictSnapshotStore,
   SnapshotManifest,
-} from '../PerDistrictSnapshotStore.js'
+} from '../SnapshotStore.js'
 
 // Mock the logger
 vi.mock('../../utils/logger.js', () => ({

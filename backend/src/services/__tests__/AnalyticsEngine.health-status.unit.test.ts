@@ -15,7 +15,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { ClubHealthAnalyticsModule } from '../analytics/ClubHealthAnalyticsModule.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
 import type { ClubTrend } from '../../types/analytics.js'
 import type { ScrapedRecord } from '../../types/districts.js'

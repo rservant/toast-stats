@@ -19,7 +19,7 @@ import path from 'path'
 import os from 'os'
 import { districtConfigRouter } from '../district-config.js'
 import { DistrictConfigurationService } from '../../../services/DistrictConfigurationService.js'
-import { FileSnapshotStore } from '../../../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 
 // Test instances
 let testDistrictConfigService: DistrictConfigurationService

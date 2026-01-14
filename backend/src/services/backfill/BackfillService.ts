@@ -22,7 +22,7 @@ import {
   IntermediateCacheManager,
 } from '../../utils/IntermediateCache.js'
 import { RefreshService } from '../RefreshService.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import type { RankingCalculator } from '../RankingCalculator.js'
 import type { DistrictStatistics } from '../../types/districts.js'
@@ -50,7 +50,7 @@ export class BackfillService {
   private jobManager: JobManager
   private dataSourceSelector: DataSourceSelector
   private scopeManager: ScopeManager
-  private snapshotStore: PerDistrictFileSnapshotStore
+  private snapshotStore: FileSnapshotStore
   // Infrastructure components for future use
   // @ts-expect-error - These will be used in future implementations
   private _alertManager: AlertManager
@@ -70,7 +70,7 @@ export class BackfillService {
 
   constructor(
     refreshService: RefreshService,
-    snapshotStore: PerDistrictFileSnapshotStore,
+    snapshotStore: FileSnapshotStore,
     configService: DistrictConfigurationService,
     alertManager?: AlertManager,
     circuitBreakerManager?: ICircuitBreakerManager,

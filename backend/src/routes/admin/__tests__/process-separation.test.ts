@@ -17,7 +17,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { processSeparationRouter } from '../process-separation.js'
-import { FileSnapshotStore } from '../../../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
 
 // Test snapshot store instance

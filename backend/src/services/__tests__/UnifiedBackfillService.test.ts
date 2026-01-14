@@ -7,19 +7,19 @@ import {
   PartialSnapshotResult,
 } from '../UnifiedBackfillService'
 import { RefreshService } from '../RefreshService'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore'
+import { FileSnapshotStore } from '../SnapshotStore'
 import { DistrictConfigurationService } from '../DistrictConfigurationService'
 import { AlertManager } from '../../utils/AlertManager'
 
 // Mock dependencies
 vi.mock('../RefreshService')
-vi.mock('../PerDistrictSnapshotStore')
+vi.mock('../SnapshotStore')
 vi.mock('../DistrictConfigurationService')
 vi.mock('../../utils/AlertManager')
 
 describe('UnifiedBackfillService', () => {
   let refreshService: RefreshService
-  let snapshotStore: PerDistrictFileSnapshotStore
+  let snapshotStore: FileSnapshotStore
   let configService: DistrictConfigurationService
   let alertManager: AlertManager
   let backfillService: BackfillService
@@ -27,7 +27,7 @@ describe('UnifiedBackfillService', () => {
   beforeEach(() => {
     // Create mocked instances
     refreshService = new RefreshService({} as Record<string, unknown>)
-    snapshotStore = new PerDistrictFileSnapshotStore({
+    snapshotStore = new FileSnapshotStore({
       cacheDir: './test-cache',
     })
     configService = new DistrictConfigurationService('./test-cache')

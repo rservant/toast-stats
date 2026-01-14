@@ -14,7 +14,7 @@
 import { Command } from 'commander'
 import { getProductionServiceFactory } from '../services/ProductionServiceFactory.js'
 import { SnapshotFilters } from '../types/snapshots.js'
-import { FileSnapshotStore } from '../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../services/SnapshotStore.js'
 // import { logger } from '../utils/logger.js'
 
 // Configure logger for CLI usage

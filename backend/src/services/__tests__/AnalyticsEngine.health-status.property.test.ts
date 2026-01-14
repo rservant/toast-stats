@@ -21,7 +21,10 @@ import fc from 'fast-check'
 import { ClubHealthAnalyticsModule } from '../analytics/ClubHealthAnalyticsModule.js'
 import { getDCPCheckpoint } from '../analytics/AnalyticsUtils.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
 import type { ClubTrend, ClubHealthStatus } from '../../types/analytics.js'
 import type { ScrapedRecord } from '../../types/districts.js'

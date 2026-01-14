@@ -20,7 +20,10 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { AnalyticsEngine } from '../AnalyticsEngine.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
 import {

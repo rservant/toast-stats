@@ -13,7 +13,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import { RefreshService } from '../RefreshService.js'
 import { BordaCountRankingCalculator } from '../RankingCalculator.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import { DataValidator } from '../DataValidator.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'

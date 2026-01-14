@@ -13,7 +13,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import { BackfillService } from '../UnifiedBackfillService.js'
 import { RefreshService } from '../RefreshService.js'
-import { PerDistrictFileSnapshotStore } from '../PerDistrictSnapshotStore.js'
+import {
+  FileSnapshotStore,
+  PerDistrictFileSnapshotStore,
+} from '../SnapshotStore.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { BordaCountRankingCalculator } from '../RankingCalculator.js'
 

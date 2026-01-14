@@ -108,6 +108,7 @@ The system uses a **two-process architecture** that completely separates data ac
 **Purpose**: Standalone CLI tool for scraping Toastmasters dashboard data
 
 **Components**:
+
 - **ToastmastersScraper**: Playwright-based browser automation for dashboard scraping
 - **ScraperOrchestrator**: Coordinates scraping across multiple districts
 - **CircuitBreaker**: Protects against cascading failures
@@ -116,6 +117,7 @@ The system uses a **two-process architecture** that completely separates data ac
 **Output**: Writes raw CSV data to the shared Raw CSV Cache
 
 **Usage**:
+
 ```bash
 # Scrape all configured districts
 scraper-cli scrape
@@ -132,11 +134,13 @@ scraper-cli status
 **Purpose**: API server that serves data from cached snapshots
 
 **Key Change**: The backend **no longer performs any scraping**. Instead:
+
 - **SnapshotBuilder** reads from the Raw CSV Cache
 - **RefreshService** orchestrates snapshot creation from cached data
 - If cache is missing, returns informative error directing user to run scraper-cli
 
 **Benefits**:
+
 - Backend remains responsive during scraping operations
 - Scraping failures don't affect data serving
 - Independent scheduling and scaling of scraping
@@ -438,7 +442,7 @@ The backend implements a **modular, dependency-injected service architecture** w
 
 - **Purpose**: Creates snapshots from cached CSV data without scraping
 - **Dependencies**: RawCSVCacheService, DistrictConfigurationService, SnapshotStore, DataValidator, RankingCalculator
-- **Features**: 
+- **Features**:
   - Reads from Raw CSV Cache (no network requests)
   - Handles partial snapshots when some districts missing
   - Cache integrity validation with checksums
@@ -1400,12 +1404,14 @@ toast-stats/
 ### Key Architectural Change
 
 **Before (scraper in backend)**:
+
 ```
 backend/src/services/ToastmastersScraper.ts  # Scraper was in backend
 backend/src/services/RefreshService.ts       # RefreshService called scraper directly
 ```
 
 **After (scraper-cli separation)**:
+
 ```
 packages/scraper-cli/src/services/ToastmastersScraper.ts  # Scraper moved to CLI
 backend/src/services/SnapshotBuilder.ts                    # New: reads from cache

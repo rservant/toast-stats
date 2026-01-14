@@ -17,7 +17,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { monitoringRouter } from '../monitoring.js'
-import { FileSnapshotStore } from '../../../services/FileSnapshotStore.js'
+import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
 
 // Test snapshot store instance
@@ -79,16 +79,16 @@ describe('Monitoring Routes', () => {
   })
 
   /**
-   * Helper to create a test snapshot
+   * Helper to create a test snapshot with ISO date format
    */
   const createTestSnapshot = (
-    id: string,
+    dateStr: string,
     status: 'success' | 'partial' | 'failed' = 'success',
     districtCount = 1
   ): Snapshot => {
     const districts = Array.from({ length: districtCount }, (_, i) => ({
       districtId: `${100 + i}`,
-      asOfDate: '2024-01-01',
+      asOfDate: dateStr,
       membership: {
         total: 100 + i * 10,
         change: 5,
@@ -116,8 +116,8 @@ describe('Monitoring Routes', () => {
     }))
 
     return {
-      snapshot_id: id,
-      created_at: new Date(parseInt(id)).toISOString(),
+      snapshot_id: dateStr,
+      created_at: new Date().toISOString(),
       schema_version: '1.0.0',
       calculation_version: '1.0.0',
       status,
@@ -126,8 +126,8 @@ describe('Monitoring Routes', () => {
         districts,
         metadata: {
           source: 'test',
-          fetchedAt: new Date(parseInt(id)).toISOString(),
-          dataAsOfDate: '2024-01-01',
+          fetchedAt: new Date().toISOString(),
+          dataAsOfDate: dateStr,
           districtCount,
           processingDurationMs: 1000,
         },
@@ -138,7 +138,7 @@ describe('Monitoring Routes', () => {
   describe('GET /snapshot-store/health', () => {
     it('should return health information when store is ready', async () => {
       // Create a test snapshot
-      const testSnapshot = createTestSnapshot('1704067200000', 'success', 2)
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success', 2)
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
       const response = await request(app).get(
@@ -154,7 +154,7 @@ describe('Monitoring Routes', () => {
     })
 
     it('should return current snapshot details when available', async () => {
-      const testSnapshot = createTestSnapshot('1704067200000', 'success', 2)
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success', 2)
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
       const response = await request(app).get(
@@ -164,7 +164,7 @@ describe('Monitoring Routes', () => {
       expect(response.status).toBe(200)
       expect(response.body.health.current_snapshot).not.toBeNull()
       expect(response.body.health.current_snapshot.snapshot_id).toBe(
-        '1704067200000'
+        '2024-01-01'
       )
       expect(response.body.health.current_snapshot.status).toBe('success')
       expect(response.body.health.current_snapshot.district_count).toBe(2)
@@ -183,13 +183,13 @@ describe('Monitoring Routes', () => {
     it('should include recent activity summary', async () => {
       // Create multiple snapshots with different statuses
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704067200000', 'success')
+        createTestSnapshot('2024-01-01', 'success')
       )
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704153600000', 'failed')
+        createTestSnapshot('2024-01-02', 'failed')
       )
       await testSnapshotStore.writeSnapshot(
-        createTestSnapshot('1704240000000', 'success')
+        createTestSnapshot('2024-01-03', 'success')
       )
 
       const response = await request(app).get(
@@ -204,7 +204,7 @@ describe('Monitoring Routes', () => {
     })
 
     it('should include store status indicators', async () => {
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
       const response = await request(app).get(
@@ -241,7 +241,7 @@ describe('Monitoring Routes', () => {
   describe('GET /snapshot-store/integrity', () => {
     it('should return integrity check results', async () => {
       // Create a test snapshot
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
 
       const response = await request(app).get(
@@ -308,7 +308,7 @@ describe('Monitoring Routes', () => {
   describe('GET /snapshot-store/performance', () => {
     it('should return performance metrics', async () => {
       // Create a test snapshot and read it to generate metrics
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
       await testSnapshotStore.getLatestSuccessful() // Generate a read
 
@@ -326,7 +326,7 @@ describe('Monitoring Routes', () => {
 
     it('should calculate cache hit rate percentage', async () => {
       // Create a test snapshot and read it multiple times
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
       await testSnapshotStore.getLatestSuccessful() // First read
       await testSnapshotStore.getLatestSuccessful() // Second read (cache hit)
@@ -343,7 +343,7 @@ describe('Monitoring Routes', () => {
     })
 
     it('should include cache efficiency indicator', async () => {
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
       await testSnapshotStore.getLatestSuccessful()
 
@@ -430,7 +430,7 @@ describe('Monitoring Routes', () => {
   describe('POST /snapshot-store/performance/reset', () => {
     it('should reset performance metrics successfully', async () => {
       // Create a test snapshot and generate some metrics
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
       await testSnapshotStore.getLatestSuccessful()
 
@@ -498,7 +498,7 @@ describe('Monitoring Routes', () => {
 
     it('should verify metrics are actually reset', async () => {
       // Create a test snapshot and generate some metrics
-      const testSnapshot = createTestSnapshot('1704067200000', 'success')
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
       await testSnapshotStore.writeSnapshot(testSnapshot)
       await testSnapshotStore.getLatestSuccessful()
       await testSnapshotStore.getLatestSuccessful()

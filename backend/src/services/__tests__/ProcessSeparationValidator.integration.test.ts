@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ProcessSeparationValidator } from '../ProcessSeparationValidator.js'
-import { FileSnapshotStore } from '../FileSnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import { RefreshService } from '../RefreshService.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { Snapshot } from '../../types/snapshots.js'

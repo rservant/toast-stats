@@ -199,7 +199,13 @@ class OrchestratorCacheAdapter implements IScraperCache {
     await fs.rename(tempFilePath, filePath)
 
     // Update metadata with checksum
-    await this.updateFullMetadata(date, type, csvContent, districtId, additionalMetadata)
+    await this.updateFullMetadata(
+      date,
+      type,
+      csvContent,
+      districtId,
+      additionalMetadata
+    )
 
     logger.debug('CSV cached successfully', {
       date,
@@ -242,7 +248,9 @@ class OrchestratorCacheAdapter implements IScraperCache {
   /**
    * Get or create full metadata for a date
    */
-  private async getOrCreateFullMetadata(date: string): Promise<FullCacheMetadata> {
+  private async getOrCreateFullMetadata(
+    date: string
+  ): Promise<FullCacheMetadata> {
     // Check in-memory cache
     const cached = this.fullMetadataCache.get(date)
     if (cached) {
@@ -391,7 +399,9 @@ class OrchestratorCacheAdapter implements IScraperCache {
           fileCount += 1
           totalSize += stat.size
         } else if (entry.isDirectory() && entry.name.startsWith('district-')) {
-          const districtEntries = await fs.readdir(fullPath, { withFileTypes: true })
+          const districtEntries = await fs.readdir(fullPath, {
+            withFileTypes: true,
+          })
           for (const districtEntry of districtEntries) {
             if (districtEntry.isFile() && districtEntry.name.endsWith('.csv')) {
               const districtFilePath = path.join(fullPath, districtEntry.name)
@@ -695,8 +705,9 @@ export class ScraperOrchestrator {
       // Execute scraping with retry logic
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
-          const { records, actualDate } = await scraper.getAllDistrictsWithMetadata(date)
-          
+          const { records, actualDate } =
+            await scraper.getAllDistrictsWithMetadata(date)
+
           // Log if actual date differs from requested
           if (actualDate !== date) {
             logger.info('All-districts: actual date differs from requested', {
@@ -724,7 +735,10 @@ export class ScraperOrchestrator {
       )
 
       if (!retryResult.success) {
-        throw retryResult.error ?? new Error('All-districts scraping failed after retries')
+        throw (
+          retryResult.error ??
+          new Error('All-districts scraping failed after retries')
+        )
       }
 
       const duration_ms = Date.now() - startTime
@@ -1035,7 +1049,11 @@ export class ScraperOrchestrator {
     const allCacheLocations: string[] = []
 
     // Scrape all-districts summary first
-    const allDistrictsResult = await this.scrapeAllDistricts(scraper, date, force)
+    const allDistrictsResult = await this.scrapeAllDistricts(
+      scraper,
+      date,
+      force
+    )
     if (allDistrictsResult.success) {
       allCacheLocations.push(...allDistrictsResult.cacheLocations)
     } else if (allDistrictsResult.error) {
