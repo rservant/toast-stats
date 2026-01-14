@@ -713,6 +713,9 @@ export class SnapshotBuilder {
   /**
    * Parse CSV content into ScrapedRecord array
    *
+   * Filters out footer rows that contain "Month of" (e.g., "Month of Mar, As of 03/24/2024")
+   * which are metadata lines from the Toastmasters dashboard, not actual data records.
+   *
    * @param csvContent - Raw CSV string
    * @returns Array of parsed records
    */
@@ -725,7 +728,24 @@ export class SnapshotBuilder {
         relax_column_count: true,
       }) as ScrapedRecord[]
 
-      return records
+      // Filter out footer rows containing "Month of" (e.g., "Month of Mar, As of 03/24/2024")
+      // These are metadata lines from the Toastmasters dashboard, not actual data records
+      const filteredRecords = records.filter((record: ScrapedRecord) => {
+        const hasMonthOf = Object.values(record).some(
+          value => typeof value === 'string' && value.includes('Month of')
+        )
+        return !hasMonthOf
+      })
+
+      if (filteredRecords.length < records.length) {
+        this.log.debug('Filtered CSV footer rows', {
+          totalRecords: records.length,
+          filteredRecords: filteredRecords.length,
+          removedRecords: records.length - filteredRecords.length,
+        })
+      }
+
+      return filteredRecords
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
