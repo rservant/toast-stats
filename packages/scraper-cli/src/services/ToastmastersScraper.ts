@@ -17,6 +17,8 @@ import type {
   DistrictInfo,
   CSVType,
   IScraperCache,
+  FallbackInfo,
+  FallbackMetrics,
 } from '../types/scraper.js'
 
 interface ScraperConfig {
@@ -29,6 +31,29 @@ export class ToastmastersScraper {
   private config: ScraperConfig
   private browser: Browser | null = null
   private cache: IScraperCache | null
+
+  /**
+   * Cache of dates that require fallback navigation
+   *
+   * Requirements:
+   * - 6.1: THE Fallback_Cache SHALL be an instance property of the ToastmastersScraper class
+   * - 6.2: WHEN a new ToastmastersScraper instance is created, THE Fallback_Cache SHALL be initialized as empty
+   * - 6.3: THE Fallback_Cache SHALL NOT be shared between ToastmastersScraper instances
+   */
+  private fallbackCache: Map<string, FallbackInfo> = new Map()
+
+  /**
+   * Metrics for fallback cache efficiency
+   *
+   * Requirements:
+   * - 7.1: THE Scraper SHALL track the number of cache hits (fallback knowledge reused)
+   * - 7.2: THE Scraper SHALL track the number of cache misses (fallback discovered fresh)
+   */
+  private fallbackMetrics: FallbackMetrics = {
+    cacheHits: 0,
+    cacheMisses: 0,
+    fallbackDatesDiscovered: 0,
+  }
 
   constructor(cache?: IScraperCache) {
     this.config = {
@@ -43,6 +68,332 @@ export class ToastmastersScraper {
     logger.debug('ToastmastersScraper initialized', {
       hasCache: !!cache,
     })
+  }
+
+  /**
+   * Get current fallback metrics (for reporting)
+   *
+   * Returns a copy of the metrics to prevent external modification.
+   *
+   * Requirements:
+   * - 7.1: THE Scraper SHALL track the number of cache hits (fallback knowledge reused)
+   * - 7.2: THE Scraper SHALL track the number of cache misses (fallback discovered fresh)
+   */
+  getFallbackMetrics(): FallbackMetrics {
+    return { ...this.fallbackMetrics }
+  }
+
+  /**
+   * Check if a date has cached fallback info
+   *
+   * Requirements:
+   * - 3.1: WHEN navigating to a date, THE Scraper SHALL first check the Fallback_Cache for that date
+   */
+  hasCachedFallback(date: string): boolean {
+    return this.fallbackCache.has(date)
+  }
+
+  /**
+   * Get cached fallback info for a date (for testing purposes)
+   *
+   * Returns a copy of the cached fallback info to prevent external modification.
+   */
+  getCachedFallbackInfo(date: string): FallbackInfo | undefined {
+    const info = this.fallbackCache.get(date)
+    return info ? { ...info } : undefined
+  }
+
+  /**
+   * Cache successful fallback knowledge
+   *
+   * Stores information about a successful fallback navigation so that subsequent
+   * requests for the same date can skip the initial failed attempt and go directly
+   * to the fallback URL.
+   *
+   * Requirements:
+   * - 4.1: WHEN fallback navigation succeeds, THE Scraper SHALL automatically populate
+   *        the Fallback_Cache with the successful parameters
+   * - 4.3: THE cache population SHALL occur before returning from the navigation method
+   * - 5.2: WHEN the Scraper populates the Fallback_Cache, THE Scraper SHALL log a debug
+   *        message with the cached parameters
+   *
+   * @param dateString - The requested date in YYYY-MM-DD format
+   * @param params - The fallback parameters that succeeded
+   */
+  private cacheFallbackKnowledge(
+    dateString: string,
+    params: {
+      fallbackMonth: number
+      fallbackYear: number
+      crossedProgramYearBoundary: boolean
+      actualDateString: string
+    }
+  ): void {
+    const fallbackInfo: FallbackInfo = {
+      requestedDate: dateString,
+      fallbackMonth: params.fallbackMonth,
+      fallbackYear: params.fallbackYear,
+      crossedProgramYearBoundary: params.crossedProgramYearBoundary,
+      actualDateString: params.actualDateString,
+      cachedAt: Date.now(),
+    }
+
+    this.fallbackCache.set(dateString, fallbackInfo)
+    this.fallbackMetrics.fallbackDatesDiscovered++
+
+    logger.debug('Cached fallback knowledge for date', {
+      dateString,
+      fallbackMonth: params.fallbackMonth,
+      crossedProgramYearBoundary: params.crossedProgramYearBoundary,
+      actualDateString: params.actualDateString,
+    })
+  }
+
+  /**
+   * Manually cache fallback knowledge (for testing purposes)
+   *
+   * This method exposes the cache population functionality for testing.
+   * In production, this is called automatically when fallback navigation succeeds.
+   *
+   * @param dateString - The requested date in YYYY-MM-DD format
+   * @param params - The fallback parameters
+   */
+  testCacheFallbackKnowledge(
+    dateString: string,
+    params: {
+      fallbackMonth: number
+      fallbackYear: number
+      crossedProgramYearBoundary: boolean
+      actualDateString: string
+    }
+  ): void {
+    this.cacheFallbackKnowledge(dateString, params)
+  }
+
+  /**
+   * Simulate a navigation attempt for testing purposes.
+   *
+   * This method simulates the cache lookup and metrics tracking behavior
+   * of navigateToDateWithFallback without requiring actual browser navigation.
+   *
+   * @param dateString - The date to simulate navigation for
+   * @param scenario - The navigation scenario to simulate:
+   *   - 'standard-success': Standard navigation succeeds (no fallback needed)
+   *   - 'fallback-success': Standard fails, fallback succeeds
+   *   - 'fallback-failure': Both standard and fallback fail
+   * @returns The simulated navigation result
+   */
+  testSimulateNavigation(
+    dateString: string,
+    scenario: 'standard-success' | 'fallback-success' | 'fallback-failure'
+  ): {
+    usedCachedFallback: boolean
+    usedFallback: boolean
+    success: boolean
+    cacheWasPopulated: boolean
+  } {
+    // Check cache first (same as navigateToDateWithFallback)
+    const cachedFallback = this.fallbackCache.get(dateString)
+
+    if (cachedFallback) {
+      // Cache hit - would use cached fallback parameters directly
+      this.fallbackMetrics.cacheHits++
+
+      logger.info('Test: Using cached fallback knowledge for date', {
+        dateString,
+        fallbackMonth: cachedFallback.fallbackMonth,
+        cachedAt: new Date(cachedFallback.cachedAt).toISOString(),
+      })
+
+      return {
+        usedCachedFallback: true,
+        usedFallback: true,
+        success: true, // Cached fallback is assumed to succeed
+        cacheWasPopulated: false, // Cache already existed
+      }
+    }
+
+    // Cache miss - simulate standard navigation
+    this.fallbackMetrics.cacheMisses++
+
+    if (scenario === 'standard-success') {
+      // Standard navigation succeeded - no cache modification
+      return {
+        usedCachedFallback: false,
+        usedFallback: false,
+        success: true,
+        cacheWasPopulated: false,
+      }
+    }
+
+    if (scenario === 'fallback-success') {
+      // Standard failed, fallback succeeded - populate cache
+      const dateObj = new Date(dateString + 'T00:00:00')
+      const month = dateObj.getMonth() + 1
+      const year = dateObj.getFullYear()
+      const prevMonth = month === 1 ? 12 : month - 1
+      const prevMonthYear = month === 1 ? year - 1 : year
+      const crossesProgramYearBoundary = month === 7
+
+      this.cacheFallbackKnowledge(dateString, {
+        fallbackMonth: prevMonth,
+        fallbackYear: prevMonthYear,
+        crossedProgramYearBoundary: crossesProgramYearBoundary,
+        actualDateString: dateString,
+      })
+
+      return {
+        usedCachedFallback: false,
+        usedFallback: true,
+        success: true,
+        cacheWasPopulated: true,
+      }
+    }
+
+    // fallback-failure: Both standard and fallback failed
+    return {
+      usedCachedFallback: false,
+      usedFallback: true,
+      success: false,
+      cacheWasPopulated: false,
+    }
+  }
+
+  /**
+   * Reset fallback metrics for testing purposes.
+   *
+   * This allows tests to start with clean metrics state.
+   */
+  testResetMetrics(): void {
+    this.fallbackMetrics = {
+      cacheHits: 0,
+      cacheMisses: 0,
+      fallbackDatesDiscovered: 0,
+    }
+  }
+
+  /**
+   * Clear the fallback cache for testing purposes.
+   *
+   * This allows tests to start with a clean cache state.
+   */
+  testClearCache(): void {
+    this.fallbackCache.clear()
+  }
+
+  /**
+   * Navigate using cached fallback parameters
+   *
+   * When a date is known to require fallback navigation (from a previous successful
+   * fallback), this method navigates directly using the cached parameters, skipping
+   * the initial failed attempt.
+   *
+   * Requirements:
+   * - 3.2: IF the date is found in the Fallback_Cache, THEN THE Scraper SHALL construct
+   *        the fallback URL directly using cached parameters
+   * - 1.2: WHEN the Scraper attempts to navigate to a date that is in the Fallback_Cache,
+   *        THE Scraper SHALL use fallback navigation directly without first trying the
+   *        standard approach
+   *
+   * @param page - The Playwright page instance
+   * @param baseUrl - The base URL for the program year
+   * @param pageName - The page name (e.g., 'Club.aspx', 'District.aspx')
+   * @param dateString - The requested date in YYYY-MM-DD format
+   * @param fallbackInfo - The cached fallback information
+   * @param districtId - Optional district ID for district-specific pages
+   * @returns Navigation result with success status and actual date string
+   */
+  private async navigateWithCachedFallback(
+    page: Page,
+    baseUrl: string,
+    pageName: string,
+    dateString: string,
+    fallbackInfo: FallbackInfo,
+    districtId?: string
+  ): Promise<{ success: boolean; actualDateString: string; usedFallback: boolean }> {
+    const dateObj = new Date(dateString + 'T00:00:00')
+    const day = dateObj.getDate()
+    const year = dateObj.getFullYear()
+    const month = dateObj.getMonth() + 1
+    const formattedDate = `${month}/${day}/${year}`
+
+    // Determine base URL (may need to use previous program year)
+    let effectiveBaseUrl = baseUrl
+    if (fallbackInfo.crossedProgramYearBoundary) {
+      const prevMonthDateString = `${fallbackInfo.fallbackYear}-${String(fallbackInfo.fallbackMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      effectiveBaseUrl = this.buildBaseUrl(prevMonthDateString)
+      logger.debug('Using previous program year URL for cached fallback', {
+        originalBaseUrl: baseUrl,
+        effectiveBaseUrl,
+        crossedProgramYearBoundary: true,
+      })
+    }
+
+    const districtParam = districtId ? `id=${districtId}&` : ''
+    const fallbackUrl = `${effectiveBaseUrl}/${pageName}?${districtParam}month=${fallbackInfo.fallbackMonth}&day=${formattedDate}`
+
+    logger.debug('Navigating with cached fallback URL', {
+      fallbackUrl,
+      dateString,
+      fallbackMonth: fallbackInfo.fallbackMonth,
+      fallbackYear: fallbackInfo.fallbackYear,
+      crossedProgramYearBoundary: fallbackInfo.crossedProgramYearBoundary,
+    })
+
+    await page.goto(fallbackUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: this.config.timeout,
+    })
+
+    // Verify the date matches
+    const actualDate = await this.getSelectedDate(page)
+    if (actualDate) {
+      const {
+        month: actualMonth,
+        day: actualDay,
+        year: actualYear,
+        dateString: actualDateString,
+      } = actualDate
+
+      if (actualMonth === month && actualDay === day && actualYear === year) {
+        logger.info('Cached fallback navigation successful', {
+          dateString,
+          actualDateString,
+          fallbackMonth: fallbackInfo.fallbackMonth,
+        })
+        return {
+          success: true,
+          actualDateString,
+          usedFallback: true,
+        }
+      }
+
+      // Cached fallback didn't work - this shouldn't happen normally
+      logger.warn('Cached fallback navigation failed, date mismatch', {
+        dateString,
+        expected: { month, day, year },
+        actual: { month: actualMonth, day: actualDay, year: actualYear },
+        cachedFallback: fallbackInfo,
+      })
+
+      return {
+        success: false,
+        actualDateString,
+        usedFallback: true,
+      }
+    }
+
+    // Could not verify date from dropdown
+    logger.warn('Could not verify date after cached fallback navigation', {
+      dateString,
+      cachedFallback: fallbackInfo,
+    })
+
+    return {
+      success: false,
+      actualDateString: fallbackInfo.actualDateString,
+      usedFallback: true,
+    }
   }
 
   /**
@@ -289,6 +640,27 @@ export class ToastmastersScraper {
 
   /**
    * Try to navigate to a date with month-end reconciliation fallback.
+   *
+   * This method first checks the fallback cache to see if the date is known to
+   * require fallback navigation. If so, it uses the cached parameters directly,
+   * skipping the initial failed attempt.
+   *
+   * Requirements:
+   * - 1.1: WHEN the Scraper successfully uses fallback navigation for a date,
+   *        THE Fallback_Cache SHALL store that the date requires fallback
+   * - 1.2: WHEN the Scraper attempts to navigate to a date that is in the Fallback_Cache,
+   *        THE Scraper SHALL use fallback navigation directly without first trying the
+   *        standard approach
+   * - 3.1: WHEN navigating to a date, THE Scraper SHALL first check the Fallback_Cache
+   *        for that date
+   * - 3.2: IF the date is found in the Fallback_Cache, THEN THE Scraper SHALL construct
+   *        the fallback URL directly using cached parameters
+   * - 3.3: IF the date is not found in the Fallback_Cache, THEN THE Scraper SHALL use
+   *        the standard navigation approach with fallback retry
+   * - 4.1: WHEN fallback navigation succeeds, THE Scraper SHALL automatically populate
+   *        the Fallback_Cache with the successful parameters
+   * - 5.1: WHEN the Scraper uses cached fallback knowledge, THE Scraper SHALL log an
+   *        info message indicating cache hit
    */
   private async navigateToDateWithFallback(
     page: Page,
@@ -300,7 +672,42 @@ export class ToastmastersScraper {
     success: boolean
     actualDateString: string
     usedFallback: boolean
+    usedCachedFallback: boolean
   }> {
+    // Step 1: Check fallback cache (Requirement 3.1)
+    const cachedFallback = this.fallbackCache.get(dateString)
+
+    if (cachedFallback) {
+      // Cache hit - use cached fallback parameters directly (Requirements 1.2, 3.2)
+      this.fallbackMetrics.cacheHits++
+
+      // Requirement 5.1: Log info message indicating cache hit
+      logger.info('Using cached fallback knowledge for date', {
+        dateString,
+        fallbackMonth: cachedFallback.fallbackMonth,
+        fallbackYear: cachedFallback.fallbackYear,
+        crossedProgramYearBoundary: cachedFallback.crossedProgramYearBoundary,
+        cachedAt: new Date(cachedFallback.cachedAt).toISOString(),
+      })
+
+      const result = await this.navigateWithCachedFallback(
+        page,
+        baseUrl,
+        pageName,
+        dateString,
+        cachedFallback,
+        districtId
+      )
+
+      return {
+        ...result,
+        usedCachedFallback: true,
+      }
+    }
+
+    // Cache miss - proceed with standard navigation (Requirement 3.3)
+    this.fallbackMetrics.cacheMisses++
+
     const dateObj = new Date(dateString + 'T00:00:00')
     const month = dateObj.getMonth() + 1
     const day = dateObj.getDate()
@@ -323,6 +730,7 @@ export class ToastmastersScraper {
         success: true,
         actualDateString: dateString,
         usedFallback: false,
+        usedCachedFallback: false,
       }
     }
 
@@ -338,10 +746,12 @@ export class ToastmastersScraper {
         requested: dateString,
         actual: dashboardDateString,
       })
+      // Requirement 4.2: Standard navigation succeeded - do NOT modify cache
       return {
         success: true,
         actualDateString: dashboardDateString,
         usedFallback: false,
+        usedCachedFallback: false,
       }
     }
 
@@ -408,10 +818,20 @@ export class ToastmastersScraper {
             usedMonth: prevMonth,
           }
         )
+
+        // Requirement 1.1, 4.1: Cache the successful fallback knowledge
+        this.cacheFallbackKnowledge(dateString, {
+          fallbackMonth: prevMonth,
+          fallbackYear: prevMonthYear,
+          crossedProgramYearBoundary: crossesProgramYearBoundary,
+          actualDateString: fbDateString,
+        })
+
         return {
           success: true,
           actualDateString: fbDateString,
           usedFallback: true,
+          usedCachedFallback: false,
         }
       }
     }
@@ -427,6 +847,7 @@ export class ToastmastersScraper {
       success: false,
       actualDateString: dashboardDateString,
       usedFallback: true,
+      usedCachedFallback: false,
     }
   }
 

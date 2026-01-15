@@ -1130,6 +1130,11 @@ export class ScraperOrchestrator {
       }
     }
 
+    // Get fallback metrics before closing scraper
+    // Requirement 7.3: WHEN the scrape session completes, THE Orchestrator SHALL log
+    // a summary including cache hit/miss statistics
+    const fallbackMetrics = scraper.getFallbackMetrics()
+
     // Close scraper resources
     await this.close()
 
@@ -1146,6 +1151,24 @@ export class ScraperOrchestrator {
     // Determine overall success
     const success =
       districtsFailed.length === 0 && districtsSucceeded.length > 0
+
+    // Log fallback metrics summary
+    // Requirement 7.3: Log cache hit/miss statistics at end of scrape session
+    if (fallbackMetrics.cacheHits > 0 || fallbackMetrics.cacheMisses > 0) {
+      logger.info('Fallback cache metrics for scrape session', {
+        cacheHits: fallbackMetrics.cacheHits,
+        cacheMisses: fallbackMetrics.cacheMisses,
+        fallbackDatesDiscovered: fallbackMetrics.fallbackDatesDiscovered,
+        hitRate:
+          fallbackMetrics.cacheHits + fallbackMetrics.cacheMisses > 0
+            ? (
+                (fallbackMetrics.cacheHits /
+                  (fallbackMetrics.cacheHits + fallbackMetrics.cacheMisses)) *
+                100
+              ).toFixed(1) + '%'
+            : 'N/A',
+      })
+    }
 
     logger.info('Scrape operation completed', {
       date,
@@ -1165,6 +1188,11 @@ export class ScraperOrchestrator {
       cacheLocations: allCacheLocations,
       errors,
       duration_ms,
+      fallbackMetrics: {
+        cacheHits: fallbackMetrics.cacheHits,
+        cacheMisses: fallbackMetrics.cacheMisses,
+        fallbackDatesDiscovered: fallbackMetrics.fallbackDatesDiscovered,
+      },
     }
   }
 }

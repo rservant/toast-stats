@@ -25,6 +25,7 @@ let mockScraperInstance: {
   getDistrictPerformance: ReturnType<typeof vi.fn>
   getAllDistrictsWithMetadata: ReturnType<typeof vi.fn>
   closeBrowser: ReturnType<typeof vi.fn>
+  getFallbackMetrics: ReturnType<typeof vi.fn>
 } | null = null
 
 // Mock the ToastmastersScraper to control success/failure behavior
@@ -42,6 +43,11 @@ vi.mock('../services/ToastmastersScraper.js', () => {
       getDistrictPerformance = vi.fn()
       getAllDistrictsWithMetadata = vi.fn()
       closeBrowser = vi.fn().mockResolvedValue(undefined)
+      getFallbackMetrics = vi.fn().mockReturnValue({
+        cacheHits: 0,
+        cacheMisses: 0,
+        fallbackDatesDiscovered: 0,
+      })
     },
   }
 })
@@ -227,6 +233,11 @@ describe('ScraperOrchestrator - Property-Based Tests', () => {
                 }
               }),
             closeBrowser: vi.fn().mockResolvedValue(undefined),
+            getFallbackMetrics: vi.fn().mockReturnValue({
+              cacheHits: 0,
+              cacheMisses: 0,
+              fallbackDatesDiscovered: 0,
+            }),
           }
 
           // Create orchestrator and run scrape

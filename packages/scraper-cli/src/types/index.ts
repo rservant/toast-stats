@@ -20,6 +20,8 @@ export type {
   DivisionPerformanceRecord,
   DistrictPerformanceRecord,
   AllDistrictsCSVRecord,
+  FallbackInfo,
+  FallbackMetrics,
 } from './scraper.js'
 
 export { CSVType } from './scraper.js'
@@ -74,6 +76,21 @@ export interface ScrapeResult {
   }>
   /** Total duration of the scrape operation in milliseconds */
   duration_ms: number
+  /**
+   * Fallback cache metrics for the scrape session
+   *
+   * Requirements:
+   * - 7.3: WHEN the scrape session completes, THE Orchestrator SHALL log a summary
+   *        including cache hit/miss statistics
+   */
+  fallbackMetrics?: {
+    /** Number of times cached fallback knowledge was reused */
+    cacheHits: number
+    /** Number of times fallback was discovered fresh (cache miss) */
+    cacheMisses: number
+    /** Number of unique dates that required fallback navigation */
+    fallbackDatesDiscovered: number
+  }
 }
 
 /**

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-START_DATE="2025-06-30"
+START_DATE="2024-07-20"
 END_DATE="2008-07-01"
 
 # Resume support: if .scrape-last exists, resume from the day before it
