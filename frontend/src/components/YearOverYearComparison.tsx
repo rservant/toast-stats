@@ -113,59 +113,57 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
     )
   }
 
-  // Calculate previous year values
+  // Calculate previous year values from percentage changes
+  // Formula: previous = current / (1 + percentageChange/100)
+  // The yearOverYear values are percentage changes, not absolute changes
   const previousYear = {
     totalMembership:
-      currentYear.totalMembership - yearOverYear.membershipChange,
+      yearOverYear.membershipChange !== -100
+        ? currentYear.totalMembership /
+          (1 + yearOverYear.membershipChange / 100)
+        : 0,
     distinguishedClubs:
-      currentYear.distinguishedClubs - yearOverYear.distinguishedChange,
+      yearOverYear.distinguishedChange !== -100
+        ? currentYear.distinguishedClubs /
+          (1 + yearOverYear.distinguishedChange / 100)
+        : 0,
     thrivingClubsPercent:
-      (currentYear.thrivingClubs / currentYear.totalClubs) * 100 -
-      yearOverYear.clubHealthChange,
+      yearOverYear.clubHealthChange !== -100
+        ? ((currentYear.thrivingClubs / currentYear.totalClubs) * 100) /
+          (1 + yearOverYear.clubHealthChange / 100)
+        : 0,
   }
 
   const currentThrivingPercent =
     (currentYear.thrivingClubs / currentYear.totalClubs) * 100
 
   // Prepare data for side-by-side comparison
+  // The yearOverYear values are already percentage changes from the backend
   const comparisonData = [
     {
       metric: 'Total Membership',
-      previous: previousYear.totalMembership,
+      previous: Math.round(previousYear.totalMembership),
       current: currentYear.totalMembership,
-      change: yearOverYear.membershipChange,
-      percentChange: (
-        (yearOverYear.membershipChange / previousYear.totalMembership) *
-        100
-      ).toFixed(1),
+      change: Math.round(
+        currentYear.totalMembership - previousYear.totalMembership
+      ),
+      percentChange: yearOverYear.membershipChange.toFixed(1),
     },
     {
       metric: 'Distinguished Clubs',
-      previous: previousYear.distinguishedClubs,
+      previous: Math.round(previousYear.distinguishedClubs),
       current: currentYear.distinguishedClubs,
-      change: yearOverYear.distinguishedChange,
-      percentChange:
-        previousYear.distinguishedClubs > 0
-          ? (
-              (yearOverYear.distinguishedChange /
-                previousYear.distinguishedClubs) *
-              100
-            ).toFixed(1)
-          : 'N/A',
+      change: Math.round(
+        currentYear.distinguishedClubs - previousYear.distinguishedClubs
+      ),
+      percentChange: yearOverYear.distinguishedChange.toFixed(1),
     },
     {
       metric: 'Thriving Clubs %',
       previous: previousYear.thrivingClubsPercent,
       current: currentThrivingPercent,
-      change: yearOverYear.clubHealthChange,
-      percentChange:
-        previousYear.thrivingClubsPercent > 0
-          ? (
-              (yearOverYear.clubHealthChange /
-                previousYear.thrivingClubsPercent) *
-              100
-            ).toFixed(1)
-          : 'N/A',
+      change: currentThrivingPercent - previousYear.thrivingClubsPercent,
+      percentChange: yearOverYear.clubHealthChange.toFixed(1),
     },
   ]
 
