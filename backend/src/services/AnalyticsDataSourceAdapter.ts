@@ -10,7 +10,7 @@
 
 import { logger } from '../utils/logger.js'
 import type { DistrictStatistics } from '../types/districts.js'
-import type { Snapshot } from '../types/snapshots.js'
+import type { Snapshot, AllDistrictsRankingsData } from '../types/snapshots.js'
 import type {
   IAnalyticsDataSource,
   AnalyticsSnapshotInfo,
@@ -299,6 +299,58 @@ export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
         error instanceof Error ? error.message : 'Unknown error'
       logger.error('Failed to get snapshot metadata via adapter', {
         operation: 'getSnapshotMetadata',
+        operation_id: operationId,
+        snapshot_id: snapshotId,
+        error: errorMessage,
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Get all districts rankings data from a specific snapshot
+   *
+   * Used for region ranking calculations and world percentile display.
+   * Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns All districts rankings data or null if not found
+   */
+  async getAllDistrictsRankings(
+    snapshotId: string
+  ): Promise<AllDistrictsRankingsData | null> {
+    const operationId = `get_rankings_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+
+    logger.debug('Getting all districts rankings via adapter', {
+      operation: 'getAllDistrictsRankings',
+      operation_id: operationId,
+      snapshot_id: snapshotId,
+    })
+
+    try {
+      const rankings = await this.snapshotStore.readAllDistrictsRankings(snapshotId)
+
+      if (rankings) {
+        logger.debug('All districts rankings retrieved', {
+          operation: 'getAllDistrictsRankings',
+          operation_id: operationId,
+          snapshot_id: snapshotId,
+          rankings_count: rankings.rankings.length,
+        })
+      } else {
+        logger.debug('All districts rankings not found', {
+          operation: 'getAllDistrictsRankings',
+          operation_id: operationId,
+          snapshot_id: snapshotId,
+        })
+      }
+
+      return rankings
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to get all districts rankings via adapter', {
+        operation: 'getAllDistrictsRankings',
         operation_id: operationId,
         snapshot_id: snapshotId,
         error: errorMessage,

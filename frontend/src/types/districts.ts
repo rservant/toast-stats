@@ -242,3 +242,75 @@ export interface DistrictRankingsResponse {
   rankings: DistrictRanking[]
   date: string
 }
+
+// ========== District Performance Targets Types ==========
+
+/**
+ * Recognition levels for district performance targets
+ * Ordered from lowest to highest achievement tier
+ */
+export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+
+/**
+ * Target values for each recognition level
+ * All values are integers (ceiling-rounded from formulas)
+ */
+export interface RecognitionTargets {
+  distinguished: number
+  select: number
+  presidents: number
+  smedley: number
+}
+
+/**
+ * Complete ranking data for a metric
+ * Includes world rank, percentile, and region rank
+ */
+export interface MetricRankings {
+  /** District's world rank (1 = best, null if unavailable) */
+  worldRank: number | null
+  /** World percentile (0-100, rounded to 1 decimal, null if unavailable) */
+  worldPercentile: number | null
+  /** District's rank within its region (1 = best, null if unavailable) */
+  regionRank: number | null
+  /** Total number of districts worldwide */
+  totalDistricts: number
+  /** Total number of districts in the region */
+  totalInRegion: number
+  /** Region identifier (null if unknown) */
+  region: string | null
+}
+
+/**
+ * Performance data for a single metric (paid clubs, membership payments, or distinguished clubs)
+ */
+export interface MetricPerformanceData {
+  /** Current value of the metric */
+  current: number
+  /** Base value used for target calculation (null if unavailable) */
+  base: number | null
+  /** Calculated targets for each recognition level (null if base unavailable) */
+  targets: RecognitionTargets | null
+  /** Highest recognition level achieved (null if none achieved or targets unavailable) */
+  achievedLevel: RecognitionLevel | null
+  /** Ranking data for the metric */
+  rankings: MetricRankings
+}
+
+/**
+ * Performance targets and rankings for district overview
+ * Contains data for all three enhanced metric cards:
+ * - Paid Clubs (replaces Total Clubs)
+ * - Membership Payments (replaces Total Membership)
+ * - Distinguished Clubs (enhanced with targets)
+ * 
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ */
+export interface DistrictPerformanceTargets {
+  /** Paid clubs performance data with targets and rankings */
+  paidClubs: MetricPerformanceData
+  /** Membership payments performance data with targets and rankings */
+  membershipPayments: MetricPerformanceData
+  /** Distinguished clubs performance data with targets and rankings */
+  distinguishedClubs: MetricPerformanceData
+}

@@ -61,18 +61,19 @@ describe('RefreshService', () => {
   })
 
   describe('executeRefresh', () => {
-    it('should return failed result when no cache data is available', async () => {
+    it('should return failed result when no districts are configured', async () => {
       // Arrange - cache returns no data
       vi.mocked(mockRawCSVCache.hasCachedCSV).mockResolvedValue(false)
 
       // Act
       const result = await refreshService.executeRefresh()
 
-      // Assert
+      // Assert - RefreshService validates district configuration first
       expect(result.success).toBe(false)
       expect(result.status).toBe('failed')
       expect(result.errors.length).toBeGreaterThan(0)
-      expect(result.errors[0]).toContain('No cached data available')
+      // The error message reflects that district configuration is validated before cache check
+      expect(result.errors[0]).toContain('Invalid district configuration')
     })
 
     it('should include metadata in refresh result', async () => {

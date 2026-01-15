@@ -4,8 +4,8 @@ import { ExportButton } from './ExportButton'
 import { exportDistrictAnalytics } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
-import { Tooltip, InfoIcon } from './Tooltip'
 import { formatDisplayDate } from '../utils/dateFormatting'
+import { TargetProgressCard } from './TargetProgressCard'
 
 interface DistrictOverviewProps {
   districtId: string
@@ -76,8 +76,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
       {/* Loading State */}
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <LoadingSkeleton variant="stat" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <LoadingSkeleton variant="stat" />
           <LoadingSkeleton variant="stat" />
           <LoadingSkeleton variant="stat" />
@@ -117,89 +116,89 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
       {/* Key Metrics */}
       {!isLoading && !error && analytics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Clubs */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-tm-loyal-blue">
-                    Total Clubs
-                  </p>
-                  <Tooltip content="Total number of clubs in the district, categorized by health status">
-                    <InfoIcon />
-                  </Tooltip>
-                </div>
-                <p className="text-3xl font-bold text-blue-900 mt-1">
-                  {analytics.allClubs.length}
-                </p>
-              </div>
-              <div className="bg-blue-200 rounded-full p-3">
-                <svg
-                  className="w-6 h-6 text-tm-loyal-blue"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
-                {analytics.thrivingClubs.length} Thriving
-              </span>
-              {vulnerableClubsCount > 0 && (
-                <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                  {vulnerableClubsCount} Vulnerable
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Paid Clubs - replaces Total Clubs */}
+          <TargetProgressCard
+            title="Paid Clubs"
+            icon={
+              <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+            }
+            current={analytics.performanceTargets?.paidClubs.current ?? analytics.allClubs.length}
+            base={analytics.performanceTargets?.paidClubs.base ?? null}
+            targets={analytics.performanceTargets?.paidClubs.targets ?? null}
+            achievedLevel={analytics.performanceTargets?.paidClubs.achievedLevel ?? null}
+            rankings={analytics.performanceTargets?.paidClubs.rankings ?? {
+              worldRank: null,
+              worldPercentile: null,
+              regionRank: null,
+              totalDistricts: 0,
+              totalInRegion: 0,
+              region: null,
+            }}
+            colorScheme="blue"
+            tooltipContent="Paid clubs count with targets for each recognition level. Thriving, Vulnerable, and Intervention Required badges show club health status."
+            badges={
+              <>
+                <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                  {analytics.thrivingClubs.length} Thriving
                 </span>
-              )}
-              {interventionRequiredClubsCount > 0 && (
-                <span className="text-xs text-red-700 bg-red-100 px-2 py-1 rounded">
-                  {interventionRequiredClubsCount} Intervention Required
-                </span>
-              )}
-            </div>
-          </div>
+                {vulnerableClubsCount > 0 && (
+                  <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                    {vulnerableClubsCount} Vulnerable
+                  </span>
+                )}
+                {interventionRequiredClubsCount > 0 && (
+                  <span className="text-xs text-red-700 bg-red-100 px-2 py-1 rounded">
+                    {interventionRequiredClubsCount} Intervention Required
+                  </span>
+                )}
+              </>
+            }
+          />
 
-          {/* Total Membership */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-green-700">
-                    Total Membership
-                  </p>
-                  <Tooltip content="Sum of active members across all clubs in the district">
-                    <InfoIcon />
-                  </Tooltip>
-                </div>
-                <p className="text-3xl font-bold text-green-900 mt-1">
-                  {analytics.totalMembership.toLocaleString()}
-                </p>
-              </div>
-              <div className="bg-green-200 rounded-full p-3">
-                <svg
-                  className="w-6 h-6 text-green-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-2">
+          {/* Membership Payments - replaces Total Membership */}
+          <TargetProgressCard
+            title="Membership Payments"
+            icon={
+              <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+            }
+            current={analytics.performanceTargets?.membershipPayments.current ?? analytics.totalMembership}
+            base={analytics.performanceTargets?.membershipPayments.base ?? null}
+            targets={analytics.performanceTargets?.membershipPayments.targets ?? null}
+            achievedLevel={analytics.performanceTargets?.membershipPayments.achievedLevel ?? null}
+            rankings={analytics.performanceTargets?.membershipPayments.rankings ?? {
+              worldRank: null,
+              worldPercentile: null,
+              regionRank: null,
+              totalDistricts: 0,
+              totalInRegion: 0,
+              region: null,
+            }}
+            colorScheme="green"
+            tooltipContent="Total membership payments (New + April + October + Late + Charter) with targets for each recognition level."
+            badges={
               <span
                 className={`text-xs px-2 py-1 rounded ${
                   analytics.membershipChange >= 0
@@ -210,103 +209,65 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 {analytics.membershipChange >= 0 ? '+' : ''}
                 {analytics.membershipChange} members
               </span>
-            </div>
-          </div>
+            }
+          />
 
-          {/* Distinguished Clubs */}
-          <div className="bg-tm-loyal-blue-10 rounded-lg p-4 border border-tm-loyal-blue-20">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-1">
-                  <p className="text-sm font-tm-body font-medium text-tm-loyal-blue">
-                    Distinguished Clubs
-                  </p>
-                  <Tooltip content="Clubs achieving DCP goals + membership requirements (valid from April 1 onwards): Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)">
-                    <InfoIcon />
-                  </Tooltip>
-                </div>
-                <p className="text-3xl font-tm-headline font-bold text-tm-loyal-blue mt-1">
-                  {analytics.distinguishedClubs.total}
-                </p>
-              </div>
-              <div className="bg-tm-loyal-blue-20 rounded-full p-3">
-                <svg
-                  className="w-6 h-6 text-tm-loyal-blue"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {analytics.distinguishedClubs.smedley > 0 && (
-                <span className="text-xs font-tm-body text-tm-happy-yellow bg-tm-happy-yellow-20 px-2 py-1 rounded font-semibold">
-                  {analytics.distinguishedClubs.smedley} Smedley
-                </span>
-              )}
-              {analytics.distinguishedClubs.presidents > 0 && (
-                <span className="text-xs font-tm-body text-tm-loyal-blue bg-tm-loyal-blue-20 px-2 py-1 rounded">
-                  {analytics.distinguishedClubs.presidents} President's
-                </span>
-              )}
-              {analytics.distinguishedClubs.select > 0 && (
-                <span className="text-xs font-tm-body text-tm-true-maroon bg-tm-true-maroon-20 px-2 py-1 rounded">
-                  {analytics.distinguishedClubs.select} Select
-                </span>
-              )}
-              {analytics.distinguishedClubs.distinguished > 0 && (
-                <span className="text-xs font-tm-body text-tm-cool-gray bg-tm-cool-gray-20 px-2 py-1 rounded">
-                  {analytics.distinguishedClubs.distinguished} Distinguished
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Projected Distinguished */}
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-1">
-                  <p className="text-sm font-medium text-amber-700">
-                    Projected Year-End
-                  </p>
-                  <Tooltip content="Number of thriving clubs projected to achieve distinguished status by end of program year">
-                    <InfoIcon />
-                  </Tooltip>
-                </div>
-                <p className="text-3xl font-bold text-amber-900 mt-1">
-                  {analytics.distinguishedProjection}
-                </p>
-              </div>
-              <div className="bg-amber-200 rounded-full p-3">
-                <svg
-                  className="w-6 h-6 text-amber-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-2">
-              <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded">
-                Distinguished Clubs
-              </span>
-            </div>
-          </div>
+          {/* Distinguished Clubs - enhanced with targets */}
+          <TargetProgressCard
+            title="Distinguished Clubs"
+            icon={
+              <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                />
+              </svg>
+            }
+            current={analytics.performanceTargets?.distinguishedClubs.current ?? analytics.distinguishedClubs.total}
+            base={analytics.performanceTargets?.distinguishedClubs.base ?? null}
+            targets={analytics.performanceTargets?.distinguishedClubs.targets ?? null}
+            achievedLevel={analytics.performanceTargets?.distinguishedClubs.achievedLevel ?? null}
+            rankings={analytics.performanceTargets?.distinguishedClubs.rankings ?? {
+              worldRank: null,
+              worldPercentile: null,
+              regionRank: null,
+              totalDistricts: 0,
+              totalInRegion: 0,
+              region: null,
+            }}
+            colorScheme="purple"
+            tooltipContent="Clubs achieving DCP goals + membership requirements with targets for each recognition level. Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)."
+            badges={
+              <>
+                {analytics.distinguishedClubs.smedley > 0 && (
+                  <span className="text-xs font-tm-body text-tm-happy-yellow bg-tm-happy-yellow-20 px-2 py-1 rounded font-semibold">
+                    {analytics.distinguishedClubs.smedley} Smedley
+                  </span>
+                )}
+                {analytics.distinguishedClubs.presidents > 0 && (
+                  <span className="text-xs font-tm-body text-tm-loyal-blue bg-tm-loyal-blue-20 px-2 py-1 rounded">
+                    {analytics.distinguishedClubs.presidents} President's
+                  </span>
+                )}
+                {analytics.distinguishedClubs.select > 0 && (
+                  <span className="text-xs font-tm-body text-tm-true-maroon bg-tm-true-maroon-20 px-2 py-1 rounded">
+                    {analytics.distinguishedClubs.select} Select
+                  </span>
+                )}
+                {analytics.distinguishedClubs.distinguished > 0 && (
+                  <span className="text-xs font-tm-body text-tm-cool-gray bg-tm-cool-gray-20 px-2 py-1 rounded">
+                    {analytics.distinguishedClubs.distinguished} Distinguished
+                  </span>
+                )}
+              </>
+            }
+          />
         </div>
       )}
     </div>

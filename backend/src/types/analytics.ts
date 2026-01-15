@@ -2,6 +2,11 @@
  * Type definitions for analytics data structures
  */
 
+import type { DistrictRanking } from './snapshots.js'
+
+// Re-export DistrictRanking for convenience
+export type { DistrictRanking } from './snapshots.js'
+
 export type ClubHealthStatus =
   | 'thriving'
   | 'vulnerable'
@@ -417,12 +422,185 @@ export interface DistrictAnalytics {
     distinguishedChange: number
     clubHealthChange: number
   }
+
+  /**
+   * Performance targets and rankings data for district overview
+   * Contains targets for paid clubs, membership payments, and distinguished clubs
+   * along with world rank, region rank, and world percentile for each metric
+   * Null if base values are unavailable
+   * Requirements: 7.1, 7.2, 7.3, 7.4
+   */
+  performanceTargets?: DistrictPerformanceTargets
 }
 
 /**
  * Interface for AnalyticsEngine service
  * Defines the contract for analytics operations with dependency injection support
  */
+// ========== District Performance Targets Types ==========
+
+/**
+ * Recognition levels for district performance targets
+ * Ordered from lowest to highest achievement tier
+ */
+export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+
+/**
+ * Target values for each recognition level
+ * All values are integers (ceiling-rounded from formulas)
+ */
+export interface RecognitionTargets {
+  distinguished: number
+  select: number
+  presidents: number
+  smedley: number
+}
+
+/**
+ * Target calculation result for a single metric
+ * Contains base value, current value, calculated targets, and achieved level
+ */
+export interface MetricTargets {
+  /** Base value used for target calculation (null if unavailable) */
+  base: number | null
+  /** Current value of the metric */
+  current: number
+  /** Calculated targets for each recognition level (null if base unavailable) */
+  targets: RecognitionTargets | null
+  /** Highest recognition level achieved (null if none achieved or targets unavailable) */
+  achievedLevel: RecognitionLevel | null
+}
+
+/**
+ * Region ranking data for a single metric
+ */
+export interface RegionRankData {
+  /** District's rank within its region (1 = best, null if unavailable) */
+  regionRank: number | null
+  /** Total number of districts in the region */
+  totalInRegion: number
+  /** Region identifier (null if unknown) */
+  region: string | null
+}
+
+/**
+ * Complete ranking data for a metric
+ * Includes world rank, percentile, and region rank
+ */
+export interface MetricRankings {
+  /** District's world rank (1 = best, null if unavailable) */
+  worldRank: number | null
+  /** World percentile (0-100, rounded to 1 decimal, null if unavailable) */
+  worldPercentile: number | null
+  /** District's rank within its region (1 = best, null if unavailable) */
+  regionRank: number | null
+  /** Total number of districts worldwide */
+  totalDistricts: number
+  /** Total number of districts in the region */
+  totalInRegion: number
+  /** Region identifier (null if unknown) */
+  region: string | null
+}
+
+/**
+ * Performance targets and rankings for district overview
+ * Contains data for all three enhanced metric cards
+ */
+export interface DistrictPerformanceTargets {
+  paidClubs: {
+    current: number
+    base: number | null
+    targets: RecognitionTargets | null
+    achievedLevel: RecognitionLevel | null
+    rankings: MetricRankings
+  }
+  membershipPayments: {
+    current: number
+    base: number | null
+    targets: RecognitionTargets | null
+    achievedLevel: RecognitionLevel | null
+    rankings: MetricRankings
+  }
+  distinguishedClubs: {
+    current: number
+    base: number | null // Uses Club_Base for percentage calculation
+    targets: RecognitionTargets | null
+    achievedLevel: RecognitionLevel | null
+    rankings: MetricRankings
+  }
+}
+
+/**
+ * Interface for TargetCalculatorService
+ * Computes recognition level targets based on base values
+ */
+export interface ITargetCalculatorService {
+  /**
+   * Calculate paid clubs targets based on Club_Base
+   * Formula: ceil(base × multiplier)
+   * - Distinguished: base × 1.01
+   * - Select: base × 1.03
+   * - President's: base × 1.05
+   * - Smedley: base × 1.08
+   */
+  calculatePaidClubsTargets(clubBase: number, currentPaidClubs: number): MetricTargets
+
+  /**
+   * Calculate membership payments targets based on Payment_Base
+   * Formula: ceil(base × multiplier)
+   * - Distinguished: base × 1.01
+   * - Select: base × 1.03
+   * - President's: base × 1.05
+   * - Smedley: base × 1.08
+   */
+  calculatePaymentsTargets(paymentBase: number, currentPayments: number): MetricTargets
+
+  /**
+   * Calculate distinguished clubs targets based on Club_Base
+   * Formula: ceil(base × percentage)
+   * - Distinguished: base × 0.45
+   * - Select: base × 0.50
+   * - President's: base × 0.55
+   * - Smedley: base × 0.60
+   */
+  calculateDistinguishedTargets(clubBase: number, currentDistinguished: number): MetricTargets
+}
+
+/**
+ * Interface for RegionRankingService
+ * Derives region rankings from world rankings
+ */
+export interface IRegionRankingService {
+  /**
+   * Calculate region rank by filtering world rankings to same region
+   * Region rank 1 = best in region
+   */
+  calculateRegionRank(
+    districtId: string,
+    metric: 'clubs' | 'payments' | 'distinguished',
+    allDistrictRankings: DistrictRanking[]
+  ): RegionRankData
+
+  /**
+   * Calculate world percentile using formula:
+   * ((totalDistricts - worldRank) / totalDistricts) × 100
+   * Displayed as "Top X%" where X = 100 - percentile
+   */
+  calculateWorldPercentile(worldRank: number, totalDistricts: number): number
+
+  /**
+   * Build complete metric rankings including world rank, percentile, and region rank
+   * Convenience method that combines world ranking data with calculated region rank and world percentile
+   */
+  buildMetricRankings(
+    districtId: string,
+    metric: 'clubs' | 'payments' | 'distinguished',
+    worldRank: number | null,
+    totalDistricts: number,
+    allDistrictRankings: DistrictRanking[]
+  ): MetricRankings
+}
+
 export interface IAnalyticsEngine {
   /**
    * Generate comprehensive district analytics

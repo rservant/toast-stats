@@ -131,6 +131,63 @@ export interface DistrictAnalytics {
     distinguishedChange: number
     clubHealthChange: number
   }
+  /**
+   * Performance targets and rankings data for district overview
+   * Contains targets for paid clubs, membership payments, and distinguished clubs
+   * along with world rank, region rank, and world percentile for each metric
+   * Null if base values are unavailable
+   * Requirements: 7.1, 7.2, 7.3, 7.4
+   */
+  performanceTargets?: DistrictPerformanceTargets
+}
+
+// ========== District Performance Targets Types (from districts.ts) ==========
+
+/**
+ * Recognition levels for district performance targets
+ */
+export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+
+/**
+ * Target values for each recognition level
+ */
+export interface RecognitionTargets {
+  distinguished: number
+  select: number
+  presidents: number
+  smedley: number
+}
+
+/**
+ * Complete ranking data for a metric
+ */
+export interface MetricRankings {
+  worldRank: number | null
+  worldPercentile: number | null
+  regionRank: number | null
+  totalDistricts: number
+  totalInRegion: number
+  region: string | null
+}
+
+/**
+ * Performance data for a single metric
+ */
+export interface MetricPerformanceData {
+  current: number
+  base: number | null
+  targets: RecognitionTargets | null
+  achievedLevel: RecognitionLevel | null
+  rankings: MetricRankings
+}
+
+/**
+ * Performance targets and rankings for district overview
+ */
+export interface DistrictPerformanceTargets {
+  paidClubs: MetricPerformanceData
+  membershipPayments: MetricPerformanceData
+  distinguishedClubs: MetricPerformanceData
 }
 
 /**

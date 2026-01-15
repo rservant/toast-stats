@@ -20,6 +20,9 @@ import type {
   MembershipAnalytics,
   DistinguishedClubAnalytics,
   YearOverYearComparison,
+  DistrictPerformanceTargets,
+  ITargetCalculatorService,
+  IRegionRankingService,
 } from '../types/analytics.js'
 import type {
   DistrictCacheEntry,
@@ -31,6 +34,8 @@ import { ClubHealthAnalyticsModule } from './analytics/ClubHealthAnalyticsModule
 import { DivisionAreaAnalyticsModule } from './analytics/DivisionAreaAnalyticsModule.js'
 import { LeadershipAnalyticsModule } from './analytics/LeadershipAnalyticsModule.js'
 import { AreaDivisionRecognitionModule } from './analytics/AreaDivisionRecognitionModule.js'
+import { TargetCalculatorService } from './TargetCalculatorService.js'
+import { RegionRankingService } from './RegionRankingService.js'
 import {
   getDCPCheckpoint,
   getCurrentProgramMonth,
@@ -47,15 +52,23 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   private readonly divisionAreaModule: DivisionAreaAnalyticsModule
   private readonly leadershipModule: LeadershipAnalyticsModule
   private readonly recognitionModule: AreaDivisionRecognitionModule
+  private readonly targetCalculator: ITargetCalculatorService
+  private readonly regionRankingService: IRegionRankingService
 
   /**
    * Create an AnalyticsEngine instance
    *
-   * Requirements: 1.1, 1.4
+   * Requirements: 1.1, 1.4, 7.1, 7.2, 7.3, 7.4
    *
    * @param dataSource - IAnalyticsDataSource for snapshot-based data retrieval
+   * @param targetCalculator - Optional ITargetCalculatorService for target calculations (defaults to TargetCalculatorService)
+   * @param regionRankingService - Optional IRegionRankingService for region rankings (defaults to RegionRankingService)
    */
-  constructor(dataSource: IAnalyticsDataSource) {
+  constructor(
+    dataSource: IAnalyticsDataSource,
+    targetCalculator?: ITargetCalculatorService,
+    regionRankingService?: IRegionRankingService
+  ) {
     this.dataSource = dataSource
     this.membershipModule = new MembershipAnalyticsModule(dataSource)
     this.distinguishedModule = new DistinguishedClubAnalyticsModule(dataSource)
@@ -63,6 +76,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     this.divisionAreaModule = new DivisionAreaAnalyticsModule(dataSource)
     this.leadershipModule = new LeadershipAnalyticsModule(dataSource)
     this.recognitionModule = new AreaDivisionRecognitionModule(dataSource)
+    this.targetCalculator = targetCalculator ?? new TargetCalculatorService()
+    this.regionRankingService = regionRankingService ?? new RegionRankingService()
 
     logger.info('AnalyticsEngine initialized', {
       operation: 'constructor',
@@ -402,6 +417,17 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         yearOverYear,
       }
 
+      // Calculate performance targets and rankings
+      // Requirements: 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3
+      const performanceTargets = await this.calculatePerformanceTargets(
+        districtId,
+        latestEntry.date,
+        distinguishedClubs.total
+      )
+      if (performanceTargets) {
+        analytics.performanceTargets = performanceTargets
+      }
+
       logger.info('Generated district analytics', {
         districtId,
         dateRange,
@@ -409,6 +435,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         vulnerableClubs: vulnerableClubs.length,
         interventionRequiredClubs: interventionRequiredClubs.length,
         thrivingClubs: thrivingClubs.length,
+        hasPerformanceTargets: !!performanceTargets,
       })
 
       return analytics
@@ -925,5 +952,135 @@ export class AnalyticsEngine implements IAnalyticsEngine {
 
     return this.distinguishedModule.calculateDistinguishedClubs(latestEntry)
       .total
+  }
+
+  /**
+   * Calculate performance targets and rankings for a district
+   *
+   * Computes recognition level targets for paid clubs, membership payments,
+   * and distinguished clubs. Also calculates world rank, region rank, and
+   * world percentile for each metric.
+   *
+   * Requirements: 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3
+   *
+   * @param districtId - The district ID
+   * @param snapshotId - The snapshot ID to get rankings from
+   * @param currentDistinguishedClubs - Current count of distinguished clubs
+   * @returns DistrictPerformanceTargets or null if data unavailable
+   */
+  private async calculatePerformanceTargets(
+    districtId: string,
+    snapshotId: string,
+    currentDistinguishedClubs: number
+  ): Promise<DistrictPerformanceTargets | null> {
+    try {
+      // Get all districts rankings data for region ranking calculations
+      const allDistrictsRankings = await this.dataSource.getAllDistrictsRankings(snapshotId)
+
+      if (!allDistrictsRankings || allDistrictsRankings.rankings.length === 0) {
+        logger.warn('No all-districts rankings data available for performance targets', {
+          districtId,
+          snapshotId,
+        })
+        return null
+      }
+
+      // Find the current district in the rankings
+      const districtRanking = allDistrictsRankings.rankings.find(
+        r => r.districtId === districtId
+      )
+
+      if (!districtRanking) {
+        logger.warn('District not found in rankings data', {
+          districtId,
+          snapshotId,
+          totalRankings: allDistrictsRankings.rankings.length,
+        })
+        return null
+      }
+
+      // Use the rankings directly - they already match the DistrictRanking interface from snapshots.ts
+      const totalDistricts = allDistrictsRankings.rankings.length
+
+      // Calculate paid clubs targets and rankings
+      const paidClubsTargets = this.targetCalculator.calculatePaidClubsTargets(
+        districtRanking.paidClubBase,
+        districtRanking.paidClubs
+      )
+      const paidClubsRankings = this.regionRankingService.buildMetricRankings(
+        districtId,
+        'clubs',
+        districtRanking.clubsRank,
+        totalDistricts,
+        allDistrictsRankings.rankings
+      )
+
+      // Calculate membership payments targets and rankings
+      const paymentsTargets = this.targetCalculator.calculatePaymentsTargets(
+        districtRanking.paymentBase,
+        districtRanking.totalPayments
+      )
+      const paymentsRankings = this.regionRankingService.buildMetricRankings(
+        districtId,
+        'payments',
+        districtRanking.paymentsRank,
+        totalDistricts,
+        allDistrictsRankings.rankings
+      )
+
+      // Calculate distinguished clubs targets and rankings
+      const distinguishedTargets = this.targetCalculator.calculateDistinguishedTargets(
+        districtRanking.paidClubBase, // Uses Club_Base for percentage calculation
+        currentDistinguishedClubs
+      )
+      const distinguishedRankings = this.regionRankingService.buildMetricRankings(
+        districtId,
+        'distinguished',
+        districtRanking.distinguishedRank,
+        totalDistricts,
+        allDistrictsRankings.rankings
+      )
+
+      const performanceTargets: DistrictPerformanceTargets = {
+        paidClubs: {
+          current: districtRanking.paidClubs,
+          base: paidClubsTargets.base,
+          targets: paidClubsTargets.targets,
+          achievedLevel: paidClubsTargets.achievedLevel,
+          rankings: paidClubsRankings,
+        },
+        membershipPayments: {
+          current: districtRanking.totalPayments,
+          base: paymentsTargets.base,
+          targets: paymentsTargets.targets,
+          achievedLevel: paymentsTargets.achievedLevel,
+          rankings: paymentsRankings,
+        },
+        distinguishedClubs: {
+          current: currentDistinguishedClubs,
+          base: distinguishedTargets.base,
+          targets: distinguishedTargets.targets,
+          achievedLevel: distinguishedTargets.achievedLevel,
+          rankings: distinguishedRankings,
+        },
+      }
+
+      logger.debug('Calculated performance targets', {
+        districtId,
+        snapshotId,
+        paidClubsBase: paidClubsTargets.base,
+        paymentsBase: paymentsTargets.base,
+        hasTargets: !!paidClubsTargets.targets,
+      })
+
+      return performanceTargets
+    } catch (error) {
+      logger.error('Failed to calculate performance targets', {
+        districtId,
+        snapshotId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      return null
+    }
   }
 }

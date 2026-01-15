@@ -19,6 +19,7 @@ import type {
   Snapshot,
   SnapshotMetadata,
   SnapshotFilters,
+  AllDistrictsRankingsData,
 } from './snapshots.js'
 import type { PerDistrictSnapshotMetadata } from '../services/SnapshotStore.js'
 import type {
@@ -642,4 +643,17 @@ export interface IAnalyticsDataSource {
   getSnapshotMetadata(
     snapshotId: string
   ): Promise<PerDistrictSnapshotMetadata | null>
+
+  /**
+   * Get all districts rankings data from a specific snapshot
+   *
+   * Used for region ranking calculations and world percentile display.
+   * Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns All districts rankings data or null if not found
+   */
+  getAllDistrictsRankings(
+    snapshotId: string
+  ): Promise<AllDistrictsRankingsData | null>
 }
