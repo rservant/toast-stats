@@ -22,7 +22,8 @@
 10. [Caching Strategy](#caching-strategy)
 11. [Error Handling](#error-handling)
 12. [Historical Data Access](#historical-data-access)
-13. [Distinguished Area and Division Recognition Programs](#distinguished-area-and-division-recognition-programs)
+13. [Closing Period Business Logic](#closing-period-business-logic)
+14. [Distinguished Area and Division Recognition Programs](#distinguished-area-and-division-recognition-programs)
 
 ---
 
@@ -1319,6 +1320,146 @@ const apiService = new RealToastmastersAPIService(scraper)
 - Improved failure detection and classification
 - Enhanced retry strategies with better backoff
 - More sophisticated fallback mechanisms
+
+---
+
+## Closing Period Business Logic
+
+### Overview
+
+Month-end closing periods are a critical aspect of Toastmasters dashboard data handling. During these periods, the dashboard continues publishing data for the prior month even though the calendar has moved into the next month. This creates a mismatch between the "As of" date and the actual data month that requires special handling.
+
+### Key Concepts
+
+**Closing Period**: The time when the dashboard publishes prior-month data with a future "As of" date. This period begins at month-end and extends into the next calendar month for an indeterminate number of days (can be 25+ days).
+
+**Data Month**: The month the statistics in a CSV actually represent (e.g., December data).
+
+**As Of Date**: The date shown on the dashboard when the CSV was generated (e.g., January 5).
+
+**Final Snapshot**: The snapshot for the last day of a month, updated with closing period data.
+
+### Closing Period Detection
+
+The system detects closing periods by comparing the CSV's data month to the "As of" date:
+
+```typescript
+interface ClosingPeriodInfo {
+  isClosingPeriod: boolean
+  dataMonth: string        // "YYYY-MM" format - the month the data represents
+  collectionDate: string   // When the data was actually collected (the "As of" date)
+  snapshotDate: string     // Date to use for snapshot (last day of dataMonth if closing)
+}
+
+function detectClosingPeriod(csvDate: string, dataMonth: string): ClosingPeriodInfo {
+  // Parse the CSV date to get month/year
+  // Compare to determine if this is closing period data
+  // Return appropriate snapshot date
+}
+```
+
+**Detection Rules**:
+- WHEN the data month is earlier than the "As of" date's month THEN it's a closing period
+- WHEN a closing period is detected THEN log the detection with both dates for debugging
+- Cross-year handling: December data collected in January is a closing period
+
+### Snapshot Dating Rules
+
+During closing periods, snapshots are dated as the last day of the data month, not the "As of" date:
+
+**Core Rules**:
+1. WHEN a closing period is detected THEN the snapshot SHALL be dated as the last day of the data month
+2. WHEN the data month is December and "As of" is January THEN the snapshot SHALL be dated December 31 of the prior year
+3. WHEN storing closing period snapshots THEN the metadata SHALL indicate the actual collection date for transparency
+
+**Snapshot Update Logic**:
+1. WHEN creating a closing period snapshot AND no snapshot exists for that date THEN create the snapshot
+2. WHEN creating a closing period snapshot AND a snapshot exists with an older or equal collection date THEN overwrite with the newer data
+3. WHEN creating a closing period snapshot AND a snapshot exists with a newer collection date THEN do NOT overwrite the existing snapshot
+
+**Newer Data Wins**: For any attempt to update a closing period snapshot, the update only proceeds if the new data has a strictly newer collection date than the existing snapshot.
+
+### Preventing Misleading Snapshots
+
+**No New-Month Snapshots During Closing**:
+- WHEN a closing period is detected THEN the system SHALL NOT create a snapshot dated in the new month
+- For any closing period data, no snapshot should be created with a date in the new month (the month of the "As of" date)
+
+**Gap Handling**:
+- Early new-month dates during closing periods may have no processed data
+- This is expected behavior, not an error
+- Application UI handles null data gracefully during expected gaps
+
+### Metadata Transparency
+
+Closing period snapshots include additional metadata for transparency:
+
+```typescript
+interface SnapshotMetadata {
+  // Standard fields
+  dataAsOfDate: string
+  source: string
+  fetchedAt: string
+
+  // Closing period tracking
+  isClosingPeriodData?: boolean    // True when snapshot is from closing period
+  collectionDate?: string          // Actual "As of" date from CSV
+  logicalDate?: string             // The date this snapshot represents (month-end)
+}
+```
+
+**API Response Metadata**:
+- WHEN serving data from a closing period snapshot THEN include `is_closing_period_data: true`
+- WHEN the snapshot date differs from the collection date THEN include both dates
+- WHEN a user requests a date with no snapshot THEN indicate the nearest available snapshot date
+
+### Data Flow During Closing Periods
+
+```mermaid
+graph LR
+    CSV[CSV Download] --> RS[RefreshService]
+    RS --> |detect closing period| CP{Closing Period?}
+    CP --> |No| PS1[Store with csvDate]
+    CP --> |Yes| PS2[Store with month-end date]
+    PS1 --> FS[Filesystem]
+    PS2 --> FS
+```
+
+**Example Timeline** (December closing period):
+
+| Calendar Date | Dashboard Shows | Data Month | Snapshot Created |
+|---------------|-----------------|------------|------------------|
+| Dec 30        | As of Dec 29    | December   | 2024-12-29       |
+| Dec 31        | As of Dec 30    | December   | 2024-12-30       |
+| Jan 1         | As of Dec 31    | December   | 2024-12-31 (closing) |
+| Jan 2         | As of Jan 1     | December   | 2024-12-31 (update) |
+| Jan 5         | As of Jan 4     | December   | 2024-12-31 (update) |
+| Jan 15        | As of Jan 14    | January    | 2025-01-14       |
+
+### API Fallback Behavior
+
+When requested dates have no snapshot (common during closing periods):
+
+1. **Return Nearest Available**: API returns the most recent available snapshot
+2. **Include Metadata**: Response indicates the actual snapshot date returned
+3. **Distinguish Gap Types**: Differentiate between "no data yet" and "closing period gap"
+4. **Clear Messaging**: Users understand when data is from a prior month's final snapshot
+
+### Correctness Properties
+
+The implementation guarantees these properties:
+
+1. **Closing Period Detection Accuracy**: For any CSV with an "As of" date in month M+1 and data for month M, the system identifies this as a closing period and sets the snapshot date to the last day of month M.
+
+2. **Snapshot Date Correctness**: For any closing period data for month M, the snapshot directory is named with the last day of month M (e.g., "2024-12-31" for December data collected in January).
+
+3. **Collection Date Preservation**: For any snapshot created from closing period data, the metadata preserves the actual collection date (the "As of" date from the CSV).
+
+4. **Newer Data Wins**: For any attempt to update a closing period snapshot, the update only proceeds if the new data has a strictly newer collection date than the existing snapshot.
+
+5. **No Misleading New-Month Snapshots**: For any closing period data, no snapshot is created with a date in the new month (the month of the "As of" date).
+
+6. **Cross-Year Handling**: For any December closing period data collected in January, the snapshot is dated December 31 of the prior year.
 
 ---
 
