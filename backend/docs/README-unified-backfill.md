@@ -182,7 +182,6 @@ type ErrorType =
 
 - **Automatic Classification**: Errors are automatically classified as retryable or permanent
 - **Exponential Backoff**: Retryable errors use exponential backoff (2s, 4s, 8s, etc.)
-- **Blacklisting**: Districts with too many consecutive failures are temporarily blacklisted
 - **Partial Success**: Operations continue even when some districts fail
 
 ## Performance Optimization
@@ -395,7 +394,7 @@ if (status.partialSnapshots) {
 #### Partial snapshots
 
 - **Cause**: Some districts failing while others succeed
-- **Solution**: Review district-level errors, check for blacklisted districts
+- **Solution**: Review district-level errors in the error summary
 - **Debug**: Examine error summaries, review district progress details
 
 ### Debug Commands

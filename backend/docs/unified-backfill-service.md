@@ -218,7 +218,6 @@ The service implements comprehensive error handling at the district level:
 - **Continuation**: Individual district failures don't stop processing of other districts
 - **Error Tracking**: Detailed error context including error type, timestamp, and retry eligibility
 - **Partial Snapshots**: Created when some districts succeed and others fail
-- **Blacklisting**: Districts with consecutive failures are temporarily blacklisted
 
 ### Error Types
 
@@ -240,7 +239,6 @@ type ErrorType =
 - **Automatic Retries**: Transient errors are automatically retried with exponential backoff
 - **Retry Configuration**: Configurable retry attempts, delays, and backoff multipliers
 - **Error Classification**: Errors are classified as retryable or permanent
-- **Blacklisting**: Districts with too many consecutive failures are temporarily blacklisted
 
 ## Performance Optimization
 
@@ -326,7 +324,7 @@ The service provides comprehensive logging at multiple levels:
 
 - **Info**: Job lifecycle events, strategy selection, completion status
 - **Debug**: Detailed processing steps, data extraction, caching operations
-- **Warn**: Scope violations, district blacklisting, partial failures
+- **Warn**: Scope violations, partial failures
 - **Error**: Critical failures, snapshot creation errors, service errors
 
 ### Metrics
@@ -334,7 +332,7 @@ The service provides comprehensive logging at multiple levels:
 Key metrics tracked by the service:
 
 - **Job Metrics**: Total jobs, completion rate, average processing time
-- **District Metrics**: Success rate per district, error counts, blacklist status
+- **District Metrics**: Success rate per district, error counts
 - **Performance Metrics**: Cache hit rate, concurrency utilization, rate limit status
 - **Error Metrics**: Error counts by type, retry success rate, permanent failures
 

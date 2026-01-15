@@ -143,7 +143,6 @@ export class JobManager {
         errors: [],
         consecutiveFailures: 0,
         totalRetries: 0,
-        isBlacklisted: false,
       }
       job.errorTrackers.set(districtId, errorTracker)
     }
@@ -165,22 +164,6 @@ export class JobManager {
     errorTracker.lastFailureAt = timestamp
     errorTracker.totalRetries++
 
-    // Check if district should be blacklisted (Requirement 6.5: exponential backoff)
-    if (errorTracker.consecutiveFailures >= 5) {
-      errorTracker.isBlacklisted = true
-      errorTracker.blacklistUntil = new Date(
-        Date.now() + Math.pow(2, errorTracker.consecutiveFailures) * 60000
-      ).toISOString()
-
-      logger.warn('District blacklisted due to consecutive failures', {
-        jobId,
-        districtId,
-        consecutiveFailures: errorTracker.consecutiveFailures,
-        blacklistUntil: errorTracker.blacklistUntil,
-        operation: 'trackDistrictError',
-      })
-    }
-
     // Update job progress counters
     job.progress.totalErrors++
     if (isRetryable) {
@@ -192,9 +175,7 @@ export class JobManager {
     // Update district progress
     const districtProgress = job.progress.districtProgress.get(districtId)
     if (districtProgress) {
-      districtProgress.status = errorTracker.isBlacklisted
-        ? 'blacklisted'
-        : 'failed'
+      districtProgress.status = 'failed'
       districtProgress.lastError = error.message
       districtProgress.errorTracker = errorTracker
       districtProgress.retryCount = errorTracker.totalRetries
@@ -208,7 +189,6 @@ export class JobManager {
       isRetryable,
       consecutiveFailures: errorTracker.consecutiveFailures,
       totalRetries: errorTracker.totalRetries,
-      isBlacklisted: errorTracker.isBlacklisted,
       context,
       operation: 'trackDistrictError',
     })
@@ -225,8 +205,6 @@ export class JobManager {
     if (errorTracker) {
       errorTracker.consecutiveFailures = 0
       errorTracker.lastSuccessAt = new Date().toISOString()
-      errorTracker.isBlacklisted = false
-      errorTracker.blacklistUntil = undefined
     }
 
     // Update district progress
@@ -241,34 +219,6 @@ export class JobManager {
       districtId,
       operation: 'trackDistrictSuccess',
     })
-  }
-
-  /**
-   * Check if district is blacklisted and should be skipped
-   */
-  isDistrictBlacklisted(jobId: string, districtId: string): boolean {
-    const job = this.jobs.get(jobId)
-    if (!job) return false
-
-    const errorTracker = job.errorTrackers.get(districtId)
-    if (!errorTracker || !errorTracker.isBlacklisted) return false
-
-    // Check if blacklist has expired
-    if (errorTracker.blacklistUntil) {
-      const blacklistExpiry = new Date(errorTracker.blacklistUntil)
-      if (Date.now() > blacklistExpiry.getTime()) {
-        errorTracker.isBlacklisted = false
-        errorTracker.blacklistUntil = undefined
-        logger.info('District blacklist expired - re-enabling', {
-          jobId,
-          districtId,
-          operation: 'isDistrictBlacklisted',
-        })
-        return false
-      }
-    }
-
-    return true
   }
 
   /**

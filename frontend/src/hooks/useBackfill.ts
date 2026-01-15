@@ -28,7 +28,6 @@ interface DistrictProgress {
     | 'completed'
     | 'failed'
     | 'skipped'
-    | 'blacklisted'
   datesProcessed: number
   datesTotal: number
   lastError?: string

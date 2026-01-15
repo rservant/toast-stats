@@ -651,25 +651,6 @@ export class BackfillService {
 
     // Process each district individually to enable partial success with caching
     for (const districtId of job.scope.targetDistricts) {
-      // Check if district is blacklisted
-      if (this.jobManager.isDistrictBlacklisted(backfillId, districtId)) {
-        logger.info('Skipping blacklisted district', {
-          backfillId,
-          districtId,
-          date,
-          operation: 'processDateWithErrorHandlingAndCaching',
-        })
-
-        const districtProgress = job.progress.districtProgress.get(districtId)
-        if (districtProgress) {
-          districtProgress.status = 'blacklisted'
-          districtProgress.failedDates.push(date)
-        }
-
-        failedDistricts.push(districtId)
-        continue
-      }
-
       try {
         // Update district status
         const districtProgress = job.progress.districtProgress.get(districtId)

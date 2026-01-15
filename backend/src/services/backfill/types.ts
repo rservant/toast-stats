@@ -116,8 +116,6 @@ export interface DistrictErrorTracker {
   lastSuccessAt?: string
   lastFailureAt?: string
   totalRetries: number
-  isBlacklisted: boolean
-  blacklistUntil?: string
 }
 
 /**
@@ -155,13 +153,7 @@ export interface BackfillScope {
  */
 export interface DistrictProgress {
   districtId: string
-  status:
-    | 'pending'
-    | 'processing'
-    | 'completed'
-    | 'failed'
-    | 'skipped'
-    | 'blacklisted'
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
   datesProcessed: number
   datesTotal: number
   lastError?: string

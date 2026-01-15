@@ -378,7 +378,7 @@ describe('UnifiedBackfillService', () => {
       expect(job.progress.retryableErrors).toBe(1)
     })
 
-    it('should blacklist districts after consecutive failures', async () => {
+    it('should track consecutive failures without blacklisting', async () => {
       const jobManager = new JobManager()
       const request = {
         startDate: '2024-01-01',
@@ -393,7 +393,7 @@ describe('UnifiedBackfillService', () => {
 
       const job = jobManager.createJob(request, scope)
 
-      // Track 5 consecutive failures to trigger blacklisting
+      // Track multiple consecutive failures
       for (let i = 0; i < 5; i++) {
         jobManager.trackDistrictError(
           job.backfillId,
@@ -404,9 +404,8 @@ describe('UnifiedBackfillService', () => {
       }
 
       const errorTracker = job.errorTrackers.get('42')
-      expect(errorTracker?.isBlacklisted).toBe(true)
-      expect(errorTracker?.blacklistUntil).toBeDefined()
-      expect(jobManager.isDistrictBlacklisted(job.backfillId, '42')).toBe(true)
+      expect(errorTracker?.consecutiveFailures).toBe(5)
+      expect(errorTracker?.totalRetries).toBe(5)
     })
 
     it('should reset error counters on district success', async () => {
@@ -440,7 +439,6 @@ describe('UnifiedBackfillService', () => {
 
       errorTracker = job.errorTrackers.get('42')
       expect(errorTracker?.consecutiveFailures).toBe(0)
-      expect(errorTracker?.isBlacklisted).toBe(false)
       expect(errorTracker?.lastSuccessAt).toBeDefined()
     })
 
