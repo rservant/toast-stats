@@ -366,8 +366,8 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 dataKey="count"
                 stroke="var(--tm-loyal-blue)" // TM Loyal Blue
                 strokeWidth={3}
-                dot={{ fill: 'var(--tm-loyal-blue)', r: 4 }}
-                activeDot={{ r: 6 }}
+                dot={{ fill: 'var(--tm-loyal-blue)', r: 0.3 }}
+                activeDot={{ r: 0.3 }}
                 name="Total Membership"
               />
 

@@ -350,9 +350,9 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                   strokeWidth={2}
                   dot={{
                     fill: DISTRICT_COLORS[index % DISTRICT_COLORS.length],
-                    r: 3,
+                    r: 0.3,
                   }}
-                  activeDot={{ r: 5 }}
+                  activeDot={{ r: 0.5 }}
                   name={district.districtId}
                   connectNulls
                 />

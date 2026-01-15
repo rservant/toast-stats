@@ -355,8 +355,8 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                         dataKey="awards"
                         stroke={colors[0]}
                         strokeWidth={2}
-                        dot={{ fill: colors[0], r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ fill: colors[0], r: 0.3 }}
+                        activeDot={{ r: 0.5 }}
                         name="Awards Earned"
                       />
                     </LineChart>
