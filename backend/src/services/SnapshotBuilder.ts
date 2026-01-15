@@ -860,8 +860,22 @@ export class SnapshotBuilder {
     allDistrictsRankings?: AllDistrictsRankingsData,
     options?: BuildOptions
   ): Promise<Snapshot> {
-    const snapshotId = `snapshot_${Date.now()}`
     const createdAt = new Date().toISOString()
+
+    // Determine the effective snapshot date (used as the storage key/ID)
+    // For closing period data, use the logical date; otherwise use dataAsOfDate
+    let effectiveSnapshotDate: string
+    if (
+      normalizedData.metadata.isClosingPeriodData &&
+      normalizedData.metadata.logicalDate
+    ) {
+      effectiveSnapshotDate = normalizedData.metadata.logicalDate
+    } else {
+      effectiveSnapshotDate = normalizedData.metadata.dataAsOfDate
+    }
+
+    // Use the ISO date as the snapshot ID - this matches how SnapshotStore stores snapshots
+    const snapshotId = effectiveSnapshotDate
 
     // Enhance metadata with scraping info if available
     if (rawData) {
@@ -901,19 +915,11 @@ export class SnapshotBuilder {
       payload: normalizedData,
     }
 
-    // Determine if we need to override the snapshot date for closing period data
-    let overrideSnapshotDate: string | undefined
-    if (
-      normalizedData.metadata.isClosingPeriodData &&
-      normalizedData.metadata.logicalDate
-    ) {
-      overrideSnapshotDate = normalizedData.metadata.logicalDate
-    }
-
-    // Write snapshot to store
+    // Write snapshot to store with the effective date as override
+    // This ensures the snapshot is stored in the correct date-based directory
     await this.snapshotStore.writeSnapshot(snapshot, allDistrictsRankings, {
       skipCurrentPointerUpdate: options?.skipCurrentPointerUpdate,
-      overrideSnapshotDate,
+      overrideSnapshotDate: effectiveSnapshotDate,
     })
 
     this.log.info('Snapshot created and persisted', {
@@ -922,7 +928,7 @@ export class SnapshotBuilder {
       districtCount: normalizedData.districts.length,
       errorCount: errors.length,
       isClosingPeriod: normalizedData.metadata.isClosingPeriodData,
-      overrideSnapshotDate,
+      effectiveSnapshotDate,
     })
 
     return snapshot
