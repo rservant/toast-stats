@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
@@ -412,60 +411,85 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
         })}
       </div>
 
-      {/* Bar Chart Visualization */}
+      {/* Bar Chart Visualization - Separate charts for each metric */}
       <div
         role="img"
         aria-label={chartDescription}
-        className="w-full overflow-x-auto"
+        className="w-full"
       >
-        <div className="min-w-[320px]">
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--tm-cool-gray-20)"
-              />
-              <XAxis
-                dataKey="metric"
-                stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '11px' }}
-                angle={-15}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis
-                stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '11px' }}
-                label={{
-                  value: 'Value',
-                  angle: -90,
-                  position: 'insideLeft',
-                  style: { fontSize: '12px' },
-                }}
-              />
-              <Tooltip
-                content={<CustomTooltip comparisonData={comparisonData} />}
-              />
-              <Legend
-                wrapperStyle={{ fontSize: '12px' }}
-                verticalAlign="top"
-                height={36}
-              />
-              <Bar
-                dataKey="Previous Year"
-                fill="var(--tm-cool-gray)" // TM Cool Gray
-                radius={[8, 8, 0, 0]}
-              />
-              <Bar
-                dataKey="Current Year"
-                fill="var(--tm-loyal-blue)" // TM Loyal Blue
-                radius={[8, 8, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Legend */}
+        <div className="flex justify-center gap-6 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--tm-cool-gray)' }}></div>
+            <span className="text-sm text-gray-600">Previous Year</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--tm-loyal-blue)' }}></div>
+            <span className="text-sm text-gray-600">Current Year</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {comparisonData.map((item, index) => {
+            const singleChartData = [
+              {
+                metric: item.metric,
+                'Previous Year': item.previous,
+                'Current Year': item.current,
+              },
+            ]
+            const maxValue = Math.max(item.previous, item.current)
+            const yAxisDomain = [0, Math.ceil(maxValue * 1.15)]
+
+            return (
+              <div key={index} className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-gray-700 text-center mb-2">
+                  {item.metric}
+                </h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart
+                    data={singleChartData}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--tm-cool-gray-20)"
+                    />
+                    <XAxis
+                      dataKey="metric"
+                      tick={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="var(--tm-cool-gray)"
+                      style={{ fontSize: '10px' }}
+                      domain={yAxisDomain}
+                      tickFormatter={(value: number) =>
+                        item.metric === 'Thriving Clubs %'
+                          ? `${value.toFixed(0)}%`
+                          : value >= 1000
+                            ? `${(value / 1000).toFixed(1)}k`
+                            : value.toFixed(0)
+                      }
+                    />
+                    <Tooltip
+                      content={<CustomTooltip comparisonData={comparisonData} />}
+                    />
+                    <Bar
+                      dataKey="Previous Year"
+                      fill="var(--tm-cool-gray)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="Current Year"
+                      fill="var(--tm-loyal-blue)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )
+          })}
         </div>
       </div>
 
