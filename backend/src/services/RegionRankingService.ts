@@ -80,31 +80,31 @@ export class RegionRankingService implements IRegionRankingService {
       }
     }
 
-    // Get the metric value for sorting
-    const getMetricValue = (district: DistrictRanking): number => {
+    // Get the world rank for the metric (used for region ranking)
+    const getWorldRank = (district: DistrictRanking): number => {
       switch (metric) {
         case 'clubs':
-          return district.paidClubs
+          return district.clubsRank
         case 'payments':
-          return district.totalPayments
+          return district.paymentsRank
         case 'distinguished':
-          return district.distinguishedClubs
+          return district.distinguishedRank
       }
     }
 
-    // Sort regional districts by metric value (descending - higher is better)
+    // Sort regional districts by world rank (ascending - lower rank is better)
     const sortedRegionalDistricts = [...regionalDistricts].sort(
-      (a, b) => getMetricValue(b) - getMetricValue(a)
+      (a, b) => getWorldRank(a) - getWorldRank(b)
     )
 
-    // Calculate rank with tie handling
-    // Districts with the same value get the same rank
-    const targetValue = getMetricValue(targetDistrict)
+    // Calculate region rank based on position in sorted list
+    // Districts with the same world rank get the same region rank
+    const targetWorldRank = getWorldRank(targetDistrict)
     let rank = 1
 
     for (const district of sortedRegionalDistricts) {
-      const value = getMetricValue(district)
-      if (value > targetValue) {
+      const worldRank = getWorldRank(district)
+      if (worldRank < targetWorldRank) {
         rank++
       } else {
         // Found our position (or a tie at our position)

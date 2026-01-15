@@ -139,22 +139,22 @@ describe('RegionRankingService - Property Tests', () => {
           districtRankingsArb(['TestRegion'], 5),
           fc.constantFrom(...metrics),
           (rankings, metric) => {
-            // Find the best performer in the region
-            const getMetricValue = (d: DistrictRanking): number => {
+            // Find the best performer in the region (lowest world rank for that metric)
+            const getWorldRank = (d: DistrictRanking): number => {
               switch (metric) {
                 case 'clubs':
-                  return d.paidClubs
+                  return d.clubsRank
                 case 'payments':
-                  return d.totalPayments
+                  return d.paymentsRank
                 case 'distinguished':
-                  return d.distinguishedClubs
+                  return d.distinguishedRank
               }
             }
 
-            const sortedByMetric = [...rankings].sort(
-              (a, b) => getMetricValue(b) - getMetricValue(a)
+            const sortedByWorldRank = [...rankings].sort(
+              (a, b) => getWorldRank(a) - getWorldRank(b)
             )
-            const bestPerformer = sortedByMetric[0]
+            const bestPerformer = sortedByWorldRank[0]
             if (!bestPerformer) return
 
             const result = service.calculateRegionRank(
@@ -163,7 +163,7 @@ describe('RegionRankingService - Property Tests', () => {
               rankings
             )
 
-            // Best performer should have rank 1
+            // Best performer (lowest world rank) should have region rank 1
             expect(result.regionRank).toBe(1)
           }
         ),
@@ -233,8 +233,8 @@ describe('RegionRankingService - Property Tests', () => {
       )
     })
 
-    it('handles ties correctly - same value gets same rank', () => {
-      // Create districts with identical metric values
+    it('handles ties correctly - same world rank gets same region rank', () => {
+      // Create districts with identical world ranks for the metric
       const createTiedDistricts = (): DistrictRanking[] => [
         {
           districtId: 'D1',
@@ -251,49 +251,49 @@ describe('RegionRankingService - Property Tests', () => {
           selectDistinguished: 20,
           presidentsDistinguished: 10,
           distinguishedPercent: 50,
-          clubsRank: 1,
-          paymentsRank: 1,
-          distinguishedRank: 1,
+          clubsRank: 1, // Tied for best
+          paymentsRank: 1, // Tied for best
+          distinguishedRank: 1, // Tied for best
           aggregateScore: 90,
         },
         {
           districtId: 'D2',
           districtName: 'District D2',
           region: 'TieRegion',
-          paidClubs: 100, // Same as D1
+          paidClubs: 100,
           paidClubBase: 95,
           clubGrowthPercent: 5.26,
-          totalPayments: 5000, // Same as D1
+          totalPayments: 5000,
           paymentBase: 4800,
           paymentGrowthPercent: 4.17,
           activeClubs: 100,
-          distinguishedClubs: 50, // Same as D1
+          distinguishedClubs: 50,
           selectDistinguished: 20,
           presidentsDistinguished: 10,
           distinguishedPercent: 50,
-          clubsRank: 2,
-          paymentsRank: 2,
-          distinguishedRank: 2,
+          clubsRank: 1, // Tied for best (same world rank as D1)
+          paymentsRank: 1, // Tied for best
+          distinguishedRank: 1, // Tied for best
           aggregateScore: 90,
         },
         {
           districtId: 'D3',
           districtName: 'District D3',
           region: 'TieRegion',
-          paidClubs: 50, // Lower
+          paidClubs: 50,
           paidClubBase: 48,
           clubGrowthPercent: 4.17,
-          totalPayments: 2500, // Lower
+          totalPayments: 2500,
           paymentBase: 2400,
           paymentGrowthPercent: 4.17,
           activeClubs: 50,
-          distinguishedClubs: 25, // Lower
+          distinguishedClubs: 25,
           selectDistinguished: 10,
           presidentsDistinguished: 5,
           distinguishedPercent: 50,
-          clubsRank: 3,
-          paymentsRank: 3,
-          distinguishedRank: 3,
+          clubsRank: 3, // Worse world rank
+          paymentsRank: 3, // Worse world rank
+          distinguishedRank: 3, // Worse world rank
           aggregateScore: 70,
         },
       ]
@@ -305,11 +305,11 @@ describe('RegionRankingService - Property Tests', () => {
         const result2 = service.calculateRegionRank('D2', metric, tiedDistricts)
         const result3 = service.calculateRegionRank('D3', metric, tiedDistricts)
 
-        // D1 and D2 should have the same rank (tied for first)
+        // D1 and D2 should have the same region rank (tied for first based on world rank)
         expect(result1.regionRank).toBe(result2.regionRank)
         expect(result1.regionRank).toBe(1)
 
-        // D3 should have a lower rank (worse performance)
+        // D3 should have a lower region rank (worse world rank)
         expect(result3.regionRank).toBeGreaterThan(result1.regionRank!)
       }
     })
