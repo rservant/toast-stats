@@ -460,10 +460,7 @@ export const MembershipPaymentsChart: React.FC<
                   dataKey={label}
                   stroke={YEAR_COLORS[index] ?? YEAR_COLORS[2]}
                   strokeWidth={index === 0 ? 3 : 2}
-                  dot={{
-                    fill: YEAR_COLORS[index] ?? YEAR_COLORS[2],
-                    r: index === 0 ? 3 : 2,
-                  }}
+                  dot={false}
                   activeDot={{ r: 5 }}
                   name={label}
                   connectNulls
