@@ -198,6 +198,10 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
 }) => {
   const colors = COLOR_SCHEMES[colorScheme]
 
+  // Suppress unused variable warnings - these are part of the component API
+  void _base
+  void _achievedLevel
+
   return (
     <div
       className={`${colors.gradient} rounded-lg p-4 border ${colors.border}`}

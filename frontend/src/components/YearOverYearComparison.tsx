@@ -166,12 +166,12 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
     },
   ]
 
-  // Chart data for bar chart
-  const chartData = comparisonData.map(item => ({
-    metric: item.metric,
-    'Previous Year': item.previous,
-    'Current Year': item.current,
-  }))
+  // Chart data for bar chart (used in individual metric charts below)
+  // const chartData = comparisonData.map(item => ({
+  //   metric: item.metric,
+  //   'Previous Year': item.previous,
+  //   'Current Year': item.current,
+  // }))
 
   // Determine overall trend
   const improvements = comparisonData.filter(d => d.change > 0).length

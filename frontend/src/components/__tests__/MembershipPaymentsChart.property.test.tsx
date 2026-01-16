@@ -11,7 +11,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest'
 import fc from 'fast-check'
-import { screen, within, cleanup } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MembershipPaymentsChart } from '../MembershipPaymentsChart'
 import {

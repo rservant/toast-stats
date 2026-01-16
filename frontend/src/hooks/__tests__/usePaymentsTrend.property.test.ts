@@ -22,8 +22,9 @@ import { ProgramYear, getProgramYear } from '../../utils/programYear'
 
 /**
  * Generator for valid program year starting years (2015-2030)
+ * Currently unused but kept for potential future test expansion
  */
-const programYearStartArb = fc.integer({ min: 2015, max: 2030 })
+// const programYearStartArb = fc.integer({ min: 2015, max: 2030 })
 
 /**
  * Generator for valid payment counts
@@ -51,37 +52,39 @@ const paymentTrendPointArb: fc.Arbitrary<PaymentTrendDataPoint> = fc.record({
 
 /**
  * Generator for grouped data map entry
+ * Currently unused but kept for potential future test expansion
  */
-const groupedDataEntryArb = (year: number) =>
-  fc.record({
-    programYear: fc.constant(getProgramYear(year)),
-    data: fc.array(paymentTrendPointArb, { minLength: 1, maxLength: 20 }),
-  })
+// const groupedDataEntryArb = (year: number) =>
+//   fc.record({
+//     programYear: fc.constant(getProgramYear(year)),
+//     data: fc.array(paymentTrendPointArb, { minLength: 1, maxLength: 20 }),
+//   })
 
 /**
  * Generator for a map of grouped payment data with specific year count
+ * Currently unused but kept for potential future test expansion
  */
-const groupedDataMapArb = (yearCount: number) => {
-  const baseYear = 2024
-  const years = Array.from({ length: yearCount }, (_, i) => baseYear - i)
+// const groupedDataMapArb = (yearCount: number) => {
+//   const baseYear = 2024
+//   const years = Array.from({ length: yearCount }, (_, i) => baseYear - i)
 
-  return fc
-    .tuple(...years.map(year => groupedDataEntryArb(year)))
-    .map(entries => {
-      const map = new Map<
-        string,
-        { programYear: ProgramYear; data: PaymentTrendDataPoint[] }
-      >()
-      entries.forEach((entry, i) => {
-        const year = years[i]
-        if (year !== undefined) {
-          const label = `${year}-${year + 1}`
-          map.set(label, entry)
-        }
-      })
-      return map
-    })
-}
+//   return fc
+//     .tuple(...years.map(year => groupedDataEntryArb(year)))
+//     .map(entries => {
+//       const map = new Map<
+//         string,
+//         { programYear: ProgramYear; data: PaymentTrendDataPoint[] }
+//       >()
+//       entries.forEach((entry, i) => {
+//         const year = years[i]
+//         if (year !== undefined) {
+//           const label = `${year}-${year + 1}`
+//           map.set(label, entry)
+//         }
+//       })
+//       return map
+//     })
+// }
 
 describe('usePaymentsTrend Property Tests', () => {
   /**
