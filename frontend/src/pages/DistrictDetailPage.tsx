@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useLeadershipInsights } from '../hooks/useLeadershipInsights'
 import { useDistinguishedClubAnalytics } from '../hooks/useDistinguishedClubAnalytics'
 import { usePaymentsTrend } from '../hooks/usePaymentsTrend'
@@ -28,6 +29,7 @@ import { YearOverYearComparison } from '../components/YearOverYearComparison'
 import { LeadershipInsights } from '../components/LeadershipInsights'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
+import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -108,6 +110,10 @@ const DistrictDetailPage: React.FC = () => {
     selectedProgramYear.startDate,
     selectedDate || selectedProgramYear.endDate
   )
+
+  // Fetch district statistics for division/area performance cards
+  const { data: districtStatistics, isLoading: isLoadingStatistics } =
+    useDistrictStatistics(districtId || null)
 
   // Fetch leadership insights for analytics tab - use program year boundaries
   const { data: leadershipInsights, isLoading: isLoadingLeadership } =
@@ -426,6 +432,15 @@ const DistrictDetailPage: React.FC = () => {
 
             {activeTab === 'divisions' && (
               <>
+                {/* Division Performance Cards */}
+                {districtStatistics && (
+                  <DivisionPerformanceCards
+                    districtSnapshot={districtStatistics}
+                    isLoading={isLoadingStatistics}
+                    snapshotTimestamp={districtStatistics.asOfDate}
+                  />
+                )}
+
                 {/* Division Rankings */}
                 {analytics && (
                   <DivisionRankings
