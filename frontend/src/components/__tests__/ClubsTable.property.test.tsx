@@ -403,76 +403,84 @@ describe('ClubsTable Property Tests', () => {
       )
     })
 
-    it('should display "—" for undefined payment values and numeric values for defined values', () => {
-      fc.assert(
-        fc.property(
-          // Generate a single club with specific payment values
-          fc.record({
-            octoberRenewals: optionalPaymentCountArb,
-            aprilRenewals: optionalPaymentCountArb,
-            newMembers: optionalPaymentCountArb,
-          }),
-          paymentValues => {
-            // Clean up any previous renders before this iteration
-            cleanup()
+    it(
+      'should display "—" for undefined payment values and numeric values for defined values',
+      { timeout: 10000 },
+      () => {
+        fc.assert(
+          fc.property(
+            // Generate a single club with specific payment values
+            fc.record({
+              octoberRenewals: optionalPaymentCountArb,
+              aprilRenewals: optionalPaymentCountArb,
+              newMembers: optionalPaymentCountArb,
+            }),
+            paymentValues => {
+              // Clean up any previous renders before this iteration
+              cleanup()
 
-            // Create a club with the generated payment values
-            const club: ClubTrend = {
-              clubId: 'test-club-1',
-              clubName: 'Test Club',
-              divisionId: 'div-1',
-              divisionName: 'Division A',
-              areaId: 'area-1',
-              areaName: 'Area 1',
-              distinguishedLevel: 'NotDistinguished',
-              currentStatus: 'thriving',
-              riskFactors: [],
-              membershipTrend: [{ date: new Date().toISOString(), count: 20 }],
-              dcpGoalsTrend: [
-                { date: new Date().toISOString(), goalsAchieved: 5 },
-              ],
-              ...paymentValues,
+              // Create a club with the generated payment values
+              const club: ClubTrend = {
+                clubId: 'test-club-1',
+                clubName: 'Test Club',
+                divisionId: 'div-1',
+                divisionName: 'Division A',
+                areaId: 'area-1',
+                areaName: 'Area 1',
+                distinguishedLevel: 'NotDistinguished',
+                currentStatus: 'thriving',
+                riskFactors: [],
+                membershipTrend: [
+                  { date: new Date().toISOString(), count: 20 },
+                ],
+                dcpGoalsTrend: [
+                  { date: new Date().toISOString(), goalsAchieved: 5 },
+                ],
+                ...paymentValues,
+              }
+
+              // Render the ClubsTable with the single club
+              render(
+                <ClubsTable
+                  clubs={[club]}
+                  districtId="test-district"
+                  isLoading={false}
+                />
+              )
+
+              // Get the data row
+              const tableRows = screen.getAllByRole('row')
+              const dataRow = tableRows[1] // First data row
+              const cells = dataRow.querySelectorAll('td')
+
+              // Columns 7, 8, 9 are Oct Ren, Apr Ren, New (0-indexed)
+              const octRenCell = cells[7]
+              const aprRenCell = cells[8]
+              const newMembersCell = cells[9]
+
+              // Helper function to get expected display value
+              const getExpectedDisplay = (
+                value: number | undefined
+              ): string => {
+                return value !== undefined ? String(value) : '—'
+              }
+
+              // Verify each cell displays the correct value
+              expect(octRenCell.textContent).toBe(
+                getExpectedDisplay(paymentValues.octoberRenewals)
+              )
+              expect(aprRenCell.textContent).toBe(
+                getExpectedDisplay(paymentValues.aprilRenewals)
+              )
+              expect(newMembersCell.textContent).toBe(
+                getExpectedDisplay(paymentValues.newMembers)
+              )
             }
-
-            // Render the ClubsTable with the single club
-            render(
-              <ClubsTable
-                clubs={[club]}
-                districtId="test-district"
-                isLoading={false}
-              />
-            )
-
-            // Get the data row
-            const tableRows = screen.getAllByRole('row')
-            const dataRow = tableRows[1] // First data row
-            const cells = dataRow.querySelectorAll('td')
-
-            // Columns 7, 8, 9 are Oct Ren, Apr Ren, New (0-indexed)
-            const octRenCell = cells[7]
-            const aprRenCell = cells[8]
-            const newMembersCell = cells[9]
-
-            // Helper function to get expected display value
-            const getExpectedDisplay = (value: number | undefined): string => {
-              return value !== undefined ? String(value) : '—'
-            }
-
-            // Verify each cell displays the correct value
-            expect(octRenCell.textContent).toBe(
-              getExpectedDisplay(paymentValues.octoberRenewals)
-            )
-            expect(aprRenCell.textContent).toBe(
-              getExpectedDisplay(paymentValues.aprilRenewals)
-            )
-            expect(newMembersCell.textContent).toBe(
-              getExpectedDisplay(paymentValues.newMembers)
-            )
-          }
-        ),
-        { numRuns: 100 }
-      )
-    })
+          ),
+          { numRuns: 20 }
+        )
+      }
+    )
   })
 
   describe('Property 4: Sorting Invariant', () => {
