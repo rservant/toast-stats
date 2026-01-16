@@ -16,7 +16,7 @@ graph TB
         DO[DistrictOverview Component]
         TC[TargetProgressCard Component]
     end
-    
+
     subgraph Backend
         AE[AnalyticsEngine]
         TCS[TargetCalculatorService]
@@ -24,7 +24,7 @@ graph TB
         RC[RankingCalculator]
         SS[SnapshotStore]
     end
-    
+
     DO --> AE
     AE --> TCS
     AE --> RCS
@@ -87,7 +87,10 @@ interface ITargetCalculatorService {
    * - President's: +5%
    * - Smedley: +8%
    */
-  calculatePaidClubsTargets(clubBase: number, currentPaidClubs: number): MetricTargets
+  calculatePaidClubsTargets(
+    clubBase: number,
+    currentPaidClubs: number
+  ): MetricTargets
 
   /**
    * Calculate membership payments targets based on Payment_Base
@@ -97,7 +100,10 @@ interface ITargetCalculatorService {
    * - President's: +5%
    * - Smedley: +8%
    */
-  calculatePaymentsTargets(paymentBase: number, currentPayments: number): MetricTargets
+  calculatePaymentsTargets(
+    paymentBase: number,
+    currentPayments: number
+  ): MetricTargets
 
   /**
    * Calculate distinguished clubs targets based on Club_Base
@@ -107,7 +113,10 @@ interface ITargetCalculatorService {
    * - President's: 55%
    * - Smedley: 60%
    */
-  calculateDistinguishedTargets(clubBase: number, currentDistinguished: number): MetricTargets
+  calculateDistinguishedTargets(
+    clubBase: number,
+    currentDistinguished: number
+  ): MetricTargets
 }
 ```
 
@@ -130,7 +139,7 @@ interface RegionRankData {
  */
 interface MetricRankings {
   worldRank: number | null
-  worldPercentile: number | null  // Rounded to 1 decimal place
+  worldPercentile: number | null // Rounded to 1 decimal place
   regionRank: number | null
   totalDistricts: number
   totalInRegion: number
@@ -182,7 +191,7 @@ interface DistrictPerformanceTargets {
   }
   distinguishedClubs: {
     current: number
-    base: number | null  // Uses Club_Base for percentage calculation
+    base: number | null // Uses Club_Base for percentage calculation
     targets: RecognitionTargets | null
     achievedLevel: RecognitionLevel | null
     rankings: MetricRankings
@@ -192,7 +201,7 @@ interface DistrictPerformanceTargets {
 // Extended DistrictAnalytics interface
 interface DistrictAnalytics {
   // ... existing fields ...
-  
+
   /**
    * Performance targets and rankings data
    * Null if base values are unavailable
@@ -216,7 +225,7 @@ interface TargetProgressCardProps {
   targets: RecognitionTargets | null
   achievedLevel: RecognitionLevel | null
   rankings: MetricRankings
-  badges?: React.ReactNode  // Existing sub-information (health badges, level badges)
+  badges?: React.ReactNode // Existing sub-information (health badges, level badges)
   colorScheme: 'blue' | 'green' | 'purple'
 }
 ```
@@ -224,6 +233,7 @@ interface TargetProgressCardProps {
 #### Enhanced DistrictOverview
 
 Modifications to existing component:
+
 - Replace "Total Clubs" card with "Paid Clubs" card using `TargetProgressCard`
 - Replace "Total Membership" card with "Membership Payments" card using `TargetProgressCard`
 - Enhance "Distinguished Clubs" card with targets using `TargetProgressCard`
@@ -236,30 +246,30 @@ Modifications to existing component:
 
 #### Paid Clubs Targets (Requirement 1)
 
-| Level | Formula | Example (Base=100) |
-|-------|---------|-------------------|
-| Distinguished | ceil(base × 1.01) | 101 |
-| Select | ceil(base × 1.03) | 103 |
-| President's | ceil(base × 1.05) | 105 |
-| Smedley | ceil(base × 1.08) | 108 |
+| Level         | Formula           | Example (Base=100) |
+| ------------- | ----------------- | ------------------ |
+| Distinguished | ceil(base × 1.01) | 101                |
+| Select        | ceil(base × 1.03) | 103                |
+| President's   | ceil(base × 1.05) | 105                |
+| Smedley       | ceil(base × 1.08) | 108                |
 
 #### Membership Payments Targets (Requirement 2)
 
-| Level | Formula | Example (Base=1000) |
-|-------|---------|-------------------|
-| Distinguished | ceil(base × 1.01) | 1010 |
-| Select | ceil(base × 1.03) | 1030 |
-| President's | ceil(base × 1.05) | 1050 |
-| Smedley | ceil(base × 1.08) | 1080 |
+| Level         | Formula           | Example (Base=1000) |
+| ------------- | ----------------- | ------------------- |
+| Distinguished | ceil(base × 1.01) | 1010                |
+| Select        | ceil(base × 1.03) | 1030                |
+| President's   | ceil(base × 1.05) | 1050                |
+| Smedley       | ceil(base × 1.08) | 1080                |
 
 #### Distinguished Clubs Targets (Requirement 3)
 
-| Level | Formula | Example (Base=100) |
-|-------|---------|-------------------|
-| Distinguished | ceil(base × 0.45) | 45 |
-| Select | ceil(base × 0.50) | 50 |
-| President's | ceil(base × 0.55) | 55 |
-| Smedley | ceil(base × 0.60) | 60 |
+| Level         | Formula           | Example (Base=100) |
+| ------------- | ----------------- | ------------------ |
+| Distinguished | ceil(base × 0.45) | 45                 |
+| Select        | ceil(base × 0.50) | 50                 |
+| President's   | ceil(base × 0.55) | 55                 |
+| Smedley       | ceil(base × 0.60) | 60                 |
 
 ### Percentile Calculation (Requirement 5)
 
@@ -269,39 +279,41 @@ displayValue = "Top " + round(100 - percentile, 1) + "%"
 ```
 
 Example: Rank 10 of 100 districts
+
 - percentile = ((100 - 10) / 100) × 100 = 90%
 - displayValue = "Top 10%"
 
 ### Data Source Mapping
 
-| Field | CSV Column | Type |
-|-------|-----------|------|
-| Club_Base | "Paid Club Base" | number |
-| Payment_Base | "Payment Base" | number |
-| Paid_Clubs | "Paid Clubs" | number |
-| Total_Payments | "Total YTD Payments" | number |
+| Field               | CSV Column                  | Type   |
+| ------------------- | --------------------------- | ------ |
+| Club_Base           | "Paid Club Base"            | number |
+| Payment_Base        | "Payment Base"              | number |
+| Paid_Clubs          | "Paid Clubs"                | number |
+| Total_Payments      | "Total YTD Payments"        | number |
 | Distinguished_Clubs | "Total Distinguished Clubs" | number |
-| Region | "REGION" | string |
+| Region              | "REGION"                    | string |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Target Calculation Formula Correctness
 
-*For any* valid base value and recognition level, the calculated target SHALL equal the ceiling of (base × multiplier), where multiplier is defined by the recognition level and metric type.
+_For any_ valid base value and recognition level, the calculated target SHALL equal the ceiling of (base × multiplier), where multiplier is defined by the recognition level and metric type.
 
 **Validates: Requirements 1.2, 1.3, 1.4, 1.5, 2.2, 2.3, 2.4, 2.5, 3.2, 3.3, 3.4, 3.5**
 
 ### Property 2: Ceiling Rounding Invariant
 
-*For any* target calculation that produces a fractional result, the output SHALL be the smallest integer greater than or equal to the calculated value (ceiling function).
+_For any_ target calculation that produces a fractional result, the output SHALL be the smallest integer greater than or equal to the calculated value (ceiling function).
 
 **Validates: Requirements 1.6, 2.6, 3.6**
 
 ### Property 3: Region Ranking Correctness
 
-*For any* district with a known region, the region rank SHALL be calculated by:
+_For any_ district with a known region, the region rank SHALL be calculated by:
+
 1. Filtering all districts to those in the same region
 2. Ordering by the metric value (descending)
 3. Assigning rank 1 to the best performer
@@ -310,19 +322,20 @@ Example: Rank 10 of 100 districts
 
 ### Property 4: World Percentile Calculation
 
-*For any* district with a world rank, the percentile SHALL be calculated as `((totalDistricts - worldRank) / totalDistricts) × 100`, rounded to one decimal place, and displayed as "Top X%" where X = 100 - percentile.
+_For any_ district with a world rank, the percentile SHALL be calculated as `((totalDistricts - worldRank) / totalDistricts) × 100`, rounded to one decimal place, and displayed as "Top X%" where X = 100 - percentile.
 
 **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
 
 ### Property 5: Target Achievement Visual Indication
 
-*For any* metric where the current value meets or exceeds a target level, the UI SHALL display a visual indicator (checkmark or color change) for that level and all lower levels.
+_For any_ metric where the current value meets or exceeds a target level, the UI SHALL display a visual indicator (checkmark or color change) for that level and all lower levels.
 
 **Validates: Requirements 6.9**
 
 ### Property 6: API Response Completeness
 
-*For any* district analytics request, the response SHALL include:
+_For any_ district analytics request, the response SHALL include:
+
 - Target calculations for all three metrics (or null if base unavailable)
 - World rank, region rank, and world percentile for each metric
 - Base values used for calculations
@@ -331,7 +344,8 @@ Example: Rank 10 of 100 districts
 
 ### Property 7: Missing Data Graceful Handling
 
-*For any* district where base values are zero, missing, or invalid:
+_For any_ district where base values are zero, missing, or invalid:
+
 - Targets SHALL be null and display "N/A"
 - Rankings SHALL display "—" if unavailable
 - Region rank SHALL be omitted if region is unknown
@@ -343,22 +357,22 @@ Example: Rank 10 of 100 districts
 
 ### Backend Error Handling
 
-| Scenario | Behavior |
-|----------|----------|
-| Club_Base = 0 or missing | Return `null` for paid clubs targets |
-| Payment_Base = 0 or missing | Return `null` for payments targets |
-| Region unknown | Return `null` for region rank |
-| No ranking data available | Return `null` for all rankings |
-| Calculation overflow | Log error, return `null` for affected targets |
+| Scenario                    | Behavior                                      |
+| --------------------------- | --------------------------------------------- |
+| Club_Base = 0 or missing    | Return `null` for paid clubs targets          |
+| Payment_Base = 0 or missing | Return `null` for payments targets            |
+| Region unknown              | Return `null` for region rank                 |
+| No ranking data available   | Return `null` for all rankings                |
+| Calculation overflow        | Log error, return `null` for affected targets |
 
 ### Frontend Error Handling
 
-| Scenario | Display |
-|----------|---------|
-| Targets = null | Show "N/A" with tooltip "Base data unavailable" |
-| Rankings = null | Show "—" with tooltip "Ranking data unavailable" |
-| Region rank = null | Omit region rank display entirely |
-| API error | Show existing error state, retain last known data |
+| Scenario           | Display                                           |
+| ------------------ | ------------------------------------------------- |
+| Targets = null     | Show "N/A" with tooltip "Base data unavailable"   |
+| Rankings = null    | Show "—" with tooltip "Ranking data unavailable"  |
+| Region rank = null | Omit region rank display entirely                 |
+| API error          | Show existing error state, retain last known data |
 
 ## Testing Strategy
 
@@ -385,15 +399,15 @@ Unit tests focus on specific examples and edge cases:
 
 Property-based tests validate universal properties across many generated inputs. Each test runs minimum 100 iterations.
 
-| Property | Test Description | Framework |
-|----------|-----------------|-----------|
-| Property 1 | Generate random base values, verify formula correctness | fast-check |
-| Property 2 | Generate fractional results, verify ceiling applied | fast-check |
+| Property   | Test Description                                                | Framework  |
+| ---------- | --------------------------------------------------------------- | ---------- |
+| Property 1 | Generate random base values, verify formula correctness         | fast-check |
+| Property 2 | Generate fractional results, verify ceiling applied             | fast-check |
 | Property 3 | Generate district sets with regions, verify ranking correctness | fast-check |
-| Property 4 | Generate rank/total pairs, verify percentile formula | fast-check |
-| Property 5 | Generate current/target pairs, verify visual indicators | fast-check |
-| Property 6 | Generate district data, verify response completeness | fast-check |
-| Property 7 | Generate missing data scenarios, verify graceful handling | fast-check |
+| Property 4 | Generate rank/total pairs, verify percentile formula            | fast-check |
+| Property 5 | Generate current/target pairs, verify visual indicators         | fast-check |
+| Property 6 | Generate district data, verify response completeness            | fast-check |
+| Property 7 | Generate missing data scenarios, verify graceful handling       | fast-check |
 
 ### Integration Tests
 
@@ -414,6 +428,7 @@ Property-based tests validate universal properties across many generated inputs.
 **Choice**: Add `performanceTargets` field to existing `DistrictAnalytics` response rather than creating a new endpoint.
 
 **Rationale**:
+
 - Maintains backward compatibility
 - Single API call for all district overview data
 - Consistent with existing architecture patterns
@@ -424,6 +439,7 @@ Property-based tests validate universal properties across many generated inputs.
 **Choice**: Create dedicated `TargetCalculatorService` rather than embedding logic in `AnalyticsEngine`.
 
 **Rationale**:
+
 - Single responsibility principle
 - Easier to test calculation logic in isolation
 - Reusable for other features (e.g., goal tracking)
@@ -434,6 +450,7 @@ Property-based tests validate universal properties across many generated inputs.
 **Choice**: Calculate region rankings by filtering existing world rankings rather than maintaining separate regional data.
 
 **Rationale**:
+
 - Leverages existing `RankingCalculator` infrastructure
 - No additional data storage required
 - Consistent ranking methodology across world and region
@@ -444,6 +461,7 @@ Property-based tests validate universal properties across many generated inputs.
 **Choice**: Always round up fractional targets using ceiling function.
 
 **Rationale**:
+
 - Consistent with Toastmasters program requirements
 - Ensures targets are achievable whole numbers
 - Prevents edge cases where fractional targets could be "met" by truncation
@@ -453,6 +471,7 @@ Property-based tests validate universal properties across many generated inputs.
 **Choice**: Create a single reusable component for all three enhanced cards.
 
 **Rationale**:
+
 - DRY principle
 - Consistent visual design across metrics
 - Easier maintenance and styling updates
@@ -463,6 +482,7 @@ Property-based tests validate universal properties across many generated inputs.
 **Choice**: Remove the "Projected Year-End" card entirely rather than relocating it.
 
 **Rationale**:
+
 - Per requirements, the card is being replaced by target-based progress tracking
 - Reduces visual clutter on the overview page
 - Target achievement provides more actionable information than projections

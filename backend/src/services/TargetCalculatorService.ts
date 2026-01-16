@@ -35,9 +35,9 @@ const GROWTH_MULTIPLIERS = {
  */
 const DISTINGUISHED_PERCENTAGES = {
   distinguished: 0.45, // 45%
-  select: 0.50, // 50%
+  select: 0.5, // 50%
   presidents: 0.55, // 55%
-  smedley: 0.60, // 60%
+  smedley: 0.6, // 60%
 } as const
 
 /**
@@ -64,7 +64,10 @@ export class TargetCalculatorService implements ITargetCalculatorService {
    * @param currentPaidClubs - Current count of paid clubs
    * @returns MetricTargets with calculated targets and achieved level
    */
-  calculatePaidClubsTargets(clubBase: number, currentPaidClubs: number): MetricTargets {
+  calculatePaidClubsTargets(
+    clubBase: number,
+    currentPaidClubs: number
+  ): MetricTargets {
     return this.calculateGrowthTargets(clubBase, currentPaidClubs)
   }
 
@@ -81,7 +84,10 @@ export class TargetCalculatorService implements ITargetCalculatorService {
    * @param currentPayments - Current count of membership payments
    * @returns MetricTargets with calculated targets and achieved level
    */
-  calculatePaymentsTargets(paymentBase: number, currentPayments: number): MetricTargets {
+  calculatePaymentsTargets(
+    paymentBase: number,
+    currentPayments: number
+  ): MetricTargets {
     return this.calculateGrowthTargets(paymentBase, currentPayments)
   }
 
@@ -98,7 +104,10 @@ export class TargetCalculatorService implements ITargetCalculatorService {
    * @param currentDistinguished - Current count of distinguished clubs
    * @returns MetricTargets with calculated targets and achieved level
    */
-  calculateDistinguishedTargets(clubBase: number, currentDistinguished: number): MetricTargets {
+  calculateDistinguishedTargets(
+    clubBase: number,
+    currentDistinguished: number
+  ): MetricTargets {
     if (!this.isValidBase(clubBase)) {
       return {
         base: null,
@@ -109,7 +118,9 @@ export class TargetCalculatorService implements ITargetCalculatorService {
     }
 
     const targets: RecognitionTargets = {
-      distinguished: Math.ceil(clubBase * DISTINGUISHED_PERCENTAGES.distinguished),
+      distinguished: Math.ceil(
+        clubBase * DISTINGUISHED_PERCENTAGES.distinguished
+      ),
       select: Math.ceil(clubBase * DISTINGUISHED_PERCENTAGES.select),
       presidents: Math.ceil(clubBase * DISTINGUISHED_PERCENTAGES.presidents),
       smedley: Math.ceil(clubBase * DISTINGUISHED_PERCENTAGES.smedley),

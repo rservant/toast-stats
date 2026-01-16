@@ -358,7 +358,10 @@ describe('ToastmastersScraper Fallback Cache - Property-Based Tests', () => {
         expect(scraper.hasCachedFallback(dateString)).toBe(false)
 
         // Simulate fallback success scenario
-        const result = scraper.testSimulateNavigation(dateString, 'fallback-success')
+        const result = scraper.testSimulateNavigation(
+          dateString,
+          'fallback-success'
+        )
 
         // Verify the result indicates cache was populated
         expect(result.cacheWasPopulated).toBe(true)
@@ -448,7 +451,10 @@ describe('ToastmastersScraper Fallback Cache - Property-Based Tests', () => {
           scraper.testResetMetrics()
 
           // Simulate navigation - should use cached fallback
-          const result = scraper.testSimulateNavigation(dateString, 'standard-success')
+          const result = scraper.testSimulateNavigation(
+            dateString,
+            'standard-success'
+          )
 
           // Verify the result indicates cached fallback was used
           expect(result.usedCachedFallback).toBe(true)
@@ -490,7 +496,10 @@ describe('ToastmastersScraper Fallback Cache - Property-Based Tests', () => {
         expect(scraper.hasCachedFallback(dateString)).toBe(false)
 
         // Simulate standard success scenario (no fallback needed)
-        const result = scraper.testSimulateNavigation(dateString, 'standard-success')
+        const result = scraper.testSimulateNavigation(
+          dateString,
+          'standard-success'
+        )
 
         // Verify the result indicates standard navigation was used
         expect(result.usedCachedFallback).toBe(false)
@@ -543,11 +552,16 @@ describe('ToastmastersScraper Fallback Cache - Property-Based Tests', () => {
           scraper.testCacheFallbackKnowledge(existingCachedDate, existingParams)
 
           // Get initial cache state
-          const initialCacheSize = scraper.hasCachedFallback(existingCachedDate) ? 1 : 0
+          const initialCacheSize = scraper.hasCachedFallback(existingCachedDate)
+            ? 1
+            : 0
           const initialMetrics = scraper.getFallbackMetrics()
 
           // Simulate standard success for a different date
-          const result = scraper.testSimulateNavigation(dateToNavigate, 'standard-success')
+          const result = scraper.testSimulateNavigation(
+            dateToNavigate,
+            'standard-success'
+          )
 
           // Verify standard navigation was used
           expect(result.usedCachedFallback).toBe(false)
@@ -565,15 +579,23 @@ describe('ToastmastersScraper Fallback Cache - Property-Based Tests', () => {
           const existingInfo = scraper.getCachedFallbackInfo(existingCachedDate)
           expect(existingInfo).toBeDefined()
           if (existingInfo) {
-            expect(existingInfo.fallbackMonth).toBe(existingParams.fallbackMonth)
+            expect(existingInfo.fallbackMonth).toBe(
+              existingParams.fallbackMonth
+            )
             expect(existingInfo.fallbackYear).toBe(existingParams.fallbackYear)
-            expect(existingInfo.crossedProgramYearBoundary).toBe(existingParams.crossedProgramYearBoundary)
-            expect(existingInfo.actualDateString).toBe(existingParams.actualDateString)
+            expect(existingInfo.crossedProgramYearBoundary).toBe(
+              existingParams.crossedProgramYearBoundary
+            )
+            expect(existingInfo.actualDateString).toBe(
+              existingParams.actualDateString
+            )
           }
 
           // Verify fallbackDatesDiscovered didn't increase (only cache miss increased)
           const finalMetrics = scraper.getFallbackMetrics()
-          expect(finalMetrics.fallbackDatesDiscovered).toBe(initialMetrics.fallbackDatesDiscovered)
+          expect(finalMetrics.fallbackDatesDiscovered).toBe(
+            initialMetrics.fallbackDatesDiscovered
+          )
           expect(finalMetrics.cacheMisses).toBe(initialMetrics.cacheMisses + 1)
 
           await scraper.closeBrowser()

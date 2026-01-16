@@ -5,7 +5,11 @@ import { Tooltip, InfoIcon } from './Tooltip'
  * Recognition levels for district performance targets
  * Ordered from lowest to highest achievement tier
  */
-export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+export type RecognitionLevel =
+  | 'distinguished'
+  | 'select'
+  | 'presidents'
+  | 'smedley'
 
 /**
  * Target values for each recognition level
@@ -63,7 +67,11 @@ export interface TargetProgressCardProps {
 /**
  * Recognition level display configuration
  */
-const RECOGNITION_LEVELS: { key: RecognitionLevel; label: string; shortLabel: string }[] = [
+const RECOGNITION_LEVELS: {
+  key: RecognitionLevel
+  label: string
+  shortLabel: string
+}[] = [
   { key: 'distinguished', label: 'Distinguished', shortLabel: 'D' },
   { key: 'select', label: 'Select', shortLabel: 'S' },
   { key: 'presidents', label: "President's", shortLabel: 'P' },
@@ -73,18 +81,21 @@ const RECOGNITION_LEVELS: { key: RecognitionLevel; label: string; shortLabel: st
 /**
  * Color scheme configurations
  */
-const COLOR_SCHEMES: Record<ColorScheme, {
-  gradient: string
-  border: string
-  iconBg: string
-  iconText: string
-  titleText: string
-  valueText: string
-  progressBg: string
-  progressFill: string
-  achievedBg: string
-  achievedText: string
-}> = {
+const COLOR_SCHEMES: Record<
+  ColorScheme,
+  {
+    gradient: string
+    border: string
+    iconBg: string
+    iconText: string
+    titleText: string
+    valueText: string
+    progressBg: string
+    progressFill: string
+    achievedBg: string
+    achievedText: string
+  }
+> = {
   blue: {
     gradient: 'bg-gradient-to-br from-blue-50 to-blue-100',
     border: 'border-blue-200',
@@ -143,7 +154,12 @@ export function isLevelAtOrBelowAchieved(
   achievedLevel: RecognitionLevel | null
 ): boolean {
   if (!achievedLevel) return false
-  const levelOrder: RecognitionLevel[] = ['distinguished', 'select', 'presidents', 'smedley']
+  const levelOrder: RecognitionLevel[] = [
+    'distinguished',
+    'select',
+    'presidents',
+    'smedley',
+  ]
   const levelIndex = levelOrder.indexOf(level)
   const achievedIndex = levelOrder.indexOf(achievedLevel)
   return levelIndex <= achievedIndex
@@ -162,10 +178,10 @@ function formatPercentile(percentile: number | null): string {
 
 /**
  * TargetProgressCard Component
- * 
+ *
  * Displays a metric card with progress bars for recognition level targets,
  * world rank, world percentile, and region rank.
- * 
+ *
  * Requirements: 6.7, 6.8, 6.9
  */
 export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
@@ -210,21 +226,30 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
       {/* Rankings display */}
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         {/* World Rank */}
-        <Tooltip content={rankings.worldRank !== null 
-          ? "District's rank among all districts worldwide (1 = best)" 
-          : "Ranking data unavailable - district may not have sufficient data for ranking"}>
+        <Tooltip
+          content={
+            rankings.worldRank !== null
+              ? "District's rank among all districts worldwide (1 = best)"
+              : 'Ranking data unavailable - district may not have sufficient data for ranking'
+          }
+        >
           <span
             className="px-2 py-1 rounded bg-gray-100 text-gray-700"
             data-testid="world-rank"
           >
-            World: {rankings.worldRank !== null ? `#${rankings.worldRank}` : '—'}
+            World:{' '}
+            {rankings.worldRank !== null ? `#${rankings.worldRank}` : '—'}
           </span>
         </Tooltip>
 
         {/* World Percentile */}
-        <Tooltip content={rankings.worldPercentile !== null
-          ? "Percentage of districts this district outperforms worldwide"
-          : "Percentile data unavailable - requires world rank data"}>
+        <Tooltip
+          content={
+            rankings.worldPercentile !== null
+              ? 'Percentage of districts this district outperforms worldwide'
+              : 'Percentile data unavailable - requires world rank data'
+          }
+        >
           <span
             className="px-2 py-1 rounded bg-gray-100 text-gray-700"
             data-testid="world-percentile"
@@ -235,14 +260,19 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
 
         {/* Region Rank - only show if region is known (Requirement 8.3) */}
         {rankings.region && (
-          <Tooltip content={rankings.regionRank !== null
-            ? `District's rank within ${rankings.region} region (1 = best)`
-            : `Regional ranking data unavailable for ${rankings.region}`}>
+          <Tooltip
+            content={
+              rankings.regionRank !== null
+                ? `District's rank within ${rankings.region} region (1 = best)`
+                : `Regional ranking data unavailable for ${rankings.region}`
+            }
+          >
             <span
               className="px-2 py-1 rounded bg-gray-100 text-gray-700"
               data-testid="region-rank"
             >
-              {rankings.region}: {rankings.regionRank !== null ? `#${rankings.regionRank}` : '—'}
+              {rankings.region}:{' '}
+              {rankings.regionRank !== null ? `#${rankings.regionRank}` : '—'}
             </span>
           </Tooltip>
         )}
@@ -259,7 +289,9 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
             return (
               <div key={key} className="flex items-center gap-2">
                 <span className="text-xs w-24 text-gray-600">{label}</span>
-                <div className={`flex-1 h-2 ${colors.progressBg} rounded-full overflow-hidden`}>
+                <div
+                  className={`flex-1 h-2 ${colors.progressBg} rounded-full overflow-hidden`}
+                >
                   <div
                     className={`h-full ${achieved ? 'bg-green-500' : colors.progressFill} transition-all duration-300`}
                     style={{ width: `${progress}%` }}
@@ -293,7 +325,10 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
 
       {/* Badges (existing sub-information) */}
       {badges && (
-        <div className="mt-3 flex flex-wrap gap-1" data-testid="badges-container">
+        <div
+          className="mt-3 flex flex-wrap gap-1"
+          data-testid="badges-container"
+        >
           {badges}
         </div>
       )}

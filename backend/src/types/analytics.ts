@@ -390,6 +390,9 @@ export interface DistrictAnalytics {
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
 
+  // Payment insights (Requirements: membership-payments-chart 3.1, 3.2)
+  paymentsTrend?: Array<{ date: string; payments: number }>
+
   // Club health
   allClubs: ClubTrend[]
   vulnerableClubs: ClubTrend[] // Contains only vulnerable clubs (not intervention-required)
@@ -443,7 +446,11 @@ export interface DistrictAnalytics {
  * Recognition levels for district performance targets
  * Ordered from lowest to highest achievement tier
  */
-export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+export type RecognitionLevel =
+  | 'distinguished'
+  | 'select'
+  | 'presidents'
+  | 'smedley'
 
 /**
  * Target values for each recognition level
@@ -543,7 +550,10 @@ export interface ITargetCalculatorService {
    * - President's: base × 1.05
    * - Smedley: base × 1.08
    */
-  calculatePaidClubsTargets(clubBase: number, currentPaidClubs: number): MetricTargets
+  calculatePaidClubsTargets(
+    clubBase: number,
+    currentPaidClubs: number
+  ): MetricTargets
 
   /**
    * Calculate membership payments targets based on Payment_Base
@@ -553,7 +563,10 @@ export interface ITargetCalculatorService {
    * - President's: base × 1.05
    * - Smedley: base × 1.08
    */
-  calculatePaymentsTargets(paymentBase: number, currentPayments: number): MetricTargets
+  calculatePaymentsTargets(
+    paymentBase: number,
+    currentPayments: number
+  ): MetricTargets
 
   /**
    * Calculate distinguished clubs targets based on Club_Base
@@ -563,7 +576,10 @@ export interface ITargetCalculatorService {
    * - President's: base × 0.55
    * - Smedley: base × 0.60
    */
-  calculateDistinguishedTargets(clubBase: number, currentDistinguished: number): MetricTargets
+  calculateDistinguishedTargets(
+    clubBase: number,
+    currentDistinguished: number
+  ): MetricTargets
 }
 
 /**

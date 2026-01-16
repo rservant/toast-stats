@@ -39,8 +39,11 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
   /**
    * Generator for navigation scenarios
    */
-  type NavigationScenario = 'standard-success' | 'fallback-success' | 'fallback-failure'
-  
+  type NavigationScenario =
+    | 'standard-success'
+    | 'fallback-success'
+    | 'fallback-failure'
+
   const generateNavigationScenario = (): fc.Arbitrary<NavigationScenario> =>
     fc.constantFrom('standard-success', 'fallback-success', 'fallback-failure')
 
@@ -72,7 +75,7 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         generateNavigationSequence(1, 20),
-        async (navigationSequence) => {
+        async navigationSequence => {
           const scraper = new ToastmastersScraper()
 
           // Track expected values
@@ -84,7 +87,7 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
           // Execute each navigation in sequence
           for (const { date, scenario } of navigationSequence) {
             const wasCachedBefore = scraper.hasCachedFallback(date)
-            
+
             // Simulate navigation
             const result = scraper.testSimulateNavigation(date, scenario)
             expectedTotalNavigations++
@@ -95,7 +98,7 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
             } else {
               // Cache miss - date was not in cache
               expectedCacheMisses++
-              
+
               // If fallback succeeded, the date should now be in cache
               if (result.cacheWasPopulated) {
                 datesAddedToCache.add(date)
@@ -107,7 +110,9 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
           const metrics = scraper.getFallbackMetrics()
 
           // Verify: cacheHits + cacheMisses = total navigation attempts
-          expect(metrics.cacheHits + metrics.cacheMisses).toBe(expectedTotalNavigations)
+          expect(metrics.cacheHits + metrics.cacheMisses).toBe(
+            expectedTotalNavigations
+          )
           expect(metrics.cacheHits).toBe(expectedCacheHits)
           expect(metrics.cacheMisses).toBe(expectedCacheMisses)
 
@@ -142,7 +147,10 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
           const scraper = new ToastmastersScraper()
 
           // First navigation - always a cache miss
-          const firstResult = scraper.testSimulateNavigation(date, 'fallback-success')
+          const firstResult = scraper.testSimulateNavigation(
+            date,
+            'fallback-success'
+          )
           expect(firstResult.usedCachedFallback).toBe(false)
 
           let metrics = scraper.getFallbackMetrics()
@@ -152,7 +160,10 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
 
           // Subsequent navigations - should all be cache hits
           for (let i = 1; i < repeatCount; i++) {
-            const result = scraper.testSimulateNavigation(date, 'standard-success')
+            const result = scraper.testSimulateNavigation(
+              date,
+              'standard-success'
+            )
             expect(result.usedCachedFallback).toBe(true)
           }
 
@@ -185,7 +196,8 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         // Generate 2-5 unique dates to pre-cache
-        fc.array(generateValidDateString(), { minLength: 2, maxLength: 5 })
+        fc
+          .array(generateValidDateString(), { minLength: 2, maxLength: 5 })
           .map(dates => [...new Set(dates)])
           .filter(dates => dates.length >= 2),
         // Generate 5-15 dates to navigate to (may include pre-cached dates)
@@ -214,9 +226,11 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
           // Navigate to each date
           for (const date of datesToNavigate) {
             const wasCachedBefore = scraper.hasCachedFallback(date)
-            
+
             // Use fallback-success for uncached dates to populate cache
-            const scenario = wasCachedBefore ? 'standard-success' : 'fallback-success'
+            const scenario = wasCachedBefore
+              ? 'standard-success'
+              : 'fallback-success'
             const result = scraper.testSimulateNavigation(date, scenario)
 
             if (wasCachedBefore) {
@@ -233,8 +247,12 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
           const metrics = scraper.getFallbackMetrics()
           expect(metrics.cacheHits).toBe(expectedCacheHits)
           expect(metrics.cacheMisses).toBe(expectedCacheMisses)
-          expect(metrics.cacheHits + metrics.cacheMisses).toBe(datesToNavigate.length)
-          expect(metrics.fallbackDatesDiscovered).toBe(newDatesAddedToCache.size)
+          expect(metrics.cacheHits + metrics.cacheMisses).toBe(
+            datesToNavigate.length
+          )
+          expect(metrics.fallbackDatesDiscovered).toBe(
+            newDatesAddedToCache.size
+          )
 
           await scraper.closeBrowser()
 
@@ -287,7 +305,7 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.array(generateValidDateString(), { minLength: 1, maxLength: 10 }),
-        async (dates) => {
+        async dates => {
           const scraper = new ToastmastersScraper()
 
           // Navigate to all dates with standard success (no fallback)
@@ -326,7 +344,7 @@ describe('Fallback Metrics Tracking Accuracy - Property-Based Tests', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.array(generateValidDateString(), { minLength: 1, maxLength: 10 }),
-        async (dates) => {
+        async dates => {
           const scraper = new ToastmastersScraper()
 
           // Navigate to all dates with fallback failure

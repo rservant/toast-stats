@@ -77,7 +77,8 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     this.leadershipModule = new LeadershipAnalyticsModule(dataSource)
     this.recognitionModule = new AreaDivisionRecognitionModule(dataSource)
     this.targetCalculator = targetCalculator ?? new TargetCalculatorService()
-    this.regionRankingService = regionRankingService ?? new RegionRankingService()
+    this.regionRankingService =
+      regionRankingService ?? new RegionRankingService()
 
     logger.info('AnalyticsEngine initialized', {
       operation: 'constructor',
@@ -319,6 +320,14 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           endDate
         )
 
+      // Build payments trend from snapshot rankings data
+      // Requirements: membership-payments-chart 3.1, 3.2, 3.3
+      const paymentsTrend = await this.buildPaymentsTrend(
+        districtId,
+        startDate,
+        endDate
+      )
+
       // Calculate year-over-year comparison
       const yearOverYearData =
         await this.membershipModule.calculateMembershipYearOverYear(
@@ -403,6 +412,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
         totalMembership,
         membershipChange,
         membershipTrend,
+        paymentsTrend: paymentsTrend.length > 0 ? paymentsTrend : undefined,
         topGrowthClubs,
         allClubs: clubTrends,
         vulnerableClubs,
@@ -931,6 +941,67 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   }
 
   /**
+   * Build payments trend from snapshot rankings data
+   * Helper method for generateDistrictAnalytics
+   *
+   * Extracts totalPayments from each snapshot's district ranking data
+   * to build a time series of payment data.
+   *
+   * Requirements: membership-payments-chart 3.1, 3.2, 3.3
+   *
+   * @param districtId - The district ID
+   * @param startDate - Start date for the range
+   * @param endDate - End date for the range
+   * @returns Array of payment trend data points, sorted by date ascending
+   */
+  private async buildPaymentsTrend(
+    districtId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<Array<{ date: string; payments: number }>> {
+    try {
+      const snapshots = await this.dataSource.getSnapshotsInRange(
+        startDate,
+        endDate
+      )
+
+      const paymentsTrend: Array<{ date: string; payments: number }> = []
+
+      for (const snapshotInfo of snapshots) {
+        const rankings = await this.dataSource.getAllDistrictsRankings(
+          snapshotInfo.snapshotId
+        )
+
+        if (rankings) {
+          const districtRanking = rankings.rankings.find(
+            r => r.districtId === districtId
+          )
+
+          if (districtRanking && districtRanking.totalPayments !== undefined) {
+            paymentsTrend.push({
+              date: snapshotInfo.dataAsOfDate,
+              payments: districtRanking.totalPayments,
+            })
+          }
+        }
+      }
+
+      // Sort by date ascending
+      paymentsTrend.sort((a, b) => a.date.localeCompare(b.date))
+
+      return paymentsTrend
+    } catch (error) {
+      logger.warn('Failed to build payments trend', {
+        districtId,
+        startDate,
+        endDate,
+        error,
+      })
+      return []
+    }
+  }
+
+  /**
    * Project distinguished clubs based on thriving clubs count
    * Helper method for generateDistrictAnalytics
    *
@@ -975,13 +1046,17 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   ): Promise<DistrictPerformanceTargets | null> {
     try {
       // Get all districts rankings data for region ranking calculations
-      const allDistrictsRankings = await this.dataSource.getAllDistrictsRankings(snapshotId)
+      const allDistrictsRankings =
+        await this.dataSource.getAllDistrictsRankings(snapshotId)
 
       if (!allDistrictsRankings || allDistrictsRankings.rankings.length === 0) {
-        logger.warn('No all-districts rankings data available for performance targets', {
-          districtId,
-          snapshotId,
-        })
+        logger.warn(
+          'No all-districts rankings data available for performance targets',
+          {
+            districtId,
+            snapshotId,
+          }
+        )
         return null
       }
 
@@ -1029,17 +1104,19 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       )
 
       // Calculate distinguished clubs targets and rankings
-      const distinguishedTargets = this.targetCalculator.calculateDistinguishedTargets(
-        districtRanking.paidClubBase, // Uses Club_Base for percentage calculation
-        currentDistinguishedClubs
-      )
-      const distinguishedRankings = this.regionRankingService.buildMetricRankings(
-        districtId,
-        'distinguished',
-        districtRanking.distinguishedRank,
-        totalDistricts,
-        allDistrictsRankings.rankings
-      )
+      const distinguishedTargets =
+        this.targetCalculator.calculateDistinguishedTargets(
+          districtRanking.paidClubBase, // Uses Club_Base for percentage calculation
+          currentDistinguishedClubs
+        )
+      const distinguishedRankings =
+        this.regionRankingService.buildMetricRankings(
+          districtId,
+          'distinguished',
+          districtRanking.distinguishedRank,
+          totalDistricts,
+          allDistrictsRankings.rankings
+        )
 
       const performanceTargets: DistrictPerformanceTargets = {
         paidClubs: {

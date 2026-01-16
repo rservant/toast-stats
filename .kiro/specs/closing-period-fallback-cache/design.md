@@ -14,7 +14,7 @@ flowchart TD
         FC[FallbackCache<br/>Map&lt;date, FallbackInfo&gt;]
         FM[FallbackMetrics<br/>hits, misses]
     end
-    
+
     subgraph Navigation Flow
         N1[navigateToDateWithFallback]
         N2{Check FallbackCache}
@@ -27,7 +27,7 @@ flowchart TD
         N9[Return success]
         N10[Return failure]
     end
-    
+
     N1 --> N2
     N2 -->|Cache hit| N3
     N2 -->|Cache miss| N4
@@ -39,7 +39,7 @@ flowchart TD
     N7 -->|Yes| N8
     N7 -->|No| N10
     N8 --> N9
-    
+
     N2 -.->|lookup| FC
     N3 -.->|increment hits| FM
     N4 -.->|increment misses| FM
@@ -56,19 +56,19 @@ Stores the information needed to reconstruct a fallback navigation:
 interface FallbackInfo {
   /** The date that was requested (YYYY-MM-DD format) */
   requestedDate: string
-  
+
   /** The month parameter that succeeded in the fallback URL */
   fallbackMonth: number
-  
+
   /** The year for the fallback month (may differ if crossing year boundary) */
   fallbackYear: number
-  
+
   /** Whether the fallback crossed a program year boundary (July) */
   crossedProgramYearBoundary: boolean
-  
+
   /** The actual date string returned by the dashboard */
   actualDateString: string
-  
+
   /** Timestamp when this entry was cached */
   cachedAt: number
 }
@@ -82,10 +82,10 @@ Tracks cache efficiency:
 interface FallbackMetrics {
   /** Number of times cached fallback knowledge was reused */
   cacheHits: number
-  
+
   /** Number of times fallback was discovered fresh (cache miss) */
   cacheMisses: number
-  
+
   /** Number of dates that required fallback */
   fallbackDatesDiscovered: number
 }
@@ -98,22 +98,22 @@ Add instance properties:
 ```typescript
 class ToastmastersScraper {
   // Existing properties...
-  
+
   /** Cache of dates that require fallback navigation */
   private fallbackCache: Map<string, FallbackInfo> = new Map()
-  
+
   /** Metrics for fallback cache efficiency */
   private fallbackMetrics: FallbackMetrics = {
     cacheHits: 0,
     cacheMisses: 0,
-    fallbackDatesDiscovered: 0
+    fallbackDatesDiscovered: 0,
   }
-  
+
   /** Get current fallback metrics (for reporting) */
   getFallbackMetrics(): FallbackMetrics {
     return { ...this.fallbackMetrics }
   }
-  
+
   /** Check if a date has cached fallback info */
   hasCachedFallback(date: string): boolean {
     return this.fallbackCache.has(date)
@@ -140,18 +140,18 @@ private async navigateToDateWithFallback(
 }> {
   // Step 1: Check fallback cache
   const cachedFallback = this.fallbackCache.get(dateString)
-  
+
   if (cachedFallback) {
     // Cache hit - use cached fallback parameters directly
     this.fallbackMetrics.cacheHits++
-    
+
     logger.info('Using cached fallback knowledge for date', {
       dateString,
       fallbackMonth: cachedFallback.fallbackMonth,
       crossedProgramYearBoundary: cachedFallback.crossedProgramYearBoundary,
       cachedAt: new Date(cachedFallback.cachedAt).toISOString()
     })
-    
+
     const result = await this.navigateWithCachedFallback(
       page,
       baseUrl,
@@ -160,23 +160,23 @@ private async navigateToDateWithFallback(
       cachedFallback,
       districtId
     )
-    
+
     return {
       ...result,
       usedCachedFallback: true
     }
   }
-  
+
   // Cache miss - proceed with standard navigation
   this.fallbackMetrics.cacheMisses++
-  
+
   // ... existing navigation logic ...
-  
+
   // If fallback succeeds, cache the knowledge
   if (usedFallback && success) {
     this.cacheFallbackKnowledge(dateString, fallbackParams)
   }
-  
+
   return {
     success,
     actualDateString,
@@ -205,33 +205,33 @@ private async navigateWithCachedFallback(
   const year = dateObj.getFullYear()
   const month = dateObj.getMonth() + 1
   const formattedDate = `${month}/${day}/${year}`
-  
+
   // Determine base URL (may need to use previous program year)
   let effectiveBaseUrl = baseUrl
   if (fallbackInfo.crossedProgramYearBoundary) {
     const prevMonthDateString = `${fallbackInfo.fallbackYear}-${String(fallbackInfo.fallbackMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     effectiveBaseUrl = this.buildBaseUrl(prevMonthDateString)
   }
-  
+
   const districtParam = districtId ? `id=${districtId}&` : ''
   const fallbackUrl = `${effectiveBaseUrl}/${pageName}?${districtParam}month=${fallbackInfo.fallbackMonth}&day=${formattedDate}`
-  
+
   logger.debug('Navigating with cached fallback URL', {
     fallbackUrl,
     dateString,
     fallbackMonth: fallbackInfo.fallbackMonth
   })
-  
+
   await page.goto(fallbackUrl, {
     waitUntil: 'domcontentloaded',
     timeout: this.config.timeout
   })
-  
+
   // Verify the date matches
   const actualDate = await this.getSelectedDate(page)
   if (actualDate) {
     const { month: actualMonth, day: actualDay, year: actualYear, dateString: actualDateString } = actualDate
-    
+
     if (actualMonth === month && actualDay === day && actualYear === year) {
       return {
         success: true,
@@ -240,13 +240,13 @@ private async navigateWithCachedFallback(
       }
     }
   }
-  
+
   // Cached fallback didn't work - this shouldn't happen normally
   logger.warn('Cached fallback navigation failed, date mismatch', {
     dateString,
     cachedFallback: fallbackInfo
   })
-  
+
   return {
     success: false,
     actualDateString: fallbackInfo.actualDateString,
@@ -274,10 +274,10 @@ private cacheFallbackKnowledge(
     actualDateString: params.actualDateString,
     cachedAt: Date.now()
   }
-  
+
   this.fallbackCache.set(dateString, fallbackInfo)
   this.fallbackMetrics.fallbackDatesDiscovered++
-  
+
   logger.debug('Cached fallback knowledge for date', {
     dateString,
     fallbackMonth: params.fallbackMonth,
@@ -292,6 +292,7 @@ private cacheFallbackKnowledge(
 ### Cache Key Format
 
 The cache uses the requested date string in YYYY-MM-DD format as the key. This ensures:
+
 - O(1) lookup via Map
 - Consistent key format across all navigation calls
 - Easy debugging and logging
@@ -304,47 +305,47 @@ The cache uses the requested date string in YYYY-MM-DD format as the key. This e
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Cache population on fallback success
 
-*For any* date where fallback navigation succeeds, the FallbackCache SHALL contain an entry for that date with all required fields (fallbackMonth, fallbackYear, crossedProgramYearBoundary, actualDateString) immediately after the navigation method returns.
+_For any_ date where fallback navigation succeeds, the FallbackCache SHALL contain an entry for that date with all required fields (fallbackMonth, fallbackYear, crossedProgramYearBoundary, actualDateString) immediately after the navigation method returns.
 
 **Validates: Requirements 1.1, 4.1, 4.3**
 
 ### Property 2: Direct fallback navigation on cache hit
 
-*For any* date that exists in the FallbackCache, subsequent navigation attempts SHALL use the cached fallback parameters directly and SHALL NOT attempt standard navigation first.
+_For any_ date that exists in the FallbackCache, subsequent navigation attempts SHALL use the cached fallback parameters directly and SHALL NOT attempt standard navigation first.
 
 **Validates: Requirements 1.2, 3.2**
 
 ### Property 3: Standard navigation on cache miss
 
-*For any* date that does not exist in the FallbackCache, navigation SHALL first attempt standard navigation before trying fallback.
+_For any_ date that does not exist in the FallbackCache, navigation SHALL first attempt standard navigation before trying fallback.
 
 **Validates: Requirements 3.3**
 
 ### Property 4: Cache entry completeness
 
-*For any* entry in the FallbackCache, the entry SHALL contain: requestedDate matching the cache key, a valid fallbackMonth (1-12), a valid fallbackYear, a boolean crossedProgramYearBoundary, and a non-empty actualDateString.
+_For any_ entry in the FallbackCache, the entry SHALL contain: requestedDate matching the cache key, a valid fallbackMonth (1-12), a valid fallbackYear, a boolean crossedProgramYearBoundary, and a non-empty actualDateString.
 
 **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
 
 ### Property 5: Cache isolation between instances
 
-*For any* two ToastmastersScraper instances, populating the FallbackCache in one instance SHALL NOT affect the FallbackCache in the other instance.
+_For any_ two ToastmastersScraper instances, populating the FallbackCache in one instance SHALL NOT affect the FallbackCache in the other instance.
 
 **Validates: Requirements 6.3**
 
 ### Property 6: Metrics tracking accuracy
 
-*For any* sequence of navigation operations, the sum of cacheHits and cacheMisses SHALL equal the total number of navigation attempts, and fallbackDatesDiscovered SHALL equal the number of unique dates added to the cache.
+_For any_ sequence of navigation operations, the sum of cacheHits and cacheMisses SHALL equal the total number of navigation attempts, and fallbackDatesDiscovered SHALL equal the number of unique dates added to the cache.
 
 **Validates: Requirements 7.1, 7.2**
 
 ### Property 7: No cache modification on standard success
 
-*For any* date where standard navigation succeeds without requiring fallback, the FallbackCache SHALL NOT be modified.
+_For any_ date where standard navigation succeeds without requiring fallback, the FallbackCache SHALL NOT be modified.
 
 **Validates: Requirements 4.2**
 
@@ -357,6 +358,7 @@ The cache is a simple Map, so lookup failures are not expected. If the Map imple
 ### Cached Fallback Navigation Failures
 
 If a cached fallback doesn't work (date mismatch after using cached params), the scraper should:
+
 1. Log a warning
 2. Return failure (don't retry with standard navigation to avoid infinite loops)
 3. The cache entry remains (it may work for other page types)
@@ -372,6 +374,7 @@ The metrics counters are JavaScript numbers, which can safely represent integers
 ### Unit Tests
 
 Unit tests will verify:
+
 - FallbackInfo interface structure validation
 - Cache key generation consistency
 - Metrics counter increments
@@ -380,6 +383,7 @@ Unit tests will verify:
 ### Property-Based Tests
 
 Property-based tests will use fast-check to verify:
+
 - Cache population invariants (Property 1, 4)
 - Navigation behavior based on cache state (Property 2, 3, 7)
 - Instance isolation (Property 5)
@@ -388,6 +392,7 @@ Property-based tests will use fast-check to verify:
 ### Integration Tests
 
 Integration tests will verify:
+
 - End-to-end scraping with fallback cache enabled
 - Metrics reporting in orchestrator summary
 - Cache behavior across multiple CSV types for same date

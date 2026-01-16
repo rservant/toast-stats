@@ -13,3 +13,7 @@ export * from './ui/Form'
 
 // Existing components
 export { Tooltip, InfoIcon } from './Tooltip'
+
+// Chart Components
+export { MembershipPaymentsChart } from './MembershipPaymentsChart'
+export type { MembershipPaymentsChartProps } from './MembershipPaymentsChart'

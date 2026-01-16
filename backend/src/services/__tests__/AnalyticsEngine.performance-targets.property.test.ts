@@ -35,7 +35,11 @@ class MockAnalyticsDataSource implements IAnalyticsDataSource {
   private rankingsData: AllDistrictsRankingsData | null = null
   private snapshots: AnalyticsSnapshotInfo[] = []
 
-  setDistrictData(snapshotId: string, districtId: string, data: DistrictStatistics): void {
+  setDistrictData(
+    snapshotId: string,
+    districtId: string,
+    data: DistrictStatistics
+  ): void {
     this.districtData.set(`${snapshotId}:${districtId}`, data)
   }
 
@@ -46,7 +50,6 @@ class MockAnalyticsDataSource implements IAnalyticsDataSource {
   setSnapshots(snapshots: AnalyticsSnapshotInfo[]): void {
     this.snapshots = snapshots
   }
-
 
   async getDistrictData(
     snapshotId: string,
@@ -111,11 +114,13 @@ class MockAnalyticsDataSource implements IAnalyticsDataSource {
   }
 }
 
-
 /**
  * Generator for valid district ranking data
  */
-function districtRankingArb(districtId: string, region: string): fc.Arbitrary<DistrictRanking> {
+function districtRankingArb(
+  districtId: string,
+  region: string
+): fc.Arbitrary<DistrictRanking> {
   return fc.record({
     districtId: fc.constant(districtId),
     districtName: fc.constant(`District ${districtId}`),
@@ -147,37 +152,40 @@ function allDistrictsRankingsArb(
   totalDistricts: number
 ): fc.Arbitrary<AllDistrictsRankingsData> {
   const regions = ['Region 1', 'Region 2', 'Region 3', 'Region 4']
-  
-  return fc.tuple(
-    districtRankingArb(targetDistrictId, targetRegion),
-    fc.array(
-      fc.tuple(
-        fc.integer({ min: 1, max: 999 }),
-        fc.constantFrom(...regions)
-      ).chain(([id, region]) => districtRankingArb(`D${id}`, region)),
-      { minLength: totalDistricts - 1, maxLength: totalDistricts - 1 }
-    )
-  ).map(([targetRanking, otherRankings]) => ({
-    metadata: {
-      snapshotId: '2026-01-14',
-      calculatedAt: '2026-01-14T12:00:00Z',
-      schemaVersion: '1.0.0',
-      calculationVersion: '1.0.0',
-      rankingVersion: '1.0.0',
-      sourceCsvDate: '2026-01-14',
-      csvFetchedAt: '2026-01-14T12:00:00Z',
-      totalDistricts: totalDistricts,
-      fromCache: false,
-    },
-    rankings: [targetRanking, ...otherRankings],
-  }))
-}
 
+  return fc
+    .tuple(
+      districtRankingArb(targetDistrictId, targetRegion),
+      fc.array(
+        fc
+          .tuple(fc.integer({ min: 1, max: 999 }), fc.constantFrom(...regions))
+          .chain(([id, region]) => districtRankingArb(`D${id}`, region)),
+        { minLength: totalDistricts - 1, maxLength: totalDistricts - 1 }
+      )
+    )
+    .map(([targetRanking, otherRankings]) => ({
+      metadata: {
+        snapshotId: '2026-01-14',
+        calculatedAt: '2026-01-14T12:00:00Z',
+        schemaVersion: '1.0.0',
+        calculationVersion: '1.0.0',
+        rankingVersion: '1.0.0',
+        sourceCsvDate: '2026-01-14',
+        csvFetchedAt: '2026-01-14T12:00:00Z',
+        totalDistricts: totalDistricts,
+        fromCache: false,
+      },
+      rankings: [targetRanking, ...otherRankings],
+    }))
+}
 
 /**
  * Create minimal district statistics for testing
  */
-function createMinimalDistrictStats(districtId: string, date: string): DistrictStatistics {
+function createMinimalDistrictStats(
+  districtId: string,
+  date: string
+): DistrictStatistics {
   return {
     districtId,
     asOfDate: date,
@@ -237,7 +245,6 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
     await analyticsEngine.dispose()
   })
 
-
   /**
    * Property 6: API Response Completeness
    *
@@ -259,14 +266,23 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             const snapshotId = '2026-01-14'
 
             // Set up mock data
-            const districtStats = createMinimalDistrictStats(districtId, snapshotId)
-            mockDataSource.setDistrictData(snapshotId, districtId, districtStats)
-            mockDataSource.setSnapshots([{
+            const districtStats = createMinimalDistrictStats(
+              districtId,
+              snapshotId
+            )
+            mockDataSource.setDistrictData(
               snapshotId,
-              status: 'success',
-              createdAt: '2026-01-14T12:00:00Z',
-              dataAsOfDate: snapshotId,
-            }])
+              districtId,
+              districtStats
+            )
+            mockDataSource.setSnapshots([
+              {
+                snapshotId,
+                status: 'success',
+                createdAt: '2026-01-14T12:00:00Z',
+                dataAsOfDate: snapshotId,
+              },
+            ])
 
             // Generate rankings data
             const rankingsData = await fc.sample(
@@ -277,7 +293,8 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             mockDataSource.setRankingsData(rankingsData)
 
             // Generate analytics
-            const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+            const analytics =
+              await analyticsEngine.generateDistrictAnalytics(districtId)
 
             // Property: performanceTargets should be present
             expect(analytics.performanceTargets).toBeDefined()
@@ -289,7 +306,11 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             expect(targets.distinguishedClubs).toBeDefined()
 
             // Property: Each metric should have required fields
-            for (const metric of [targets.paidClubs, targets.membershipPayments, targets.distinguishedClubs]) {
+            for (const metric of [
+              targets.paidClubs,
+              targets.membershipPayments,
+              targets.distinguishedClubs,
+            ]) {
               expect(typeof metric.current).toBe('number')
               expect(metric.rankings).toBeDefined()
               expect(typeof metric.rankings.totalDistricts).toBe('number')
@@ -297,7 +318,11 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             }
 
             // Property: Rankings should include world rank, region rank, and percentile
-            for (const metric of [targets.paidClubs, targets.membershipPayments, targets.distinguishedClubs]) {
+            for (const metric of [
+              targets.paidClubs,
+              targets.membershipPayments,
+              targets.distinguishedClubs,
+            ]) {
               expect(metric.rankings.worldRank).not.toBeUndefined()
               expect(metric.rankings.regionRank).not.toBeUndefined()
               expect(metric.rankings.worldPercentile).not.toBeUndefined()
@@ -311,7 +336,6 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
       )
     })
 
-
     it('base values are included when available', async () => {
       await fc.assert(
         fc.asyncProperty(
@@ -323,14 +347,23 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             const region = 'Region 1'
 
             // Set up mock data
-            const districtStats = createMinimalDistrictStats(districtId, snapshotId)
-            mockDataSource.setDistrictData(snapshotId, districtId, districtStats)
-            mockDataSource.setSnapshots([{
+            const districtStats = createMinimalDistrictStats(
+              districtId,
+              snapshotId
+            )
+            mockDataSource.setDistrictData(
               snapshotId,
-              status: 'success',
-              createdAt: '2026-01-14T12:00:00Z',
-              dataAsOfDate: snapshotId,
-            }])
+              districtId,
+              districtStats
+            )
+            mockDataSource.setSnapshots([
+              {
+                snapshotId,
+                status: 'success',
+                createdAt: '2026-01-14T12:00:00Z',
+                dataAsOfDate: snapshotId,
+              },
+            ])
 
             // Create rankings with specific base values
             const rankingsData: AllDistrictsRankingsData = {
@@ -345,38 +378,47 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
                 totalDistricts: 1,
                 fromCache: false,
               },
-              rankings: [{
-                districtId,
-                districtName: `District ${districtId}`,
-                region,
-                paidClubs: paidClubBase + 5,
-                paidClubBase,
-                clubGrowthPercent: 5,
-                totalPayments: paymentBase + 50,
-                paymentBase,
-                paymentGrowthPercent: 5,
-                activeClubs: paidClubBase,
-                distinguishedClubs: 20,
-                selectDistinguished: 10,
-                presidentsDistinguished: 5,
-                distinguishedPercent: 40,
-                clubsRank: 1,
-                paymentsRank: 1,
-                distinguishedRank: 1,
-                aggregateScore: 300,
-              }],
+              rankings: [
+                {
+                  districtId,
+                  districtName: `District ${districtId}`,
+                  region,
+                  paidClubs: paidClubBase + 5,
+                  paidClubBase,
+                  clubGrowthPercent: 5,
+                  totalPayments: paymentBase + 50,
+                  paymentBase,
+                  paymentGrowthPercent: 5,
+                  activeClubs: paidClubBase,
+                  distinguishedClubs: 20,
+                  selectDistinguished: 10,
+                  presidentsDistinguished: 5,
+                  distinguishedPercent: 40,
+                  clubsRank: 1,
+                  paymentsRank: 1,
+                  distinguishedRank: 1,
+                  aggregateScore: 300,
+                },
+              ],
             }
             mockDataSource.setRankingsData(rankingsData)
 
             // Generate analytics
-            const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+            const analytics =
+              await analyticsEngine.generateDistrictAnalytics(districtId)
 
             // Property: Base values should match input
             expect(analytics.performanceTargets).toBeDefined()
-            expect(analytics.performanceTargets!.paidClubs.base).toBe(paidClubBase)
-            expect(analytics.performanceTargets!.membershipPayments.base).toBe(paymentBase)
+            expect(analytics.performanceTargets!.paidClubs.base).toBe(
+              paidClubBase
+            )
+            expect(analytics.performanceTargets!.membershipPayments.base).toBe(
+              paymentBase
+            )
             // Distinguished clubs uses paidClubBase
-            expect(analytics.performanceTargets!.distinguishedClubs.base).toBe(paidClubBase)
+            expect(analytics.performanceTargets!.distinguishedClubs.base).toBe(
+              paidClubBase
+            )
 
             return true
           }
@@ -385,7 +427,6 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
       )
     })
   })
-
 
   /**
    * Property 7: Missing Data Graceful Handling
@@ -406,16 +447,19 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
       // Set up mock data without rankings
       const districtStats = createMinimalDistrictStats(districtId, snapshotId)
       mockDataSource.setDistrictData(snapshotId, districtId, districtStats)
-      mockDataSource.setSnapshots([{
-        snapshotId,
-        status: 'success',
-        createdAt: '2026-01-14T12:00:00Z',
-        dataAsOfDate: snapshotId,
-      }])
+      mockDataSource.setSnapshots([
+        {
+          snapshotId,
+          status: 'success',
+          createdAt: '2026-01-14T12:00:00Z',
+          dataAsOfDate: snapshotId,
+        },
+      ])
       mockDataSource.setRankingsData(null) // No rankings data
 
       // Generate analytics
-      const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+      const analytics =
+        await analyticsEngine.generateDistrictAnalytics(districtId)
 
       // Property: performanceTargets should be undefined when rankings unavailable
       expect(analytics.performanceTargets).toBeUndefined()
@@ -428,12 +472,14 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
       // Set up mock data
       const districtStats = createMinimalDistrictStats(districtId, snapshotId)
       mockDataSource.setDistrictData(snapshotId, districtId, districtStats)
-      mockDataSource.setSnapshots([{
-        snapshotId,
-        status: 'success',
-        createdAt: '2026-01-14T12:00:00Z',
-        dataAsOfDate: snapshotId,
-      }])
+      mockDataSource.setSnapshots([
+        {
+          snapshotId,
+          status: 'success',
+          createdAt: '2026-01-14T12:00:00Z',
+          dataAsOfDate: snapshotId,
+        },
+      ])
 
       // Rankings data without the target district
       const rankingsData: AllDistrictsRankingsData = {
@@ -448,54 +494,65 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
           totalDistricts: 1,
           fromCache: false,
         },
-        rankings: [{
-          districtId: 'OTHER_DISTRICT',
-          districtName: 'Other District',
-          region: 'Region 1',
-          paidClubs: 50,
-          paidClubBase: 48,
-          clubGrowthPercent: 4,
-          totalPayments: 1000,
-          paymentBase: 950,
-          paymentGrowthPercent: 5,
-          activeClubs: 50,
-          distinguishedClubs: 20,
-          selectDistinguished: 10,
-          presidentsDistinguished: 5,
-          distinguishedPercent: 40,
-          clubsRank: 1,
-          paymentsRank: 1,
-          distinguishedRank: 1,
-          aggregateScore: 300,
-        }],
+        rankings: [
+          {
+            districtId: 'OTHER_DISTRICT',
+            districtName: 'Other District',
+            region: 'Region 1',
+            paidClubs: 50,
+            paidClubBase: 48,
+            clubGrowthPercent: 4,
+            totalPayments: 1000,
+            paymentBase: 950,
+            paymentGrowthPercent: 5,
+            activeClubs: 50,
+            distinguishedClubs: 20,
+            selectDistinguished: 10,
+            presidentsDistinguished: 5,
+            distinguishedPercent: 40,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
       }
       mockDataSource.setRankingsData(rankingsData)
 
       // Generate analytics
-      const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+      const analytics =
+        await analyticsEngine.generateDistrictAnalytics(districtId)
 
       // Property: performanceTargets should be undefined when district not in rankings
       expect(analytics.performanceTargets).toBeUndefined()
     })
 
-
     it('targets are null when base values are zero or invalid', async () => {
       await fc.assert(
         fc.asyncProperty(
           fc.constantFrom(0, -1, -100), // invalid base values
-          async (invalidBase) => {
+          async invalidBase => {
             const districtId = 'D105'
             const snapshotId = '2026-01-14'
 
             // Set up mock data
-            const districtStats = createMinimalDistrictStats(districtId, snapshotId)
-            mockDataSource.setDistrictData(snapshotId, districtId, districtStats)
-            mockDataSource.setSnapshots([{
+            const districtStats = createMinimalDistrictStats(
+              districtId,
+              snapshotId
+            )
+            mockDataSource.setDistrictData(
               snapshotId,
-              status: 'success',
-              createdAt: '2026-01-14T12:00:00Z',
-              dataAsOfDate: snapshotId,
-            }])
+              districtId,
+              districtStats
+            )
+            mockDataSource.setSnapshots([
+              {
+                snapshotId,
+                status: 'success',
+                createdAt: '2026-01-14T12:00:00Z',
+                dataAsOfDate: snapshotId,
+              },
+            ])
 
             // Rankings with invalid base values
             const rankingsData: AllDistrictsRankingsData = {
@@ -510,40 +567,51 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
                 totalDistricts: 1,
                 fromCache: false,
               },
-              rankings: [{
-                districtId,
-                districtName: `District ${districtId}`,
-                region: 'Region 1',
-                paidClubs: 50,
-                paidClubBase: invalidBase,
-                clubGrowthPercent: 0,
-                totalPayments: 1000,
-                paymentBase: invalidBase,
-                paymentGrowthPercent: 0,
-                activeClubs: 50,
-                distinguishedClubs: 20,
-                selectDistinguished: 10,
-                presidentsDistinguished: 5,
-                distinguishedPercent: 40,
-                clubsRank: 1,
-                paymentsRank: 1,
-                distinguishedRank: 1,
-                aggregateScore: 300,
-              }],
+              rankings: [
+                {
+                  districtId,
+                  districtName: `District ${districtId}`,
+                  region: 'Region 1',
+                  paidClubs: 50,
+                  paidClubBase: invalidBase,
+                  clubGrowthPercent: 0,
+                  totalPayments: 1000,
+                  paymentBase: invalidBase,
+                  paymentGrowthPercent: 0,
+                  activeClubs: 50,
+                  distinguishedClubs: 20,
+                  selectDistinguished: 10,
+                  presidentsDistinguished: 5,
+                  distinguishedPercent: 40,
+                  clubsRank: 1,
+                  paymentsRank: 1,
+                  distinguishedRank: 1,
+                  aggregateScore: 300,
+                },
+              ],
             }
             mockDataSource.setRankingsData(rankingsData)
 
             // Generate analytics
-            const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+            const analytics =
+              await analyticsEngine.generateDistrictAnalytics(districtId)
 
             // Property: performanceTargets should exist but targets should be null
             expect(analytics.performanceTargets).toBeDefined()
             expect(analytics.performanceTargets!.paidClubs.base).toBeNull()
             expect(analytics.performanceTargets!.paidClubs.targets).toBeNull()
-            expect(analytics.performanceTargets!.membershipPayments.base).toBeNull()
-            expect(analytics.performanceTargets!.membershipPayments.targets).toBeNull()
-            expect(analytics.performanceTargets!.distinguishedClubs.base).toBeNull()
-            expect(analytics.performanceTargets!.distinguishedClubs.targets).toBeNull()
+            expect(
+              analytics.performanceTargets!.membershipPayments.base
+            ).toBeNull()
+            expect(
+              analytics.performanceTargets!.membershipPayments.targets
+            ).toBeNull()
+            expect(
+              analytics.performanceTargets!.distinguishedClubs.base
+            ).toBeNull()
+            expect(
+              analytics.performanceTargets!.distinguishedClubs.targets
+            ).toBeNull()
 
             return true
           }
@@ -559,12 +627,14 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
       // Set up mock data
       const districtStats = createMinimalDistrictStats(districtId, snapshotId)
       mockDataSource.setDistrictData(snapshotId, districtId, districtStats)
-      mockDataSource.setSnapshots([{
-        snapshotId,
-        status: 'success',
-        createdAt: '2026-01-14T12:00:00Z',
-        dataAsOfDate: snapshotId,
-      }])
+      mockDataSource.setSnapshots([
+        {
+          snapshotId,
+          status: 'success',
+          createdAt: '2026-01-14T12:00:00Z',
+          dataAsOfDate: snapshotId,
+        },
+      ])
 
       // Rankings with empty region
       const rankingsData: AllDistrictsRankingsData = {
@@ -579,37 +649,46 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
           totalDistricts: 1,
           fromCache: false,
         },
-        rankings: [{
-          districtId,
-          districtName: `District ${districtId}`,
-          region: '', // Empty region
-          paidClubs: 50,
-          paidClubBase: 48,
-          clubGrowthPercent: 4,
-          totalPayments: 1000,
-          paymentBase: 950,
-          paymentGrowthPercent: 5,
-          activeClubs: 50,
-          distinguishedClubs: 20,
-          selectDistinguished: 10,
-          presidentsDistinguished: 5,
-          distinguishedPercent: 40,
-          clubsRank: 1,
-          paymentsRank: 1,
-          distinguishedRank: 1,
-          aggregateScore: 300,
-        }],
+        rankings: [
+          {
+            districtId,
+            districtName: `District ${districtId}`,
+            region: '', // Empty region
+            paidClubs: 50,
+            paidClubBase: 48,
+            clubGrowthPercent: 4,
+            totalPayments: 1000,
+            paymentBase: 950,
+            paymentGrowthPercent: 5,
+            activeClubs: 50,
+            distinguishedClubs: 20,
+            selectDistinguished: 10,
+            presidentsDistinguished: 5,
+            distinguishedPercent: 40,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
       }
       mockDataSource.setRankingsData(rankingsData)
 
       // Generate analytics
-      const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+      const analytics =
+        await analyticsEngine.generateDistrictAnalytics(districtId)
 
       // Property: Region rank should be null when region is empty
       expect(analytics.performanceTargets).toBeDefined()
-      expect(analytics.performanceTargets!.paidClubs.rankings.regionRank).toBeNull()
-      expect(analytics.performanceTargets!.membershipPayments.rankings.regionRank).toBeNull()
-      expect(analytics.performanceTargets!.distinguishedClubs.rankings.regionRank).toBeNull()
+      expect(
+        analytics.performanceTargets!.paidClubs.rankings.regionRank
+      ).toBeNull()
+      expect(
+        analytics.performanceTargets!.membershipPayments.rankings.regionRank
+      ).toBeNull()
+      expect(
+        analytics.performanceTargets!.distinguishedClubs.rankings.regionRank
+      ).toBeNull()
     })
   })
 })

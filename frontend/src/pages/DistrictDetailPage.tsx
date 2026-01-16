@@ -4,6 +4,7 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useLeadershipInsights } from '../hooks/useLeadershipInsights'
 import { useDistinguishedClubAnalytics } from '../hooks/useDistinguishedClubAnalytics'
+import { usePaymentsTrend } from '../hooks/usePaymentsTrend'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
@@ -22,6 +23,7 @@ import { ClubDetailModal } from '../components/ClubDetailModal'
 import { DivisionRankings } from '../components/DivisionRankings'
 import { AreaPerformanceChart } from '../components/AreaPerformanceChart'
 import { MembershipTrendChart } from '../components/MembershipTrendChart'
+import { MembershipPaymentsChart } from '../components/MembershipPaymentsChart'
 import { YearOverYearComparison } from '../components/YearOverYearComparison'
 import { LeadershipInsights } from '../components/LeadershipInsights'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
@@ -120,6 +122,14 @@ const DistrictDetailPage: React.FC = () => {
     useDistinguishedClubAnalytics(
       districtId || null,
       selectedProgramYear.startDate,
+      selectedDate || selectedProgramYear.endDate
+    )
+
+  // Fetch payment trend data for trends tab - fetch 3 years for multi-year comparison
+  const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
+    usePaymentsTrend(
+      districtId || null,
+      undefined, // Let hook fetch 3 years automatically for comparison
       selectedDate || selectedProgramYear.endDate
     )
 
@@ -447,6 +457,18 @@ const DistrictDetailPage: React.FC = () => {
                     <MembershipTrendChart
                       membershipTrend={analytics.membershipTrend}
                       isLoading={isLoadingAnalytics}
+                    />
+                  </LazyChart>
+                )}
+
+                {/* Membership Payments Chart - Lazy Loaded */}
+                {paymentsTrendData && (
+                  <LazyChart height="450px">
+                    <MembershipPaymentsChart
+                      paymentsTrend={paymentsTrendData.currentYearTrend}
+                      multiYearData={paymentsTrendData.multiYearData}
+                      statistics={paymentsTrendData.statistics}
+                      isLoading={isLoadingPaymentsTrend}
                     />
                   </LazyChart>
                 )}

@@ -137,3 +137,33 @@ export function getProgramYearProgress(programYear: ProgramYear): number {
 
   return Math.round((elapsed / total) * 100)
 }
+
+/**
+ * Calculate the day number within a program year for a given date.
+ * Program year starts July 1 (day 0) and ends June 30 (day 364 or 365 in leap years).
+ *
+ * @param dateStr - ISO date string (YYYY-MM-DD) or Date object
+ * @returns Day number within the program year (0-365)
+ *
+ * Requirements: 2.2 - Align data by relative position within the program year
+ */
+export function calculateProgramYearDay(dateStr: string | Date): number {
+  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+
+  // Get the program year start date for this date
+  const year = date.getFullYear()
+  const month = date.getMonth() // 0-indexed (0 = January, 6 = July)
+
+  // Program year starts July 1
+  // If month >= 6 (July or later), program year started this calendar year
+  // If month < 6 (before July), program year started previous calendar year
+  const programYearStartYear = month >= 6 ? year : year - 1
+  const programYearStart = new Date(programYearStartYear, 6, 1) // July 1
+
+  // Calculate days since program year start
+  const diffTime = date.getTime() - programYearStart.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+  // Clamp to valid range [0, 365]
+  return Math.max(0, Math.min(365, diffDays))
+}

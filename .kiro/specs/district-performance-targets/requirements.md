@@ -77,7 +77,7 @@ This feature enhances the District Overview page by integrating performance targ
 #### Acceptance Criteria
 
 1. THE System SHALL calculate world percentile for each metric based on world rank and total district count
-2. WHEN calculating percentile, THE System SHALL use the formula: ((totalDistricts - worldRank) / totalDistricts) * 100
+2. WHEN calculating percentile, THE System SHALL use the formula: ((totalDistricts - worldRank) / totalDistricts) \* 100
 3. THE System SHALL round percentile to one decimal place
 4. THE System SHALL display percentile as "Top X%" where X is 100 minus the calculated percentile (e.g., rank 10 of 100 = "Top 10%")
 

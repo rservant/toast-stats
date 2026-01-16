@@ -249,7 +249,11 @@ export interface DistrictRankingsResponse {
  * Recognition levels for district performance targets
  * Ordered from lowest to highest achievement tier
  */
-export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+export type RecognitionLevel =
+  | 'distinguished'
+  | 'select'
+  | 'presidents'
+  | 'smedley'
 
 /**
  * Target values for each recognition level
@@ -303,7 +307,7 @@ export interface MetricPerformanceData {
  * - Paid Clubs (replaces Total Clubs)
  * - Membership Payments (replaces Total Membership)
  * - Distinguished Clubs (enhanced with targets)
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 export interface DistrictPerformanceTargets {

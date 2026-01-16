@@ -334,12 +334,7 @@ export interface BackfillProgress {
 
 export interface DistrictProgress {
   districtId: string
-  status:
-    | 'pending'
-    | 'processing'
-    | 'completed'
-    | 'failed'
-    | 'skipped'
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
   datesProcessed: number
   datesTotal: number
   lastError?: string

@@ -40,12 +40,17 @@ describe('TargetCalculatorService - Property Tests', () => {
     // Percentages for distinguished clubs
     const DISTINGUISHED_PERCENTAGES = {
       distinguished: 0.45,
-      select: 0.50,
+      select: 0.5,
       presidents: 0.55,
-      smedley: 0.60,
+      smedley: 0.6,
     } as const
 
-    const recognitionLevels: RecognitionLevel[] = ['distinguished', 'select', 'presidents', 'smedley']
+    const recognitionLevels: RecognitionLevel[] = [
+      'distinguished',
+      'select',
+      'presidents',
+      'smedley',
+    ]
 
     // Arbitrary for positive base values (realistic range for districts)
     const positiveBaseArb = fc.integer({ min: 1, max: 10000 })
@@ -100,7 +105,9 @@ describe('TargetCalculatorService - Property Tests', () => {
 
           // Verify each recognition level target matches the formula
           for (const level of recognitionLevels) {
-            const expectedTarget = Math.ceil(base * DISTINGUISHED_PERCENTAGES[level])
+            const expectedTarget = Math.ceil(
+              base * DISTINGUISHED_PERCENTAGES[level]
+            )
             expect(result.targets![level]).toBe(expectedTarget)
           }
         }),
@@ -111,12 +118,25 @@ describe('TargetCalculatorService - Property Tests', () => {
     it('targets are monotonically increasing across recognition levels', () => {
       fc.assert(
         fc.property(positiveBaseArb, currentValueArb, (base, current) => {
-          const paidClubsResult = calculator.calculatePaidClubsTargets(base, current)
-          const paymentsResult = calculator.calculatePaymentsTargets(base, current)
-          const distinguishedResult = calculator.calculateDistinguishedTargets(base, current)
+          const paidClubsResult = calculator.calculatePaidClubsTargets(
+            base,
+            current
+          )
+          const paymentsResult = calculator.calculatePaymentsTargets(
+            base,
+            current
+          )
+          const distinguishedResult = calculator.calculateDistinguishedTargets(
+            base,
+            current
+          )
 
           // For all metric types, targets should increase: distinguished < select < presidents < smedley
-          for (const result of [paidClubsResult, paymentsResult, distinguishedResult]) {
+          for (const result of [
+            paidClubsResult,
+            paymentsResult,
+            distinguishedResult,
+          ]) {
             const targets = result.targets!
             expect(targets.distinguished).toBeLessThanOrEqual(targets.select)
             expect(targets.select).toBeLessThanOrEqual(targets.presidents)
@@ -145,11 +165,24 @@ describe('TargetCalculatorService - Property Tests', () => {
     it('all targets are integers (ceiling applied)', () => {
       fc.assert(
         fc.property(baseArb, currentArb, (base, current) => {
-          const paidClubsResult = calculator.calculatePaidClubsTargets(base, current)
-          const paymentsResult = calculator.calculatePaymentsTargets(base, current)
-          const distinguishedResult = calculator.calculateDistinguishedTargets(base, current)
+          const paidClubsResult = calculator.calculatePaidClubsTargets(
+            base,
+            current
+          )
+          const paymentsResult = calculator.calculatePaymentsTargets(
+            base,
+            current
+          )
+          const distinguishedResult = calculator.calculateDistinguishedTargets(
+            base,
+            current
+          )
 
-          for (const result of [paidClubsResult, paymentsResult, distinguishedResult]) {
+          for (const result of [
+            paidClubsResult,
+            paymentsResult,
+            distinguishedResult,
+          ]) {
             if (result.targets) {
               expect(Number.isInteger(result.targets.distinguished)).toBe(true)
               expect(Number.isInteger(result.targets.select)).toBe(true)
@@ -172,33 +205,56 @@ describe('TargetCalculatorService - Property Tests', () => {
 
       const DISTINGUISHED_PERCENTAGES = {
         distinguished: 0.45,
-        select: 0.50,
+        select: 0.5,
         presidents: 0.55,
-        smedley: 0.60,
+        smedley: 0.6,
       }
 
       fc.assert(
         fc.property(baseArb, currentArb, (base, current) => {
-          const paidClubsResult = calculator.calculatePaidClubsTargets(base, current)
-          const paymentsResult = calculator.calculatePaymentsTargets(base, current)
-          const distinguishedResult = calculator.calculateDistinguishedTargets(base, current)
+          const paidClubsResult = calculator.calculatePaidClubsTargets(
+            base,
+            current
+          )
+          const paymentsResult = calculator.calculatePaymentsTargets(
+            base,
+            current
+          )
+          const distinguishedResult = calculator.calculateDistinguishedTargets(
+            base,
+            current
+          )
 
           // Paid clubs: target >= base * multiplier
-          for (const [level, multiplier] of Object.entries(GROWTH_MULTIPLIERS)) {
+          for (const [level, multiplier] of Object.entries(
+            GROWTH_MULTIPLIERS
+          )) {
             const rawValue = base * multiplier
-            expect(paidClubsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]).toBeGreaterThanOrEqual(rawValue)
+            expect(
+              paidClubsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]
+            ).toBeGreaterThanOrEqual(rawValue)
           }
 
           // Payments: target >= base * multiplier
-          for (const [level, multiplier] of Object.entries(GROWTH_MULTIPLIERS)) {
+          for (const [level, multiplier] of Object.entries(
+            GROWTH_MULTIPLIERS
+          )) {
             const rawValue = base * multiplier
-            expect(paymentsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]).toBeGreaterThanOrEqual(rawValue)
+            expect(
+              paymentsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]
+            ).toBeGreaterThanOrEqual(rawValue)
           }
 
           // Distinguished: target >= base * percentage
-          for (const [level, percentage] of Object.entries(DISTINGUISHED_PERCENTAGES)) {
+          for (const [level, percentage] of Object.entries(
+            DISTINGUISHED_PERCENTAGES
+          )) {
             const rawValue = base * percentage
-            expect(distinguishedResult.targets![level as keyof typeof DISTINGUISHED_PERCENTAGES]).toBeGreaterThanOrEqual(rawValue)
+            expect(
+              distinguishedResult.targets![
+                level as keyof typeof DISTINGUISHED_PERCENTAGES
+              ]
+            ).toBeGreaterThanOrEqual(rawValue)
           }
         }),
         { numRuns: 100 }
@@ -215,33 +271,56 @@ describe('TargetCalculatorService - Property Tests', () => {
 
       const DISTINGUISHED_PERCENTAGES = {
         distinguished: 0.45,
-        select: 0.50,
+        select: 0.5,
         presidents: 0.55,
-        smedley: 0.60,
+        smedley: 0.6,
       }
 
       fc.assert(
         fc.property(baseArb, currentArb, (base, current) => {
-          const paidClubsResult = calculator.calculatePaidClubsTargets(base, current)
-          const paymentsResult = calculator.calculatePaymentsTargets(base, current)
-          const distinguishedResult = calculator.calculateDistinguishedTargets(base, current)
+          const paidClubsResult = calculator.calculatePaidClubsTargets(
+            base,
+            current
+          )
+          const paymentsResult = calculator.calculatePaymentsTargets(
+            base,
+            current
+          )
+          const distinguishedResult = calculator.calculateDistinguishedTargets(
+            base,
+            current
+          )
 
           // Paid clubs: target < base * multiplier + 1
-          for (const [level, multiplier] of Object.entries(GROWTH_MULTIPLIERS)) {
+          for (const [level, multiplier] of Object.entries(
+            GROWTH_MULTIPLIERS
+          )) {
             const rawValue = base * multiplier
-            expect(paidClubsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]).toBeLessThan(rawValue + 1)
+            expect(
+              paidClubsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]
+            ).toBeLessThan(rawValue + 1)
           }
 
           // Payments: target < base * multiplier + 1
-          for (const [level, multiplier] of Object.entries(GROWTH_MULTIPLIERS)) {
+          for (const [level, multiplier] of Object.entries(
+            GROWTH_MULTIPLIERS
+          )) {
             const rawValue = base * multiplier
-            expect(paymentsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]).toBeLessThan(rawValue + 1)
+            expect(
+              paymentsResult.targets![level as keyof typeof GROWTH_MULTIPLIERS]
+            ).toBeLessThan(rawValue + 1)
           }
 
           // Distinguished: target < base * percentage + 1
-          for (const [level, percentage] of Object.entries(DISTINGUISHED_PERCENTAGES)) {
+          for (const [level, percentage] of Object.entries(
+            DISTINGUISHED_PERCENTAGES
+          )) {
             const rawValue = base * percentage
-            expect(distinguishedResult.targets![level as keyof typeof DISTINGUISHED_PERCENTAGES]).toBeLessThan(rawValue + 1)
+            expect(
+              distinguishedResult.targets![
+                level as keyof typeof DISTINGUISHED_PERCENTAGES
+              ]
+            ).toBeLessThan(rawValue + 1)
           }
         }),
         { numRuns: 100 }
@@ -299,9 +378,18 @@ describe('TargetCalculatorService - Property Tests', () => {
     it('returns null targets for invalid base values', () => {
       fc.assert(
         fc.property(invalidBaseArb, currentArb, (base, current) => {
-          const paidClubsResult = calculator.calculatePaidClubsTargets(base, current)
-          const paymentsResult = calculator.calculatePaymentsTargets(base, current)
-          const distinguishedResult = calculator.calculateDistinguishedTargets(base, current)
+          const paidClubsResult = calculator.calculatePaidClubsTargets(
+            base,
+            current
+          )
+          const paymentsResult = calculator.calculatePaymentsTargets(
+            base,
+            current
+          )
+          const distinguishedResult = calculator.calculateDistinguishedTargets(
+            base,
+            current
+          )
 
           expect(paidClubsResult.base).toBeNull()
           expect(paidClubsResult.targets).toBeNull()

@@ -328,7 +328,8 @@ export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
     })
 
     try {
-      const rankings = await this.snapshotStore.readAllDistrictsRankings(snapshotId)
+      const rankings =
+        await this.snapshotStore.readAllDistrictsRankings(snapshotId)
 
       if (rankings) {
         logger.debug('All districts rankings retrieved', {

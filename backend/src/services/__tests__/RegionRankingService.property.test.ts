@@ -173,40 +173,37 @@ describe('RegionRankingService - Property Tests', () => {
 
     it('region rank is calculated for all three metrics (Req 4.4)', () => {
       fc.assert(
-        fc.property(
-          districtRankingsArb(['MultiMetricRegion'], 3),
-          (rankings) => {
-            const targetDistrict = rankings[0]
-            if (!targetDistrict) return
+        fc.property(districtRankingsArb(['MultiMetricRegion'], 3), rankings => {
+          const targetDistrict = rankings[0]
+          if (!targetDistrict) return
 
-            // Calculate region rank for each metric
-            const clubsResult = service.calculateRegionRank(
-              targetDistrict.districtId,
-              'clubs',
-              rankings
-            )
-            const paymentsResult = service.calculateRegionRank(
-              targetDistrict.districtId,
-              'payments',
-              rankings
-            )
-            const distinguishedResult = service.calculateRegionRank(
-              targetDistrict.districtId,
-              'distinguished',
-              rankings
-            )
+          // Calculate region rank for each metric
+          const clubsResult = service.calculateRegionRank(
+            targetDistrict.districtId,
+            'clubs',
+            rankings
+          )
+          const paymentsResult = service.calculateRegionRank(
+            targetDistrict.districtId,
+            'payments',
+            rankings
+          )
+          const distinguishedResult = service.calculateRegionRank(
+            targetDistrict.districtId,
+            'distinguished',
+            rankings
+          )
 
-            // All should return valid region ranks
-            expect(clubsResult.regionRank).not.toBeNull()
-            expect(paymentsResult.regionRank).not.toBeNull()
-            expect(distinguishedResult.regionRank).not.toBeNull()
+          // All should return valid region ranks
+          expect(clubsResult.regionRank).not.toBeNull()
+          expect(paymentsResult.regionRank).not.toBeNull()
+          expect(distinguishedResult.regionRank).not.toBeNull()
 
-            // All should have same total in region
-            expect(clubsResult.totalInRegion).toBe(rankings.length)
-            expect(paymentsResult.totalInRegion).toBe(rankings.length)
-            expect(distinguishedResult.totalInRegion).toBe(rankings.length)
-          }
-        ),
+          // All should have same total in region
+          expect(clubsResult.totalInRegion).toBe(rankings.length)
+          expect(paymentsResult.totalInRegion).toBe(rankings.length)
+          expect(distinguishedResult.totalInRegion).toBe(rankings.length)
+        }),
         { numRuns: 100 }
       )
     })
@@ -225,7 +222,9 @@ describe('RegionRankingService - Property Tests', () => {
               )
 
               expect(result.regionRank).toBeGreaterThanOrEqual(1)
-              expect(result.regionRank).toBeLessThanOrEqual(result.totalInRegion)
+              expect(result.regionRank).toBeLessThanOrEqual(
+                result.totalInRegion
+              )
             }
           }
         ),
@@ -337,11 +336,9 @@ describe('RegionRankingService - Property Tests', () => {
       }
 
       for (const metric of metrics) {
-        const result = service.calculateRegionRank(
-          'D1',
-          metric,
-          [districtWithNullRegion]
-        )
+        const result = service.calculateRegionRank('D1', metric, [
+          districtWithNullRegion,
+        ])
 
         // Empty region should be treated as unknown
         expect(result.regionRank).toBeNull()
@@ -369,7 +366,6 @@ describe('RegionRankingService - Property Tests', () => {
     })
   })
 
-
   /**
    * Property 4: World Percentile Calculation
    *
@@ -393,7 +389,10 @@ describe('RegionRankingService - Property Tests', () => {
             // Ensure worldRank <= totalDistricts for valid input
             const validRank = Math.min(worldRank, totalDistricts)
 
-            const percentile = service.calculateWorldPercentile(validRank, totalDistricts)
+            const percentile = service.calculateWorldPercentile(
+              validRank,
+              totalDistricts
+            )
 
             // Percentile should be a number
             expect(typeof percentile).toBe('number')
@@ -413,10 +412,14 @@ describe('RegionRankingService - Property Tests', () => {
             // Ensure worldRank <= totalDistricts for valid input
             const validRank = Math.min(worldRank, totalDistricts)
 
-            const percentile = service.calculateWorldPercentile(validRank, totalDistricts)
+            const percentile = service.calculateWorldPercentile(
+              validRank,
+              totalDistricts
+            )
 
             // Calculate expected value using the formula
-            const expectedRaw = ((totalDistricts - validRank) / totalDistricts) * 100
+            const expectedRaw =
+              ((totalDistricts - validRank) / totalDistricts) * 100
             const expectedRounded = Math.round(expectedRaw * 10) / 10
 
             expect(percentile).toBe(expectedRounded)
@@ -434,10 +437,14 @@ describe('RegionRankingService - Property Tests', () => {
           (worldRank, totalDistricts) => {
             const validRank = Math.min(worldRank, totalDistricts)
 
-            const percentile = service.calculateWorldPercentile(validRank, totalDistricts)
+            const percentile = service.calculateWorldPercentile(
+              validRank,
+              totalDistricts
+            )
 
             // Check that percentile has at most one decimal place
-            const decimalPlaces = (percentile.toString().split('.')[1] || '').length
+            const decimalPlaces = (percentile.toString().split('.')[1] || '')
+              .length
             expect(decimalPlaces).toBeLessThanOrEqual(1)
           }
         ),
@@ -480,7 +487,10 @@ describe('RegionRankingService - Property Tests', () => {
           (worldRank, totalDistricts) => {
             const validRank = Math.min(worldRank, totalDistricts)
 
-            const percentile = service.calculateWorldPercentile(validRank, totalDistricts)
+            const percentile = service.calculateWorldPercentile(
+              validRank,
+              totalDistricts
+            )
 
             // Percentile should be >= 0 and < 100 (can't be exactly 100 since rank >= 1)
             expect(percentile).toBeGreaterThanOrEqual(0)
@@ -495,13 +505,19 @@ describe('RegionRankingService - Property Tests', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 10, max: 200 }), // totalDistricts
-          (totalDistricts) => {
+          totalDistricts => {
             // Compare two different ranks
             const betterRank = 1
             const worseRank = totalDistricts
 
-            const betterPercentile = service.calculateWorldPercentile(betterRank, totalDistricts)
-            const worsePercentile = service.calculateWorldPercentile(worseRank, totalDistricts)
+            const betterPercentile = service.calculateWorldPercentile(
+              betterRank,
+              totalDistricts
+            )
+            const worsePercentile = service.calculateWorldPercentile(
+              worseRank,
+              totalDistricts
+            )
 
             // Better rank should have higher percentile
             expect(betterPercentile).toBeGreaterThan(worsePercentile)
@@ -515,11 +531,14 @@ describe('RegionRankingService - Property Tests', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 5, max: 100 }), // totalDistricts
-          (totalDistricts) => {
+          totalDistricts => {
             let previousPercentile = 100
 
             for (let rank = 1; rank <= totalDistricts; rank++) {
-              const percentile = service.calculateWorldPercentile(rank, totalDistricts)
+              const percentile = service.calculateWorldPercentile(
+                rank,
+                totalDistricts
+              )
               expect(percentile).toBeLessThanOrEqual(previousPercentile)
               previousPercentile = percentile
             }
@@ -560,7 +579,9 @@ describe('RegionRankingService - Property Tests', () => {
       fc.assert(
         fc.property(
           districtRankingsArb(['IntegrationRegion'], 5),
-          fc.constantFrom('clubs', 'payments', 'distinguished') as fc.Arbitrary<'clubs' | 'payments' | 'distinguished'>,
+          fc.constantFrom('clubs', 'payments', 'distinguished') as fc.Arbitrary<
+            'clubs' | 'payments' | 'distinguished'
+          >,
           fc.integer({ min: 1, max: 5 }), // worldRank
           (rankings, metric, worldRank) => {
             const targetDistrict = rankings[0]
@@ -582,7 +603,10 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.region).toBe(targetDistrict.region)
 
             // World percentile should match calculated value
-            const expectedPercentile = service.calculateWorldPercentile(worldRank, totalDistricts)
+            const expectedPercentile = service.calculateWorldPercentile(
+              worldRank,
+              totalDistricts
+            )
             expect(result.worldPercentile).toBe(expectedPercentile)
 
             // Region rank should be valid
@@ -598,7 +622,9 @@ describe('RegionRankingService - Property Tests', () => {
       fc.assert(
         fc.property(
           districtRankingsArb(['NullRankRegion'], 3),
-          fc.constantFrom('clubs', 'payments', 'distinguished') as fc.Arbitrary<'clubs' | 'payments' | 'distinguished'>,
+          fc.constantFrom('clubs', 'payments', 'distinguished') as fc.Arbitrary<
+            'clubs' | 'payments' | 'distinguished'
+          >,
           (rankings, metric) => {
             const targetDistrict = rankings[0]
             if (!targetDistrict) return

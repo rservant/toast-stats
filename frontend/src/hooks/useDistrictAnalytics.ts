@@ -110,6 +110,7 @@ export interface DistrictAnalytics {
   totalMembership: number
   membershipChange: number
   membershipTrend: Array<{ date: string; count: number }>
+  paymentsTrend?: Array<{ date: string; payments: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
   allClubs: ClubTrend[]
   vulnerableClubs: ClubTrend[] // Contains only vulnerable clubs (not intervention-required)
@@ -146,7 +147,11 @@ export interface DistrictAnalytics {
 /**
  * Recognition levels for district performance targets
  */
-export type RecognitionLevel = 'distinguished' | 'select' | 'presidents' | 'smedley'
+export type RecognitionLevel =
+  | 'distinguished'
+  | 'select'
+  | 'presidents'
+  | 'smedley'
 
 /**
  * Target values for each recognition level

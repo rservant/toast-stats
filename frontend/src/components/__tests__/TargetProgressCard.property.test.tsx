@@ -34,21 +34,28 @@ const RECOGNITION_LEVEL_ORDER: RecognitionLevel[] = [
 ]
 
 // Arbitrary generator for recognition targets
-const recognitionTargetsArb = fc.record({
-  distinguished: fc.integer({ min: 1, max: 200 }),
-  select: fc.integer({ min: 1, max: 200 }),
-  presidents: fc.integer({ min: 1, max: 200 }),
-  smedley: fc.integer({ min: 1, max: 200 }),
-}).map(targets => {
-  // Ensure targets are in ascending order (distinguished < select < presidents < smedley)
-  const sorted = [targets.distinguished, targets.select, targets.presidents, targets.smedley].sort((a, b) => a - b)
-  return {
-    distinguished: sorted[0],
-    select: sorted[1],
-    presidents: sorted[2],
-    smedley: sorted[3],
-  } as RecognitionTargets
-})
+const recognitionTargetsArb = fc
+  .record({
+    distinguished: fc.integer({ min: 1, max: 200 }),
+    select: fc.integer({ min: 1, max: 200 }),
+    presidents: fc.integer({ min: 1, max: 200 }),
+    smedley: fc.integer({ min: 1, max: 200 }),
+  })
+  .map(targets => {
+    // Ensure targets are in ascending order (distinguished < select < presidents < smedley)
+    const sorted = [
+      targets.distinguished,
+      targets.select,
+      targets.presidents,
+      targets.smedley,
+    ].sort((a, b) => a - b)
+    return {
+      distinguished: sorted[0],
+      select: sorted[1],
+      presidents: sorted[2],
+      smedley: sorted[3],
+    } as RecognitionTargets
+  })
 
 // Arbitrary generator for metric rankings
 const metricRankingsArb: fc.Arbitrary<MetricRankings> = fc.record({
@@ -57,7 +64,10 @@ const metricRankingsArb: fc.Arbitrary<MetricRankings> = fc.record({
   regionRank: fc.option(fc.integer({ min: 1, max: 50 }), { nil: null }),
   totalDistricts: fc.integer({ min: 1, max: 150 }),
   totalInRegion: fc.integer({ min: 1, max: 50 }),
-  region: fc.option(fc.constantFrom('Region 1', 'Region 2', 'Region 3', 'Region 4'), { nil: null }),
+  region: fc.option(
+    fc.constantFrom('Region 1', 'Region 2', 'Region 3', 'Region 4'),
+    { nil: null }
+  ),
 })
 
 // Default icon for testing
@@ -88,12 +98,12 @@ describe('TargetProgressCard Property Tests', () => {
             // Test each recognition level
             RECOGNITION_LEVEL_ORDER.forEach(level => {
               const targetValue = targets[level]
-              
+
               // Test with current value exactly meeting the target
               const currentMeetsTarget = targetValue
-              
+
               cleanupAllResources()
-              
+
               renderWithProviders(
                 <TargetProgressCard
                   title="Test Metric"
@@ -108,10 +118,12 @@ describe('TargetProgressCard Property Tests', () => {
               )
 
               // Verify the achieved indicator is displayed for this level
-              const achievedIndicator = screen.queryByTestId(`achieved-indicator-${level}`)
+              const achievedIndicator = screen.queryByTestId(
+                `achieved-indicator-${level}`
+              )
               expect(achievedIndicator).toBeInTheDocument()
               expect(achievedIndicator).toHaveTextContent('✓')
-              
+
               cleanupAllResources()
             })
           }
@@ -154,9 +166,11 @@ describe('TargetProgressCard Property Tests', () => {
 
             // Verify indicators for all levels at or below the achieved level
             RECOGNITION_LEVEL_ORDER.forEach((level, index) => {
-              const achievedIndicator = screen.queryByTestId(`achieved-indicator-${level}`)
+              const achievedIndicator = screen.queryByTestId(
+                `achieved-indicator-${level}`
+              )
               const progressBar = screen.queryByTestId(`progress-bar-${level}`)
-              
+
               if (index <= achievedLevelIndex) {
                 // This level should be achieved
                 expect(achievedIndicator).toBeInTheDocument()
@@ -205,9 +219,11 @@ describe('TargetProgressCard Property Tests', () => {
 
             // Verify no achievement indicators are displayed
             RECOGNITION_LEVEL_ORDER.forEach(level => {
-              const achievedIndicator = screen.queryByTestId(`achieved-indicator-${level}`)
+              const achievedIndicator = screen.queryByTestId(
+                `achieved-indicator-${level}`
+              )
               expect(achievedIndicator).not.toBeInTheDocument()
-              
+
               // Progress bar should not have achieved styling
               const progressBar = screen.queryByTestId(`progress-bar-${level}`)
               expect(progressBar).toHaveAttribute('data-achieved', 'false')
@@ -233,7 +249,9 @@ describe('TargetProgressCard Property Tests', () => {
           }),
           ({ targets, rankings, currentRatio }) => {
             // Calculate current value as a ratio of the distinguished target
-            const currentValue = Math.floor(targets.distinguished * currentRatio)
+            const currentValue = Math.floor(
+              targets.distinguished * currentRatio
+            )
 
             cleanupAllResources()
 
@@ -271,7 +289,12 @@ describe('TargetProgressCard Property Tests', () => {
         fc.property(
           fc.record({
             targets: recognitionTargetsArb,
-            level: fc.constantFrom<RecognitionLevel>('distinguished', 'select', 'presidents', 'smedley'),
+            level: fc.constantFrom<RecognitionLevel>(
+              'distinguished',
+              'select',
+              'presidents',
+              'smedley'
+            ),
             offset: fc.integer({ min: 0, max: 100 }),
           }),
           ({ targets, level, offset }) => {
@@ -280,8 +303,10 @@ describe('TargetProgressCard Property Tests', () => {
             const currentBelow = Math.max(0, targetValue - 1)
 
             // Should return true when current >= target
-            expect(isLevelAchieved(level, currentMeetsOrExceeds, targets)).toBe(true)
-            
+            expect(isLevelAchieved(level, currentMeetsOrExceeds, targets)).toBe(
+              true
+            )
+
             // Should return false when current < target (unless target is 0 or 1)
             if (targetValue > 1) {
               expect(isLevelAchieved(level, currentBelow, targets)).toBe(false)
@@ -299,7 +324,12 @@ describe('TargetProgressCard Property Tests', () => {
       fc.assert(
         fc.property(
           fc.record({
-            level: fc.constantFrom<RecognitionLevel>('distinguished', 'select', 'presidents', 'smedley'),
+            level: fc.constantFrom<RecognitionLevel>(
+              'distinguished',
+              'select',
+              'presidents',
+              'smedley'
+            ),
             current: fc.integer({ min: 0, max: 1000 }),
           }),
           ({ level, current }) => {
@@ -325,7 +355,7 @@ describe('TargetProgressCard Property Tests', () => {
             const testLevel = RECOGNITION_LEVEL_ORDER[testLevelIndex]
 
             const result = isLevelAtOrBelowAchieved(testLevel, achievedLevel)
-            
+
             // Should return true if testLevel index <= achievedLevel index
             expect(result).toBe(testLevelIndex <= achievedLevelIndex)
           }
@@ -340,8 +370,13 @@ describe('TargetProgressCard Property Tests', () => {
     it('isLevelAtOrBelowAchieved returns false when achievedLevel is null', () => {
       fc.assert(
         fc.property(
-          fc.constantFrom<RecognitionLevel>('distinguished', 'select', 'presidents', 'smedley'),
-          (level) => {
+          fc.constantFrom<RecognitionLevel>(
+            'distinguished',
+            'select',
+            'presidents',
+            'smedley'
+          ),
+          level => {
             expect(isLevelAtOrBelowAchieved(level, null)).toBe(false)
           }
         ),
@@ -378,7 +413,9 @@ describe('TargetProgressCard Property Tests', () => {
             )
 
             // Should display N/A indicator
-            const unavailableIndicator = screen.getByTestId('targets-unavailable')
+            const unavailableIndicator = screen.getByTestId(
+              'targets-unavailable'
+            )
             expect(unavailableIndicator).toBeInTheDocument()
             expect(unavailableIndicator).toHaveTextContent('N/A')
 

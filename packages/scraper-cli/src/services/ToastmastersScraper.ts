@@ -310,7 +310,11 @@ export class ToastmastersScraper {
     dateString: string,
     fallbackInfo: FallbackInfo,
     districtId?: string
-  ): Promise<{ success: boolean; actualDateString: string; usedFallback: boolean }> {
+  ): Promise<{
+    success: boolean
+    actualDateString: string
+    usedFallback: boolean
+  }> {
     const dateObj = new Date(dateString + 'T00:00:00')
     const day = dateObj.getDate()
     const year = dateObj.getFullYear()

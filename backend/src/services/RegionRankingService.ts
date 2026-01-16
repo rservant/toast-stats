@@ -53,10 +53,16 @@ export class RegionRankingService implements IRegionRankingService {
     allDistrictRankings: DistrictRanking[]
   ): RegionRankData {
     // Find the target district
-    const targetDistrict = allDistrictRankings.find(d => d.districtId === districtId)
+    const targetDistrict = allDistrictRankings.find(
+      d => d.districtId === districtId
+    )
 
     // If district not found or has no region (null or empty string), return null data
-    if (!targetDistrict || !targetDistrict.region || targetDistrict.region.trim() === '') {
+    if (
+      !targetDistrict ||
+      !targetDistrict.region ||
+      targetDistrict.region.trim() === ''
+    ) {
       return {
         regionRank: null,
         totalInRegion: 0,
@@ -175,12 +181,17 @@ export class RegionRankingService implements IRegionRankingService {
     allDistrictRankings: DistrictRanking[]
   ): MetricRankings {
     // Calculate region rank
-    const regionData = this.calculateRegionRank(districtId, metric, allDistrictRankings)
+    const regionData = this.calculateRegionRank(
+      districtId,
+      metric,
+      allDistrictRankings
+    )
 
     // Calculate world percentile (only if world rank is available)
-    const worldPercentile = worldRank !== null && totalDistricts > 0
-      ? this.calculateWorldPercentile(worldRank, totalDistricts)
-      : null
+    const worldPercentile =
+      worldRank !== null && totalDistricts > 0
+        ? this.calculateWorldPercentile(worldRank, totalDistricts)
+        : null
 
     return {
       worldRank,

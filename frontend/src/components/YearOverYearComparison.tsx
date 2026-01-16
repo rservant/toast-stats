@@ -412,19 +412,21 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
       </div>
 
       {/* Bar Chart Visualization - Separate charts for each metric */}
-      <div
-        role="img"
-        aria-label={chartDescription}
-        className="w-full"
-      >
+      <div role="img" aria-label={chartDescription} className="w-full">
         {/* Legend */}
         <div className="flex justify-center gap-6 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--tm-cool-gray)' }}></div>
+            <div
+              className="w-4 h-4 rounded"
+              style={{ backgroundColor: 'var(--tm-cool-gray)' }}
+            ></div>
             <span className="text-sm text-gray-600">Previous Year</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--tm-loyal-blue)' }}></div>
+            <div
+              className="w-4 h-4 rounded"
+              style={{ backgroundColor: 'var(--tm-loyal-blue)' }}
+            ></div>
             <span className="text-sm text-gray-600">Current Year</span>
           </div>
         </div>
@@ -455,11 +457,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                       strokeDasharray="3 3"
                       stroke="var(--tm-cool-gray-20)"
                     />
-                    <XAxis
-                      dataKey="metric"
-                      tick={false}
-                      axisLine={false}
-                    />
+                    <XAxis dataKey="metric" tick={false} axisLine={false} />
                     <YAxis
                       stroke="var(--tm-cool-gray)"
                       style={{ fontSize: '10px' }}
@@ -473,7 +471,9 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                       }
                     />
                     <Tooltip
-                      content={<CustomTooltip comparisonData={comparisonData} />}
+                      content={
+                        <CustomTooltip comparisonData={comparisonData} />
+                      }
                     />
                     <Bar
                       dataKey="Previous Year"

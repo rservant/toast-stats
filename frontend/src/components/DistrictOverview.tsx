@@ -121,11 +121,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
           <TargetProgressCard
             title="Paid Clubs"
             icon={
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -134,18 +130,25 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 />
               </svg>
             }
-            current={analytics.performanceTargets?.paidClubs.current ?? analytics.allClubs.length}
+            current={
+              analytics.performanceTargets?.paidClubs.current ??
+              analytics.allClubs.length
+            }
             base={analytics.performanceTargets?.paidClubs.base ?? null}
             targets={analytics.performanceTargets?.paidClubs.targets ?? null}
-            achievedLevel={analytics.performanceTargets?.paidClubs.achievedLevel ?? null}
-            rankings={analytics.performanceTargets?.paidClubs.rankings ?? {
-              worldRank: null,
-              worldPercentile: null,
-              regionRank: null,
-              totalDistricts: 0,
-              totalInRegion: 0,
-              region: null,
-            }}
+            achievedLevel={
+              analytics.performanceTargets?.paidClubs.achievedLevel ?? null
+            }
+            rankings={
+              analytics.performanceTargets?.paidClubs.rankings ?? {
+                worldRank: null,
+                worldPercentile: null,
+                regionRank: null,
+                totalDistricts: 0,
+                totalInRegion: 0,
+                region: null,
+              }
+            }
             colorScheme="blue"
             tooltipContent="Paid clubs count with targets for each recognition level. Thriving, Vulnerable, and Intervention Required badges show club health status."
             badges={
@@ -171,11 +174,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
           <TargetProgressCard
             title="Membership Payments"
             icon={
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -184,18 +183,28 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 />
               </svg>
             }
-            current={analytics.performanceTargets?.membershipPayments.current ?? analytics.totalMembership}
+            current={
+              analytics.performanceTargets?.membershipPayments.current ??
+              analytics.totalMembership
+            }
             base={analytics.performanceTargets?.membershipPayments.base ?? null}
-            targets={analytics.performanceTargets?.membershipPayments.targets ?? null}
-            achievedLevel={analytics.performanceTargets?.membershipPayments.achievedLevel ?? null}
-            rankings={analytics.performanceTargets?.membershipPayments.rankings ?? {
-              worldRank: null,
-              worldPercentile: null,
-              regionRank: null,
-              totalDistricts: 0,
-              totalInRegion: 0,
-              region: null,
-            }}
+            targets={
+              analytics.performanceTargets?.membershipPayments.targets ?? null
+            }
+            achievedLevel={
+              analytics.performanceTargets?.membershipPayments.achievedLevel ??
+              null
+            }
+            rankings={
+              analytics.performanceTargets?.membershipPayments.rankings ?? {
+                worldRank: null,
+                worldPercentile: null,
+                regionRank: null,
+                totalDistricts: 0,
+                totalInRegion: 0,
+                region: null,
+              }
+            }
             colorScheme="green"
             tooltipContent="Total membership payments (New + April + October + Late + Charter) with targets for each recognition level."
             badges={
@@ -216,11 +225,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
           <TargetProgressCard
             title="Distinguished Clubs"
             icon={
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -229,18 +234,28 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 />
               </svg>
             }
-            current={analytics.performanceTargets?.distinguishedClubs.current ?? analytics.distinguishedClubs.total}
+            current={
+              analytics.performanceTargets?.distinguishedClubs.current ??
+              analytics.distinguishedClubs.total
+            }
             base={analytics.performanceTargets?.distinguishedClubs.base ?? null}
-            targets={analytics.performanceTargets?.distinguishedClubs.targets ?? null}
-            achievedLevel={analytics.performanceTargets?.distinguishedClubs.achievedLevel ?? null}
-            rankings={analytics.performanceTargets?.distinguishedClubs.rankings ?? {
-              worldRank: null,
-              worldPercentile: null,
-              regionRank: null,
-              totalDistricts: 0,
-              totalInRegion: 0,
-              region: null,
-            }}
+            targets={
+              analytics.performanceTargets?.distinguishedClubs.targets ?? null
+            }
+            achievedLevel={
+              analytics.performanceTargets?.distinguishedClubs.achievedLevel ??
+              null
+            }
+            rankings={
+              analytics.performanceTargets?.distinguishedClubs.rankings ?? {
+                worldRank: null,
+                worldPercentile: null,
+                regionRank: null,
+                totalDistricts: 0,
+                totalInRegion: 0,
+                region: null,
+              }
+            }
             colorScheme="purple"
             tooltipContent="Clubs achieving DCP goals + membership requirements with targets for each recognition level. Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)."
             badges={

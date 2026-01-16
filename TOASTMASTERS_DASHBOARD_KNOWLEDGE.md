@@ -1346,12 +1346,15 @@ The system detects closing periods by comparing the CSV's data month to the "As 
 ```typescript
 interface ClosingPeriodInfo {
   isClosingPeriod: boolean
-  dataMonth: string        // "YYYY-MM" format - the month the data represents
-  collectionDate: string   // When the data was actually collected (the "As of" date)
-  snapshotDate: string     // Date to use for snapshot (last day of dataMonth if closing)
+  dataMonth: string // "YYYY-MM" format - the month the data represents
+  collectionDate: string // When the data was actually collected (the "As of" date)
+  snapshotDate: string // Date to use for snapshot (last day of dataMonth if closing)
 }
 
-function detectClosingPeriod(csvDate: string, dataMonth: string): ClosingPeriodInfo {
+function detectClosingPeriod(
+  csvDate: string,
+  dataMonth: string
+): ClosingPeriodInfo {
   // Parse the CSV date to get month/year
   // Compare to determine if this is closing period data
   // Return appropriate snapshot date
@@ -1359,6 +1362,7 @@ function detectClosingPeriod(csvDate: string, dataMonth: string): ClosingPeriodI
 ```
 
 **Detection Rules**:
+
 - WHEN the data month is earlier than the "As of" date's month THEN it's a closing period
 - WHEN a closing period is detected THEN log the detection with both dates for debugging
 - Cross-year handling: December data collected in January is a closing period
@@ -1368,11 +1372,13 @@ function detectClosingPeriod(csvDate: string, dataMonth: string): ClosingPeriodI
 During closing periods, snapshots are dated as the last day of the data month, not the "As of" date:
 
 **Core Rules**:
+
 1. WHEN a closing period is detected THEN the snapshot SHALL be dated as the last day of the data month
 2. WHEN the data month is December and "As of" is January THEN the snapshot SHALL be dated December 31 of the prior year
 3. WHEN storing closing period snapshots THEN the metadata SHALL indicate the actual collection date for transparency
 
 **Snapshot Update Logic**:
+
 1. WHEN creating a closing period snapshot AND no snapshot exists for that date THEN create the snapshot
 2. WHEN creating a closing period snapshot AND a snapshot exists with an older or equal collection date THEN overwrite with the newer data
 3. WHEN creating a closing period snapshot AND a snapshot exists with a newer collection date THEN do NOT overwrite the existing snapshot
@@ -1382,10 +1388,12 @@ During closing periods, snapshots are dated as the last day of the data month, n
 ### Preventing Misleading Snapshots
 
 **No New-Month Snapshots During Closing**:
+
 - WHEN a closing period is detected THEN the system SHALL NOT create a snapshot dated in the new month
 - For any closing period data, no snapshot should be created with a date in the new month (the month of the "As of" date)
 
 **Gap Handling**:
+
 - Early new-month dates during closing periods may have no processed data
 - This is expected behavior, not an error
 - Application UI handles null data gracefully during expected gaps
@@ -1402,13 +1410,14 @@ interface SnapshotMetadata {
   fetchedAt: string
 
   // Closing period tracking
-  isClosingPeriodData?: boolean    // True when snapshot is from closing period
-  collectionDate?: string          // Actual "As of" date from CSV
-  logicalDate?: string             // The date this snapshot represents (month-end)
+  isClosingPeriodData?: boolean // True when snapshot is from closing period
+  collectionDate?: string // Actual "As of" date from CSV
+  logicalDate?: string // The date this snapshot represents (month-end)
 }
 ```
 
 **API Response Metadata**:
+
 - WHEN serving data from a closing period snapshot THEN include `is_closing_period_data: true`
 - WHEN the snapshot date differs from the collection date THEN include both dates
 - WHEN a user requests a date with no snapshot THEN indicate the nearest available snapshot date
@@ -1427,14 +1436,14 @@ graph LR
 
 **Example Timeline** (December closing period):
 
-| Calendar Date | Dashboard Shows | Data Month | Snapshot Created |
-|---------------|-----------------|------------|------------------|
-| Dec 30        | As of Dec 29    | December   | 2024-12-29       |
-| Dec 31        | As of Dec 30    | December   | 2024-12-30       |
+| Calendar Date | Dashboard Shows | Data Month | Snapshot Created     |
+| ------------- | --------------- | ---------- | -------------------- |
+| Dec 30        | As of Dec 29    | December   | 2024-12-29           |
+| Dec 31        | As of Dec 30    | December   | 2024-12-30           |
 | Jan 1         | As of Dec 31    | December   | 2024-12-31 (closing) |
-| Jan 2         | As of Jan 1     | December   | 2024-12-31 (update) |
-| Jan 5         | As of Jan 4     | December   | 2024-12-31 (update) |
-| Jan 15        | As of Jan 14    | January    | 2025-01-14       |
+| Jan 2         | As of Jan 1     | December   | 2024-12-31 (update)  |
+| Jan 5         | As of Jan 4     | December   | 2024-12-31 (update)  |
+| Jan 15        | As of Jan 14    | January    | 2025-01-14           |
 
 ### API Fallback Behavior
 

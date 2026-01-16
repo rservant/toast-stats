@@ -3,6 +3,7 @@
 ## Introduction
 
 This feature optimizes the scraper's handling of closing period data by caching the fallback knowledge after the first successful fallback. Currently, when scraping data for a date that requires month-end reconciliation (closing period), each CSV download independently:
+
 1. Tries the requested month parameter
 2. Detects a date mismatch from the dashboard
 3. Falls back to the previous month parameter
