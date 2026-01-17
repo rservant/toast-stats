@@ -80,7 +80,10 @@ export const DivisionPerformanceCards: React.FC<
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-tm-loyal-blue mb-4"></div>
-            <p className="font-tm-body text-gray-600" style={{ fontSize: '14px' }}>
+            <p
+              className="font-tm-body text-gray-600"
+              style={{ fontSize: '14px' }}
+            >
               Loading division performance data...
             </p>
           </div>
@@ -108,10 +111,16 @@ export const DivisionPerformanceCards: React.FC<
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <h3 className="font-tm-headline font-semibold text-gray-900 mb-2" style={{ fontSize: '18px' }}>
+          <h3
+            className="font-tm-headline font-semibold text-gray-900 mb-2"
+            style={{ fontSize: '18px' }}
+          >
             No Data Available
           </h3>
-          <p className="font-tm-body text-gray-600" style={{ fontSize: '14px' }}>
+          <p
+            className="font-tm-body text-gray-600"
+            style={{ fontSize: '14px' }}
+          >
             District snapshot data is not available. Please try refreshing the
             page.
           </p>
@@ -139,10 +148,16 @@ export const DivisionPerformanceCards: React.FC<
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="font-tm-headline font-semibold text-gray-900 mb-2" style={{ fontSize: '18px' }}>
+          <h3
+            className="font-tm-headline font-semibold text-gray-900 mb-2"
+            style={{ fontSize: '18px' }}
+          >
             No Divisions Found
           </h3>
-          <p className="font-tm-body text-gray-600" style={{ fontSize: '14px' }}>
+          <p
+            className="font-tm-body text-gray-600"
+            style={{ fontSize: '14px' }}
+          >
             No division data was found in the district snapshot.
           </p>
         </div>
@@ -158,18 +173,30 @@ export const DivisionPerformanceCards: React.FC<
         <div className="bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-tm-headline font-semibold text-tm-black" style={{ fontSize: '18px' }}>
+              <h2
+                className="font-tm-headline font-semibold text-tm-black"
+                style={{ fontSize: '18px' }}
+              >
                 Division & Area Performance
               </h2>
-              <p className="font-tm-body text-gray-600 mt-1" style={{ fontSize: '14px' }}>
+              <p
+                className="font-tm-body text-gray-600 mt-1"
+                style={{ fontSize: '14px' }}
+              >
                 Performance metrics for all divisions and areas
               </p>
             </div>
             <div className="text-right">
-              <p className="font-tm-body text-gray-500 uppercase tracking-wide" style={{ fontSize: '12px' }}>
+              <p
+                className="font-tm-body text-gray-500 uppercase tracking-wide"
+                style={{ fontSize: '12px' }}
+              >
                 Data as of
               </p>
-              <p className="font-tm-body font-medium text-gray-900" style={{ fontSize: '14px' }}>
+              <p
+                className="font-tm-body font-medium text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 {formatDisplayDate(snapshotTimestamp)}
               </p>
             </div>
@@ -193,11 +220,13 @@ export const DivisionPerformanceCards: React.FC<
 
       {/* Summary Footer */}
       <div className="bg-white rounded-lg shadow-md p-4">
-        <p className="font-tm-body text-gray-600 text-center" style={{ fontSize: '14px' }}>
+        <p
+          className="font-tm-body text-gray-600 text-center"
+          style={{ fontSize: '14px' }}
+        >
           Showing {divisions.length} division
           {divisions.length !== 1 ? 's' : ''} with{' '}
-          {divisions.reduce((sum, div) => sum + div.areas.length, 0)} total
-          area
+          {divisions.reduce((sum, div) => sum + div.areas.length, 0)} total area
           {divisions.reduce((sum, div) => sum + div.areas.length, 0) !== 1
             ? 's'
             : ''}

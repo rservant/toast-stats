@@ -30,7 +30,10 @@ import DivisionSummary from '../DivisionSummary'
 import { AreaPerformanceTable } from '../AreaPerformanceTable'
 import { AreaPerformanceRow } from '../AreaPerformanceRow'
 import type { DistrictSnapshot } from '../../types/district'
-import type { DivisionPerformance, AreaPerformance } from '../../types/performance'
+import type {
+  DivisionPerformance,
+  AreaPerformance,
+} from '../../types/performance'
 
 // Extend expect with jest-axe matchers
 // @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
@@ -531,7 +534,7 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
       // The components use font-tm-headline, font-tm-body, and other brand classes
       const brandElements = container.querySelectorAll('[class*="font-tm-"]')
       expect(brandElements.length).toBeGreaterThan(0)
-      
+
       // Verify the components render with proper structure
       const headings = container.querySelectorAll('h2, h3')
       expect(headings.length).toBeGreaterThan(0)
@@ -619,7 +622,9 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
   describe('Data Completeness for Screen Readers', () => {
     it('should announce all division metrics', () => {
       const division = createMockDivisionPerformance()
-      const { container } = render(<DivisionPerformanceCard division={division} />)
+      const { container } = render(
+        <DivisionPerformanceCard division={division} />
+      )
 
       // Check for division identifier
       expect(screen.getByText(/division a/i)).toBeInTheDocument()

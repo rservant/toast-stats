@@ -178,7 +178,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       // Verify area tables are present (one per division)
       const tables = screen.getAllByRole('table')
       expect(tables).toHaveLength(2)
-      
+
       // Verify area identifiers are displayed
       expect(screen.getByText('A1')).toBeInTheDocument()
       expect(screen.getByText('B1')).toBeInTheDocument()
@@ -212,10 +212,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
 
     it('should handle missing data gracefully', () => {
       render(
-        <DivisionPerformanceCards
-          districtSnapshot={null}
-          isLoading={false}
-        />
+        <DivisionPerformanceCards districtSnapshot={null} isLoading={false} />
       )
 
       expect(screen.getByText('No Data Available')).toBeInTheDocument()
@@ -240,7 +237,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       expect(screen.getByText('Division B')).toBeInTheDocument()
 
       // Verify cards are visible
-      const divisionCards = screen.getAllByLabelText(/Division [AB] performance card/)
+      const divisionCards = screen.getAllByLabelText(
+        /Division [AB] performance card/
+      )
       expect(divisionCards).toHaveLength(2)
       divisionCards.forEach(card => {
         expect(card).toBeVisible()
@@ -363,7 +362,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       // Verify tables are present (one per division)
       const tables = screen.getAllByRole('table')
       expect(tables).toHaveLength(2)
-      
+
       // Verify table headers exist (appears in both tables)
       expect(screen.getAllByText('Area').length).toBeGreaterThanOrEqual(2)
       expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(2)
@@ -381,7 +380,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       // Verify division headings exist (h2 level)
       const divisionHeadings = screen.getAllByRole('heading', { level: 2 })
       expect(divisionHeadings.length).toBeGreaterThanOrEqual(2) // At least Division A and Division B
-      
+
       // Verify heading text
       expect(screen.getByText(/Division A/)).toBeInTheDocument()
       expect(screen.getByText(/Division B/)).toBeInTheDocument()
@@ -396,7 +395,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       )
 
       // Verify status badges are present (axe will check contrast)
-      const statusBadges = screen.getAllByText(/Distinguished|Select Distinguished|President's Distinguished|Not Distinguished/i)
+      const statusBadges = screen.getAllByText(
+        /Distinguished|Select Distinguished|President's Distinguished|Not Distinguished/i
+      )
       expect(statusBadges.length).toBeGreaterThan(0)
     })
 

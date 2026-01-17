@@ -157,7 +157,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1, max: 20 }), // clubBase
-          (clubBase) => {
+          clubBase => {
             // Arrange: Create area data without visit fields
             const areaData = {
               someOtherField: 'value',
@@ -243,10 +243,10 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
               }),
               { minLength: 1, maxLength: 10 }
             )
-            .map((divisions) => {
+            .map(divisions => {
               // Ensure unique division IDs by keeping only the first occurrence
               const seen = new Set<string>()
-              return divisions.filter((d) => {
+              return divisions.filter(d => {
                 if (seen.has(d.divisionId)) {
                   return false
                 }
@@ -254,10 +254,10 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
                 return true
               })
             }),
-          (divisions) => {
+          divisions => {
             // Arrange: Create snapshot with divisions
             const snapshot = {
-              divisionPerformance: divisions.map((d) => ({
+              divisionPerformance: divisions.map(d => ({
                 Division: d.divisionId,
                 'Club Base': d.clubBase.toString(),
                 'Paid Clubs': d.paidClubs.toString(),
@@ -273,7 +273,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             expect(result.length).toBe(divisions.length)
 
             // All division IDs should be present
-            const resultDivisionIds = result.map((d) => d.divisionId)
+            const resultDivisionIds = result.map(d => d.divisionId)
             for (const division of divisions) {
               expect(resultDivisionIds).toContain(division.divisionId)
             }
@@ -296,9 +296,9 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
               { minLength: 1, maxLength: 8 }
             ),
           }),
-          (divisionData) => {
+          divisionData => {
             // Arrange: Create snapshot with division and areas
-            const clubPerformance = divisionData.areas.flatMap((area) =>
+            const clubPerformance = divisionData.areas.flatMap(area =>
               Array.from({ length: area.clubCount }, (_, i) => ({
                 Division: divisionData.divisionId,
                 Area: area.areaId,
@@ -321,7 +321,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
 
             // Get unique area IDs
             const uniqueAreaIds = [
-              ...new Set(divisionData.areas.map((a) => a.areaId)),
+              ...new Set(divisionData.areas.map(a => a.areaId)),
             ]
 
             // Act: Extract division performance
@@ -335,7 +335,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             expect(result[0].areas.length).toBe(uniqueAreaIds.length)
 
             // All area IDs should be present
-            const resultAreaIds = result[0].areas.map((a) => a.areaId)
+            const resultAreaIds = result[0].areas.map(a => a.areaId)
             for (const areaId of uniqueAreaIds) {
               expect(resultAreaIds).toContain(areaId)
             }
@@ -349,7 +349,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1, max: 10 }), // number of divisions
-          (divisionCount) => {
+          divisionCount => {
             // Arrange: Create snapshot with N divisions
             const snapshot = {
               divisionPerformance: Array.from(
@@ -379,7 +379,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1, max: 8 }), // number of areas
-          (areaCount) => {
+          areaCount => {
             // Arrange: Create snapshot with one division and N areas
             const clubPerformance = Array.from({ length: areaCount }, (_, i) =>
               Array.from({ length: 2 }, () => ({
@@ -418,7 +418,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
       fc.assert(
         fc.property(
           fc.integer({ min: 1, max: 5 }), // number of divisions
-          (divisionCount) => {
+          divisionCount => {
             // Arrange: Create snapshot with divisions but no club performance
             const snapshot = {
               divisionPerformance: Array.from(
@@ -460,10 +460,10 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
               }),
               { minLength: 1, maxLength: 5 }
             )
-            .map((divisions) => {
+            .map(divisions => {
               // Ensure unique division IDs by keeping only the first occurrence
               const seen = new Set<string>()
-              return divisions.filter((d) => {
+              return divisions.filter(d => {
                 if (seen.has(d.divisionId)) {
                   return false
                 }
@@ -471,10 +471,10 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
                 return true
               })
             }),
-          (divisions) => {
+          divisions => {
             // Arrange: Create snapshot
             const snapshot = {
-              divisionPerformance: divisions.map((d) => ({
+              divisionPerformance: divisions.map(d => ({
                 Division: d.divisionId,
                 'Club Base': d.clubBase.toString(),
                 'Paid Clubs': d.paidClubs.toString(),
@@ -490,7 +490,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             expect(result.length).toBe(divisions.length)
             for (const division of divisions) {
               const extracted = result.find(
-                (d) => d.divisionId === division.divisionId
+                d => d.divisionId === division.divisionId
               )
               expect(extracted).toBeDefined()
               if (extracted) {
@@ -531,16 +531,16 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
               }),
               { minLength: 2, maxLength: 15 }
             )
-            .filter((divisions) => {
+            .filter(divisions => {
               // Ensure we have at least one duplicate
-              const ids = divisions.map((d) => d.divisionId)
+              const ids = divisions.map(d => d.divisionId)
               const uniqueIds = new Set(ids)
               return uniqueIds.size < ids.length
             }),
-          (divisions) => {
+          divisions => {
             // Arrange: Create snapshot with duplicate divisions
             const snapshot = {
-              divisionPerformance: divisions.map((d) => ({
+              divisionPerformance: divisions.map(d => ({
                 Division: d.divisionId,
                 'Club Base': d.clubBase.toString(),
                 'Paid Clubs': d.paidClubs.toString(),
@@ -553,14 +553,14 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             const result = extractDivisionPerformance(snapshot)
 
             // Assert: Result should contain only unique divisions
-            const resultDivisionIds = result.map((d) => d.divisionId)
+            const resultDivisionIds = result.map(d => d.divisionId)
             const uniqueResultIds = new Set(resultDivisionIds)
             expect(resultDivisionIds.length).toBe(uniqueResultIds.size)
 
             // Assert: Each division ID should appear exactly once
             for (const divisionId of uniqueResultIds) {
               const count = resultDivisionIds.filter(
-                (id) => id === divisionId
+                id => id === divisionId
               ).length
               expect(count).toBe(1)
             }
@@ -632,9 +632,9 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             }),
             { minLength: 2, maxLength: 3 }
           ),
-          (divisionSpecs) => {
+          divisionSpecs => {
             // Arrange: Create snapshot with multiple divisions, each appearing multiple times
-            const divisionPerformance = divisionSpecs.flatMap((spec) =>
+            const divisionPerformance = divisionSpecs.flatMap(spec =>
               Array.from({ length: spec.occurrences }, (_, i) => ({
                 Division: spec.divisionId,
                 'Club Base': (spec.clubBase + i).toString(), // Vary values
@@ -655,14 +655,14 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
 
             // Assert: Should have exactly as many divisions as unique IDs
             const uniqueDivisionIds = new Set(
-              divisionSpecs.map((s) => s.divisionId)
+              divisionSpecs.map(s => s.divisionId)
             )
             expect(result.length).toBe(uniqueDivisionIds.size)
 
             // Assert: Each division should appear exactly once
-            const resultIds = result.map((d) => d.divisionId)
+            const resultIds = result.map(d => d.divisionId)
             for (const divisionId of uniqueDivisionIds) {
-              const count = resultIds.filter((id) => id === divisionId).length
+              const count = resultIds.filter(id => id === divisionId).length
               expect(count).toBe(1)
             }
           }
@@ -721,10 +721,10 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             }),
             { minLength: 1, maxLength: 20 }
           ),
-          (divisions) => {
+          divisions => {
             // Arrange: Create snapshot (may or may not have duplicates)
             const snapshot = {
-              divisionPerformance: divisions.map((d) => ({
+              divisionPerformance: divisions.map(d => ({
                 Division: d.divisionId,
                 'Club Base': d.clubBase.toString(),
                 'Paid Clubs': d.paidClubs.toString(),
@@ -737,12 +737,12 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
             const result = extractDivisionPerformance(snapshot)
 
             // Assert: Result must always have unique division IDs
-            const resultDivisionIds = result.map((d) => d.divisionId)
+            const resultDivisionIds = result.map(d => d.divisionId)
             const uniqueResultIds = new Set(resultDivisionIds)
             expect(resultDivisionIds.length).toBe(uniqueResultIds.size)
 
             // Assert: Result count should not exceed input unique count
-            const inputUniqueIds = new Set(divisions.map((d) => d.divisionId))
+            const inputUniqueIds = new Set(divisions.map(d => d.divisionId))
             expect(result.length).toBeLessThanOrEqual(inputUniqueIds.size)
           }
         ),

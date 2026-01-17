@@ -30,7 +30,7 @@ describe('Division Performance Generators', () => {
   describe('divisionIdArb', () => {
     it('should generate valid division identifiers', () => {
       fc.assert(
-        fc.property(divisionIdArb, (divisionId) => {
+        fc.property(divisionIdArb, divisionId => {
           // Should match pattern A-Z or AA-ZZ
           expect(divisionId).toMatch(/^[A-Z]{1,2}$/)
           expect(divisionId.length).toBeGreaterThanOrEqual(1)
@@ -44,7 +44,7 @@ describe('Division Performance Generators', () => {
   describe('areaIdArb', () => {
     it('should generate valid area identifiers', () => {
       fc.assert(
-        fc.property(areaIdArb, (areaId) => {
+        fc.property(areaIdArb, areaId => {
           // Should match pattern A1-Z9 or AA1-ZZ9
           expect(areaId).toMatch(/^[A-Z]{1,2}[1-9]$/)
           expect(areaId.length).toBeGreaterThanOrEqual(2)
@@ -58,7 +58,7 @@ describe('Division Performance Generators', () => {
   describe('clubCountArb', () => {
     it('should generate valid club counts', () => {
       fc.assert(
-        fc.property(clubCountArb, (count) => {
+        fc.property(clubCountArb, count => {
           expect(count).toBeGreaterThanOrEqual(0)
           expect(count).toBeLessThanOrEqual(100)
           expect(Number.isInteger(count)).toBe(true)
@@ -71,7 +71,7 @@ describe('Division Performance Generators', () => {
   describe('netGrowthArb', () => {
     it('should generate valid net growth values', () => {
       fc.assert(
-        fc.property(netGrowthArb, (growth) => {
+        fc.property(netGrowthArb, growth => {
           expect(growth).toBeGreaterThanOrEqual(-50)
           expect(growth).toBeLessThanOrEqual(50)
           expect(Number.isInteger(growth)).toBe(true)
@@ -84,7 +84,7 @@ describe('Division Performance Generators', () => {
   describe('divisionStatusArb', () => {
     it('should generate valid division status values', () => {
       fc.assert(
-        fc.property(divisionStatusArb, (status) => {
+        fc.property(divisionStatusArb, status => {
           expect([
             'not-distinguished',
             'distinguished',
@@ -102,7 +102,7 @@ describe('Division Performance Generators', () => {
   describe('areaStatusArb', () => {
     it('should generate valid area status values', () => {
       fc.assert(
-        fc.property(areaStatusArb, (status) => {
+        fc.property(areaStatusArb, status => {
           expect([
             'not-qualified',
             'not-distinguished',
@@ -119,7 +119,7 @@ describe('Division Performance Generators', () => {
   describe('visitStatusArb', () => {
     it('should generate internally consistent visit status', () => {
       fc.assert(
-        fc.property(visitStatusArb(), (visitStatus) => {
+        fc.property(visitStatusArb(), visitStatus => {
           // Verify structure
           expect(visitStatus).toHaveProperty('completed')
           expect(visitStatus).toHaveProperty('required')
@@ -147,7 +147,7 @@ describe('Division Performance Generators', () => {
 
     it('should generate visit status based on club base when provided', () => {
       fc.assert(
-        fc.property(fc.integer({ min: 1, max: 20 }), (clubBase) => {
+        fc.property(fc.integer({ min: 1, max: 20 }), clubBase => {
           const visitStatus = fc.sample(visitStatusArb(clubBase), 1)[0]
 
           // Required should be 75% of club base
@@ -164,7 +164,7 @@ describe('Division Performance Generators', () => {
   describe('areaPerformanceArb', () => {
     it('should generate valid area performance objects', () => {
       fc.assert(
-        fc.property(areaPerformanceArb(), (area) => {
+        fc.property(areaPerformanceArb(), area => {
           // Verify structure
           expect(area).toHaveProperty('areaId')
           expect(area).toHaveProperty('status')
@@ -205,7 +205,7 @@ describe('Division Performance Generators', () => {
 
     it('should respect qualified option when provided', () => {
       fc.assert(
-        fc.property(areaPerformanceArb({ qualified: true }), (area) => {
+        fc.property(areaPerformanceArb({ qualified: true }), area => {
           expect(area.isQualified).toBe(true)
           expect(area.status).not.toBe('not-qualified')
         }),
@@ -213,7 +213,7 @@ describe('Division Performance Generators', () => {
       )
 
       fc.assert(
-        fc.property(areaPerformanceArb({ qualified: false }), (area) => {
+        fc.property(areaPerformanceArb({ qualified: false }), area => {
           expect(area.isQualified).toBe(false)
           expect(area.status).toBe('not-qualified')
         }),
@@ -225,7 +225,7 @@ describe('Division Performance Generators', () => {
   describe('divisionPerformanceArb', () => {
     it('should generate valid division performance objects', () => {
       fc.assert(
-        fc.property(divisionPerformanceArb(), (division) => {
+        fc.property(divisionPerformanceArb(), division => {
           // Verify structure
           expect(division).toHaveProperty('divisionId')
           expect(division).toHaveProperty('status')
@@ -237,7 +237,9 @@ describe('Division Performance Generators', () => {
           expect(division).toHaveProperty('areas')
 
           // Verify net growth consistency
-          expect(division.netGrowth).toBe(division.paidClubs - division.clubBase)
+          expect(division.netGrowth).toBe(
+            division.paidClubs - division.clubBase
+          )
 
           // Verify required distinguished clubs calculation
           expect(division.requiredDistinguishedClubs).toBe(
@@ -263,7 +265,7 @@ describe('Division Performance Generators', () => {
       fc.assert(
         fc.property(
           divisionPerformanceArb({ includeAreas: false }),
-          (division) => {
+          division => {
             expect(division.areas).toEqual([])
           }
         ),
@@ -274,17 +276,14 @@ describe('Division Performance Generators', () => {
     it('should generate specific number of areas when areaCount is provided', () => {
       const areaCount = 5
       fc.assert(
-        fc.property(
-          divisionPerformanceArb({ areaCount }),
-          (division) => {
-            // Should have exactly areaCount unique areas
-            expect(division.areas.length).toBeLessThanOrEqual(areaCount)
-            // Verify uniqueness
-            const areaIds = division.areas.map((a) => a.areaId)
-            const uniqueAreaIds = new Set(areaIds)
-            expect(uniqueAreaIds.size).toBe(division.areas.length)
-          }
-        ),
+        fc.property(divisionPerformanceArb({ areaCount }), division => {
+          // Should have exactly areaCount unique areas
+          expect(division.areas.length).toBeLessThanOrEqual(areaCount)
+          // Verify uniqueness
+          const areaIds = division.areas.map(a => a.areaId)
+          const uniqueAreaIds = new Set(areaIds)
+          expect(uniqueAreaIds.size).toBe(division.areas.length)
+        }),
         { numRuns: 100 }
       )
     })
@@ -293,12 +292,12 @@ describe('Division Performance Generators', () => {
   describe('divisionsArrayArb', () => {
     it('should generate arrays of divisions with unique IDs', () => {
       fc.assert(
-        fc.property(divisionsArrayArb(), (divisions) => {
+        fc.property(divisionsArrayArb(), divisions => {
           // Verify it's an array
           expect(Array.isArray(divisions)).toBe(true)
 
           // Verify all division IDs are unique
-          const divisionIds = divisions.map((d) => d.divisionId)
+          const divisionIds = divisions.map(d => d.divisionId)
           const uniqueIds = new Set(divisionIds)
           expect(uniqueIds.size).toBe(divisions.length)
 
@@ -307,7 +306,9 @@ describe('Division Performance Generators', () => {
             const current = divisions[i]
             const next = divisions[i + 1]
             if (current && next) {
-              expect(current.divisionId.localeCompare(next.divisionId)).toBeLessThanOrEqual(0)
+              expect(
+                current.divisionId.localeCompare(next.divisionId)
+              ).toBeLessThanOrEqual(0)
             }
           }
         }),
@@ -319,7 +320,7 @@ describe('Division Performance Generators', () => {
       fc.assert(
         fc.property(
           divisionsArrayArb({ minLength: 2, maxLength: 5 }),
-          (divisions) => {
+          divisions => {
             // Note: Due to uniqueness filtering, we may get fewer divisions than minLength
             // if duplicate division IDs are generated. This is expected behavior.
             expect(divisions.length).toBeGreaterThanOrEqual(1)
@@ -334,7 +335,7 @@ describe('Division Performance Generators', () => {
   describe('districtSnapshotArb', () => {
     it('should generate valid district snapshot structure', () => {
       fc.assert(
-        fc.property(districtSnapshotArb, (snapshot) => {
+        fc.property(districtSnapshotArb, snapshot => {
           expect(snapshot).toHaveProperty('divisionPerformance')
           expect(snapshot).toHaveProperty('clubPerformance')
           expect(Array.isArray(snapshot.divisionPerformance)).toBe(true)
@@ -348,10 +349,12 @@ describe('Division Performance Generators', () => {
   describe('timestampArb', () => {
     it('should generate valid ISO 8601 timestamps', () => {
       fc.assert(
-        fc.property(timestampArb(), (timestamp) => {
+        fc.property(timestampArb(), timestamp => {
           // Should be a valid ISO 8601 string
           expect(typeof timestamp).toBe('string')
-          expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+          expect(timestamp).toMatch(
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+          )
 
           // Should be parseable as a date
           const date = new Date(timestamp)
@@ -370,7 +373,7 @@ describe('Division Performance Generators', () => {
   describe('clubBaseArb', () => {
     it('should generate valid club base values', () => {
       fc.assert(
-        fc.property(clubBaseArb(), (clubBase) => {
+        fc.property(clubBaseArb(), clubBase => {
           expect(clubBase).toBeGreaterThanOrEqual(1)
           expect(clubBase).toBeLessThanOrEqual(100)
           expect(Number.isInteger(clubBase)).toBe(true)
@@ -383,7 +386,7 @@ describe('Division Performance Generators', () => {
   describe('areaQualifyingMetricsArb', () => {
     it('should generate valid area qualifying metrics', () => {
       fc.assert(
-        fc.property(areaQualifyingMetricsArb, (metrics) => {
+        fc.property(areaQualifyingMetricsArb, metrics => {
           expect(metrics).toHaveProperty('netGrowth')
           expect(metrics).toHaveProperty('firstRoundVisits')
           expect(metrics).toHaveProperty('secondRoundVisits')
@@ -400,7 +403,7 @@ describe('Division Performance Generators', () => {
   describe('divisionMetricsArb', () => {
     it('should generate internally consistent division metrics', () => {
       fc.assert(
-        fc.property(divisionMetricsArb, (metrics) => {
+        fc.property(divisionMetricsArb, metrics => {
           expect(metrics).toHaveProperty('clubBase')
           expect(metrics).toHaveProperty('threshold')
           expect(metrics).toHaveProperty('distinguishedClubs')
@@ -410,7 +413,9 @@ describe('Division Performance Generators', () => {
           expect(metrics.threshold).toBe(Math.ceil(metrics.clubBase * 0.5))
 
           // Verify distinguished clubs doesn't exceed club base
-          expect(metrics.distinguishedClubs).toBeLessThanOrEqual(metrics.clubBase)
+          expect(metrics.distinguishedClubs).toBeLessThanOrEqual(
+            metrics.clubBase
+          )
         }),
         { numRuns: 100 }
       )
@@ -420,7 +425,7 @@ describe('Division Performance Generators', () => {
   describe('areaMetricsArb', () => {
     it('should generate internally consistent area metrics', () => {
       fc.assert(
-        fc.property(areaMetricsArb, (metrics) => {
+        fc.property(areaMetricsArb, metrics => {
           expect(metrics).toHaveProperty('clubBase')
           expect(metrics).toHaveProperty('threshold')
           expect(metrics).toHaveProperty('distinguishedClubs')
@@ -431,7 +436,9 @@ describe('Division Performance Generators', () => {
           expect(metrics.threshold).toBe(Math.ceil(metrics.clubBase * 0.5))
 
           // Verify distinguished clubs doesn't exceed club base
-          expect(metrics.distinguishedClubs).toBeLessThanOrEqual(metrics.clubBase)
+          expect(metrics.distinguishedClubs).toBeLessThanOrEqual(
+            metrics.clubBase
+          )
 
           // Verify isQualified is boolean
           expect(typeof metrics.isQualified).toBe('boolean')

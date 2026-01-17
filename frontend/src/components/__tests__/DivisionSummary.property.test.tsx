@@ -17,7 +17,9 @@ import type { DistinguishedStatus } from '../../utils/divisionStatus'
 /**
  * Generator for division distinguished status (excludes 'not-qualified')
  */
-const divisionStatusArb = fc.constantFrom<Exclude<DistinguishedStatus, 'not-qualified'>>(
+const divisionStatusArb = fc.constantFrom<
+  Exclude<DistinguishedStatus, 'not-qualified'>
+>(
   'not-distinguished',
   'distinguished',
   'select-distinguished',
@@ -84,13 +86,17 @@ describe('DivisionSummary Property-Based Tests', () => {
           )
 
           // Requirement 3.1: Division identifier must be present
-          const divisionHeading = screen.getByText(new RegExp(`Division ${divisionId}`))
+          const divisionHeading = screen.getByText(
+            new RegExp(`Division ${divisionId}`)
+          )
           if (!divisionHeading) {
             throw new Error(`Division identifier "${divisionId}" not found`)
           }
 
           // Requirement 3.2: Status level must be present
-          const statusBadge = screen.getByRole('status', { name: /Division status:/i })
+          const statusBadge = screen.getByRole('status', {
+            name: /Division status:/i,
+          })
           if (!statusBadge) {
             throw new Error('Status badge not found')
           }
@@ -107,9 +113,13 @@ describe('DivisionSummary Property-Based Tests', () => {
             throw new Error('Paid clubs section not found')
           }
 
-          const paidClubsPattern = new RegExp(`${paidClubs}\\s*/\\s*${clubBase}`)
+          const paidClubsPattern = new RegExp(
+            `${paidClubs}\\s*/\\s*${clubBase}`
+          )
           if (!paidClubsSection.textContent?.match(paidClubsPattern)) {
-            throw new Error(`Paid clubs "${paidClubs} / ${clubBase}" not found in paid clubs section`)
+            throw new Error(
+              `Paid clubs "${paidClubs} / ${clubBase}" not found in paid clubs section`
+            )
           }
 
           // Requirement 3.3: Net growth indicator must be present
@@ -119,19 +129,28 @@ describe('DivisionSummary Property-Based Tests', () => {
           }
 
           // Requirement 3.4: Distinguished clubs in "current/required" format must be present
-          const distinguishedClubsLabel = screen.getByText('Distinguished Clubs')
+          const distinguishedClubsLabel = screen.getByText(
+            'Distinguished Clubs'
+          )
           if (!distinguishedClubsLabel) {
             throw new Error('Distinguished Clubs label not found')
           }
 
           // Find distinguished clubs text within the distinguished clubs section
-          const distinguishedClubsSection = distinguishedClubsLabel.closest('div')?.parentElement
+          const distinguishedClubsSection =
+            distinguishedClubsLabel.closest('div')?.parentElement
           if (!distinguishedClubsSection) {
             throw new Error('Distinguished clubs section not found')
           }
 
-          const distinguishedClubsPattern = new RegExp(`${distinguishedClubs}\\s*/\\s*${requiredDistinguishedClubs}`)
-          if (!distinguishedClubsSection.textContent?.match(distinguishedClubsPattern)) {
+          const distinguishedClubsPattern = new RegExp(
+            `${distinguishedClubs}\\s*/\\s*${requiredDistinguishedClubs}`
+          )
+          if (
+            !distinguishedClubsSection.textContent?.match(
+              distinguishedClubsPattern
+            )
+          ) {
             throw new Error(
               `Distinguished clubs "${distinguishedClubs} / ${requiredDistinguishedClubs}" not found in distinguished clubs section`
             )
@@ -187,7 +206,9 @@ describe('DivisionSummary Property-Based Tests', () => {
             />
           )
 
-          const statusBadge = screen.getByRole('status', { name: /Division status:/i })
+          const statusBadge = screen.getByRole('status', {
+            name: /Division status:/i,
+          })
 
           // Status badge should have base styling classes
           const hasBaseClasses =
@@ -263,7 +284,9 @@ describe('DivisionSummary Property-Based Tests', () => {
           // Check that appropriate color class is applied
           if (netGrowth > 0) {
             if (!netGrowthElement.className.includes('tm-text-loyal-blue')) {
-              throw new Error('Positive net growth should use tm-text-loyal-blue')
+              throw new Error(
+                'Positive net growth should use tm-text-loyal-blue'
+              )
             }
             if (!netGrowthElement.textContent?.includes('↑')) {
               throw new Error('Positive net growth should display up arrow')
@@ -273,7 +296,9 @@ describe('DivisionSummary Property-Based Tests', () => {
             }
           } else if (netGrowth < 0) {
             if (!netGrowthElement.className.includes('tm-text-true-maroon')) {
-              throw new Error('Negative net growth should use tm-text-true-maroon')
+              throw new Error(
+                'Negative net growth should use tm-text-true-maroon'
+              )
             }
             if (!netGrowthElement.textContent?.includes('↓')) {
               throw new Error('Negative net growth should display down arrow')

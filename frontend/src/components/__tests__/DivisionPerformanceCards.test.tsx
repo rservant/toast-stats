@@ -155,10 +155,7 @@ describe('DivisionPerformanceCards', () => {
   describe('Error State - Invalid Data', () => {
     it('should display error message when districtSnapshot is null', () => {
       render(
-        <DivisionPerformanceCards
-          districtSnapshot={null}
-          isLoading={false}
-        />
+        <DivisionPerformanceCards districtSnapshot={null} isLoading={false} />
       )
 
       expect(screen.getByText('No Data Available')).toBeInTheDocument()
@@ -180,10 +177,7 @@ describe('DivisionPerformanceCards', () => {
 
     it('should show error icon when data is invalid', () => {
       const { container } = render(
-        <DivisionPerformanceCards
-          districtSnapshot={null}
-          isLoading={false}
-        />
+        <DivisionPerformanceCards districtSnapshot={null} isLoading={false} />
       )
 
       const errorIcon = container.querySelector('svg')
@@ -340,10 +334,18 @@ describe('DivisionPerformanceCards', () => {
       expect(divisionBCard).toBeInTheDocument()
 
       // Verify they appear in the correct order in the DOM
-      const allCards = screen.getAllByLabelText(/Division [AB] performance card/)
+      const allCards = screen.getAllByLabelText(
+        /Division [AB] performance card/
+      )
       expect(allCards).toHaveLength(2)
-      expect(allCards[0]).toHaveAttribute('aria-label', 'Division A performance card')
-      expect(allCards[1]).toHaveAttribute('aria-label', 'Division B performance card')
+      expect(allCards[0]).toHaveAttribute(
+        'aria-label',
+        'Division A performance card'
+      )
+      expect(allCards[1]).toHaveAttribute(
+        'aria-label',
+        'Division B performance card'
+      )
     })
 
     it('should maintain order with different division identifiers', () => {
@@ -380,7 +382,9 @@ describe('DivisionPerformanceCards', () => {
         />
       )
 
-      expect(screen.getByText(/Showing 2 divisions with 2 total areas/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Showing 2 divisions with 2 total areas/i)
+      ).toBeInTheDocument()
     })
 
     it('should use singular form for single division', () => {
@@ -393,7 +397,9 @@ describe('DivisionPerformanceCards', () => {
         />
       )
 
-      expect(screen.getByText(/Showing 1 division with 1 total area/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Showing 1 division with 1 total area/i)
+      ).toBeInTheDocument()
     })
 
     it('should handle multiple areas correctly', () => {
@@ -417,7 +423,9 @@ describe('DivisionPerformanceCards', () => {
         />
       )
 
-      expect(screen.getByText(/Showing 1 division with 3 total areas/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Showing 1 division with 3 total areas/i)
+      ).toBeInTheDocument()
     })
   })
 
@@ -439,7 +447,9 @@ describe('DivisionPerformanceCards', () => {
     })
 
     it('should log extraction errors to console', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {})
       vi.mocked(extractDivisionPerformance).mockImplementation(() => {
         throw new Error('Extraction failed')
       })

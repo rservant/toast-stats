@@ -217,8 +217,8 @@ describe('ISO Date-based Snapshot Migration', () => {
     })
   })
 
-  describe('Current Pointer', () => {
-    it('should update current.json with ISO date snapshot ID', async () => {
+  describe('Latest Snapshot Retrieval', () => {
+    it('should retrieve latest snapshot using directory scanning', async () => {
       const testDate = '2026-01-07'
       const normalizedData: NormalizedData = {
         districts: [],
@@ -243,13 +243,12 @@ describe('ISO Date-based Snapshot Migration', () => {
 
       await snapshotStore.writeSnapshot(snapshot)
 
-      // Read current.json
-      const currentPath = path.join(testCacheDir, 'current.json')
-      const currentContent = await fs.readFile(currentPath, 'utf-8')
-      const current = JSON.parse(currentContent)
+      // Verify latest snapshot can be retrieved via directory scanning
+      const latestSnapshot = await snapshotStore.getLatestSuccessful()
 
-      expect(current.snapshot_id).toBe(testDate)
-      expect(current.snapshot_id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(latestSnapshot).not.toBeNull()
+      expect(latestSnapshot!.snapshot_id).toBe(testDate)
+      expect(latestSnapshot!.snapshot_id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     })
   })
 

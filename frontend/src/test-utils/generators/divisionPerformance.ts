@@ -147,11 +147,13 @@ export const areaStatusArb = fc.constantFrom<DistinguishedStatus>(
  * //   { completed: 10, required: 8, percentage: 100, meetsThreshold: true }
  * // ]
  */
-export const visitStatusArb = (clubBase?: number): fc.Arbitrary<VisitStatus> => {
+export const visitStatusArb = (
+  clubBase?: number
+): fc.Arbitrary<VisitStatus> => {
   if (clubBase !== undefined) {
     // Generate visit status based on a specific club base
     const required = Math.ceil(clubBase * 0.75)
-    return fc.integer({ min: 0, max: clubBase }).map((completed) => ({
+    return fc.integer({ min: 0, max: clubBase }).map(completed => ({
       completed,
       required,
       percentage: (completed / clubBase) * 100,
@@ -219,54 +221,52 @@ export const areaPerformanceArb = (options?: {
         ? fc.constant(options.qualified)
         : fc.boolean()
     )
-    .chain(
-      ([areaId, clubBase, paidClubs, distinguishedClubs, isQualified]) => {
-        const netGrowth = paidClubs - clubBase
-        const requiredDistinguishedClubs = Math.ceil(clubBase * 0.5)
+    .chain(([areaId, clubBase, paidClubs, distinguishedClubs, isQualified]) => {
+      const netGrowth = paidClubs - clubBase
+      const requiredDistinguishedClubs = Math.ceil(clubBase * 0.5)
 
-        // Generate visit status based on club base
-        return fc
-          .tuple(visitStatusArb(clubBase), visitStatusArb(clubBase))
-          .map(([firstRoundVisits, secondRoundVisits]) => {
-            // Calculate status based on qualifying and metrics
-            let status: DistinguishedStatus
+      // Generate visit status based on club base
+      return fc
+        .tuple(visitStatusArb(clubBase), visitStatusArb(clubBase))
+        .map(([firstRoundVisits, secondRoundVisits]) => {
+          // Calculate status based on qualifying and metrics
+          let status: DistinguishedStatus
 
-            if (!isQualified) {
-              status = 'not-qualified'
-            } else if (
-              distinguishedClubs >= requiredDistinguishedClubs + 1 &&
-              netGrowth >= 1
-            ) {
-              status = 'presidents-distinguished'
-            } else if (
-              distinguishedClubs >= requiredDistinguishedClubs + 1 &&
-              paidClubs >= clubBase
-            ) {
-              status = 'select-distinguished'
-            } else if (
-              distinguishedClubs >= requiredDistinguishedClubs &&
-              paidClubs >= clubBase
-            ) {
-              status = 'distinguished'
-            } else {
-              status = 'not-distinguished'
-            }
+          if (!isQualified) {
+            status = 'not-qualified'
+          } else if (
+            distinguishedClubs >= requiredDistinguishedClubs + 1 &&
+            netGrowth >= 1
+          ) {
+            status = 'presidents-distinguished'
+          } else if (
+            distinguishedClubs >= requiredDistinguishedClubs + 1 &&
+            paidClubs >= clubBase
+          ) {
+            status = 'select-distinguished'
+          } else if (
+            distinguishedClubs >= requiredDistinguishedClubs &&
+            paidClubs >= clubBase
+          ) {
+            status = 'distinguished'
+          } else {
+            status = 'not-distinguished'
+          }
 
-            return {
-              areaId,
-              status,
-              clubBase,
-              paidClubs,
-              netGrowth,
-              distinguishedClubs,
-              requiredDistinguishedClubs,
-              firstRoundVisits,
-              secondRoundVisits,
-              isQualified,
-            }
-          })
-      }
-    )
+          return {
+            areaId,
+            status,
+            clubBase,
+            paidClubs,
+            netGrowth,
+            distinguishedClubs,
+            requiredDistinguishedClubs,
+            firstRoundVisits,
+            secondRoundVisits,
+            isQualified,
+          }
+        })
+    })
 }
 
 /**
@@ -344,16 +344,18 @@ export const divisionPerformanceArb = (options?: {
               minLength: options?.areaCount ?? 0,
               maxLength: options?.areaCount ?? 8,
             })
-            .map((areas) => {
+            .map(areas => {
               // Ensure unique area IDs and sort by ID
               const uniqueAreas = Array.from(
-                new Map(areas.map((a) => [a.areaId, a])).values()
+                new Map(areas.map(a => [a.areaId, a])).values()
               )
-              return uniqueAreas.sort((a, b) => a.areaId.localeCompare(b.areaId))
+              return uniqueAreas.sort((a, b) =>
+                a.areaId.localeCompare(b.areaId)
+              )
             })
         : fc.constant([] as AreaPerformance[])
 
-      return areasArb.map((areas) => ({
+      return areasArb.map(areas => ({
         divisionId,
         status,
         clubBase,
@@ -392,16 +394,16 @@ export const divisionsArrayArb = (options?: {
   includeAreas?: boolean
 }): fc.Arbitrary<DivisionPerformance[]> => {
   const includeAreas = options?.includeAreas ?? true
-  
+
   return fc
     .array(divisionPerformanceArb({ includeAreas }), {
       minLength: options?.minLength ?? 0,
       maxLength: options?.maxLength ?? 10,
     })
-    .map((divisions) => {
+    .map(divisions => {
       // Ensure unique division IDs and sort by ID
       const uniqueDivisions = Array.from(
-        new Map(divisions.map((d) => [d.divisionId, d])).values()
+        new Map(divisions.map(d => [d.divisionId, d])).values()
       )
       return uniqueDivisions.sort((a, b) =>
         a.divisionId.localeCompare(b.divisionId)
@@ -457,7 +459,7 @@ export const timestampArb = (options?: {
       min: options?.min ?? new Date('2020-01-01'),
       max: options?.max ?? new Date('2030-12-31'),
     })
-    .map((date) => date.toISOString())
+    .map(date => date.toISOString())
 }
 
 /**
@@ -525,7 +527,7 @@ export const areaQualifyingMetricsArb = fc.record({
  * //   ...
  * // ]
  */
-export const divisionMetricsArb = clubBaseArb().chain((clubBase) => {
+export const divisionMetricsArb = clubBaseArb().chain(clubBase => {
   const threshold = Math.ceil(clubBase * 0.5)
   return fc.record({
     clubBase: fc.constant(clubBase),
@@ -554,7 +556,7 @@ export const divisionMetricsArb = clubBaseArb().chain((clubBase) => {
  * //   ...
  * // ]
  */
-export const areaMetricsArb = clubBaseArb().chain((clubBase) => {
+export const areaMetricsArb = clubBaseArb().chain(clubBase => {
   const threshold = Math.ceil(clubBase * 0.5)
   return fc.record({
     clubBase: fc.constant(clubBase),

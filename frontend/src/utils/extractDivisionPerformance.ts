@@ -122,7 +122,7 @@ export function extractDivisionPerformance(
   // We need to merge these two data sources
   const clubDataRaw = snapshot['divisionPerformance']
   const clubPerformanceRaw = snapshot['clubPerformance']
-  
+
   if (!Array.isArray(clubDataRaw)) {
     return []
   }
@@ -136,12 +136,13 @@ export function extractDivisionPerformance(
       }
       const clubPerf = clubPerfRaw as Record<string, unknown>
       // Use Club Number as the key (or Club Name if Number not available)
-      const clubKey = 
-        (typeof clubPerf['Club Number'] === 'string' || typeof clubPerf['Club Number'] === 'number'
+      const clubKey =
+        (typeof clubPerf['Club Number'] === 'string' ||
+        typeof clubPerf['Club Number'] === 'number'
           ? String(clubPerf['Club Number'])
           : '') ||
         (typeof clubPerf['Club Name'] === 'string' ? clubPerf['Club Name'] : '')
-      
+
       if (clubKey) {
         clubPerformanceMap.set(clubKey, clubPerf)
       }
@@ -186,8 +187,9 @@ export function extractDivisionPerformance(
       clubBase++
 
       // Get the club identifier to look up performance data
-      const clubKey = 
-        (typeof clubData['Club'] === 'string' || typeof clubData['Club'] === 'number'
+      const clubKey =
+        (typeof clubData['Club'] === 'string' ||
+        typeof clubData['Club'] === 'number'
           ? String(clubData['Club'])
           : '') ||
         (typeof clubData['Club Name'] === 'string' ? clubData['Club Name'] : '')
@@ -236,7 +238,11 @@ export function extractDivisionPerformance(
     )
 
     // Extract areas for this division
-    const areas = extractAreasForDivision(divisionId, clubDataRaw, clubPerformanceMap)
+    const areas = extractAreasForDivision(
+      divisionId,
+      clubDataRaw,
+      clubPerformanceMap
+    )
 
     // Add division to results
     divisions.push({
@@ -317,7 +323,7 @@ function extractAreasForDivision(
       const club = clubRaw as Record<string, unknown>
 
       // Get the club identifier to look up performance data
-      const clubKey = 
+      const clubKey =
         (typeof club['Club'] === 'string' || typeof club['Club'] === 'number'
           ? String(club['Club'])
           : '') ||
@@ -328,7 +334,10 @@ function extractAreasForDivision(
 
       if (clubPerf) {
         // Count paid clubs (clubs with "Active" status)
-        const status = typeof clubPerf['Club Status'] === 'string' ? clubPerf['Club Status'] : ''
+        const status =
+          typeof clubPerf['Club Status'] === 'string'
+            ? clubPerf['Club Status']
+            : ''
         if (status === 'Active') {
           paidClubs++
         }

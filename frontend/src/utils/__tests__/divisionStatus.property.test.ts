@@ -87,26 +87,23 @@ describe('Property 1: Distinguished Club Threshold Calculation', () => {
 
   it('should produce monotonically increasing thresholds for increasing club bases', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 1, max: 99 }),
-        (clubBase: number) => {
-          const threshold1 = calculateRequiredDistinguishedClubs(clubBase)
-          const threshold2 = calculateRequiredDistinguishedClubs(clubBase + 1)
+      fc.property(fc.integer({ min: 1, max: 99 }), (clubBase: number) => {
+        const threshold1 = calculateRequiredDistinguishedClubs(clubBase)
+        const threshold2 = calculateRequiredDistinguishedClubs(clubBase + 1)
 
-          // Threshold for larger club base must be >= threshold for smaller club base
-          expect(threshold2).toBeGreaterThanOrEqual(threshold1)
+        // Threshold for larger club base must be >= threshold for smaller club base
+        expect(threshold2).toBeGreaterThanOrEqual(threshold1)
 
-          // The difference should be at most 1 (since we're incrementing by 1)
-          expect(threshold2 - threshold1).toBeLessThanOrEqual(1)
-        }
-      ),
+        // The difference should be at most 1 (since we're incrementing by 1)
+        expect(threshold2 - threshold1).toBeLessThanOrEqual(1)
+      }),
       { numRuns: 100 }
     )
   })
 
   it('should handle edge case of club base = 1', () => {
     const result = calculateRequiredDistinguishedClubs(1)
-    
+
     // For club base of 1, 50% rounded up should be 1
     expect(result).toBe(1)
     expect(result).toBe(Math.ceil(1 * 0.5))
@@ -114,7 +111,7 @@ describe('Property 1: Distinguished Club Threshold Calculation', () => {
 
   it('should handle edge case of club base = 2', () => {
     const result = calculateRequiredDistinguishedClubs(2)
-    
+
     // For club base of 2, 50% should be exactly 1
     expect(result).toBe(1)
     expect(result).toBe(Math.ceil(2 * 0.5))
@@ -123,13 +120,13 @@ describe('Property 1: Distinguished Club Threshold Calculation', () => {
   it('should verify specific known examples', () => {
     // Test specific examples to ensure correctness
     const testCases = [
-      { clubBase: 1, expected: 1 },   // 50% of 1 = 0.5 → 1
-      { clubBase: 2, expected: 1 },   // 50% of 2 = 1.0 → 1
-      { clubBase: 3, expected: 2 },   // 50% of 3 = 1.5 → 2
-      { clubBase: 4, expected: 2 },   // 50% of 4 = 2.0 → 2
-      { clubBase: 5, expected: 3 },   // 50% of 5 = 2.5 → 3
-      { clubBase: 10, expected: 5 },  // 50% of 10 = 5.0 → 5
-      { clubBase: 11, expected: 6 },  // 50% of 11 = 5.5 → 6
+      { clubBase: 1, expected: 1 }, // 50% of 1 = 0.5 → 1
+      { clubBase: 2, expected: 1 }, // 50% of 2 = 1.0 → 1
+      { clubBase: 3, expected: 2 }, // 50% of 3 = 1.5 → 2
+      { clubBase: 4, expected: 2 }, // 50% of 4 = 2.0 → 2
+      { clubBase: 5, expected: 3 }, // 50% of 5 = 2.5 → 3
+      { clubBase: 10, expected: 5 }, // 50% of 10 = 5.0 → 5
+      { clubBase: 11, expected: 6 }, // 50% of 11 = 5.5 → 6
       { clubBase: 20, expected: 10 }, // 50% of 20 = 10.0 → 10
       { clubBase: 21, expected: 11 }, // 50% of 21 = 10.5 → 11
     ]
@@ -278,12 +275,12 @@ describe('Property 5: Net Growth Calculation', () => {
   it('should verify specific known examples', () => {
     // Test specific examples to ensure correctness
     const testCases = [
-      { paidClubs: 10, clubBase: 10, expected: 0 },   // No change
-      { paidClubs: 12, clubBase: 10, expected: 2 },   // Positive growth
-      { paidClubs: 8, clubBase: 10, expected: -2 },   // Negative growth
-      { paidClubs: 0, clubBase: 5, expected: -5 },    // All clubs lost
-      { paidClubs: 20, clubBase: 0, expected: 20 },   // Starting from zero
-      { paidClubs: 1, clubBase: 1, expected: 0 },     // Single club, no change
+      { paidClubs: 10, clubBase: 10, expected: 0 }, // No change
+      { paidClubs: 12, clubBase: 10, expected: 2 }, // Positive growth
+      { paidClubs: 8, clubBase: 10, expected: -2 }, // Negative growth
+      { paidClubs: 0, clubBase: 5, expected: -5 }, // All clubs lost
+      { paidClubs: 20, clubBase: 0, expected: 20 }, // Starting from zero
+      { paidClubs: 1, clubBase: 1, expected: 0 }, // Single club, no change
       { paidClubs: 100, clubBase: 50, expected: 50 }, // Large positive growth
       { paidClubs: 25, clubBase: 75, expected: -50 }, // Large negative growth
     ]
@@ -339,7 +336,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
         (clubBase: number, completedVisits: number) => {
           // Constrain completed visits to be at most club base
           const actualCompleted = Math.min(completedVisits, clubBase)
-          
+
           const result = calculateVisitStatus(actualCompleted, clubBase)
 
           // Calculate expected values
@@ -360,7 +357,9 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
 
           // Required must be at least 75% of club base
           expect(result.required).toBeGreaterThanOrEqual(clubBase * 0.75)
-          expect(result.required).toBeLessThanOrEqual(Math.ceil(clubBase * 0.75))
+          expect(result.required).toBeLessThanOrEqual(
+            Math.ceil(clubBase * 0.75)
+          )
 
           // If completed >= required, threshold must be met
           if (actualCompleted >= result.required) {
@@ -385,7 +384,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
         (clubBase: number, completedVisits: number) => {
           // Constrain completed visits to be at most club base
           const actualCompleted = Math.min(completedVisits, clubBase)
-          
+
           // Calculate visit status multiple times with the same inputs
           const result1 = calculateVisitStatus(actualCompleted, clubBase)
           const result2 = calculateVisitStatus(actualCompleted, clubBase)
@@ -574,7 +573,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
         (clubBase: number, completedVisits: number) => {
           // Constrain completed visits to be at most club base
           const actualCompleted = Math.min(completedVisits, clubBase)
-          
+
           const result = calculateVisitStatus(actualCompleted, clubBase)
 
           // Verify the equivalence relationship
@@ -637,7 +636,7 @@ describe('Property 2: Division Status Classification', () => {
   const clubBaseArb = fc.integer({ min: 1, max: 100 })
 
   // Generator for division metrics
-  const divisionMetricsArb = clubBaseArb.chain((clubBase) => {
+  const divisionMetricsArb = clubBaseArb.chain(clubBase => {
     const threshold = Math.ceil(clubBase * 0.5)
     return fc.record({
       clubBase: fc.constant(clubBase),
@@ -649,7 +648,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should classify status correctly for any valid division metrics', () => {
     fc.assert(
-      fc.property(divisionMetricsArb, (metrics) => {
+      fc.property(divisionMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
 
@@ -673,7 +672,10 @@ describe('Property 2: Division Status Classification', () => {
         if (distinguishedClubs >= threshold + 1 && netGrowth >= 1) {
           // Should be President's Distinguished
           expect(status).toBe('presidents-distinguished')
-        } else if (distinguishedClubs >= threshold + 1 && paidClubs >= clubBase) {
+        } else if (
+          distinguishedClubs >= threshold + 1 &&
+          paidClubs >= clubBase
+        ) {
           // Should be Select Distinguished (but not President's)
           expect(status).toBe('select-distinguished')
         } else if (distinguishedClubs >= threshold && paidClubs >= clubBase) {
@@ -690,7 +692,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should produce consistent results for the same inputs', () => {
     fc.assert(
-      fc.property(divisionMetricsArb, (metrics) => {
+      fc.property(divisionMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
 
@@ -725,9 +727,9 @@ describe('Property 2: Division Status Classification', () => {
     )
   })
 
-  it('should correctly identify President\'s Distinguished status', () => {
+  it("should correctly identify President's Distinguished status", () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const distinguishedClubs = threshold + 1
         const paidClubs = clubBase + 1 // Net growth of 1
@@ -750,7 +752,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should correctly identify Select Distinguished status', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const distinguishedClubs = threshold + 1
         const paidClubs = clubBase // No net growth
@@ -773,7 +775,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should correctly identify Distinguished status', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const distinguishedClubs = threshold // Exactly at threshold
         const paidClubs = clubBase // No net growth
@@ -796,7 +798,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should correctly identify Not Distinguished status', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
 
         // Test case 1: Below threshold
@@ -827,9 +829,9 @@ describe('Property 2: Division Status Classification', () => {
     )
   })
 
-  it('should respect status precedence (President\'s > Select > Distinguished)', () => {
+  it("should respect status precedence (President's > Select > Distinguished)", () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
 
         // When all criteria for President's are met, it should be President's
@@ -868,7 +870,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should handle boundary conditions correctly', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
 
         // Exactly at threshold + 1 with net growth = 1 should be President's
@@ -921,7 +923,8 @@ describe('Property 2: Division Status Classification', () => {
     // Test specific examples to ensure correctness
     const testCases = [
       {
-        description: 'President\'s Distinguished: 6 distinguished (≥ 5+1), net growth 2 (≥ 1)',
+        description:
+          "President's Distinguished: 6 distinguished (≥ 5+1), net growth 2 (≥ 1)",
         distinguishedClubs: 6,
         threshold: 5,
         paidClubs: 12,
@@ -930,7 +933,8 @@ describe('Property 2: Division Status Classification', () => {
         expected: 'presidents-distinguished',
       },
       {
-        description: 'Select Distinguished: 6 distinguished (≥ 5+1), paid 10 (≥ 10), net growth 0',
+        description:
+          'Select Distinguished: 6 distinguished (≥ 5+1), paid 10 (≥ 10), net growth 0',
         distinguishedClubs: 6,
         threshold: 5,
         paidClubs: 10,
@@ -966,7 +970,8 @@ describe('Property 2: Division Status Classification', () => {
         expected: 'not-distinguished',
       },
       {
-        description: 'President\'s Distinguished: Exactly at threshold + 1, net growth = 1',
+        description:
+          "President's Distinguished: Exactly at threshold + 1, net growth = 1",
         distinguishedClubs: 6,
         threshold: 5,
         paidClubs: 11,
@@ -1011,7 +1016,7 @@ describe('Property 2: Division Status Classification', () => {
         expected: 'not-distinguished',
       },
       {
-        description: 'Edge case: club base = 1, threshold = 1, President\'s',
+        description: "Edge case: club base = 1, threshold = 1, President's",
         distinguishedClubs: 2,
         threshold: 1,
         paidClubs: 2,
@@ -1039,21 +1044,31 @@ describe('Property 2: Division Status Classification', () => {
       },
     ]
 
-    testCases.forEach(({ description, distinguishedClubs, threshold, paidClubs, clubBase, netGrowth, expected }) => {
-      const status = calculateDivisionStatus(
+    testCases.forEach(
+      ({
+        description,
         distinguishedClubs,
         threshold,
         paidClubs,
         clubBase,
-        netGrowth
-      )
-      expect(status).toBe(expected)
-    })
+        netGrowth,
+        expected,
+      }) => {
+        const status = calculateDivisionStatus(
+          distinguishedClubs,
+          threshold,
+          paidClubs,
+          clubBase,
+          netGrowth
+        )
+        expect(status).toBe(expected)
+      }
+    )
   })
 
   it('should maintain invariant: higher distinguished clubs never decrease status', () => {
     fc.assert(
-      fc.property(divisionMetricsArb, (metrics) => {
+      fc.property(divisionMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
 
@@ -1078,13 +1093,15 @@ describe('Property 2: Division Status Classification', () => {
         // Define status ordering
         const statusOrder = {
           'not-distinguished': 0,
-          'distinguished': 1,
+          distinguished: 1,
           'select-distinguished': 2,
           'presidents-distinguished': 3,
         }
 
         // Status with more distinguished clubs should be >= status with fewer
-        expect(statusOrder[status2]).toBeGreaterThanOrEqual(statusOrder[status1])
+        expect(statusOrder[status2]).toBeGreaterThanOrEqual(
+          statusOrder[status1]
+        )
       }),
       { numRuns: 100 }
     )
@@ -1092,7 +1109,7 @@ describe('Property 2: Division Status Classification', () => {
 
   it('should maintain invariant: higher net growth never decreases status', () => {
     fc.assert(
-      fc.property(divisionMetricsArb, (metrics) => {
+      fc.property(divisionMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
 
@@ -1117,13 +1134,15 @@ describe('Property 2: Division Status Classification', () => {
         // Define status ordering
         const statusOrder = {
           'not-distinguished': 0,
-          'distinguished': 1,
+          distinguished: 1,
           'select-distinguished': 2,
           'presidents-distinguished': 3,
         }
 
         // Status with higher net growth should be >= status with lower net growth
-        expect(statusOrder[status2]).toBeGreaterThanOrEqual(statusOrder[status1])
+        expect(statusOrder[status2]).toBeGreaterThanOrEqual(
+          statusOrder[status1]
+        )
       }),
       { numRuns: 100 }
     )
@@ -1167,7 +1186,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
 
   it('should mark area as qualified if and only if ALL three criteria are met', () => {
     fc.assert(
-      fc.property(areaQualifyingMetricsArb, (metrics) => {
+      fc.property(areaQualifyingMetricsArb, metrics => {
         const { netGrowth, firstRoundVisits, secondRoundVisits } = metrics
 
         const isQualified = checkAreaQualifying(
@@ -1207,7 +1226,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
 
   it('should produce consistent results for the same inputs', () => {
     fc.assert(
-      fc.property(areaQualifyingMetricsArb, (metrics) => {
+      fc.property(areaQualifyingMetricsArb, metrics => {
         const { netGrowth, firstRoundVisits, secondRoundVisits } = metrics
 
         // Calculate qualification multiple times with the same inputs
@@ -1345,22 +1364,26 @@ describe('Property 3: Area Qualifying Requirements', () => {
 
   it('should handle edge case of zero net growth (no change)', () => {
     fc.assert(
-      fc.property(visitStatusArb, visitStatusArb, (firstRoundVisits, secondRoundVisits) => {
-        const netGrowth = 0
+      fc.property(
+        visitStatusArb,
+        visitStatusArb,
+        (firstRoundVisits, secondRoundVisits) => {
+          const netGrowth = 0
 
-        // Force both visit rounds to meet threshold
-        const firstRound = { ...firstRoundVisits, meetsThreshold: true }
-        const secondRound = { ...secondRoundVisits, meetsThreshold: true }
+          // Force both visit rounds to meet threshold
+          const firstRound = { ...firstRoundVisits, meetsThreshold: true }
+          const secondRound = { ...secondRoundVisits, meetsThreshold: true }
 
-        const isQualified = checkAreaQualifying(
-          netGrowth,
-          firstRound,
-          secondRound
-        )
+          const isQualified = checkAreaQualifying(
+            netGrowth,
+            firstRound,
+            secondRound
+          )
 
-        // Zero net growth (no change) should still qualify if visits are met
-        expect(isQualified).toBe(true)
-      }),
+          // Zero net growth (no change) should still qualify if visits are met
+          expect(isQualified).toBe(true)
+        }
+      ),
       { numRuns: 100 }
     )
   })
@@ -1371,88 +1394,196 @@ describe('Property 3: Area Qualifying Requirements', () => {
       {
         description: 'Qualified: no club loss, both visits ≥ 75%',
         netGrowth: 0,
-        firstRoundVisits: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
-        secondRoundVisits: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
+        firstRoundVisits: {
+          completed: 3,
+          required: 3,
+          percentage: 75,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 3,
+          required: 3,
+          percentage: 75,
+          meetsThreshold: true,
+        },
         expected: true,
       },
       {
         description: 'Qualified: positive growth, both visits ≥ 75%',
         netGrowth: 2,
-        firstRoundVisits: { completed: 4, required: 3, percentage: 100, meetsThreshold: true },
-        secondRoundVisits: { completed: 4, required: 3, percentage: 100, meetsThreshold: true },
+        firstRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
         expected: true,
       },
       {
         description: 'Not qualified: net club loss',
         netGrowth: -1,
-        firstRoundVisits: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
-        secondRoundVisits: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
+        firstRoundVisits: {
+          completed: 3,
+          required: 3,
+          percentage: 75,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 3,
+          required: 3,
+          percentage: 75,
+          meetsThreshold: true,
+        },
         expected: false,
       },
       {
         description: 'Not qualified: first round visits below 75%',
         netGrowth: 0,
-        firstRoundVisits: { completed: 2, required: 3, percentage: 67, meetsThreshold: false },
-        secondRoundVisits: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
+        firstRoundVisits: {
+          completed: 2,
+          required: 3,
+          percentage: 67,
+          meetsThreshold: false,
+        },
+        secondRoundVisits: {
+          completed: 3,
+          required: 3,
+          percentage: 75,
+          meetsThreshold: true,
+        },
         expected: false,
       },
       {
         description: 'Not qualified: second round visits below 75%',
         netGrowth: 0,
-        firstRoundVisits: { completed: 3, required: 3, percentage: 75, meetsThreshold: true },
-        secondRoundVisits: { completed: 2, required: 3, percentage: 67, meetsThreshold: false },
+        firstRoundVisits: {
+          completed: 3,
+          required: 3,
+          percentage: 75,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 2,
+          required: 3,
+          percentage: 67,
+          meetsThreshold: false,
+        },
         expected: false,
       },
       {
         description: 'Not qualified: both visit rounds below 75%',
         netGrowth: 0,
-        firstRoundVisits: { completed: 2, required: 3, percentage: 67, meetsThreshold: false },
-        secondRoundVisits: { completed: 2, required: 3, percentage: 67, meetsThreshold: false },
+        firstRoundVisits: {
+          completed: 2,
+          required: 3,
+          percentage: 67,
+          meetsThreshold: false,
+        },
+        secondRoundVisits: {
+          completed: 2,
+          required: 3,
+          percentage: 67,
+          meetsThreshold: false,
+        },
         expected: false,
       },
       {
         description: 'Not qualified: all three criteria failed',
         netGrowth: -2,
-        firstRoundVisits: { completed: 1, required: 3, percentage: 33, meetsThreshold: false },
-        secondRoundVisits: { completed: 1, required: 3, percentage: 33, meetsThreshold: false },
+        firstRoundVisits: {
+          completed: 1,
+          required: 3,
+          percentage: 33,
+          meetsThreshold: false,
+        },
+        secondRoundVisits: {
+          completed: 1,
+          required: 3,
+          percentage: 33,
+          meetsThreshold: false,
+        },
         expected: false,
       },
       {
         description: 'Qualified: exactly at thresholds',
         netGrowth: 0,
-        firstRoundVisits: { completed: 8, required: 8, percentage: 80, meetsThreshold: true },
-        secondRoundVisits: { completed: 8, required: 8, percentage: 80, meetsThreshold: true },
+        firstRoundVisits: {
+          completed: 8,
+          required: 8,
+          percentage: 80,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 8,
+          required: 8,
+          percentage: 80,
+          meetsThreshold: true,
+        },
         expected: true,
       },
       {
         description: 'Not qualified: one below first round threshold',
         netGrowth: 0,
-        firstRoundVisits: { completed: 7, required: 8, percentage: 70, meetsThreshold: false },
-        secondRoundVisits: { completed: 8, required: 8, percentage: 80, meetsThreshold: true },
+        firstRoundVisits: {
+          completed: 7,
+          required: 8,
+          percentage: 70,
+          meetsThreshold: false,
+        },
+        secondRoundVisits: {
+          completed: 8,
+          required: 8,
+          percentage: 80,
+          meetsThreshold: true,
+        },
         expected: false,
       },
       {
         description: 'Not qualified: one below second round threshold',
         netGrowth: 0,
-        firstRoundVisits: { completed: 8, required: 8, percentage: 80, meetsThreshold: true },
-        secondRoundVisits: { completed: 7, required: 8, percentage: 70, meetsThreshold: false },
+        firstRoundVisits: {
+          completed: 8,
+          required: 8,
+          percentage: 80,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 7,
+          required: 8,
+          percentage: 70,
+          meetsThreshold: false,
+        },
         expected: false,
       },
     ]
 
-    testCases.forEach(({ description, netGrowth, firstRoundVisits, secondRoundVisits, expected }) => {
-      const isQualified = checkAreaQualifying(
+    testCases.forEach(
+      ({
+        description,
         netGrowth,
         firstRoundVisits,
-        secondRoundVisits
-      )
-      expect(isQualified).toBe(expected)
-    })
+        secondRoundVisits,
+        expected,
+      }) => {
+        const isQualified = checkAreaQualifying(
+          netGrowth,
+          firstRoundVisits,
+          secondRoundVisits
+        )
+        expect(isQualified).toBe(expected)
+      }
+    )
   })
 
   it('should maintain invariant: improving any criterion never makes area less qualified', () => {
     fc.assert(
-      fc.property(areaQualifyingMetricsArb, (metrics) => {
+      fc.property(areaQualifyingMetricsArb, metrics => {
         const { netGrowth, firstRoundVisits, secondRoundVisits } = metrics
 
         // Calculate qualification with current metrics
@@ -1479,7 +1610,10 @@ describe('Property 3: Area Qualifying Requirements', () => {
         )
 
         // Improve second round visits (force to meet threshold)
-        const improvedSecondRound = { ...secondRoundVisits, meetsThreshold: true }
+        const improvedSecondRound = {
+          ...secondRoundVisits,
+          meetsThreshold: true,
+        }
         const qualified4 = checkAreaQualifying(
           netGrowth,
           firstRoundVisits,
@@ -1525,7 +1659,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
   const clubBaseArb = fc.integer({ min: 1, max: 100 })
 
   // Generator for area metrics
-  const areaMetricsArb = clubBaseArb.chain((clubBase) => {
+  const areaMetricsArb = clubBaseArb.chain(clubBase => {
     const threshold = Math.ceil(clubBase * 0.5)
     return fc.record({
       clubBase: fc.constant(clubBase),
@@ -1538,7 +1672,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should return "not-qualified" for any non-qualified area regardless of metrics', () => {
     fc.assert(
-      fc.property(areaMetricsArb, (metrics) => {
+      fc.property(areaMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
         const isQualified = false // Force not qualified
@@ -1564,7 +1698,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should apply division classification rules for qualified areas', () => {
     fc.assert(
-      fc.property(areaMetricsArb, (metrics) => {
+      fc.property(areaMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
         const isQualified = true // Force qualified
@@ -1599,8 +1733,14 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should produce consistent results for the same inputs', () => {
     fc.assert(
-      fc.property(areaMetricsArb, (metrics) => {
-        const { clubBase, threshold, distinguishedClubs, paidClubs, isQualified } = metrics
+      fc.property(areaMetricsArb, metrics => {
+        const {
+          clubBase,
+          threshold,
+          distinguishedClubs,
+          paidClubs,
+          isQualified,
+        } = metrics
         const netGrowth = paidClubs - clubBase
 
         // Calculate status multiple times with the same inputs
@@ -1637,9 +1777,9 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
     )
   })
 
-  it('should correctly identify President\'s Distinguished for qualified areas', () => {
+  it("should correctly identify President's Distinguished for qualified areas", () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const distinguishedClubs = threshold + 1
         const paidClubs = clubBase + 1 // Net growth of 1
@@ -1664,7 +1804,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should correctly identify Select Distinguished for qualified areas', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const distinguishedClubs = threshold + 1
         const paidClubs = clubBase // No net growth
@@ -1689,7 +1829,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should correctly identify Distinguished for qualified areas', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const distinguishedClubs = threshold // Exactly at threshold
         const paidClubs = clubBase // No net growth
@@ -1714,7 +1854,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should correctly identify Not Distinguished for qualified areas with insufficient metrics', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const isQualified = true
 
@@ -1750,7 +1890,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should verify that excellent metrics cannot override non-qualified status', () => {
     fc.assert(
-      fc.property(clubBaseArb, (clubBase) => {
+      fc.property(clubBaseArb, clubBase => {
         const threshold = Math.ceil(clubBase * 0.5)
         const isQualified = false
 
@@ -1789,7 +1929,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         expected: 'not-qualified',
       },
       {
-        description: 'Qualified: President\'s Distinguished',
+        description: "Qualified: President's Distinguished",
         isQualified: true,
         distinguishedClubs: 6,
         threshold: 5,
@@ -1880,22 +2020,33 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
       },
     ]
 
-    testCases.forEach(({ description, isQualified, distinguishedClubs, threshold, paidClubs, clubBase, netGrowth, expected }) => {
-      const status = calculateAreaStatus(
+    testCases.forEach(
+      ({
+        description,
         isQualified,
         distinguishedClubs,
         threshold,
         paidClubs,
         clubBase,
-        netGrowth
-      )
-      expect(status).toBe(expected)
-    })
+        netGrowth,
+        expected,
+      }) => {
+        const status = calculateAreaStatus(
+          isQualified,
+          distinguishedClubs,
+          threshold,
+          paidClubs,
+          clubBase,
+          netGrowth
+        )
+        expect(status).toBe(expected)
+      }
+    )
   })
 
   it('should maintain invariant: qualifying status change affects result', () => {
     fc.assert(
-      fc.property(areaMetricsArb, (metrics) => {
+      fc.property(areaMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
 
@@ -1930,7 +2081,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         const statusOrder = {
           'not-qualified': 0,
           'not-distinguished': 1,
-          'distinguished': 2,
+          distinguished: 2,
           'select-distinguished': 3,
           'presidents-distinguished': 4,
         }
@@ -1945,7 +2096,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
   it('should maintain invariant: qualified areas with better metrics never have worse status', () => {
     fc.assert(
-      fc.property(areaMetricsArb, (metrics) => {
+      fc.property(areaMetricsArb, metrics => {
         const { clubBase, threshold, distinguishedClubs, paidClubs } = metrics
         const netGrowth = paidClubs - clubBase
         const isQualified = true // Only test qualified areas
@@ -1974,13 +2125,15 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         const statusOrder = {
           'not-qualified': 0,
           'not-distinguished': 1,
-          'distinguished': 2,
+          distinguished: 2,
           'select-distinguished': 3,
           'presidents-distinguished': 4,
         }
 
         // Status with more distinguished clubs should be >= status with fewer
-        expect(statusOrder[status2]).toBeGreaterThanOrEqual(statusOrder[status1])
+        expect(statusOrder[status2]).toBeGreaterThanOrEqual(
+          statusOrder[status1]
+        )
       }),
       { numRuns: 100 }
     )

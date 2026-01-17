@@ -37,7 +37,9 @@ export interface DivisionSummaryProps {
 /**
  * Returns the display label for a distinguished status
  */
-function getStatusLabel(status: Exclude<DistinguishedStatus, 'not-qualified'>): string {
+function getStatusLabel(
+  status: Exclude<DistinguishedStatus, 'not-qualified'>
+): string {
   switch (status) {
     case 'presidents-distinguished':
       return "President's Distinguished"
@@ -53,9 +55,12 @@ function getStatusLabel(status: Exclude<DistinguishedStatus, 'not-qualified'>): 
 /**
  * Returns the CSS classes for status badge styling
  */
-function getStatusBadgeClasses(status: Exclude<DistinguishedStatus, 'not-qualified'>): string {
-  const baseClasses = 'inline-flex items-center px-3 py-1.5 tm-rounded-lg tm-body-small font-semibold'
-  
+function getStatusBadgeClasses(
+  status: Exclude<DistinguishedStatus, 'not-qualified'>
+): string {
+  const baseClasses =
+    'inline-flex items-center px-3 py-1.5 tm-rounded-lg tm-body-small font-semibold'
+
   switch (status) {
     case 'presidents-distinguished':
       return `${baseClasses} tm-bg-loyal-blue tm-text-white`
@@ -113,9 +118,7 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
     <div className="p-6 border-b border-gray-200">
       {/* Division Identifier and Status Badge */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="tm-h2 tm-text-loyal-blue">
-          Division {divisionId}
-        </h2>
+        <h2 className="tm-h2 tm-text-loyal-blue">Division {divisionId}</h2>
         <div
           className={statusBadgeClasses}
           role="status"
@@ -130,9 +133,7 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Paid Clubs Progress */}
         <div>
-          <p className="tm-body-small tm-text-cool-gray mb-1">
-            Paid Clubs
-          </p>
+          <p className="tm-body-small tm-text-cool-gray mb-1">Paid Clubs</p>
           <div className="flex items-baseline gap-2">
             <span className="tm-h3 tm-text-black">
               {paidClubs} / {clubBase}
@@ -141,9 +142,9 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
               className={`tm-body-small ${netGrowthClasses}`}
               aria-label={`Net growth: ${netGrowth > 0 ? 'positive' : netGrowth < 0 ? 'negative' : 'neutral'} ${Math.abs(netGrowth)}`}
             >
-              <span aria-hidden="true">{netGrowthIcon}</span>
-              {' '}
-              {netGrowth > 0 ? '+' : ''}{netGrowth}
+              <span aria-hidden="true">{netGrowthIcon}</span>{' '}
+              {netGrowth > 0 ? '+' : ''}
+              {netGrowth}
             </span>
           </div>
         </div>

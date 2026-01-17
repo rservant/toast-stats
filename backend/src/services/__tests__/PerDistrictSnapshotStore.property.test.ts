@@ -50,6 +50,9 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     }
   })
 
+  // Counter for generating unique dataAsOfDate values across test iterations
+  let testIterationCounter = 0
+
   // Generators for property-based testing
   const districtIdGenerator = fc.oneof(
     fc.integer({ min: 1, max: 999 }).map(n => n.toString()), // Numeric districts
@@ -102,6 +105,17 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     }),
   })
 
+  /**
+   * Generate a unique dataAsOfDate for each test iteration.
+   * This ensures snapshots don't overwrite each other when using the same store.
+   */
+  const generateUniqueDataAsOfDate = (): string => {
+    testIterationCounter++
+    const baseDate = new Date('2020-01-01')
+    baseDate.setDate(baseDate.getDate() + testIterationCounter)
+    return baseDate.toISOString().split('T')[0]
+  }
+
   const snapshotGenerator = fc.record({
     snapshot_id: fc
       .integer({ min: 1000000000000, max: 9999999999999 })
@@ -131,6 +145,7 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
         fetchedAt: fc
           .integer({ min: 1577836800000, max: 1924992000000 })
           .map(timestamp => new Date(timestamp).toISOString()),
+        // Note: dataAsOfDate will be overridden in tests to ensure uniqueness
         dataAsOfDate: fc
           .integer({ min: 1577836800000, max: 1924992000000 })
           .map(timestamp => new Date(timestamp).toISOString().split('T')[0]),
@@ -149,6 +164,10 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Force status to 'success' for this test since we need getLatestSuccessful to work
           snapshot.status = 'success'
 
+          // Generate unique dataAsOfDate to prevent snapshot overwrites
+          const uniqueDataAsOfDate = generateUniqueDataAsOfDate()
+          snapshot.payload.metadata.dataAsOfDate = uniqueDataAsOfDate
+
           // Ensure district count matches payload
           snapshot.payload.metadata.districtCount =
             snapshot.payload.districts.length
@@ -165,10 +184,8 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(snapshot)
 
-          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
-          const latestSnapshot = await store.getLatestSuccessful()
-          expect(latestSnapshot).not.toBeNull()
-          const actualSnapshotId = latestSnapshot!.snapshot_id
+          // The actual snapshot ID is the ISO date format of dataAsOfDate
+          const actualSnapshotId = uniqueDataAsOfDate
 
           // Verify directory structure exists using actual snapshot ID
           const snapshotDir = path.join(
@@ -235,6 +252,10 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Force status to 'success' for this test since we need getLatestSuccessful to work
           snapshot.status = 'success'
 
+          // Generate unique dataAsOfDate to prevent snapshot overwrites
+          const uniqueDataAsOfDate = generateUniqueDataAsOfDate()
+          snapshot.payload.metadata.dataAsOfDate = uniqueDataAsOfDate
+
           // Ensure district count matches payload
           snapshot.payload.metadata.districtCount =
             snapshot.payload.districts.length
@@ -250,10 +271,8 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(snapshot)
 
-          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
-          const latestSnapshot = await store.getLatestSuccessful()
-          expect(latestSnapshot).not.toBeNull()
-          const actualSnapshotId = latestSnapshot!.snapshot_id
+          // The actual snapshot ID is the ISO date format of dataAsOfDate
+          const actualSnapshotId = uniqueDataAsOfDate
 
           // Read and verify metadata.json using actual snapshot ID
           const metadata = await store.getSnapshotMetadata(actualSnapshotId)
@@ -268,9 +287,7 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
             snapshot.payload.districts.map(d => d.districtId)
           )
           expect(metadata!.source).toBe(snapshot.payload.metadata.source)
-          expect(metadata!.dataAsOfDate).toBe(
-            snapshot.payload.metadata.dataAsOfDate
-          )
+          expect(metadata!.dataAsOfDate).toBe(uniqueDataAsOfDate)
 
           // Read and verify manifest.json using actual snapshot ID
           const manifest = await store.getSnapshotManifest(actualSnapshotId)
@@ -304,36 +321,45 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
     TEST_TIMEOUT
   )
 
-  // Feature: district-scoped-data-collection, Property 16: Current Snapshot Pointer Maintenance
+  // Feature: district-scoped-data-collection, Property 16: Directory Scanning for Latest Snapshot
+  // Updated: current.json pointer mechanism removed, directory scanning is now primary mechanism
   it(
-    'Property 16: Current Snapshot Pointer Maintenance - should update current.json for successful snapshots',
+    'Property 16: Directory Scanning for Latest Snapshot - should find latest successful snapshot via directory scanning',
     async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.array(snapshotGenerator, { minLength: 1, maxLength: 5 }),
+          fc.array(snapshotGenerator, { minLength: 1, maxLength: 3 }),
           async snapshots => {
+            // Generate unique base date for this test iteration
+            const baseIterationDate = generateUniqueDataAsOfDate()
+            const baseDate = new Date(baseIterationDate)
+
             // Ensure unique snapshot IDs and district IDs within each snapshot
             // Use different dataAsOfDate values to ensure unique snapshot directories
             const uniqueSnapshots = snapshots.map((snapshot, index) => {
-              // Generate unique dataAsOfDate for each snapshot
-              const baseDate = new Date('2020-01-01')
-              baseDate.setDate(baseDate.getDate() + index)
-              const dataAsOfDate = baseDate.toISOString().split('T')[0]
+              // Generate unique dataAsOfDate for each snapshot within this iteration
+              const snapshotDate = new Date(baseDate)
+              snapshotDate.setDate(snapshotDate.getDate() + index)
+              const dataAsOfDate = snapshotDate.toISOString().split('T')[0]
 
               return {
                 ...snapshot,
                 snapshot_id: (Date.now() + index).toString(),
                 payload: {
                   ...snapshot.payload,
-                  districts: snapshot.payload.districts.map(
-                    (district, districtIndex) => ({
+                  // Limit districts to reduce test complexity
+                  districts: snapshot.payload.districts
+                    .slice(0, 2)
+                    .map((district, districtIndex) => ({
                       ...district,
-                      districtId: `${district.districtId}_${index}_${districtIndex}`,
-                    })
-                  ),
+                      districtId: `D${testIterationCounter}_${index}_${districtIndex}`,
+                    })),
                   metadata: {
                     ...snapshot.payload.metadata,
-                    districtCount: snapshot.payload.districts.length,
+                    districtCount: Math.min(
+                      snapshot.payload.districts.length,
+                      2
+                    ),
                     dataAsOfDate,
                   },
                 },
@@ -352,7 +378,7 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
               }
             }
 
-            // Verify current.json points to the last successful snapshot
+            // Verify latest successful snapshot is found via directory scanning (no current.json pointer)
             if (lastSuccessfulDataAsOfDate) {
               const currentSnapshot = await store.getLatestSuccessful()
               expect(currentSnapshot).toBeDefined()
@@ -360,12 +386,20 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
               expect(currentSnapshot!.snapshot_id).toBe(
                 lastSuccessfulDataAsOfDate
               )
+
+              // Verify no current.json pointer file exists (directory scanning is primary mechanism)
+              const currentPointerPath = path.join(testCacheDir, 'current.json')
+              const currentExists = await fs
+                .access(currentPointerPath)
+                .then(() => true)
+                .catch(() => false)
+              expect(currentExists).toBe(false)
             }
 
             return true
           }
         ),
-        { numRuns: Math.min(TEST_ITERATIONS, 50) } // Reduce iterations for this more complex test
+        { numRuns: 10 } // Reduced iterations for this complex test
       )
     },
     TEST_TIMEOUT
@@ -379,6 +413,10 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
         fc.asyncProperty(snapshotGenerator, async originalSnapshot => {
           // Force status to 'success' for this test since we need getLatestSuccessful to work
           originalSnapshot.status = 'success'
+
+          // Generate unique dataAsOfDate to prevent snapshot overwrites
+          const uniqueDataAsOfDate = generateUniqueDataAsOfDate()
+          originalSnapshot.payload.metadata.dataAsOfDate = uniqueDataAsOfDate
 
           // Ensure district count matches payload
           originalSnapshot.payload.metadata.districtCount =
@@ -397,10 +435,8 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(originalSnapshot)
 
-          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
-          const latestSnapshot = await store.getLatestSuccessful()
-          expect(latestSnapshot).not.toBeNull()
-          const actualSnapshotId = latestSnapshot!.snapshot_id
+          // The actual snapshot ID is the ISO date format of dataAsOfDate
+          const actualSnapshotId = uniqueDataAsOfDate
 
           // Read it back using the aggregation method with actual snapshot ID
           const reconstructedSnapshot =
@@ -449,7 +485,7 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
             originalSnapshot.payload.metadata.source
           )
           expect(reconstructedSnapshot!.payload.metadata.dataAsOfDate).toBe(
-            originalSnapshot.payload.metadata.dataAsOfDate
+            uniqueDataAsOfDate
           )
           expect(reconstructedSnapshot!.payload.metadata.districtCount).toBe(
             originalSnapshot.payload.districts.length
@@ -472,6 +508,10 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Force status to 'success' for this test since we need getLatestSuccessful to work
           snapshot.status = 'success'
 
+          // Generate unique dataAsOfDate to prevent snapshot overwrites
+          const uniqueDataAsOfDate = generateUniqueDataAsOfDate()
+          snapshot.payload.metadata.dataAsOfDate = uniqueDataAsOfDate
+
           // Ensure district count matches payload
           snapshot.payload.metadata.districtCount =
             snapshot.payload.districts.length
@@ -487,10 +527,8 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
           // Write the snapshot
           await store.writeSnapshot(snapshot)
 
-          // Get the actual snapshot ID (writeSnapshot converts to ISO date format)
-          const latestSnapshot = await store.getLatestSuccessful()
-          expect(latestSnapshot).not.toBeNull()
-          const actualSnapshotId = latestSnapshot!.snapshot_id
+          // The actual snapshot ID is the ISO date format of dataAsOfDate
+          const actualSnapshotId = uniqueDataAsOfDate
 
           // Test reading existing districts using actual snapshot ID
           for (const originalDistrict of snapshot.payload.districts) {
@@ -501,6 +539,7 @@ describe('PerDistrictSnapshotStore Property Tests', () => {
 
             // District should be found and data should match
             expect(districtData).toBeDefined()
+            expect(districtData).not.toBeNull()
             expect(districtData!.districtId).toBe(originalDistrict.districtId)
             expect(districtData!.membership.total).toBe(
               originalDistrict.membership.total

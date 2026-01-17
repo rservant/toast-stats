@@ -179,7 +179,9 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
 
           // Requirement 1.3: Verify cards are ordered by division identifier
           // Get all division heading elements in DOM order
-          const allDivisionHeadings = screen.getAllByText(/^Division [A-Z]{1,2}$/)
+          const allDivisionHeadings = screen.getAllByText(
+            /^Division [A-Z]{1,2}$/
+          )
 
           if (allDivisionHeadings.length !== expectedCount) {
             throw new Error(
@@ -626,136 +628,140 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
    * - 10.2: When new district snapshot data becomes available, THE System SHALL
    *         update all displayed metrics
    */
-  it('Property 13: should recalculate and update metrics when snapshot changes', { timeout: 10000 }, () => {
-    fc.assert(
-      fc.property(
-        divisionsArrayArb,
-        divisionsArrayArb,
-        (divisions1, divisions2) => {
-          // Skip if both division arrays are empty (nothing to compare)
-          if (divisions1.length === 0 && divisions2.length === 0) {
-            return true
-          }
+  it(
+    'Property 13: should recalculate and update metrics when snapshot changes',
+    { timeout: 10000 },
+    () => {
+      fc.assert(
+        fc.property(
+          divisionsArrayArb,
+          divisionsArrayArb,
+          (divisions1, divisions2) => {
+            // Skip if both division arrays are empty (nothing to compare)
+            if (divisions1.length === 0 && divisions2.length === 0) {
+              return true
+            }
 
-          // Ensure the two division arrays are actually different
-          // by checking if they have different content
-          const areDifferent =
-            divisions1.length !== divisions2.length ||
-            divisions1.some((d1, idx) => {
-              const d2 = divisions2[idx]
-              return (
-                !d2 ||
-                d1.divisionId !== d2.divisionId ||
-                d1.status !== d2.status ||
-                d1.paidClubs !== d2.paidClubs ||
-                d1.clubBase !== d2.clubBase ||
-                d1.distinguishedClubs !== d2.distinguishedClubs
-              )
-            })
-
-          // Skip if the divisions are identical (no change to detect)
-          if (!areDifferent) {
-            return true
-          }
-
-          cleanup()
-
-          // Create mock snapshots (the actual snapshot structure doesn't matter
-          // since we're mocking extractDivisionPerformance)
-          const snapshot1 = { data: 'snapshot1' }
-          const snapshot2 = { data: 'snapshot2' }
-
-          // Render with first snapshot
-          vi.mocked(extractDivisionPerformance).mockReturnValue(divisions1)
-          const { rerender } = render(
-            <DivisionPerformanceCards
-              districtSnapshot={snapshot1}
-              isLoading={false}
-            />
-          )
-
-          // Verify first render shows divisions from first snapshot
-          if (divisions1.length > 0) {
-            for (const division of divisions1) {
-              const divisionLabel = `Division ${division.divisionId}`
-              const card = screen.queryByText(divisionLabel)
-              if (!card) {
-                throw new Error(
-                  `Expected to find division "${division.divisionId}" in initial render`
+            // Ensure the two division arrays are actually different
+            // by checking if they have different content
+            const areDifferent =
+              divisions1.length !== divisions2.length ||
+              divisions1.some((d1, idx) => {
+                const d2 = divisions2[idx]
+                return (
+                  !d2 ||
+                  d1.divisionId !== d2.divisionId ||
+                  d1.status !== d2.status ||
+                  d1.paidClubs !== d2.paidClubs ||
+                  d1.clubBase !== d2.clubBase ||
+                  d1.distinguishedClubs !== d2.distinguishedClubs
                 )
-              }
-            }
-          }
+              })
 
-          // Update to second snapshot
-          vi.mocked(extractDivisionPerformance).mockReturnValue(divisions2)
-          rerender(
-            <DivisionPerformanceCards
-              districtSnapshot={snapshot2}
-              isLoading={false}
-            />
-          )
-
-          // Requirement 10.1: Verify status classifications are recalculated
-          // Check that the component now shows divisions from the second snapshot
-          if (divisions2.length === 0) {
-            // Should show empty state
-            const emptyMessage = screen.queryByText('No Divisions Found')
-            if (!emptyMessage) {
-              throw new Error(
-                'Expected "No Divisions Found" message after updating to empty snapshot'
-              )
+            // Skip if the divisions are identical (no change to detect)
+            if (!areDifferent) {
+              return true
             }
-          } else {
-            // Should show divisions from second snapshot
-            for (const division of divisions2) {
-              const divisionLabel = `Division ${division.divisionId}`
-              const card = screen.queryByText(divisionLabel)
-              if (!card) {
-                throw new Error(
-                  `Expected to find division "${division.divisionId}" after snapshot update but it was not rendered`
-                )
-              }
-            }
-          }
 
-          // Requirement 10.2: Verify metrics are updated
-          // Verify that divisions removed in the second snapshot are no longer shown
-          for (const division1 of divisions1) {
-            const stillExists = divisions2.some(
-              d => d.divisionId === division1.divisionId
+            cleanup()
+
+            // Create mock snapshots (the actual snapshot structure doesn't matter
+            // since we're mocking extractDivisionPerformance)
+            const snapshot1 = { data: 'snapshot1' }
+            const snapshot2 = { data: 'snapshot2' }
+
+            // Render with first snapshot
+            vi.mocked(extractDivisionPerformance).mockReturnValue(divisions1)
+            const { rerender } = render(
+              <DivisionPerformanceCards
+                districtSnapshot={snapshot1}
+                isLoading={false}
+              />
             )
-            if (!stillExists && divisions2.length > 0) {
-              // This division was removed, verify it's not in the DOM
-              const divisionLabel = `Division ${division1.divisionId}`
-              const card = screen.queryByText(divisionLabel)
-              if (card) {
-                throw new Error(
-                  `Division "${division1.divisionId}" should not be rendered after being removed from snapshot`
-                )
+
+            // Verify first render shows divisions from first snapshot
+            if (divisions1.length > 0) {
+              for (const division of divisions1) {
+                const divisionLabel = `Division ${division.divisionId}`
+                const card = screen.queryByText(divisionLabel)
+                if (!card) {
+                  throw new Error(
+                    `Expected to find division "${division.divisionId}" in initial render`
+                  )
+                }
               }
             }
-          }
 
-          // Verify the count changed if the number of divisions changed
-          if (divisions1.length !== divisions2.length) {
-            const expectedCount = divisions2.length
-            if (expectedCount > 0) {
-              const allDivisionHeadings = screen.queryAllByText(
-                /^Division [A-Z]{1,2}$/
+            // Update to second snapshot
+            vi.mocked(extractDivisionPerformance).mockReturnValue(divisions2)
+            rerender(
+              <DivisionPerformanceCards
+                districtSnapshot={snapshot2}
+                isLoading={false}
+              />
+            )
+
+            // Requirement 10.1: Verify status classifications are recalculated
+            // Check that the component now shows divisions from the second snapshot
+            if (divisions2.length === 0) {
+              // Should show empty state
+              const emptyMessage = screen.queryByText('No Divisions Found')
+              if (!emptyMessage) {
+                throw new Error(
+                  'Expected "No Divisions Found" message after updating to empty snapshot'
+                )
+              }
+            } else {
+              // Should show divisions from second snapshot
+              for (const division of divisions2) {
+                const divisionLabel = `Division ${division.divisionId}`
+                const card = screen.queryByText(divisionLabel)
+                if (!card) {
+                  throw new Error(
+                    `Expected to find division "${division.divisionId}" after snapshot update but it was not rendered`
+                  )
+                }
+              }
+            }
+
+            // Requirement 10.2: Verify metrics are updated
+            // Verify that divisions removed in the second snapshot are no longer shown
+            for (const division1 of divisions1) {
+              const stillExists = divisions2.some(
+                d => d.divisionId === division1.divisionId
               )
-              if (allDivisionHeadings.length !== expectedCount) {
-                throw new Error(
-                  `Expected ${expectedCount} division cards after snapshot update but found ${allDivisionHeadings.length}`
-                )
+              if (!stillExists && divisions2.length > 0) {
+                // This division was removed, verify it's not in the DOM
+                const divisionLabel = `Division ${division1.divisionId}`
+                const card = screen.queryByText(divisionLabel)
+                if (card) {
+                  throw new Error(
+                    `Division "${division1.divisionId}" should not be rendered after being removed from snapshot`
+                  )
+                }
               }
             }
-          }
 
-          return true
-        }
-      ),
-      { numRuns: 100 }
-    )
-  })
+            // Verify the count changed if the number of divisions changed
+            if (divisions1.length !== divisions2.length) {
+              const expectedCount = divisions2.length
+              if (expectedCount > 0) {
+                const allDivisionHeadings = screen.queryAllByText(
+                  /^Division [A-Z]{1,2}$/
+                )
+                if (allDivisionHeadings.length !== expectedCount) {
+                  throw new Error(
+                    `Expected ${expectedCount} division cards after snapshot update but found ${allDivisionHeadings.length}`
+                  )
+                }
+              }
+            }
+
+            return true
+          }
+        ),
+        { numRuns: 100 }
+      )
+    }
+  )
 })

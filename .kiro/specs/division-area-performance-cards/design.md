@@ -40,13 +40,15 @@ DistrictDetailPage (existing)
 **Purpose**: Container component that orchestrates division performance card rendering
 
 **Props**:
+
 ```typescript
 interface DivisionPerformanceCardsProps {
-  districtSnapshot: DistrictSnapshot;
+  districtSnapshot: DistrictSnapshot
 }
 ```
 
 **Responsibilities**:
+
 - Extract division and area data from district snapshot
 - Calculate performance metrics for all divisions and areas
 - Render DivisionPerformanceCard components in order
@@ -57,13 +59,15 @@ interface DivisionPerformanceCardsProps {
 **Purpose**: Displays performance summary and area details for a single division
 
 **Props**:
+
 ```typescript
 interface DivisionPerformanceCardProps {
-  division: DivisionPerformance;
+  division: DivisionPerformance
 }
 ```
 
 **Responsibilities**:
+
 - Render division summary section
 - Render area performance table
 - Apply card styling and layout
@@ -73,19 +77,21 @@ interface DivisionPerformanceCardProps {
 **Purpose**: Displays high-level division performance metrics
 
 **Props**:
+
 ```typescript
 interface DivisionSummaryProps {
-  divisionId: string;
-  status: DistinguishedStatus;
-  paidClubs: number;
-  clubBase: number;
-  netGrowth: number;
-  distinguishedClubs: number;
-  requiredDistinguishedClubs: number;
+  divisionId: string
+  status: DistinguishedStatus
+  paidClubs: number
+  clubBase: number
+  netGrowth: number
+  distinguishedClubs: number
+  requiredDistinguishedClubs: number
 }
 ```
 
 **Responsibilities**:
+
 - Display division identifier
 - Display status badge with appropriate styling
 - Display paid clubs progress with net growth indicator
@@ -97,13 +103,15 @@ interface DivisionSummaryProps {
 **Purpose**: Displays tabular performance data for all areas in a division
 
 **Props**:
+
 ```typescript
 interface AreaPerformanceTableProps {
-  areas: AreaPerformance[];
+  areas: AreaPerformance[]
 }
 ```
 
 **Responsibilities**:
+
 - Render table header with column labels
 - Render AreaPerformanceRow for each area
 - Apply responsive table styling
@@ -114,13 +122,15 @@ interface AreaPerformanceTableProps {
 **Purpose**: Displays performance metrics for a single area
 
 **Props**:
+
 ```typescript
 interface AreaPerformanceRowProps {
-  area: AreaPerformance;
+  area: AreaPerformance
 }
 ```
 
 **Responsibilities**:
+
 - Display area identifier
 - Display paid clubs with net growth
 - Display distinguished clubs progress
@@ -133,26 +143,26 @@ interface AreaPerformanceRowProps {
 ### DistinguishedStatus Type
 
 ```typescript
-type DistinguishedStatus = 
+type DistinguishedStatus =
   | 'not-distinguished'
   | 'distinguished'
   | 'select-distinguished'
   | 'presidents-distinguished'
-  | 'not-qualified'; // For areas only
+  | 'not-qualified' // For areas only
 ```
 
 ### DivisionPerformance Interface
 
 ```typescript
 interface DivisionPerformance {
-  divisionId: string;
-  status: Exclude<DistinguishedStatus, 'not-qualified'>;
-  clubBase: number;
-  paidClubs: number;
-  netGrowth: number;
-  distinguishedClubs: number;
-  requiredDistinguishedClubs: number;
-  areas: AreaPerformance[];
+  divisionId: string
+  status: Exclude<DistinguishedStatus, 'not-qualified'>
+  clubBase: number
+  paidClubs: number
+  netGrowth: number
+  distinguishedClubs: number
+  requiredDistinguishedClubs: number
+  areas: AreaPerformance[]
 }
 ```
 
@@ -160,16 +170,16 @@ interface DivisionPerformance {
 
 ```typescript
 interface AreaPerformance {
-  areaId: string;
-  status: DistinguishedStatus;
-  clubBase: number;
-  paidClubs: number;
-  netGrowth: number;
-  distinguishedClubs: number;
-  requiredDistinguishedClubs: number;
-  firstRoundVisits: VisitStatus;
-  secondRoundVisits: VisitStatus;
-  isQualified: boolean;
+  areaId: string
+  status: DistinguishedStatus
+  clubBase: number
+  paidClubs: number
+  netGrowth: number
+  distinguishedClubs: number
+  requiredDistinguishedClubs: number
+  firstRoundVisits: VisitStatus
+  secondRoundVisits: VisitStatus
+  isQualified: boolean
 }
 ```
 
@@ -177,10 +187,10 @@ interface AreaPerformance {
 
 ```typescript
 interface VisitStatus {
-  completed: number;
-  required: number; // 75% of club base, rounded up
-  percentage: number;
-  meetsThreshold: boolean; // >= 75%
+  completed: number
+  required: number // 75% of club base, rounded up
+  percentage: number
+  meetsThreshold: boolean // >= 75%
 }
 ```
 
@@ -257,18 +267,18 @@ function extractVisitData(
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
-
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Distinguished Club Threshold Calculation
 
-*For any* club base value greater than zero, the required distinguished clubs threshold should equal the ceiling of 50% of the club base.
+_For any_ club base value greater than zero, the required distinguished clubs threshold should equal the ceiling of 50% of the club base.
 
 **Validates: Requirements 2.1, 5.5**
 
 ### Property 2: Division Status Classification
 
-*For any* division with valid metrics (club base, paid clubs, distinguished clubs), the calculated status should match exactly one of the four status levels based on the following rules:
+_For any_ division with valid metrics (club base, paid clubs, distinguished clubs), the calculated status should match exactly one of the four status levels based on the following rules:
+
 - President's Distinguished when: distinguished clubs ≥ (50% of base + 1) AND net growth ≥ 1
 - Select Distinguished when: distinguished clubs ≥ (50% of base + 1) AND paid clubs ≥ base (but not President's)
 - Distinguished when: distinguished clubs ≥ 50% of base AND paid clubs ≥ base (but not Select or President's)
@@ -278,7 +288,8 @@ function extractVisitData(
 
 ### Property 3: Area Qualifying Requirements
 
-*For any* area with valid metrics, the area should be marked as qualified if and only if ALL three conditions are met:
+_For any_ area with valid metrics, the area should be marked as qualified if and only if ALL three conditions are met:
+
 - No net club loss (paid clubs ≥ club base)
 - First round visits ≥ 75% of club base
 - Second round visits ≥ 75% of club base
@@ -287,67 +298,67 @@ function extractVisitData(
 
 ### Property 4: Area Status Classification with Qualifying Gate
 
-*For any* area with valid metrics, if the area is not qualified, the status must be "not-qualified" regardless of other metrics. If the area is qualified, the status should follow the same classification rules as divisions (Distinguished, Select Distinguished, or President's Distinguished).
+_For any_ area with valid metrics, if the area is not qualified, the status must be "not-qualified" regardless of other metrics. If the area is qualified, the status should follow the same classification rules as divisions (Distinguished, Select Distinguished, or President's Distinguished).
 
 **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
 
 ### Property 5: Net Growth Calculation
 
-*For any* valid paid clubs count and club base, net growth should equal (paid clubs - club base), which can be positive, negative, or zero.
+_For any_ valid paid clubs count and club base, net growth should equal (paid clubs - club base), which can be positive, negative, or zero.
 
 **Validates: Requirements 2.6**
 
 ### Property 6: Visit Completion Percentage Calculation
 
-*For any* valid completed visits count and club base, the visit completion percentage should equal (completed visits / club base) × 100, and the threshold should be met when percentage ≥ 75.
+_For any_ valid completed visits count and club base, the visit completion percentage should equal (completed visits / club base) × 100, and the threshold should be met when percentage ≥ 75.
 
 **Validates: Requirements 7.3, 7.4**
 
 ### Property 7: Division Card Count and Ordering
 
-*For any* district snapshot containing N divisions, the rendered output should contain exactly N division cards, ordered by division identifier in ascending order.
+_For any_ district snapshot containing N divisions, the rendered output should contain exactly N division cards, ordered by division identifier in ascending order.
 
 **Validates: Requirements 1.1, 1.3**
 
 ### Property 8: Area Row Count and Ordering
 
-*For any* division containing N areas, the rendered area table should contain exactly N rows, ordered by area identifier in ascending order.
+_For any_ division containing N areas, the rendered area table should contain exactly N rows, ordered by area identifier in ascending order.
 
 **Validates: Requirements 6.1, 6.8**
 
 ### Property 9: Division Summary Data Completeness
 
-*For any* division, the rendered summary section should contain all required data elements: division identifier, status level, paid clubs in "current/base" format, net growth indicator, and distinguished clubs in "current/required" format.
+_For any_ division, the rendered summary section should contain all required data elements: division identifier, status level, paid clubs in "current/base" format, net growth indicator, and distinguished clubs in "current/required" format.
 
 **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
 ### Property 10: Area Row Data Completeness
 
-*For any* area, the rendered row should contain all required data elements: area identifier, paid clubs with net growth, distinguished clubs progress, first round visit status, second round visit status, and current status level.
+_For any_ area, the rendered row should contain all required data elements: area identifier, paid clubs with net growth, distinguished clubs progress, first round visit status, second round visit status, and current status level.
 
 **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.7**
 
 ### Property 11: Visit Data Extraction
 
-*For any* district snapshot containing area visit data, the extraction function should correctly retrieve first round visits from "Nov Visit award" field and second round visits from "May visit award" field.
+_For any_ district snapshot containing area visit data, the extraction function should correctly retrieve first round visits from "Nov Visit award" field and second round visits from "May visit award" field.
 
 **Validates: Requirements 7.1, 7.2**
 
 ### Property 12: Data Extraction Completeness
 
-*For any* valid district snapshot, the extraction function should produce division performance data that includes all divisions and all areas within each division present in the snapshot.
+_For any_ valid district snapshot, the extraction function should produce division performance data that includes all divisions and all areas within each division present in the snapshot.
 
 **Validates: Requirements 1.4**
 
 ### Property 13: Snapshot Update Reactivity
 
-*For any* two different district snapshots, providing the second snapshot should result in recalculated status classifications and updated metrics that reflect the new snapshot's data.
+_For any_ two different district snapshots, providing the second snapshot should result in recalculated status classifications and updated metrics that reflect the new snapshot's data.
 
 **Validates: Requirements 10.1, 10.2**
 
 ### Property 14: Snapshot Timestamp Display
 
-*For any* district snapshot with a timestamp, the rendered output should include that timestamp in a visible location.
+_For any_ district snapshot with a timestamp, the rendered output should include that timestamp in a visible location.
 
 **Validates: Requirements 10.3**
 
@@ -356,16 +367,19 @@ function extractVisitData(
 ### Invalid or Missing Data
 
 **Division/Area Data Missing**:
+
 - When division or area data is missing from snapshot, log warning and skip that entity
 - Display message to user indicating incomplete data
 - Continue rendering other valid divisions/areas
 
 **Invalid Numeric Values**:
+
 - When club counts are negative or non-numeric, treat as zero
 - Log validation error with entity identifier
 - Display error indicator in affected card/row
 
 **Missing Visit Data**:
+
 - When visit award data is missing, treat as zero completed visits
 - Display "No data" indicator in visit status columns
 - Do not prevent area from being rendered
@@ -373,17 +387,20 @@ function extractVisitData(
 ### Calculation Edge Cases
 
 **Zero Club Base**:
+
 - When club base is zero, set required distinguished clubs to zero
 - Status calculation should handle division by zero gracefully
 - Display appropriate message indicating no clubs in division/area
 
 **Threshold Rounding**:
+
 - Always use Math.ceil() for threshold calculations to ensure proper rounding up
 - Document that 50% threshold means "at least half, rounded up"
 
 ### Data Consistency
 
 **Inconsistent Counts**:
+
 - When distinguished clubs > paid clubs (data inconsistency), log warning
 - Display data as-is but add visual indicator of potential data issue
 - Do not block rendering or status calculation
@@ -395,6 +412,7 @@ function extractVisitData(
 Unit tests will focus on core calculation logic and data transformation:
 
 **Status Calculation Functions**:
+
 - Test `calculateRequiredDistinguishedClubs` with various club base values including edge cases (0, 1, even, odd)
 - Test `calculateDivisionStatus` with boundary conditions for each status level
 - Test `calculateAreaStatus` with qualified and non-qualified scenarios
@@ -402,11 +420,13 @@ Unit tests will focus on core calculation logic and data transformation:
 - Test `calculateVisitStatus` with various completion percentages around 75% threshold
 
 **Data Extraction Functions**:
+
 - Test `extractDivisionPerformance` with sample snapshot structures
 - Test `extractVisitData` with present and missing visit award data
 - Test handling of malformed or incomplete snapshot data
 
 **Edge Cases**:
+
 - Zero club base scenarios
 - Missing visit data (example test)
 - Negative net growth values
@@ -422,7 +442,7 @@ Property-based tests will verify universal correctness properties across randomi
 
 1. **Distinguished Club Threshold Property** (Property 1)
    - Generate random club base values (1-100)
-   - Verify threshold = Math.ceil(clubBase * 0.5)
+   - Verify threshold = Math.ceil(clubBase \* 0.5)
    - Tag: **Feature: division-area-performance-cards, Property 1: Distinguished club threshold calculation**
 
 2. **Division Status Classification Property** (Property 2)
@@ -507,13 +527,15 @@ Integration tests will verify component interaction and data flow:
 
 **Library**: fast-check (TypeScript property-based testing library)
 
-**Rationale**: 
+**Rationale**:
+
 - Native TypeScript support with excellent type inference
 - Mature library with comprehensive arbitrary generators
 - Good integration with Vitest (existing test framework)
 - Supports custom generators for domain-specific types
 
 **Custom Generators Needed**:
+
 - Division performance data generator
 - Area performance data generator
 - District snapshot structure generator

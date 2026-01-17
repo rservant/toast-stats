@@ -77,7 +77,11 @@ describe('DivisionSummary', () => {
       )
 
       expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
-      expect(screen.getByRole('status', { name: /Division status: President's Distinguished/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: President's Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
 
     it('should display "Select Distinguished" status', () => {
@@ -94,7 +98,11 @@ describe('DivisionSummary', () => {
       )
 
       expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
-      expect(screen.getByRole('status', { name: /Division status: Select Distinguished/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Select Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
 
     it('should display "Distinguished" status', () => {
@@ -111,7 +119,9 @@ describe('DivisionSummary', () => {
       )
 
       expect(screen.getByText('Distinguished')).toBeInTheDocument()
-      expect(screen.getByRole('status', { name: /Division status: Distinguished/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', { name: /Division status: Distinguished/i })
+      ).toBeInTheDocument()
     })
 
     it('should display "Not Distinguished" status', () => {
@@ -128,7 +138,11 @@ describe('DivisionSummary', () => {
       )
 
       expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
-      expect(screen.getByRole('status', { name: /Division status: Not Distinguished/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Not Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
   })
 

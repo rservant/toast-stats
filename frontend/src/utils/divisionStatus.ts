@@ -153,7 +153,10 @@ export function calculateRequiredDistinguishedClubs(clubBase: number): number {
  *
  * Requirements: 2.6
  */
-export function calculateNetGrowth(paidClubs: number, clubBase: number): number {
+export function calculateNetGrowth(
+  paidClubs: number,
+  clubBase: number
+): number {
   return paidClubs - clubBase
 }
 
@@ -253,10 +256,7 @@ export function calculateDivisionStatus(
   netGrowth: number
 ): Exclude<DistinguishedStatus, 'not-qualified'> {
   // President's Distinguished: distinguished ≥ (threshold + 1) AND net growth ≥ 1
-  if (
-    distinguishedClubs >= requiredDistinguishedClubs + 1 &&
-    netGrowth >= 1
-  ) {
+  if (distinguishedClubs >= requiredDistinguishedClubs + 1 && netGrowth >= 1) {
     return 'presidents-distinguished'
   }
 
@@ -334,7 +334,6 @@ export function checkAreaQualifying(
   return noClubLoss && firstRoundMet && secondRoundMet
 }
 
-
 /**
  * Calculates area distinguished status based on metrics and qualifying requirements
  *
@@ -394,10 +393,7 @@ export function calculateAreaStatus(
 
   // If area is qualified, apply the same classification logic as divisions
   // President's Distinguished: distinguished ≥ (threshold + 1) AND net growth ≥ 1
-  if (
-    distinguishedClubs >= requiredDistinguishedClubs + 1 &&
-    netGrowth >= 1
-  ) {
+  if (distinguishedClubs >= requiredDistinguishedClubs + 1 && netGrowth >= 1) {
     return 'presidents-distinguished'
   }
 

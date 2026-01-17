@@ -20,7 +20,7 @@ This implementation plan breaks down the Division and Area Performance Cards fea
     - **Validates: Requirements 2.1, 5.5**
 
   - [x] 1.3 Implement `calculateRequiredDistinguishedClubs` function
-    - Calculate Math.ceil(clubBase * 0.5)
+    - Calculate Math.ceil(clubBase \* 0.5)
     - Handle edge case of zero club base
     - _Requirements: 2.1, 5.5_
 

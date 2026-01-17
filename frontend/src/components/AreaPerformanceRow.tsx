@@ -132,13 +132,19 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
     <tr className="hover:bg-gray-50 transition-colors">
       {/* Area Identifier - Requirement 6.2 */}
       <td className="px-4 py-3 whitespace-nowrap">
-        <div className="font-medium text-gray-900 font-tm-body" style={{ fontSize: '14px' }}>
+        <div
+          className="font-medium text-gray-900 font-tm-body"
+          style={{ fontSize: '14px' }}
+        >
           {area.areaId}
         </div>
       </td>
 
       {/* Paid Clubs with Net Growth - Requirement 6.3 */}
-      <td className="px-4 py-3 whitespace-nowrap text-center font-tm-body" style={{ fontSize: '14px' }}>
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
         <div className="flex items-center justify-center gap-2">
           <span className="text-gray-900 tabular-nums">
             {area.paidClubs}/{area.clubBase}
@@ -152,14 +158,20 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
       </td>
 
       {/* Distinguished Clubs Progress - Requirement 6.4 */}
-      <td className="px-4 py-3 whitespace-nowrap text-center font-tm-body" style={{ fontSize: '14px' }}>
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
         <span className="text-gray-900 tabular-nums">
           {area.distinguishedClubs}/{area.requiredDistinguishedClubs}
         </span>
       </td>
 
       {/* First Round Visit Status - Requirement 6.5 */}
-      <td className="px-4 py-3 whitespace-nowrap text-center font-tm-body" style={{ fontSize: '14px' }}>
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
         <span
           className={`font-medium tabular-nums ${getVisitStatusStyle(area.firstRoundVisits.meetsThreshold)}`}
         >
@@ -172,7 +184,10 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
       </td>
 
       {/* Second Round Visit Status - Requirement 6.6 */}
-      <td className="px-4 py-3 whitespace-nowrap text-center font-tm-body" style={{ fontSize: '14px' }}>
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
         <span
           className={`font-medium tabular-nums ${getVisitStatusStyle(area.secondRoundVisits.meetsThreshold)}`}
         >

@@ -76,10 +76,14 @@ describe('DivisionPerformanceCard', () => {
 
       // Verify division summary is rendered
       expect(screen.getByText('Division A')).toBeInTheDocument()
-      expect(screen.getByRole('status', { name: /Division status: Distinguished/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', { name: /Division status: Distinguished/i })
+      ).toBeInTheDocument()
       // "Paid Clubs" and "Distinguished Clubs" appear in both summary and table, so use getAllByText
       expect(screen.getAllByText('Paid Clubs').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Distinguished Clubs').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Distinguished Clubs').length).toBeGreaterThan(
+        0
+      )
     })
 
     it('should render AreaPerformanceTable below summary', () => {
@@ -102,7 +106,9 @@ describe('DivisionPerformanceCard', () => {
       // Verify division-level metrics are displayed
       expect(screen.getByText(/52 \/ 50/)).toBeInTheDocument() // Paid clubs
       expect(screen.getByText(/26 \/ 25/)).toBeInTheDocument() // Distinguished clubs
-      expect(screen.getByLabelText(/Net growth: positive 2/i)).toBeInTheDocument()
+      expect(
+        screen.getByLabelText(/Net growth: positive 2/i)
+      ).toBeInTheDocument()
     })
 
     it('should pass areas data to AreaPerformanceTable', () => {
@@ -112,18 +118,24 @@ describe('DivisionPerformanceCard', () => {
       expect(screen.getByText('A1')).toBeInTheDocument()
       expect(screen.getByText('A2')).toBeInTheDocument()
       // Area table formats numbers without spaces around slash
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === '11/10' || false
-      })).toBeInTheDocument()
-      expect(screen.getByText((content, element) => {
-        return element?.textContent === '7/8' || false
-      })).toBeInTheDocument()
+      expect(
+        screen.getByText((content, element) => {
+          return element?.textContent === '11/10' || false
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText((content, element) => {
+          return element?.textContent === '7/8' || false
+        })
+      ).toBeInTheDocument()
     })
   })
 
   describe('Card Styling (Requirement 8.1)', () => {
     it('should render as a card component', () => {
-      const { container } = render(<DivisionPerformanceCard division={mockDivision} />)
+      const { container } = render(
+        <DivisionPerformanceCard division={mockDivision} />
+      )
 
       // Verify card classes are applied
       const card = container.querySelector('.tm-card')
@@ -131,14 +143,18 @@ describe('DivisionPerformanceCard', () => {
     })
 
     it('should use default card variant', () => {
-      const { container } = render(<DivisionPerformanceCard division={mockDivision} />)
+      const { container } = render(
+        <DivisionPerformanceCard division={mockDivision} />
+      )
 
       const card = container.querySelector('.tm-card-default')
       expect(card).toBeInTheDocument()
     })
 
     it('should have proper spacing between cards', () => {
-      const { container } = render(<DivisionPerformanceCard division={mockDivision} />)
+      const { container } = render(
+        <DivisionPerformanceCard division={mockDivision} />
+      )
 
       const card = container.querySelector('.mb-6')
       expect(card).toBeInTheDocument()
@@ -169,12 +185,14 @@ describe('DivisionPerformanceCard', () => {
       render(<DivisionPerformanceCard division={mockDivision} />)
 
       // Verify status badge has proper aria-label
-      expect(screen.getByRole('status', { name: /Division status: Distinguished/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', { name: /Division status: Distinguished/i })
+      ).toBeInTheDocument()
     })
   })
 
   describe('Different Division Statuses', () => {
-    it('should render President\'s Distinguished division', () => {
+    it("should render President's Distinguished division", () => {
       const presidentsDiv: DivisionPerformance = {
         ...mockDivision,
         status: 'presidents-distinguished',
@@ -224,7 +242,9 @@ describe('DivisionPerformanceCard', () => {
         divisionId: 'B',
       }
 
-      const { rerender } = render(<DivisionPerformanceCard division={divisionB} />)
+      const { rerender } = render(
+        <DivisionPerformanceCard division={divisionB} />
+      )
       expect(screen.getByText('Division B')).toBeInTheDocument()
 
       const divisionC: DivisionPerformance = {

@@ -11,7 +11,10 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import * as fc from 'fast-check'
 import { AreaPerformanceRow } from '../AreaPerformanceRow'
-import { AreaPerformance, DistinguishedStatus } from '../../utils/divisionStatus'
+import {
+  AreaPerformance,
+  DistinguishedStatus,
+} from '../../utils/divisionStatus'
 
 /**
  * **Feature: division-area-performance-cards, Property 10: Area Row Data Completeness**
@@ -51,7 +54,9 @@ describe('Property 10: Area Row Data Completeness', () => {
 
   // Generator for area performance data
   const areaPerformanceArb = fc.record({
-    areaId: fc.string({ minLength: 1, maxLength: 10 }).filter((s) => s.trim().length > 0),
+    areaId: fc
+      .string({ minLength: 1, maxLength: 10 })
+      .filter(s => s.trim().length > 0),
     status: distinguishedStatusArb,
     clubBase: fc.integer({ min: 0, max: 100 }),
     paidClubs: fc.integer({ min: 0, max: 150 }),
@@ -81,7 +86,7 @@ describe('Property 10: Area Row Data Completeness', () => {
 
         // Get all cells in the row
         const cells = row!.querySelectorAll('td')
-        
+
         // Requirement 6.2: Area identifier must be present
         // Should be in the first cell
         expect(cells.length).toBeGreaterThanOrEqual(6)
@@ -91,12 +96,13 @@ describe('Property 10: Area Row Data Completeness', () => {
         // Requirement 6.3: Paid clubs with net growth must be present
         // Should be in the second cell in format "paidClubs/clubBase (netGrowth)"
         const paidClubsCell = cells[1]
-        expect(paidClubsCell.textContent).toContain(`${area.paidClubs}/${area.clubBase}`)
-        
+        expect(paidClubsCell.textContent).toContain(
+          `${area.paidClubs}/${area.clubBase}`
+        )
+
         // Net growth should be formatted with +/- sign
-        const expectedNetGrowth = area.netGrowth > 0 
-          ? `+${area.netGrowth}` 
-          : `${area.netGrowth}`
+        const expectedNetGrowth =
+          area.netGrowth > 0 ? `+${area.netGrowth}` : `${area.netGrowth}`
         expect(paidClubsCell.textContent).toContain(`(${expectedNetGrowth})`)
 
         // Requirement 6.4: Distinguished clubs progress must be present
@@ -112,7 +118,9 @@ describe('Property 10: Area Row Data Completeness', () => {
         expect(firstRoundCell.textContent).toContain(
           `${area.firstRoundVisits.completed}/${area.firstRoundVisits.required}`
         )
-        const firstRoundIndicator = area.firstRoundVisits.meetsThreshold ? '✓' : '✗'
+        const firstRoundIndicator = area.firstRoundVisits.meetsThreshold
+          ? '✓'
+          : '✗'
         expect(firstRoundCell.textContent).toContain(firstRoundIndicator)
 
         // Requirement 6.6: Second round visit status must be present
@@ -121,22 +129,24 @@ describe('Property 10: Area Row Data Completeness', () => {
         expect(secondRoundCell.textContent).toContain(
           `${area.secondRoundVisits.completed}/${area.secondRoundVisits.required}`
         )
-        const secondRoundIndicator = area.secondRoundVisits.meetsThreshold ? '✓' : '✗'
+        const secondRoundIndicator = area.secondRoundVisits.meetsThreshold
+          ? '✓'
+          : '✗'
         expect(secondRoundCell.textContent).toContain(secondRoundIndicator)
 
         // Requirement 6.7: Current status level must be present
         // Should be in the sixth cell
         const statusCell = cells[5]
-        
+
         // Map status to expected display text
         const statusLabels: Record<DistinguishedStatus, string> = {
           'presidents-distinguished': "President's Distinguished",
           'select-distinguished': 'Select Distinguished',
-          'distinguished': 'Distinguished',
+          distinguished: 'Distinguished',
           'not-qualified': 'Not Qualified',
           'not-distinguished': 'Not Distinguished',
         }
-        
+
         const expectedStatusLabel = statusLabels[area.status]
         expect(statusCell.textContent).toContain(expectedStatusLabel)
       }),
@@ -155,7 +165,7 @@ describe('Property 10: Area Row Data Completeness', () => {
             </tbody>
           </table>
         )
-        
+
         const { container: container2 } = render(
           <table>
             <tbody>
@@ -198,7 +208,10 @@ describe('Property 10: Area Row Data Completeness', () => {
 
   it('should handle edge case of zero values correctly', () => {
     fc.assert(
-      fc.property(distinguishedStatusArb, visitStatusArb, visitStatusArb, 
+      fc.property(
+        distinguishedStatusArb,
+        visitStatusArb,
+        visitStatusArb,
         (status, firstRound, secondRound) => {
           const area: AreaPerformance = {
             areaId: 'A0',
@@ -235,54 +248,51 @@ describe('Property 10: Area Row Data Completeness', () => {
 
   it('should handle positive and negative net growth correctly', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: -50, max: 50 }),
-        (netGrowth) => {
-          const clubBase = 10
-          const paidClubs = clubBase + netGrowth
+      fc.property(fc.integer({ min: -50, max: 50 }), netGrowth => {
+        const clubBase = 10
+        const paidClubs = clubBase + netGrowth
 
-          const area: AreaPerformance = {
-            areaId: 'A1',
-            status: 'distinguished',
-            clubBase,
-            paidClubs: Math.max(0, paidClubs), // Ensure non-negative
-            netGrowth,
-            distinguishedClubs: 5,
-            requiredDistinguishedClubs: 5,
-            firstRoundVisits: {
-              completed: 8,
-              required: 8,
-              percentage: 80,
-              meetsThreshold: true,
-            },
-            secondRoundVisits: {
-              completed: 8,
-              required: 8,
-              percentage: 80,
-              meetsThreshold: true,
-            },
-            isQualified: true,
-          }
-
-          const { container } = render(
-            <table>
-              <tbody>
-                <AreaPerformanceRow area={area} />
-              </tbody>
-            </table>
-          )
-
-          const cells = container.querySelectorAll('td')
-          const paidClubsCell = cells[1]
-
-          // Net growth should be formatted with appropriate sign
-          if (netGrowth > 0) {
-            expect(paidClubsCell.textContent).toContain(`(+${netGrowth})`)
-          } else {
-            expect(paidClubsCell.textContent).toContain(`(${netGrowth})`)
-          }
+        const area: AreaPerformance = {
+          areaId: 'A1',
+          status: 'distinguished',
+          clubBase,
+          paidClubs: Math.max(0, paidClubs), // Ensure non-negative
+          netGrowth,
+          distinguishedClubs: 5,
+          requiredDistinguishedClubs: 5,
+          firstRoundVisits: {
+            completed: 8,
+            required: 8,
+            percentage: 80,
+            meetsThreshold: true,
+          },
+          secondRoundVisits: {
+            completed: 8,
+            required: 8,
+            percentage: 80,
+            meetsThreshold: true,
+          },
+          isQualified: true,
         }
-      ),
+
+        const { container } = render(
+          <table>
+            <tbody>
+              <AreaPerformanceRow area={area} />
+            </tbody>
+          </table>
+        )
+
+        const cells = container.querySelectorAll('td')
+        const paidClubsCell = cells[1]
+
+        // Net growth should be formatted with appropriate sign
+        if (netGrowth > 0) {
+          expect(paidClubsCell.textContent).toContain(`(+${netGrowth})`)
+        } else {
+          expect(paidClubsCell.textContent).toContain(`(${netGrowth})`)
+        }
+      }),
       { numRuns: 100 }
     )
   })
@@ -353,14 +363,14 @@ describe('Property 10: Area Row Data Completeness', () => {
     const statusLabels: Record<DistinguishedStatus, string> = {
       'presidents-distinguished': "President's Distinguished",
       'select-distinguished': 'Select Distinguished',
-      'distinguished': 'Distinguished',
+      distinguished: 'Distinguished',
       'not-qualified': 'Not Qualified',
       'not-distinguished': 'Not Distinguished',
     }
 
-    statusTypes.forEach((status) => {
+    statusTypes.forEach(status => {
       fc.assert(
-        fc.property(fc.constant(status), (statusValue) => {
+        fc.property(fc.constant(status), statusValue => {
           const area: AreaPerformance = {
             areaId: 'A1',
             status: statusValue,
@@ -502,7 +512,7 @@ describe('Property 10: Area Row Data Completeness', () => {
       },
     ]
 
-    testCases.forEach((area) => {
+    testCases.forEach(area => {
       const { container } = render(
         <table>
           <tbody>
@@ -515,7 +525,9 @@ describe('Property 10: Area Row Data Completeness', () => {
 
       // Verify all data elements are present
       expect(cells[0].textContent).toContain(area.areaId)
-      expect(cells[1].textContent).toContain(`${area.paidClubs}/${area.clubBase}`)
+      expect(cells[1].textContent).toContain(
+        `${area.paidClubs}/${area.clubBase}`
+      )
       expect(cells[2].textContent).toContain(
         `${area.distinguishedClubs}/${area.requiredDistinguishedClubs}`
       )

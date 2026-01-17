@@ -11,7 +11,10 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import * as fc from 'fast-check'
 import { AreaPerformanceTable } from '../AreaPerformanceTable'
-import { AreaPerformance, DistinguishedStatus } from '../../utils/divisionStatus'
+import {
+  AreaPerformance,
+  DistinguishedStatus,
+} from '../../utils/divisionStatus'
 
 /**
  * Generator for DistinguishedStatus values
@@ -30,10 +33,12 @@ const distinguishedStatusArb: fc.Arbitrary<DistinguishedStatus> = fc.oneof(
 const areaPerformanceArb: fc.Arbitrary<AreaPerformance> = fc.record({
   areaId: fc.oneof(
     // Generate area IDs like A1, A2, B1, B2, etc.
-    fc.tuple(
-      fc.constantFrom('A', 'B', 'C', 'D', 'E', 'F', 'G'),
-      fc.integer({ min: 1, max: 20 })
-    ).map(([letter, num]) => `${letter}${num}`),
+    fc
+      .tuple(
+        fc.constantFrom('A', 'B', 'C', 'D', 'E', 'F', 'G'),
+        fc.integer({ min: 1, max: 20 })
+      )
+      .map(([letter, num]) => `${letter}${num}`),
     // Also generate some numeric-only IDs
     fc.integer({ min: 1, max: 100 }).map(n => `${n}`)
   ),
@@ -552,26 +557,28 @@ describe('Property 8: Area Row Count and Ordering', () => {
       },
     ]
 
-    testCases.forEach(({ description, areas, expectedCount, expectedOrder }) => {
-      const { container } = render(<AreaPerformanceTable areas={areas} />)
+    testCases.forEach(
+      ({ description, areas, expectedCount, expectedOrder }) => {
+        const { container } = render(<AreaPerformanceTable areas={areas} />)
 
-      const tbody = container.querySelector('tbody')
-      const rows = tbody?.querySelectorAll('tr')
+        const tbody = container.querySelector('tbody')
+        const rows = tbody?.querySelectorAll('tr')
 
-      // Verify row count
-      expect(rows?.length).toBe(expectedCount)
+        // Verify row count
+        expect(rows?.length).toBe(expectedCount)
 
-      // Verify order
-      const renderedAreaIds: string[] = []
-      rows?.forEach(row => {
-        const firstCell = row.querySelector('td')
-        if (firstCell?.textContent) {
-          renderedAreaIds.push(firstCell.textContent.trim())
-        }
-      })
+        // Verify order
+        const renderedAreaIds: string[] = []
+        rows?.forEach(row => {
+          const firstCell = row.querySelector('td')
+          if (firstCell?.textContent) {
+            renderedAreaIds.push(firstCell.textContent.trim())
+          }
+        })
 
-      expect(renderedAreaIds).toEqual(expectedOrder)
-    })
+        expect(renderedAreaIds).toEqual(expectedOrder)
+      }
+    )
   })
 
   it('should maintain invariant: row count equals input array length', () => {

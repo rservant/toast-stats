@@ -18,15 +18,15 @@
  * │       ├── metadata.json
  * │       ├── manifest.json
  * │       └── district_*.json
- * ├── current.json                          # Points to latest successful snapshot
  * └── config/
  *     └── districts.json                    # District configuration
  *
  * Performance optimizations:
- * - In-memory caching of current snapshot metadata and content
+ * - In-memory caching of current snapshot content
  * - Concurrent read request handling with shared cache
  * - Optimized file system access patterns
  * - Read performance independence from refresh operations
+ * - Directory scanning for latest successful snapshot (no pointer file)
  */
 
 import fs from 'fs/promises'
@@ -39,7 +39,6 @@ import {
   Snapshot,
   SnapshotMetadata,
   SnapshotFilters,
-  CurrentSnapshotPointer,
   SnapshotStoreConfig,
   NormalizedData,
   CURRENT_SCHEMA_VERSION,
@@ -137,8 +136,6 @@ export interface PerDistrictSnapshotMetadata {
  * Options for writing snapshots
  */
 export interface WriteSnapshotOptions {
-  /** If true, don't update current.json (useful for backfill operations) */
-  skipCurrentPointerUpdate?: boolean
   /**
    * Override the snapshot directory date.
    * Used for closing period data where the snapshot should be dated
@@ -222,16 +219,12 @@ export class FileSnapshotStore
 {
   private readonly cacheDir: string
   private readonly snapshotsDir: string
-  private readonly currentPointerFile: string
   private readonly config: Required<SnapshotStoreConfig>
   private readonly integrityValidator: SnapshotIntegrityValidator
   private readonly recoveryService: SnapshotRecoveryService
 
   // Performance optimization: In-memory cache for current snapshot
   private currentSnapshotCache: SnapshotCacheEntry | null = null
-  private currentPointerCache: CurrentSnapshotPointer | null = null
-  private currentPointerCacheTime: number = 0
-  private readonly POINTER_CACHE_TTL = 30000 // 30 seconds
   private readonly SNAPSHOT_CACHE_TTL = 300000 // 5 minutes
 
   // Concurrent read handling
@@ -248,7 +241,6 @@ export class FileSnapshotStore
   constructor(config: SnapshotStoreConfig) {
     this.cacheDir = config.cacheDir
     this.snapshotsDir = path.join(this.cacheDir, 'snapshots')
-    this.currentPointerFile = path.join(this.cacheDir, 'current.json')
 
     this.config = {
       cacheDir: config.cacheDir,
@@ -259,14 +251,14 @@ export class FileSnapshotStore
 
     this.integrityValidator = new SnapshotIntegrityValidator(
       this.cacheDir,
-      this.snapshotsDir,
-      this.currentPointerFile
+      this.snapshotsDir
     )
     this.recoveryService = new SnapshotRecoveryService(this.config)
   }
 
   /**
-   * Get the most recent successful snapshot with performance optimizations
+   * Get the most recent successful snapshot with performance optimizations.
+   * Uses directory scanning to find the latest successful snapshot.
    */
   async getLatestSuccessful(): Promise<Snapshot | null> {
     const startTime = Date.now()
@@ -327,8 +319,8 @@ export class FileSnapshotStore
         return result
       }
 
-      // Start new read operation
-      const readPromise = this.performOptimizedRead(operationId)
+      // Start new read operation using directory scanning
+      const readPromise = this.findLatestSuccessfulByScanning()
       this.activeReads.set(cacheKey, readPromise)
 
       try {
@@ -668,40 +660,14 @@ export class FileSnapshotStore
         processing_duration: metadata.processingDuration,
       })
 
-      // Update current pointer if this is a successful snapshot and not skipped
-      if (snapshot.status === 'success' && !options?.skipCurrentPointerUpdate) {
-        const snapshotWithUpdatedId = {
-          ...snapshot,
-          snapshot_id: snapshotDirName,
-        }
-        await this.updateCurrentPointer(snapshotWithUpdatedId)
-
-        // Invalidate caches
+      // Invalidate caches when writing a successful snapshot
+      if (snapshot.status === 'success') {
         this.invalidateCaches()
 
-        logger.info('Current pointer updated for successful snapshot', {
+        logger.info('Caches invalidated for successful snapshot', {
           operation: 'writeSnapshot',
           snapshot_id: snapshotDirName,
-          pointer_file: this.currentPointerFile,
         })
-      } else if (options?.skipCurrentPointerUpdate) {
-        logger.info(
-          'Skipping current pointer update as requested (backfill mode)',
-          {
-            operation: 'writeSnapshot',
-            snapshot_id: snapshotDirName,
-            status: snapshot.status,
-          }
-        )
-      } else {
-        logger.info(
-          'Skipping current pointer update for non-successful snapshot',
-          {
-            operation: 'writeSnapshot',
-            snapshot_id: snapshotDirName,
-            status: snapshot.status,
-          }
-        )
       }
 
       const duration = Date.now() - startTime
@@ -1476,36 +1442,6 @@ export class FileSnapshotStore
   }
 
   /**
-   * Set the current snapshot pointer to a specific snapshot ID
-   */
-  async setCurrentSnapshot(snapshotId: string): Promise<void> {
-    logger.info('Setting current snapshot pointer', {
-      operation: 'setCurrentSnapshot',
-      snapshot_id: snapshotId,
-    })
-
-    const snapshot = await this.getSnapshot(snapshotId)
-    if (!snapshot) {
-      throw new Error(`Snapshot ${snapshotId} not found`)
-    }
-
-    if (snapshot.status !== 'success' && snapshot.status !== 'partial') {
-      logger.warn('Setting current pointer to non-successful snapshot', {
-        operation: 'setCurrentSnapshot',
-        snapshot_id: snapshotId,
-        status: snapshot.status,
-      })
-    }
-
-    await this.updateCurrentPointer(snapshot)
-
-    logger.info('Current snapshot pointer set successfully', {
-      operation: 'setCurrentSnapshot',
-      snapshot_id: snapshotId,
-    })
-  }
-
-  /**
    * Get performance metrics for monitoring
    */
   getPerformanceMetrics(): ReadPerformanceMetrics {
@@ -1546,59 +1482,10 @@ export class FileSnapshotStore
    */
   private invalidateCaches(): void {
     this.currentSnapshotCache = null
-    this.currentPointerCache = null
-    this.currentPointerCacheTime = 0
 
     logger.debug('Invalidated all in-memory caches', {
       operation: 'invalidateCaches',
     })
-  }
-
-  /**
-   * Update the current snapshot pointer atomically
-   */
-  private async updateCurrentPointer(snapshot: Snapshot): Promise<void> {
-    const startTime = Date.now()
-    logger.debug('Starting current pointer update', {
-      operation: 'updateCurrentPointer',
-      snapshot_id: snapshot.snapshot_id,
-      status: snapshot.status,
-    })
-
-    const pointer: CurrentSnapshotPointer = {
-      snapshot_id: snapshot.snapshot_id,
-      updated_at: new Date().toISOString(),
-      schema_version: snapshot.schema_version,
-      calculation_version: snapshot.calculation_version,
-    }
-
-    const tempPath = `${this.currentPointerFile}.tmp`
-
-    try {
-      await fs.writeFile(tempPath, JSON.stringify(pointer, null, 2), 'utf-8')
-      await fs.rename(tempPath, this.currentPointerFile)
-
-      const duration = Date.now() - startTime
-      logger.info('Current pointer updated successfully', {
-        operation: 'updateCurrentPointer',
-        snapshot_id: snapshot.snapshot_id,
-        updated_at: pointer.updated_at,
-        schema_version: pointer.schema_version,
-        calculation_version: pointer.calculation_version,
-        duration_ms: duration,
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to update current pointer', {
-        operation: 'updateCurrentPointer',
-        snapshot_id: snapshot.snapshot_id,
-        error: errorMessage,
-        duration_ms: duration,
-      })
-      throw error
-    }
   }
 
   /**
@@ -1651,82 +1538,6 @@ export class FileSnapshotStore
         error: error instanceof Error ? error.message : 'Unknown error',
       })
     }
-  }
-
-  /**
-   * Perform optimized read operation with caching and error handling
-   */
-  private async performOptimizedRead(
-    operationId: string
-  ): Promise<Snapshot | null> {
-    await this.ensureDirectoryExists()
-
-    // Try to read from current.json pointer first
-    try {
-      const pointer = await this.getCachedCurrentPointer()
-
-      logger.debug('Found current pointer', {
-        operation: 'performOptimizedRead',
-        operation_id: operationId,
-        snapshot_id: pointer.snapshot_id,
-        pointer_updated_at: pointer.updated_at,
-        from_cache: this.currentPointerCache !== null,
-      })
-
-      const snapshot = await this.readSnapshotFromDirectory(pointer.snapshot_id)
-
-      if (snapshot && snapshot.status === 'success') {
-        return snapshot
-      } else if (snapshot) {
-        logger.warn(
-          'Pointer references non-successful snapshot, attempting recovery',
-          {
-            operation: 'performOptimizedRead',
-            operation_id: operationId,
-            snapshot_id: snapshot.snapshot_id,
-            status: snapshot.status,
-          }
-        )
-
-        await this.attemptAutomaticRecovery('invalid_current_snapshot_status')
-      }
-    } catch (error) {
-      logger.debug('Current pointer read failed, attempting recovery', {
-        operation: 'performOptimizedRead',
-        operation_id: operationId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-
-      await this.attemptAutomaticRecovery('corrupted_current_pointer')
-    }
-
-    // Fall back to scanning directory for latest successful snapshot
-    const snapshot = await this.findLatestSuccessfulByScanning()
-
-    if (snapshot) {
-      logger.info(
-        'Successfully retrieved latest successful snapshot by scanning',
-        {
-          operation: 'performOptimizedRead',
-          operation_id: operationId,
-          snapshot_id: snapshot.snapshot_id,
-          created_at: snapshot.created_at,
-          schema_version: snapshot.schema_version,
-          calculation_version: snapshot.calculation_version,
-          district_count: snapshot.payload.districts.length,
-        }
-      )
-    } else {
-      logger.info(
-        'No successful snapshots available - failed snapshots excluded from serving',
-        {
-          operation: 'performOptimizedRead',
-          operation_id: operationId,
-        }
-      )
-    }
-
-    return snapshot
   }
 
   /**
@@ -1833,28 +1644,6 @@ export class FileSnapshotStore
   }
 
   /**
-   * Get cached current pointer or read from file
-   */
-  private async getCachedCurrentPointer(): Promise<CurrentSnapshotPointer> {
-    const now = Date.now()
-
-    if (
-      this.currentPointerCache &&
-      now - this.currentPointerCacheTime < this.POINTER_CACHE_TTL
-    ) {
-      return this.currentPointerCache
-    }
-
-    const pointerContent = await fs.readFile(this.currentPointerFile, 'utf-8')
-    const pointer: CurrentSnapshotPointer = JSON.parse(pointerContent)
-
-    this.currentPointerCache = pointer
-    this.currentPointerCacheTime = now
-
-    return pointer
-  }
-
-  /**
    * Find the latest successful snapshot by scanning the directory
    */
   private async findLatestSuccessfulByScanning(): Promise<Snapshot | null> {
@@ -1894,8 +1683,6 @@ export class FileSnapshotStore
         })
 
         if (snapshot && snapshot.status === 'success') {
-          await this.updateCurrentPointer(snapshot)
-
           const duration = Date.now() - startTime
           logger.info('Found latest successful snapshot by scanning', {
             operation: 'findLatestSuccessfulByScanning',
@@ -1928,50 +1715,6 @@ export class FileSnapshotStore
     })
 
     return null
-  }
-
-  /**
-   * Attempt automatic recovery for common corruption scenarios
-   */
-  private async attemptAutomaticRecovery(reason: string): Promise<void> {
-    logger.info('Attempting automatic recovery', {
-      operation: 'attemptAutomaticRecovery',
-      reason,
-      cache_dir: this.cacheDir,
-    })
-
-    try {
-      const recoveryResult = await this.recoveryService.recoverSnapshotStore({
-        createBackups: true,
-        removeCorruptedFiles: false,
-        forceRecovery: false,
-      })
-
-      if (recoveryResult.success) {
-        logger.info('Automatic recovery successful', {
-          operation: 'attemptAutomaticRecovery',
-          reason,
-          actions_taken: recoveryResult.actionsTaken.length,
-          current_snapshot: recoveryResult.currentSnapshotId,
-          recovery_type: recoveryResult.recoveryMetadata.recoveryType,
-        })
-      } else {
-        logger.warn('Automatic recovery partially successful or failed', {
-          operation: 'attemptAutomaticRecovery',
-          reason,
-          actions_taken: recoveryResult.actionsTaken.length,
-          remaining_issues: recoveryResult.remainingIssues.length,
-          manual_steps_required: recoveryResult.manualStepsRequired.length,
-          recovery_type: recoveryResult.recoveryMetadata.recoveryType,
-        })
-      }
-    } catch (error) {
-      logger.error('Automatic recovery failed with error', {
-        operation: 'attemptAutomaticRecovery',
-        reason,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
   }
 
   /**

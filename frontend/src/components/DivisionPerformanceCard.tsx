@@ -57,9 +57,9 @@ export interface DivisionPerformanceCardProps {
  * />
  * ```
  */
-export const DivisionPerformanceCard: React.FC<DivisionPerformanceCardProps> = ({
-  division,
-}) => {
+export const DivisionPerformanceCard: React.FC<
+  DivisionPerformanceCardProps
+> = ({ division }) => {
   return (
     <Card
       variant="default"

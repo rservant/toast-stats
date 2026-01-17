@@ -113,7 +113,10 @@ const DistrictDetailPage: React.FC = () => {
 
   // Fetch district statistics for division/area performance cards
   const { data: districtStatistics, isLoading: isLoadingStatistics } =
-    useDistrictStatistics(districtId || null)
+    useDistrictStatistics(
+      districtId || null,
+      selectedDate || selectedProgramYear.endDate
+    )
 
   // Fetch leadership insights for analytics tab - use program year boundaries
   const { data: leadershipInsights, isLoading: isLoadingLeadership } =

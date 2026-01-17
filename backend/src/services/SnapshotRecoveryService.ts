@@ -1,22 +1,17 @@
 /**
  * Snapshot recovery service for handling corruption and automatic recovery
  *
- * This service provides automatic recovery mechanisms for corrupted snapshots
- * and current.json pointers, with fallback to previous successful snapshots.
+ * This service provides automatic recovery mechanisms for corrupted snapshots,
+ * with fallback to previous successful snapshots.
  */
 
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
 import { SnapshotIntegrityValidator } from './SnapshotIntegrityValidator.js'
-import type {
-  CurrentSnapshotPointer,
-  Snapshot,
-  SnapshotStoreConfig,
-} from '../types/snapshots.js'
+import type { SnapshotStoreConfig } from '../types/snapshots.js'
 import type {
   SnapshotStoreIntegrityResult,
-  CurrentPointerIntegrityResult,
   SnapshotIntegrityResult,
 } from './SnapshotIntegrityValidator.js'
 
@@ -73,12 +68,10 @@ export class SnapshotRecoveryService {
 
   constructor(private readonly config: Required<SnapshotStoreConfig>) {
     const snapshotsDir = path.join(config.cacheDir, 'snapshots')
-    const currentPointerFile = path.join(config.cacheDir, 'current.json')
 
     this.integrityValidator = new SnapshotIntegrityValidator(
       config.cacheDir,
-      snapshotsDir,
-      currentPointerFile
+      snapshotsDir
     )
   }
 
@@ -126,15 +119,6 @@ export class SnapshotRecoveryService {
       // Create backups if requested
       if (options.createBackups !== false) {
         await this.createRecoveryBackups(result)
-      }
-
-      // Recover current pointer if needed
-      if (!integrityResult.currentPointer.isValid) {
-        await this.recoverCurrentPointer(
-          integrityResult.currentPointer,
-          result,
-          options
-        )
       }
 
       // Remove corrupted snapshots if requested
@@ -193,105 +177,6 @@ export class SnapshotRecoveryService {
       })
 
       return this.finalizeRecoveryResult(result, startTime)
-    }
-  }
-
-  /**
-   * Recover a corrupted current.json pointer
-   */
-  async recoverCurrentPointer(
-    pointerResult: CurrentPointerIntegrityResult,
-    recoveryResult: RecoveryResult,
-    _options: RecoveryOptions
-  ): Promise<void> {
-    const currentPointerFile = path.join(this.config.cacheDir, 'current.json')
-
-    logger.info('Starting current pointer recovery', {
-      operation: 'recoverCurrentPointer',
-      pointer_valid: pointerResult.isValid,
-      alternatives_available: pointerResult.alternativeSnapshots.length,
-    })
-
-    try {
-      // If we have alternative successful snapshots, use the latest one
-      if (pointerResult.alternativeSnapshots.length > 0) {
-        const latestSuccessfulId = pointerResult.alternativeSnapshots[0] // Already sorted newest first
-
-        if (!latestSuccessfulId) {
-          recoveryResult.remainingIssues.push(
-            'No valid snapshot ID found in alternative snapshots'
-          )
-          return
-        }
-
-        // Get the snapshot to extract metadata
-        const snapshotPath = path.join(
-          this.config.cacheDir,
-          'snapshots',
-          `${latestSuccessfulId}.json`
-        )
-        const snapshotContent = await fs.readFile(snapshotPath, 'utf-8')
-        const snapshot: Snapshot = JSON.parse(snapshotContent)
-
-        // Create new current pointer
-        const newPointer: CurrentSnapshotPointer = {
-          snapshot_id: latestSuccessfulId,
-          updated_at: new Date().toISOString(),
-          schema_version: snapshot.schema_version,
-          calculation_version: snapshot.calculation_version,
-        }
-
-        // Write new pointer atomically
-        const tempPath = `${currentPointerFile}.recovery.tmp`
-        await fs.writeFile(
-          tempPath,
-          JSON.stringify(newPointer, null, 2),
-          'utf-8'
-        )
-        await fs.rename(tempPath, currentPointerFile)
-
-        recoveryResult.actionsTaken.push(
-          `Recreated current.json pointer to reference snapshot ${latestSuccessfulId}`
-        )
-        recoveryResult.currentSnapshotId = latestSuccessfulId
-
-        logger.info('Current pointer recovery successful', {
-          operation: 'recoverCurrentPointer',
-          new_snapshot_id: latestSuccessfulId,
-          snapshot_created_at: snapshot.created_at,
-          schema_version: snapshot.schema_version,
-          calculation_version: snapshot.calculation_version,
-        })
-      } else {
-        recoveryResult.remainingIssues.push(
-          'No successful snapshots available for current pointer recovery'
-        )
-        recoveryResult.manualStepsRequired.push(
-          'Run data refresh to create a successful snapshot'
-        )
-        recoveryResult.manualStepsRequired.push(
-          'Manually create current.json pointer after successful refresh'
-        )
-
-        logger.warn(
-          'Current pointer recovery failed - no successful snapshots available',
-          {
-            operation: 'recoverCurrentPointer',
-          }
-        )
-      }
-    } catch (error) {
-      recoveryResult.remainingIssues.push(
-        `Current pointer recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-      recoveryResult.manualStepsRequired.push(
-        'Manually recreate current.json with proper structure'
-      )
-
-      logger.error('Current pointer recovery failed with error', {
-        operation: 'recoverCurrentPointer',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
     }
   }
 
@@ -378,20 +263,6 @@ export class SnapshotRecoveryService {
     try {
       await fs.mkdir(backupSubDir, { recursive: true })
 
-      // Backup current.json if it exists
-      const currentPointerFile = path.join(this.config.cacheDir, 'current.json')
-      try {
-        await fs.access(currentPointerFile)
-        const backupPointerPath = path.join(backupSubDir, 'current.json')
-        await fs.copyFile(currentPointerFile, backupPointerPath)
-        recoveryResult.recoveryMetadata.backupsCreated.push(backupPointerPath)
-        recoveryResult.actionsTaken.push(
-          'Created backup of current.json pointer'
-        )
-      } catch {
-        // current.json doesn't exist, which is fine
-      }
-
       // Backup snapshots directory structure (metadata only, not full files due to size)
       const snapshotsDir = path.join(this.config.cacheDir, 'snapshots')
       try {
@@ -460,22 +331,7 @@ export class SnapshotRecoveryService {
         recoverySteps.push('CRITICAL: No successful snapshots available')
         recoverySteps.push('1. Run immediate data refresh: npm run refresh')
         recoverySteps.push('2. Verify refresh completes successfully')
-        recoverySteps.push('3. Check that current.json is created')
-      } else if (!integrityStatus.currentPointer.isValid) {
-        urgencyLevel = 'high'
-        estimatedRecoveryTime = '10-15 minutes'
-        recoverySteps.push(
-          'HIGH: Current pointer is corrupted but successful snapshots exist'
-        )
-        recoverySteps.push(
-          '1. Run automatic recovery: await recoveryService.recoverSnapshotStore()'
-        )
-        recoverySteps.push(
-          '2. If automatic recovery fails, manually recreate current.json'
-        )
-        recoverySteps.push(
-          `3. Use latest successful snapshot: ${integrityStatus.summary.latestSuccessfulSnapshot}`
-        )
+        recoverySteps.push('3. Check that snapshots are created')
       } else if (integrityStatus.summary.corruptedSnapshots > 0) {
         urgencyLevel = 'medium'
         estimatedRecoveryTime = '15-20 minutes'

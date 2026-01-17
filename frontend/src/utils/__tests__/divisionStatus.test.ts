@@ -57,7 +57,7 @@ describe('calculateDivisionStatus', () => {
       expect(distinguishedClubs).toBe(6)
     })
 
-    it('should classify as President\'s Distinguished when exactly at net growth = 1', () => {
+    it("should classify as President's Distinguished when exactly at net growth = 1", () => {
       // Club base = 10, threshold = 5, distinguished = 6, net growth = 1
       const clubBase = 10
       const threshold = calculateRequiredDistinguishedClubs(clubBase)
@@ -209,7 +209,7 @@ describe('calculateDivisionStatus', () => {
       expect(status).toBe('select-distinguished')
     })
 
-    it('should classify as President\'s Distinguished with zero club base and net growth', () => {
+    it("should classify as President's Distinguished with zero club base and net growth", () => {
       // Edge case: zero club base, 1 distinguished club, 1 paid club (net growth = 1)
       const clubBase = 0
       const threshold = calculateRequiredDistinguishedClubs(clubBase)
@@ -270,7 +270,7 @@ describe('calculateDivisionStatus', () => {
       expect(status).toBe('select-distinguished')
     })
 
-    it('should classify as President\'s Distinguished when club base = 1, distinguished = 2, net growth = 1', () => {
+    it("should classify as President's Distinguished when club base = 1, distinguished = 2, net growth = 1", () => {
       const clubBase = 1
       const threshold = calculateRequiredDistinguishedClubs(clubBase)
       const distinguishedClubs = 2 // threshold + 1
@@ -313,7 +313,7 @@ describe('calculateDivisionStatus', () => {
     it('should handle odd club base correctly (club base = 11, threshold = 6)', () => {
       const clubBase = 11
       const threshold = calculateRequiredDistinguishedClubs(clubBase)
-      
+
       expect(threshold).toBe(6) // Math.ceil(11 * 0.5) = 6
 
       // Test Distinguished at threshold
@@ -352,7 +352,7 @@ describe('calculateDivisionStatus', () => {
     it('should handle large club base correctly (club base = 100)', () => {
       const clubBase = 100
       const threshold = calculateRequiredDistinguishedClubs(clubBase)
-      
+
       expect(threshold).toBe(50) // Math.ceil(100 * 0.5) = 50
 
       // Test President's Distinguished
@@ -439,7 +439,7 @@ describe('calculateDivisionStatus', () => {
   })
 
   describe('high net growth', () => {
-    it('should classify as President\'s Distinguished with high net growth', () => {
+    it("should classify as President's Distinguished with high net growth", () => {
       const clubBase = 10
       const threshold = calculateRequiredDistinguishedClubs(clubBase)
       const distinguishedClubs = 6 // threshold + 1

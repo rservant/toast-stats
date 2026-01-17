@@ -290,10 +290,13 @@ describe('AreaPerformanceTable', () => {
     })
 
     it('should handle many areas', () => {
-      const manyAreas: AreaPerformance[] = Array.from({ length: 20 }, (_, i) => ({
-        ...mockArea1,
-        areaId: `A${i + 1}`,
-      }))
+      const manyAreas: AreaPerformance[] = Array.from(
+        { length: 20 },
+        (_, i) => ({
+          ...mockArea1,
+          areaId: `A${i + 1}`,
+        })
+      )
 
       const { container } = render(<AreaPerformanceTable areas={manyAreas} />)
 
