@@ -8,6 +8,8 @@ ignore: |
   .git/
   */dist/
   */build/
+  # Kubernetes multi-document YAML files require document separators
+  docs/deployment-examples/kubernetes-cache-config.yaml
 
 rules:
   # Allow longer lines for GitHub Actions (common for long commands)
