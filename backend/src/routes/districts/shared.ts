@@ -642,6 +642,199 @@ export async function serveDistrictFromSnapshot<T>(
 
 /**
  * Helper function to serve district-specific data from per-district snapshots
+ * with support for date-aware snapshot selection.
+ *
+ * Uses the new DistrictDataAggregator for efficient per-district file access.
+ *
+ * Requirements:
+ * - 4.3: Accept optional date parameter for historical snapshot access
+ * - 4.4: Include fallback metadata when a different snapshot is returned
+ * - 5.1: Prefer exact date match, fall back to nearest snapshot
+ * - Property 5: Snapshot selection priority (exact match preferred)
+ * - Property 6: Fallback metadata inclusion
+ */
+export async function serveDistrictFromPerDistrictSnapshotByDate<T>(
+  res: Response,
+  districtId: string,
+  requestedDate: string | undefined,
+  dataExtractor: (district: DistrictStatistics) => T,
+  errorContext: string
+): Promise<T | null> {
+  // If no date is provided, delegate to the existing function for backward compatibility
+  // (Property 3: Backward compatibility)
+  if (!requestedDate) {
+    return serveDistrictFromPerDistrictSnapshot(
+      res,
+      districtId,
+      dataExtractor,
+      errorContext
+    )
+  }
+
+  const startTime = Date.now()
+  const operationId = `per_district_date_read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  logger.info('Starting date-aware per-district snapshot read operation', {
+    operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+    operation_id: operationId,
+    district_id: districtId,
+    requested_date: requestedDate,
+    context: errorContext,
+  })
+
+  try {
+    // First, try to get the exact snapshot for the requested date
+    // (Property 5: Snapshot selection priority - exact match preferred)
+    let snapshot = await perDistrictSnapshotStore.getSnapshot(requestedDate)
+    let fallbackReason:
+      | 'no_snapshot_for_date'
+      | 'closing_period_gap'
+      | 'future_date'
+      | null = null
+
+    // If exact date not found, use findNearestSnapshot for fallback
+    // (Requirement 5.1: Fallback to nearest snapshot)
+    if (!snapshot) {
+      logger.info('Exact snapshot not found, searching for nearest', {
+        operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+        operation_id: operationId,
+        requested_date: requestedDate,
+      })
+
+      const nearestResult = await findNearestSnapshot(requestedDate)
+      snapshot = nearestResult.snapshot
+      fallbackReason = nearestResult.fallbackReason
+    }
+
+    if (!snapshot) {
+      const duration = Date.now() - startTime
+      logger.warn('No snapshot available for date-aware read operation', {
+        operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+        operation_id: operationId,
+        district_id: districtId,
+        requested_date: requestedDate,
+        context: errorContext,
+        duration_ms: duration,
+      })
+
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
+        },
+      })
+      return null
+    }
+
+    logger.info('Retrieved snapshot for date-aware read operation', {
+      operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+      requested_date: requestedDate,
+      is_fallback: fallbackReason !== null,
+      fallback_reason: fallbackReason,
+      created_at: snapshot.created_at,
+      schema_version: snapshot.schema_version,
+      calculation_version: snapshot.calculation_version,
+      context: errorContext,
+    })
+
+    // Get district data using the aggregator
+    const district = await districtDataAggregator.getDistrictData(
+      snapshot.snapshot_id,
+      districtId
+    )
+
+    if (!district) {
+      const duration = Date.now() - startTime
+      logger.warn('District not found in date-aware snapshot', {
+        operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+        operation_id: operationId,
+        snapshot_id: snapshot.snapshot_id,
+        district_id: districtId,
+        requested_date: requestedDate,
+        context: errorContext,
+        duration_ms: duration,
+      })
+
+      res.status(404).json({
+        error: {
+          code: 'DISTRICT_NOT_FOUND',
+          message: 'District not found',
+        },
+      })
+      return null
+    }
+
+    logger.debug('Found district in date-aware snapshot', {
+      operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+      operation_id: operationId,
+      snapshot_id: snapshot.snapshot_id,
+      district_id: districtId,
+      requested_date: requestedDate,
+    })
+
+    const data = dataExtractor(district)
+
+    // Build snapshot metadata with fallback information when applicable
+    // (Property 6: Fallback metadata inclusion)
+    const responseWithMetadata = {
+      ...data,
+      _snapshot_metadata: buildSnapshotResponseMetadata(
+        snapshot,
+        requestedDate,
+        fallbackReason
+      ),
+    }
+
+    const duration = Date.now() - startTime
+    logger.info(
+      'Date-aware per-district snapshot read operation completed successfully',
+      {
+        operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+        operation_id: operationId,
+        snapshot_id: snapshot.snapshot_id,
+        district_id: districtId,
+        requested_date: requestedDate,
+        is_fallback: fallbackReason !== null,
+        fallback_reason: fallbackReason,
+        context: errorContext,
+        duration_ms: duration,
+      }
+    )
+
+    return responseWithMetadata as T
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorResponse = transformErrorResponse(error)
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Date-aware per-district snapshot read operation failed', {
+      operation: 'serveDistrictFromPerDistrictSnapshotByDate',
+      operation_id: operationId,
+      district_id: districtId,
+      requested_date: requestedDate,
+      context: errorContext,
+      error: errorMessage,
+      duration_ms: duration,
+    })
+
+    res.status(500).json({
+      error: {
+        code: errorResponse.code || 'SNAPSHOT_ERROR',
+        message: `Failed to ${errorContext}`,
+        details: errorResponse.details,
+      },
+    })
+    return null
+  }
+}
+
+/**
+ * Helper function to serve district-specific data from per-district snapshots
  * Uses the new DistrictDataAggregator for efficient per-district file access
  */
 export async function serveDistrictFromPerDistrictSnapshot<T>(

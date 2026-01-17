@@ -33,6 +33,7 @@ import {
   validateDateFormat,
   serveFromPerDistrictSnapshot,
   serveDistrictFromPerDistrictSnapshot,
+  serveDistrictFromPerDistrictSnapshotByDate,
   perDistrictSnapshotStore,
   buildSnapshotResponseMetadata,
   findNearestSnapshot,
@@ -313,7 +314,15 @@ coreRouter.get(
 
 /**
  * GET /api/districts/:districtId/statistics
- * Fetch district statistics from latest snapshot
+ * Fetch district statistics from snapshot
+ *
+ * Query parameters:
+ * - date: Optional ISO date (YYYY-MM-DD) to fetch statistics for a specific historical snapshot
+ *         If not provided, returns statistics from the latest successful snapshot
+ *
+ * Requirements:
+ * - 4.3: Accept optional date query parameter
+ * - Property 4: Validate date format and return 400 for invalid dates
  */
 coreRouter.get(
   '/:districtId/statistics',
@@ -321,12 +330,19 @@ coreRouter.get(
     ttl: 900, // 15 minutes
     keyGenerator: req => {
       const districtId = req.params['districtId']
+      const date = req.query['date'] as string | undefined
       if (!districtId) throw new Error('Missing districtId parameter')
-      return generateDistrictCacheKey(districtId, 'statistics')
+      // Include date in cache key for proper cache invalidation (Requirement 6.1)
+      return generateDistrictCacheKey(
+        districtId,
+        'statistics',
+        date ? { date } : undefined
+      )
     },
   }),
   async (req: Request, res: Response) => {
     const rawDistrictId = req.params['districtId']
+    const requestedDate = req.query['date'] as string | undefined
 
     if (!rawDistrictId) {
       res.status(400).json({
@@ -348,6 +364,20 @@ coreRouter.get(
       return
     }
 
+    // Validate date format if provided (Property 4: Date format validation)
+    if (requestedDate !== undefined) {
+      if (!validateDateFormat(requestedDate)) {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_DATE_FORMAT',
+            message: 'Date must be in YYYY-MM-DD format',
+            details: `Received: ${requestedDate}`,
+          },
+        })
+        return
+      }
+    }
+
     const districtId = rawDistrictId
     const requestId = `district_stats_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -355,13 +385,18 @@ coreRouter.get(
       operation: 'GET /api/districts/:districtId/statistics',
       request_id: requestId,
       district_id: districtId,
+      requested_date: requestedDate || 'latest',
       user_agent: req.get('user-agent'),
       ip: req.ip,
     })
 
-    const data = await serveDistrictFromPerDistrictSnapshot(
+    // Use date-aware snapshot selection (Task 1.3)
+    // - When requestedDate is provided: get snapshot for that date with fallback to nearest
+    // - When requestedDate is undefined: get latest snapshot (backward compatible - Property 3)
+    const data = await serveDistrictFromPerDistrictSnapshotByDate(
       res,
       districtId,
+      requestedDate,
       district => {
         logger.debug(
           'Extracting district statistics from per-district snapshot',
@@ -369,6 +404,7 @@ coreRouter.get(
             operation: 'GET /api/districts/:districtId/statistics',
             request_id: requestId,
             district_id: districtId,
+            requested_date: requestedDate || 'latest',
           }
         )
 
@@ -384,6 +420,7 @@ coreRouter.get(
         operation: 'GET /api/districts/:districtId/statistics',
         request_id: requestId,
         district_id: districtId,
+        requested_date: requestedDate || 'latest',
         snapshot_id: (data as { _snapshot_metadata?: { snapshot_id?: string } })
           ._snapshot_metadata?.snapshot_id,
       })

@@ -88,12 +88,9 @@ graph TB
 
     subgraph "Storage Layer"
         N[(Snapshot Files)]
-        O[current.json pointer]
     end
 
     H --> N
-    H --> O
-    L --> O
     L --> N
 ```
 
@@ -358,7 +355,7 @@ sequenceDiagram
     RS->>FSS: writeSnapshot(snapshot)
     FSS-->>RS: SnapshotResult
 
-    Note over FSS: Atomic write + update current.json
+    Note over FSS: Atomic write to snapshot directory
 ```
 
 #### CSV Data Transformation Details
@@ -470,7 +467,7 @@ The backend implements a **modular, dependency-injected service architecture** w
 - **Purpose**: File-based snapshot storage with atomic operations
 - **Performance**: In-memory caching (5-minute TTL), concurrent read optimization
 - **Features**: Atomic writes using temp files, integrity validation, recovery services
-- **Storage**: Single JSON files per snapshot with current.json pointer
+- **Storage**: Single JSON files per snapshot with directory scanning for latest
 
 **PerDistrictFileSnapshotStore** (Modern Snapshot Storage)
 
@@ -604,7 +601,6 @@ CACHE_DIR/
 │   ├── 1704067200000.json    # Immutable snapshots (timestamp IDs)
 │   ├── 1704153600000.json
 │   └── 1704240000000.json
-└── current.json              # Atomic pointer to latest successful snapshot
 ```
 
 ### Storage Characteristics
@@ -612,12 +608,12 @@ CACHE_DIR/
 **Atomic Operations**:
 
 - Uses temporary files + rename for crash safety
-- Current pointer updated only after successful snapshot creation
+- Latest snapshot determined by directory scanning
 - No partial writes or corrupted states
 
 **Performance Features**:
 
-- In-memory cache for current snapshot metadata and content
+- In-memory cache for snapshot metadata and content
 - Concurrent read deduplication (multiple requests share single file operation)
 - Automatic cleanup of old snapshots (configurable age/count limits)
 - Optional compression support (currently disabled)
@@ -626,7 +622,7 @@ CACHE_DIR/
 
 - **SnapshotIntegrityValidator**: Validates snapshot store consistency
 - **SnapshotRecoveryService**: Automatic recovery from corrupted files
-- **Pointer Recovery**: Scans directory to find latest successful snapshot if pointer corrupted
+- **Directory Scanning**: Scans directory to find latest successful snapshot
 - **Backup Support**: Can create backups before recovery operations
 
 ### Storage Implementations
@@ -639,7 +635,6 @@ CACHE_DIR/
 │   ├── 1704067200000.json    # Immutable snapshots (timestamp IDs)
 │   ├── 1704153600000.json
 │   └── 1704240000000.json
-└── current.json              # Atomic pointer to latest successful snapshot
 ```
 
 **Characteristics**:
@@ -648,6 +643,7 @@ CACHE_DIR/
 - Optimized for system-wide data access
 - In-memory caching with 5-minute TTL
 - Concurrent read optimization with request deduplication
+- Latest snapshot determined by directory scanning
 
 #### PerDistrictFileSnapshotStore (Modern Format)
 
@@ -664,7 +660,6 @@ CACHE_DIR/
 │       ├── metadata.json
 │       ├── manifest.json
 │       └── district_*.json
-├── current.json                          # Points to latest successful snapshot
 └── config/
     └── districts.json                    # District configuration
 ```
@@ -832,6 +827,147 @@ _500 Internal Server Error_ - Rankings file missing:
 - Rankings are immutable once created - they reflect the calculation version at snapshot creation time
 - For historical rankings, query specific snapshot IDs through admin endpoints
 
+#### Statistics Endpoint Details
+
+**GET `/api/districts/:districtId/statistics`**
+
+Returns comprehensive district statistics including membership, clubs, education, and performance data.
+
+**Purpose**: Provides detailed district-level statistics for the Division & Area Performance dashboard section. Supports date-aware queries to retrieve historical data matching the user's selected date.
+
+**Query Parameters**:
+
+| Parameter | Type   | Required | Description                                                                 |
+| --------- | ------ | -------- | --------------------------------------------------------------------------- |
+| `date`    | string | No       | ISO date string (YYYY-MM-DD). If omitted, returns data from latest snapshot |
+
+**Request Examples**:
+
+```bash
+# Get latest statistics (default behavior)
+GET /api/districts/42/statistics
+
+# Get statistics for a specific date
+GET /api/districts/42/statistics?date=2026-01-14
+```
+
+**Response Structure**:
+
+```json
+{
+  "districtId": "42",
+  "districtName": "District 42",
+  "asOfDate": "2026-01-14",
+  "membership": {
+    "total": 3247,
+    "change": 125,
+    "changePercent": 4.0
+  },
+  "clubs": {
+    "total": 156,
+    "active": 152,
+    "suspended": 4,
+    "distinguished": 89
+  },
+  "divisions": [
+    {
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areas": [...]
+    }
+  ],
+  "_snapshot_metadata": {
+    "snapshot_id": "2026-01-14",
+    "created_at": "2026-01-14T10:30:00.000Z",
+    "data_as_of": "2026-01-14",
+    "schema_version": "1.0.0",
+    "calculation_version": "2.1.0"
+  }
+}
+```
+
+**Date Parameter Behavior**:
+
+1. **When `date` is provided**: Returns data from the snapshot matching that date
+2. **When `date` is omitted**: Returns data from the latest successful snapshot (backward compatible)
+3. **When exact date not found**: Falls back to nearest available snapshot with fallback metadata
+
+**Fallback Response** (when exact date not available):
+
+When the requested date doesn't have an exact snapshot match, the response includes fallback metadata:
+
+```json
+{
+  "districtId": "42",
+  "asOfDate": "2026-01-10",
+  "_snapshot_metadata": {
+    "snapshot_id": "2026-01-10",
+    "data_as_of": "2026-01-10",
+    "fallback": {
+      "requested_date": "2026-01-14",
+      "actual_snapshot_date": "2026-01-10",
+      "fallback_reason": "no_snapshot_for_date"
+    }
+  }
+}
+```
+
+**Fallback Reasons**:
+
+- `no_snapshot_for_date`: No snapshot exists for the requested date
+- `closing_period_gap`: Gap due to month-end closing period
+- `future_date`: Requested date is in the future
+
+**Error Responses**:
+
+_400 Bad Request_ - Invalid date format:
+
+```json
+{
+  "error": {
+    "code": "INVALID_DATE_FORMAT",
+    "message": "Date must be in YYYY-MM-DD format",
+    "details": "Received: invalid-date"
+  }
+}
+```
+
+_404 Not Found_ - District not found:
+
+```json
+{
+  "error": {
+    "code": "DISTRICT_NOT_FOUND",
+    "message": "District not found"
+  }
+}
+```
+
+_503 Service Unavailable_ - No snapshot available:
+
+```json
+{
+  "error": {
+    "code": "NO_SNAPSHOT_AVAILABLE",
+    "message": "No data snapshot available yet",
+    "details": "Run a refresh operation to create the first snapshot"
+  }
+}
+```
+
+**Performance Characteristics**:
+
+- Response time: Sub-10ms (served from cached snapshot)
+- Cache TTL: 15 minutes (HTTP cache middleware)
+- Cache key includes date parameter for proper invalidation
+
+**Usage Notes**:
+
+- The `asOfDate` field always reflects the actual snapshot date used
+- When using fallback, compare `requested_date` with `actual_snapshot_date` to detect date mismatch
+- Frontend should display the `asOfDate` to users for transparency
+- The date parameter enables consistent data views across all dashboard sections
+
 ### Admin Endpoints (`/api/admin`)
 
 | Endpoint                            | Method | Purpose                       |
@@ -994,9 +1130,8 @@ interface DistrictStatistics {
 2. **Normalize** → Transform CSV records to structured DistrictStatistics
 3. **Validate** → Check against Zod schemas and business rules
 4. **Create Snapshot** → Persist with status (success/partial/failed)
-5. **Update Pointer** → If successful, atomically update current.json
-6. **Serve Reads** → API endpoints read from current snapshot
-7. **Preserve History** → Failed snapshots retained for debugging
+5. **Serve Reads** → API endpoints read from latest snapshot via directory scanning
+6. **Preserve History** → Failed snapshots retained for debugging
 
 ## Dependency Injection System
 
@@ -1116,8 +1251,7 @@ The backend implements multiple layers of performance optimization to ensure con
 
 **In-Memory Caching**:
 
-- **Current Snapshot Cache**: 5-minute TTL for latest snapshot data
-- **Pointer Cache**: 30-second TTL for current.json pointer
+- **Snapshot Cache**: 5-minute TTL for latest snapshot data
 - **District Data Cache**: 5-minute TTL for frequently accessed districts
 - **Analytics Cache**: Configurable TTL for computed analytics results
 
@@ -1216,7 +1350,7 @@ interface RetryOptions {
 
 - **SnapshotIntegrityValidator**: Detects corrupted or invalid snapshots
 - **SnapshotRecoveryService**: Automatic recovery from corrupted files
-- **Pointer Recovery**: Scans directory to rebuild current.json if corrupted
+- **Directory Scanning**: Finds latest successful snapshot by scanning snapshot directory
 - **Backup Creation**: Creates backups before recovery operations
 
 **District-Level Error Handling**:

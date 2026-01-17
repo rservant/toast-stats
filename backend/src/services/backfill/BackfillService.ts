@@ -1119,13 +1119,11 @@ export class BackfillService {
             snapshot: Snapshot,
             rankings?: AllDistrictsRankingsData,
             options?: {
-              skipCurrentPointerUpdate?: boolean
               overrideSnapshotDate?: string
             }
           ) => Promise<void>
         }
         await perDistrictStore.writeSnapshot(snapshot, allDistrictsRankings, {
-          skipCurrentPointerUpdate: true,
           overrideSnapshotDate: effectiveSnapshotDate,
         })
 
@@ -1147,13 +1145,11 @@ export class BackfillService {
             snapshot: Snapshot,
             rankings?: AllDistrictsRankingsData,
             options?: {
-              skipCurrentPointerUpdate?: boolean
               overrideSnapshotDate?: string
             }
           ) => Promise<void>
         }
         await perDistrictStore.writeSnapshot(snapshot, undefined, {
-          skipCurrentPointerUpdate: true,
           overrideSnapshotDate: effectiveSnapshotDate,
         })
       }

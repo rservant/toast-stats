@@ -1,57 +1,18 @@
 /**
  * Snapshot integrity validation and corruption detection service
  *
- * This service provides comprehensive validation of snapshot files and the
- * current.json pointer to detect corruption and provide recovery guidance.
+ * This service provides comprehensive validation of snapshot files
+ * to detect corruption and provide recovery guidance.
  */
 
 import fs from 'fs/promises'
 import path from 'path'
 import { z } from 'zod'
 import { logger } from '../utils/logger.js'
-import type {} from // Snapshot,
-// CurrentSnapshotPointer,
-// SnapshotValidationResult,
-// SnapshotStatus,
-'../types/snapshots.js'
 
 /**
- * Result of snapshot integrity validation
- */
-export interface SnapshotIntegrityResult {
-  /** Whether the snapshot is valid and uncorrupted */
-  isValid: boolean
-
-  /** Specific corruption issues found */
-  corruptionIssues: string[]
-
-  /** Recovery recommendations */
-  recoveryRecommendations: string[]
-
-  /** Whether the snapshot file exists and is readable */
-  fileAccessible: boolean
-
-  /** Whether the JSON structure is valid */
-  jsonValid: boolean
-
-  /** Whether the snapshot schema is valid */
-  schemaValid: boolean
-
-  /** Whether the snapshot content is internally consistent */
-  contentConsistent: boolean
-
-  /** Metadata about the validation process */
-  validationMetadata: {
-    validatedAt: string
-    validatorVersion: string
-    validationDurationMs: number
-    snapshotId?: string
-    filePath?: string
-  }
-}
-
-/**
- * Result of current pointer validation
+ * @deprecated This interface is no longer used as current.json pointer validation has been removed.
+ * Will be removed in a future version. See Task 2.4 for SnapshotRecoveryService updates.
  */
 export interface CurrentPointerIntegrityResult {
   /** Whether the current pointer is valid */
@@ -89,14 +50,46 @@ export interface CurrentPointerIntegrityResult {
 }
 
 /**
+ * Result of snapshot integrity validation
+ */
+export interface SnapshotIntegrityResult {
+  /** Whether the snapshot is valid and uncorrupted */
+  isValid: boolean
+
+  /** Specific corruption issues found */
+  corruptionIssues: string[]
+
+  /** Recovery recommendations */
+  recoveryRecommendations: string[]
+
+  /** Whether the snapshot file exists and is readable */
+  fileAccessible: boolean
+
+  /** Whether the JSON structure is valid */
+  jsonValid: boolean
+
+  /** Whether the snapshot schema is valid */
+  schemaValid: boolean
+
+  /** Whether the snapshot content is internally consistent */
+  contentConsistent: boolean
+
+  /** Metadata about the validation process */
+  validationMetadata: {
+    validatedAt: string
+    validatorVersion: string
+    validationDurationMs: number
+    snapshotId?: string
+    filePath?: string
+  }
+}
+
+/**
  * Comprehensive snapshot store integrity result
  */
 export interface SnapshotStoreIntegrityResult {
   /** Overall health status */
   isHealthy: boolean
-
-  /** Current pointer validation result */
-  currentPointer: CurrentPointerIntegrityResult
 
   /** Individual snapshot validation results */
   snapshots: SnapshotIntegrityResult[]
@@ -140,16 +133,6 @@ const SnapshotSchema = z.object({
 })
 
 /**
- * Zod schema for validating current pointer structure
- */
-const CurrentPointerSchema = z.object({
-  snapshot_id: z.string().min(1),
-  updated_at: z.string().datetime(),
-  schema_version: z.string().min(1),
-  calculation_version: z.string().min(1),
-})
-
-/**
  * Snapshot integrity validator service
  */
 export class SnapshotIntegrityValidator {
@@ -157,8 +140,7 @@ export class SnapshotIntegrityValidator {
 
   constructor(
     private readonly cacheDir: string,
-    private readonly snapshotsDir: string,
-    private readonly currentPointerFile: string
+    private readonly snapshotsDir: string
   ) {}
 
   /**
@@ -313,209 +295,6 @@ export class SnapshotIntegrityValidator {
   }
 
   /**
-   * Validate the integrity of the current.json pointer file
-   */
-  async validateCurrentPointer(): Promise<CurrentPointerIntegrityResult> {
-    const startTime = Date.now()
-
-    logger.info('Starting current pointer integrity validation', {
-      operation: 'validateCurrentPointer',
-      pointer_file: this.currentPointerFile,
-    })
-
-    const result: CurrentPointerIntegrityResult = {
-      isValid: false,
-      issues: [],
-      recoveryRecommendations: [],
-      fileAccessible: false,
-      jsonValid: false,
-      referencedSnapshotExists: false,
-      referencedSnapshotSuccessful: false,
-      alternativeSnapshots: [],
-      validationMetadata: {
-        validatedAt: new Date().toISOString(),
-        validatorVersion: this.validatorVersion,
-        validationDurationMs: 0,
-        pointerFilePath: this.currentPointerFile,
-      },
-    }
-
-    try {
-      // Check file accessibility
-      try {
-        await fs.access(this.currentPointerFile, fs.constants.R_OK)
-        result.fileAccessible = true
-      } catch {
-        result.issues.push('Current pointer file is not accessible')
-        result.recoveryRecommendations.push(
-          'Scan snapshots directory to find latest successful snapshot'
-        )
-        result.recoveryRecommendations.push(
-          'Recreate current.json pointer file'
-        )
-
-        // Find alternative snapshots
-        result.alternativeSnapshots =
-          await this.findAlternativeSuccessfulSnapshots()
-
-        return this.finalizePointerResult(result, startTime)
-      }
-
-      // Check JSON validity
-      let pointer: Record<string, unknown>
-      try {
-        const content = await fs.readFile(this.currentPointerFile, 'utf-8')
-        pointer = JSON.parse(content)
-        result.jsonValid = true
-        result.validationMetadata.referencedSnapshotId = pointer[
-          'snapshot_id'
-        ] as string
-      } catch (error) {
-        result.issues.push(
-          `Invalid JSON in current pointer: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-        result.recoveryRecommendations.push(
-          'Current pointer file contains invalid JSON'
-        )
-        result.recoveryRecommendations.push(
-          'Remove corrupted current.json and recreate from latest successful snapshot'
-        )
-
-        // Find alternative snapshots
-        result.alternativeSnapshots =
-          await this.findAlternativeSuccessfulSnapshots()
-
-        return this.finalizePointerResult(result, startTime)
-      }
-
-      // Check pointer schema validity
-      try {
-        const schemaResult = CurrentPointerSchema.safeParse(pointer)
-        if (!schemaResult.success) {
-          result.issues.push('Current pointer schema validation failed:')
-          schemaResult.error.issues.forEach(issue => {
-            const path =
-              issue.path.length > 0 ? ` at ${issue.path.join('.')}` : ''
-            result.issues.push(`  - ${issue.message}${path}`)
-          })
-          result.recoveryRecommendations.push(
-            'Current pointer structure is invalid'
-          )
-          result.recoveryRecommendations.push(
-            'Recreate current.json with proper structure'
-          )
-        }
-      } catch (error) {
-        result.issues.push(
-          `Pointer schema validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-      }
-
-      // Check if referenced snapshot exists
-      if (
-        pointer['snapshot_id'] &&
-        typeof pointer['snapshot_id'] === 'string'
-      ) {
-        const snapshotPath = path.join(
-          this.snapshotsDir,
-          `${pointer['snapshot_id']}.json`
-        )
-        try {
-          await fs.access(snapshotPath, fs.constants.R_OK)
-          result.referencedSnapshotExists = true
-
-          // Check if referenced snapshot is successful
-          try {
-            const snapshotContent = await fs.readFile(snapshotPath, 'utf-8')
-            const snapshot = JSON.parse(snapshotContent)
-            result.referencedSnapshotSuccessful = snapshot.status === 'success'
-
-            if (!result.referencedSnapshotSuccessful) {
-              result.issues.push(
-                `Referenced snapshot has status '${snapshot.status}', not 'success'`
-              )
-              result.recoveryRecommendations.push(
-                'Current pointer references a non-successful snapshot'
-              )
-              result.recoveryRecommendations.push(
-                'Update pointer to reference latest successful snapshot'
-              )
-            }
-          } catch {
-            result.issues.push(
-              'Referenced snapshot file is corrupted or unreadable'
-            )
-            result.recoveryRecommendations.push(
-              'Referenced snapshot is corrupted'
-            )
-            result.recoveryRecommendations.push(
-              'Update pointer to reference a valid successful snapshot'
-            )
-          }
-        } catch {
-          result.issues.push(
-            `Referenced snapshot does not exist: ${pointer['snapshot_id']}`
-          )
-          result.recoveryRecommendations.push(
-            'Current pointer references a non-existent snapshot'
-          )
-          result.recoveryRecommendations.push(
-            'Update pointer to reference an existing successful snapshot'
-          )
-        }
-      }
-
-      // Find alternative snapshots regardless of current state
-      result.alternativeSnapshots =
-        await this.findAlternativeSuccessfulSnapshots()
-
-      // Determine overall validity
-      result.isValid =
-        result.fileAccessible &&
-        result.jsonValid &&
-        result.referencedSnapshotExists &&
-        result.referencedSnapshotSuccessful
-
-      if (result.isValid) {
-        logger.info('Current pointer integrity validation passed', {
-          operation: 'validateCurrentPointer',
-          referenced_snapshot: pointer['snapshot_id'],
-          updated_at: pointer['updated_at'],
-        })
-      } else {
-        logger.warn('Current pointer integrity validation failed', {
-          operation: 'validateCurrentPointer',
-          issues_count: result.issues.length,
-          file_accessible: result.fileAccessible,
-          json_valid: result.jsonValid,
-          referenced_exists: result.referencedSnapshotExists,
-          referenced_successful: result.referencedSnapshotSuccessful,
-          alternatives_found: result.alternativeSnapshots.length,
-        })
-      }
-
-      return this.finalizePointerResult(result, startTime)
-    } catch (error) {
-      result.issues.push(
-        `Unexpected validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-      result.recoveryRecommendations.push(
-        'An unexpected error occurred during pointer validation'
-      )
-      result.recoveryRecommendations.push(
-        'Check system logs and file permissions'
-      )
-
-      logger.error('Current pointer validation failed with unexpected error', {
-        operation: 'validateCurrentPointer',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-
-      return this.finalizePointerResult(result, startTime)
-    }
-  }
-
-  /**
    * Validate the integrity of the entire snapshot store
    */
   async validateSnapshotStore(): Promise<SnapshotStoreIntegrityResult> {
@@ -528,7 +307,6 @@ export class SnapshotIntegrityValidator {
 
     const result: SnapshotStoreIntegrityResult = {
       isHealthy: false,
-      currentPointer: await this.validateCurrentPointer(),
       snapshots: [],
       storeIssues: [],
       storeRecoveryRecommendations: [],
@@ -621,22 +399,8 @@ export class SnapshotIntegrityValidator {
         )
       }
 
-      // Check current pointer consistency with available snapshots
-      if (
-        !result.currentPointer.isValid &&
-        result.summary.successfulSnapshots > 0
-      ) {
-        result.storeIssues.push(
-          'Current pointer is invalid but successful snapshots exist'
-        )
-        result.storeRecoveryRecommendations.push(
-          'Recreate current.json pointer to reference latest successful snapshot'
-        )
-      }
-
-      // Determine overall health
+      // Determine overall health (based on having at least one successful snapshot and no corrupted ones)
       result.isHealthy =
-        result.currentPointer.isValid &&
         result.summary.successfulSnapshots > 0 &&
         result.summary.corruptedSnapshots === 0
 
@@ -659,7 +423,6 @@ export class SnapshotIntegrityValidator {
           corrupted_snapshots: result.summary.corruptedSnapshots,
           successful_snapshots: result.summary.successfulSnapshots,
           store_issues: result.storeIssues.length,
-          pointer_valid: result.currentPointer.isValid,
           duration_ms: duration,
         })
       }
@@ -777,60 +540,12 @@ export class SnapshotIntegrityValidator {
   }
 
   /**
-   * Find alternative successful snapshots for recovery
-   */
-  private async findAlternativeSuccessfulSnapshots(): Promise<string[]> {
-    try {
-      const files = await fs.readdir(this.snapshotsDir)
-      const snapshotFiles = files
-        .filter(file => file.endsWith('.json'))
-        .sort((a, b) => {
-          const timestampA = parseInt(path.basename(a, '.json'))
-          const timestampB = parseInt(path.basename(b, '.json'))
-          return timestampB - timestampA // Newest first
-        })
-
-      const alternatives: string[] = []
-
-      for (const file of snapshotFiles) {
-        try {
-          const snapshotPath = path.join(this.snapshotsDir, file)
-          const content = await fs.readFile(snapshotPath, 'utf-8')
-          const snapshot = JSON.parse(content)
-
-          if (snapshot.status === 'success') {
-            alternatives.push(path.basename(file, '.json'))
-          }
-        } catch {
-          // Skip corrupted files
-          continue
-        }
-      }
-
-      return alternatives
-    } catch {
-      return []
-    }
-  }
-
-  /**
    * Finalize snapshot validation result with timing
    */
   private finalizeResult(
     result: SnapshotIntegrityResult,
     startTime: number
   ): SnapshotIntegrityResult {
-    result.validationMetadata.validationDurationMs = Date.now() - startTime
-    return result
-  }
-
-  /**
-   * Finalize pointer validation result with timing
-   */
-  private finalizePointerResult(
-    result: CurrentPointerIntegrityResult,
-    startTime: number
-  ): CurrentPointerIntegrityResult {
     result.validationMetadata.validationDurationMs = Date.now() - startTime
     return result
   }

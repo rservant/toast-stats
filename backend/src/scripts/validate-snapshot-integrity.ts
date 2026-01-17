@@ -147,27 +147,6 @@ function formatIntegrityResult(result: SnapshotStoreIntegrityResult): void {
   }
   console.log()
 
-  // Current pointer status
-  console.log('🎯 Current Pointer Status:')
-  const pointerStatus = result.currentPointer.isValid
-    ? '✅ Valid'
-    : '❌ Invalid'
-  console.log(`   Status: ${pointerStatus}`)
-
-  if (!result.currentPointer.isValid) {
-    console.log('   Issues:')
-    result.currentPointer.issues.forEach((issue: string) => {
-      console.log(`     - ${issue}`)
-    })
-  }
-
-  if (result.currentPointer.alternativeSnapshots.length > 0) {
-    console.log(
-      `   Alternative Snapshots Available: ${result.currentPointer.alternativeSnapshots.length}`
-    )
-  }
-  console.log()
-
   // Store-level issues
   if (result.storeIssues.length > 0) {
     console.log('⚠️  Store Issues:')
@@ -297,9 +276,6 @@ function formatRecoveryGuidance(guidance: RecoveryGuidance): void {
   )
   console.log(
     `   Corrupted Snapshots: ${integrityStatus.summary.corruptedSnapshots}`
-  )
-  console.log(
-    `   Current Pointer Valid: ${integrityStatus.currentPointer.isValid ? 'Yes' : 'No'}`
   )
 }
 

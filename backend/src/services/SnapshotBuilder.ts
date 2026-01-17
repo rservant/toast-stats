@@ -48,8 +48,6 @@ export interface SnapshotBuilderConfig {
 export interface BuildOptions {
   /** Target date for snapshot (YYYY-MM-DD format), defaults to current date */
   date?: string
-  /** If true, don't update current.json pointer (useful for backfill operations) */
-  skipCurrentPointerUpdate?: boolean
 }
 
 /**
@@ -195,7 +193,6 @@ export class SnapshotBuilder {
     this.log.info('Starting snapshot build from cache', {
       buildId,
       targetDate,
-      skipCurrentPointerUpdate: options.skipCurrentPointerUpdate,
     })
 
     try {
@@ -277,8 +274,7 @@ export class SnapshotBuilder {
           'failed',
           validationResult.errors,
           rawData,
-          allDistrictsRankings,
-          options
+          allDistrictsRankings
         )
 
         return {
@@ -316,8 +312,7 @@ export class SnapshotBuilder {
         snapshotStatus,
         allErrors,
         rawData,
-        allDistrictsRankings,
-        options
+        allDistrictsRankings
       )
 
       this.log.info('Snapshot build completed successfully', {
@@ -849,7 +844,6 @@ export class SnapshotBuilder {
    * @param errors - Error messages
    * @param rawData - Raw data for metadata
    * @param allDistrictsRankings - Optional rankings data
-   * @param options - Build options
    * @returns Created snapshot
    */
   private async createSnapshot(
@@ -857,8 +851,7 @@ export class SnapshotBuilder {
     status: SnapshotStatus,
     errors: string[],
     rawData?: RawData,
-    allDistrictsRankings?: AllDistrictsRankingsData,
-    options?: BuildOptions
+    allDistrictsRankings?: AllDistrictsRankingsData
   ): Promise<Snapshot> {
     const createdAt = new Date().toISOString()
 
@@ -918,7 +911,6 @@ export class SnapshotBuilder {
     // Write snapshot to store with the effective date as override
     // This ensures the snapshot is stored in the correct date-based directory
     await this.snapshotStore.writeSnapshot(snapshot, allDistrictsRankings, {
-      skipCurrentPointerUpdate: options?.skipCurrentPointerUpdate,
       overrideSnapshotDate: effectiveSnapshotDate,
     })
 

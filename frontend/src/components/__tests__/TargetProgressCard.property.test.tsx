@@ -17,9 +17,11 @@ import {
   RecognitionTargets,
   MetricRankings,
   RecognitionLevel,
+} from '../TargetProgressCard'
+import {
   isLevelAchieved,
   isLevelAtOrBelowAchieved,
-} from '../TargetProgressCard'
+} from '../../utils/targetProgressHelpers'
 import {
   renderWithProviders,
   cleanupAllResources,

@@ -268,7 +268,7 @@ describe('Snapshot Infrastructure', () => {
       expect(snapshotsDirExists).toBe(true)
     })
 
-    it('should create current.json pointer for successful snapshots', async () => {
+    it('should retrieve latest successful snapshot via directory scanning', async () => {
       const dataAsOfDate = '2024-01-01'
       const testSnapshot: Snapshot = {
         snapshot_id: dataAsOfDate,
@@ -291,20 +291,15 @@ describe('Snapshot Infrastructure', () => {
 
       await snapshotStore.writeSnapshot(testSnapshot)
 
-      const currentPointerFile = path.join(testCacheDir, 'current.json')
-      const pointerExists = await fs
-        .access(currentPointerFile)
-        .then(() => true)
-        .catch(() => false)
+      // Verify latest snapshot can be retrieved via directory scanning (no current.json pointer)
+      const latestSnapshot = await snapshotStore.getLatestSuccessful()
 
-      expect(pointerExists).toBe(true)
-
-      const pointerContent = await fs.readFile(currentPointerFile, 'utf-8')
-      const pointer = JSON.parse(pointerContent)
-
-      expect(pointer.snapshot_id).toBe(dataAsOfDate)
-      expect(pointer.schema_version).toBe(testSnapshot.schema_version)
-      expect(pointer.calculation_version).toBe(testSnapshot.calculation_version)
+      expect(latestSnapshot).not.toBeNull()
+      expect(latestSnapshot!.snapshot_id).toBe(dataAsOfDate)
+      expect(latestSnapshot!.schema_version).toBe(testSnapshot.schema_version)
+      expect(latestSnapshot!.calculation_version).toBe(
+        testSnapshot.calculation_version
+      )
     })
   })
 })
