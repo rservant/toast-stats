@@ -18,6 +18,7 @@ export type SortField =
   | 'octoberRenewals'
   | 'aprilRenewals'
   | 'newMembers'
+  | 'clubStatus'
 
 /**
  * Sort direction types
@@ -202,6 +203,14 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     filterable: true,
     filterType: 'categorical',
     filterOptions: ['thriving', 'vulnerable', 'intervention-required'],
+  },
+  {
+    field: 'clubStatus',
+    label: 'Club Status',
+    sortable: true,
+    filterable: true,
+    filterType: 'categorical',
+    filterOptions: ['Active', 'Suspended', 'Ineligible', 'Low'],
   },
   {
     field: 'octoberRenewals',

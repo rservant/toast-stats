@@ -8,9 +8,10 @@ import { exportClubPerformance } from '../csvExport'
  */
 
 describe('CSV Export Property Tests', () => {
-  // Store the original URL.createObjectURL and URL.revokeObjectURL
+  // Store the original URL.createObjectURL, URL.revokeObjectURL, and Blob
   let originalCreateObjectURL: typeof URL.createObjectURL
   let originalRevokeObjectURL: typeof URL.revokeObjectURL
+  let originalBlob: typeof Blob
   let capturedCSVContent: string | null = null
 
   beforeEach(() => {
@@ -45,7 +46,7 @@ describe('CSV Export Property Tests', () => {
     )
 
     // Capture the Blob content using a class mock
-    const OriginalBlob = globalThis.Blob
+    originalBlob = globalThis.Blob
     globalThis.Blob = class MockBlob {
       constructor(
         parts?: (string | Blob | ArrayBuffer | ArrayBufferView)[],
@@ -55,7 +56,7 @@ describe('CSV Export Property Tests', () => {
           capturedCSVContent = parts[0] as string
         }
         // Return a real Blob for type compatibility
-        return new OriginalBlob(parts, options)
+        return new originalBlob(parts, options)
       }
     } as typeof Blob
   })
@@ -63,6 +64,7 @@ describe('CSV Export Property Tests', () => {
   afterEach(() => {
     URL.createObjectURL = originalCreateObjectURL
     URL.revokeObjectURL = originalRevokeObjectURL
+    globalThis.Blob = originalBlob
     vi.restoreAllMocks()
   })
 

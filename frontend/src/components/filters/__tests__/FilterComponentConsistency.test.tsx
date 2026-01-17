@@ -167,6 +167,7 @@ describe('Filter Component Consistency', () => {
       expect(categoricalColumns.map(c => c.field)).toEqual([
         'distinguished',
         'status',
+        'clubStatus',
       ])
 
       // Each categorical column should be filterable and have options

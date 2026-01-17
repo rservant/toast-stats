@@ -27,6 +27,11 @@ export interface ClubTrend {
   octoberRenewals?: number
   aprilRenewals?: number
   newMembers?: number
+  /**
+   * Club operational status from Toastmasters dashboard
+   * Values: "Active", "Suspended", "Ineligible", "Low", or undefined
+   */
+  clubStatus?: string
 }
 
 export interface DivisionAnalytics {

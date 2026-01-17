@@ -1,6 +1,7 @@
 import React from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { formatDisplayDate } from '../utils/dateFormatting'
+import { getClubStatusBadge } from '../utils/clubStatusBadge'
 
 interface ClubDetailModalProps {
   club: ClubTrend | null
@@ -134,11 +135,23 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
 
           {/* Status and Export */}
           <div className="flex items-center justify-between mb-6">
-            <span
-              className={`px-4 py-2 text-sm font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
-            >
-              {club.currentStatus.toUpperCase()}
-            </span>
+            <div className="flex items-center gap-3">
+              {/* Health status badge */}
+              <span
+                className={`px-4 py-2 text-sm font-medium rounded-full border ${getStatusBadge(club.currentStatus)}`}
+              >
+                {club.currentStatus.toUpperCase()}
+              </span>
+
+              {/* Club status badge - only render when clubStatus is defined */}
+              {club.clubStatus && (
+                <span
+                  className={`px-4 py-2 text-sm font-medium rounded-full border ${getClubStatusBadge(club.clubStatus)}`}
+                >
+                  {club.clubStatus}
+                </span>
+              )}
+            </div>
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 bg-tm-loyal-blue text-white rounded-lg hover:bg-tm-loyal-blue-80 transition-colors font-tm-body"

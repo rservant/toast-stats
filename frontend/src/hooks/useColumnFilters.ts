@@ -174,6 +174,16 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
           }
           break
 
+        case 'clubStatus':
+          if (filter.type === 'categorical' && Array.isArray(filter.value)) {
+            const selectedValues = filter.value as string[]
+            if (selectedValues.length === 0) return clubs
+            return clubs.filter(club => {
+              return club.clubStatus && selectedValues.includes(club.clubStatus)
+            })
+          }
+          break
+
         case 'octoberRenewals':
           if (filter.type === 'numeric' && Array.isArray(filter.value)) {
             const [min, max] = filter.value as [number | null, number | null]

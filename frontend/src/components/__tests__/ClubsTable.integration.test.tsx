@@ -150,7 +150,10 @@ describe('ClubsTable Integration Tests', () => {
       const distinguishedHeader = screen.getByRole('button', {
         name: /distinguished/i,
       })
-      const statusHeader = screen.getByRole('button', { name: /status/i })
+      // Use more specific regex to match "Status column header" but not "Club Status column header"
+      const statusHeader = screen.getByRole('button', {
+        name: /^status column header/i,
+      })
 
       expect(clubNameHeader).toBeInTheDocument()
       expect(divisionHeader).toBeInTheDocument()
