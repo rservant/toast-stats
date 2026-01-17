@@ -249,6 +249,19 @@ export class FileSnapshotStore
       enableCompression: config.enableCompression ?? false,
     }
 
+  /**
+   * Validate that a constructed file path is within the allowed base directory.
+   * Prevents path traversal attacks (e.g., using "../" in snapshotId or districtId).
+   * @throws Error if the path would escape the base directory
+   */
+  private validatePathWithinBase(filePath: string, baseDir: string): void {
+    const resolvedPath = path.resolve(filePath)
+    const resolvedBase = path.resolve(baseDir)
+    if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+      throw new Error(`Path traversal attempt detected: ${filePath}`)
+    }
+  }
+
     this.integrityValidator = new SnapshotIntegrityValidator(
       this.cacheDir,
       this.snapshotsDir
@@ -826,6 +839,9 @@ export class FileSnapshotStore
       const snapshotDir = path.join(this.snapshotsDir, snapshotId)
       const districtFile = path.join(snapshotDir, `district_${districtId}.json`)
 
+      // Validate path is within snapshots directory to prevent path traversal
+      this.validatePathWithinBase(districtFile, this.snapshotsDir)
+
       const content = await fs.readFile(districtFile, 'utf-8')
       const perDistrictData: PerDistrictData = JSON.parse(content)
 
@@ -897,6 +913,9 @@ export class FileSnapshotStore
       const snapshotDir = path.join(this.snapshotsDir, snapshotId)
       const manifestPath = path.join(snapshotDir, 'manifest.json')
 
+      // Validate path is within snapshots directory to prevent path traversal
+      this.validatePathWithinBase(manifestPath, this.snapshotsDir)
+
       const content = await fs.readFile(manifestPath, 'utf-8')
       const manifest: SnapshotManifest = JSON.parse(content)
 
@@ -937,6 +956,9 @@ export class FileSnapshotStore
     try {
       const snapshotDir = path.join(this.snapshotsDir, snapshotId)
       const metadataPath = path.join(snapshotDir, 'metadata.json')
+
+      // Validate path is within snapshots directory to prevent path traversal
+      this.validatePathWithinBase(metadataPath, this.snapshotsDir)
 
       const content = await fs.readFile(metadataPath, 'utf-8')
       const metadata: PerDistrictSnapshotMetadata = JSON.parse(content)
@@ -1580,6 +1602,9 @@ export class FileSnapshotStore
   ): Promise<Snapshot | null> {
     const snapshotDir = path.join(this.snapshotsDir, snapshotId)
     const metadataPath = path.join(snapshotDir, 'metadata.json')
+
+    // Validate path is within snapshots directory to prevent path traversal
+    this.validatePathWithinBase(metadataPath, this.snapshotsDir)
 
     try {
       await fs.access(metadataPath)
