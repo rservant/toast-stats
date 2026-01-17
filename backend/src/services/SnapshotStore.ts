@@ -249,6 +249,13 @@ export class FileSnapshotStore
       enableCompression: config.enableCompression ?? false,
     }
 
+    this.integrityValidator = new SnapshotIntegrityValidator(
+      this.cacheDir,
+      this.snapshotsDir
+    )
+    this.recoveryService = new SnapshotRecoveryService(this.config)
+  }
+
   /**
    * Validate that a constructed file path is within the allowed base directory.
    * Prevents path traversal attacks (e.g., using "../" in snapshotId or districtId).
@@ -257,16 +264,12 @@ export class FileSnapshotStore
   private validatePathWithinBase(filePath: string, baseDir: string): void {
     const resolvedPath = path.resolve(filePath)
     const resolvedBase = path.resolve(baseDir)
-    if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+    if (
+      !resolvedPath.startsWith(resolvedBase + path.sep) &&
+      resolvedPath !== resolvedBase
+    ) {
       throw new Error(`Path traversal attempt detected: ${filePath}`)
     }
-  }
-
-    this.integrityValidator = new SnapshotIntegrityValidator(
-      this.cacheDir,
-      this.snapshotsDir
-    )
-    this.recoveryService = new SnapshotRecoveryService(this.config)
   }
 
   /**
