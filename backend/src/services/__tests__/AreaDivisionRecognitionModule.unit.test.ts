@@ -73,7 +73,7 @@ describe('AreaDivisionRecognitionModule - Unit Tests', () => {
    */
   function createEntry(clubs: ScrapedRecord[]): DistrictCacheEntry {
     return {
-      districtId: 'test-district',
+      districtId: 'testDistrict',
       date: '2026-01-15',
       districtPerformance: [],
       divisionPerformance: [],

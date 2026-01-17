@@ -257,18 +257,71 @@ export class FileSnapshotStore
   }
 
   /**
-   * Validate that a constructed file path is within the allowed base directory.
-   * Prevents path traversal attacks (e.g., using "../" in snapshotId or districtId).
+   * Resolve a path under a base directory, ensuring it doesn't escape via traversal.
+   * Returns the sanitized path for use in file operations.
+   * This is CodeQL-friendly because it returns a new sanitized value.
    * @throws Error if the path would escape the base directory
    */
-  private validatePathWithinBase(filePath: string, baseDir: string): void {
-    const resolvedPath = path.resolve(filePath)
-    const resolvedBase = path.resolve(baseDir)
-    if (
-      !resolvedPath.startsWith(resolvedBase + path.sep) &&
-      resolvedPath !== resolvedBase
-    ) {
-      throw new Error(`Path traversal attempt detected: ${filePath}`)
+  private resolvePathUnderBase(baseDir: string, ...parts: string[]): string {
+    const base = path.resolve(baseDir)
+    const candidate = path.resolve(baseDir, ...parts)
+
+    const rel = path.relative(base, candidate)
+
+    // Must not be outside base, and must not be absolute (Windows safety)
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      throw new Error(`Path traversal attempt detected: ${candidate}`)
+    }
+
+    return candidate
+  }
+
+  /**
+   * Resolve an existing path under a base directory with symlink protection.
+   * Uses realpath to resolve symlinks and ensure the actual file is within base.
+   * Use this for reads where the file is expected to exist.
+   * @throws Error if the path would escape the base directory or file doesn't exist
+   */
+  private async resolveExistingPathUnderBase(
+    baseDir: string,
+    ...parts: string[]
+  ): Promise<string> {
+    const baseReal = await fs.realpath(baseDir)
+
+    // Resolve the target path lexically first
+    const candidate = path.resolve(baseDir, ...parts)
+
+    // realpath resolves symlinks - prevents "symlink escapes base" attacks
+    const candidateReal = await fs.realpath(candidate)
+
+    const rel = path.relative(baseReal, candidateReal)
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      throw new Error(`Path traversal attempt detected: ${candidateReal}`)
+    }
+
+    return candidateReal
+  }
+
+  /**
+   * Validate a district ID to ensure it is safe to use in file paths.
+   * District IDs are typically numeric (e.g., "42", "15") or alphanumeric (e.g., "F", "NONEXISTENT1").
+   * The pattern prevents path traversal by rejecting special characters like /, \, .., etc.
+   * @throws Error if the district ID format is invalid
+   */
+  private validateDistrictId(districtId: string): void {
+    if (typeof districtId !== 'string' || districtId.length === 0) {
+      throw new Error('Invalid district ID: empty or non-string value')
+    }
+
+    // Allow alphanumeric characters only (no path separators, dots, or special chars)
+    // This prevents path traversal while allowing valid district IDs
+    const DISTRICT_ID_PATTERN = /^[A-Za-z0-9]+$/
+    if (!DISTRICT_ID_PATTERN.test(districtId)) {
+      logger.warn('Rejected district ID with invalid characters', {
+        operation: 'validateDistrictId',
+        district_id: districtId,
+      })
+      throw new Error('Invalid district ID format')
     }
   }
 
@@ -717,8 +770,16 @@ export class FileSnapshotStore
     districtId: string,
     data: DistrictStatistics
   ): Promise<void> {
-    const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-    const districtFile = path.join(snapshotDir, `district_${districtId}.json`)
+    // Validate inputs before constructing paths
+    this.validateSnapshotId(snapshotId)
+    this.validateDistrictId(districtId)
+
+    // Use safe path resolution for write operation
+    const districtFile = this.resolvePathUnderBase(
+      this.snapshotsDir,
+      snapshotId,
+      `district_${districtId}.json`
+    )
 
     const perDistrictData: PerDistrictData = {
       districtId,
@@ -749,8 +810,14 @@ export class FileSnapshotStore
     snapshotId: string,
     rankingsData: AllDistrictsRankingsData
   ): Promise<void> {
-    const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-    const rankingsFile = path.join(snapshotDir, 'all-districts-rankings.json')
+    this.validateSnapshotId(snapshotId)
+
+    // Use safe path resolution for write operation
+    const rankingsFile = this.resolvePathUnderBase(
+      this.snapshotsDir,
+      snapshotId,
+      'all-districts-rankings.json'
+    )
 
     const updatedRankingsData = {
       ...rankingsData,
@@ -782,8 +849,14 @@ export class FileSnapshotStore
     snapshotId: string
   ): Promise<AllDistrictsRankingsData | null> {
     try {
-      const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-      const rankingsFile = path.join(snapshotDir, 'all-districts-rankings.json')
+      this.validateSnapshotId(snapshotId)
+
+      // Use symlink-safe path resolution for existing file read
+      const rankingsFile = await this.resolveExistingPathUnderBase(
+        this.snapshotsDir,
+        snapshotId,
+        'all-districts-rankings.json'
+      )
 
       const content = await fs.readFile(rankingsFile, 'utf-8')
       const rankingsData: AllDistrictsRankingsData = JSON.parse(content)
@@ -821,8 +894,14 @@ export class FileSnapshotStore
    */
   async hasAllDistrictsRankings(snapshotId: string): Promise<boolean> {
     try {
-      const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-      const rankingsFile = path.join(snapshotDir, 'all-districts-rankings.json')
+      this.validateSnapshotId(snapshotId)
+
+      // Use symlink-safe path resolution for existing file check
+      const rankingsFile = await this.resolveExistingPathUnderBase(
+        this.snapshotsDir,
+        snapshotId,
+        'all-districts-rankings.json'
+      )
 
       await fs.access(rankingsFile)
       return true
@@ -839,11 +918,16 @@ export class FileSnapshotStore
     districtId: string
   ): Promise<DistrictStatistics | null> {
     try {
-      const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-      const districtFile = path.join(snapshotDir, `district_${districtId}.json`)
+      // Validate inputs before constructing paths
+      this.validateSnapshotId(snapshotId)
+      this.validateDistrictId(districtId)
 
-      // Validate path is within snapshots directory to prevent path traversal
-      this.validatePathWithinBase(districtFile, this.snapshotsDir)
+      // Use symlink-safe path resolution for existing file read
+      const districtFile = await this.resolveExistingPathUnderBase(
+        this.snapshotsDir,
+        snapshotId,
+        `district_${districtId}.json`
+      )
 
       const content = await fs.readFile(districtFile, 'utf-8')
       const perDistrictData: PerDistrictData = JSON.parse(content)
@@ -913,11 +997,14 @@ export class FileSnapshotStore
     snapshotId: string
   ): Promise<SnapshotManifest | null> {
     try {
-      const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-      const manifestPath = path.join(snapshotDir, 'manifest.json')
+      this.validateSnapshotId(snapshotId)
 
-      // Validate path is within snapshots directory to prevent path traversal
-      this.validatePathWithinBase(manifestPath, this.snapshotsDir)
+      // Use symlink-safe path resolution for existing file read
+      const manifestPath = await this.resolveExistingPathUnderBase(
+        this.snapshotsDir,
+        snapshotId,
+        'manifest.json'
+      )
 
       const content = await fs.readFile(manifestPath, 'utf-8')
       const manifest: SnapshotManifest = JSON.parse(content)
@@ -957,11 +1044,14 @@ export class FileSnapshotStore
     snapshotId: string
   ): Promise<PerDistrictSnapshotMetadata | null> {
     try {
-      const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-      const metadataPath = path.join(snapshotDir, 'metadata.json')
+      this.validateSnapshotId(snapshotId)
 
-      // Validate path is within snapshots directory to prevent path traversal
-      this.validatePathWithinBase(metadataPath, this.snapshotsDir)
+      // Use symlink-safe path resolution for existing file read
+      const metadataPath = await this.resolveExistingPathUnderBase(
+        this.snapshotsDir,
+        snapshotId,
+        'metadata.json'
+      )
 
       const content = await fs.readFile(metadataPath, 'utf-8')
       const metadata: PerDistrictSnapshotMetadata = JSON.parse(content)
@@ -1603,11 +1693,20 @@ export class FileSnapshotStore
   private async readSnapshotFromDirectory(
     snapshotId: string
   ): Promise<Snapshot | null> {
-    const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-    const metadataPath = path.join(snapshotDir, 'metadata.json')
+    this.validateSnapshotId(snapshotId)
 
-    // Validate path is within snapshots directory to prevent path traversal
-    this.validatePathWithinBase(metadataPath, this.snapshotsDir)
+    // Use symlink-safe path resolution - check if metadata file exists
+    let metadataPath: string
+    try {
+      metadataPath = await this.resolveExistingPathUnderBase(
+        this.snapshotsDir,
+        snapshotId,
+        'metadata.json'
+      )
+    } catch {
+      // File doesn't exist or path traversal attempt
+      return null
+    }
 
     try {
       await fs.access(metadataPath)
