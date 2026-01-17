@@ -172,6 +172,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           aValue = a.newMembers
           bValue = b.newMembers
           break
+        case 'clubStatus':
+          aValue = a.clubStatus?.toLowerCase()
+          bValue = b.clubStatus?.toLowerCase()
+          break
         default:
           return 0
       }
@@ -388,6 +392,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                     >
                       {getStatusLabel(club.currentStatus)}
                     </span>
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap text-sm text-center">
+                    {club.clubStatus ? (
+                      <span className="text-gray-900">{club.clubStatus}</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center">
                     {club.octoberRenewals !== undefined ? (

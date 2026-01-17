@@ -219,6 +219,8 @@ export class ClubHealthAnalyticsModule {
         octoberRenewals: membershipPayments.octoberRenewals,
         aprilRenewals: membershipPayments.aprilRenewals,
         newMembers: membershipPayments.newMembers,
+        // Club operational status from Toastmasters dashboard (Requirements 2.2)
+        clubStatus: this.extractClubStatus(club),
       })
     }
 
@@ -566,6 +568,30 @@ export class ClubHealthAnalyticsModule {
     const membershipBase = parseIntSafe(club['Mem. Base'])
 
     return currentMembers - membershipBase
+  }
+
+  /**
+   * Extract club status from a club record
+   *
+   * Parses the "Club Status" or "Status" field from the Toastmasters dashboard
+   * CSV data. Returns undefined for missing, null, or empty values.
+   *
+   * Requirements: 1.2, 1.3, 1.4
+   *
+   * @param club - Raw club data record from CSV
+   * @returns Club status string or undefined if not present
+   */
+  private extractClubStatus(club: ScrapedRecord): string | undefined {
+    const status = club['Club Status'] ?? club['Status']
+    if (status === null || status === undefined || status === '') {
+      return undefined
+    }
+    const trimmed = String(status).trim()
+    // Return undefined if the trimmed result is empty (whitespace-only input)
+    if (trimmed === '') {
+      return undefined
+    }
+    return trimmed
   }
 
   /**

@@ -430,10 +430,10 @@ describe('ClubsTable', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      // Columns 7, 8, 9 are Oct Ren, Apr Ren, New (0-indexed)
-      expect(cells[7]).toHaveTextContent('0')
+      // Columns 8, 9, 10 are Oct Ren, Apr Ren, New (0-indexed, after Club Status column)
       expect(cells[8]).toHaveTextContent('0')
       expect(cells[9]).toHaveTextContent('0')
+      expect(cells[10]).toHaveTextContent('0')
     })
 
     it('should display "—" for undefined payment counts', () => {
@@ -457,10 +457,10 @@ describe('ClubsTable', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      // Columns 7, 8, 9 are Oct Ren, Apr Ren, New (0-indexed)
-      expect(cells[7]).toHaveTextContent('—')
+      // Columns 8, 9, 10 are Oct Ren, Apr Ren, New (0-indexed, after Club Status column)
       expect(cells[8]).toHaveTextContent('—')
       expect(cells[9]).toHaveTextContent('—')
+      expect(cells[10]).toHaveTextContent('—')
     })
 
     it('should handle mixed defined and undefined payment values', () => {
@@ -484,9 +484,10 @@ describe('ClubsTable', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      expect(cells[7]).toHaveTextContent('10')
-      expect(cells[8]).toHaveTextContent('—')
-      expect(cells[9]).toHaveTextContent('0')
+      // Columns 8, 9, 10 are Oct Ren, Apr Ren, New (0-indexed, after Club Status column)
+      expect(cells[8]).toHaveTextContent('10')
+      expect(cells[9]).toHaveTextContent('—')
+      expect(cells[10]).toHaveTextContent('0')
     })
   })
 
@@ -504,10 +505,10 @@ describe('ClubsTable', () => {
 
       const headerRow = screen.getAllByRole('row')[0]
       const headerCells = headerRow.querySelectorAll('th')
-      expect(headerCells.length).toBe(10)
+      expect(headerCells.length).toBe(11)
     })
 
-    it('should render 10 cells per data row', () => {
+    it('should render 11 cells per data row', () => {
       const clubs = [createMockClub()]
 
       render(
@@ -520,7 +521,7 @@ describe('ClubsTable', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      expect(cells.length).toBe(10)
+      expect(cells.length).toBe(11)
     })
   })
 

@@ -530,6 +530,7 @@ export const exportClubPerformance = (
     octoberRenewals?: number | undefined
     aprilRenewals?: number | undefined
     newMembers?: number | undefined
+    clubStatus?: string
   }>,
   districtId: string
 ): void => {
@@ -541,6 +542,7 @@ export const exportClubPerformance = (
     'Current Membership',
     'Current DCP Goals',
     'Status',
+    'Club Status',
     'Distinguished Level',
     'Oct Ren',
     'Apr Ren',
@@ -563,6 +565,7 @@ export const exportClubPerformance = (
       currentMembership,
       currentDcpGoals,
       club.currentStatus,
+      club.clubStatus ?? '',
       club.distinguishedLevel || 'None',
       club.octoberRenewals ?? '',
       club.aprilRenewals ?? '',
