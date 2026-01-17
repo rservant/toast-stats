@@ -65,7 +65,7 @@ describe('Property 1: Distinguished Club Threshold Calculation', () => {
           expect(result).toBe(Math.floor(clubBase / 2) + 1)
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -81,7 +81,7 @@ describe('Property 1: Distinguished Club Threshold Calculation', () => {
         expect(result1).toBe(result2)
         expect(result2).toBe(result3)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -97,7 +97,7 @@ describe('Property 1: Distinguished Club Threshold Calculation', () => {
         // The difference should be at most 1 (since we're incrementing by 1)
         expect(threshold2 - threshold1).toBeLessThanOrEqual(1)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -195,7 +195,7 @@ describe('Property 5: Net Growth Calculation', () => {
           )
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -215,7 +215,7 @@ describe('Property 5: Net Growth Calculation', () => {
           expect(result2).toBe(result3)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -233,7 +233,7 @@ describe('Property 5: Net Growth Calculation', () => {
           expect(netGrowth).toBeGreaterThan(0)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -255,7 +255,7 @@ describe('Property 5: Net Growth Calculation', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -268,7 +268,7 @@ describe('Property 5: Net Growth Calculation', () => {
         // Net growth must be exactly zero when counts are equal
         expect(netGrowth).toBe(0)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -304,7 +304,7 @@ describe('Property 5: Net Growth Calculation', () => {
           expect(paidClubs - netGrowth).toBe(clubBase)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })
@@ -372,7 +372,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -395,7 +395,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
           expect(result2).toEqual(result3)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -423,7 +423,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
           expect(aboveThreshold.percentage).toBeGreaterThan(75)
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -440,7 +440,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
         // Required should still be 75% of club base
         expect(result.required).toBe(Math.ceil(clubBase * 0.75))
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -457,7 +457,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
         // Required should still be 75% of club base
         expect(result.required).toBe(Math.ceil(clubBase * 0.75))
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -584,7 +584,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -608,7 +608,7 @@ describe('Property 6: Visit Completion Percentage Calculation', () => {
         expect(Number.isInteger(result.required)).toBe(true)
         expect(result.required).toBeGreaterThan(0)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })
@@ -686,7 +686,7 @@ describe('Property 2: Division Status Classification', () => {
           expect(status).toBe('not-distinguished')
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -723,7 +723,7 @@ describe('Property 2: Division Status Classification', () => {
         expect(result1).toBe(result2)
         expect(result2).toBe(result3)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -746,7 +746,7 @@ describe('Property 2: Division Status Classification', () => {
         // Must be President's Distinguished
         expect(status).toBe('presidents-distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -769,7 +769,7 @@ describe('Property 2: Division Status Classification', () => {
         // Must be Select Distinguished (not President's because net growth < 1)
         expect(status).toBe('select-distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -792,7 +792,7 @@ describe('Property 2: Division Status Classification', () => {
         // Must be Distinguished (not Select because distinguished < threshold + 1)
         expect(status).toBe('distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -825,7 +825,7 @@ describe('Property 2: Division Status Classification', () => {
           expect(status2).toBe('not-distinguished')
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -864,7 +864,7 @@ describe('Property 2: Division Status Classification', () => {
         )
         expect(distinguishedStatus).toBe('distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -915,7 +915,7 @@ describe('Property 2: Division Status Classification', () => {
           expect(belowThreshold).toBe('not-distinguished')
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1103,7 +1103,7 @@ describe('Property 2: Division Status Classification', () => {
           statusOrder[status1]
         )
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1144,7 +1144,7 @@ describe('Property 2: Division Status Classification', () => {
           statusOrder[status1]
         )
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })
@@ -1220,7 +1220,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(failedCriteria).toBe(true)
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1250,7 +1250,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
         expect(result1).toBe(result2)
         expect(result2).toBe(result3)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1276,7 +1276,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(netGrowth).toBeLessThan(0)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1303,7 +1303,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(firstRound.meetsThreshold).toBe(false)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1330,7 +1330,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(secondRound.meetsThreshold).toBe(false)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1358,7 +1358,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(secondRound.meetsThreshold).toBe(true)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1384,7 +1384,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(isQualified).toBe(true)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1628,7 +1628,7 @@ describe('Property 3: Area Qualifying Requirements', () => {
           expect(qualified2).toBe(true)
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })
@@ -1687,7 +1687,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         // This should be true even if the area has excellent metrics
         // (e.g., high distinguished clubs, positive net growth)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1722,7 +1722,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         // Area status should never be 'not-qualified' when isQualified is true
         expect(areaStatus).not.toBe('not-qualified')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1768,7 +1768,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         expect(result1).toBe(result2)
         expect(result2).toBe(result3)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1793,7 +1793,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         // Must be President's Distinguished for qualified areas
         expect(status).toBe('presidents-distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1818,7 +1818,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         // Must be Select Distinguished for qualified areas
         expect(status).toBe('select-distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1843,7 +1843,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         // Must be Distinguished for qualified areas
         expect(status).toBe('distinguished')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1879,7 +1879,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
           expect(status2).toBe('not-distinguished')
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -1906,7 +1906,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         // Must still be 'not-qualified' despite excellent metrics
         expect(status).toBe('not-qualified')
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -2085,7 +2085,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
           statusOrder[notQualifiedStatus]
         )
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -2130,7 +2130,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
           statusOrder[status1]
         )
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })

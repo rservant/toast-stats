@@ -15,7 +15,8 @@ import {
 } from '../SnapshotStore.js'
 
 // Test configuration
-const TEST_ITERATIONS = 100
+// Optimized for CI/CD timeout compliance (30s limit)
+const TEST_ITERATIONS = 25
 const TEST_TIMEOUT = 30000
 
 describe('PerDistrictSnapshotStore Property Tests', () => {

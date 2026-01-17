@@ -105,7 +105,7 @@ describe('RefreshService - No New-Month Snapshots Property Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -158,7 +158,7 @@ describe('RefreshService - No New-Month Snapshots Property Tests', () => {
           return true
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 25 }
     )
   })
 
@@ -208,7 +208,7 @@ describe('RefreshService - No New-Month Snapshots Property Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 })

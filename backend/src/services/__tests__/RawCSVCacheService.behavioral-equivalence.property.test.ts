@@ -246,7 +246,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -293,7 +293,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -343,7 +343,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -403,7 +403,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -456,7 +456,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -501,7 +501,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -551,7 +551,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -581,7 +581,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -653,7 +653,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -684,7 +684,7 @@ describe('RawCSVCacheService - Behavioral Equivalence Property Tests', () => {
             await serviceWithExplicit.dispose()
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })

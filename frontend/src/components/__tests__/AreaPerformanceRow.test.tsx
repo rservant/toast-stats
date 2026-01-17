@@ -353,4 +353,147 @@ describe('AreaPerformanceRow', () => {
       expect(screen.getByText('55/48')).toBeInTheDocument()
     })
   })
+
+  describe('Row Structure', () => {
+    it('should render exactly 6 table cells for all required data elements', () => {
+      const area = createMockArea()
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const row = container.querySelector('tr')
+      const cells = row?.querySelectorAll('td')
+
+      // Must have exactly 6 cells: areaId, paidClubs, distinguishedClubs, firstRound, secondRound, status
+      expect(cells?.length).toBe(6)
+    })
+
+    it('should render all data elements in correct cell positions', () => {
+      const area = createMockArea({
+        areaId: 'C5',
+        paidClubs: 15,
+        clubBase: 12,
+        netGrowth: 3,
+        distinguishedClubs: 8,
+        requiredDistinguishedClubs: 6,
+        firstRoundVisits: {
+          completed: 10,
+          required: 10,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 9,
+          required: 10,
+          percentage: 90,
+          meetsThreshold: false,
+        },
+        status: 'select-distinguished',
+      })
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const cells = container.querySelectorAll('td')
+
+      // Cell 0: Area identifier
+      expect(cells[0].textContent).toContain('C5')
+      // Cell 1: Paid clubs with net growth
+      expect(cells[1].textContent).toContain('15/12')
+      expect(cells[1].textContent).toContain('(+3)')
+      // Cell 2: Distinguished clubs
+      expect(cells[2].textContent).toBe('8/6')
+      // Cell 3: First round visits
+      expect(cells[3].textContent).toBe('10/10 ✓')
+      // Cell 4: Second round visits
+      expect(cells[4].textContent).toBe('9/10 ✗')
+      // Cell 5: Status
+      expect(cells[5].textContent).toContain('Select Distinguished')
+    })
+  })
+
+  describe('Data Integrity', () => {
+    it('should display all input values in the rendered output', () => {
+      const area: AreaPerformance = {
+        areaId: 'D7',
+        status: 'not-qualified',
+        clubBase: 8,
+        paidClubs: 6,
+        netGrowth: -2,
+        distinguishedClubs: 2,
+        requiredDistinguishedClubs: 4,
+        firstRoundVisits: {
+          completed: 5,
+          required: 7,
+          percentage: 71.4,
+          meetsThreshold: false,
+        },
+        secondRoundVisits: {
+          completed: 3,
+          required: 7,
+          percentage: 42.9,
+          meetsThreshold: false,
+        },
+        isQualified: false,
+      }
+
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const text = container.textContent ?? ''
+
+      // Verify all input values appear in the output
+      expect(text).toContain('D7')
+      expect(text).toContain('6')
+      expect(text).toContain('8')
+      expect(text).toContain('2')
+      expect(text).toContain('4')
+      expect(text).toContain('5')
+      expect(text).toContain('7')
+      expect(text).toContain('3')
+      expect(text).toContain('Not Qualified')
+    })
+
+    it('should produce consistent output for the same input data', () => {
+      const area = createMockArea({
+        areaId: 'E2',
+        paidClubs: 11,
+        clubBase: 10,
+        netGrowth: 1,
+      })
+
+      // Render twice with the same data
+      const { container: container1 } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const { container: container2 } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      // Both renders should produce identical output
+      expect(container1.textContent).toBe(container2.textContent)
+    })
+  })
 })

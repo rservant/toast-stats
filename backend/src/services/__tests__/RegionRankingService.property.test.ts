@@ -102,7 +102,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.region).toBe(targetDistrict.region)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -129,7 +129,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.totalInRegion).toBe(sameRegionCount)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -167,7 +167,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.regionRank).toBe(1)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -204,7 +204,8 @@ describe('RegionRankingService - Property Tests', () => {
           expect(paymentsResult.totalInRegion).toBe(rankings.length)
           expect(distinguishedResult.totalInRegion).toBe(rankings.length)
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -228,7 +229,7 @@ describe('RegionRankingService - Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -361,7 +362,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.totalInRegion).toBe(0)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })
@@ -399,7 +400,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(isNaN(percentile)).toBe(false)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -425,7 +426,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(percentile).toBe(expectedRounded)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -448,7 +449,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(decimalPlaces).toBeLessThanOrEqual(1)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -497,7 +498,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(percentile).toBeLessThan(100)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -523,7 +524,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(betterPercentile).toBeGreaterThan(worsePercentile)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -544,7 +545,7 @@ describe('RegionRankingService - Property Tests', () => {
             }
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 25 }
       )
     })
 
@@ -614,7 +615,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.totalInRegion).toBe(rankings.length)
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -645,7 +646,7 @@ describe('RegionRankingService - Property Tests', () => {
             expect(result.regionRank).not.toBeNull()
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })

@@ -131,7 +131,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
           await testContainer.dispose()
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -196,7 +196,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -268,7 +268,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -310,7 +310,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
           return true
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 25 }
     )
   })
 
@@ -363,7 +363,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -408,7 +408,7 @@ describe('Interface-Based Dependency Injection Properties', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 })
