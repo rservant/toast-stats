@@ -14,6 +14,9 @@ import * as fc from 'fast-check'
 import DivisionSummary from '../DivisionSummary'
 import type { DistinguishedStatus } from '../../utils/divisionStatus'
 
+// Suppress unused variable warning - container is used for rendering context
+const _suppressUnusedWarning = (value: unknown) => void value
+
 /**
  * Generator for division distinguished status (excludes 'not-qualified')
  */
@@ -84,6 +87,7 @@ describe('DivisionSummary Property-Based Tests', () => {
               requiredDistinguishedClubs={requiredDistinguishedClubs}
             />
           )
+          _suppressUnusedWarning(container)
 
           // Requirement 3.1: Division identifier must be present
           const divisionHeading = screen.getByText(

@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import DivisionSummary from '../DivisionSummary'
-import type { DistinguishedStatus } from '../../utils/divisionStatus'
+// DistinguishedStatus type is used implicitly through the status prop
 
 describe('DivisionSummary', () => {
   describe('Division Identifier Display (Requirement 3.1)', () => {

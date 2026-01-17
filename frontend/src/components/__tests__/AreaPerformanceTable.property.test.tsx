@@ -557,28 +557,26 @@ describe('Property 8: Area Row Count and Ordering', () => {
       },
     ]
 
-    testCases.forEach(
-      ({ description, areas, expectedCount, expectedOrder }) => {
-        const { container } = render(<AreaPerformanceTable areas={areas} />)
+    testCases.forEach(({ areas, expectedCount, expectedOrder }) => {
+      const { container } = render(<AreaPerformanceTable areas={areas} />)
 
-        const tbody = container.querySelector('tbody')
-        const rows = tbody?.querySelectorAll('tr')
+      const tbody = container.querySelector('tbody')
+      const rows = tbody?.querySelectorAll('tr')
 
-        // Verify row count
-        expect(rows?.length).toBe(expectedCount)
+      // Verify row count
+      expect(rows?.length).toBe(expectedCount)
 
-        // Verify order
-        const renderedAreaIds: string[] = []
-        rows?.forEach(row => {
-          const firstCell = row.querySelector('td')
-          if (firstCell?.textContent) {
-            renderedAreaIds.push(firstCell.textContent.trim())
-          }
-        })
+      // Verify order
+      const renderedAreaIds: string[] = []
+      rows?.forEach(row => {
+        const firstCell = row.querySelector('td')
+        if (firstCell?.textContent) {
+          renderedAreaIds.push(firstCell.textContent.trim())
+        }
+      })
 
-        expect(renderedAreaIds).toEqual(expectedOrder)
-      }
-    )
+      expect(renderedAreaIds).toEqual(expectedOrder)
+    })
   })
 
   it('should maintain invariant: row count equals input array length', () => {

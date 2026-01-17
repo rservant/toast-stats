@@ -16,7 +16,6 @@ import { screen, render, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import React from 'react'
 
 // Mock localStorage before any imports that use it
 const localStorageMock = {
@@ -33,12 +32,17 @@ Object.defineProperty(global, 'localStorage', {
 })
 
 // Mock IntersectionObserver for lazy loading components
-class MockIntersectionObserver {
+class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | null = null
   readonly rootMargin: string = ''
   readonly thresholds: ReadonlyArray<number> = []
 
-  constructor(callback: IntersectionObserverCallback) {
+  constructor(
+    callback: (
+      entries: IntersectionObserverEntry[],
+      observer: IntersectionObserver
+    ) => void
+  ) {
     // Immediately call callback with all entries as intersecting
     setTimeout(() => {
       callback([], this)
@@ -278,7 +282,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
       // Track calls to verify date changes
       const callDates: (string | undefined)[] = []
       mockUseDistrictStatistics.mockImplementation(
-        (districtId: string | null, selectedDate?: string) => {
+        (_districtId: string | null, selectedDate?: string) => {
           callDates.push(selectedDate)
           return {
             data: selectedDate
@@ -329,7 +333,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
 
       let capturedDate: string | undefined
       mockUseDistrictStatistics.mockImplementation(
-        (districtId: string | null, selectedDate?: string) => {
+        (_districtId: string | null, selectedDate?: string) => {
           capturedDate = selectedDate
           return {
             data: createMockDistrictStatistics('2026-01-14T10:30:00Z'),
@@ -395,7 +399,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
 
       // Mock to return different timestamps based on selected date
       mockUseDistrictStatistics.mockImplementation(
-        (districtId: string | null, selectedDate?: string) => {
+        (_districtId: string | null, selectedDate?: string) => {
           const date = selectedDate || '2026-01-14'
           return {
             data: createMockDistrictStatistics(`${date}T10:30:00Z`),
@@ -643,7 +647,7 @@ describe('DistrictDetailPage - Date Consistency Integration Tests', () => {
 
       let capturedDate: string | undefined
       mockUseDistrictStatistics.mockImplementation(
-        (districtId: string | null, selectedDate?: string) => {
+        (_districtId: string | null, selectedDate?: string) => {
           capturedDate = selectedDate
           return {
             data: createMockDistrictStatistics('2026-01-14T10:30:00Z'),

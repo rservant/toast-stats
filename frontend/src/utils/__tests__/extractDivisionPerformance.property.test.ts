@@ -299,7 +299,7 @@ describe('extractDivisionPerformance - Property-Based Tests', () => {
           divisionData => {
             // Arrange: Create snapshot with division and areas
             const clubPerformance = divisionData.areas.flatMap(area =>
-              Array.from({ length: area.clubCount }, (_, i) => ({
+              Array.from({ length: area.clubCount }, () => ({
                 Division: divisionData.divisionId,
                 Area: area.areaId,
                 Status: 'Active',

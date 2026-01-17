@@ -1046,7 +1046,6 @@ describe('Property 2: Division Status Classification', () => {
 
     testCases.forEach(
       ({
-        description,
         distinguishedClubs,
         threshold,
         paidClubs,
@@ -1054,6 +1053,7 @@ describe('Property 2: Division Status Classification', () => {
         netGrowth,
         expected,
       }) => {
+        // description field is for documentation purposes only
         const status = calculateDivisionStatus(
           distinguishedClubs,
           threshold,
@@ -1564,13 +1564,8 @@ describe('Property 3: Area Qualifying Requirements', () => {
     ]
 
     testCases.forEach(
-      ({
-        description,
-        netGrowth,
-        firstRoundVisits,
-        secondRoundVisits,
-        expected,
-      }) => {
+      ({ netGrowth, firstRoundVisits, secondRoundVisits, expected }) => {
+        // description field is for documentation purposes only
         const isQualified = checkAreaQualifying(
           netGrowth,
           firstRoundVisits,
@@ -2022,7 +2017,6 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
 
     testCases.forEach(
       ({
-        description,
         isQualified,
         distinguishedClubs,
         threshold,
@@ -2031,6 +2025,7 @@ describe('Property 4: Area Status Classification with Qualifying Gate', () => {
         netGrowth,
         expected,
       }) => {
+        // description field is for documentation purposes only
         const status = calculateAreaStatus(
           isQualified,
           distinguishedClubs,
