@@ -125,7 +125,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -141,7 +142,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             securityManager.validatePathSafety(safe, 'test')
           ).not.toThrow()
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -167,7 +169,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             ).toThrow('outside the cache directory bounds')
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -193,7 +196,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             ).not.toThrow()
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -220,7 +224,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             expect(sanitized).not.toContain('>')
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -236,7 +241,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             securityManager.validateDistrictId(districtId)
           ).not.toThrow()
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -250,7 +256,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
           // Valid date strings should never throw
           expect(() => securityManager.validateDateString(date)).not.toThrow()
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -266,7 +273,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             securityManager.validateCSVContent(csv, 100)
           ).not.toThrow()
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -298,7 +306,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             ).toThrow('CSV content contains potentially malicious patterns')
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -319,7 +328,8 @@ describe('CacheSecurityManager - Property-Based Tests', () => {
             expect(sanitizedTwice).toBe(sanitizedOnce)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
   })

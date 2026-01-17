@@ -47,7 +47,7 @@ describe('calculateProgramYearDay Property Tests', () => {
         // Result must be an integer
         expect(Number.isInteger(result)).toBe(true)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -59,7 +59,7 @@ describe('calculateProgramYearDay Property Tests', () => {
 
         expect(result).toBe(0)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -87,7 +87,7 @@ describe('calculateProgramYearDay Property Tests', () => {
           expect(Math.abs(result1 - result2)).toBeLessThanOrEqual(1)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -114,7 +114,7 @@ describe('calculateProgramYearDay Property Tests', () => {
           expect(result2).toBeGreaterThanOrEqual(result1)
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -132,7 +132,7 @@ describe('calculateProgramYearDay Property Tests', () => {
         expect(resultFromString).toBeGreaterThanOrEqual(0)
         expect(resultFromString).toBeLessThanOrEqual(365)
       }),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })

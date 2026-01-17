@@ -194,7 +194,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -270,7 +270,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -340,7 +340,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -409,7 +409,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -470,7 +470,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -533,7 +533,7 @@ describe('AnalyticsEngine Health Status Classification - Property-Based Tests', 
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 })

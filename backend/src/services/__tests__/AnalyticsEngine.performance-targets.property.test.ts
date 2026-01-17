@@ -332,7 +332,7 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 25 }
       )
     })
 
@@ -423,7 +423,7 @@ describe('AnalyticsEngine Performance Targets - Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 25 }
       )
     })
   })

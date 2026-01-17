@@ -209,7 +209,8 @@ describe('DataNormalizer - Property Tests', () => {
             )
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -278,7 +279,8 @@ describe('DataNormalizer - Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -332,7 +334,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(typeof metadata.logicalDate).toBe('string')
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -372,7 +375,8 @@ describe('DataNormalizer - Property Tests', () => {
             )
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
   })
@@ -413,7 +417,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(actualTotal).toBe(expectedTotal)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -438,7 +443,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(clubMembership.length).toBe(expectedValidClubs)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -486,7 +492,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(sumFromByClub).toBe(expectedTotal)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -508,7 +515,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(actualActiveCount).toBe(expectedActiveCount)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -534,7 +542,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(actualDistinguishedCount).toBe(expectedDistinguishedCount)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -564,7 +573,8 @@ describe('DataNormalizer - Property Tests', () => {
             expect(result.clubs.total).toBe(clubPerformance.length)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
   })

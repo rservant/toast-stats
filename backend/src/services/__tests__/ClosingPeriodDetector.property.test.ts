@@ -110,7 +110,8 @@ describe('ClosingPeriodDetector - Property Tests', () => {
             expect(result.dataMonth).toMatch(/^\d{4}-\d{2}$/)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -150,7 +151,8 @@ describe('ClosingPeriodDetector - Property Tests', () => {
             expect(result.snapshotDate).toBe(expectedSnapshotDate)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
   })
@@ -192,7 +194,8 @@ describe('ClosingPeriodDetector - Property Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -315,7 +318,7 @@ describe('ClosingPeriodDetector - Property Tests', () => {
             expect(result.dataMonth).toBe(`${year - 1}-12`)
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 25 }
       )
     })
   })

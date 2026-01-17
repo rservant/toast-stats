@@ -281,6 +281,24 @@ describe('DivisionPerformanceCards', () => {
       expect(screen.getByText('Division B')).toBeInTheDocument()
     })
 
+    it('should render single division correctly', () => {
+      const singleDivision: DivisionPerformance[] = [mockDivisions[0]]
+      vi.mocked(extractDivisionPerformance).mockReturnValue(singleDivision)
+
+      render(
+        <DivisionPerformanceCards
+          districtSnapshot={mockSnapshot}
+          isLoading={false}
+        />
+      )
+
+      expect(screen.getByText('Division A')).toBeInTheDocument()
+      expect(screen.queryByText('Division B')).not.toBeInTheDocument()
+      expect(
+        screen.getByLabelText('Division A performance card')
+      ).toBeInTheDocument()
+    })
+
     it('should render all divisions simultaneously', () => {
       vi.mocked(extractDivisionPerformance).mockReturnValue(mockDivisions)
 
@@ -345,6 +363,45 @@ describe('DivisionPerformanceCards', () => {
       expect(allCards[1]).toHaveAttribute(
         'aria-label',
         'Division B performance card'
+      )
+    })
+
+    it('should render multiple divisions in alphabetical order', () => {
+      // Create divisions C, A, B to verify ordering is maintained
+      const unorderedDivisions: DivisionPerformance[] = [
+        { ...mockDivisions[0], divisionId: 'C' },
+        { ...mockDivisions[0], divisionId: 'A' },
+        { ...mockDivisions[1], divisionId: 'B' },
+      ]
+      // extractDivisionPerformance returns them in sorted order
+      const sortedDivisions = [...unorderedDivisions].sort((a, b) =>
+        a.divisionId.localeCompare(b.divisionId)
+      )
+      vi.mocked(extractDivisionPerformance).mockReturnValue(sortedDivisions)
+
+      render(
+        <DivisionPerformanceCards
+          districtSnapshot={mockSnapshot}
+          isLoading={false}
+        />
+      )
+
+      // Verify all three divisions are rendered in alphabetical order
+      const allCards = screen.getAllByLabelText(
+        /Division [ABC] performance card/
+      )
+      expect(allCards).toHaveLength(3)
+      expect(allCards[0]).toHaveAttribute(
+        'aria-label',
+        'Division A performance card'
+      )
+      expect(allCards[1]).toHaveAttribute(
+        'aria-label',
+        'Division B performance card'
+      )
+      expect(allCards[2]).toHaveAttribute(
+        'aria-label',
+        'Division C performance card'
       )
     })
 

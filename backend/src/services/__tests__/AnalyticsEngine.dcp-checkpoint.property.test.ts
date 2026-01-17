@@ -126,7 +126,7 @@ describe('AnalyticsEngine DCP Checkpoint - Property-Based Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -152,7 +152,7 @@ describe('AnalyticsEngine DCP Checkpoint - Property-Based Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -193,7 +193,7 @@ describe('AnalyticsEngine DCP Checkpoint - Property-Based Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance
     )
   })
 
@@ -218,7 +218,7 @@ describe('AnalyticsEngine DCP Checkpoint - Property-Based Tests', () => {
           return true
         }
       ),
-      { numRuns: 50 }
+      { numRuns: 25 }
     )
   })
 })

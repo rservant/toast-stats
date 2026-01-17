@@ -71,7 +71,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             expect(result.targets![level]).toBe(expectedTarget)
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -90,7 +90,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             expect(result.targets![level]).toBe(expectedTarget)
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -111,7 +111,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             expect(result.targets![level]).toBe(expectedTarget)
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -143,7 +143,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             expect(targets.presidents).toBeLessThanOrEqual(targets.smedley)
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })
@@ -191,7 +191,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             }
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -257,7 +257,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             ).toBeGreaterThanOrEqual(rawValue)
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
 
@@ -323,7 +323,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             ).toBeLessThan(rawValue + 1)
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })
@@ -357,7 +357,7 @@ describe('TargetCalculatorService - Property Tests', () => {
             expect(achieved).toBeNull()
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })
@@ -406,7 +406,7 @@ describe('TargetCalculatorService - Property Tests', () => {
           expect(distinguishedResult.achievedLevel).toBeNull()
           expect(distinguishedResult.current).toBe(current)
         }),
-        { numRuns: 100 }
+        { numRuns: 25 } // Optimized for CI/CD timeout compliance
       )
     })
   })

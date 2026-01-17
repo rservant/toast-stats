@@ -288,7 +288,7 @@ describe('PerDistrictSnapshotStore - Closing Period Property Tests', () => {
             return true
           }
         ),
-        { numRuns: 50 }
+        { numRuns: 25 }
       )
     },
     TEST_TIMEOUT

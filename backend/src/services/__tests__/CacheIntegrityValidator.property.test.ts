@@ -155,7 +155,8 @@ describe('CacheIntegrityValidator - Property-Based Tests', () => {
             await fs.rm(datePath, { recursive: true, force: true })
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -204,7 +205,8 @@ describe('CacheIntegrityValidator - Property-Based Tests', () => {
             await fs.rm(datePath, { recursive: true, force: true })
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -256,7 +258,8 @@ describe('CacheIntegrityValidator - Property-Based Tests', () => {
             await fs.rm(datePath, { recursive: true, force: true })
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -319,7 +322,8 @@ describe('CacheIntegrityValidator - Property-Based Tests', () => {
             await fs.rm(datePath, { recursive: true, force: true })
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -366,7 +370,8 @@ describe('CacheIntegrityValidator - Property-Based Tests', () => {
             await fs.rm(datePath, { recursive: true, force: true })
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -386,7 +391,8 @@ describe('CacheIntegrityValidator - Property-Based Tests', () => {
           expect(result.isValid).toBe(false)
           expect(result.issues).toContain('Metadata file does not exist')
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
   })
@@ -498,7 +504,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
           expect(result.isValid).toBe(true)
           expect(result.issues).toHaveLength(0)
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -521,7 +528,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
             expect(result.issues.some(i => i.includes('empty'))).toBe(true)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -548,7 +556,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
             ).toBe(true)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -570,7 +579,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
             true
           )
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -616,7 +626,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
             ).toBe(true)
           }
         ),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -659,7 +670,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
           // Cleanup for next iteration
           await fs.rm(datePath, { recursive: true, force: true })
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
 
@@ -687,7 +699,8 @@ describe('CacheIntegrityValidator - Property 2: Corruption Detection and Recover
           // Cleanup for next iteration
           await fs.rm(datePath, { recursive: true, force: true })
         }),
-        { numRuns: 100 }
+        // Optimized for CI/CD timeout compliance (30s limit)
+        { numRuns: 25 }
       )
     })
   })

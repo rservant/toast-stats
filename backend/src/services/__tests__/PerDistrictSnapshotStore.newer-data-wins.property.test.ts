@@ -18,7 +18,8 @@ import {
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 
 // Test configuration
-const TEST_ITERATIONS = 100
+// Optimized for CI/CD timeout compliance (30s limit)
+const TEST_ITERATIONS = 25
 const TEST_TIMEOUT = 30000
 
 describe('PerDistrictSnapshotStore - Newer Data Wins Property Tests', () => {

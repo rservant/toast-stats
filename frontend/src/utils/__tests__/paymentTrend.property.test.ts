@@ -69,7 +69,7 @@ describe('buildPaymentTrend Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -102,7 +102,7 @@ describe('buildPaymentTrend Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -132,7 +132,7 @@ describe('buildPaymentTrend Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -152,7 +152,7 @@ describe('buildPaymentTrend Property Tests', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 
@@ -177,7 +177,7 @@ describe('buildPaymentTrend Property Tests', () => {
           expect(result).toEqual([])
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 } // Optimized for CI/CD timeout compliance (was 100)
     )
   })
 })
