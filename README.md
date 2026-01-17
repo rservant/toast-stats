@@ -173,31 +173,30 @@ USE_MOCK_DATA=false  # Use real data from cache (requires scraper-cli to populat
 - Responsive design for all devices
 - Accessibility compliant
 
-For detailed project status and implementation information, see [PROJECT_STATUS.md](./PROJECT_STATUS.md).
-
 ## Project History
 
-This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs/archive/` for historical reference:
+This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs-archive/` for historical reference.
 
-**Archived Specifications:**
+**Recent Completions (January 2026):**
 
-- **toastmasters-district-visualizer**: Original project specification
-- **district-level-data**: District analytics features
+- **april-renewal-status**: Membership payment tracking columns
+- **closing-period-fallback-cache**: Scraper navigation optimization
+- **club-status-field**: Club status display and filtering
+- **date-aware-district-statistics**: Date-synchronized statistics
+- **district-performance-targets**: Performance targets and rankings
+- **division-area-performance-cards**: Division/Area performance display
+- **membership-payments-chart**: Multi-year payment trend charts
+- **pbt-test-cleanup**: Property-based test optimization
+
+**Infrastructure & Architecture:**
+
+- **scraper-cli-separation**: Standalone scraping CLI tool
+- **analytics-engine-migration**: PerDistrictSnapshotStore migration
 - **data-refresh-architecture**: Snapshot-based data architecture
 - **unified-backfill-service**: Historical data collection
 - **raw-csv-cache-system**: CSV caching infrastructure
-- **club-health-classification**: Club health scoring
-- **district-scoped-data-collection**: Per-district data collection
-- **codebase-cleanup**: Code quality improvements
-- **remove-district-cache-manager**: Legacy cache removal
-- **analytics-engine-migration**: Analytics module extraction
-- **analytics-engine-refactor**: Analytics modular architecture (5 specialized modules)
-- **raw-csv-cache-refactor**: Cache security and integrity extraction
-- **refresh-service-refactor**: Closing period and normalization extraction
-- **admin-routes-refactor**: Admin routes modular architecture
-- **scraper-cli-separation**: Separated scraping into standalone CLI tool
 
-Active specifications for ongoing maintenance are located in `.kiro/specs/`.
+See `.kiro/specs-archive/README.md` for the complete list of archived specifications.
 
 ## Deployment
 
