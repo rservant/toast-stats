@@ -15,9 +15,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { exportClubPerformance } from '../csvExport'
 
 describe('CSV Export - Club Status Column', () => {
-  // Store the original URL methods
+  // Store the original URL methods and Blob
   let originalCreateObjectURL: typeof URL.createObjectURL
   let originalRevokeObjectURL: typeof URL.revokeObjectURL
+  let originalBlob: typeof Blob
   let capturedCSVContent: string | null = null
 
   beforeEach(() => {
@@ -53,25 +54,26 @@ describe('CSV Export - Club Status Column', () => {
       () => null as unknown as HTMLElement
     )
 
-    // Capture the Blob content by spying on Blob constructor
-    const OriginalBlob = globalThis.Blob
-    vi.spyOn(globalThis, 'Blob').mockImplementation(
-      (
-        parts?: (string | ArrayBuffer | ArrayBufferView | Blob)[],
-        _options?: { type?: string; endings?: 'transparent' | 'native' }
-      ) => {
+    // Capture the Blob content using a class mock (must be a class to work with 'new')
+    originalBlob = globalThis.Blob
+    globalThis.Blob = class MockBlob {
+      constructor(
+        parts?: (string | Blob | ArrayBuffer | ArrayBufferView)[],
+        options?: { type?: string; endings?: 'transparent' | 'native' }
+      ) {
         if (parts && parts.length > 0) {
           capturedCSVContent = parts[0] as string
         }
         // Return a real Blob for type compatibility
-        return new OriginalBlob(parts, _options)
+        return new originalBlob(parts, options)
       }
-    )
+    } as typeof Blob
   })
 
   afterEach(() => {
     URL.createObjectURL = originalCreateObjectURL
     URL.revokeObjectURL = originalRevokeObjectURL
+    globalThis.Blob = originalBlob
     vi.restoreAllMocks()
   })
 
