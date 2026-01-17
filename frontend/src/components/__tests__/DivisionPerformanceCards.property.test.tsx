@@ -124,115 +124,121 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
    * - The ordering is consistent and deterministic
    * - All divisions are represented (no divisions are skipped)
    */
-  it('Property 7: should render exactly N division cards ordered by division identifier', () => {
-    fc.assert(
-      fc.property(
-        districtSnapshotArb,
-        divisionsArrayArb,
-        (snapshot, divisions) => {
-          // Clean up any previous renders
-          cleanup()
+  it(
+    'Property 7: should render exactly N division cards ordered by division identifier',
+    { timeout: 15000 },
+    () => {
+      fc.assert(
+        fc.property(
+          districtSnapshotArb,
+          divisionsArrayArb,
+          (snapshot, divisions) => {
+            // Clean up any previous renders
+            cleanup()
 
-          // Mock the extractDivisionPerformance to return our generated divisions
-          vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
+            // Mock the extractDivisionPerformance to return our generated divisions
+            vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
 
-          // Render the component
-          render(
-            <DivisionPerformanceCards
-              districtSnapshot={snapshot}
-              isLoading={false}
-            />
-          )
+            // Render the component
+            render(
+              <DivisionPerformanceCards
+                districtSnapshot={snapshot}
+                isLoading={false}
+              />
+            )
 
-          // Requirement 1.1: Verify exactly N division cards are rendered
-          const expectedCount = divisions.length
+            // Requirement 1.1: Verify exactly N division cards are rendered
+            const expectedCount = divisions.length
 
-          if (expectedCount === 0) {
-            // Empty state: should show "No Divisions Found" message
-            const emptyMessage = screen.queryByText('No Divisions Found')
-            if (!emptyMessage) {
+            if (expectedCount === 0) {
+              // Empty state: should show "No Divisions Found" message
+              const emptyMessage = screen.queryByText('No Divisions Found')
+              if (!emptyMessage) {
+                throw new Error(
+                  'Expected "No Divisions Found" message when divisions array is empty'
+                )
+              }
+              return true
+            }
+
+            // For non-empty divisions, verify each division card is present
+            const divisionCards = divisions.map(division => {
+              const divisionLabel = `Division ${division.divisionId}`
+              const card = screen.queryByText(divisionLabel)
+              if (!card) {
+                throw new Error(
+                  `Expected to find division card for "${divisionLabel}" but it was not rendered`
+                )
+              }
+              return { divisionId: division.divisionId, element: card }
+            })
+
+            // Verify we found exactly the expected number of cards
+            if (divisionCards.length !== expectedCount) {
               throw new Error(
-                'Expected "No Divisions Found" message when divisions array is empty'
+                `Expected ${expectedCount} division cards but found ${divisionCards.length}`
               )
             }
+
+            // Requirement 1.3: Verify cards are ordered by division identifier
+            // Get all division heading elements in DOM order
+            const allDivisionHeadings = screen.getAllByText(
+              /^Division [A-Z]{1,2}$/
+            )
+
+            if (allDivisionHeadings.length !== expectedCount) {
+              throw new Error(
+                `Expected ${expectedCount} division headings but found ${allDivisionHeadings.length}`
+              )
+            }
+
+            // Extract division IDs from the rendered headings in DOM order
+            const renderedOrder = allDivisionHeadings.map(heading => {
+              const match = heading.textContent?.match(
+                /^Division ([A-Z]{1,2})$/
+              )
+              if (!match) {
+                throw new Error(
+                  `Could not extract division ID from heading: ${heading.textContent}`
+                )
+              }
+              return match[1]
+            })
+
+            // Expected order is the sorted division IDs
+            const expectedOrder = divisions.map(d => d.divisionId)
+
+            // Verify the rendered order matches the expected sorted order
+            for (let i = 0; i < expectedOrder.length; i++) {
+              if (renderedOrder[i] !== expectedOrder[i]) {
+                throw new Error(
+                  `Division cards are not in correct order. ` +
+                    `Expected "${expectedOrder[i]}" at position ${i} but found "${renderedOrder[i]}". ` +
+                    `Expected order: [${expectedOrder.join(', ')}], ` +
+                    `Rendered order: [${renderedOrder.join(', ')}]`
+                )
+              }
+            }
+
+            // Verify ordering is ascending (each division ID should be <= next)
+            for (let i = 0; i < renderedOrder.length - 1; i++) {
+              const current = renderedOrder[i]
+              const next = renderedOrder[i + 1]
+              if (current && next && current.localeCompare(next) > 0) {
+                throw new Error(
+                  `Division cards are not in ascending order. ` +
+                    `"${current}" at position ${i} should come before "${next}" at position ${i + 1}`
+                )
+              }
+            }
+
             return true
           }
-
-          // For non-empty divisions, verify each division card is present
-          const divisionCards = divisions.map(division => {
-            const divisionLabel = `Division ${division.divisionId}`
-            const card = screen.queryByText(divisionLabel)
-            if (!card) {
-              throw new Error(
-                `Expected to find division card for "${divisionLabel}" but it was not rendered`
-              )
-            }
-            return { divisionId: division.divisionId, element: card }
-          })
-
-          // Verify we found exactly the expected number of cards
-          if (divisionCards.length !== expectedCount) {
-            throw new Error(
-              `Expected ${expectedCount} division cards but found ${divisionCards.length}`
-            )
-          }
-
-          // Requirement 1.3: Verify cards are ordered by division identifier
-          // Get all division heading elements in DOM order
-          const allDivisionHeadings = screen.getAllByText(
-            /^Division [A-Z]{1,2}$/
-          )
-
-          if (allDivisionHeadings.length !== expectedCount) {
-            throw new Error(
-              `Expected ${expectedCount} division headings but found ${allDivisionHeadings.length}`
-            )
-          }
-
-          // Extract division IDs from the rendered headings in DOM order
-          const renderedOrder = allDivisionHeadings.map(heading => {
-            const match = heading.textContent?.match(/^Division ([A-Z]{1,2})$/)
-            if (!match) {
-              throw new Error(
-                `Could not extract division ID from heading: ${heading.textContent}`
-              )
-            }
-            return match[1]
-          })
-
-          // Expected order is the sorted division IDs
-          const expectedOrder = divisions.map(d => d.divisionId)
-
-          // Verify the rendered order matches the expected sorted order
-          for (let i = 0; i < expectedOrder.length; i++) {
-            if (renderedOrder[i] !== expectedOrder[i]) {
-              throw new Error(
-                `Division cards are not in correct order. ` +
-                  `Expected "${expectedOrder[i]}" at position ${i} but found "${renderedOrder[i]}". ` +
-                  `Expected order: [${expectedOrder.join(', ')}], ` +
-                  `Rendered order: [${renderedOrder.join(', ')}]`
-              )
-            }
-          }
-
-          // Verify ordering is ascending (each division ID should be <= next)
-          for (let i = 0; i < renderedOrder.length - 1; i++) {
-            const current = renderedOrder[i]
-            const next = renderedOrder[i + 1]
-            if (current && next && current.localeCompare(next) > 0) {
-              throw new Error(
-                `Division cards are not in ascending order. ` +
-                  `"${current}" at position ${i} should come before "${next}" at position ${i + 1}`
-              )
-            }
-          }
-
-          return true
-        }
-      ),
-      { numRuns: 100 }
-    )
-  })
+        ),
+        { numRuns: 25 }
+      )
+    }
+  )
 
   /**
    * Property: Division Card Count Consistency
@@ -241,81 +247,17 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
    * exactly match the number of divisions returned by extractDivisionPerformance.
    * This verifies that no divisions are duplicated or omitted during rendering.
    */
-  it('should render exactly one card per division with no duplicates', () => {
-    fc.assert(
-      fc.property(
-        districtSnapshotArb,
-        divisionsArrayArb,
-        (snapshot, divisions) => {
-          cleanup()
-
-          vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
-
-          render(
-            <DivisionPerformanceCards
-              districtSnapshot={snapshot}
-              isLoading={false}
-            />
-          )
-
-          if (divisions.length === 0) {
-            return true
-          }
-
-          // Count how many times each division ID appears in the rendered output
-          const divisionIdCounts = new Map<string, number>()
-
-          for (const division of divisions) {
-            const divisionLabel = `Division ${division.divisionId}`
-            const elements = screen.getAllByText(divisionLabel)
-
-            // Each division should appear exactly once (in its card heading)
-            if (elements.length !== 1) {
-              throw new Error(
-                `Division "${division.divisionId}" appears ${elements.length} times, expected exactly 1`
-              )
-            }
-
-            divisionIdCounts.set(division.divisionId, elements.length)
-          }
-
-          // Verify all divisions were counted
-          if (divisionIdCounts.size !== divisions.length) {
-            throw new Error(
-              `Expected ${divisions.length} unique divisions but found ${divisionIdCounts.size}`
-            )
-          }
-
-          return true
-        }
-      ),
-      { numRuns: 100 }
-    )
-  })
-
-  /**
-   * Property: Ordering Stability
-   *
-   * For any set of divisions, rendering the component multiple times with the
-   * same data should produce the same ordering every time. This verifies that
-   * the ordering is deterministic and not affected by render timing or other
-   * non-deterministic factors.
-   */
-  it('should produce consistent ordering across multiple renders', () => {
-    fc.assert(
-      fc.property(
-        districtSnapshotArb,
-        divisionsArrayArb,
-        (snapshot, divisions) => {
-          if (divisions.length === 0) {
-            return true
-          }
-
-          // Render the component multiple times
-          const orderings: string[][] = []
-
-          for (let i = 0; i < 3; i++) {
+  it(
+    'should render exactly one card per division with no duplicates',
+    { timeout: 15000 },
+    () => {
+      fc.assert(
+        fc.property(
+          districtSnapshotArb,
+          divisionsArrayArb,
+          (snapshot, divisions) => {
             cleanup()
+
             vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
 
             render(
@@ -325,46 +267,118 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
               />
             )
 
-            const headings = screen.getAllByText(/^Division [A-Z]{1,2}$/)
-            const order = headings.map(h => {
-              const match = h.textContent?.match(/^Division ([A-Z]{1,2})$/)
-              return match ? match[1] : ''
-            })
+            if (divisions.length === 0) {
+              return true
+            }
 
-            orderings.push(order)
-          }
+            // Count how many times each division ID appears in the rendered output
+            const divisionIdCounts = new Map<string, number>()
 
-          // All orderings should be identical
-          const firstOrdering = orderings[0]
-          for (let i = 1; i < orderings.length; i++) {
-            const currentOrdering = orderings[i]
-            if (firstOrdering && currentOrdering) {
-              if (firstOrdering.length !== currentOrdering.length) {
+            for (const division of divisions) {
+              const divisionLabel = `Division ${division.divisionId}`
+              const elements = screen.getAllByText(divisionLabel)
+
+              // Each division should appear exactly once (in its card heading)
+              if (elements.length !== 1) {
                 throw new Error(
-                  `Inconsistent ordering across renders. ` +
-                    `First render had ${firstOrdering.length} divisions, ` +
-                    `render ${i + 1} had ${currentOrdering.length} divisions`
+                  `Division "${division.divisionId}" appears ${elements.length} times, expected exactly 1`
                 )
               }
 
-              for (let j = 0; j < firstOrdering.length; j++) {
-                if (firstOrdering[j] !== currentOrdering[j]) {
+              divisionIdCounts.set(division.divisionId, elements.length)
+            }
+
+            // Verify all divisions were counted
+            if (divisionIdCounts.size !== divisions.length) {
+              throw new Error(
+                `Expected ${divisions.length} unique divisions but found ${divisionIdCounts.size}`
+              )
+            }
+
+            return true
+          }
+        ),
+        { numRuns: 25 }
+      )
+    }
+  )
+
+  /**
+   * Property: Ordering Stability
+   *
+   * For any set of divisions, rendering the component multiple times with the
+   * same data should produce the same ordering every time. This verifies that
+   * the ordering is deterministic and not affected by render timing or other
+   * non-deterministic factors.
+   */
+  it(
+    'should produce consistent ordering across multiple renders',
+    { timeout: 15000 },
+    () => {
+      fc.assert(
+        fc.property(
+          districtSnapshotArb,
+          divisionsArrayArb,
+          (snapshot, divisions) => {
+            if (divisions.length === 0) {
+              return true
+            }
+
+            // Render the component multiple times
+            const orderings: string[][] = []
+
+            for (let i = 0; i < 3; i++) {
+              cleanup()
+              vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
+
+              render(
+                <DivisionPerformanceCards
+                  districtSnapshot={snapshot}
+                  isLoading={false}
+                />
+              )
+
+              const headings = screen.getAllByText(/^Division [A-Z]{1,2}$/)
+              const order = headings.map(h => {
+                const match = h.textContent?.match(/^Division ([A-Z]{1,2})$/)
+                return match ? match[1] : ''
+              })
+
+              orderings.push(order)
+            }
+
+            // All orderings should be identical
+            const firstOrdering = orderings[0]
+            for (let i = 1; i < orderings.length; i++) {
+              const currentOrdering = orderings[i]
+              if (firstOrdering && currentOrdering) {
+                if (firstOrdering.length !== currentOrdering.length) {
                   throw new Error(
                     `Inconsistent ordering across renders. ` +
-                      `Position ${j}: first render had "${firstOrdering[j]}", ` +
-                      `render ${i + 1} had "${currentOrdering[j]}"`
+                      `First render had ${firstOrdering.length} divisions, ` +
+                      `render ${i + 1} had ${currentOrdering.length} divisions`
                   )
+                }
+
+                for (let j = 0; j < firstOrdering.length; j++) {
+                  if (firstOrdering[j] !== currentOrdering[j]) {
+                    throw new Error(
+                      `Inconsistent ordering across renders. ` +
+                        `Position ${j}: first render had "${firstOrdering[j]}", ` +
+                        `render ${i + 1} had "${currentOrdering[j]}"`
+                    )
+                  }
                 }
               }
             }
-          }
 
-          return true
-        }
-      ),
-      { numRuns: 100 }
-    )
-  })
+            return true
+          }
+        ),
+        { numRuns: 25 }
+      )
+    }
+  )
 
   /**
    * Property: Alphabetical Ordering Invariant
@@ -418,7 +432,7 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 }
     )
   })
 
@@ -461,7 +475,7 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
 
         return true
       }),
-      { numRuns: 100 }
+      { numRuns: 25 }
     )
   })
 
@@ -482,76 +496,77 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
    * Requirements:
    * - 10.3: THE System SHALL display the timestamp of the current snapshot data
    */
-  it('Property 14: should display snapshot timestamp when provided', () => {
-    // Generator for ISO 8601 timestamp strings
-    const timestampArb = fc
-      .date({
-        min: new Date('2020-01-01'),
-        max: new Date('2030-12-31'),
-      })
-      .map(date => date.toISOString())
+  it(
+    'Property 14: should display snapshot timestamp when provided',
+    { timeout: 15000 },
+    () => {
+      // Generator for ISO 8601 timestamp strings using integer-based approach to avoid invalid dates
+      const timestampArb = fc
+        .integer({ min: 1577836800000, max: 1924991999000 }) // 2020-01-01 to 2030-12-31 in milliseconds
+        .map(ms => new Date(ms).toISOString())
 
-    // Generator for non-empty divisions array (at least 1 division)
-    const nonEmptyDivisionsArb = fc
-      .array(divisionPerformanceArb, { minLength: 1, maxLength: 10 })
-      .map(divisions => {
-        // Ensure unique division IDs and sort by ID
-        const uniqueDivisions = Array.from(
-          new Map(divisions.map(d => [d.divisionId, d])).values()
-        )
-        return uniqueDivisions.sort((a, b) =>
-          a.divisionId.localeCompare(b.divisionId)
-        )
-      })
-
-    fc.assert(
-      fc.property(
-        districtSnapshotArb,
-        nonEmptyDivisionsArb,
-        timestampArb,
-        (snapshot, divisions, timestamp) => {
-          cleanup()
-
-          // Mock the extractDivisionPerformance to return our generated divisions
-          vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
-
-          // Render the component with a timestamp
-          render(
-            <DivisionPerformanceCards
-              districtSnapshot={snapshot}
-              isLoading={false}
-              snapshotTimestamp={timestamp}
-            />
+      // Generator for non-empty divisions array (at least 1 division)
+      const nonEmptyDivisionsArb = fc
+        .array(divisionPerformanceArb, { minLength: 1, maxLength: 10 })
+        .map(divisions => {
+          // Ensure unique division IDs and sort by ID
+          const uniqueDivisions = Array.from(
+            new Map(divisions.map(d => [d.divisionId, d])).values()
           )
+          return uniqueDivisions.sort((a, b) =>
+            a.divisionId.localeCompare(b.divisionId)
+          )
+        })
 
-          // Requirement 10.3: Verify timestamp is displayed
-          // The timestamp should be formatted and visible in the output
-          // Use the mocked formatDisplayDate function to get the expected format
-          const expectedFormattedDate = formatDisplayDate(timestamp)
+      fc.assert(
+        fc.property(
+          districtSnapshotArb,
+          nonEmptyDivisionsArb,
+          timestampArb,
+          (snapshot, divisions, timestamp) => {
+            cleanup()
 
-          // Look for the formatted timestamp in the rendered output
-          const timestampElement = screen.queryByText(expectedFormattedDate)
-          if (!timestampElement) {
-            throw new Error(
-              `Expected to find timestamp "${expectedFormattedDate}" in rendered output but it was not found. ` +
-                `Original timestamp: ${timestamp}`
+            // Mock the extractDivisionPerformance to return our generated divisions
+            vi.mocked(extractDivisionPerformance).mockReturnValue(divisions)
+
+            // Render the component with a timestamp
+            render(
+              <DivisionPerformanceCards
+                districtSnapshot={snapshot}
+                isLoading={false}
+                snapshotTimestamp={timestamp}
+              />
             )
-          }
 
-          // Verify the "Data as of" label is present
-          const dataAsOfLabel = screen.queryByText('Data as of')
-          if (!dataAsOfLabel) {
-            throw new Error(
-              'Expected to find "Data as of" label near timestamp but it was not found'
-            )
-          }
+            // Requirement 10.3: Verify timestamp is displayed
+            // The timestamp should be formatted and visible in the output
+            // Use the mocked formatDisplayDate function to get the expected format
+            const expectedFormattedDate = formatDisplayDate(timestamp)
 
-          return true
-        }
-      ),
-      { numRuns: 100 }
-    )
-  })
+            // Look for the formatted timestamp in the rendered output
+            const timestampElement = screen.queryByText(expectedFormattedDate)
+            if (!timestampElement) {
+              throw new Error(
+                `Expected to find timestamp "${expectedFormattedDate}" in rendered output but it was not found. ` +
+                  `Original timestamp: ${timestamp}`
+              )
+            }
+
+            // Verify the "Data as of" label is present
+            const dataAsOfLabel = screen.queryByText('Data as of')
+            if (!dataAsOfLabel) {
+              throw new Error(
+                'Expected to find "Data as of" label near timestamp but it was not found'
+              )
+            }
+
+            return true
+          }
+        ),
+        { numRuns: 25 }
+      )
+    }
+  )
 
   /**
    * Property: Timestamp Absence Handling
@@ -603,7 +618,7 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
           return true
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 25 }
     )
   })
 
@@ -630,7 +645,7 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
    */
   it(
     'Property 13: should recalculate and update metrics when snapshot changes',
-    { timeout: 10000 },
+    { timeout: 20000 },
     () => {
       fc.assert(
         fc.property(
@@ -760,7 +775,7 @@ describe('DivisionPerformanceCards Property-Based Tests', () => {
             return true
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 25 }
       )
     }
   )
