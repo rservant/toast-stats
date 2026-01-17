@@ -176,7 +176,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
    */
   describe('12.1 generateDistrictAnalytics returns correct arrays', () => {
     it('vulnerableClubs contains only Vulnerable clubs', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       // January 15 - requires 3 DCP goals
       const snapshotDate = '2026-01-15'
 
@@ -241,7 +241,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
     })
 
     it('interventionRequiredClubs contains only Intervention Required clubs', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const snapshotDate = '2026-01-15'
 
       const stats = createDistrictStats(districtId, [
@@ -308,7 +308,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
     })
 
     it('thrivingClubs contains only Thriving clubs', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const snapshotDate = '2026-01-15'
 
       const stats = createDistrictStats(districtId, [
@@ -371,7 +371,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
     })
 
     it('all clubs are mutually exclusive across arrays', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const snapshotDate = '2026-01-15'
 
       // Create a mix of clubs
@@ -454,7 +454,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
     })
 
     it('arrays use new status values (thriving, vulnerable, intervention-required)', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const snapshotDate = '2026-01-15'
 
       const stats = createDistrictStats(districtId, [
@@ -505,7 +505,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
    */
   describe('12.2 year-over-year calculations use new classification logic', () => {
     it('clubHealth metrics use new classification (thrivingClubs, vulnerableClubs, interventionRequiredClubs)', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const currentDate = '2026-01-15'
       const previousDate = '2025-01-15'
 
@@ -632,7 +632,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
     })
 
     it('year-over-year does not use old terminology (healthyClubs, atRiskClubs, criticalClubs)', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const currentDate = '2026-01-15'
       const previousDate = '2025-01-15'
 
@@ -683,7 +683,7 @@ describe('AnalyticsEngine Integration Tests - Club Health Classification', () =>
     })
 
     it('percentage changes are calculated correctly for club health metrics', async () => {
-      const districtId = `test-district-${Date.now()}`
+      const districtId = `testDistrict${Date.now()}`
       const currentDate = '2026-01-15'
       const previousDate = '2025-01-15'
 

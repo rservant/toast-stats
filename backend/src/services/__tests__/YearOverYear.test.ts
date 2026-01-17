@@ -132,7 +132,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('findPreviousProgramYearDate', () => {
     it('should calculate previous year date correctly (Requirement 9.1)', async () => {
-      const districtId = `test-district-${Date.now()}-5`
+      const districtId = `testDistrict${Date.now()}v5`
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 
@@ -174,7 +174,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('calculatePercentageChanges', () => {
     it('should calculate percentage changes for all key metrics (Requirement 9.2)', async () => {
-      const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+      const districtId = `testDistrict${Date.now()}${Math.random().toString(36).substring(2, 8)}`
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 
@@ -248,7 +248,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('handleMissingData', () => {
     it('should handle missing previous year data gracefully (Requirement 9.3)', async () => {
-      const districtId = `test-district-${Date.now()}-1`
+      const districtId = `testDistrict${Date.now()}v1`
       const currentDate = '2024-11-22'
 
       // Only create current year snapshot
@@ -275,7 +275,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     })
 
     it('should handle missing current year data gracefully (Requirement 9.3)', async () => {
-      const districtId = `test-district-${Date.now()}-2`
+      const districtId = `testDistrict${Date.now()}v2`
       const currentDate = '2024-11-22'
 
       // No data cached at all for this district
@@ -290,7 +290,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('multiYearTrends', () => {
     it('should support multi-year trends when 3+ years available (Requirement 9.5)', async () => {
-      const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+      const districtId = `testDistrict${Date.now()}${Math.random().toString(36).substring(2, 8)}`
 
       // Create snapshots for 3 years
       for (let year = 2022; year <= 2024; year++) {
@@ -325,7 +325,7 @@ describe('Year-Over-Year Comparison Logic', () => {
     })
 
     it('should not provide multi-year trends when less than 3 years available', async () => {
-      const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+      const districtId = `testDistrict${Date.now()}${Math.random().toString(36).substring(2, 8)}`
 
       // Create snapshots for only 2 years
       for (let year = 2023; year <= 2024; year++) {
@@ -356,7 +356,7 @@ describe('Year-Over-Year Comparison Logic', () => {
 
   describe('distinguishedClubsComparison', () => {
     it('should calculate distinguished clubs year-over-year with breakdown by level', async () => {
-      const districtId = `test-district-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+      const districtId = `testDistrict${Date.now()}${Math.random().toString(36).substring(2, 8)}`
       const currentDate = '2024-11-22'
       const previousDate = '2023-11-22'
 

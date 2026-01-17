@@ -263,7 +263,7 @@ describe('Middleware Application Consistency Property Tests', () => {
       },
       {
         method: 'DELETE',
-        path: '/api/admin/districts/config/test-district',
+        path: '/api/admin/districts/config/testDistrict',
         description: 'delete district',
       },
       {

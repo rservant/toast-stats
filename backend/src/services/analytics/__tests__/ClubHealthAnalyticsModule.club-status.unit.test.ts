@@ -71,7 +71,7 @@ describe('ClubHealthAnalyticsModule - Club Status Parsing Unit Tests', () => {
     clubRecord: ScrapedRecord
   ): DistrictCacheEntry {
     return {
-      districtId: 'test-district',
+      districtId: 'testDistrict',
       date: '2026-01-15',
       districtPerformance: [],
       divisionPerformance: [],
@@ -120,7 +120,7 @@ describe('ClubHealthAnalyticsModule - Club Status Parsing Unit Tests', () => {
     clubRecord: ScrapedRecord
   ): Promise<string | undefined> {
     const entry = createDistrictCacheEntry(clubRecord)
-    const trends = await clubHealthModule.analyzeClubTrends('test-district', [
+    const trends = await clubHealthModule.analyzeClubTrends('testDistrict', [
       entry,
     ])
     return trends[0]?.clubStatus
