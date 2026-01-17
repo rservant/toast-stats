@@ -164,11 +164,17 @@ class PerformanceMonitoringService {
 
   private extractFontFamily(url: string): string {
     // Extract font family from Google Fonts URL or file name
-    if (url.includes('fonts.googleapis.com')) {
-      const match = url.match(/family=([^&:]+)/)
-      return match && match[1]
-        ? decodeURIComponent(match[1].replace(/\+/g, ' '))
-        : 'Unknown'
+    // Use URL parsing to properly validate the hostname (security: avoid substring bypass attacks)
+    try {
+      const parsedUrl = new URL(url)
+      if (parsedUrl.hostname === 'fonts.googleapis.com') {
+        const match = url.match(/family=([^&:]+)/)
+        return match && match[1]
+          ? decodeURIComponent(match[1].replace(/\+/g, ' '))
+          : 'Unknown'
+      }
+    } catch {
+      // URL parsing failed, fall through to file name extraction
     }
 
     // Extract from file name
