@@ -682,21 +682,30 @@ export class DistrictConfigurationService {
 
   /**
    * Calculate edit distance between two strings (Levenshtein distance)
+   * Includes length limits to prevent DoS attacks via extremely long strings
    */
   private calculateEditDistance(str1: string, str2: string): number {
+    // Limit string lengths to prevent DoS - district IDs are short (e.g., "42", "F")
+    const MAX_LENGTH = 20
+    const s1 = str1.length > MAX_LENGTH ? str1.substring(0, MAX_LENGTH) : str1
+    const s2 = str2.length > MAX_LENGTH ? str2.substring(0, MAX_LENGTH) : str2
+
+    const len1 = s1.length
+    const len2 = s2.length
+
     const matrix: number[][] = []
 
-    for (let i = 0; i <= str2.length; i++) {
+    for (let i = 0; i <= len2; i++) {
       matrix[i] = [i]
     }
 
-    for (let j = 0; j <= str1.length; j++) {
+    for (let j = 0; j <= len1; j++) {
       matrix[0]![j] = j
     }
 
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+    for (let i = 1; i <= len2; i++) {
+      for (let j = 1; j <= len1; j++) {
+        if (s2.charAt(i - 1) === s1.charAt(j - 1)) {
           matrix[i]![j] = matrix[i - 1]![j - 1]!
         } else {
           matrix[i]![j] = Math.min(
@@ -708,7 +717,7 @@ export class DistrictConfigurationService {
       }
     }
 
-    return matrix[str2.length]![str1.length]!
+    return matrix[len2]![len1]!
   }
 
   /**
