@@ -1,0 +1,44 @@
+version: 2
+
+updates:
+  # Single lockfile at repo root (npm workspaces / single package-lock.json)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Toronto"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+    versioning-strategy: "increase"
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      patch-and-minor:
+        applies-to: "version-updates"
+        update-types: ["patch", "minor"]
+      dev-deps:
+        applies-to: "version-updates"
+        dependency-type: "development"
+      prod-deps:
+        applies-to: "version-updates"
+        dependency-type: "production"
+
+  # Keep GitHub Actions up-to-date too
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:15"
+      timezone: "America/Toronto"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+      
