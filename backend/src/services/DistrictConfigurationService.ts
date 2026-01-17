@@ -686,12 +686,14 @@ export class DistrictConfigurationService {
    */
   private calculateEditDistance(str1: string, str2: string): number {
     // Limit string lengths to prevent DoS - district IDs are short (e.g., "42", "F")
+    // Using explicit bounds to ensure loop iterations are capped regardless of input
     const MAX_LENGTH = 20
-    const s1 = str1.length > MAX_LENGTH ? str1.substring(0, MAX_LENGTH) : str1
-    const s2 = str2.length > MAX_LENGTH ? str2.substring(0, MAX_LENGTH) : str2
+    const s1 = str1.substring(0, MAX_LENGTH)
+    const s2 = str2.substring(0, MAX_LENGTH)
 
-    const len1 = s1.length
-    const len2 = s2.length
+    // Explicitly bound lengths to MAX_LENGTH to prevent loop-bound injection
+    const len1 = Math.min(s1.length, MAX_LENGTH)
+    const len2 = Math.min(s2.length, MAX_LENGTH)
 
     const matrix: number[][] = []
 
