@@ -1,6 +1,7 @@
 {
   "name": "@toastmasters/scraper-cli",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Standalone CLI tool for scraping Toastmasters dashboard data",
