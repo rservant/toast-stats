@@ -459,6 +459,7 @@ export const timestampArb = (options?: {
       min: options?.min ?? new Date('2020-01-01'),
       max: options?.max ?? new Date('2030-12-31'),
     })
+    .filter(date => !isNaN(date.getTime()))
     .map(date => date.toISOString())
 }
 

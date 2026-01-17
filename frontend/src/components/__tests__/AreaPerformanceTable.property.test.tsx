@@ -29,6 +29,8 @@ const distinguishedStatusArb: fc.Arbitrary<DistinguishedStatus> = fc.oneof(
 
 /**
  * Generator for AreaPerformance data
+ * Note: We use fc.double instead of fc.float for percentage to avoid NaN values
+ * which cause issues with JSON serialization in mutation tests
  */
 const areaPerformanceArb: fc.Arbitrary<AreaPerformance> = fc.record({
   areaId: fc.oneof(
@@ -51,13 +53,13 @@ const areaPerformanceArb: fc.Arbitrary<AreaPerformance> = fc.record({
   firstRoundVisits: fc.record({
     completed: fc.integer({ min: 0, max: 50 }),
     required: fc.integer({ min: 1, max: 50 }),
-    percentage: fc.float({ min: 0, max: 100 }),
+    percentage: fc.double({ min: 0, max: 100, noNaN: true }),
     meetsThreshold: fc.boolean(),
   }),
   secondRoundVisits: fc.record({
     completed: fc.integer({ min: 0, max: 50 }),
     required: fc.integer({ min: 1, max: 50 }),
-    percentage: fc.float({ min: 0, max: 100 }),
+    percentage: fc.double({ min: 0, max: 100, noNaN: true }),
     meetsThreshold: fc.boolean(),
   }),
   isQualified: fc.boolean(),

@@ -56,6 +56,8 @@ const runAxeSynchronized = async (container: Element): Promise<unknown> => {
 
 describe('DistrictDetailPage - Division Performance Cards Integration', () => {
   // Mock district statistics data with division and area performance
+  // Note: divisionPerformance contains club-level data with Division and Area fields
+  // The extractDivisionPerformance function groups clubs by Division and Area
   const mockDistrictStatistics = {
     districtId: 'D1',
     asOfDate: '2024-01-15T10:30:00Z',
@@ -78,47 +80,72 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       topClubs: [],
       byMonth: [],
     },
+    // divisionPerformance contains club-level data that gets grouped by Division/Area
     divisionPerformance: [
+      // Division A clubs
       {
+        Club: '123456',
+        'Club Name': 'Test Club A1-1',
         Division: 'A',
-        'Club Base': '50',
-        'Paid Clubs': '52',
-        'Distinguished Clubs': '26',
+        Area: 'A1',
+        'Division Club Base': '50',
+        'Area Club Base': '10',
+        'Nov Visit award': '1',
+        'May visit award': '1',
       },
       {
+        Club: '123457',
+        'Club Name': 'Test Club A1-2',
+        Division: 'A',
+        Area: 'A1',
+        'Division Club Base': '50',
+        'Area Club Base': '10',
+        'Nov Visit award': '1',
+        'May visit award': '1',
+      },
+      // Division B clubs
+      {
+        Club: '123458',
+        'Club Name': 'Test Club B1-1',
         Division: 'B',
-        'Club Base': '40',
-        'Paid Clubs': '41',
-        'Distinguished Clubs': '21',
+        Area: 'B1',
+        'Division Club Base': '40',
+        'Area Club Base': '8',
+        'Nov Visit award': '1',
+        'May visit award': '1',
       },
     ],
+    // clubPerformance contains club status and distinguished status
     clubPerformance: [
       {
         'Club Number': '123456',
-        'Club Name': 'Test Club A1',
+        'Club Name': 'Test Club A1-1',
         Division: 'A',
         Area: 'A1',
-        'Club Status': 'Distinguished',
+        'Club Status': 'Active',
+        'Club Distinguished Status': 'Distinguished',
         'Mem. Base': '20',
         'Active Members': '22',
         'Goals Met': '5',
       },
       {
         'Club Number': '123457',
-        'Club Name': 'Test Club A2',
+        'Club Name': 'Test Club A1-2',
         Division: 'A',
         Area: 'A1',
-        'Club Status': 'Low',
+        'Club Status': 'Active',
+        'Club Distinguished Status': 'Select Distinguished',
         'Mem. Base': '15',
-        'Active Members': '12',
-        'Goals Met': '2',
+        'Active Members': '20',
+        'Goals Met': '7',
       },
       {
         'Club Number': '123458',
-        'Club Name': 'Test Club B1',
+        'Club Name': 'Test Club B1-1',
         Division: 'B',
         Area: 'B1',
-        'Club Status': 'Distinguished',
+        'Club Status': 'Active',
+        'Club Distinguished Status': 'Distinguished',
         'Mem. Base': '25',
         'Active Members': '27',
         'Goals Met': '6',
@@ -158,13 +185,15 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
         />
       )
 
-      // Verify Division A data
-      expect(screen.getByText(/52 \/ 50/)).toBeInTheDocument() // Paid clubs
-      expect(screen.getByText(/26 \/ 25/)).toBeInTheDocument() // Distinguished clubs
+      // Verify Division A data - 2 clubs in division A, both active and distinguished
+      // Club base from "Division Club Base" = 50, but actual clubs = 2
+      // Since we have 2 clubs with "Division Club Base": "50", the division uses 50 as base
+      expect(screen.getByText(/2 \/ 50/)).toBeInTheDocument() // Paid clubs (2 active / 50 base)
+      expect(screen.getByText(/2 \/ 25/)).toBeInTheDocument() // Distinguished clubs (2 / 25 required)
 
-      // Verify Division B data
-      expect(screen.getByText(/41 \/ 40/)).toBeInTheDocument() // Paid clubs
-      expect(screen.getByText(/21 \/ 20/)).toBeInTheDocument() // Distinguished clubs
+      // Verify Division B data - 1 club in division B
+      expect(screen.getByText(/1 \/ 40/)).toBeInTheDocument() // Paid clubs (1 active / 40 base)
+      expect(screen.getByText(/1 \/ 20/)).toBeInTheDocument() // Distinguished clubs (1 / 20 required)
     })
 
     it('should display area performance tables', () => {
@@ -292,8 +321,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       )
 
       // Verify key metrics are visible and readable
-      expect(screen.getByText(/52 \/ 50/)).toBeVisible()
-      expect(screen.getByText(/26 \/ 25/)).toBeVisible()
+      // Division A: 2 paid clubs / 50 base, 2 distinguished / 25 required
+      expect(screen.getByText(/2 \/ 50/)).toBeVisible()
+      expect(screen.getByText(/2 \/ 25/)).toBeVisible()
     })
 
     it('should handle horizontal scrolling for area tables on mobile', () => {
@@ -437,8 +467,8 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
         />
       )
 
-      // Should show total area count
-      expect(screen.getByText(/with 2 total areas/i)).toBeInTheDocument()
+      // Should show total area count (A1 in Division A, B1 in Division B = 2 areas)
+      expect(screen.getByText(/with 2 total area/i)).toBeInTheDocument()
     })
 
     it('should handle empty division data', () => {

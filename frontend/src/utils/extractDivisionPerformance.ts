@@ -23,6 +23,278 @@ import {
 } from './divisionStatus.js'
 
 /**
+ * Determines the distinguished level for a club based on DCP criteria
+ * Uses the same logic as DistinguishedClubAnalyticsModule for consistency
+ *
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+ *
+ * @param club - Raw club data record from CSV
+ * @returns Distinguished level or null if not distinguished
+ */
+export function determineDistinguishedLevel(
+  club: Record<string, unknown>
+): 'Smedley' | 'Presidents' | 'Select' | 'Distinguished' | null {
+  // Requirement 3.5: CSP requirement for 2025-2026+
+  // Check if CSP field exists and if so, require it to be submitted
+  const cspSubmitted = getCSPStatus(club)
+  if (!cspSubmitted) {
+    // Club cannot be distinguished without CSP (when CSP field is present)
+    return null
+  }
+
+  // Requirement 3.2: Check "Club Distinguished Status" field as primary source
+  const statusField = club['Club Distinguished Status']
+  const extractedLevel = extractDistinguishedLevelFromStatus(statusField)
+
+  if (extractedLevel !== null) {
+    return extractedLevel
+  }
+
+  // Requirement 3.3: Calculate from DCP goals, membership, and net growth if status field is missing
+  const dcpGoals = parseIntSafe(club['Goals Met'])
+  const membership = parseIntSafe(
+    club['Active Members'] ??
+      club['Active Membership'] ??
+      club['Membership'] ??
+      club['Paid Members']
+  )
+  const netGrowth = calculateClubNetGrowth(club)
+
+  return calculateDistinguishedLevelFromCriteria(
+    dcpGoals,
+    membership,
+    netGrowth
+  )
+}
+
+/**
+ * Extracts distinguished level from Club Distinguished Status field
+ *
+ * @param statusField - Value from "Club Distinguished Status" field
+ * @returns Distinguished level or null if not found/empty
+ */
+function extractDistinguishedLevelFromStatus(
+  statusField: unknown
+): 'Smedley' | 'Presidents' | 'Select' | 'Distinguished' | null {
+  if (statusField === null || statusField === undefined) {
+    return null
+  }
+
+  const status = String(statusField).toLowerCase().trim()
+
+  if (status === '' || status === 'none' || status === 'n/a') {
+    return null
+  }
+
+  // Check for Smedley Distinguished (highest level)
+  if (status.includes('smedley')) {
+    return 'Smedley'
+  }
+
+  // Check for President's Distinguished
+  if (status.includes('president')) {
+    return 'Presidents'
+  }
+
+  // Check for Select Distinguished
+  if (status.includes('select')) {
+    return 'Select'
+  }
+
+  // Check for Distinguished (base level)
+  if (status.includes('distinguished')) {
+    return 'Distinguished'
+  }
+
+  return null
+}
+
+/**
+ * Calculates distinguished level based on DCP goals, membership, and net growth
+ *
+ * Distinguished Level Criteria (from Toastmasters DCP):
+ * - Smedley Distinguished: 10 goals + 25 members
+ * - President's Distinguished: 9 goals + 20 members
+ * - Select Distinguished: 7 goals + (20 members OR net growth of 5)
+ * - Distinguished: 5 goals + (20 members OR net growth of 3)
+ *
+ * @param dcpGoals - Number of DCP goals achieved
+ * @param membership - Current active membership count
+ * @param netGrowth - Net membership growth (current - base)
+ * @returns Distinguished level or null if not distinguished
+ */
+function calculateDistinguishedLevelFromCriteria(
+  dcpGoals: number,
+  membership: number,
+  netGrowth: number
+): 'Smedley' | 'Presidents' | 'Select' | 'Distinguished' | null {
+  // Smedley Distinguished: 10 goals + 25 members
+  if (dcpGoals >= 10 && membership >= 25) {
+    return 'Smedley'
+  }
+
+  // President's Distinguished: 9 goals + 20 members
+  if (dcpGoals >= 9 && membership >= 20) {
+    return 'Presidents'
+  }
+
+  // Select Distinguished: 7 goals + (20 members OR net growth of 5)
+  if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
+    return 'Select'
+  }
+
+  // Distinguished: 5 goals + (20 members OR net growth of 3)
+  if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
+    return 'Distinguished'
+  }
+
+  return null
+}
+
+/**
+ * Gets CSP (Club Success Plan) submission status from club data
+ *
+ * CSP data availability by program year:
+ * - 2025-2026 and later: CSP field is guaranteed to be present
+ * - Prior to 2025-2026: CSP field did not exist, defaults to true
+ *
+ * @param club - Raw club data record
+ * @returns true if CSP is submitted or field is absent (historical data), false otherwise
+ */
+function getCSPStatus(club: Record<string, unknown>): boolean {
+  // Check for CSP field in various possible formats
+  const cspValue =
+    club['CSP'] ??
+    club['Club Success Plan'] ??
+    club['CSP Submitted'] ??
+    club['Club Success Plan Submitted']
+
+  // Historical data compatibility: if field doesn't exist (pre-2025-2026 data), assume submitted
+  if (cspValue === undefined || cspValue === null) {
+    return true
+  }
+
+  // Parse the value
+  const cspString = String(cspValue).toLowerCase().trim()
+
+  // Check for positive indicators
+  if (
+    cspString === 'yes' ||
+    cspString === 'true' ||
+    cspString === '1' ||
+    cspString === 'submitted' ||
+    cspString === 'y'
+  ) {
+    return true
+  }
+
+  // Check for negative indicators
+  if (
+    cspString === 'no' ||
+    cspString === 'false' ||
+    cspString === '0' ||
+    cspString === 'not submitted' ||
+    cspString === 'n'
+  ) {
+    return false
+  }
+
+  // Default to true for unknown values (historical data compatibility)
+  return true
+}
+
+/**
+ * Calculates net growth for a club (Active Members - Mem. Base)
+ *
+ * @param club - Raw club data record
+ * @returns Net membership growth
+ */
+function calculateClubNetGrowth(club: Record<string, unknown>): number {
+  const currentMembers = parseIntSafe(
+    club['Active Members'] ??
+      club['Active Membership'] ??
+      club['Membership'] ??
+      club['Paid Members']
+  )
+
+  const membershipBase = parseIntSafe(club['Mem. Base'] ?? club['Base'])
+
+  return currentMembers - membershipBase
+}
+
+/**
+ * Safely parses a value to an integer, returning 0 for invalid values
+ *
+ * @param value - Value to parse
+ * @returns Parsed integer or 0 if invalid
+ */
+function parseIntSafe(value: unknown): number {
+  if (value === null || value === undefined) {
+    return 0
+  }
+
+  if (typeof value === 'number') {
+    return Math.floor(value)
+  }
+
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10)
+    return isNaN(parsed) ? 0 : parsed
+  }
+
+  return 0
+}
+
+/**
+ * Counts the number of clubs with completed visits for a given visit field
+ *
+ * This function iterates through all clubs and counts those with "1" in the
+ * specified visit field. Only the exact value "1" is counted as completed.
+ * Any other value (including "0", empty string, missing field, or invalid data)
+ * is NOT counted as a completed visit.
+ *
+ * Requirements: 4.2, 5.2
+ *
+ * @param clubs - Array of club records (unknown type for safety)
+ * @param visitField - Field name ("Nov Visit award" or "May visit award")
+ * @returns Number of clubs with "1" in the visit field
+ *
+ * @example
+ * const clubs = [
+ *   { "Nov Visit award": "1" },
+ *   { "Nov Visit award": "0" },
+ *   { "Nov Visit award": "1" },
+ *   { }  // missing field
+ * ]
+ * countVisitCompletions(clubs, "Nov Visit award") // Returns 2
+ */
+export function countVisitCompletions(
+  clubs: unknown[],
+  visitField: string
+): number {
+  let count = 0
+
+  for (const clubRaw of clubs) {
+    // Type guard: ensure club is an object
+    if (typeof clubRaw !== 'object' || clubRaw === null) {
+      continue
+    }
+
+    const club = clubRaw as Record<string, unknown>
+    const visitValue = club[visitField]
+
+    // Only count "1" as completed
+    // Requirement 4.2/5.2: Count each club that has "1" in the visit field
+    // Any other value (including "0", empty, invalid, missing) is NOT counted
+    if (visitValue === '1' || visitValue === 1) {
+      count++
+    }
+  }
+
+  return count
+}
+
+/**
  * Extracts area visit data from snapshot JSON
  *
  * Retrieves first round visits from "Nov Visit award" field and second round
@@ -176,25 +448,52 @@ export function extractDivisionPerformance(
 
   for (const [divisionId, clubs] of divisionMap.entries()) {
     // Aggregate division metrics from club data
-    let clubBase = 0
     let paidClubs = 0
     let distinguishedClubs = 0
+
+    // Requirement 1.1, 1.2, 1.3: Read "Division Club Base" from first club in division
+    // All clubs in a division have the same value for this field
+    const firstClub = clubs[0] as Record<string, unknown>
+    const divisionClubBaseRaw = firstClub['Division Club Base']
+    let clubBase: number
+
+    if (divisionClubBaseRaw !== undefined && divisionClubBaseRaw !== null) {
+      const parsed = parseIntSafe(divisionClubBaseRaw)
+      if (parsed > 0) {
+        // Valid "Division Club Base" field found
+        clubBase = parsed
+      } else {
+        // Requirement 1.4: Invalid/non-numeric value, fall back to counting clubs
+        console.debug(
+          `Division "${divisionId}": Invalid "Division Club Base" value "${String(divisionClubBaseRaw)}", falling back to club count`
+        )
+        clubBase = clubs.length
+      }
+    } else {
+      // Requirement 1.4: Field missing, fall back to counting clubs
+      console.debug(
+        `Division "${divisionId}": "Division Club Base" field missing, falling back to club count`
+      )
+      clubBase = clubs.length
+    }
 
     for (const clubRaw of clubs) {
       const clubData = clubRaw as Record<string, unknown>
 
-      // Club Base: count all clubs (this represents the starting number)
-      clubBase++
-
       // Get the club identifier to look up performance data
+      // Try multiple field names for club identifier
       const clubKey =
         (typeof clubData['Club'] === 'string' ||
         typeof clubData['Club'] === 'number'
           ? String(clubData['Club'])
           : '') ||
+        (typeof clubData['Club Number'] === 'string' ||
+        typeof clubData['Club Number'] === 'number'
+          ? String(clubData['Club Number'])
+          : '') ||
         (typeof clubData['Club Name'] === 'string' ? clubData['Club Name'] : '')
 
-      // Look up club performance data
+      // Look up club performance data for paid clubs status and distinguished status
       const clubPerf = clubKey ? clubPerformanceMap.get(clubKey) : undefined
 
       if (clubPerf) {
@@ -207,17 +506,19 @@ export function extractDivisionPerformance(
           paidClubs++
         }
 
-        // Distinguished Clubs: count clubs with distinguished status
-        const distinguishedStatus =
-          typeof clubPerf['Club Distinguished Status'] === 'string'
-            ? clubPerf['Club Distinguished Status']
-            : ''
-        if (
-          distinguishedStatus === 'Distinguished' ||
-          distinguishedStatus === 'Select Distinguished' ||
-          distinguishedStatus === 'Presidents Distinguished' ||
-          distinguishedStatus === 'Smedley Distinguished'
-        ) {
+        // Requirements 3.1, 3.2, 3.3, 3.4: Use determineDistinguishedLevel helper
+        // for each club to count distinguished clubs consistently with analytics engine
+        // IMPORTANT: Use clubPerf (from clubPerformance) which has "Club Distinguished Status"
+        // field, not clubData (from divisionPerformance) which doesn't have this field
+        const distinguishedLevel = determineDistinguishedLevel(clubPerf)
+        if (distinguishedLevel !== null) {
+          distinguishedClubs++
+        }
+      } else {
+        // Fallback: try to determine distinguished status from divisionPerformance data
+        // This may not have "Club Distinguished Status" field, so it will use DCP calculation
+        const distinguishedLevel = determineDistinguishedLevel(clubData)
+        if (distinguishedLevel !== null) {
           distinguishedClubs++
         }
       }
@@ -310,22 +611,59 @@ function extractAreasForDivision(
   const areas: AreaPerformance[] = []
 
   for (const [areaId, clubs] of areaMap.entries()) {
-    // Calculate area metrics from clubs
-    const clubBase = clubs.length
+    // Requirement 2.1, 2.2, 2.3: Read "Area Club Base" from first club in area
+    // All clubs in an area have the same value for this field
+    const firstClub = clubs[0] as Record<string, unknown>
+    const areaClubBaseRaw = firstClub['Area Club Base']
+    let clubBase: number
+
+    if (areaClubBaseRaw !== undefined && areaClubBaseRaw !== null) {
+      const parsed = parseIntSafe(areaClubBaseRaw)
+      if (parsed > 0) {
+        // Valid "Area Club Base" field found
+        clubBase = parsed
+      } else {
+        // Requirement 2.4: Invalid/non-numeric value, fall back to counting clubs
+        console.debug(
+          `Area "${areaId}": Invalid "Area Club Base" value "${String(areaClubBaseRaw)}", falling back to club count`
+        )
+        clubBase = clubs.length
+      }
+    } else {
+      // Requirement 2.4: Field missing, fall back to counting clubs
+      console.debug(
+        `Area "${areaId}": "Area Club Base" field missing, falling back to club count`
+      )
+      clubBase = clubs.length
+    }
+
     let paidClubs = 0
     let distinguishedClubs = 0
 
-    // Get visit data from first club (area-level data is same across all clubs in area)
-    const firstClub = clubs[0] as Record<string, unknown>
-    const { firstRound, secondRound } = extractVisitData(firstClub, clubBase)
+    // Requirements 4.1, 4.2, 4.3, 4.4, 4.5: Calculate first round visits by counting clubs
+    // Iterate through all clubs in the area and count those with "1" in "Nov Visit award"
+    // NOT reading from a single club and treating it as the total visit count
+    const firstRoundCompleted = countVisitCompletions(clubs, 'Nov Visit award')
+    const firstRound = calculateVisitStatus(firstRoundCompleted, clubBase)
+
+    // Requirements 5.1, 5.2, 5.3, 5.4, 5.5: Calculate second round visits by counting clubs
+    // Iterate through all clubs in the area and count those with "1" in "May visit award"
+    // NOT reading from a single club and treating it as the total visit count
+    const secondRoundCompleted = countVisitCompletions(clubs, 'May visit award')
+    const secondRound = calculateVisitStatus(secondRoundCompleted, clubBase)
 
     for (const clubRaw of clubs) {
       const club = clubRaw as Record<string, unknown>
 
       // Get the club identifier to look up performance data
+      // Try multiple field names for club identifier
       const clubKey =
         (typeof club['Club'] === 'string' || typeof club['Club'] === 'number'
           ? String(club['Club'])
+          : '') ||
+        (typeof club['Club Number'] === 'string' ||
+        typeof club['Club Number'] === 'number'
+          ? String(club['Club Number'])
           : '') ||
         (typeof club['Club Name'] === 'string' ? club['Club Name'] : '')
 
@@ -342,17 +680,19 @@ function extractAreasForDivision(
           paidClubs++
         }
 
-        // Count distinguished clubs
-        const distinguishedStatus =
-          typeof clubPerf['Club Distinguished Status'] === 'string'
-            ? clubPerf['Club Distinguished Status']
-            : ''
-        if (
-          distinguishedStatus === 'Distinguished' ||
-          distinguishedStatus === 'Select Distinguished' ||
-          distinguishedStatus === 'Presidents Distinguished' ||
-          distinguishedStatus === 'Smedley Distinguished'
-        ) {
+        // Requirements 3.1, 3.2, 3.3, 3.4: Use determineDistinguishedLevel helper
+        // for each club to count distinguished clubs consistently with analytics engine
+        // IMPORTANT: Use clubPerf (from clubPerformance) which has "Club Distinguished Status"
+        // field, not club (from divisionPerformance) which doesn't have this field
+        const distinguishedLevel = determineDistinguishedLevel(clubPerf)
+        if (distinguishedLevel !== null) {
+          distinguishedClubs++
+        }
+      } else {
+        // Fallback: try to determine distinguished status from divisionPerformance data
+        // This may not have "Club Distinguished Status" field, so it will use DCP calculation
+        const distinguishedLevel = determineDistinguishedLevel(club)
+        if (distinguishedLevel !== null) {
           distinguishedClubs++
         }
       }
