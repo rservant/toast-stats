@@ -20,6 +20,7 @@ import {
   getValidDistrictId,
   validateDateFormat,
   getAnalyticsEngine,
+  extractStringParam,
 } from './shared.js'
 
 export const analyticsRouter = Router()
@@ -149,8 +150,10 @@ analyticsRouter.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache for analytics
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'analytics', {
         startDate: req.query['startDate'],
         endDate: req.query['endDate'],
@@ -303,17 +306,19 @@ analyticsRouter.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      const clubId = req.params['clubId']
-      if (!districtId || !clubId)
-        throw new Error('Missing districtId or clubId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
+      const clubId = extractStringParam(req.params['clubId'], 'clubId')
       return generateDistrictCacheKey(districtId, `clubs/${clubId}/trends`)
     },
   }),
   async (req: Request, res: Response) => {
     try {
       const districtId = getValidDistrictId(req)
-      const clubId = req.params['clubId']
+      const rawClubId = req.params['clubId']
+      const clubId = Array.isArray(rawClubId) ? rawClubId[0] : rawClubId
 
       // Validate district ID
       if (!districtId) {
@@ -339,7 +344,7 @@ analyticsRouter.get(
 
       // Get club trends
       const analyticsEngine = await getAnalyticsEngine()
-      const clubTrend = await analyticsEngine.getClubTrends(districtId!, clubId)
+      const clubTrend = await analyticsEngine.getClubTrends(districtId, clubId)
 
       if (!clubTrend) {
         res.status(404).json({
@@ -398,8 +403,10 @@ analyticsRouter.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'vulnerable-clubs')
     },
   }),
@@ -420,9 +427,8 @@ analyticsRouter.get(
 
       // Identify vulnerable clubs (formerly at-risk)
       const analyticsEngine = await getAnalyticsEngine()
-      const vulnerableClubs = await analyticsEngine.identifyAtRiskClubs(
-        districtId!
-      )
+      const vulnerableClubs =
+        await analyticsEngine.identifyAtRiskClubs(districtId)
 
       // Get intervention-required clubs separately - only if we have vulnerable clubs data
       let interventionRequiredCount = 0
@@ -502,8 +508,10 @@ analyticsRouter.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'leadership-insights', {
         startDate: req.query['startDate'],
         endDate: req.query['endDate'],
@@ -515,8 +523,12 @@ analyticsRouter.get(
       const { districtId } = req.params
       const { startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId!)) {
+      // Validate district ID - ensure it's a string first
+      if (
+        !districtId ||
+        typeof districtId !== 'string' ||
+        !validateDistrictId(districtId)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -579,7 +591,7 @@ analyticsRouter.get(
       // Generate leadership insights
       const analyticsEngine = await getAnalyticsEngine()
       const insights = await analyticsEngine.generateLeadershipInsights(
-        districtId!,
+        districtId,
         startDate as string | undefined,
         endDate as string | undefined
       )
@@ -630,8 +642,10 @@ analyticsRouter.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(
         districtId,
         'distinguished-club-analytics',
@@ -647,8 +661,12 @@ analyticsRouter.get(
       const { districtId } = req.params
       const { startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId!)) {
+      // Validate district ID - ensure it's a string first
+      if (
+        !districtId ||
+        typeof districtId !== 'string' ||
+        !validateDistrictId(districtId)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -712,7 +730,7 @@ analyticsRouter.get(
       const analyticsEngine = await getAnalyticsEngine()
       const analytics =
         await analyticsEngine.generateDistinguishedClubAnalytics(
-          districtId!,
+          districtId,
           startDate as string | undefined,
           endDate as string | undefined
         )
@@ -762,17 +780,19 @@ analyticsRouter.get(
   cacheMiddleware({
     ttl: 300, // 5 minutes cache
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      const date = req.params['date']
-      if (!districtId || !date)
-        throw new Error('Missing districtId or date parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
+      const date = extractStringParam(req.params['date'], 'date')
       return generateDistrictCacheKey(districtId, `year-over-year/${date}`)
     },
   }),
   async (req: Request, res: Response) => {
     try {
       const districtId = getValidDistrictId(req)
-      const date = req.params['date']
+      const rawDate = req.params['date']
+      const date = Array.isArray(rawDate) ? rawDate[0] : rawDate
 
       // Validate district ID
       if (!districtId) {
@@ -840,8 +860,12 @@ analyticsRouter.get(
       const { districtId } = req.params
       const { format, startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId!)) {
+      // Validate district ID - ensure it's a string first
+      if (
+        !districtId ||
+        typeof districtId !== 'string' ||
+        !validateDistrictId(districtId)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -915,13 +939,13 @@ analyticsRouter.get(
       // Generate analytics data for export
       const analyticsEngine = await getAnalyticsEngine()
       const analytics = await analyticsEngine.generateDistrictAnalytics(
-        districtId!,
+        districtId,
         startDate as string | undefined,
         endDate as string | undefined
       )
 
       // Generate CSV content
-      const csvContent = generateDistrictAnalyticsCSV(analytics, districtId!)
+      const csvContent = generateDistrictAnalyticsCSV(analytics, districtId)
 
       // Generate filename with date range
       const dateRangeStr =

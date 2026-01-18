@@ -341,22 +341,27 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                   return district?.districtName || value
                 }}
               />
-              {data.map((district, index) => (
-                <Line
-                  key={district.districtId}
-                  type="monotone"
-                  dataKey={district.districtId}
-                  stroke={DISTRICT_COLORS[index % DISTRICT_COLORS.length]}
-                  strokeWidth={2}
-                  dot={{
-                    fill: DISTRICT_COLORS[index % DISTRICT_COLORS.length],
-                    r: 0.3,
-                  }}
-                  activeDot={{ r: 0.5 }}
-                  name={district.districtId}
-                  connectNulls
-                />
-              ))}
+              {data.map((district, index) => {
+                const color =
+                  DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
+                  'var(--tm-loyal-blue)'
+                return (
+                  <Line
+                    key={district.districtId}
+                    type="monotone"
+                    dataKey={district.districtId}
+                    stroke={color}
+                    strokeWidth={2}
+                    dot={{
+                      fill: color,
+                      r: 0.3,
+                    }}
+                    activeDot={{ r: 0.5 }}
+                    name={district.districtId}
+                    connectNulls
+                  />
+                )
+              })}
             </LineChart>
           </ResponsiveContainer>
         </div>

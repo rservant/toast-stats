@@ -633,7 +633,8 @@ function createIsolatedTestApp(cacheDirectory: string): Express {
 
   // Unified Backfill Endpoints
   router.post('/backfill', (req, res) => {
-    const { startDate, endDate, targetDistricts, collectionType } = req.body
+    const body = req.body || {}
+    const { startDate, endDate, targetDistricts, collectionType } = body
 
     if (!startDate) {
       return res.status(400).json({

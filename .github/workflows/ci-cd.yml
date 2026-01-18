@@ -41,6 +41,10 @@ jobs:
         id: typescript
         run: |
           echo "Checking TypeScript compilation..."
+          # NOTE: Uses the same tsconfig.json as local development for consistency.
+          # Backend: tsconfig.json (excludes tests, exactOptionalPropertyTypes: false)
+          # Frontend: tsconfig.json (excludes tests, exactOptionalPropertyTypes: true)
+          # This ensures CI/CD and local development have identical type checking behavior.
 
           # Run backend typecheck
           set +e
