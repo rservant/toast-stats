@@ -241,7 +241,16 @@
    * Per Toastmasters Brand Guidelines
    * ======================================== */
   
-  /* Spacing Scale */
+  /* Base spacing multiplier for Tailwind v4
+   * px-1 = 1 * 0.25rem = 4px
+   * px-2 = 2 * 0.25rem = 8px
+   * px-3 = 3 * 0.25rem = 12px
+   * px-4 = 4 * 0.25rem = 16px
+   * etc.
+   */
+  --spacing: 0.25rem;
+  
+  /* Brand Spacing Scale (semantic names for p-xs, p-sm, etc.) */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
