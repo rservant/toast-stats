@@ -11,7 +11,7 @@
 /* ===== RESPONSIVE BREAKPOINTS ===== */
 /* Using Toastmasters brand-approved breakpoints */
 
-/* Mobile First Base Styles */
+/* Mobile First Base Styles - CSS Custom Properties (unlayered) */
 :root {
   /* Responsive Font Scaling */
   --tm-font-scale-mobile: 0.875;
@@ -32,677 +32,714 @@
   --tm-touch-target-wide: 48px;
 }
 
-/* ===== MOBILE FIRST (320px+) ===== */
-/* Base styles ensure minimum requirements are met */
+/* ===== BASE LAYER - Element Defaults ===== */
+@layer base {
+  /* ===== MOBILE FIRST (320px+) ===== */
+  /* Base styles ensure minimum requirements are met */
 
-/* Typography - Minimum 14px body text on mobile */
-body {
-  font-size: max(14px, var(--tm-font-size-base));
-  line-height: max(1.4, var(--tm-line-height-normal));
-  font-family: var(--tm-font-body);
-}
-
-/* Ensure all text elements meet minimum line-height requirements */
-/* Note: font-size is NOT set here to allow Tailwind utility classes to work.
-   Individual components should set their own font sizes via Tailwind classes. */
-p, span, div, label, input, textarea, select, button {
-  line-height: max(1.4, var(--tm-line-height-normal));
-}
-
-/* Touch Target Compliance - Minimum 44px on all breakpoints */
-/* Note: padding and position are NOT set here to allow Tailwind utility classes to work.
-   Individual components should set their own padding via Tailwind classes
-   like px-3 py-2, px-4 py-3, etc. */
-button,
-input[type="button"],
-input[type="submit"],
-input[type="reset"],
-a[href],
-[role="button"],
-[role="link"],
-[tabindex]:not([tabindex="-1"]),
-.tm-interactive {
-  min-width: var(--tm-touch-target-mobile);
-  min-height: var(--tm-touch-target-mobile);
-  
-  /* Brand-compliant focus indicators */
-  &:focus-visible {
-    outline: 2px solid var(--tm-loyal-blue);
-    outline-offset: 2px;
+  /* Typography - Minimum 14px body text on mobile */
+  body {
+    font-size: max(14px, var(--tm-font-size-base));
+    line-height: max(1.4, var(--tm-line-height-normal));
+    font-family: var(--tm-font-body);
   }
-}
 
-/* Responsive Container */
-.tm-responsive-container {
-  width: 100%;
-  max-width: 100vw;
-  padding: var(--tm-responsive-padding-mobile);
-  margin: 0 auto;
-}
+  /* Ensure all text elements meet minimum line-height requirements */
+  /* Note: font-size is NOT set here to allow Tailwind utility classes to work.
+     Individual components should set their own font sizes via Tailwind classes. */
+  p, span, div, label, input, textarea, select, button {
+    line-height: max(1.4, var(--tm-line-height-normal));
+  }
 
-/* Fluid Typography Base */
-.tm-fluid-text {
-  font-size: clamp(14px, 4vw, 18px);
-  line-height: max(1.4, var(--tm-line-height-normal));
-}
-
-/* Brand Color Consistency - Mobile */
-.tm-brand-header {
-  background-color: var(--tm-loyal-blue);
-  color: var(--tm-white);
-  padding: var(--tm-responsive-padding-mobile);
-}
-
-.tm-brand-nav {
-  background-color: var(--tm-loyal-blue);
-  
-  a, button {
-    color: var(--tm-white);
-    min-height: var(--tm-touch-target-mobile);
-    padding: 12px 16px;
+  /* ===== TABLET (768px+) ===== */
+  @media (min-width: 768px) {
+    :root {
+      --tm-current-font-scale: var(--tm-font-scale-tablet);
+      --tm-current-padding: var(--tm-responsive-padding-tablet);
+      --tm-current-touch-target: var(--tm-touch-target-tablet);
+    }
     
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-  }
-}
-
-/* ===== TABLET (768px+) ===== */
-@media (min-width: 768px) {
-  :root {
-    --tm-current-font-scale: var(--tm-font-scale-tablet);
-    --tm-current-padding: var(--tm-responsive-padding-tablet);
-    --tm-current-touch-target: var(--tm-touch-target-tablet);
-  }
-  
-  /* Responsive Container */
-  .tm-responsive-container {
-    padding: var(--tm-responsive-padding-tablet);
-    max-width: 1200px;
-  }
-  
-  /* Typography Scaling */
-  .tm-fluid-text {
-    font-size: clamp(16px, 3vw, 20px);
-  }
-  
-  /* Enhanced Touch Targets */
-  button,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"],
-  a[href],
-  [role="button"],
-  [role="link"],
-  .tm-interactive {
-    min-width: var(--tm-touch-target-tablet);
-    min-height: var(--tm-touch-target-tablet);
-    /* padding removed - let Tailwind classes handle this */
-  }
-  
-  /* Brand Navigation - Tablet */
-  .tm-brand-nav {
-    a, button {
-      padding: 14px 20px;
+    /* Enhanced Touch Targets */
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a[href],
+    [role="button"],
+    [role="link"] {
+      min-width: var(--tm-touch-target-tablet);
       min-height: var(--tm-touch-target-tablet);
+      /* padding removed - let Tailwind classes handle this */
     }
   }
-  
-  /* Brand Header - Tablet */
-  .tm-brand-header {
-    padding: var(--tm-responsive-padding-tablet);
-  }
-}
 
-/* ===== DESKTOP (1024px+) ===== */
-@media (min-width: 1024px) {
-  :root {
-    --tm-current-font-scale: var(--tm-font-scale-desktop);
-    --tm-current-padding: var(--tm-responsive-padding-desktop);
-    --tm-current-touch-target: var(--tm-touch-target-desktop);
-  }
-  
-  /* Responsive Container */
-  .tm-responsive-container {
-    padding: var(--tm-responsive-padding-desktop);
-    max-width: 1200px;
-  }
-  
-  /* Typography Scaling */
-  .tm-fluid-text {
-    font-size: clamp(18px, 2.5vw, 22px);
-  }
-  
-  /* Enhanced Touch Targets for Desktop */
-  button,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"],
-  a[href],
-  [role="button"],
-  [role="link"],
-  .tm-interactive {
-    min-width: var(--tm-touch-target-desktop);
-    min-height: var(--tm-touch-target-desktop);
-    /* padding removed - let Tailwind classes handle this */
-  }
-  
-  /* Brand Navigation - Desktop */
-  .tm-brand-nav {
-    a, button {
-      padding: 16px 24px;
+  /* ===== DESKTOP (1024px+) ===== */
+  @media (min-width: 1024px) {
+    :root {
+      --tm-current-font-scale: var(--tm-font-scale-desktop);
+      --tm-current-padding: var(--tm-responsive-padding-desktop);
+      --tm-current-touch-target: var(--tm-touch-target-desktop);
+    }
+    
+    /* Enhanced Touch Targets for Desktop */
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a[href],
+    [role="button"],
+    [role="link"] {
+      min-width: var(--tm-touch-target-desktop);
       min-height: var(--tm-touch-target-desktop);
+      /* padding removed - let Tailwind classes handle this */
     }
   }
-  
-  /* Brand Header - Desktop */
-  .tm-brand-header {
-    padding: var(--tm-responsive-padding-desktop);
+
+  /* ===== WIDE SCREENS (1440px+) ===== */
+  @media (min-width: 1440px) {
+    :root {
+      --tm-current-font-scale: var(--tm-font-scale-wide);
+      --tm-current-padding: var(--tm-responsive-padding-wide);
+      --tm-current-touch-target: var(--tm-touch-target-wide);
+    }
+    
+    /* Enhanced Touch Targets for Wide Screens */
+    button,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"],
+    a[href],
+    [role="button"],
+    [role="link"] {
+      min-width: var(--tm-touch-target-wide);
+      min-height: var(--tm-touch-target-wide);
+      /* padding removed - let Tailwind classes handle this */
+    }
+  }
+
+  /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    button,
+    a[href] {
+      border: 1px solid currentColor;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none;
+    }
   }
 }
 
-/* ===== WIDE SCREENS (1440px+) ===== */
-@media (min-width: 1440px) {
-  :root {
-    --tm-current-font-scale: var(--tm-font-scale-wide);
-    --tm-current-padding: var(--tm-responsive-padding-wide);
-    --tm-current-touch-target: var(--tm-touch-target-wide);
+/* ===== BRAND LAYER - Component Classes ===== */
+@layer brand {
+  /* Touch Target Compliance - Minimum 44px on all breakpoints */
+  /* Note: Element-level touch targets (button, input, a[href], etc.) are now
+     defined in the base layer per CSS Layer Architecture.
+     
+     This section only handles the .tm-interactive utility class.
+     Individual components should set their own padding via Tailwind classes
+     like px-3 py-2, px-4 py-3, etc. */
+  .tm-interactive {
+    min-width: var(--tm-touch-target-mobile);
+    min-height: var(--tm-touch-target-mobile);
   }
-  
+
   /* Responsive Container */
   .tm-responsive-container {
-    padding: var(--tm-responsive-padding-wide);
-    max-width: 1400px;
+    width: 100%;
+    max-width: 100vw;
+    padding: var(--tm-responsive-padding-mobile);
+    margin: 0 auto;
   }
-  
-  /* Typography Scaling */
+
+  /* Fluid Typography Base */
   .tm-fluid-text {
-    font-size: clamp(20px, 2vw, 24px);
+    font-size: clamp(14px, 4vw, 18px);
+    line-height: max(1.4, var(--tm-line-height-normal));
   }
-  
-  /* Enhanced Touch Targets for Wide Screens */
-  button,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"],
-  a[href],
-  [role="button"],
-  [role="link"],
-  .tm-interactive {
-    min-width: var(--tm-touch-target-wide);
-    min-height: var(--tm-touch-target-wide);
-    /* padding removed - let Tailwind classes handle this */
-  }
-  
-  /* Brand Navigation - Wide */
-  .tm-brand-nav {
-    a, button {
-      padding: 18px 28px;
-      min-height: var(--tm-touch-target-wide);
-    }
-  }
-  
-  /* Brand Header - Wide */
+
+  /* Brand Color Consistency - Mobile */
   .tm-brand-header {
-    padding: var(--tm-responsive-padding-wide);
-  }
-}
-
-/* ===== FLUID TYPOGRAPHY SYSTEM ===== */
-/* Implements fluid scaling between breakpoints while maintaining minimums */
-
-.tm-h1-fluid {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-black);
-  font-size: clamp(24px, 5vw, 48px);
-  line-height: max(1.2, var(--tm-line-height-tight));
-}
-
-.tm-h2-fluid {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-bold);
-  font-size: clamp(20px, 4vw, 36px);
-  line-height: max(1.3, var(--tm-line-height-snug));
-}
-
-.tm-h3-fluid {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-semibold);
-  font-size: clamp(18px, 3vw, 28px);
-  line-height: max(1.3, var(--tm-line-height-snug));
-}
-
-.tm-body-fluid {
-  font-family: var(--tm-font-body);
-  font-weight: var(--tm-font-weight-regular);
-  font-size: clamp(14px, 2.5vw, 18px);
-  line-height: max(1.4, var(--tm-line-height-normal));
-}
-
-.tm-nav-fluid {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-semibold);
-  font-size: clamp(14px, 2vw, 16px);
-  line-height: max(1.4, var(--tm-line-height-normal));
-}
-
-/* ===== GRADIENT PERFORMANCE OPTIMIZATION ===== */
-/* Optimize gradients for mobile while maintaining visual quality */
-
-.tm-gradient-optimized {
-  /* Use simpler gradients on mobile for performance */
-  background: var(--tm-loyal-blue);
-}
-
-@media (min-width: 768px) {
-  .tm-gradient-optimized {
-    background: var(--tm-gradient-loyal-blue);
-  }
-}
-
-/* Reduce gradient complexity on mobile */
-@media (max-width: 767px) {
-  .tm-gradient-loyal-blue-mobile {
-    background: linear-gradient(180deg, var(--tm-loyal-blue) 0%, var(--tm-loyal-blue-end) 100%);
-  }
-  
-  .tm-gradient-true-maroon-mobile {
-    background: linear-gradient(180deg, var(--tm-true-maroon) 0%, var(--tm-true-maroon-end) 100%);
-  }
-  
-  .tm-gradient-cool-gray-mobile {
-    background: linear-gradient(180deg, var(--tm-cool-gray) 0%, var(--tm-cool-gray-end) 100%);
-  }
-}
-
-/* ===== RESPONSIVE BRAND COMPONENTS ===== */
-
-/* Responsive Button System */
-.tm-btn-responsive {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-semibold);
-  border-radius: var(--tm-radius-md);
-  transition: all 0.2s ease;
-  
-  /* Mobile */
-  min-height: 44px;
-  padding: 12px 16px;
-  font-size: 14px;
-  
-  /* Tablet */
-  @media (min-width: 768px) {
-    min-height: 44px;
-    padding: 14px 20px;
-    font-size: 15px;
-  }
-  
-  /* Desktop */
-  @media (min-width: 1024px) {
-    min-height: 48px;
-    padding: 16px 24px;
-    font-size: 16px;
-  }
-  
-  /* Wide */
-  @media (min-width: 1440px) {
-    min-height: 48px;
-    padding: 18px 28px;
-    font-size: 16px;
-  }
-}
-
-.tm-btn-primary-responsive {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-semibold);
-  border-radius: var(--tm-radius-md);
-  transition: all 0.2s ease;
-  background-color: var(--tm-loyal-blue);
-  color: var(--tm-white);
-  
-  /* Mobile */
-  min-height: 44px;
-  padding: 12px 16px;
-  font-size: 14px;
-  
-  /* Tablet */
-  @media (min-width: 768px) {
-    min-height: 44px;
-    padding: 14px 20px;
-    font-size: 15px;
-  }
-  
-  /* Desktop */
-  @media (min-width: 1024px) {
-    min-height: 48px;
-    padding: 16px 24px;
-    font-size: 16px;
-  }
-  
-  /* Wide */
-  @media (min-width: 1440px) {
-    min-height: 48px;
-    padding: 18px 28px;
-    font-size: 16px;
-  }
-  
-  &:hover {
-    background-color: var(--tm-loyal-blue-90);
-  }
-  
-  &:focus-visible {
-    outline: 2px solid var(--tm-loyal-blue);
-    outline-offset: 2px;
-  }
-}
-
-.tm-btn-secondary-responsive {
-  font-family: var(--tm-font-headline);
-  font-weight: var(--tm-font-weight-semibold);
-  border-radius: var(--tm-radius-md);
-  transition: all 0.2s ease;
-  background-color: transparent;
-  color: var(--tm-loyal-blue);
-  border: 2px solid var(--tm-loyal-blue);
-  
-  /* Mobile */
-  min-height: 44px;
-  padding: 12px 16px;
-  font-size: 14px;
-  
-  /* Tablet */
-  @media (min-width: 768px) {
-    min-height: 44px;
-    padding: 14px 20px;
-    font-size: 15px;
-  }
-  
-  /* Desktop */
-  @media (min-width: 1024px) {
-    min-height: 48px;
-    padding: 16px 24px;
-    font-size: 16px;
-  }
-  
-  /* Wide */
-  @media (min-width: 1440px) {
-    min-height: 48px;
-    padding: 18px 28px;
-    font-size: 16px;
-  }
-  
-  &:hover {
     background-color: var(--tm-loyal-blue);
     color: var(--tm-white);
+    padding: var(--tm-responsive-padding-mobile);
   }
-}
 
-/* Responsive Card System */
-.tm-card-responsive {
-  background-color: var(--tm-white);
-  border: 1px solid var(--tm-cool-gray-30);
-  border-radius: var(--tm-radius-lg);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  
-  /* Mobile */
-  padding: var(--tm-space-md);
-  margin-bottom: var(--tm-space-md);
-  
-  /* Tablet */
+  .tm-brand-nav {
+    background-color: var(--tm-loyal-blue);
+    
+    /* Note: padding removed from element selectors to allow Tailwind utilities to override.
+     * Use Tailwind classes like px-4 py-3 on individual elements for padding.
+     * min-height is kept for accessibility compliance (touch targets).
+     */
+    a, button {
+      color: var(--tm-white);
+      min-height: var(--tm-touch-target-mobile);
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  /* ===== TABLET (768px+) ===== */
   @media (min-width: 768px) {
-    padding: var(--tm-space-lg);
-    margin-bottom: var(--tm-space-lg);
-  }
-  
-  /* Desktop */
-  @media (min-width: 1024px) {
-    padding: var(--tm-space-xl);
-    margin-bottom: var(--tm-space-xl);
-  }
-  
-  /* Wide */
-  @media (min-width: 1440px) {
-    padding: var(--tm-space-2xl);
-    margin-bottom: var(--tm-space-2xl);
-  }
-}
-
-/* Responsive Navigation System */
-.tm-nav-responsive {
-  background-color: var(--tm-loyal-blue);
-  
-  /* Mobile - Stack navigation */
-  @media (max-width: 767px) {
-    .tm-nav-items {
-      flex-direction: column;
-      width: 100%;
+    /* Responsive Container */
+    .tm-responsive-container {
+      padding: var(--tm-responsive-padding-tablet);
+      max-width: 1200px;
     }
     
-    .tm-nav-item {
-      width: 100%;
-      min-height: 44px;
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    /* Typography Scaling */
+    .tm-fluid-text {
+      font-size: clamp(16px, 3vw, 20px);
+    }
+    
+    /* Enhanced Touch Targets */
+    .tm-interactive {
+      min-width: var(--tm-touch-target-tablet);
+      min-height: var(--tm-touch-target-tablet);
+    }
+    
+    /* Brand Navigation - Tablet */
+    .tm-brand-nav {
+      a, button {
+        min-height: var(--tm-touch-target-tablet);
+        /* padding removed - use Tailwind classes like px-5 py-3.5 */
+      }
+    }
+    
+    /* Brand Header - Tablet */
+    .tm-brand-header {
+      padding: var(--tm-responsive-padding-tablet);
     }
   }
-  
-  /* Tablet and up - Horizontal navigation */
+
+  /* ===== DESKTOP (1024px+) ===== */
+  @media (min-width: 1024px) {
+    /* Responsive Container */
+    .tm-responsive-container {
+      padding: var(--tm-responsive-padding-desktop);
+      max-width: 1200px;
+    }
+    
+    /* Typography Scaling */
+    .tm-fluid-text {
+      font-size: clamp(18px, 2.5vw, 22px);
+    }
+    
+    /* Enhanced Touch Targets for Desktop */
+    .tm-interactive {
+      min-width: var(--tm-touch-target-desktop);
+      min-height: var(--tm-touch-target-desktop);
+    }
+    
+    /* Brand Navigation - Desktop */
+    .tm-brand-nav {
+      a, button {
+        min-height: var(--tm-touch-target-desktop);
+        /* padding removed - use Tailwind classes like px-6 py-4 */
+      }
+    }
+    
+    /* Brand Header - Desktop */
+    .tm-brand-header {
+      padding: var(--tm-responsive-padding-desktop);
+    }
+  }
+
+  /* ===== WIDE SCREENS (1440px+) ===== */
+  @media (min-width: 1440px) {
+    /* Responsive Container */
+    .tm-responsive-container {
+      padding: var(--tm-responsive-padding-wide);
+      max-width: 1400px;
+    }
+    
+    /* Typography Scaling */
+    .tm-fluid-text {
+      font-size: clamp(20px, 2vw, 24px);
+    }
+    
+    /* Enhanced Touch Targets for Wide Screens */
+    .tm-interactive {
+      min-width: var(--tm-touch-target-wide);
+      min-height: var(--tm-touch-target-wide);
+    }
+    
+    /* Brand Navigation - Wide */
+    .tm-brand-nav {
+      a, button {
+        min-height: var(--tm-touch-target-wide);
+        /* padding removed - use Tailwind classes like px-7 py-4.5 */
+      }
+    }
+    
+    /* Brand Header - Wide */
+    .tm-brand-header {
+      padding: var(--tm-responsive-padding-wide);
+    }
+  }
+
+  /* ===== FLUID TYPOGRAPHY SYSTEM ===== */
+  /* Implements fluid scaling between breakpoints while maintaining minimums */
+
+  .tm-h1-fluid {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-black);
+    font-size: clamp(24px, 5vw, 48px);
+    line-height: max(1.2, var(--tm-line-height-tight));
+  }
+
+  .tm-h2-fluid {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-bold);
+    font-size: clamp(20px, 4vw, 36px);
+    line-height: max(1.3, var(--tm-line-height-snug));
+  }
+
+  .tm-h3-fluid {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: clamp(18px, 3vw, 28px);
+    line-height: max(1.3, var(--tm-line-height-snug));
+  }
+
+  .tm-body-fluid {
+    font-family: var(--tm-font-body);
+    font-weight: var(--tm-font-weight-regular);
+    font-size: clamp(14px, 2.5vw, 18px);
+    line-height: max(1.4, var(--tm-line-height-normal));
+  }
+
+  .tm-nav-fluid {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: clamp(14px, 2vw, 16px);
+    line-height: max(1.4, var(--tm-line-height-normal));
+  }
+
+  /* ===== GRADIENT PERFORMANCE OPTIMIZATION ===== */
+  /* Optimize gradients for mobile while maintaining visual quality */
+
+  .tm-gradient-optimized {
+    /* Use simpler gradients on mobile for performance */
+    background: var(--tm-loyal-blue);
+  }
+
   @media (min-width: 768px) {
-    .tm-nav-items {
-      flex-direction: row;
+    .tm-gradient-optimized {
+      background: var(--tm-gradient-loyal-blue);
+    }
+  }
+
+  /* Reduce gradient complexity on mobile */
+  @media (max-width: 767px) {
+    .tm-gradient-loyal-blue-mobile {
+      background: linear-gradient(180deg, var(--tm-loyal-blue) 0%, var(--tm-loyal-blue-end) 100%);
+    }
+    
+    .tm-gradient-true-maroon-mobile {
+      background: linear-gradient(180deg, var(--tm-true-maroon) 0%, var(--tm-true-maroon-end) 100%);
+    }
+    
+    .tm-gradient-cool-gray-mobile {
+      background: linear-gradient(180deg, var(--tm-cool-gray) 0%, var(--tm-cool-gray-end) 100%);
+    }
+  }
+
+  /* ===== RESPONSIVE BRAND COMPONENTS ===== */
+
+  /* Responsive Button System */
+  .tm-btn-responsive {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-semibold);
+    border-radius: var(--tm-radius-md);
+    transition: all 0.2s ease;
+    
+    /* Mobile */
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 14px;
+    
+    /* Tablet */
+    @media (min-width: 768px) {
+      min-height: 44px;
+      padding: 14px 20px;
+      font-size: 15px;
+    }
+    
+    /* Desktop */
+    @media (min-width: 1024px) {
+      min-height: 48px;
+      padding: 16px 24px;
+      font-size: 16px;
+    }
+    
+    /* Wide */
+    @media (min-width: 1440px) {
+      min-height: 48px;
+      padding: 18px 28px;
+      font-size: 16px;
+    }
+  }
+
+  .tm-btn-primary-responsive {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-semibold);
+    border-radius: var(--tm-radius-md);
+    transition: all 0.2s ease;
+    background-color: var(--tm-loyal-blue);
+    color: var(--tm-white);
+    
+    /* Mobile */
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 14px;
+    
+    /* Tablet */
+    @media (min-width: 768px) {
+      min-height: 44px;
+      padding: 14px 20px;
+      font-size: 15px;
+    }
+    
+    /* Desktop */
+    @media (min-width: 1024px) {
+      min-height: 48px;
+      padding: 16px 24px;
+      font-size: 16px;
+    }
+    
+    /* Wide */
+    @media (min-width: 1440px) {
+      min-height: 48px;
+      padding: 18px 28px;
+      font-size: 16px;
+    }
+    
+    &:hover {
+      background-color: var(--tm-loyal-blue-90);
+    }
+    
+    &:focus-visible {
+      outline: 2px solid var(--tm-loyal-blue);
+      outline-offset: 2px;
+    }
+  }
+
+  .tm-btn-secondary-responsive {
+    font-family: var(--tm-font-headline);
+    font-weight: var(--tm-font-weight-semibold);
+    border-radius: var(--tm-radius-md);
+    transition: all 0.2s ease;
+    background-color: transparent;
+    color: var(--tm-loyal-blue);
+    border: 2px solid var(--tm-loyal-blue);
+    
+    /* Mobile */
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 14px;
+    
+    /* Tablet */
+    @media (min-width: 768px) {
+      min-height: 44px;
+      padding: 14px 20px;
+      font-size: 15px;
+    }
+    
+    /* Desktop */
+    @media (min-width: 1024px) {
+      min-height: 48px;
+      padding: 16px 24px;
+      font-size: 16px;
+    }
+    
+    /* Wide */
+    @media (min-width: 1440px) {
+      min-height: 48px;
+      padding: 18px 28px;
+      font-size: 16px;
+    }
+    
+    &:hover {
+      background-color: var(--tm-loyal-blue);
+      color: var(--tm-white);
+    }
+  }
+
+  /* Responsive Card System */
+  .tm-card-responsive {
+    background-color: var(--tm-white);
+    border: 1px solid var(--tm-cool-gray-30);
+    border-radius: var(--tm-radius-lg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    /* Mobile */
+    padding: var(--tm-space-md);
+    margin-bottom: var(--tm-space-md);
+    
+    /* Tablet */
+    @media (min-width: 768px) {
+      padding: var(--tm-space-lg);
+      margin-bottom: var(--tm-space-lg);
+    }
+    
+    /* Desktop */
+    @media (min-width: 1024px) {
+      padding: var(--tm-space-xl);
+      margin-bottom: var(--tm-space-xl);
+    }
+    
+    /* Wide */
+    @media (min-width: 1440px) {
+      padding: var(--tm-space-2xl);
+      margin-bottom: var(--tm-space-2xl);
+    }
+  }
+
+  /* Responsive Navigation System */
+  .tm-nav-responsive {
+    background-color: var(--tm-loyal-blue);
+    
+    /* Mobile - Stack navigation */
+    @media (max-width: 767px) {
+      .tm-nav-items {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .tm-nav-item {
+        width: 100%;
+        min-height: 44px;
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
+    
+    /* Tablet and up - Horizontal navigation */
+    @media (min-width: 768px) {
+      .tm-nav-items {
+        flex-direction: row;
+        align-items: center;
+      }
+      
+      .tm-nav-item {
+        min-height: 44px;
+        padding: 14px 20px;
+      }
+    }
+    
+    /* Desktop enhancements */
+    @media (min-width: 1024px) {
+      .tm-nav-item {
+        min-height: 48px;
+        padding: 16px 24px;
+      }
+    }
+    
+    /* Wide screen enhancements */
+    @media (min-width: 1440px) {
+      .tm-nav-item {
+        min-height: 48px;
+        padding: 18px 28px;
+      }
+    }
+  }
+
+  /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .tm-brand-header,
+    .tm-brand-nav {
+      border: 2px solid var(--tm-white);
+    }
+    
+    .tm-interactive {
+      border: 1px solid currentColor;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .tm-btn-responsive,
+    .tm-nav-item,
+    .tm-interactive {
+      transition: none;
+    }
+  }
+
+  /* Focus management for keyboard navigation */
+  .tm-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 1000;
+    background: var(--tm-loyal-blue);
+    color: var(--tm-white);
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: var(--tm-radius-sm);
+    font-family: var(--tm-font-headline);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.4;
+    
+    &:focus {
+      position: fixed;
+      top: 6px;
+      left: 6px;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      min-height: var(--tm-touch-target);
+      display: flex;
       align-items: center;
     }
     
-    .tm-nav-item {
-      min-height: 44px;
-      padding: 14px 20px;
+    &:hover {
+      background: var(--tm-loyal-blue-90);
     }
   }
-  
-  /* Desktop enhancements */
-  @media (min-width: 1024px) {
-    .tm-nav-item {
-      min-height: 48px;
-      padding: 16px 24px;
-    }
-  }
-  
-  /* Wide screen enhancements */
-  @media (min-width: 1440px) {
-    .tm-nav-item {
-      min-height: 48px;
-      padding: 18px 28px;
-    }
-  }
-}
 
-/* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+  /* ===== RESPONSIVE UTILITIES ===== */
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .tm-brand-header,
-  .tm-brand-nav {
-    border: 2px solid var(--tm-white);
-  }
-  
-  button,
-  a[href],
-  .tm-interactive {
-    border: 1px solid currentColor;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .tm-btn-responsive,
-  .tm-nav-item,
-  .tm-interactive {
-    transition: none;
-  }
-}
-
-/* Focus management for keyboard navigation */
-.tm-skip-link {
-  position: absolute;
-  left: -9999px;
-  top: auto;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  z-index: 1000;
-  background: var(--tm-loyal-blue);
-  color: var(--tm-white);
-  padding: 12px 24px;
-  text-decoration: none;
-  border-radius: var(--tm-radius-sm);
-  font-family: var(--tm-font-headline);
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.4;
-  
-  &:focus {
-    position: fixed;
-    top: 6px;
-    left: 6px;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    min-height: var(--tm-touch-target);
-    display: flex;
-    align-items: center;
-  }
-  
-  &:hover {
-    background: var(--tm-loyal-blue-90);
-  }
-}
-
-/* ===== RESPONSIVE UTILITIES ===== */
-
-/* Show/hide utilities for different breakpoints */
-.tm-show-mobile {
-  display: block;
-}
-
-.tm-hide-mobile {
-  display: none;
-}
-
-@media (min-width: 768px) {
+  /* Show/hide utilities for different breakpoints */
   .tm-show-mobile {
-    display: none;
+    display: block;
   }
-  
+
   .tm-hide-mobile {
-    display: block;
-  }
-  
-  .tm-show-tablet {
-    display: block;
-  }
-  
-  .tm-hide-tablet {
     display: none;
   }
-}
 
-@media (min-width: 1024px) {
-  .tm-show-tablet {
-    display: none;
-  }
-  
-  .tm-hide-tablet {
-    display: block;
-  }
-  
-  .tm-show-desktop {
-    display: block;
-  }
-  
-  .tm-hide-desktop {
-    display: none;
-  }
-}
-
-@media (min-width: 1440px) {
-  .tm-show-desktop {
-    display: none;
-  }
-  
-  .tm-hide-desktop {
-    display: block;
-  }
-  
-  .tm-show-wide {
-    display: block;
-  }
-  
-  .tm-hide-wide {
-    display: none;
-  }
-}
-
-/* Responsive spacing utilities */
-.tm-responsive-spacing {
-  padding: var(--tm-responsive-padding-mobile);
-  
   @media (min-width: 768px) {
-    padding: var(--tm-responsive-padding-tablet);
+    .tm-show-mobile {
+      display: none;
+    }
+    
+    .tm-hide-mobile {
+      display: block;
+    }
+    
+    .tm-show-tablet {
+      display: block;
+    }
+    
+    .tm-hide-tablet {
+      display: none;
+    }
   }
-  
-  @media (min-width: 1024px) {
-    padding: var(--tm-responsive-padding-desktop);
-  }
-  
-  @media (min-width: 1440px) {
-    padding: var(--tm-responsive-padding-wide);
-  }
-}
 
-/* Responsive grid system */
-.tm-responsive-grid {
-  display: grid;
-  gap: var(--tm-space-md);
-  
-  /* Mobile - Single column */
-  grid-template-columns: 1fr;
-  
-  /* Tablet - Two columns */
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--tm-space-lg);
-  }
-  
-  /* Desktop - Three columns */
   @media (min-width: 1024px) {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--tm-space-xl);
+    .tm-show-tablet {
+      display: none;
+    }
+    
+    .tm-hide-tablet {
+      display: block;
+    }
+    
+    .tm-show-desktop {
+      display: block;
+    }
+    
+    .tm-hide-desktop {
+      display: none;
+    }
   }
-  
-  /* Wide - Four columns */
-  @media (min-width: 1440px) {
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--tm-space-2xl);
-  }
-}
 
-/* ===== PRINT STYLES ===== */
-/* Ensure brand compliance in print media */
-@media print {
-  .tm-brand-header,
-  .tm-brand-nav {
-    background: transparent !important;
-    color: var(--tm-black) !important;
-    border-bottom: 2px solid var(--tm-black);
+  @media (min-width: 1440px) {
+    .tm-show-desktop {
+      display: none;
+    }
+    
+    .tm-hide-desktop {
+      display: block;
+    }
+    
+    .tm-show-wide {
+      display: block;
+    }
+    
+    .tm-hide-wide {
+      display: none;
+    }
   }
-  
-  .tm-btn-responsive {
-    border: 1px solid var(--tm-black);
-    background: transparent !important;
-    color: var(--tm-black) !important;
+
+  /* Responsive spacing utilities */
+  .tm-responsive-spacing {
+    padding: var(--tm-responsive-padding-mobile);
+    
+    @media (min-width: 768px) {
+      padding: var(--tm-responsive-padding-tablet);
+    }
+    
+    @media (min-width: 1024px) {
+      padding: var(--tm-responsive-padding-desktop);
+    }
+    
+    @media (min-width: 1440px) {
+      padding: var(--tm-responsive-padding-wide);
+    }
   }
-  
-  /* Hide interactive elements that don't work in print */
-  .tm-hide-print {
-    display: none !important;
+
+  /* Responsive grid system */
+  .tm-responsive-grid {
+    display: grid;
+    gap: var(--tm-space-md);
+    
+    /* Mobile - Single column */
+    grid-template-columns: 1fr;
+    
+    /* Tablet - Two columns */
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--tm-space-lg);
+    }
+    
+    /* Desktop - Three columns */
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--tm-space-xl);
+    }
+    
+    /* Wide - Four columns */
+    @media (min-width: 1440px) {
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--tm-space-2xl);
+    }
+  }
+
+  /* ===== PRINT STYLES ===== */
+  /* Ensure brand compliance in print media */
+  @media print {
+    .tm-brand-header,
+    .tm-brand-nav {
+      background: transparent !important;
+      color: var(--tm-black) !important;
+      border-bottom: 2px solid var(--tm-black);
+    }
+    
+    .tm-btn-responsive {
+      border: 1px solid var(--tm-black);
+      background: transparent !important;
+      color: var(--tm-black) !important;
+    }
+    
+    /* Hide interactive elements that don't work in print */
+    .tm-hide-print {
+      display: none !important;
+    }
   }
 }

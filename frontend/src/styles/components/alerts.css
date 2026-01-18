@@ -1,103 +1,105 @@
 /* Alert Component Styles */
 
-.tm-alert {
-  /* Base styles for all alerts */
-  font-family: var(--tm-font-body);
-  border-width: 1px;
-  border-style: solid;
-  position: relative;
-}
-
-/* Alert Variants with proper contrast */
-.tm-alert-success {
-  background-color: var(--tm-loyal-blue-10);
-  border-color: var(--tm-loyal-blue);
-  color: var(--tm-black);
-}
-
-.tm-alert-warning {
-  background-color: var(--tm-true-maroon-10);
-  border-color: var(--tm-true-maroon);
-  color: var(--tm-black);
-}
-
-.tm-alert-error {
-  background-color: var(--tm-true-maroon-10);
-  border-color: var(--tm-true-maroon);
-  color: var(--tm-black);
-}
-
-.tm-alert-info {
-  background-color: var(--tm-cool-gray-20);
-  border-color: var(--tm-cool-gray);
-  color: var(--tm-black);
-}
-
-.tm-alert-highlight {
-  background-color: var(--tm-happy-yellow-20);
-  border-color: var(--tm-happy-yellow);
-  color: var(--tm-black);
-}
-
-/* Alert title styling */
-.tm-alert h4 {
-  font-family: var(--tm-font-headline);
-  font-weight: 600;
-  margin: 0 0 4px 0;
-}
-
-/* Alert icon styling */
-.tm-alert .tm-alert-icon {
-  flex-shrink: 0;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.tm-alert-success .tm-alert-icon {
-  color: var(--tm-loyal-blue);
-}
-
-.tm-alert-warning .tm-alert-icon,
-.tm-alert-error .tm-alert-icon {
-  color: var(--tm-true-maroon);
-}
-
-.tm-alert-info .tm-alert-icon {
-  color: var(--tm-cool-gray);
-}
-
-.tm-alert-highlight .tm-alert-icon {
-  color: var(--tm-black);
-}
-
-/* Close button styling */
-.tm-alert button[aria-label="Close alert"] {
-  min-width: var(--tm-touch-target);
-  min-height: var(--tm-touch-target);
-  border-radius: var(--tm-radius-sm);
-  transition: background-color 0.2s ease-in-out;
-}
-
-.tm-alert button[aria-label="Close alert"]:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.tm-alert button[aria-label="Close alert"]:focus-visible {
-  outline: 2px solid var(--tm-loyal-blue);
-  outline-offset: 2px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
+@layer brand {
   .tm-alert {
-    padding: 12px;
+    /* Base styles for all alerts */
+    font-family: var(--tm-font-body);
+    border-width: 1px;
+    border-style: solid;
+    position: relative;
   }
-  
+
+  /* Alert Variants with proper contrast */
+  .tm-alert-success {
+    background-color: var(--tm-loyal-blue-10);
+    border-color: var(--tm-loyal-blue);
+    color: var(--tm-black);
+  }
+
+  .tm-alert-warning {
+    background-color: var(--tm-true-maroon-10);
+    border-color: var(--tm-true-maroon);
+    color: var(--tm-black);
+  }
+
+  .tm-alert-error {
+    background-color: var(--tm-true-maroon-10);
+    border-color: var(--tm-true-maroon);
+    color: var(--tm-black);
+  }
+
+  .tm-alert-info {
+    background-color: var(--tm-cool-gray-20);
+    border-color: var(--tm-cool-gray);
+    color: var(--tm-black);
+  }
+
+  .tm-alert-highlight {
+    background-color: var(--tm-happy-yellow-20);
+    border-color: var(--tm-happy-yellow);
+    color: var(--tm-black);
+  }
+
+  /* Alert title styling */
   .tm-alert h4 {
-    font-size: 14px;
+    font-family: var(--tm-font-headline);
+    font-weight: 600;
+    margin: 0 0 4px 0;
   }
-  
-  .tm-alert .tm-body-medium {
-    font-size: 14px;
+
+  /* Alert icon styling */
+  .tm-alert .tm-alert-icon {
+    flex-shrink: 0;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .tm-alert-success .tm-alert-icon {
+    color: var(--tm-loyal-blue);
+  }
+
+  .tm-alert-warning .tm-alert-icon,
+  .tm-alert-error .tm-alert-icon {
+    color: var(--tm-true-maroon);
+  }
+
+  .tm-alert-info .tm-alert-icon {
+    color: var(--tm-cool-gray);
+  }
+
+  .tm-alert-highlight .tm-alert-icon {
+    color: var(--tm-black);
+  }
+
+  /* Close button styling */
+  .tm-alert button[aria-label="Close alert"] {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    border-radius: var(--tm-radius-sm);
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .tm-alert button[aria-label="Close alert"]:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .tm-alert button[aria-label="Close alert"]:focus-visible {
+    outline: 2px solid var(--tm-loyal-blue);
+    outline-offset: 2px;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .tm-alert {
+      padding: 12px;
+    }
+    
+    .tm-alert h4 {
+      font-size: 14px;
+    }
+    
+    .tm-alert .tm-body-medium {
+      font-size: 14px;
+    }
   }
 }

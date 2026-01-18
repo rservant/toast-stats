@@ -1,9 +1,23 @@
 /* All @import statements must come first in CSS */
-@import "tailwindcss";
+
+/* CSS Cascade Layer Declaration - MUST come before any imports
+ * Layer order establishes cascade priority (lowest to highest):
+ * - base: Element-level defaults (easily overridable)
+ * - brand: Toastmasters brand component classes
+ * - utilities: Tailwind utilities (highest priority, always wins when applied)
+ */
+@layer base, brand, utilities;
+
+@import "tailwindcss" layer(utilities);
 @import './styles/tokens/colors.css';
 @import './styles/tokens/typography.css';
 @import './styles/tokens/spacing.css';
 @import './styles/tokens/gradients.css';
+
+/* Base layer imports - element-level defaults */
+@import './styles/layers/base.css';
+
+/* Brand layer imports - component classes */
 @import './styles/components/typography.css';
 @import './styles/components/navigation.css';
 @import './styles/components/headers.css';
@@ -328,113 +342,16 @@
   --gradient-overlay-light: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
 }
 
-/* Toastmasters Brand Utility Classes */
-
-/* Base Typography Classes */
-.tm-headline {
-  font-family: var(--tm-font-headline);
-}
-
-.tm-body {
-  font-family: var(--tm-font-body);
-}
-
-/* Heading Styles */
-.tm-h1 {
-  font-family: var(--tm-font-headline);
-  font-size: var(--tm-h1-font-size);
-  line-height: var(--tm-h1-line-height);
-  font-weight: var(--tm-h1-font-weight);
-}
-
-.tm-h2 {
-  font-family: var(--tm-font-headline);
-  font-size: var(--tm-h2-font-size);
-  line-height: var(--tm-h2-line-height);
-  font-weight: var(--tm-h2-font-weight);
-}
-
-.tm-h3 {
-  font-family: var(--tm-font-headline);
-  font-size: var(--tm-h3-font-size);
-  line-height: var(--tm-h3-line-height);
-  font-weight: var(--tm-h3-font-weight);
-}
-
-.tm-nav {
-  font-family: var(--tm-font-headline);
-  font-size: var(--tm-nav-font-size);
-  line-height: var(--tm-nav-line-height);
-  font-weight: var(--tm-nav-font-weight);
-}
-
-/* Body Text Styles */
-.tm-body-large {
-  font-family: var(--tm-font-body);
-  font-size: var(--tm-body-large-font-size);
-  line-height: var(--tm-body-large-line-height);
-  font-weight: var(--tm-body-large-font-weight);
-}
-
-.tm-body-medium {
-  font-family: var(--tm-font-body);
-  font-size: var(--tm-body-medium-font-size);
-  line-height: var(--tm-body-medium-line-height);
-  font-weight: var(--tm-body-medium-font-weight);
-}
-
-.tm-body-small {
-  font-family: var(--tm-font-body);
-  font-size: var(--tm-body-small-font-size);
-  line-height: var(--tm-body-small-line-height);
-  font-weight: var(--tm-body-small-font-weight);
-}
-
-.tm-caption {
-  font-family: var(--tm-font-body);
-  font-size: var(--tm-caption-font-size);
-  line-height: var(--tm-caption-line-height);
-  font-weight: var(--tm-caption-font-weight);
-}
-
-/* Color Utility Classes */
-.tm-text-loyal-blue { color: var(--tm-loyal-blue); }
-.tm-text-true-maroon { color: var(--tm-true-maroon); }
-.tm-text-cool-gray { color: var(--tm-cool-gray); }
-.tm-text-happy-yellow { color: var(--tm-happy-yellow); }
-.tm-text-black { color: var(--tm-black); }
-.tm-text-white { color: var(--tm-white); }
-
-.tm-bg-loyal-blue { background-color: var(--tm-loyal-blue); }
-.tm-bg-true-maroon { background-color: var(--tm-true-maroon); }
-.tm-bg-cool-gray { background-color: var(--tm-cool-gray); }
-.tm-bg-happy-yellow { background-color: var(--tm-happy-yellow); }
-.tm-bg-black { background-color: var(--tm-black); }
-.tm-bg-white { background-color: var(--tm-white); }
-
-/* Touch Target Utilities */
-.tm-touch-target {
-  min-width: var(--tm-touch-target);
-  min-height: var(--tm-touch-target);
-}
-
-/* Spacing Utilities */
-.tm-space-xs { gap: var(--tm-space-xs); }
-.tm-space-sm { gap: var(--tm-space-sm); }
-.tm-space-md { gap: var(--tm-space-md); }
-.tm-space-lg { gap: var(--tm-space-lg); }
-.tm-space-xl { gap: var(--tm-space-xl); }
-
-/* Border Radius Utilities */
-.tm-rounded-sm { border-radius: var(--tm-radius-sm); }
-.tm-rounded-md { border-radius: var(--tm-radius-md); }
-.tm-rounded-lg { border-radius: var(--tm-radius-lg); }
-
-/* Accessibility Utilities */
-.tm-focus-visible:focus-visible {
-  outline: 2px solid var(--tm-loyal-blue);
-  outline-offset: 2px;
-}
+/* ========================================
+ * BRAND UTILITY CLASSES
+ * Note: .tm-* classes are now defined in their authoritative locations:
+ * - Typography classes: styles/components/typography.css
+ * - Color, spacing, radius, touch target utilities: styles/brand.css
+ * - Button classes: styles/components/buttons.css
+ * - Navigation classes: styles/components/navigation.css
+ * - Form classes: styles/components/forms.css
+ * - Card classes: styles/components/cards.css
+ * ======================================== */
 
 /* Minimum Requirements Enforcement */
 body {
@@ -472,20 +389,9 @@ body {
   width: 100%;
 }
 
-/* Accessibility: Enhanced focus indicators */
-*:focus {
-  outline: 2px solid var(--tm-loyal-blue);
-  outline-offset: 2px;
-}
-
-*:focus:not(:focus-visible) {
-  outline: none;
-}
-
-*:focus-visible {
-  outline: 2px solid var(--tm-loyal-blue);
-  outline-offset: 2px;
-}
+/* Note: Focus indicator styles have been moved to the base layer
+   (styles/layers/base.css) per CSS Layer Architecture.
+   The base layer provides :focus-visible and :focus:not(:focus-visible) defaults. */
 
 /* Skip navigation link - DEPRECATED: Use .tm-skip-link instead */
 .skip-link {
@@ -558,17 +464,9 @@ body {
   border-width: 0;
 }
 
-/* Mobile-friendly touch targets - minimum 44x44px */
-@media (max-width: 640px) {
-  button,
-  a,
-  input[type="button"],
-  input[type="submit"],
-  select {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
+/* Note: Mobile touch targets are now defined in the base layer (styles/layers/base.css)
+ * per CSS Layer Architecture. The base layer sets 44px minimum touch targets
+ * for all interactive elements, which can be overridden by Tailwind utilities. */
 
 /* Prevent horizontal scroll on mobile */
 body {

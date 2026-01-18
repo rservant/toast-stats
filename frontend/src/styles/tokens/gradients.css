@@ -36,36 +36,41 @@
   --tm-cool-gray-end: #F5F5F5;
 }
 
-/* Gradient Utility Classes */
-.tm-gradient-loyal-blue {
-  background: var(--tm-gradient-loyal-blue);
-}
+/* Gradient Utility Classes
+ * Note: These classes are wrapped in @layer brand to ensure proper cascade ordering
+ * per CSS Layer Architecture spec. All .tm-* classes must be in the brand layer.
+ */
+@layer brand {
+  .tm-gradient-loyal-blue {
+    background: var(--tm-gradient-loyal-blue);
+  }
 
-.tm-gradient-true-maroon {
-  background: var(--tm-gradient-true-maroon);
-}
+  .tm-gradient-true-maroon {
+    background: var(--tm-gradient-true-maroon);
+  }
 
-.tm-gradient-cool-gray {
-  background: var(--tm-gradient-cool-gray);
-}
+  .tm-gradient-cool-gray {
+    background: var(--tm-gradient-cool-gray);
+  }
 
-/* Gradient Text Overlay Utilities */
-.tm-gradient-text-overlay {
-  position: relative;
-}
+  /* Gradient Text Overlay Utilities */
+  .tm-gradient-text-overlay {
+    position: relative;
+  }
 
-.tm-gradient-text-overlay::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--tm-gradient-overlay-dark);
-  z-index: 1;
-}
+  .tm-gradient-text-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--tm-gradient-overlay-dark);
+    z-index: 1;
+  }
 
-.tm-gradient-text-overlay > * {
-  position: relative;
-  z-index: 2;
+  .tm-gradient-text-overlay > * {
+    position: relative;
+    z-index: 2;
+  }
 }
