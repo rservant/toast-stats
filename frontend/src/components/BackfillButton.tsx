@@ -430,7 +430,7 @@ export function BackfillButton({
 
                     {/* Performance optimization status */}
                     {backfillStatus.performanceStatus && (
-                      <div className="tm-caption tm-text-cool-gray border-t pt-2 mt-2">
+                      <div className="tm-caption tm-text-cool-gray border-t border-t-gray-200 pt-2 mt-2">
                         <p className="font-medium mb-1">Performance Status:</p>
                         <div className="space-y-1">
                           <p>

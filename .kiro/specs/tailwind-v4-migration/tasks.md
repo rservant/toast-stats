@@ -67,18 +67,18 @@ This implementation plan completes the Tailwind CSS v3 to v4 migration by:
     - Replace standalone `ring` with `ring-3`
     - _Requirements: 3.5, 3.6_
 
-- [ ] 4. Handle Default Border and Ring Color Changes
-  - [~] 4.1 Add explicit border colors where needed
+- [x] 4. Handle Default Border and Ring Color Changes
+  - [x] 4.1 Add explicit border colors where needed
     - Identify components using `border` class without color specification
     - Add explicit `border-gray-200` or `border-gray-300` where needed
     - _Requirements: 4.1, 4.3_
   
-  - [~] 4.2 Add explicit ring colors where needed
+  - [x] 4.2 Add explicit ring colors where needed
     - Identify components using `ring` class without color specification
     - Add explicit ring color classes where needed (e.g., `ring-blue-500`)
     - _Requirements: 4.2_
 
-- [~] 5. Checkpoint - Verify CSS Configuration
+- [-] 5. Checkpoint - Verify CSS Configuration
   - Run `npm run build` to verify no CSS compilation errors
   - Visually inspect key pages for styling issues
   - _Requirements: 7.1, 7.2_
