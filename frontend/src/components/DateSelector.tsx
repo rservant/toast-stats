@@ -140,7 +140,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
         <select
           value={selectedMonth || ''}
           onChange={e => handleMonthChange(Number(e.target.value))}
-          className="px-4 py-2 border-2 border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-colors appearance-none pr-10 bg-white"
+          className="px-4 py-2 border-2 border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-colors appearance-none pr-10 bg-white"
           aria-label="Select month"
         >
           <option value="">Select Month</option>
@@ -172,7 +172,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
           value={selectedDay || ''}
           onChange={e => handleDayChange(Number(e.target.value))}
           disabled={!selectedMonth}
-          className="px-4 py-2 border-2 border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-colors appearance-none pr-10 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="px-4 py-2 border-2 border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-colors appearance-none pr-10 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
           aria-label="Select day"
         >
           <option value="">Select Day</option>

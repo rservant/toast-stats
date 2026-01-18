@@ -83,7 +83,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
+              className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
               tabIndex={0}
               aria-label="Clear categorical filter"
             >
@@ -106,10 +106,10 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                   handleSelectAll()
                 }
               }}
-              className="flex items-center gap-2 cursor-pointer text-sm text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded px-1 py-1"
+              className="flex items-center gap-2 cursor-pointer text-sm text-tm-loyal-blue hover:underline font-medium focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded px-1 py-1"
             >
               <div
-                className={`w-4 h-4 min-w-[16px] min-h-[16px] border-2 rounded-sm flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+                className={`w-4 h-4 min-w-[16px] min-h-[16px] border-2 rounded-xs flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
                   allSelected
                     ? 'bg-tm-loyal-blue border-tm-loyal-blue'
                     : localSelected.length > 0
@@ -133,7 +133,7 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                   </svg>
                 )}
                 {localSelected.length > 0 && !allSelected && (
-                  <div className="w-2 h-2 bg-tm-loyal-blue rounded-sm" />
+                  <div className="w-2 h-2 bg-tm-loyal-blue rounded-xs" />
                 )}
               </div>
               <span>{allSelected ? 'Deselect All' : 'Select All'}</span>
@@ -158,10 +158,10 @@ export const CategoricalFilter: React.FC<CategoricalFilterProps> = ({
                     handleToggle(option)
                   }
                 }}
-                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded px-2 py-2 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset"
+                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded px-2 py-2 transition-colors duration-200 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset"
               >
                 <div
-                  className={`w-4 h-4 min-w-[16px] min-h-[16px] border-2 rounded-sm flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+                  className={`w-4 h-4 min-w-[16px] min-h-[16px] border-2 rounded-xs flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
                     isSelected
                       ? 'bg-tm-loyal-blue border-tm-loyal-blue'
                       : 'bg-white border-gray-300 hover:border-gray-400'

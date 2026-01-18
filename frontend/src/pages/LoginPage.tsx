@@ -82,7 +82,7 @@ const LoginPage: React.FC = () => {
           {/* General error message */}
           {error && (
             <div
-              className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded"
+              className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-sm"
               role="alert"
             >
               {error}
@@ -102,7 +102,7 @@ const LoginPage: React.FC = () => {
               id="username"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body ${
                 validationErrors.username ? 'border-red-500' : 'border-gray-300'
               }`}
               disabled={isLoading}
@@ -135,7 +135,7 @@ const LoginPage: React.FC = () => {
               id="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body ${
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body ${
                 validationErrors.password ? 'border-red-500' : 'border-gray-300'
               }`}
               disabled={isLoading}

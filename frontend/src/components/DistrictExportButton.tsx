@@ -71,7 +71,7 @@ export const DistrictExportButton: React.FC<DistrictExportButtonProps> = ({
         )}
       </button>
       {error && (
-        <div className="absolute top-full mt-1 right-0 bg-red-50 border border-red-200 text-red-700 text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+        <div className="absolute top-full mt-1 right-0 bg-red-50 border border-red-200 text-red-700 text-xs rounded-sm px-2 py-1 whitespace-nowrap z-10">
           {error.message}
         </div>
       )}

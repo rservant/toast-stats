@@ -103,7 +103,7 @@ const DistrictSelector: React.FC<DistrictSelectorProps> = ({
             id="district-select"
             value={selectedDistrictId || ''}
             onChange={handleDistrictChange}
-            className="block w-full min-h-[48px] px-4 py-3 pr-10 bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:border-tm-loyal-blue focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue text-base font-medium text-gray-900 transition-colors cursor-pointer appearance-none"
+            className="block w-full min-h-[48px] px-4 py-3 pr-10 bg-white border-2 border-gray-300 rounded-lg shadow-xs hover:border-tm-loyal-blue focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:border-tm-loyal-blue text-base font-medium text-gray-900 transition-colors cursor-pointer appearance-none"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
               backgroundPosition: 'right 0.5rem center',

@@ -81,7 +81,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
                 e.currentTarget.click()
               }
             }}
-            className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 ${
               operator === 'contains'
                 ? 'bg-blue-100 text-tm-loyal-blue border border-blue-300 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
@@ -101,7 +101,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
                 e.currentTarget.click()
               }
             }}
-            className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 ${
               operator === 'startsWith'
                 ? 'bg-blue-100 text-tm-loyal-blue border border-blue-300 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:border-gray-400'
@@ -121,7 +121,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
             value={localValue}
             onChange={e => handleInputChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 transition-colors duration-200"
+            className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded hover:border-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 transition-colors duration-200"
             autoFocus
             tabIndex={0}
             aria-label={`Filter text input. Current operator: ${operator}`}
@@ -130,7 +130,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1 transition-all duration-200"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 rounded p-1 transition-all duration-200"
               aria-label="Clear filter"
               tabIndex={0}
             >
@@ -159,7 +159,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
+            className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
             tabIndex={0}
             aria-label="Clear text filter"
           >

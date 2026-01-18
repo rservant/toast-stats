@@ -17,7 +17,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   className = '',
   height,
 }) => {
-  const baseClasses = 'animate-pulse bg-gray-200 rounded'
+  const baseClasses = 'animate-pulse bg-gray-200 rounded-sm'
 
   if (variant === 'card') {
     return (

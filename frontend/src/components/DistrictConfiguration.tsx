@@ -92,11 +92,11 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+          <div className="h-6 bg-gray-200 rounded-sm w-1/3"></div>
+          <div className="h-4 bg-gray-200 rounded-sm w-2/3"></div>
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-200 rounded"></div>
+              <div key={i} className="h-10 bg-gray-200 rounded-sm"></div>
             ))}
           </div>
         </div>
@@ -126,7 +126,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
   return (
     <div className="space-y-4">
       {/* Stats + Add District Row */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white rounded-lg shadow-xs p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Stats */}
           <div className="flex gap-6">
@@ -160,7 +160,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                 setQuickAddError('')
               }}
               placeholder="District ID"
-              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-sm text-gray-900 bg-white"
+              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-sm text-gray-900 bg-white"
               onKeyPress={e => {
                 if (e.key === 'Enter') {
                   handleQuickAdd()
@@ -202,7 +202,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
       )}
 
       {/* District List */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white rounded-lg shadow-xs p-4">
         <h3 className="font-semibold text-tm-black mb-3">Districts</h3>
 
         {/* District Grid */}
@@ -228,7 +228,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
             return (
               <div
                 key={districtId}
-                className={`relative px-3 py-2 rounded border bg-white text-sm ${
+                className={`relative px-3 py-2 rounded-sm border bg-white text-sm ${
                   isInvalid
                     ? 'border-l-2 border-l-tm-true-maroon border-t-gray-200 border-r-gray-200 border-b-gray-200'
                     : isValid
@@ -243,7 +243,7 @@ export const DistrictConfiguration: React.FC<DistrictConfigurationProps> = ({
                   <button
                     onClick={() => handleRemove(districtId)}
                     disabled={isRemoving}
-                    className="w-5 h-5 flex items-center justify-center rounded text-gray-500 hover:text-white hover:bg-tm-true-maroon transition-colors"
+                    className="w-5 h-5 flex items-center justify-center rounded-sm text-gray-500 hover:text-white hover:bg-tm-true-maroon transition-colors"
                     title="Remove"
                   >
                     ×

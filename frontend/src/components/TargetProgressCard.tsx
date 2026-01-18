@@ -208,7 +208,7 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
           }
         >
           <span
-            className="px-2 py-1 rounded bg-gray-100 text-gray-700"
+            className="px-2 py-1 rounded-sm bg-gray-100 text-gray-700"
             data-testid="world-rank"
           >
             World:{' '}
@@ -225,7 +225,7 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
           }
         >
           <span
-            className="px-2 py-1 rounded bg-gray-100 text-gray-700"
+            className="px-2 py-1 rounded-sm bg-gray-100 text-gray-700"
             data-testid="world-percentile"
           >
             {formatPercentile(rankings.worldPercentile)}
@@ -242,7 +242,7 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
             }
           >
             <span
-              className="px-2 py-1 rounded bg-gray-100 text-gray-700"
+              className="px-2 py-1 rounded-sm bg-gray-100 text-gray-700"
               data-testid="region-rank"
             >
               {rankings.region}:{' '}
@@ -278,7 +278,7 @@ export const TargetProgressCard: React.FC<TargetProgressCardProps> = ({
                 </span>
                 {achieved && (
                   <span
-                    className={`${colors.achievedBg} ${colors.achievedText} px-1.5 py-0.5 rounded text-xs`}
+                    className={`${colors.achievedBg} ${colors.achievedText} px-1.5 py-0.5 rounded-sm text-xs`}
                     data-testid={`achieved-indicator-${key}`}
                     aria-label={`${label} target achieved`}
                   >

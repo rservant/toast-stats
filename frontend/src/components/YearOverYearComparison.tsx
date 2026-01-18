@@ -417,14 +417,14 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
         <div className="flex justify-center gap-6 mb-4">
           <div className="flex items-center gap-2">
             <div
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded-sm"
               style={{ backgroundColor: 'var(--tm-cool-gray)' }}
             ></div>
             <span className="text-sm text-gray-600">Previous Year</span>
           </div>
           <div className="flex items-center gap-2">
             <div
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded-sm"
               style={{ backgroundColor: 'var(--tm-loyal-blue)' }}
             ></div>
             <span className="text-sm text-gray-600">Current Year</span>

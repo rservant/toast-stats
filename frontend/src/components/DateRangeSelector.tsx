@@ -67,7 +67,7 @@ export const DateRangeSelector = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+    <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
       <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
         Select Date Range
       </h3>
@@ -88,7 +88,7 @@ export const DateRangeSelector = ({
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
               max={today}
-              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-gray-900 bg-white"
+              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-base text-gray-900 bg-white"
             />
           </div>
 
@@ -105,14 +105,14 @@ export const DateRangeSelector = ({
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
               max={today}
-              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base text-gray-900 bg-white"
+              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-base text-gray-900 bg-white"
             />
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="text-xs sm:text-sm text-red-600 bg-red-50 px-3 py-2 rounded">
+          <div className="text-xs sm:text-sm text-red-600 bg-red-50 px-3 py-2 rounded-sm">
             {error}
           </div>
         )}
@@ -125,31 +125,31 @@ export const DateRangeSelector = ({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handlePresetRange(7)}
-              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm text-xs sm:text-sm transition-colors"
             >
               Last 7 Days
             </button>
             <button
               onClick={() => handlePresetRange(14)}
-              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm text-xs sm:text-sm transition-colors"
             >
               Last 14 Days
             </button>
             <button
               onClick={() => handlePresetRange(30)}
-              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm text-xs sm:text-sm transition-colors"
             >
               Last 30 Days
             </button>
             <button
               onClick={() => handlePresetRange(60)}
-              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm text-xs sm:text-sm transition-colors"
             >
               Last 60 Days
             </button>
             <button
               onClick={() => handlePresetRange(90)}
-              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs sm:text-sm transition-colors"
+              className="min-h-[44px] px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm text-xs sm:text-sm transition-colors"
             >
               Last 90 Days
             </button>

@@ -267,7 +267,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         ref={buttonRef}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         onKeyDown={handleKeyDown}
-        className="group flex items-center gap-1 px-2 py-2 text-left text-[9px] font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer"
+        className="group flex items-center gap-1 px-2 py-2 text-left text-[9px] font-medium text-gray-700 uppercase tracking-wider hover:bg-gray-100 hover:text-gray-900 hover:shadow-xs focus:bg-gray-100 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer"
         tabIndex={0}
         aria-expanded={isDropdownOpen}
         aria-haspopup="true"
@@ -318,11 +318,11 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className={`px-3 py-1 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
+                    className={`px-3 py-1 text-sm rounded border focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
                       currentSort.field === field &&
                       currentSort.direction === 'asc'
                         ? 'bg-tm-loyal-blue-20 text-tm-loyal-blue border-tm-loyal-blue hover:bg-tm-loyal-blue-30'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-xs'
                     }`}
                     tabIndex={0}
                     aria-label={`Sort ${label} ascending (A to Z)`}
@@ -350,11 +350,11 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className={`px-3 py-1 text-sm rounded border focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
+                    className={`px-3 py-1 text-sm rounded border focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200 ${
                       currentSort.field === field &&
                       currentSort.direction === 'desc'
                         ? 'bg-tm-loyal-blue-20 text-tm-loyal-blue border-tm-loyal-blue hover:bg-tm-loyal-blue-30'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-xs'
                     }`}
                     tabIndex={0}
                     aria-label={`Sort ${label} descending (Z to A)`}
@@ -379,7 +379,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className="px-3 py-1 text-sm bg-tm-loyal-blue text-tm-white rounded hover:bg-tm-loyal-blue-90 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200"
+                    className="px-3 py-1 text-sm bg-tm-loyal-blue text-tm-white rounded hover:bg-tm-loyal-blue-90 hover:shadow-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-all duration-200"
                     tabIndex={0}
                     aria-label={`Apply ${label} filter`}
                   >
@@ -393,7 +393,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
                         e.currentTarget.click()
                       }
                     }}
-                    className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 hover:text-gray-900 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                    className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 hover:text-gray-900 hover:shadow-xs focus:outline-hidden focus:ring-2 focus:ring-gray-500 transition-all duration-200"
                     tabIndex={0}
                     aria-label={`Clear ${label} filter`}
                   >

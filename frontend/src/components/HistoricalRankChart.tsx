@@ -99,8 +99,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         </h2>
         <div className="flex items-center justify-center h-80">
           <div className="animate-pulse flex flex-col items-center">
-            <div className="h-4 w-32 bg-gray-300 rounded mb-2"></div>
-            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+            <div className="h-4 w-32 bg-gray-300 rounded-sm mb-2"></div>
+            <div className="h-4 w-24 bg-gray-300 rounded-sm"></div>
           </div>
         </div>
       </section>

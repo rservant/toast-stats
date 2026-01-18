@@ -146,10 +146,10 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
         aria-label="Loading club performance data"
       >
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-6 bg-gray-200 rounded-sm w-1/4 mb-4"></div>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 rounded"></div>
+              <div key={i} className="h-12 bg-gray-200 rounded-sm"></div>
             ))}
           </div>
         </div>
@@ -183,7 +183,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                 setStatusFilter(e.target.value)
                 setCurrentPage(1)
               }}
-              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-base"
             >
               <option value="all">All Clubs</option>
               <option value="active">Active</option>
@@ -427,7 +427,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               aria-label="Previous page"
             >
               Previous
@@ -440,7 +440,7 @@ const ClubPerformanceTable: React.FC<ClubPerformanceTableProps> = ({
                 setCurrentPage(prev => Math.min(totalPages, prev + 1))
               }
               disabled={currentPage === totalPages}
-              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-[44px] px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               aria-label="Next page"
             >
               Next

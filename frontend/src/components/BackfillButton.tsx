@@ -205,7 +205,7 @@ export function BackfillButton({
                       type="date"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                      className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
                     />
                   </div>
 
@@ -221,7 +221,7 @@ export function BackfillButton({
                       type="date"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                      className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
                     />
                   </div>
 
@@ -247,7 +247,7 @@ export function BackfillButton({
                             )
                           }
                           placeholder="e.g., 42, 15, 73"
-                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
                         />
                       </div>
 
@@ -269,7 +269,7 @@ export function BackfillButton({
                                 | 'auto'
                             )
                           }
-                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
                         >
                           <option value="auto">Auto (recommended)</option>
                           <option value="system-wide">System-wide</option>

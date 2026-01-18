@@ -46,7 +46,7 @@ describe('Focus Indicators', () => {
       expect(headerButton).toBeTruthy()
 
       const buttonClasses = headerButton?.className || ''
-      expect(buttonClasses).toContain('focus:outline-none')
+      expect(buttonClasses).toContain('focus:outline-hidden')
       expect(buttonClasses).toContain('focus:ring-2')
       expect(buttonClasses).toMatch(/focus:ring-(blue-500|tm-loyal-blue)/)
     })
@@ -105,7 +105,7 @@ describe('Focus Indicators', () => {
 
       sortButtons.forEach(button => {
         const buttonClasses = button.className
-        expect(buttonClasses).toContain('focus:outline-none')
+        expect(buttonClasses).toContain('focus:outline-hidden')
         expect(buttonClasses).toMatch(/focus:ring-\d+/)
       })
     })
@@ -138,10 +138,10 @@ describe('Focus Indicators', () => {
         'button, input, [tabindex="0"]'
       )
 
-      // All focusable elements should have focus:outline-none
+      // All focusable elements should have focus:outline-hidden
       focusableElements.forEach(element => {
         const elementClasses = element.className
-        expect(elementClasses).toContain('focus:outline-none')
+        expect(elementClasses).toContain('focus:outline-hidden')
 
         // All should have some form of focus ring
         const hasFocusRing =
@@ -170,7 +170,7 @@ describe('Focus Indicators', () => {
       expect(textInput).toBeTruthy()
 
       const inputClasses = textInput?.className || ''
-      expect(inputClasses).toContain('focus:outline-none')
+      expect(inputClasses).toContain('focus:outline-hidden')
       expect(inputClasses).toContain('focus:ring-2')
       expect(inputClasses).toContain('focus:ring-blue-500')
     })
@@ -193,7 +193,7 @@ describe('Focus Indicators', () => {
 
       operatorButtons.forEach(button => {
         const buttonClasses = button.className
-        expect(buttonClasses).toContain('focus:outline-none')
+        expect(buttonClasses).toContain('focus:outline-hidden')
         expect(buttonClasses).toContain('focus:ring-2')
         expect(buttonClasses).toContain('focus:ring-blue-500')
       })
@@ -218,7 +218,7 @@ describe('Focus Indicators', () => {
       expect(clearButton).toBeTruthy()
 
       const buttonClasses = clearButton?.className || ''
-      expect(buttonClasses).toContain('focus:outline-none')
+      expect(buttonClasses).toContain('focus:outline-hidden')
       expect(buttonClasses).toMatch(/focus:ring-\d+/)
     })
   })
@@ -242,7 +242,7 @@ describe('Focus Indicators', () => {
 
       numericInputs.forEach(input => {
         const inputClasses = input.className
-        expect(inputClasses).toContain('focus:outline-none')
+        expect(inputClasses).toContain('focus:outline-hidden')
         expect(inputClasses).toContain('focus:ring-2')
         expect(inputClasses).toContain('focus:ring-blue-500')
       })
@@ -267,7 +267,7 @@ describe('Focus Indicators', () => {
       expect(clearButton).toBeTruthy()
 
       const buttonClasses = clearButton?.className || ''
-      expect(buttonClasses).toContain('focus:outline-none')
+      expect(buttonClasses).toContain('focus:outline-hidden')
       expect(buttonClasses).toMatch(/focus:ring-\d+/)
     })
   })
@@ -294,7 +294,7 @@ describe('Focus Indicators', () => {
 
       checkboxes.forEach(checkbox => {
         const checkboxClasses = checkbox.className
-        expect(checkboxClasses).toContain('focus:outline-none')
+        expect(checkboxClasses).toContain('focus:outline-hidden')
         expect(checkboxClasses).toMatch(/focus:ring-\d+/)
       })
     })
@@ -321,7 +321,7 @@ describe('Focus Indicators', () => {
       expect(selectAllCheckbox).toBeTruthy()
 
       const checkboxClasses = selectAllCheckbox?.className || ''
-      expect(checkboxClasses).toContain('focus:outline-none')
+      expect(checkboxClasses).toContain('focus:outline-hidden')
       expect(checkboxClasses).toMatch(/focus:ring-\d+/)
     })
 
@@ -346,7 +346,7 @@ describe('Focus Indicators', () => {
       expect(clearButton).toBeTruthy()
 
       const buttonClasses = clearButton?.className || ''
-      expect(buttonClasses).toContain('focus:outline-none')
+      expect(buttonClasses).toContain('focus:outline-hidden')
       expect(buttonClasses).toMatch(/focus:ring-\d+/)
     })
   })

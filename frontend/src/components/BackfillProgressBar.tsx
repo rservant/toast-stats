@@ -74,7 +74,7 @@ export function BackfillProgressBar({
   }
 
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm">
+    <div className="bg-white border-b border-gray-200 shadow-xs">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center gap-4">
           {/* Icon */}

@@ -115,7 +115,7 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
               onClick={() => setViewMode('bar')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'bar'
-                  ? 'bg-white text-tm-loyal-blue shadow-sm'
+                  ? 'bg-white text-tm-loyal-blue shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -140,7 +140,7 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
               onClick={() => setViewMode('heatmap')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'heatmap'
-                  ? 'bg-white text-tm-loyal-blue shadow-sm'
+                  ? 'bg-white text-tm-loyal-blue shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -259,7 +259,7 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
                             area.normalizedScore
                           )} ${getHeatmapTextColor(
                             area.normalizedScore
-                          )} rounded-lg p-4 cursor-pointer transition-transform hover:scale-105 shadow-sm`}
+                          )} rounded-lg p-4 cursor-pointer transition-transform hover:scale-105 shadow-xs`}
                         >
                           <div className="text-center">
                             <div className="text-xs font-medium mb-1 truncate">
@@ -299,19 +299,19 @@ export const AreaPerformanceChart: React.FC<AreaPerformanceChartProps> = ({
             </span>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <div className="w-4 h-4 bg-green-500 rounded-sm"></div>
                 <span className="text-xs text-gray-600">Excellent (7-10)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <div className="w-4 h-4 bg-yellow-500 rounded-sm"></div>
                 <span className="text-xs text-gray-600">Good (5-7)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                <div className="w-4 h-4 bg-orange-500 rounded-sm"></div>
                 <span className="text-xs text-gray-600">Fair (3-5)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <div className="w-4 h-4 bg-red-500 rounded-sm"></div>
                 <span className="text-xs text-gray-600">
                   Needs Attention (&lt;3)
                 </span>
