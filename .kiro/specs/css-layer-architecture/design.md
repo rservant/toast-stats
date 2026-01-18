@@ -5,6 +5,7 @@
 This design addresses CSS architecture conflicts between custom Toastmasters brand CSS and Tailwind v4 utilities. The core problem is that element-level selectors and component classes in the brand CSS have equal or higher specificity than Tailwind utilities, preventing predictable style overrides.
 
 The solution uses CSS Cascade Layers (`@layer`) to establish a clear priority order where:
+
 1. **Base layer** - Element-level defaults (lowest priority, easily overridable)
 2. **Brand layer** - Component classes with brand styling
 3. **Utilities layer** - Tailwind utilities (highest priority, always wins when applied)
@@ -61,7 +62,7 @@ frontend/src/
 @layer base, brand, utilities;
 
 /* Tailwind imports into utilities layer */
-@import "tailwindcss" layer(utilities);
+@import 'tailwindcss' layer(utilities);
 
 /* Token imports (unlayered - CSS custom properties) */
 @import './styles/tokens/colors.css';
@@ -93,23 +94,28 @@ The base layer contains element-level defaults that establish brand compliance w
     font-size: max(14px, 1rem);
     line-height: max(1.4, 1.5);
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--tm-font-headline);
   }
-  
+
   /* Touch target defaults for interactive elements */
   button,
-  [type="button"],
-  [type="submit"],
-  [type="reset"],
+  [type='button'],
+  [type='submit'],
+  [type='reset'],
   a[href],
-  [role="button"],
-  [tabindex]:not([tabindex="-1"]) {
+  [role='button'],
+  [tabindex]:not([tabindex='-1']) {
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   /* Focus indicators */
   :focus-visible {
     outline: 2px solid var(--tm-loyal-blue);
@@ -145,7 +151,7 @@ Brand layer contains `.tm-*` component classes. These provide complete brand-com
 Tailwind utilities automatically go into the utilities layer via the import statement:
 
 ```css
-@import "tailwindcss" layer(utilities);
+@import 'tailwindcss' layer(utilities);
 ```
 
 This ensures any Tailwind class applied to an element will override both base and brand layer styles.
@@ -159,8 +165,8 @@ Design tokens remain in `:root` and are NOT placed in layers. They define values
 ```css
 /* tokens/typography.css - NOT in a layer */
 :root {
-  --tm-font-headline: "Montserrat", system-ui, sans-serif;
-  --tm-font-body: "Source Sans 3", system-ui, sans-serif;
+  --tm-font-headline: 'Montserrat', system-ui, sans-serif;
+  --tm-font-body: 'Source Sans 3', system-ui, sans-serif;
   --tm-font-size-min-body: 14px;
   --tm-line-height-min: 1.4;
   --tm-touch-target: 44px;
@@ -169,25 +175,25 @@ Design tokens remain in `:root` and are NOT placed in layers. They define values
 
 ### Layer Priority Model
 
-| Layer | Priority | Contents | Override Behavior |
-|-------|----------|----------|-------------------|
-| (unlayered) | Lowest | `:root`, `@theme` | Foundation values |
-| base | Low | Element selectors | Overridden by brand and utilities |
-| brand | Medium | `.tm-*` classes | Overridden by utilities |
-| utilities | Highest | Tailwind classes | Always wins when applied |
+| Layer       | Priority | Contents          | Override Behavior                 |
+| ----------- | -------- | ----------------- | --------------------------------- |
+| (unlayered) | Lowest   | `:root`, `@theme` | Foundation values                 |
+| base        | Low      | Element selectors | Overridden by brand and utilities |
+| brand       | Medium   | `.tm-*` classes   | Overridden by utilities           |
+| utilities   | Highest  | Tailwind classes  | Always wins when applied          |
 
 ### File Ownership Model
 
 Each `.tm-*` class has exactly one authoritative definition:
 
-| Class Pattern | Authoritative File |
-|---------------|-------------------|
+| Class Pattern                          | Authoritative File          |
+| -------------------------------------- | --------------------------- |
 | `.tm-headline`, `.tm-body`, `.tm-h1-3` | `components/typography.css` |
-| `.tm-btn-*` | `components/buttons.css` |
-| `.tm-nav-*` | `components/navigation.css` |
-| `.tm-form-*` | `components/forms.css` |
-| `.tm-card-*`, `.tm-panel-*` | `components/cards.css` |
-| `.tm-*-responsive` | `responsive.css` |
+| `.tm-btn-*`                            | `components/buttons.css`    |
+| `.tm-nav-*`                            | `components/navigation.css` |
+| `.tm-form-*`                           | `components/forms.css`      |
+| `.tm-card-*`, `.tm-panel-*`            | `components/cards.css`      |
+| `.tm-*-responsive`                     | `responsive.css`            |
 
 ## Correctness Criteria
 
@@ -249,6 +255,7 @@ The CSS build process should fail fast on structural errors:
 ### Runtime Graceful Degradation
 
 1. **Missing Tokens**: If a `--tm-*` variable is referenced but not defined, CSS will use the fallback value or inherit. Components should define sensible fallbacks:
+
    ```css
    font-family: var(--tm-font-body, system-ui, sans-serif);
    ```
@@ -257,7 +264,13 @@ The CSS build process should fail fast on structural errors:
 
 3. **Font Loading**: If brand fonts fail to load, the fallback stack ensures readable text:
    ```css
-   font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+   font-family:
+     'Montserrat',
+     system-ui,
+     -apple-system,
+     'Segoe UI',
+     Arial,
+     sans-serif;
    ```
 
 ### Migration Validation Checklist
@@ -292,24 +305,24 @@ Validate CSS file structure through parsing and assertion:
 // structure.test.ts
 describe('CSS Layer Architecture', () => {
   test('index.css declares layers in correct order', () => {
-    const css = readFileSync('frontend/src/index.css', 'utf-8');
-    const layerMatch = css.match(/@layer\s+([^;]+);/);
-    expect(layerMatch).toBeTruthy();
-    expect(layerMatch![1]).toBe('base, brand, utilities');
-  });
+    const css = readFileSync('frontend/src/index.css', 'utf-8')
+    const layerMatch = css.match(/@layer\s+([^;]+);/)
+    expect(layerMatch).toBeTruthy()
+    expect(layerMatch![1]).toBe('base, brand, utilities')
+  })
 
   test('Tailwind is imported into utilities layer', () => {
-    const css = readFileSync('frontend/src/index.css', 'utf-8');
-    expect(css).toMatch(/@import\s+["']tailwindcss["']\s+layer\(utilities\)/);
-  });
+    const css = readFileSync('frontend/src/index.css', 'utf-8')
+    expect(css).toMatch(/@import\s+["']tailwindcss["']\s+layer\(utilities\)/)
+  })
 
   test('token imports precede component imports', () => {
-    const css = readFileSync('frontend/src/index.css', 'utf-8');
-    const tokenImportPos = css.indexOf('tokens/');
-    const componentImportPos = css.indexOf('components/');
-    expect(tokenImportPos).toBeLessThan(componentImportPos);
-  });
-});
+    const css = readFileSync('frontend/src/index.css', 'utf-8')
+    const tokenImportPos = css.indexOf('tokens/')
+    const componentImportPos = css.indexOf('components/')
+    expect(tokenImportPos).toBeLessThan(componentImportPos)
+  })
+})
 ```
 
 #### 2. Single Definition Tests (Exhaustive Check)
@@ -319,23 +332,30 @@ Check each known `.tm-*` class is defined exactly once:
 ```typescript
 // consolidation.test.ts
 const knownTmClasses = [
-  '.tm-headline', '.tm-body', '.tm-h1', '.tm-h2', '.tm-h3',
-  '.tm-btn-primary', '.tm-btn-secondary',
-  '.tm-nav-item', '.tm-card', '.tm-panel'
-];
+  '.tm-headline',
+  '.tm-body',
+  '.tm-h1',
+  '.tm-h2',
+  '.tm-h3',
+  '.tm-btn-primary',
+  '.tm-btn-secondary',
+  '.tm-nav-item',
+  '.tm-card',
+  '.tm-panel',
+]
 
 describe('Single Class Definition', () => {
-  const cssFiles = glob.sync('frontend/src/styles/**/*.css');
-  
-  test.each(knownTmClasses)('%s is defined in exactly one file', (className) => {
+  const cssFiles = glob.sync('frontend/src/styles/**/*.css')
+
+  test.each(knownTmClasses)('%s is defined in exactly one file', className => {
     const filesContaining = cssFiles.filter(file => {
-      const content = readFileSync(file, 'utf-8');
-      const regex = new RegExp(`${className.replace('.', '\\.')}\\s*\\{`);
-      return regex.test(content);
-    });
-    expect(filesContaining).toHaveLength(1);
-  });
-});
+      const content = readFileSync(file, 'utf-8')
+      const regex = new RegExp(`${className.replace('.', '\\.')}\\s*\\{`)
+      return regex.test(content)
+    })
+    expect(filesContaining).toHaveLength(1)
+  })
+})
 ```
 
 #### 3. Brand Layer Restriction Tests
@@ -344,27 +364,47 @@ Verify no element selectors in brand layer for overridable properties:
 
 ```typescript
 // layer-restrictions.test.ts
-const overridableProperties = ['min-height', 'min-width', 'font-family', 'line-height', 'padding', 'font-size'];
-const elementSelectors = ['button', 'a', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'input', 'select', 'textarea'];
+const overridableProperties = [
+  'min-height',
+  'min-width',
+  'font-family',
+  'line-height',
+  'padding',
+  'font-size',
+]
+const elementSelectors = [
+  'button',
+  'a',
+  'p',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'input',
+  'select',
+  'textarea',
+]
 
 describe('Brand Layer Restrictions', () => {
   test('brand layer does not use element selectors for overridable properties', () => {
-    const componentFiles = glob.sync('frontend/src/styles/components/**/*.css');
-    
+    const componentFiles = glob.sync('frontend/src/styles/components/**/*.css')
+
     for (const file of componentFiles) {
-      const content = readFileSync(file, 'utf-8');
-      const brandLayerMatch = content.match(/@layer\s+brand\s*\{([\s\S]*?)\}/g);
-      
+      const content = readFileSync(file, 'utf-8')
+      const brandLayerMatch = content.match(/@layer\s+brand\s*\{([\s\S]*?)\}/g)
+
       if (brandLayerMatch) {
         for (const selector of elementSelectors) {
           // Check for bare element selectors (not class selectors)
-          const bareElementRegex = new RegExp(`(?<!\\.)\\b${selector}\\s*\\{`);
-          expect(brandLayerMatch.join('')).not.toMatch(bareElementRegex);
+          const bareElementRegex = new RegExp(`(?<!\\.)\\b${selector}\\s*\\{`)
+          expect(brandLayerMatch.join('')).not.toMatch(bareElementRegex)
         }
       }
     }
-  });
-});
+  })
+})
 ```
 
 #### 4. Cascade Override Tests (Example-Based)
@@ -375,34 +415,64 @@ Test specific, representative override scenarios:
 // cascade-override.test.ts
 describe('Tailwind Utility Override Behavior', () => {
   // These tests require a browser environment (jsdom or Playwright)
-  
+
   const overrideScenarios = [
-    { brandClass: 'tm-btn-primary', utility: 'p-2', property: 'padding', expected: '8px' },
-    { brandClass: 'tm-btn-primary', utility: 'h-8', property: 'height', expected: '32px' },
-    { brandClass: 'tm-btn-primary', utility: 'min-h-0', property: 'min-height', expected: '0px' },
-    { brandClass: 'tm-headline', utility: 'font-sans', property: 'font-family', expectedContains: 'system-ui' },
-    { brandClass: 'tm-body', utility: 'text-lg', property: 'font-size', expected: '18px' },
-    { brandClass: 'tm-card', utility: 'shadow-lg', property: 'box-shadow', expectedContains: 'rgba' },
-  ];
+    {
+      brandClass: 'tm-btn-primary',
+      utility: 'p-2',
+      property: 'padding',
+      expected: '8px',
+    },
+    {
+      brandClass: 'tm-btn-primary',
+      utility: 'h-8',
+      property: 'height',
+      expected: '32px',
+    },
+    {
+      brandClass: 'tm-btn-primary',
+      utility: 'min-h-0',
+      property: 'min-height',
+      expected: '0px',
+    },
+    {
+      brandClass: 'tm-headline',
+      utility: 'font-sans',
+      property: 'font-family',
+      expectedContains: 'system-ui',
+    },
+    {
+      brandClass: 'tm-body',
+      utility: 'text-lg',
+      property: 'font-size',
+      expected: '18px',
+    },
+    {
+      brandClass: 'tm-card',
+      utility: 'shadow-lg',
+      property: 'box-shadow',
+      expectedContains: 'rgba',
+    },
+  ]
 
   test.each(overrideScenarios)(
     '$utility overrides $brandClass $property',
     async ({ brandClass, utility, property, expected, expectedContains }) => {
-      const element = document.createElement('div');
-      element.className = `${brandClass} ${utility}`;
-      document.body.appendChild(element);
-      
-      const computed = getComputedStyle(element);
+      const element = document.createElement('div')
+      element.className = `${brandClass} ${utility}`
+      document.body.appendChild(element)
+
+      const computed = getComputedStyle(element)
       if (expected) {
-        expect(computed.getPropertyValue(property)).toBe(expected);
+        expect(computed.getPropertyValue(property)).toBe(expected)
       } else if (expectedContains) {
-        expect(computed.getPropertyValue(property)).toContain(expectedContains);
+        expect(computed.getPropertyValue(property)).toContain(expectedContains)
       }
-      
-      document.body.removeChild(element);
+
+      document.body.removeChild(element)
     }
-  );
-});
+  )
+})
 ```
 
 #### 5. No Important Declaration Tests
@@ -412,36 +482,43 @@ Scan for forbidden `!important` usage:
 ```typescript
 // no-important.test.ts
 const forbiddenImportantProperties = [
-  'font-family', 'font-size', 'line-height', 
-  'padding', 'min-height', 'min-width', 'box-shadow'
-];
+  'font-family',
+  'font-size',
+  'line-height',
+  'padding',
+  'min-height',
+  'min-width',
+  'box-shadow',
+]
 
 describe('No !important on Overridable Properties', () => {
   test('CSS files do not use !important on overridable properties', () => {
-    const cssFiles = glob.sync('frontend/src/styles/**/*.css');
-    
+    const cssFiles = glob.sync('frontend/src/styles/**/*.css')
+
     for (const file of cssFiles) {
-      const content = readFileSync(file, 'utf-8');
-      
+      const content = readFileSync(file, 'utf-8')
+
       for (const prop of forbiddenImportantProperties) {
-        const importantRegex = new RegExp(`${prop}\\s*:[^;]*!important`, 'gi');
-        const matches = content.match(importantRegex) || [];
-        expect(matches).toHaveLength(0);
+        const importantRegex = new RegExp(`${prop}\\s*:[^;]*!important`, 'gi')
+        const matches = content.match(importantRegex) || []
+        expect(matches).toHaveLength(0)
       }
     }
-  });
+  })
 
   test('text-shadow: none !important is permitted', () => {
     // This is explicitly allowed per brand guidelines
-    const cssFiles = glob.sync('frontend/src/styles/**/*.css');
-    const allContent = cssFiles.map(f => readFileSync(f, 'utf-8')).join('\n');
-    
+    const cssFiles = glob.sync('frontend/src/styles/**/*.css')
+    const allContent = cssFiles.map(f => readFileSync(f, 'utf-8')).join('\n')
+
     // Should not fail if text-shadow: none !important exists
-    const textShadowImportant = allContent.match(/text-shadow\s*:\s*none\s*!important/gi);
+    const textShadowImportant = allContent.match(
+      /text-shadow\s*:\s*none\s*!important/gi
+    )
     // This test documents the exception, not a failure condition
-    expect(true).toBe(true);
-  });
-});
+    expect(true).toBe(true)
+  })
+})
 ```
 
 #### 6. Visual Regression Tests (Integration)
@@ -452,18 +529,30 @@ For critical components, capture before/after screenshots:
 // visual.integration.test.ts
 describe('Visual Regression', () => {
   const criticalComponents = [
-    { name: 'primary-button', html: '<button class="tm-btn-primary">Click</button>' },
-    { name: 'secondary-button', html: '<button class="tm-btn-secondary">Click</button>' },
+    {
+      name: 'primary-button',
+      html: '<button class="tm-btn-primary">Click</button>',
+    },
+    {
+      name: 'secondary-button',
+      html: '<button class="tm-btn-secondary">Click</button>',
+    },
     { name: 'card', html: '<div class="tm-card"><p>Content</p></div>' },
-    { name: 'navigation', html: '<nav class="tm-nav"><a class="tm-nav-item" href="#">Link</a></nav>' },
-  ];
+    {
+      name: 'navigation',
+      html: '<nav class="tm-nav"><a class="tm-nav-item" href="#">Link</a></nav>',
+    },
+  ]
 
-  test.each(criticalComponents)('$name matches baseline', async ({ name, html }) => {
-    // Implementation depends on visual testing tool (Playwright, Percy, etc.)
-    const screenshot = await captureScreenshot(html);
-    expect(screenshot).toMatchSnapshot(`${name}.png`);
-  });
-});
+  test.each(criticalComponents)(
+    '$name matches baseline',
+    async ({ name, html }) => {
+      // Implementation depends on visual testing tool (Playwright, Percy, etc.)
+      const screenshot = await captureScreenshot(html)
+      expect(screenshot).toMatchSnapshot(`${name}.png`)
+    }
+  )
+})
 ```
 
 ### Test File Organization
