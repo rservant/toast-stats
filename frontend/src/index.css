@@ -195,19 +195,20 @@
   --font-family-tm-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   
   /* Font Sizes with Line Heights
-   * Tailwind v4 format: --font-size-{name}: {size}; --line-height-{name}: {value};
+   * Tailwind v4 format: --text-{name}: {size}; generates text-{name} utility
    * Minimum body text: 14px per brand guidelines
    */
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-base: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 24px;
-  --font-size-3xl: 30px;
-  --font-size-4xl: 36px;
-  --font-size-5xl: 48px;
-  --font-size-6xl: 60px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+  --text-5xl: 48px;
+  --text-6xl: 60px;
+  --text-7xl: 72px;
   
   /* Line Heights
    * Minimum line-height ratio: 1.4 per brand guidelines
@@ -518,14 +519,9 @@ body {
   align-items: center;
 }
 
-/* Ensure sufficient color contrast for text */
-.text-gray-600 {
-  color: var(--tm-black); /* Ensures 4.5:1 contrast on white */
-}
-
-.text-gray-700 {
-  color: var(--tm-black); /* Ensures better contrast */
-}
+/* Note: Removed .text-gray-600 and .text-gray-700 overrides that were
+   conflicting with Tailwind utilities. If contrast is needed, use
+   text-gray-800 or text-gray-900 directly in components instead. */
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {

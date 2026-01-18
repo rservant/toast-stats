@@ -82,7 +82,8 @@
   line-height: max(var(--tm-caption-line-height), var(--tm-line-height-min));
 }
 
-/* Prohibited Effects Prevention */
+/* Prohibited Effects Prevention
+   Note: filter: none removed to allow Tailwind filter utilities (blur, brightness, etc.) */
 .tm-typography,
 .tm-headline,
 .tm-headline-h1,
@@ -96,7 +97,6 @@
 .tm-caption {
   /* Explicitly prevent prohibited text effects */
   text-shadow: none !important;
-  filter: none !important;
   -webkit-text-stroke: none !important;
   text-stroke: none !important;
   outline: none;
@@ -145,37 +145,33 @@
   }
 }
 
-/* HTML Element Overrides for Brand Compliance */
+/* HTML Element Overrides for Brand Compliance
+   Note: font-size removed to allow Tailwind text-* utilities to work.
+   Use .tm-headline-h1, .tm-headline-h2, .tm-headline-h3 classes for brand typography. */
 h1, .h1 {
   font-family: var(--tm-font-headline);
-  font-size: var(--tm-h1-font-size);
   font-weight: var(--tm-h1-font-weight);
   line-height: var(--tm-h1-line-height);
   letter-spacing: var(--tm-letter-spacing-tight);
   text-shadow: none !important;
-  filter: none !important;
   -webkit-text-stroke: none !important;
 }
 
 h2, .h2 {
   font-family: var(--tm-font-headline);
-  font-size: var(--tm-h2-font-size);
   font-weight: var(--tm-h2-font-weight);
   line-height: var(--tm-h2-line-height);
   letter-spacing: var(--tm-letter-spacing-tight);
   text-shadow: none !important;
-  filter: none !important;
   -webkit-text-stroke: none !important;
 }
 
 h3, .h3 {
   font-family: var(--tm-font-headline);
-  font-size: var(--tm-h3-font-size);
   font-weight: var(--tm-h3-font-weight);
   line-height: var(--tm-h3-line-height);
   letter-spacing: var(--tm-letter-spacing-normal);
   text-shadow: none !important;
-  filter: none !important;
   -webkit-text-stroke: none !important;
 }
 
@@ -184,16 +180,15 @@ h4, h5, h6 {
   font-weight: var(--tm-font-weight-semibold);
   line-height: max(var(--tm-line-height-snug), var(--tm-line-height-min));
   text-shadow: none !important;
-  filter: none !important;
   -webkit-text-stroke: none !important;
 }
 
+/* HTML Element Base Styles for Brand Compliance
+   Note: Only set font-family here, not font-size, to allow Tailwind utilities to work */
 p, body, div, span, label, input, textarea, select, button {
   font-family: var(--tm-font-body);
-  font-size: max(var(--tm-font-size-base), var(--tm-font-size-min-body));
   line-height: max(var(--tm-line-height-normal), var(--tm-line-height-min));
   text-shadow: none !important;
-  filter: none !important;
   -webkit-text-stroke: none !important;
 }
 
