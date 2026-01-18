@@ -235,9 +235,10 @@ describe('ColumnHeader', () => {
   /**
    * Tests for sort indicator icons
    * Validates: Requirements 4.1
+   * Updated: Now uses a single down chevron for all states (simplified UI)
    */
   describe('sort indicator icons', () => {
-    it('displays dual arrow sort icon when column is sortable but not currently sorted', () => {
+    it('displays down chevron icon when column is sortable', () => {
       render(
         <ColumnHeader
           {...defaultProps}
@@ -248,20 +249,14 @@ describe('ColumnHeader', () => {
 
       const headerButton = screen.getByRole('button')
 
-      // Check for sort icons
-      const sortIcons = headerButton.querySelectorAll('svg')
-      expect(sortIcons.length).toBeGreaterThan(0)
-
-      // Look for the dual arrow icon (unsorted state)
-      const sortIndicator = Array.from(sortIcons).find(icon =>
-        icon.querySelector(
-          'path[d*="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"]'
-        )
+      // Check for down chevron icon (simplified - same icon for all states)
+      const chevronIcon = headerButton.querySelector(
+        'svg path[d*="M19 9l-7 7-7-7"]'
       )
-      expect(sortIndicator).toBeInTheDocument()
+      expect(chevronIcon).toBeInTheDocument()
     })
 
-    it('displays ascending sort icon when column is sorted ascending', () => {
+    it('displays down chevron with blue color when column is sorted ascending', () => {
       render(
         <ColumnHeader
           {...defaultProps}
@@ -272,9 +267,11 @@ describe('ColumnHeader', () => {
 
       const headerButton = screen.getByRole('button')
 
-      // Check for ascending sort icon (chevron up)
-      const ascIcon = headerButton.querySelector('svg path[d*="M5 15l7-7 7 7"]')
-      expect(ascIcon).toBeInTheDocument()
+      // Check for blue-colored chevron (active state indicator)
+      const blueIcon = headerButton.querySelector(
+        'svg[class*="text-tm-loyal-blue"]'
+      )
+      expect(blueIcon).toBeInTheDocument()
     })
 
     it('displays descending sort icon when column is sorted descending', () => {
@@ -303,11 +300,11 @@ describe('ColumnHeader', () => {
 
       const headerButton = screen.getByRole('button')
 
-      // Should not have the dual arrow sort icon
-      const sortIndicator = headerButton.querySelector(
-        'svg path[d*="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"]'
+      // Should still have the dropdown chevron since it's filterable
+      const chevronIcons = headerButton.querySelectorAll(
+        'svg path[d*="M19 9l-7 7-7-7"]'
       )
-      expect(sortIndicator).not.toBeInTheDocument()
+      expect(chevronIcons.length).toBeGreaterThanOrEqual(1)
     })
   })
 
