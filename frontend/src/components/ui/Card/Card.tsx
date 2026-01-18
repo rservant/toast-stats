@@ -9,6 +9,7 @@ export const Card: React.FC<CardProps> = ({
   onClick,
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
+  'aria-busy': ariaBusy,
   tabIndex,
   role,
 }) => {
@@ -41,6 +42,7 @@ export const Card: React.FC<CardProps> = ({
     onClick,
     'aria-label': ariaLabel,
     'aria-describedby': ariaDescribedBy,
+    'aria-busy': ariaBusy,
     tabIndex: onClick ? (tabIndex ?? 0) : tabIndex,
     role: role || (onClick ? 'button' : undefined),
   }

@@ -37,8 +37,15 @@ import { DistrictBackfillButton } from '../components/DistrictBackfillButton'
 import { DistrictExportButton } from '../components/DistrictExportButton'
 import { LazyChart } from '../components/LazyChart'
 import { useBackfillContext } from '../contexts/BackfillContext'
+import GlobalRankingsTab from '../components/GlobalRankingsTab'
 
-type TabType = 'overview' | 'clubs' | 'divisions' | 'trends' | 'analytics'
+type TabType =
+  | 'overview'
+  | 'clubs'
+  | 'divisions'
+  | 'trends'
+  | 'analytics'
+  | 'globalRankings'
 
 const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
@@ -168,6 +175,7 @@ const DistrictDetailPage: React.FC = () => {
     { id: 'divisions', label: 'Divisions & Areas' },
     { id: 'trends', label: 'Trends' },
     { id: 'analytics', label: 'Analytics' },
+    { id: 'globalRankings', label: 'Global Rankings' },
   ]
 
   // Handle club click
@@ -561,6 +569,13 @@ const DistrictDetailPage: React.FC = () => {
                   </LazyChart>
                 )}
               </>
+            )}
+
+            {activeTab === 'globalRankings' && districtId && (
+              <GlobalRankingsTab
+                districtId={districtId}
+                districtName={districtName}
+              />
             )}
           </div>
         </div>

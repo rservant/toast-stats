@@ -12,7 +12,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { AvailableProgramYearsService } from '../AvailableProgramYearsService.js'
 import type { FileSnapshotStore } from '../SnapshotStore.js'
-import type { SnapshotMetadata, AllDistrictsRankingsData } from '../../types/snapshots.js'
+import type {
+  SnapshotMetadata,
+  AllDistrictsRankingsData,
+} from '../../types/snapshots.js'
 
 describe('AvailableProgramYearsService', () => {
   let service: AvailableProgramYearsService
@@ -22,7 +25,10 @@ describe('AvailableProgramYearsService', () => {
   }
 
   // Sample test data
-  const createMockSnapshotMetadata = (snapshotId: string, status: 'success' | 'failed' = 'success'): SnapshotMetadata => ({
+  const createMockSnapshotMetadata = (
+    snapshotId: string,
+    status: 'success' | 'failed' = 'success'
+  ): SnapshotMetadata => ({
     snapshot_id: snapshotId,
     created_at: `${snapshotId}T10:00:00.000Z`,
     status,
@@ -111,8 +117,12 @@ describe('AvailableProgramYearsService', () => {
 
       // Rankings exist but don't include the requested district
       mockSnapshotStore.readAllDistrictsRankings
-        .mockResolvedValueOnce(createMockRankingsData('2024-01-15', ['15', 'F']))
-        .mockResolvedValueOnce(createMockRankingsData('2024-02-15', ['15', 'F']))
+        .mockResolvedValueOnce(
+          createMockRankingsData('2024-01-15', ['15', 'F'])
+        )
+        .mockResolvedValueOnce(
+          createMockRankingsData('2024-02-15', ['15', 'F'])
+        )
 
       const result = await service.getAvailableProgramYears('42')
 
@@ -132,9 +142,15 @@ describe('AvailableProgramYearsService', () => {
 
       // All snapshots include district 42
       mockSnapshotStore.readAllDistrictsRankings
-        .mockResolvedValueOnce(createMockRankingsData('2023-09-15', ['42', '15']))
-        .mockResolvedValueOnce(createMockRankingsData('2023-12-15', ['42', '15']))
-        .mockResolvedValueOnce(createMockRankingsData('2024-03-15', ['42', '15']))
+        .mockResolvedValueOnce(
+          createMockRankingsData('2023-09-15', ['42', '15'])
+        )
+        .mockResolvedValueOnce(
+          createMockRankingsData('2023-12-15', ['42', '15'])
+        )
+        .mockResolvedValueOnce(
+          createMockRankingsData('2024-03-15', ['42', '15'])
+        )
 
       const result = await service.getAvailableProgramYears('42')
 
@@ -251,7 +267,8 @@ describe('AvailableProgramYearsService', () => {
       // Use a date in the current/future program year
       const futureDate = new Date()
       futureDate.setMonth(futureDate.getMonth() + 1)
-      const snapshotDate = futureDate.toISOString().split('T')[0] ?? '2025-01-15'
+      const snapshotDate =
+        futureDate.toISOString().split('T')[0] ?? '2025-01-15'
 
       mockSnapshotStore.listSnapshots.mockResolvedValue([
         createMockSnapshotMetadata(snapshotDate),
@@ -377,9 +394,15 @@ describe('AvailableProgramYearsService', () => {
 
       // District 42 only in first and third snapshots
       mockSnapshotStore.readAllDistrictsRankings
-        .mockResolvedValueOnce(createMockRankingsData('2023-09-15', ['42', '15']))
-        .mockResolvedValueOnce(createMockRankingsData('2023-10-15', ['15', 'F'])) // No 42
-        .mockResolvedValueOnce(createMockRankingsData('2023-11-15', ['42', 'F']))
+        .mockResolvedValueOnce(
+          createMockRankingsData('2023-09-15', ['42', '15'])
+        )
+        .mockResolvedValueOnce(
+          createMockRankingsData('2023-10-15', ['15', 'F'])
+        ) // No 42
+        .mockResolvedValueOnce(
+          createMockRankingsData('2023-11-15', ['42', 'F'])
+        )
 
       const result = await service.getAvailableProgramYears('42')
 

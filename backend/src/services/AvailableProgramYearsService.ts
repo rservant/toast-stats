@@ -70,9 +70,7 @@ interface ProgramYearAggregation {
  * Queries the SnapshotStore to determine which program years have ranking
  * snapshots containing data for a specific district.
  */
-export class AvailableProgramYearsService
-  implements IAvailableProgramYearsService
-{
+export class AvailableProgramYearsService implements IAvailableProgramYearsService {
   private readonly snapshotStore: FileSnapshotStore
 
   constructor(snapshotStore: FileSnapshotStore) {

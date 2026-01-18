@@ -187,16 +187,16 @@ interface UseGlobalRankingsResult {
   // Current year data
   currentYearHistory: RankHistoryResponse | null
   endOfYearRankings: EndOfYearRankings | null
-  
+
   // Multi-year data
   availableProgramYears: ProgramYear[]
   yearlyRankings: YearlyRankingSummary[]
-  
+
   // State
   isLoading: boolean
   isError: boolean
   error: Error | null
-  
+
   // Actions
   refetch: () => void
 }
@@ -268,7 +268,7 @@ interface EndOfYearRankings {
 
 // Year-over-year comparison
 interface YearOverYearChange {
-  overall: number    // Rank change (negative = improved)
+  overall: number // Rank change (negative = improved)
   clubs: number
   payments: number
   distinguished: number
@@ -282,12 +282,22 @@ The component uses local React state with React Query for data fetching:
 ```typescript
 // Query keys for caching
 const globalRankingsQueryKeys = {
-  rankHistory: (districtId: string, programYear: string) => 
-    ['district', districtId, 'rank-history', programYear],
-  availableYears: (districtId: string) => 
-    ['district', districtId, 'available-ranking-years'],
-  allYearsRankings: (districtId: string) => 
-    ['district', districtId, 'all-years-rankings'],
+  rankHistory: (districtId: string, programYear: string) => [
+    'district',
+    districtId,
+    'rank-history',
+    programYear,
+  ],
+  availableYears: (districtId: string) => [
+    'district',
+    districtId,
+    'available-ranking-years',
+  ],
+  allYearsRankings: (districtId: string) => [
+    'district',
+    districtId,
+    'all-years-rankings',
+  ],
 }
 ```
 

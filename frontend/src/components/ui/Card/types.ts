@@ -8,6 +8,7 @@ export interface CardProps {
   onClick?: () => void
   'aria-label'?: string
   'aria-describedby'?: string
+  'aria-busy'?: boolean | 'true' | 'false'
   tabIndex?: number
   role?: string
 }

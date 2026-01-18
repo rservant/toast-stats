@@ -163,11 +163,9 @@ describe('useGlobalRankings', () => {
         'global-rankings',
         '57',
       ])
-      expect(globalRankingsQueryKeys.byDistrictAndYear('57', '2024-2025')).toEqual([
-        'global-rankings',
-        '57',
-        '2024-2025',
-      ])
+      expect(
+        globalRankingsQueryKeys.byDistrictAndYear('57', '2024-2025')
+      ).toEqual(['global-rankings', '57', '2024-2025'])
     })
   })
 
@@ -193,10 +191,9 @@ describe('useGlobalRankings', () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`))
       })
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       // Initially loading
       expect(result.current.isLoading).toBe(true)
@@ -232,10 +229,9 @@ describe('useGlobalRankings', () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`))
       })
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -270,10 +266,9 @@ describe('useGlobalRankings', () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`))
       })
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -313,10 +308,9 @@ describe('useGlobalRankings', () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`))
       })
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       // Should be loading initially
       expect(result.current.isLoading).toBe(true)
@@ -337,10 +331,9 @@ describe('useGlobalRankings', () => {
 
       mockedApiClient.get.mockRejectedValue(new Error(errorMessage))
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(
         () => {
@@ -372,10 +365,9 @@ describe('useGlobalRankings', () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`))
       })
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -421,10 +413,9 @@ describe('useGlobalRankings', () => {
         return Promise.reject(new Error(`Unexpected URL: ${url}`))
       })
 
-      const { result } = renderHook(
-        () => useGlobalRankings({ districtId }),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useGlobalRankings({ districtId }), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)

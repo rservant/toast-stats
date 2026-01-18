@@ -58,8 +58,8 @@ rankingsRouter.get(
     keyGenerator: req => {
       const rawDistrictId = req.params['districtId']
       const districtId = Array.isArray(rawDistrictId)
-        ? rawDistrictId[0] ?? 'unknown'
-        : rawDistrictId ?? 'unknown'
+        ? (rawDistrictId[0] ?? 'unknown')
+        : (rawDistrictId ?? 'unknown')
       return generateDistrictCacheKey(districtId, 'available-ranking-years')
     },
   }),
