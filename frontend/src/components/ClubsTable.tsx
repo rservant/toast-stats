@@ -278,7 +278,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="ml-4 px-3 py-1 text-xs text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium border border-tm-loyal-blue-30 rounded hover:bg-tm-loyal-blue-10 font-tm-body"
+              className="ml-4 px-3 py-1 text-xs text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium border border-tm-loyal-blue-30 rounded-sm hover:bg-tm-loyal-blue-10 font-tm-body"
             >
               Clear All Filters ({activeFilterCount})
             </button>
@@ -379,7 +379,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   <td className="px-2 py-3 whitespace-nowrap text-center">
                     {club.distinguishedLevel &&
                     club.distinguishedLevel !== 'NotDistinguished' ? (
-                      <span className="px-1.5 py-0.5 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded font-tm-body">
+                      <span className="px-1.5 py-0.5 text-xs font-medium bg-tm-happy-yellow-20 text-tm-true-maroon rounded-sm font-tm-body">
                         {club.distinguishedLevel}
                       </span>
                     ) : (

@@ -324,7 +324,7 @@ describe('ColumnHeader', () => {
       // Verify hover classes are present
       expect(buttonClasses).toMatch(/hover:bg-gray-100/)
       expect(buttonClasses).toMatch(/hover:text-gray-900/)
-      expect(buttonClasses).toMatch(/hover:shadow-sm/)
+      expect(buttonClasses).toMatch(/hover:shadow-xs/)
 
       // Verify cursor-pointer for interactivity
       expect(buttonClasses).toMatch(/cursor-pointer/)
@@ -380,7 +380,7 @@ describe('ColumnHeader', () => {
       const buttonClasses = headerButton.className
 
       // Verify focus classes are present
-      expect(buttonClasses).toMatch(/focus:outline-none/)
+      expect(buttonClasses).toMatch(/focus:outline-hidden/)
       expect(buttonClasses).toMatch(/focus:ring-2/)
       expect(buttonClasses).toMatch(/focus:ring-tm-loyal-blue/)
     })

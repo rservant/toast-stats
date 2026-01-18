@@ -120,7 +120,7 @@ export const DistinguishedProgressChart: React.FC<
           </div>
 
           {/* Breakdown by Level */}
-          <div className="border-t pt-4">
+          <div className="border-t border-t-gray-200 pt-4">
             <h4 className="text-sm font-tm-headline font-semibold text-gray-900 mb-3">
               Breakdown by Level
             </h4>
@@ -212,7 +212,7 @@ export const DistinguishedProgressChart: React.FC<
           </div>
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-4 gap-3 pt-4 border-t">
+          <div className="grid grid-cols-4 gap-3 pt-4 border-t border-t-gray-200">
             <div className="text-center">
               <p className="text-xl font-tm-headline font-bold text-tm-happy-yellow">
                 {distinguishedClubs.smedley}

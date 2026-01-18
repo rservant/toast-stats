@@ -42,13 +42,17 @@ body {
   font-family: var(--tm-font-body);
 }
 
-/* Ensure all text elements meet minimum size requirements */
+/* Ensure all text elements meet minimum line-height requirements */
+/* Note: font-size is NOT set here to allow Tailwind utility classes to work.
+   Individual components should set their own font sizes via Tailwind classes. */
 p, span, div, label, input, textarea, select, button {
-  font-size: max(14px, 1rem);
   line-height: max(1.4, var(--tm-line-height-normal));
 }
 
 /* Touch Target Compliance - Minimum 44px on all breakpoints */
+/* Note: padding and position are NOT set here to allow Tailwind utility classes to work.
+   Individual components should set their own padding via Tailwind classes
+   like px-3 py-2, px-4 py-3, etc. */
 button,
 input[type="button"],
 input[type="submit"],
@@ -60,13 +64,6 @@ a[href],
 .tm-interactive {
   min-width: var(--tm-touch-target-mobile);
   min-height: var(--tm-touch-target-mobile);
-  padding: max(12px, var(--tm-component-padding-sm));
-  
-  /* Ensure touch targets are accessible */
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   
   /* Brand-compliant focus indicators */
   &:focus-visible {
@@ -140,7 +137,7 @@ a[href],
   .tm-interactive {
     min-width: var(--tm-touch-target-tablet);
     min-height: var(--tm-touch-target-tablet);
-    padding: max(14px, var(--tm-component-padding-md));
+    /* padding removed - let Tailwind classes handle this */
   }
   
   /* Brand Navigation - Tablet */
@@ -187,7 +184,7 @@ a[href],
   .tm-interactive {
     min-width: var(--tm-touch-target-desktop);
     min-height: var(--tm-touch-target-desktop);
-    padding: max(16px, var(--tm-component-padding-lg));
+    /* padding removed - let Tailwind classes handle this */
   }
   
   /* Brand Navigation - Desktop */
@@ -234,7 +231,7 @@ a[href],
   .tm-interactive {
     min-width: var(--tm-touch-target-wide);
     min-height: var(--tm-touch-target-wide);
-    padding: max(18px, var(--tm-component-padding-xl));
+    /* padding removed - let Tailwind classes handle this */
   }
   
   /* Brand Navigation - Wide */

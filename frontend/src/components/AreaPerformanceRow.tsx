@@ -202,7 +202,7 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
       {/* Status Badge - Requirement 6.7, 8.1, 8.2 */}
       <td className="px-4 py-3 whitespace-nowrap text-center">
         <span
-          className={`px-2 py-1 font-medium rounded border ${getStatusBadge(area.status)} font-tm-body`}
+          className={`px-2 py-1 font-medium rounded-sm border ${getStatusBadge(area.status)} font-tm-body`}
           style={{ fontSize: '14px' }}
         >
           {getStatusLabel(area.status)}

@@ -181,7 +181,7 @@ export const InterventionRequiredClubsPanel: React.FC<
                           {club.riskFactors.map((factor, index) => (
                             <span
                               key={index}
-                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded font-tm-body"
+                              className="text-xs px-2 py-1 bg-white border border-red-300 text-red-800 rounded-sm font-tm-body"
                             >
                               {factor}
                             </span>

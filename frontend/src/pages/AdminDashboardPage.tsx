@@ -71,7 +71,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <div
-      className={`bg-white rounded-lg shadow p-3 border-l-4 ${borderColor}`}
+      className={`bg-white rounded-lg shadow-sm p-3 border-l-4 ${borderColor}`}
       role="region"
       aria-label={title}
     >
@@ -96,7 +96,7 @@ const Section: React.FC<SectionProps> = ({
   error,
 }) => (
   <section
-    className="bg-white rounded-lg shadow p-4 mb-4"
+    className="bg-white rounded-lg shadow-sm p-4 mb-4"
     aria-labelledby={`section-${title.toLowerCase().replace(/\s/g, '-')}`}
   >
     <h2
@@ -107,11 +107,11 @@ const Section: React.FC<SectionProps> = ({
     </h2>
     {isLoading ? (
       <div className="animate-pulse space-y-3">
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-4 bg-gray-200 rounded-sm w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded-sm w-1/2"></div>
       </div>
     ) : error ? (
-      <div className="text-red-600 p-4 bg-red-50 rounded" role="alert">
+      <div className="text-red-600 p-4 bg-red-50 rounded-sm" role="alert">
         Error: {error.message}
       </div>
     ) : (
@@ -158,7 +158,7 @@ const AdminDashboardPage: React.FC = () => {
           </div>
           <Link
             to="/"
-            className="px-4 py-2 bg-tm-loyal-blue text-white rounded hover:bg-opacity-90 transition-colors min-h-[44px] flex items-center"
+            className="px-4 py-2 bg-tm-loyal-blue text-white rounded-sm hover:bg-opacity-90 transition-colors min-h-[44px] flex items-center"
           >
             ← Back to Home
           </Link>
@@ -221,7 +221,7 @@ const AdminDashboardPage: React.FC = () => {
               </div>
 
               {healthQuery.data.health.current_snapshot && (
-                <div className="bg-gray-50 rounded p-3">
+                <div className="bg-gray-50 rounded-sm p-3">
                   <h3 className="font-medium text-sm text-tm-black mb-2">
                     Current Snapshot Details
                   </h3>
@@ -305,7 +305,7 @@ const AdminDashboardPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-gray-50 rounded p-3">
+              <div className="flex items-center justify-between bg-gray-50 rounded-sm p-3">
                 <div className="text-sm text-gray-600">
                   <span className="font-medium">Cache Hits:</span>{' '}
                   {performanceQuery.data.performance.cacheHits} |{' '}
@@ -315,7 +315,7 @@ const AdminDashboardPage: React.FC = () => {
                 <button
                   onClick={() => resetMetricsMutation.mutate()}
                   disabled={resetMetricsMutation.isPending}
-                  className="px-4 py-2 bg-tm-true-maroon text-white rounded hover:bg-opacity-90 transition-colors disabled:opacity-50 min-h-[44px]"
+                  className="px-4 py-2 bg-tm-true-maroon text-white rounded-sm hover:bg-opacity-90 transition-colors disabled:opacity-50 min-h-[44px]"
                 >
                   {resetMetricsMutation.isPending
                     ? 'Resetting...'
@@ -347,7 +347,7 @@ const AdminDashboardPage: React.FC = () => {
                         : 'error'
                   }
                 />
-                <div className="bg-white rounded-lg shadow p-3 border-l-4 border-l-tm-loyal-blue">
+                <div className="bg-white rounded-lg shadow-sm p-3 border-l-4 border-l-tm-loyal-blue">
                   <p className="text-sm text-gray-600">Compliance Status</p>
                   <div className="mt-1">
                     <StatusBadge
@@ -355,7 +355,7 @@ const AdminDashboardPage: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-3 border-l-4 border-l-tm-loyal-blue">
+                <div className="bg-white rounded-lg shadow-sm p-3 border-l-4 border-l-tm-loyal-blue">
                   <p className="text-sm text-gray-600">Read Operations</p>
                   <div className="mt-1">
                     <StatusBadge
@@ -365,7 +365,7 @@ const AdminDashboardPage: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-3 border-l-4 border-l-tm-loyal-blue">
+                <div className="bg-white rounded-lg shadow-sm p-3 border-l-4 border-l-tm-loyal-blue">
                   <p className="text-sm text-gray-600">Refresh Operations</p>
                   <div className="mt-1">
                     <StatusBadge
@@ -377,7 +377,7 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded p-3 text-sm text-gray-600">
+              <div className="bg-gray-50 rounded-sm p-3 text-sm text-gray-600">
                 Last validation:{' '}
                 {formatDate(complianceQuery.data.compliance.lastValidationTime)}
               </div>
@@ -471,14 +471,14 @@ const AdminDashboardPage: React.FC = () => {
         </Section>
 
         {/* Quick Links */}
-        <section className="bg-white rounded-lg shadow p-4">
+        <section className="bg-white rounded-lg shadow-sm p-4">
           <h2 className="text-lg font-semibold text-tm-black mb-3">
             Admin Quick Links
           </h2>
           <div className="flex flex-wrap gap-3">
             <Link
               to="/admin/districts"
-              className="px-4 py-2 bg-tm-loyal-blue text-white rounded hover:bg-opacity-90 transition-colors min-h-[44px] flex items-center"
+              className="px-4 py-2 bg-tm-loyal-blue text-white rounded-sm hover:bg-opacity-90 transition-colors min-h-[44px] flex items-center"
             >
               District Configuration
             </Link>

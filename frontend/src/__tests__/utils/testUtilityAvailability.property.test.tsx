@@ -229,7 +229,7 @@ describe('Property Test: Test Utility Function Availability', () => {
               fc.constant(''),
               fc.constant('test-class'),
               fc.constant('bg-tm-loyal-blue text-white'),
-              fc.constant('p-4 rounded')
+              fc.constant('p-4 rounded-sm')
             ),
           }),
           { minLength: 1, maxLength: 3 } // Reduced for faster execution

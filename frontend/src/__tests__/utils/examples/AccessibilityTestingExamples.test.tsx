@@ -26,7 +26,7 @@ const AccessibleButton: React.FC<{
   ariaLabel?: string
 }> = ({ children, onClick, disabled, ariaLabel }) => (
   <button
-    className="bg-tm-loyal-blue text-white px-6 py-3 rounded focus:ring-2 focus:ring-blue-300"
+    className="bg-tm-loyal-blue text-white px-6 py-3 rounded-sm focus:ring-2 focus:ring-blue-300"
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
@@ -117,7 +117,7 @@ const AccessibleModal: React.FC<{
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="text-gray-500 hover:text-gray-700 focus:ring-2 focus:ring-blue-500 rounded"
+            className="text-gray-500 hover:text-gray-700 focus:ring-2 focus:ring-blue-500 rounded-sm"
             style={{ minHeight: '44px', minWidth: '44px' }}
           >
             ✕
@@ -170,7 +170,7 @@ const AccessibleNavigation: React.FC = () => (
       <li>
         <a
           href="/home"
-          className="text-tm-loyal-blue hover:text-tm-true-maroon focus:ring-2 focus:ring-blue-500 px-3 py-2 rounded"
+          className="text-tm-loyal-blue hover:text-tm-true-maroon focus:ring-2 focus:ring-blue-500 px-3 py-2 rounded-sm"
           style={{
             minHeight: '44px',
             minWidth: '44px',
@@ -184,7 +184,7 @@ const AccessibleNavigation: React.FC = () => (
       <li>
         <a
           href="/about"
-          className="text-tm-loyal-blue hover:text-tm-true-maroon focus:ring-2 focus:ring-blue-500 px-3 py-2 rounded"
+          className="text-tm-loyal-blue hover:text-tm-true-maroon focus:ring-2 focus:ring-blue-500 px-3 py-2 rounded-sm"
           style={{
             minHeight: '44px',
             minWidth: '44px',
@@ -198,7 +198,7 @@ const AccessibleNavigation: React.FC = () => (
       <li>
         <a
           href="/contact"
-          className="text-tm-loyal-blue hover:text-tm-true-maroon focus:ring-2 focus:ring-blue-500 px-3 py-2 rounded"
+          className="text-tm-loyal-blue hover:text-tm-true-maroon focus:ring-2 focus:ring-blue-500 px-3 py-2 rounded-sm"
           style={{
             minHeight: '44px',
             minWidth: '44px',

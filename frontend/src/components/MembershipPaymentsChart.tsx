@@ -479,7 +479,7 @@ export const MembershipPaymentsChart: React.FC<
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
         <div className="flex items-center gap-2">
           <div
-            className="w-4 h-1 rounded"
+            className="w-4 h-1 rounded-sm"
             style={{ backgroundColor: 'var(--tm-loyal-blue)' }}
           ></div>
           <span className="font-tm-body">Current Year</span>
@@ -488,7 +488,7 @@ export const MembershipPaymentsChart: React.FC<
           <>
             <div className="flex items-center gap-2">
               <div
-                className="w-4 h-1 rounded"
+                className="w-4 h-1 rounded-sm"
                 style={{ backgroundColor: 'var(--tm-true-maroon)' }}
               ></div>
               <span className="font-tm-body">Previous Year</span>
@@ -496,7 +496,7 @@ export const MembershipPaymentsChart: React.FC<
             {multiYearData.previousYears.length > 1 && (
               <div className="flex items-center gap-2">
                 <div
-                  className="w-4 h-1 rounded"
+                  className="w-4 h-1 rounded-sm"
                   style={{ backgroundColor: 'var(--tm-cool-gray)' }}
                 ></div>
                 <span className="font-tm-body">2 Years Ago</span>

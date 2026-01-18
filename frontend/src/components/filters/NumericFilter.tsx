@@ -108,7 +108,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
+              className="text-xs text-tm-loyal-blue hover:text-tm-loyal-blue hover:underline font-medium focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
               tabIndex={0}
               aria-label="Clear numeric filter"
             >
@@ -128,7 +128,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
               placeholder="Min"
               min={min}
               max={max}
-              className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 transition-colors duration-200"
+              className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded hover:border-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 transition-colors duration-200"
               tabIndex={0}
               aria-label={`Minimum ${label.toLowerCase()} value`}
             />
@@ -142,7 +142,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
               placeholder="Max"
               min={min}
               max={max}
-              className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 transition-colors duration-200"
+              className="w-full px-3 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded hover:border-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 transition-colors duration-200"
               tabIndex={0}
               aria-label={`Maximum ${label.toLowerCase()} value`}
             />

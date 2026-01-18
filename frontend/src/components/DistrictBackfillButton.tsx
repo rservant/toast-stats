@@ -243,7 +243,7 @@ export function DistrictBackfillButton({
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
                       max={maxDate}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
                     />
                   </div>
 
@@ -260,7 +260,7 @@ export function DistrictBackfillButton({
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
                       max={maxDate}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white font-tm-body"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Dashboard data is 1-2 days behind, so today's data is not
