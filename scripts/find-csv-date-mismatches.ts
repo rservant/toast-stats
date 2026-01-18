@@ -46,7 +46,9 @@ interface ScanResult {
  * Extract "As of" date from CSV footer line
  * Format: "Month of Jan, As of 01/11/2026" -> "2026-01-11"
  */
-function extractAsOfDate(csvContent: string): { date: string; footerLine: string } | null {
+function extractAsOfDate(
+  csvContent: string
+): { date: string; footerLine: string } | null {
   const lines = csvContent.trim().split('\n')
 
   // Check last few lines for the footer (sometimes there's trailing whitespace)
@@ -55,7 +57,9 @@ function extractAsOfDate(csvContent: string): { date: string; footerLine: string
     if (!line) continue
 
     // Match pattern: "Month of Jan, As of 01/11/2026"
-    const match = line.match(/Month of ([A-Za-z]+),\s*As of (\d{2})\/(\d{2})\/(\d{4})/)
+    const match = line.match(
+      /Month of ([A-Za-z]+),\s*As of (\d{2})\/(\d{2})\/(\d{4})/
+    )
     if (match) {
       const [, , month, day, year] = match
       if (month && day && year) {
@@ -104,7 +108,10 @@ function findCSVFiles(dir: string): string[] {
  * Extract the ISO date directory from a file path
  * e.g., /cache/raw-csv/2024-01-15/district-1/club-performance.csv -> "2024-01-15"
  */
-function extractDirectoryDate(filePath: string, rawCsvDir: string): string | null {
+function extractDirectoryDate(
+  filePath: string,
+  rawCsvDir: string
+): string | null {
   const relativePath = path.relative(rawCsvDir, filePath)
   const parts = relativePath.split(path.sep)
 
@@ -224,7 +231,11 @@ function findRawCsvDirectories(baseDir: string): string[] {
   try {
     const entries = fs.readdirSync(baseDir, { withFileTypes: true })
     for (const entry of entries) {
-      if (entry.isDirectory() && entry.name !== 'raw-csv' && entry.name !== 'node_modules') {
+      if (
+        entry.isDirectory() &&
+        entry.name !== 'raw-csv' &&
+        entry.name !== 'node_modules'
+      ) {
         const subDir = path.join(baseDir, entry.name)
         rawCsvDirs.push(...findRawCsvDirectories(subDir))
       }
@@ -248,7 +259,9 @@ function main(): void {
     console.log('CSV Date Mismatch Scanner')
     console.log('='.repeat(60))
     console.log(`Base directory: ${baseDir}`)
-    console.log(`Mode: ${scanAll ? 'Scan all raw-csv directories' : 'Single cache directory'}`)
+    console.log(
+      `Mode: ${scanAll ? 'Scan all raw-csv directories' : 'Single cache directory'}`
+    )
     console.log('')
   }
 
@@ -263,7 +276,9 @@ function main(): void {
   if (scanAll) {
     const cacheDirs = findRawCsvDirectories(baseDir)
     if (!jsonOutput) {
-      console.log(`Found ${cacheDirs.length} directories with raw-csv subdirectories`)
+      console.log(
+        `Found ${cacheDirs.length} directories with raw-csv subdirectories`
+      )
       console.log('')
     }
 
@@ -283,19 +298,25 @@ function main(): void {
   }
 
   if (jsonOutput) {
-    console.log(JSON.stringify({
-      baseDirectory: baseDir,
-      scanMode: scanAll ? 'all' : 'single',
-      summary: {
-        totalFilesScanned: totalResult.totalFilesScanned,
-        filesWithFooter: totalResult.filesWithFooter,
-        filesWithoutFooter: totalResult.filesWithoutFooter,
-        errorCount: totalResult.errors.length,
-        mismatchCount: totalResult.mismatches.length,
-      },
-      mismatches: totalResult.mismatches,
-      errors: totalResult.errors,
-    }, null, 2))
+    console.log(
+      JSON.stringify(
+        {
+          baseDirectory: baseDir,
+          scanMode: scanAll ? 'all' : 'single',
+          summary: {
+            totalFilesScanned: totalResult.totalFilesScanned,
+            filesWithFooter: totalResult.filesWithFooter,
+            filesWithoutFooter: totalResult.filesWithoutFooter,
+            errorCount: totalResult.errors.length,
+            mismatchCount: totalResult.mismatches.length,
+          },
+          mismatches: totalResult.mismatches,
+          errors: totalResult.errors,
+        },
+        null,
+        2
+      )
+    )
   } else {
     console.log('')
     console.log('Summary:')
@@ -318,7 +339,9 @@ function main(): void {
         console.log('')
       }
     } else {
-      console.log('✓ No mismatches found - all CSV files match their directory dates')
+      console.log(
+        '✓ No mismatches found - all CSV files match their directory dates'
+      )
     }
 
     if (totalResult.errors.length > 0) {

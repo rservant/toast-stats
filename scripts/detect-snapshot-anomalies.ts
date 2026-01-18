@@ -201,7 +201,8 @@ function calculateChanges(
     const prevValue = previous[key] as number
     const currValue = current[key] as number
     const absoluteChange = currValue - prevValue
-    const percentChange = prevValue !== 0 ? (absoluteChange / prevValue) * 100 : 0
+    const percentChange =
+      prevValue !== 0 ? (absoluteChange / prevValue) * 100 : 0
 
     changes.push({
       metric: label,
