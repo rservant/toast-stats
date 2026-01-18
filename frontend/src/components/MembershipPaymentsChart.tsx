@@ -453,19 +453,23 @@ export const MembershipPaymentsChart: React.FC<
               />
 
               {/* Render a line for each year */}
-              {yearLabels.map((label, index) => (
-                <Line
-                  key={label}
-                  type="monotone"
-                  dataKey={label}
-                  stroke={YEAR_COLORS[index] ?? YEAR_COLORS[2]}
-                  strokeWidth={index === 0 ? 3 : 2}
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                  name={label}
-                  connectNulls
-                />
-              ))}
+              {yearLabels.map((label, index) => {
+                const color =
+                  YEAR_COLORS[index] ?? YEAR_COLORS[2] ?? 'var(--tm-cool-gray)'
+                return (
+                  <Line
+                    key={label}
+                    type="monotone"
+                    dataKey={label}
+                    stroke={color}
+                    strokeWidth={index === 0 ? 3 : 2}
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                    name={label}
+                    connectNulls
+                  />
+                )
+              })}
             </LineChart>
           </ResponsiveContainer>
         </div>

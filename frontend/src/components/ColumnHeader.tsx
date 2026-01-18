@@ -9,7 +9,7 @@ import { CategoricalFilter } from './filters/CategoricalFilter'
  */
 const useFocusTrap = (
   isActive: boolean,
-  containerRef: React.RefObject<HTMLElement>
+  containerRef: React.RefObject<HTMLElement | null>
 ) => {
   useEffect(() => {
     if (!isActive || !containerRef.current) return

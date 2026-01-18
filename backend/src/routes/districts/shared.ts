@@ -133,11 +133,34 @@ export function validateDistrictId(districtId: string): boolean {
 }
 
 /**
+ * Extract a string parameter from Express params (handles string | string[] type)
+ * Returns the string value or throws if not a valid string
+ */
+export function extractStringParam(
+  value: string | string[] | undefined,
+  paramName: string
+): string {
+  if (!value) {
+    throw new Error(`Missing ${paramName} parameter`)
+  }
+  if (Array.isArray(value)) {
+    throw new Error(
+      `Invalid ${paramName} parameter: expected string, got array`
+    )
+  }
+  return value
+}
+
+/**
  * Helper function to validate and extract district ID from request params
  */
 export function getValidDistrictId(req: Request): string | null {
   const districtId = req.params['districtId']
-  if (!districtId || !validateDistrictId(districtId!)) {
+  // Express params can be string | string[] - we only accept string
+  if (!districtId || Array.isArray(districtId)) {
+    return null
+  }
+  if (!validateDistrictId(districtId)) {
     return null
   }
   return districtId

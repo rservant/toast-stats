@@ -38,6 +38,7 @@ import {
   buildSnapshotResponseMetadata,
   findNearestSnapshot,
   getProgramYearInfo,
+  extractStringParam,
 } from './shared.js'
 
 export const coreRouter = Router()
@@ -329,9 +330,11 @@ coreRouter.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params['districtId']
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       const date = req.query['date'] as string | undefined
-      if (!districtId) throw new Error('Missing districtId parameter')
       // Include date in cache key for proper cache invalidation (Requirement 6.1)
       return generateDistrictCacheKey(
         districtId,
@@ -344,7 +347,12 @@ coreRouter.get(
     const rawDistrictId = req.params['districtId']
     const requestedDate = req.query['date'] as string | undefined
 
-    if (!rawDistrictId) {
+    // Handle string | string[] type from Express
+    const districtIdStr = Array.isArray(rawDistrictId)
+      ? rawDistrictId[0]
+      : rawDistrictId
+
+    if (!districtIdStr) {
       res.status(400).json({
         error: {
           code: 'MISSING_PARAMETER',
@@ -354,7 +362,7 @@ coreRouter.get(
       return
     }
 
-    if (!validateDistrictId(rawDistrictId)) {
+    if (!validateDistrictId(districtIdStr)) {
       res.status(400).json({
         error: {
           code: 'INVALID_DISTRICT_ID',
@@ -378,7 +386,7 @@ coreRouter.get(
       }
     }
 
-    const districtId = rawDistrictId
+    const districtId = districtIdStr
     const requestId = `district_stats_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     logger.info('Received request for district statistics', {
@@ -438,8 +446,10 @@ coreRouter.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'membership-history', {
         months: req.query['months'],
       })
@@ -504,8 +514,10 @@ coreRouter.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'clubs')
     },
   }),
@@ -548,8 +560,10 @@ coreRouter.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'educational-awards', {
         months: req.query['months'],
       })
@@ -612,8 +626,10 @@ coreRouter.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      if (!districtId) throw new Error('Missing districtId parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
       return generateDistrictCacheKey(districtId, 'daily-reports', {
         startDate: req.query['startDate'],
         endDate: req.query['endDate'],
@@ -727,16 +743,18 @@ coreRouter.get(
   cacheMiddleware({
     ttl: 900, // 15 minutes
     keyGenerator: req => {
-      const districtId = req.params['districtId']
-      const date = req.params['date']
-      if (!districtId || !date)
-        throw new Error('Missing districtId or date parameter')
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
+      const date = extractStringParam(req.params['date'], 'date')
       return generateDistrictCacheKey(districtId, `daily-reports/${date}`)
     },
   }),
   async (req: Request, res: Response) => {
     const districtId = getValidDistrictId(req)
-    const date = req.params['date']
+    const rawDate = req.params['date']
+    const date = Array.isArray(rawDate) ? rawDate[0] : rawDate
 
     // Validate district ID
     if (!districtId) {

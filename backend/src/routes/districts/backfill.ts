@@ -528,7 +528,11 @@ backfillRouter.post(
       }
 
       // Validate date formats if provided
-      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
+      if (
+        startDate &&
+        typeof startDate === 'string' &&
+        !validateDateFormat(startDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -538,7 +542,11 @@ backfillRouter.post(
         return
       }
 
-      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
+      if (
+        endDate &&
+        typeof endDate === 'string' &&
+        !validateDateFormat(endDate)
+      ) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',

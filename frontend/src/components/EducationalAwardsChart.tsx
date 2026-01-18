@@ -353,9 +353,12 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
                       <Line
                         type="monotone"
                         dataKey="awards"
-                        stroke={colors[0]}
+                        stroke={colors[0] ?? 'var(--tm-loyal-blue)'}
                         strokeWidth={2}
-                        dot={{ fill: colors[0], r: 0.3 }}
+                        dot={{
+                          fill: colors[0] ?? 'var(--tm-loyal-blue)',
+                          r: 0.3,
+                        }}
                         activeDot={{ r: 0.5 }}
                         name="Awards Earned"
                       />
