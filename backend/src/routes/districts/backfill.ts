@@ -75,7 +75,25 @@ backfillRouter.post('/backfill', async (req: Request, res: Response) => {
 
     const backfillService = await getBackfillService()
     const backfillId = await backfillService.initiateBackfill(request)
-    const status = backfillService.getBackfillStatus(backfillId!)
+
+    if (!backfillId) {
+      logger.error('Failed to create backfill job', {
+        operation: 'POST /api/districts/backfill',
+        request_id: requestId,
+      })
+
+      res.status(500).json({
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create backfill job',
+          details: 'The backfill job could not be created',
+        },
+        request_id: requestId,
+      })
+      return
+    }
+
+    const status = backfillService.getBackfillStatus(backfillId)
 
     if (!status) {
       logger.error('Failed to retrieve backfill status after creation', {
@@ -208,7 +226,7 @@ backfillRouter.get(
       }
 
       const backfillService = await getBackfillService()
-      const status = backfillService.getBackfillStatus(backfillId!)
+      const status = backfillService.getBackfillStatus(backfillId)
 
       if (!status) {
         logger.warn('Backfill job not found', {
@@ -368,7 +386,7 @@ backfillRouter.delete(
       const backfillService = await getBackfillService()
 
       // Check if job exists before attempting cancellation
-      const currentStatus = backfillService.getBackfillStatus(backfillId!)
+      const currentStatus = backfillService.getBackfillStatus(backfillId)
       if (!currentStatus) {
         logger.warn('Attempted to cancel non-existent backfill job', {
           operation: 'DELETE /api/districts/backfill/:backfillId',
@@ -418,7 +436,7 @@ backfillRouter.delete(
         return
       }
 
-      const cancelled = await backfillService.cancelBackfill(backfillId!)
+      const cancelled = await backfillService.cancelBackfill(backfillId)
 
       if (!cancelled) {
         logger.error('Backfill cancellation failed unexpectedly', {
@@ -510,7 +528,7 @@ backfillRouter.post(
       }
 
       // Validate date formats if provided
-      if (startDate && !validateDateFormat(startDate!)) {
+      if (startDate && typeof startDate === 'string' && !validateDateFormat(startDate)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -520,7 +538,7 @@ backfillRouter.post(
         return
       }
 
-      if (endDate && !validateDateFormat(endDate!)) {
+      if (endDate && typeof endDate === 'string' && !validateDateFormat(endDate)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DATE_FORMAT',
@@ -569,7 +587,17 @@ backfillRouter.post(
         collectionType: 'per-district',
       })
 
-      const status = backfillService.getBackfillStatus(backfillId!)
+      if (!backfillId) {
+        res.status(500).json({
+          error: {
+            code: 'BACKFILL_ERROR',
+            message: 'Failed to create backfill job',
+          },
+        })
+        return
+      }
+
+      const status = backfillService.getBackfillStatus(backfillId)
 
       res.json(status)
     } catch (error) {
@@ -632,8 +660,19 @@ backfillRouter.get(
         return
       }
 
+      // Validate backfill ID
+      if (!backfillId || typeof backfillId !== 'string') {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_BACKFILL_ID',
+            message: 'Invalid backfill ID format',
+          },
+        })
+        return
+      }
+
       const backfillService = await getBackfillService()
-      const status = backfillService.getBackfillStatus(backfillId!)
+      const status = backfillService.getBackfillStatus(backfillId)
 
       if (!status) {
         res.status(404).json({
@@ -646,7 +685,7 @@ backfillRouter.get(
       }
 
       // Verify the backfill includes the requested district
-      if (!status.scope.targetDistricts.includes(districtId!)) {
+      if (!status.scope.targetDistricts.includes(districtId)) {
         res.status(404).json({
           error: {
             code: 'BACKFILL_NOT_FOUND',
@@ -693,10 +732,21 @@ backfillRouter.delete(
         return
       }
 
+      // Validate backfill ID
+      if (!backfillId || typeof backfillId !== 'string') {
+        res.status(400).json({
+          error: {
+            code: 'INVALID_BACKFILL_ID',
+            message: 'Invalid backfill ID format',
+          },
+        })
+        return
+      }
+
       const backfillService = await getBackfillService()
 
       // Get status first to verify it belongs to this district
-      const status = backfillService.getBackfillStatus(backfillId!)
+      const status = backfillService.getBackfillStatus(backfillId)
 
       if (!status) {
         res.status(404).json({
@@ -709,7 +759,7 @@ backfillRouter.delete(
       }
 
       // Verify the backfill includes the requested district
-      if (!status.scope.targetDistricts.includes(districtId!)) {
+      if (!status.scope.targetDistricts.includes(districtId)) {
         res.status(404).json({
           error: {
             code: 'BACKFILL_NOT_FOUND',
@@ -719,7 +769,7 @@ backfillRouter.delete(
         return
       }
 
-      const cancelled = await backfillService.cancelBackfill(backfillId!)
+      const cancelled = await backfillService.cancelBackfill(backfillId)
 
       if (!cancelled) {
         res.status(400).json({

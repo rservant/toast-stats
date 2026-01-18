@@ -136,11 +136,11 @@ snapshotsRouter.get(
   logAdminAccess,
   async (req, res): Promise<void> => {
     const startTime = Date.now()
-    const snapshotId = req.params['snapshotId']
+    const snapshotIdParam = req.params['snapshotId']
     const operationId = generateOperationId('inspect_snapshot')
 
-    // Validate snapshotId parameter
-    if (!snapshotId) {
+    // Validate snapshotId parameter - ensure it's a string
+    if (!snapshotIdParam || typeof snapshotIdParam !== 'string') {
       res.status(400).json({
         error: {
           code: 'MISSING_SNAPSHOT_ID',
@@ -149,6 +149,8 @@ snapshotsRouter.get(
       })
       return
     }
+
+    const snapshotId = snapshotIdParam
 
     logger.info('Admin snapshot inspection requested', {
       operation: 'inspectSnapshot',
@@ -264,11 +266,11 @@ snapshotsRouter.get(
   logAdminAccess,
   async (req, res): Promise<void> => {
     const startTime = Date.now()
-    const snapshotId = req.params['snapshotId']
+    const snapshotIdParam = req.params['snapshotId']
     const operationId = generateOperationId('get_payload')
 
-    // Validate snapshotId parameter
-    if (!snapshotId) {
+    // Validate snapshotId parameter - ensure it's a string
+    if (!snapshotIdParam || typeof snapshotIdParam !== 'string') {
       res.status(400).json({
         error: {
           code: 'MISSING_SNAPSHOT_ID',
@@ -277,6 +279,8 @@ snapshotsRouter.get(
       })
       return
     }
+
+    const snapshotId = snapshotIdParam
 
     logger.info('Admin snapshot payload requested', {
       operation: 'getSnapshotPayload',

@@ -339,7 +339,7 @@ analyticsRouter.get(
 
       // Get club trends
       const analyticsEngine = await getAnalyticsEngine()
-      const clubTrend = await analyticsEngine.getClubTrends(districtId!, clubId)
+      const clubTrend = await analyticsEngine.getClubTrends(districtId, clubId)
 
       if (!clubTrend) {
         res.status(404).json({
@@ -421,7 +421,7 @@ analyticsRouter.get(
       // Identify vulnerable clubs (formerly at-risk)
       const analyticsEngine = await getAnalyticsEngine()
       const vulnerableClubs = await analyticsEngine.identifyAtRiskClubs(
-        districtId!
+        districtId
       )
 
       // Get intervention-required clubs separately - only if we have vulnerable clubs data
@@ -515,8 +515,8 @@ analyticsRouter.get(
       const { districtId } = req.params
       const { startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId!)) {
+      // Validate district ID - ensure it's a string first
+      if (!districtId || typeof districtId !== 'string' || !validateDistrictId(districtId)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -579,7 +579,7 @@ analyticsRouter.get(
       // Generate leadership insights
       const analyticsEngine = await getAnalyticsEngine()
       const insights = await analyticsEngine.generateLeadershipInsights(
-        districtId!,
+        districtId,
         startDate as string | undefined,
         endDate as string | undefined
       )
@@ -647,8 +647,8 @@ analyticsRouter.get(
       const { districtId } = req.params
       const { startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId!)) {
+      // Validate district ID - ensure it's a string first
+      if (!districtId || typeof districtId !== 'string' || !validateDistrictId(districtId)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -712,7 +712,7 @@ analyticsRouter.get(
       const analyticsEngine = await getAnalyticsEngine()
       const analytics =
         await analyticsEngine.generateDistinguishedClubAnalytics(
-          districtId!,
+          districtId,
           startDate as string | undefined,
           endDate as string | undefined
         )
@@ -840,8 +840,8 @@ analyticsRouter.get(
       const { districtId } = req.params
       const { format, startDate, endDate } = req.query
 
-      // Validate district ID
-      if (!validateDistrictId(districtId!)) {
+      // Validate district ID - ensure it's a string first
+      if (!districtId || typeof districtId !== 'string' || !validateDistrictId(districtId)) {
         res.status(400).json({
           error: {
             code: 'INVALID_DISTRICT_ID',
@@ -915,13 +915,13 @@ analyticsRouter.get(
       // Generate analytics data for export
       const analyticsEngine = await getAnalyticsEngine()
       const analytics = await analyticsEngine.generateDistrictAnalytics(
-        districtId!,
+        districtId,
         startDate as string | undefined,
         endDate as string | undefined
       )
 
       // Generate CSV content
-      const csvContent = generateDistrictAnalyticsCSV(analytics, districtId!)
+      const csvContent = generateDistrictAnalyticsCSV(analytics, districtId)
 
       // Generate filename with date range
       const dateRangeStr =
