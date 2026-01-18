@@ -141,6 +141,7 @@ import type {
   ConfigurationChange,
   ConfigurationValidationResult,
 } from '../services/DistrictConfigurationService.js'
+import type { AvailableRankingYearsResponse } from './districts.js'
 
 /**
  * Security configuration subset for CacheSecurityManager
@@ -585,6 +586,26 @@ export interface AnalyticsSnapshotInfo {
   createdAt: string
   /** The date the data represents (business date) */
   dataAsOfDate: string
+}
+
+/**
+ * Available Program Years Service Interface
+ *
+ * Provides access to program years with ranking data for a district.
+ * Used by the Global Rankings tab to display available program years.
+ *
+ * Requirements: 2.1, 2.3 (Global Rankings feature)
+ */
+export interface IAvailableProgramYearsService {
+  /**
+   * Get all program years with ranking data available for a district
+   *
+   * @param districtId - The district ID to query
+   * @returns Promise resolving to available program years result
+   */
+  getAvailableProgramYears(
+    districtId: string
+  ): Promise<AvailableRankingYearsResponse>
 }
 
 /**

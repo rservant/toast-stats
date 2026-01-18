@@ -360,3 +360,33 @@ export interface DistrictDataRange {
   startDate: string
   endDate: string
 }
+
+// Available Program Years Types (for Global Rankings feature)
+
+/**
+ * Program year with associated ranking data metadata
+ * Used by the Global Rankings tab to display available program years
+ */
+export interface ProgramYearWithData {
+  /** Program year string, e.g., "2023-2024" */
+  year: string
+  /** Start date of the program year (July 1), e.g., "2023-07-01" */
+  startDate: string
+  /** End date of the program year (June 30), e.g., "2024-06-30" */
+  endDate: string
+  /** Whether the program year has complete data (ended and has final snapshot) */
+  hasCompleteData: boolean
+  /** Number of snapshots available for this program year */
+  snapshotCount: number
+  /** Date of the latest snapshot in this program year */
+  latestSnapshotDate: string
+}
+
+/**
+ * Response type for the available ranking years endpoint
+ * GET /api/districts/:districtId/available-ranking-years
+ */
+export interface AvailableRankingYearsResponse {
+  districtId: string
+  programYears: ProgramYearWithData[]
+}

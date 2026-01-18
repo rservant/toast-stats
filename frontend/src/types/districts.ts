@@ -248,6 +248,36 @@ export interface DistrictRankingsResponse {
   date: string
 }
 
+// ========== Available Program Years Types ==========
+
+/**
+ * Information about a program year that has ranking data available
+ */
+export interface ProgramYearWithData {
+  /** Program year identifier (e.g., "2023-2024") */
+  year: string
+  /** Start date of the program year (ISO date string) */
+  startDate: string
+  /** End date of the program year (ISO date string) */
+  endDate: string
+  /** Whether the program year has complete data (reached end date) */
+  hasCompleteData: boolean
+  /** Number of snapshots available for this program year */
+  snapshotCount: number
+  /** Date of the most recent snapshot (ISO date string) */
+  latestSnapshotDate: string
+}
+
+/**
+ * Response from GET /api/districts/:districtId/available-ranking-years
+ */
+export interface AvailableRankingYearsResponse {
+  /** District identifier */
+  districtId: string
+  /** List of program years with ranking data */
+  programYears: ProgramYearWithData[]
+}
+
 // ========== District Performance Targets Types ==========
 
 /**

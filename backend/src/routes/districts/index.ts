@@ -9,6 +9,7 @@ import { coreRouter } from './core.js'
 import { analyticsRouter } from './analytics.js'
 import { backfillRouter } from './backfill.js'
 import { snapshotsRouter } from './snapshots.js'
+import { rankingsRouter } from './rankings.js'
 
 const router = Router()
 
@@ -23,6 +24,9 @@ router.use('/', backfillRouter)
 
 // Core routes (includes / and /:districtId routes)
 router.use('/', coreRouter)
+
+// Rankings routes (/:districtId/available-ranking-years)
+router.use('/', rankingsRouter)
 
 // Analytics routes (all are /:districtId/* routes)
 router.use('/', analyticsRouter)
