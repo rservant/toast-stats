@@ -41,8 +41,25 @@ jobs:
         id: typescript
         run: |
           echo "Checking TypeScript compilation..."
-          BACKEND_ERRORS=$(npm run typecheck:backend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
-          FRONTEND_ERRORS=$(npm run typecheck:frontend 2>&1 | grep -E "error TS[0-9]+" | wc -l || echo "0")
+
+          # Run backend typecheck and capture exit code
+          BACKEND_OUTPUT=$(npm run typecheck:backend 2>&1) || true
+          BACKEND_EXIT=$?
+          BACKEND_ERRORS=$(echo "$BACKEND_OUTPUT" | grep -cE "error TS[0-9]+" || echo "0")
+
+          # Run frontend typecheck and capture exit code
+          FRONTEND_OUTPUT=$(npm run typecheck:frontend 2>&1) || true
+          FRONTEND_EXIT=$?
+          FRONTEND_ERRORS=$(echo "$FRONTEND_OUTPUT" | grep -cE "error TS[0-9]+" || echo "0")
+
+          # Use exit codes as primary indicator, error count as secondary
+          if [ "$BACKEND_EXIT" -ne 0 ] && [ "$BACKEND_ERRORS" -eq 0 ]; then
+            BACKEND_ERRORS=1
+          fi
+          if [ "$FRONTEND_EXIT" -ne 0 ] && [ "$FRONTEND_ERRORS" -eq 0 ]; then
+            FRONTEND_ERRORS=1
+          fi
+
           TOTAL_ERRORS=$((BACKEND_ERRORS + FRONTEND_ERRORS))
 
           echo "backend_errors=$BACKEND_ERRORS" >> $GITHUB_OUTPUT
@@ -58,6 +75,20 @@ jobs:
           echo "| Backend | $BACKEND_ERRORS | $BACKEND_STATUS |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend | $FRONTEND_ERRORS | $FRONTEND_STATUS |" >> $GITHUB_STEP_SUMMARY
           echo "| **Total** | **$TOTAL_ERRORS** | $TOTAL_STATUS |" >> $GITHUB_STEP_SUMMARY
+
+          # Show actual errors if any
+          if [ "$BACKEND_ERRORS" -gt 0 ]; then
+            echo "### Backend Errors" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$BACKEND_OUTPUT" | grep -E "error TS[0-9]+" | head -20 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "$FRONTEND_ERRORS" -gt 0 ]; then
+            echo "### Frontend Errors" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$FRONTEND_OUTPUT" | grep -E "error TS[0-9]+" | head -20 >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
           if [ "$TOTAL_ERRORS" -gt 0 ]; then
             echo "❌ POLICY VIOLATION: TypeScript errors are not permitted"
