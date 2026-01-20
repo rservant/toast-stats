@@ -869,6 +869,17 @@ coreRouter.get(
       const effectiveStartDate = startDateParam ?? programYear.startDate
       const effectiveEndDate = endDateParam ?? programYear.endDate
 
+      logger.info('Rank history request parameters', {
+        operation: 'GET /api/districts/:districtId/rank-history',
+        operation_id: operationId,
+        district_id: districtId,
+        startDateParam,
+        endDateParam,
+        effectiveStartDate,
+        effectiveEndDate,
+        programYear: programYear.year,
+      })
+
       // Get all successful snapshots
       const allSnapshots = await perDistrictSnapshotStore.listSnapshots(
         undefined,
@@ -899,6 +910,7 @@ coreRouter.get(
         clubsRank: number
         paymentsRank: number
         distinguishedRank: number
+        totalDistricts: number
       }
       const history: HistoryEntry[] = []
       let districtName = `District ${districtId}`
@@ -949,6 +961,7 @@ coreRouter.get(
             clubsRank: districtRanking.clubsRank,
             paymentsRank: districtRanking.paymentsRank,
             distinguishedRank: districtRanking.distinguishedRank,
+            totalDistricts: rankings.metadata.totalDistricts,
           })
         } catch (error) {
           // Log but continue processing other snapshots
