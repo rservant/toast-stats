@@ -104,7 +104,8 @@ const mockRankHistory2024 = {
   },
 }
 
-const mockRankHistory2023 = {
+// mockRankHistory2023 available for future tests requiring 2023 data
+const _mockRankHistory2023 = {
   districtId: '57',
   districtName: 'District 57',
   history: [
@@ -143,6 +144,7 @@ const mockRankHistory2023 = {
     year: '2023-2024',
   },
 }
+void _mockRankHistory2023
 
 const mockEndOfYearRankings2024 = {
   overall: { rank: 9, totalDistricts: 126, percentile: 93.7 },
@@ -153,7 +155,8 @@ const mockEndOfYearRankings2024 = {
   isPartialYear: true,
 }
 
-const mockEndOfYearRankings2023 = {
+// mockEndOfYearRankings2023 available for future tests requiring 2023 data
+const _mockEndOfYearRankings2023 = {
   overall: { rank: 15, totalDistricts: 126, percentile: 88.1 },
   paidClubs: { rank: 15, totalDistricts: 126, percentile: 88.1 },
   membershipPayments: { rank: 18, totalDistricts: 126, percentile: 85.7 },
@@ -161,6 +164,7 @@ const mockEndOfYearRankings2023 = {
   asOfDate: '2024-06-30',
   isPartialYear: false,
 }
+void _mockEndOfYearRankings2023
 
 const mockYearlyRankings = [
   {
