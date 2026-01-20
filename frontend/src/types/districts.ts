@@ -190,6 +190,7 @@ export interface HistoricalRankPoint {
   clubsRank: number
   paymentsRank: number
   distinguishedRank: number
+  totalDistricts: number
 }
 
 export interface DistrictRankHistory {

@@ -910,6 +910,7 @@ coreRouter.get(
         clubsRank: number
         paymentsRank: number
         distinguishedRank: number
+        totalDistricts: number
       }
       const history: HistoryEntry[] = []
       let districtName = `District ${districtId}`
@@ -960,6 +961,7 @@ coreRouter.get(
             clubsRank: districtRanking.clubsRank,
             paymentsRank: districtRanking.paymentsRank,
             distinguishedRank: districtRanking.distinguishedRank,
+            totalDistricts: rankings.metadata.totalDistricts,
           })
         } catch (error) {
           // Log but continue processing other snapshots

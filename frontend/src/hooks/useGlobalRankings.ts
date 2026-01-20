@@ -143,13 +143,11 @@ export function convertToProgramYear(
  *
  * @param history - The rank history response
  * @param programYearData - Program year metadata including completeness status
- * @param totalDistricts - Total number of districts (estimated from aggregate score if not provided)
  * @returns End-of-year rankings or null if no history data
  */
 export function extractEndOfYearRankings(
   history: RankHistoryResponse | null,
-  programYearData: ProgramYearWithData | undefined,
-  totalDistricts: number = 126 // Default estimate for Toastmasters districts
+  programYearData: ProgramYearWithData | undefined
 ): EndOfYearRankings | null {
   if (!history || history.history.length === 0) {
     return null
@@ -164,6 +162,9 @@ export function extractEndOfYearRankings(
   if (!latestPoint) {
     return null
   }
+
+  // Use totalDistricts from the data point itself
+  const totalDistricts = latestPoint.totalDistricts
 
   // Calculate percentile: (totalDistricts - rank + 1) / totalDistricts * 100
   const calculatePercentile = (rank: number): number => {
@@ -257,8 +258,7 @@ function getLatestRankPoint(
  */
 function buildYearlyRankingSummaries(
   programYears: ProgramYearWithData[],
-  historyByYear: Map<string, RankHistoryResponse>,
-  totalDistricts: number
+  historyByYear: Map<string, RankHistoryResponse>
 ): YearlyRankingSummary[] {
   // Sort program years in descending order (most recent first)
   const sortedYears = [...programYears].sort((a, b) =>
@@ -318,7 +318,7 @@ function buildYearlyRankingSummaries(
       clubsRank: latestPoint.clubsRank,
       paymentsRank: latestPoint.paymentsRank,
       distinguishedRank: latestPoint.distinguishedRank,
-      totalDistricts,
+      totalDistricts: latestPoint.totalDistricts,
       isPartialYear: !yearData.hasCompleteData,
       yearOverYearChange,
     })
@@ -510,11 +510,7 @@ export function useGlobalRankings({
 
   // Calculate end-of-year rankings for the selected year
   const endOfYearRankings = useMemo(() => {
-    return extractEndOfYearRankings(
-      currentYearHistory,
-      selectedProgramYearData,
-      126 // Default total districts estimate
-    )
+    return extractEndOfYearRankings(currentYearHistory, selectedProgramYearData)
   }, [currentYearHistory, selectedProgramYearData])
 
   // Build yearly ranking summaries from selected year and all previous years
@@ -560,11 +556,7 @@ export function useGlobalRankings({
 
     // Only pass years that actually have history data to ensure
     // year-over-year changes are calculated correctly
-    return buildYearlyRankingSummaries(
-      yearsWithHistory,
-      historyByYear,
-      126 // Default total districts estimate
-    )
+    return buildYearlyRankingSummaries(yearsWithHistory, historyByYear)
   }, [availableYearsData, allYearsHistoryData, effectiveSelectedYear])
 
   // Combine loading states

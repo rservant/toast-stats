@@ -88,6 +88,7 @@ const createMockRankHistoryResponse = (
       clubsRank: 15,
       paymentsRank: 20,
       distinguishedRank: 10,
+      totalDistricts: 126,
     },
     {
       date: '2024-08-15',
@@ -95,6 +96,7 @@ const createMockRankHistoryResponse = (
       clubsRank: 12,
       paymentsRank: 18,
       distinguishedRank: 8,
+      totalDistricts: 126,
     },
     {
       date: '2024-09-15',
@@ -102,6 +104,7 @@ const createMockRankHistoryResponse = (
       clubsRank: 10,
       paymentsRank: 15,
       distinguishedRank: 5,
+      totalDistricts: 126,
     },
   ],
   programYear: {
@@ -473,6 +476,7 @@ describe('Helper Functions', () => {
             clubsRank: 15,
             paymentsRank: 20,
             distinguishedRank: 10,
+            totalDistricts: 126,
           },
           {
             date: '2024-09-15',
@@ -480,6 +484,7 @@ describe('Helper Functions', () => {
             clubsRank: 10,
             paymentsRank: 15,
             distinguishedRank: 5,
+            totalDistricts: 126,
           },
           {
             date: '2024-08-15',
@@ -487,6 +492,7 @@ describe('Helper Functions', () => {
             clubsRank: 12,
             paymentsRank: 18,
             distinguishedRank: 8,
+            totalDistricts: 126,
           },
         ],
         programYear: {
@@ -497,7 +503,7 @@ describe('Helper Functions', () => {
       }
 
       const programYearData = createMockProgramYearWithData('2024-2025', false)
-      const result = extractEndOfYearRankings(history, programYearData, 126)
+      const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
       // Should use the most recent date (2024-09-15)
@@ -524,6 +530,7 @@ describe('Helper Functions', () => {
             clubsRank: 1, // Best rank
             paymentsRank: 126, // Worst rank
             distinguishedRank: 63, // Middle rank
+            totalDistricts: 126,
           },
         ],
         programYear: {
@@ -534,7 +541,7 @@ describe('Helper Functions', () => {
       }
 
       const programYearData = createMockProgramYearWithData('2024-2025', true)
-      const result = extractEndOfYearRankings(history, programYearData, 126)
+      const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
       // Rank 1 of 126 = (126 - 1 + 1) / 126 * 100 = 100%
@@ -560,12 +567,12 @@ describe('Helper Functions', () => {
         },
       }
 
-      const result = extractEndOfYearRankings(history, undefined, 126)
+      const result = extractEndOfYearRankings(history, undefined)
       expect(result).toBeNull()
     })
 
     it('should return null for null history', () => {
-      const result = extractEndOfYearRankings(null, undefined, 126)
+      const result = extractEndOfYearRankings(null, undefined)
       expect(result).toBeNull()
     })
   })
