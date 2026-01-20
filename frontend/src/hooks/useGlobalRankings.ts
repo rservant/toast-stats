@@ -336,6 +336,7 @@ export const globalRankingsQueryKeys = {
  * This hook combines data from:
  * - useAvailableProgramYears: Gets all program years with ranking data
  * - useRankHistory: Gets rank history for the selected program year
+ * - Additional queries for all program years to build multi-year comparison
  *
  * It provides:
  * - Current year rank history and end-of-year rankings
@@ -425,6 +426,54 @@ export function useGlobalRankings({
     refetch: refetchHistory,
   } = useRankHistory(rankHistoryParams)
 
+  // Build params for fetching ALL years' history
+  // We need to provide a date range that covers all available program years
+  const allYearsHistoryParams = useMemo(() => {
+    if (
+      !availableYearsData?.programYears ||
+      availableYearsData.programYears.length === 0
+    ) {
+      return {
+        districtIds: districtId ? [districtId] : [],
+      }
+    }
+
+    // Sort program years to find the earliest and latest dates
+    const sortedYears = [...availableYearsData.programYears].sort((a, b) =>
+      a.year.localeCompare(b.year)
+    )
+
+    const earliestYear = sortedYears[0]
+    const latestYear = sortedYears[sortedYears.length - 1]
+
+    const params: {
+      districtIds: string[]
+      startDate?: string
+      endDate?: string
+    } = {
+      districtIds: districtId ? [districtId] : [],
+    }
+
+    // Set date range to cover all available program years
+    if (earliestYear) {
+      params.startDate = earliestYear.startDate
+    }
+    if (latestYear) {
+      params.endDate = latestYear.endDate
+    }
+
+    return params
+  }, [districtId, availableYearsData])
+
+  // Fetch rank history for ALL program years (for multi-year comparison)
+  const {
+    data: allYearsHistoryData,
+    isLoading: isLoadingAllYears,
+    isError: isErrorAllYears,
+    error: errorAllYears,
+    refetch: refetchAllYears,
+  } = useRankHistory(allYearsHistoryParams)
+
   // Extract current year history (first result since we only query one district)
   const currentYearHistory = useMemo(() => {
     if (!rankHistoryData || rankHistoryData.length === 0) return null
@@ -450,38 +499,64 @@ export function useGlobalRankings({
     )
   }, [currentYearHistory, selectedProgramYearData])
 
-  // Build yearly ranking summaries
-  // For now, we only have data for the selected year
-  // In a full implementation, we would fetch history for all years
+  // Build yearly ranking summaries from selected year and all previous years
   const yearlyRankings = useMemo(() => {
-    if (!availableYearsData?.programYears || !currentYearHistory) {
+    if (!availableYearsData?.programYears || !effectiveSelectedYear) {
       return []
     }
 
-    // Create a map with the current year's history
+    // Get the complete history data
+    const allHistory = allYearsHistoryData?.[0]
+    if (!allHistory || allHistory.history.length === 0) {
+      return []
+    }
+
+    // Filter program years to only include selected year and earlier
+    // Program years are in format "2023-2024", so string comparison works
+    const filteredProgramYears = availableYearsData.programYears.filter(
+      yearData => yearData.year <= effectiveSelectedYear.label
+    )
+
+    // Group history points by program year
     const historyByYear = new Map<string, RankHistoryResponse>()
-    if (effectiveSelectedYear) {
-      historyByYear.set(effectiveSelectedYear.label, currentYearHistory)
+
+    for (const yearData of filteredProgramYears) {
+      // Filter history points that fall within this program year's date range
+      const yearHistory = allHistory.history.filter(point => {
+        return (
+          point.date >= yearData.startDate && point.date <= yearData.endDate
+        )
+      })
+
+      if (yearHistory.length > 0) {
+        historyByYear.set(yearData.year, {
+          districtId: allHistory.districtId,
+          districtName: allHistory.districtName,
+          history: yearHistory,
+          programYear: allHistory.programYear, // Use the original programYear info
+        })
+      }
     }
 
     return buildYearlyRankingSummaries(
-      availableYearsData.programYears,
+      filteredProgramYears,
       historyByYear,
       126 // Default total districts estimate
     )
-  }, [availableYearsData, currentYearHistory, effectiveSelectedYear])
+  }, [availableYearsData, allYearsHistoryData, effectiveSelectedYear])
 
   // Combine loading states
-  const isLoading = isLoadingYears || isLoadingHistory
+  const isLoading = isLoadingYears || isLoadingHistory || isLoadingAllYears
 
   // Combine error states
-  const isError = isErrorYears || isErrorHistory
-  const error = errorYears ?? errorHistory ?? null
+  const isError = isErrorYears || isErrorHistory || isErrorAllYears
+  const error = errorYears ?? errorHistory ?? errorAllYears ?? null
 
   // Combined refetch function
   const refetch = () => {
     refetchYears()
     refetchHistory()
+    refetchAllYears()
   }
 
   return {
