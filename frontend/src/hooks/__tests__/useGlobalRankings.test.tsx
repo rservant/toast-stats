@@ -22,6 +22,7 @@ import {
   calculateYearOverYearChange,
   convertToProgramYear,
   globalRankingsQueryKeys,
+  buildYearlyRankingSummaries,
   type EndOfYearRankings,
 } from '../useGlobalRankings'
 import { apiClient } from '../../services/api'
@@ -515,6 +516,120 @@ describe('Helper Functions', () => {
     })
 
     /**
+     * Test that extractEndOfYearRankings uses overallRank from API when present
+     *
+     * **Validates: Requirements 3.1** - WHEN extractEndOfYearRankings processes rank history data,
+     * THE System SHALL use the overallRank field from the API response
+     */
+    it('should use overallRank from API when present', () => {
+      const history: RankHistoryResponse = {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2024-09-15',
+            aggregateScore: 360,
+            clubsRank: 10,
+            paymentsRank: 15,
+            distinguishedRank: 5,
+            totalDistricts: 126,
+            overallRank: 7, // API-provided overallRank based on aggregateScore position
+          },
+        ],
+        programYear: {
+          startDate: '2024-07-01',
+          endDate: '2025-06-30',
+          year: '2024-2025',
+        },
+      }
+
+      const programYearData = createMockProgramYearWithData('2024-2025', false)
+      const result = extractEndOfYearRankings(history, programYearData)
+
+      expect(result).not.toBeNull()
+      // Should use the API-provided overallRank (7), NOT the average of category ranks
+      // Average would be: Math.round((10 + 15 + 5) / 3) = 10
+      expect(result?.overall.rank).toBe(7)
+    })
+
+    /**
+     * Test that extractEndOfYearRankings falls back to averaging when overallRank is missing
+     *
+     * **Validates: Requirements 3.4** - IF the overallRank field is not present in legacy data,
+     * THEN THE System SHALL fall back to calculating rank from aggregateScore position
+     */
+    it('should fall back to averaging category ranks when overallRank is missing (legacy data)', () => {
+      const history: RankHistoryResponse = {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2024-09-15',
+            aggregateScore: 360,
+            clubsRank: 10,
+            paymentsRank: 15,
+            distinguishedRank: 5,
+            totalDistricts: 126,
+            // No overallRank field - simulating legacy data
+          },
+        ],
+        programYear: {
+          startDate: '2024-07-01',
+          endDate: '2025-06-30',
+          year: '2024-2025',
+        },
+      }
+
+      const programYearData = createMockProgramYearWithData('2024-2025', false)
+      const result = extractEndOfYearRankings(history, programYearData)
+
+      expect(result).not.toBeNull()
+      // Should fall back to averaging: Math.round((10 + 15 + 5) / 3) = 10
+      expect(result?.overall.rank).toBe(10)
+    })
+
+    /**
+     * Test that overallRank is used even when it differs significantly from category average
+     *
+     * **Validates: Requirements 3.1, 3.3** - THE System SHALL NOT calculate overall rank
+     * by averaging clubsRank, paymentsRank, and distinguishedRank
+     */
+    it('should use overallRank even when it differs significantly from category average', () => {
+      const history: RankHistoryResponse = {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2024-09-15',
+            aggregateScore: 400, // High aggregate score
+            clubsRank: 50, // Poor clubs rank
+            paymentsRank: 60, // Poor payments rank
+            distinguishedRank: 70, // Poor distinguished rank
+            totalDistricts: 126,
+            overallRank: 3, // But excellent overall rank due to high aggregate score
+          },
+        ],
+        programYear: {
+          startDate: '2024-07-01',
+          endDate: '2025-06-30',
+          year: '2024-2025',
+        },
+      }
+
+      const programYearData = createMockProgramYearWithData('2024-2025', false)
+      const result = extractEndOfYearRankings(history, programYearData)
+
+      expect(result).not.toBeNull()
+      // Should use API-provided overallRank (3), NOT the average
+      // Average would be: Math.round((50 + 60 + 70) / 3) = 60
+      expect(result?.overall.rank).toBe(3)
+      // Verify category ranks are still correct
+      expect(result?.paidClubs.rank).toBe(50)
+      expect(result?.membershipPayments.rank).toBe(60)
+      expect(result?.distinguishedClubs.rank).toBe(70)
+    })
+
+    /**
      * Test that percentiles are calculated correctly
      *
      * **Validates: Requirements 3.5**
@@ -675,6 +790,220 @@ describe('Helper Functions', () => {
 
       const result = calculateYearOverYearChange(currentYear, null)
       expect(result).toBeNull()
+    })
+  })
+
+  describe('buildYearlyRankingSummaries', () => {
+    /**
+     * Test that buildYearlyRankingSummaries uses overallRank from API when present
+     *
+     * **Validates: Requirements 3.3** - WHEN buildYearlyRankingSummaries creates yearly summaries,
+     * THE System SHALL use the overallRank field from the latest data point
+     */
+    it('should use overallRank from API when present in history data', () => {
+      const programYears: ProgramYearWithData[] = [
+        {
+          year: '2023-2024',
+          startDate: '2023-07-01',
+          endDate: '2024-06-30',
+          hasCompleteData: true,
+          snapshotCount: 52,
+          latestSnapshotDate: '2024-06-30',
+        },
+      ]
+
+      const historyByYear = new Map<string, RankHistoryResponse>()
+      historyByYear.set('2023-2024', {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2024-06-30',
+            aggregateScore: 380,
+            clubsRank: 12,
+            paymentsRank: 18,
+            distinguishedRank: 9,
+            totalDistricts: 126,
+            overallRank: 5, // API-provided overallRank based on aggregateScore position
+          },
+        ],
+        programYear: {
+          startDate: '2023-07-01',
+          endDate: '2024-06-30',
+          year: '2023-2024',
+        },
+      })
+
+      const result = buildYearlyRankingSummaries(programYears, historyByYear)
+
+      expect(result).toHaveLength(1)
+      // Should use API-provided overallRank (5), NOT the average of category ranks
+      // Average would be: Math.round((12 + 18 + 9) / 3) = 13
+      expect(result[0]?.overallRank).toBe(5)
+      expect(result[0]?.clubsRank).toBe(12)
+      expect(result[0]?.paymentsRank).toBe(18)
+      expect(result[0]?.distinguishedRank).toBe(9)
+    })
+
+    /**
+     * Test that buildYearlyRankingSummaries falls back to averaging when overallRank is missing
+     *
+     * **Validates: Requirements 3.4** - IF the overallRank field is not present in legacy data,
+     * THEN THE System SHALL fall back to calculating rank
+     */
+    it('should fall back to averaging category ranks when overallRank is missing', () => {
+      const programYears: ProgramYearWithData[] = [
+        {
+          year: '2022-2023',
+          startDate: '2022-07-01',
+          endDate: '2023-06-30',
+          hasCompleteData: true,
+          snapshotCount: 48,
+          latestSnapshotDate: '2023-06-30',
+        },
+      ]
+
+      const historyByYear = new Map<string, RankHistoryResponse>()
+      historyByYear.set('2022-2023', {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2023-06-30',
+            aggregateScore: 350,
+            clubsRank: 15,
+            paymentsRank: 21,
+            distinguishedRank: 12,
+            totalDistricts: 126,
+            // No overallRank - simulating legacy data
+          },
+        ],
+        programYear: {
+          startDate: '2022-07-01',
+          endDate: '2023-06-30',
+          year: '2022-2023',
+        },
+      })
+
+      const result = buildYearlyRankingSummaries(programYears, historyByYear)
+
+      expect(result).toHaveLength(1)
+      // Should fall back to averaging: Math.round((15 + 21 + 12) / 3) = 16
+      expect(result[0]?.overallRank).toBe(16)
+    })
+
+    /**
+     * Test that year-over-year changes use overallRank correctly
+     *
+     * **Validates: Requirements 3.3** - Year-over-year changes should be calculated
+     * using the correct overallRank values from the API
+     */
+    it('should calculate year-over-year changes using overallRank from API', () => {
+      const programYears: ProgramYearWithData[] = [
+        {
+          year: '2023-2024',
+          startDate: '2023-07-01',
+          endDate: '2024-06-30',
+          hasCompleteData: true,
+          snapshotCount: 52,
+          latestSnapshotDate: '2024-06-30',
+        },
+        {
+          year: '2022-2023',
+          startDate: '2022-07-01',
+          endDate: '2023-06-30',
+          hasCompleteData: true,
+          snapshotCount: 48,
+          latestSnapshotDate: '2023-06-30',
+        },
+      ]
+
+      const historyByYear = new Map<string, RankHistoryResponse>()
+
+      // 2022-2023: overallRank = 10
+      historyByYear.set('2022-2023', {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2023-06-30',
+            aggregateScore: 350,
+            clubsRank: 15,
+            paymentsRank: 20,
+            distinguishedRank: 10,
+            totalDistricts: 126,
+            overallRank: 10,
+          },
+        ],
+        programYear: {
+          startDate: '2022-07-01',
+          endDate: '2023-06-30',
+          year: '2022-2023',
+        },
+      })
+
+      // 2023-2024: overallRank = 5 (improved from 10)
+      historyByYear.set('2023-2024', {
+        districtId: '57',
+        districtName: 'District 57',
+        history: [
+          {
+            date: '2024-06-30',
+            aggregateScore: 380,
+            clubsRank: 10,
+            paymentsRank: 15,
+            distinguishedRank: 5,
+            totalDistricts: 126,
+            overallRank: 5,
+          },
+        ],
+        programYear: {
+          startDate: '2023-07-01',
+          endDate: '2024-06-30',
+          year: '2023-2024',
+        },
+      })
+
+      const result = buildYearlyRankingSummaries(programYears, historyByYear)
+
+      expect(result).toHaveLength(2)
+
+      // Most recent year (2023-2024) should be first
+      const currentYear = result[0]
+      expect(currentYear?.programYear).toBe('2023-2024')
+      expect(currentYear?.overallRank).toBe(5)
+      // Year-over-year change: previous (10) - current (5) = 5 (positive = improvement)
+      expect(currentYear?.yearOverYearChange?.overall).toBe(5)
+
+      // Previous year (2022-2023) should be second
+      const previousYear = result[1]
+      expect(previousYear?.programYear).toBe('2022-2023')
+      expect(previousYear?.overallRank).toBe(10)
+      // No year-over-year change for oldest year
+      expect(previousYear?.yearOverYearChange).toBeNull()
+    })
+
+    /**
+     * Test that buildYearlyRankingSummaries handles empty history gracefully
+     */
+    it('should return empty array when no history data available', () => {
+      const programYears: ProgramYearWithData[] = [
+        {
+          year: '2023-2024',
+          startDate: '2023-07-01',
+          endDate: '2024-06-30',
+          hasCompleteData: false,
+          snapshotCount: 0,
+          latestSnapshotDate: '',
+        },
+      ]
+
+      const historyByYear = new Map<string, RankHistoryResponse>()
+      // No history data for the program year
+
+      const result = buildYearlyRankingSummaries(programYears, historyByYear)
+
+      expect(result).toHaveLength(0)
     })
   })
 })
