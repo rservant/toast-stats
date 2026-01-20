@@ -130,12 +130,14 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
 
   return (
     <div
-      className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs"
+      className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 min-w-[180px]"
       role="tooltip"
     >
-      <p className="text-sm font-medium text-gray-900 mb-2">{formattedDate}</p>
-      <p className="text-sm text-tm-loyal-blue">
-        <span className="font-semibold">{metricConfig.label}:</span>{' '}
+      <p className="text-sm font-medium text-gray-900 mb-1 whitespace-nowrap">
+        {formattedDate}
+      </p>
+      <p className="text-sm text-tm-loyal-blue whitespace-nowrap">
+        {metricConfig.shortLabel}:{' '}
         {isRankMetric ? `Rank #${value}` : `Score ${Math.round(value)}`}
       </p>
     </div>
