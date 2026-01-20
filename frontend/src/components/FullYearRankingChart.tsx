@@ -98,12 +98,14 @@ interface ChartDataPoint {
 interface CustomTooltipProps {
   active?: boolean
   payload?: TooltipPayload[]
+  label?: string
   selectedMetric: RankMetric
 }
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({
   active,
   payload,
+  label,
   selectedMetric,
 }) => {
   if (!active || !payload || payload.length === 0) {
@@ -115,23 +117,26 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
     return null
   }
 
-  const formattedDate = formatLongDate(dataPoint.payload.date)
+  // Use the label (date) from recharts, or fall back to payload data
+  const dateToFormat = label || dataPoint.payload?.date
+  const formattedDate = dateToFormat
+    ? formatLongDate(dateToFormat)
+    : 'Unknown date'
   const metricConfig = METRIC_CONFIG[selectedMetric]
   const isRankMetric = selectedMetric !== 'aggregate'
 
+  // Get the value - it could be in dataPoint.value or dataPoint.payload.value
+  const value = dataPoint.value ?? dataPoint.payload?.value ?? 0
+
   return (
     <div
-      className="bg-white border border-[var(--tm-cool-gray)] rounded-lg shadow-lg p-3 max-w-xs"
+      className="bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-xs"
       role="tooltip"
     >
-      <p className="tm-body-small font-medium tm-text-black mb-2">
-        {formattedDate}
-      </p>
-      <p className="tm-body-small tm-text-loyal-blue">
+      <p className="text-sm font-medium text-gray-900 mb-2">{formattedDate}</p>
+      <p className="text-sm text-tm-loyal-blue">
         <span className="font-semibold">{metricConfig.label}:</span>{' '}
-        {isRankMetric
-          ? `Rank #${dataPoint.value}`
-          : `Score ${Math.round(dataPoint.value)}`}
+        {isRankMetric ? `Rank #${value}` : `Score ${Math.round(value)}`}
       </p>
     </div>
   )
@@ -213,11 +218,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({ programYear }) => (
     role="status"
     aria-label="No ranking data available"
   >
-    <h2 className="text-lg sm:text-xl font-semibold tm-text-black font-tm-headline mb-4">
+    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline mb-4">
       Ranking Progression
     </h2>
     <div className="flex items-center justify-center h-80">
-      <p className="tm-body tm-text-cool-gray text-center">
+      <p className="text-base text-gray-600 font-tm-body text-center">
         No ranking data available for the {programYear.label} program year.
       </p>
     </div>
@@ -294,10 +299,10 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
       {/* Header */}
       <div className="flex flex-col gap-4 mb-4">
         <div className="flex-1">
-          <h2 className="text-lg sm:text-xl font-semibold tm-text-black font-tm-headline">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline">
             Ranking Progression
           </h2>
-          <p className="tm-body-small tm-text-cool-gray mt-1">
+          <p className="text-sm text-gray-600 font-tm-body mt-1">
             Program Year: {programYear.label} ({programYear.startDate} to{' '}
             {programYear.endDate})
           </p>
@@ -309,7 +314,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
           role="group"
           aria-label="Select ranking metric"
         >
-          <span className="tm-body-small font-medium tm-text-cool-gray self-center mr-2">
+          <span className="text-sm font-medium text-gray-600 font-tm-body self-center mr-2">
             View:
           </span>
           <MetricToggleButton

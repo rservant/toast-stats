@@ -133,7 +133,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <h2
           id="end-of-year-rankings-heading"
-          className="tm-h3 tm-text-black font-bold font-tm-headline"
+          className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline"
         >
           End-of-Year Rankings
         </h2>
@@ -141,14 +141,14 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
         {/* Data freshness and partial year indicators */}
         <div className="flex flex-wrap items-center gap-2">
           {rankings && (
-            <span className="tm-body-small tm-text-cool-gray">
+            <span className="text-sm text-gray-600 font-tm-body">
               As of {formatAsOfDate(rankings.asOfDate)}
             </span>
           )}
 
           {rankings?.isPartialYear && (
             <span
-              className="inline-flex items-center px-2.5 py-1 tm-rounded-lg tm-body-small font-medium tm-bg-happy-yellow-30 tm-text-black"
+              className="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-medium bg-amber-100 text-amber-800"
               role="status"
               aria-label="Partial year data - program year not yet complete"
             >
@@ -171,7 +171,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
       </div>
 
       {/* Program Year Label */}
-      <p className="tm-body-small tm-text-cool-gray mb-4">
+      <p className="text-sm text-gray-600 font-tm-body mb-4">
         {programYear.label} Program Year
       </p>
 

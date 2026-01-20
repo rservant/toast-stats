@@ -279,7 +279,7 @@ describe('MultiYearComparisonTable', () => {
       const unchangedIndicators = screen.getAllByRole('status', {
         name: /Distinguished rank unchanged/i,
       })
-      expect(unchangedIndicators[0]).toHaveClass('tm-text-cool-gray')
+      expect(unchangedIndicators[0]).toHaveClass('text-gray-600')
     })
   })
 
@@ -317,13 +317,13 @@ describe('MultiYearComparisonTable', () => {
       expect(partialBadges).toHaveLength(0)
     })
 
-    it('partial badge uses brand yellow color', () => {
+    it('partial badge uses amber color for visibility', () => {
       renderWithProviders(<MultiYearComparisonTable {...baseProps} />)
 
       const partialBadges = screen.getAllByRole('status', {
         name: /Partial year data/i,
       })
-      expect(partialBadges[0]).toHaveClass('tm-bg-happy-yellow-30')
+      expect(partialBadges[0]).toHaveClass('bg-amber-100')
     })
   })
 

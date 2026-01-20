@@ -48,8 +48,8 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
       }
     }
     return {
-      bgClass: 'tm-bg-cool-gray-20',
-      textClass: 'tm-text-cool-gray',
+      bgClass: 'bg-gray-200',
+      textClass: 'text-gray-600',
       icon: '→',
       label: 'unchanged',
     }
@@ -85,7 +85,7 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
  */
 const PartialYearBadge: React.FC = () => (
   <span
-    className="inline-flex items-center px-2 py-0.5 tm-rounded-lg text-xs font-medium tm-bg-happy-yellow-30 tm-text-black"
+    className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-amber-100 text-amber-800"
     role="status"
     aria-label="Partial year data - program year not yet complete"
   >
@@ -132,11 +132,11 @@ const EmptyState: React.FC = () => (
     role="status"
     aria-label="No multi-year ranking data available"
   >
-    <h2 className="text-lg sm:text-xl font-semibold tm-text-black font-tm-headline mb-4">
+    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline mb-4">
       Multi-Year Comparison
     </h2>
     <div className="flex items-center justify-center py-8">
-      <p className="tm-body tm-text-cool-gray text-center">
+      <p className="text-base text-gray-600 font-tm-body text-center">
         No multi-year ranking data available. Rankings will appear here once
         data from multiple program years is collected.
       </p>
@@ -161,11 +161,9 @@ const RankCell: React.FC<RankCellProps> = ({
   metricLabel,
 }) => (
   <div className="flex flex-col items-start gap-1">
-    <span className="tm-body font-medium tm-text-black">
+    <span className="text-base font-medium text-gray-900 font-tm-body">
       {rank}
-      <span className="tm-body-small tm-text-cool-gray ml-1">
-        /{totalDistricts}
-      </span>
+      <span className="text-sm text-gray-500 ml-1">/{totalDistricts}</span>
     </span>
     {change !== undefined && (
       <ChangeIndicator change={change} metricLabel={metricLabel} />
@@ -182,13 +180,13 @@ interface MobileYearCardProps {
 
 const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
   <div
-    className="bg-white border border-[var(--tm-cool-gray)] rounded-lg p-4 mb-3"
+    className="bg-white border border-gray-300 rounded-lg p-4 mb-3"
     role="listitem"
     aria-label={`Rankings for ${ranking.programYear} program year`}
   >
     {/* Year header */}
-    <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--tm-cool-gray-20)]">
-      <span className="tm-body font-semibold tm-text-black font-tm-headline">
+    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+      <span className="text-base font-semibold text-gray-900 font-tm-headline">
         {ranking.programYear}
       </span>
       {ranking.isPartialYear && <PartialYearBadge />}
@@ -198,7 +196,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
     <div className="grid grid-cols-2 gap-3">
       {/* Overall */}
       <div>
-        <span className="tm-body-small tm-text-cool-gray block mb-1">
+        <span className="text-sm text-gray-600 font-tm-body block mb-1">
           Overall
         </span>
         <RankCell
@@ -211,7 +209,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
 
       {/* Clubs */}
       <div>
-        <span className="tm-body-small tm-text-cool-gray block mb-1">
+        <span className="text-sm text-gray-600 font-tm-body block mb-1">
           Clubs
         </span>
         <RankCell
@@ -224,7 +222,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
 
       {/* Payments */}
       <div>
-        <span className="tm-body-small tm-text-cool-gray block mb-1">
+        <span className="text-sm text-gray-600 font-tm-body block mb-1">
           Payments
         </span>
         <RankCell
@@ -237,7 +235,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
 
       {/* Distinguished */}
       <div>
-        <span className="tm-body-small tm-text-cool-gray block mb-1">
+        <span className="text-sm text-gray-600 font-tm-body block mb-1">
           Distinguished
         </span>
         <RankCell
@@ -306,7 +304,7 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
       {/* Header */}
       <h2
         id="multi-year-comparison-heading"
-        className="text-lg sm:text-xl font-semibold tm-text-black font-tm-headline mb-4"
+        className="text-lg sm:text-xl font-semibold text-gray-900 font-tm-headline mb-4"
       >
         Multi-Year Comparison
       </h2>
@@ -327,34 +325,34 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
           aria-describedby="multi-year-table-desc"
         >
           <thead>
-            <tr className="border-b-2 border-[var(--tm-cool-gray)]">
+            <tr className="border-b-2 border-gray-300">
               <th
                 scope="col"
-                className="text-left py-3 px-2 tm-body-small font-semibold tm-text-cool-gray font-tm-headline"
+                className="text-left py-3 px-2 text-sm font-semibold text-gray-700 font-tm-headline"
               >
                 Program Year
               </th>
               <th
                 scope="col"
-                className="text-left py-3 px-2 tm-body-small font-semibold tm-text-cool-gray font-tm-headline"
+                className="text-left py-3 px-2 text-sm font-semibold text-gray-700 font-tm-headline"
               >
                 Overall
               </th>
               <th
                 scope="col"
-                className="text-left py-3 px-2 tm-body-small font-semibold tm-text-cool-gray font-tm-headline"
+                className="text-left py-3 px-2 text-sm font-semibold text-gray-700 font-tm-headline"
               >
                 Clubs
               </th>
               <th
                 scope="col"
-                className="text-left py-3 px-2 tm-body-small font-semibold tm-text-cool-gray font-tm-headline"
+                className="text-left py-3 px-2 text-sm font-semibold text-gray-700 font-tm-headline"
               >
                 Payments
               </th>
               <th
                 scope="col"
-                className="text-left py-3 px-2 tm-body-small font-semibold tm-text-cool-gray font-tm-headline"
+                className="text-left py-3 px-2 text-sm font-semibold text-gray-700 font-tm-headline"
               >
                 Distinguished
               </th>
@@ -364,14 +362,14 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
             {sortedRankings.map((ranking, index) => (
               <tr
                 key={ranking.programYear}
-                className={`border-b border-[var(--tm-cool-gray-20)] ${
-                  index % 2 === 0 ? 'bg-white' : 'tm-bg-cool-gray-10'
-                } hover:tm-bg-loyal-blue-10 transition-colors`}
+                className={`border-b border-gray-200 ${
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                } hover:bg-blue-50 transition-colors`}
               >
                 {/* Program Year */}
                 <td className="py-3 px-2">
                   <div className="flex items-center gap-2">
-                    <span className="tm-body font-medium tm-text-black">
+                    <span className="text-base font-medium text-gray-900">
                       {ranking.programYear}
                     </span>
                     {ranking.isPartialYear && <PartialYearBadge />}

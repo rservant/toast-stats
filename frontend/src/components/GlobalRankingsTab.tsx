@@ -202,7 +202,7 @@ const DataFreshness: React.FC<DataFreshnessProps> = ({ lastUpdated }) => {
 
   return (
     <div
-      className="flex items-center gap-2 tm-body-small tm-text-cool-gray"
+      className="flex items-center gap-2 text-sm text-gray-600 font-tm-body"
       aria-label={`Rankings last updated ${formatLongDate(lastUpdated)}`}
     >
       <svg
