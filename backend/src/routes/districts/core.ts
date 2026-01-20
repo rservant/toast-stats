@@ -911,6 +911,7 @@ coreRouter.get(
         paymentsRank: number
         distinguishedRank: number
         totalDistricts: number
+        overallRank: number // Position when sorted by aggregateScore (1 = best)
       }
       const history: HistoryEntry[] = []
       let districtName = `District ${districtId}`
@@ -955,6 +956,17 @@ coreRouter.get(
             districtName = districtRanking.districtName
           }
 
+          // Calculate overallRank by sorting all districts by aggregateScore descending
+          // and finding the target district's position (1-indexed)
+          const sortedRankings = [...rankings.rankings].sort(
+            (a, b) => b.aggregateScore - a.aggregateScore
+          )
+          const overallRankPosition = sortedRankings.findIndex(
+            r => r.districtId === districtId
+          )
+          const overallRank =
+            overallRankPosition >= 0 ? overallRankPosition + 1 : 0
+
           history.push({
             date,
             aggregateScore: districtRanking.aggregateScore,
@@ -962,6 +974,7 @@ coreRouter.get(
             paymentsRank: districtRanking.paymentsRank,
             distinguishedRank: districtRanking.distinguishedRank,
             totalDistricts: rankings.metadata.totalDistricts,
+            overallRank,
           })
         } catch (error) {
           // Log but continue processing other snapshots

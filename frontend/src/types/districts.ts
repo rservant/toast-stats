@@ -191,6 +191,8 @@ export interface HistoricalRankPoint {
   paymentsRank: number
   distinguishedRank: number
   totalDistricts: number
+  /** Overall rank based on aggregateScore position (1 = best). Optional for backward compatibility with existing snapshots. */
+  overallRank?: number
 }
 
 export interface DistrictRankHistory {

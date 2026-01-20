@@ -172,16 +172,16 @@ export function extractEndOfYearRankings(
     return Math.round(percentile * 10) / 10 // Round to 1 decimal place
   }
 
-  // For overall rank, we use the aggregate score position
-  // The aggregate score is a Borda count, so higher is better
-  // We need to estimate the overall rank from the aggregate score
-  // For now, we'll use the average of the three category ranks as an approximation
-  const overallRank = Math.round(
-    (latestPoint.clubsRank +
-      latestPoint.paymentsRank +
-      latestPoint.distinguishedRank) /
-      3
-  )
+  // Use overallRank from API if available (based on aggregateScore position)
+  // Fall back to averaging category ranks for legacy data without overallRank
+  const overallRank =
+    latestPoint.overallRank ??
+    Math.round(
+      (latestPoint.clubsRank +
+        latestPoint.paymentsRank +
+        latestPoint.distinguishedRank) /
+        3
+    )
 
   return {
     overall: {
@@ -256,7 +256,7 @@ function getLatestRankPoint(
 /**
  * Build yearly ranking summaries from available program years and their history data
  */
-function buildYearlyRankingSummaries(
+export function buildYearlyRankingSummaries(
   programYears: ProgramYearWithData[],
   historyByYear: Map<string, RankHistoryResponse>
 ): YearlyRankingSummary[] {
@@ -285,12 +285,16 @@ function buildYearlyRankingSummaries(
       continue
     }
 
-    const overallRank = Math.round(
-      (latestPoint.clubsRank +
-        latestPoint.paymentsRank +
-        latestPoint.distinguishedRank) /
-        3
-    )
+    // Use overallRank from API if available (based on aggregateScore position)
+    // Fall back to averaging category ranks for legacy data without overallRank
+    const overallRank =
+      latestPoint.overallRank ??
+      Math.round(
+        (latestPoint.clubsRank +
+          latestPoint.paymentsRank +
+          latestPoint.distinguishedRank) /
+          3
+      )
 
     // Calculate year-over-year change directly from previous ranks
     // Positive change = improvement (rank number decreased)
