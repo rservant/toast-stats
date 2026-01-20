@@ -169,7 +169,8 @@ export function BackfillButton({
 
       {showModal && (
         <div
-          className="fixed inset-0 tm-bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           onClick={e => {
             if (e.target === e.currentTarget && !backfillId) {
               setShowModal(false)
@@ -179,14 +180,20 @@ export function BackfillButton({
           aria-modal="true"
           aria-labelledby="backfill-title"
         >
-          <div className="tm-card tm-card-default tm-card-padding-lg max-w-md w-full mx-4">
-            <h2 id="backfill-title" className="tm-h2 mb-4">
+          <div
+            className="bg-white rounded-lg shadow-xl p-6 mx-4"
+            style={{ width: '100%', maxWidth: '28rem' }}
+          >
+            <h2
+              id="backfill-title"
+              className="text-2xl font-bold text-gray-900 mb-4"
+            >
               Backfill Historical Data
             </h2>
 
             {!backfillId ? (
               <>
-                <p className="tm-body-medium tm-text-cool-gray mb-4">
+                <p className="text-sm text-gray-600 mb-4">
                   This will fetch data from the Toastmasters dashboard for dates
                   that aren't already cached. Only missing dates will be
                   downloaded.
@@ -196,7 +203,7 @@ export function BackfillButton({
                   <div>
                     <label
                       htmlFor="backfill-start-date"
-                      className="block tm-body-medium font-medium tm-text-black mb-1"
+                      className="block text-sm font-medium text-gray-700 mb-1"
                     >
                       Start Date (optional, defaults to program year start)
                     </label>
@@ -205,14 +212,14 @@ export function BackfillButton({
                       type="date"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white"
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="backfill-end-date"
-                      className="block tm-body-medium font-medium tm-text-black mb-1"
+                      className="block text-sm font-medium text-gray-700 mb-1"
                     >
                       End Date (optional, defaults to today)
                     </label>
@@ -221,7 +228,7 @@ export function BackfillButton({
                       type="date"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white"
                     />
                   </div>
 
@@ -230,7 +237,7 @@ export function BackfillButton({
                       <div>
                         <label
                           htmlFor="backfill-target-districts"
-                          className="block tm-body-medium font-medium tm-text-black mb-1"
+                          className="block text-sm font-medium text-gray-700 mb-1"
                         >
                           Target Districts (optional, comma-separated)
                         </label>
@@ -247,14 +254,14 @@ export function BackfillButton({
                             )
                           }
                           placeholder="e.g., 42, 15, 73"
-                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white"
                         />
                       </div>
 
                       <div>
                         <label
                           htmlFor="backfill-collection-type"
-                          className="block tm-body-medium font-medium tm-text-black mb-1"
+                          className="block text-sm font-medium text-gray-700 mb-1"
                         >
                           Collection Type
                         </label>
@@ -269,7 +276,7 @@ export function BackfillButton({
                                 | 'auto'
                             )
                           }
-                          className="w-full px-3 py-2 border border-tm-cool-gray tm-rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue tm-text-black tm-bg-white"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue text-gray-900 bg-white"
                         >
                           <option value="auto">Auto (recommended)</option>
                           <option value="system-wide">System-wide</option>
@@ -280,7 +287,7 @@ export function BackfillButton({
                       <div>
                         <label
                           htmlFor="backfill-concurrency"
-                          className="block tm-body-medium font-medium tm-text-black mb-1"
+                          className="block text-sm font-medium text-gray-700 mb-1"
                         >
                           Concurrency ({concurrency})
                         </label>
@@ -305,7 +312,7 @@ export function BackfillButton({
                             onChange={e => setRetryFailures(e.target.checked)}
                             className="mr-2"
                           />
-                          <span className="tm-body-small">
+                          <span className="text-sm text-gray-700">
                             Retry failed operations
                           </span>
                         </label>
@@ -316,7 +323,7 @@ export function BackfillButton({
                             onChange={e => setSkipExisting(e.target.checked)}
                             className="mr-2"
                           />
-                          <span className="tm-body-small">
+                          <span className="text-sm text-gray-700">
                             Skip already cached dates
                           </span>
                         </label>
@@ -327,7 +334,7 @@ export function BackfillButton({
                             onChange={e => setEnableCaching(e.target.checked)}
                             className="mr-2"
                           />
-                          <span className="tm-body-small">
+                          <span className="text-sm text-gray-700">
                             Enable intermediate caching
                           </span>
                         </label>
@@ -337,8 +344,8 @@ export function BackfillButton({
                 </div>
 
                 {(initiateMutation.isError || isStatusError) && (
-                  <div className="mb-4 p-3 tm-bg-true-maroon-10 border border-tm-true-maroon tm-rounded-md">
-                    <p className="tm-body-small tm-text-black">
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm text-red-800">
                       Error:{' '}
                       {(initiateMutation.error as ApiError)?.response?.data
                         ?.error?.message || 'Failed to initiate backfill'}
@@ -372,13 +379,13 @@ export function BackfillButton({
                 {backfillStatus?.status === 'processing' && (
                   <div className="space-y-4 mb-6">
                     <div>
-                      <div className="flex justify-between tm-body-small tm-text-cool-gray mb-2">
+                      <div className="flex justify-between text-sm text-gray-600 mb-2">
                         <span>Progress</span>
                         <span>{progressPercentage}%</span>
                       </div>
-                      <div className="w-full tm-bg-cool-gray tm-rounded-lg h-2.5">
+                      <div className="w-full bg-gray-200 rounded-lg h-2.5">
                         <div
-                          className="tm-bg-loyal-blue h-2.5 tm-rounded-lg transition-all duration-300"
+                          className="bg-tm-loyal-blue h-2.5 rounded-lg transition-all duration-300"
                           style={{ width: `${progressPercentage}%` }}
                           role="progressbar"
                           aria-valuenow={progressPercentage}
@@ -388,12 +395,12 @@ export function BackfillButton({
                       </div>
                     </div>
 
-                    <div className="tm-body-small tm-text-cool-gray">
+                    <div className="text-sm text-gray-600">
                       <p>
                         Processing: {backfillStatus.progress.completed} of{' '}
                         {backfillStatus.progress.total} dates
                       </p>
-                      <div className="tm-caption tm-text-cool-gray mt-2 space-y-1">
+                      <div className="text-xs text-gray-500 mt-2 space-y-1">
                         {backfillStatus.progress.skipped > 0 && (
                           <p>
                             ✓ Skipped: {backfillStatus.progress.skipped}{' '}
@@ -407,12 +414,12 @@ export function BackfillButton({
                           </p>
                         )}
                         {backfillStatus.progress.failed > 0 && (
-                          <p className="tm-text-true-maroon">
+                          <p className="text-red-600">
                             ✗ Failed: {backfillStatus.progress.failed}
                           </p>
                         )}
                         {backfillStatus.progress.partialSnapshots > 0 && (
-                          <p className="tm-text-happy-yellow">
+                          <p className="text-yellow-600">
                             ⚠ Partial snapshots:{' '}
                             {backfillStatus.progress.partialSnapshots}
                           </p>
@@ -421,7 +428,7 @@ export function BackfillButton({
                           Current: {backfillStatus.progress.current}
                         </p>
                         {backfillStatus.collectionStrategy && (
-                          <p className="tm-text-cool-gray">
+                          <p className="text-gray-500">
                             Strategy: {backfillStatus.collectionStrategy.type}
                           </p>
                         )}
@@ -430,7 +437,7 @@ export function BackfillButton({
 
                     {/* Performance optimization status */}
                     {backfillStatus.performanceStatus && (
-                      <div className="tm-caption tm-text-cool-gray border-t border-t-gray-200 pt-2 mt-2">
+                      <div className="text-xs text-gray-500 border-t border-gray-200 pt-2 mt-2">
                         <p className="font-medium mb-1">Performance Status:</p>
                         <div className="space-y-1">
                           <p>
@@ -477,18 +484,18 @@ export function BackfillButton({
                   backfillStatus?.status === 'partial_success') && (
                   <div className="mb-6">
                     <div
-                      className={`p-4 border tm-rounded-md ${
+                      className={`p-4 border rounded-md ${
                         backfillStatus.status === 'complete'
-                          ? 'tm-bg-loyal-blue-10 border-tm-loyal-blue'
-                          : 'tm-bg-happy-yellow-10 border-tm-happy-yellow'
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-yellow-50 border-yellow-200'
                       }`}
                     >
-                      <p className="tm-body-small tm-text-black font-medium">
+                      <p className="text-sm text-gray-900 font-medium">
                         {backfillStatus.status === 'complete'
                           ? 'Backfill complete!'
                           : 'Backfill completed with some issues'}
                       </p>
-                      <div className="tm-caption tm-text-black mt-2 space-y-1">
+                      <div className="text-xs text-gray-700 mt-2 space-y-1">
                         <p>Processed {backfillStatus.progress.total} dates</p>
                         {backfillStatus.progress.skipped > 0 && (
                           <p>
@@ -503,12 +510,12 @@ export function BackfillButton({
                           </p>
                         )}
                         {backfillStatus.progress.failed > 0 && (
-                          <p className="tm-text-true-maroon">
+                          <p className="text-red-600">
                             • Failed: {backfillStatus.progress.failed}
                           </p>
                         )}
                         {backfillStatus.progress.partialSnapshots > 0 && (
-                          <p className="tm-text-happy-yellow">
+                          <p className="text-yellow-600">
                             • Partial snapshots:{' '}
                             {backfillStatus.progress.partialSnapshots}
                           </p>
@@ -522,11 +529,11 @@ export function BackfillButton({
                         </p>
                         {backfillStatus.errorSummary &&
                           backfillStatus.errorSummary.totalErrors > 0 && (
-                            <div className="mt-2 p-2 tm-bg-true-maroon-10 tm-rounded-md">
-                              <p className="tm-text-true-maroon font-medium">
+                            <div className="mt-2 p-2 bg-red-50 rounded-md">
+                              <p className="text-red-600 font-medium">
                                 Error Summary:
                               </p>
-                              <p className="tm-caption">
+                              <p className="text-xs">
                                 Total errors:{' '}
                                 {backfillStatus.errorSummary.totalErrors}(
                                 {backfillStatus.errorSummary.retryableErrors}{' '}
@@ -534,7 +541,7 @@ export function BackfillButton({
                                 {backfillStatus.errorSummary.permanentErrors}{' '}
                                 permanent)
                               </p>
-                              <p className="tm-caption">
+                              <p className="text-xs">
                                 Affected districts:{' '}
                                 {backfillStatus.errorSummary.affectedDistricts.join(
                                   ', '
@@ -549,11 +556,11 @@ export function BackfillButton({
 
                 {backfillStatus?.status === 'error' && (
                   <div className="mb-6">
-                    <div className="p-4 tm-bg-true-maroon-10 border border-tm-true-maroon tm-rounded-md">
-                      <p className="tm-body-small tm-text-black font-medium">
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm text-gray-900 font-medium">
                         Backfill failed
                       </p>
-                      <p className="tm-caption tm-text-black mt-1">
+                      <p className="text-xs text-gray-700 mt-1">
                         {backfillStatus.error || 'An unknown error occurred'}
                       </p>
                     </div>
@@ -566,7 +573,7 @@ export function BackfillButton({
                       onClick={handleCancel}
                       disabled={cancelMutation.isPending}
                       variant="secondary"
-                      className="flex-1 tm-bg-true-maroon tm-text-white hover:bg-opacity-90"
+                      className="flex-1 bg-red-600 text-white hover:bg-red-700"
                     >
                       {cancelMutation.isPending
                         ? 'Cancelling...'
