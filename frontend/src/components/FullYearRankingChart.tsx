@@ -403,7 +403,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
                 strokeWidth={2}
                 dot={{
                   fill: 'var(--tm-loyal-blue)',
-                  r: 3,
+                  r: 0.3,
                 }}
                 activeDot={{
                   r: 6,
