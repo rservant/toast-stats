@@ -32,17 +32,18 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
 
   const getIndicatorStyles = () => {
     if (isImproved) {
+      // Use Tailwind utility classes for TM brand colors with 10% opacity
       return {
-        bgClass: 'tm-bg-loyal-blue-10',
-        textClass: 'tm-text-loyal-blue',
+        bgClass: 'bg-tm-loyal-blue-10',
+        textClass: 'text-tm-loyal-blue',
         icon: '↑',
         label: 'improved',
       }
     }
     if (isDeclined) {
       return {
-        bgClass: 'tm-bg-true-maroon-10',
-        textClass: 'tm-text-true-maroon',
+        bgClass: 'bg-tm-true-maroon-10',
+        textClass: 'text-tm-true-maroon',
         icon: '↓',
         label: 'declined',
       }
@@ -60,7 +61,7 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center px-1.5 py-0.5 tm-rounded-lg text-xs font-medium ${styles.bgClass} ${styles.textClass}`}
+      className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-xs font-medium ${styles.bgClass} ${styles.textClass}`}
       role="status"
       aria-label={`${metricLabel} ${styles.label}${!isUnchanged ? ` by ${absoluteChange} position${absoluteChange !== 1 ? 's' : ''}` : ''}`}
     >

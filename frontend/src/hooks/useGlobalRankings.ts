@@ -266,7 +266,12 @@ function buildYearlyRankingSummaries(
   )
 
   const summaries: YearlyRankingSummary[] = []
-  let previousYearRankings: EndOfYearRankings | null = null
+
+  // Track previous year's ranks for year-over-year calculation
+  let previousOverallRank: number | null = null
+  let previousClubsRank: number | null = null
+  let previousPaymentsRank: number | null = null
+  let previousDistinguishedRank: number | null = null
 
   // Process in reverse order (oldest first) to calculate year-over-year changes
   const reversedYears = [...sortedYears].reverse()
@@ -287,16 +292,25 @@ function buildYearlyRankingSummaries(
         3
     )
 
-    const currentRankings = extractEndOfYearRankings(
-      history ?? null,
-      yearData,
-      totalDistricts
-    )
+    // Calculate year-over-year change directly from previous ranks
+    // Positive change = improvement (rank number decreased)
+    // Negative change = decline (rank number increased)
+    let yearOverYearChange: YearOverYearChange | null = null
 
-    const yearOverYearChange = calculateYearOverYearChange(
-      currentRankings,
-      previousYearRankings
-    )
+    if (
+      previousOverallRank !== null &&
+      previousClubsRank !== null &&
+      previousPaymentsRank !== null &&
+      previousDistinguishedRank !== null
+    ) {
+      yearOverYearChange = {
+        overall: previousOverallRank - overallRank,
+        clubs: previousClubsRank - latestPoint.clubsRank,
+        payments: previousPaymentsRank - latestPoint.paymentsRank,
+        distinguished:
+          previousDistinguishedRank - latestPoint.distinguishedRank,
+      }
+    }
 
     summaries.push({
       programYear: yearData.year,
@@ -309,7 +323,11 @@ function buildYearlyRankingSummaries(
       yearOverYearChange,
     })
 
-    previousYearRankings = currentRankings
+    // Update previous ranks for next iteration
+    previousOverallRank = overallRank
+    previousClubsRank = latestPoint.clubsRank
+    previousPaymentsRank = latestPoint.paymentsRank
+    previousDistinguishedRank = latestPoint.distinguishedRank
   }
 
   // Reverse to get most recent first
@@ -433,9 +451,8 @@ export function useGlobalRankings({
       !availableYearsData?.programYears ||
       availableYearsData.programYears.length === 0
     ) {
-      return {
-        districtIds: districtId ? [districtId] : [],
-      }
+      // Return null to indicate we're not ready to fetch yet
+      return null
     }
 
     // Sort program years to find the earliest and latest dates
@@ -466,13 +483,14 @@ export function useGlobalRankings({
   }, [districtId, availableYearsData])
 
   // Fetch rank history for ALL program years (for multi-year comparison)
+  // Only fetch when we have the full date range from available program years
   const {
     data: allYearsHistoryData,
     isLoading: isLoadingAllYears,
     isError: isErrorAllYears,
     error: errorAllYears,
     refetch: refetchAllYears,
-  } = useRankHistory(allYearsHistoryParams)
+  } = useRankHistory(allYearsHistoryParams ?? { districtIds: [] })
 
   // Extract current year history (first result since we only query one district)
   const currentYearHistory = useMemo(() => {
@@ -519,6 +537,7 @@ export function useGlobalRankings({
 
     // Group history points by program year
     const historyByYear = new Map<string, RankHistoryResponse>()
+    const yearsWithHistory: ProgramYearWithData[] = []
 
     for (const yearData of filteredProgramYears) {
       // Filter history points that fall within this program year's date range
@@ -535,18 +554,25 @@ export function useGlobalRankings({
           history: yearHistory,
           programYear: allHistory.programYear, // Use the original programYear info
         })
+        yearsWithHistory.push(yearData)
       }
     }
 
+    // Only pass years that actually have history data to ensure
+    // year-over-year changes are calculated correctly
     return buildYearlyRankingSummaries(
-      filteredProgramYears,
+      yearsWithHistory,
       historyByYear,
       126 // Default total districts estimate
     )
   }, [availableYearsData, allYearsHistoryData, effectiveSelectedYear])
 
   // Combine loading states
-  const isLoading = isLoadingYears || isLoadingHistory || isLoadingAllYears
+  // Include loading for all years history only when we're actually fetching it
+  const isLoading =
+    isLoadingYears ||
+    isLoadingHistory ||
+    (allYearsHistoryParams !== null && isLoadingAllYears)
 
   // Combine error states
   const isError = isErrorYears || isErrorHistory || isErrorAllYears

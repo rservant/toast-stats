@@ -261,7 +261,7 @@ describe('MultiYearComparisonTable', () => {
       const improvementIndicators = screen.getAllByRole('status', {
         name: /Overall rank improved by 5 positions/i,
       })
-      expect(improvementIndicators[0]).toHaveClass('tm-text-loyal-blue')
+      expect(improvementIndicators[0]).toHaveClass('text-tm-loyal-blue')
     })
 
     it('uses correct colors for decline (maroon)', () => {
@@ -270,7 +270,7 @@ describe('MultiYearComparisonTable', () => {
       const declineIndicators = screen.getAllByRole('status', {
         name: /Payments rank declined by 2 positions/i,
       })
-      expect(declineIndicators[0]).toHaveClass('tm-text-true-maroon')
+      expect(declineIndicators[0]).toHaveClass('text-tm-true-maroon')
     })
 
     it('uses correct colors for unchanged (gray)', () => {

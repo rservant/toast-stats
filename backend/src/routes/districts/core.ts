@@ -869,6 +869,17 @@ coreRouter.get(
       const effectiveStartDate = startDateParam ?? programYear.startDate
       const effectiveEndDate = endDateParam ?? programYear.endDate
 
+      logger.info('Rank history request parameters', {
+        operation: 'GET /api/districts/:districtId/rank-history',
+        operation_id: operationId,
+        district_id: districtId,
+        startDateParam,
+        endDateParam,
+        effectiveStartDate,
+        effectiveEndDate,
+        programYear: programYear.year,
+      })
+
       // Get all successful snapshots
       const allSnapshots = await perDistrictSnapshotStore.listSnapshots(
         undefined,
