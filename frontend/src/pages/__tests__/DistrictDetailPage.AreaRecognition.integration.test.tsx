@@ -557,10 +557,12 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
     })
 
     /**
-     * Validates: Requirement 1.1
-     * The AreaProgressTable component should be rendered within the panel
+     * Validates: Requirement 10.1, 10.2, 10.3
+     * The standalone AreaProgressTable component has been removed from AreaRecognitionPanel.
+     * AreaRecognitionPanel now displays only CriteriaExplanation and AreaProgressSummary.
+     * Recognition metrics are now displayed in the AreaPerformanceTable within Division cards.
      */
-    it('should render AreaProgressTable component in the tab', async () => {
+    it('should render AreaProgressSummary component in the tab (AreaProgressTable removed per Requirement 10.1)', async () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
@@ -570,12 +572,18 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Verify AreaProgressTable is present (has role="grid")
+      // Verify AreaProgressSummary is present (has role="region" with name "Area Progress Summary")
       await waitFor(() => {
         expect(
-          screen.getByRole('grid', { name: /area progress table/i })
+          screen.getByRole('region', { name: /area progress summary/i })
         ).toBeInTheDocument()
       })
+
+      // Verify the standalone AreaProgressTable is NOT rendered in AreaRecognitionPanel
+      // (it was removed per Requirement 10.1 - recognition metrics are now in Division cards)
+      expect(
+        screen.queryByRole('grid', { name: /area progress table/i })
+      ).not.toBeInTheDocument()
     })
 
     /**
@@ -660,6 +668,7 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
     /**
      * Validates: Requirement 1.1
      * Area metrics should be calculated and displayed correctly
+     * Note: AreaProgressTable was removed per Requirement 10.1. Metrics are now in AreaProgressSummary.
      */
     it('should display correct area metrics from data', async () => {
       const user = userEvent.setup()
@@ -671,23 +680,22 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Wait for the table to render
+      // Wait for the AreaProgressSummary to render (AreaProgressTable was removed per Requirement 10.1)
       await waitFor(() => {
         expect(
-          screen.getByRole('grid', { name: /area progress table/i })
+          screen.getByRole('region', { name: /area progress summary/i })
         ).toBeInTheDocument()
       })
 
-      // Verify summary footer shows correct counts
+      // Verify summary shows correct counts
       // 3 areas (A1, A2, B1) across 2 divisions (A, B)
-      expect(
-        screen.getByText(/Showing 3 areas across 2 divisions/)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/3 areas in 2 divisions/)).toBeInTheDocument()
     })
 
     /**
      * Validates: Requirement 1.1
      * extractDivisionPerformance utility should correctly process the data
+     * Note: AreaProgressTable was removed per Requirement 10.1. Metrics are now in AreaProgressSummary.
      */
     it('should correctly extract and display paid clubs data', async () => {
       const user = userEvent.setup()
@@ -699,24 +707,20 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Wait for the table to render
+      // Wait for the AreaProgressSummary to render (AreaProgressTable was removed per Requirement 10.1)
       await waitFor(() => {
         expect(
-          screen.getByRole('grid', { name: /area progress table/i })
+          screen.getByRole('region', { name: /area progress summary/i })
         ).toBeInTheDocument()
       })
 
       // Area A1: 3 active clubs out of 4 total (club 100004 is Suspended)
       // Area A2: 4 active clubs out of 4 total
       // Area B1: 4 active clubs out of 5 total (club 100012 is Low)
-      // The table should show paid/total ratios - use getAllByText since values may appear multiple times
-      const threeOfFour = screen.getAllByText('3/4')
-      const fourOfFour = screen.getAllByText('4/4')
-      const fourOfFive = screen.getAllByText('4/5')
-
-      expect(threeOfFour.length).toBeGreaterThan(0) // A1: 3 paid / 4 total
-      expect(fourOfFour.length).toBeGreaterThan(0) // A2: 4 paid / 4 total
-      expect(fourOfFive.length).toBeGreaterThan(0) // B1: 4 paid / 5 total
+      // The AreaProgressSummary shows paid/total in progress text as "X of Y clubs paid"
+      expect(screen.getByText(/3 of 4 clubs paid/)).toBeInTheDocument() // A1: 3 paid / 4 total
+      expect(screen.getByText(/4 of 4 clubs paid/)).toBeInTheDocument() // A2: 4 paid / 4 total
+      expect(screen.getByText(/4 of 5 clubs paid/)).toBeInTheDocument() // B1: 4 paid / 5 total
     })
   })
 

@@ -2,22 +2,25 @@
  * AreaRecognitionPanel Component
  *
  * Container component for the Area Recognition section within the Divisions & Areas tab.
- * This component combines the CriteriaExplanation, AreaProgressTable, and AreaProgressSummary
- * components to provide a comprehensive view of Distinguished Area Program (DAP) criteria
- * and each area's progress toward recognition.
+ * This component combines the CriteriaExplanation and AreaProgressSummary components to
+ * provide a comprehensive view of Distinguished Area Program (DAP) criteria and each
+ * area's progress toward recognition.
+ *
+ * Note: The standalone AreaProgressTable has been removed from this panel. Recognition
+ * metrics are now displayed in the AreaPerformanceTable within each Division card.
  *
  * Requirements validated:
  * - 1.1: Display Area Recognition section alongside existing content
  * - 1.2: Position logically within existing tab layout
  * - 1.3: Maintain consistent styling with existing components
- * - 9.1: Preserve AreaProgressTable alongside AreaProgressSummary
- * - 9.4: Display both AreaProgressTable and AreaProgressSummary in Area Recognition section
+ * - 10.1: Remove standalone AreaProgressTable from Area Recognition section
+ * - 10.2: Retain AreaProgressSummary (paragraph-based progress descriptions)
+ * - 10.3: Display only CriteriaExplanation and AreaProgressSummary
  *
  * Architecture:
  * ```
  * AreaRecognitionPanel (this component)
  * ├── CriteriaExplanation - DAP criteria and eligibility requirements
- * ├── AreaProgressTable - Area progress with gap analysis (tabular view)
  * └── AreaProgressSummary - Area progress with narrative descriptions
  * ```
  *
@@ -32,8 +35,7 @@
 import React, { useMemo } from 'react'
 import { DivisionPerformance } from '../utils/divisionStatus'
 import { CriteriaExplanation } from './CriteriaExplanation'
-import { AreaProgressTable, AreaWithDivision } from './AreaProgressTable'
-import { AreaProgressSummary } from './AreaProgressSummary'
+import { AreaProgressSummary, AreaWithDivision } from './AreaProgressSummary'
 import { LoadingSkeleton } from './LoadingSkeleton'
 
 /**
@@ -50,16 +52,18 @@ export interface AreaRecognitionPanelProps {
  * AreaRecognitionPanel Component
  *
  * Main container component for the area recognition section. Extracts areas
- * from division performance data and renders the criteria explanation,
- * progress table, and progress summary components.
+ * from division performance data and renders the criteria explanation and
+ * progress summary components.
  *
  * Features:
  * - Section header with title and description
  * - Criteria explanation (collapsible)
- * - Area progress table with gap analysis (tabular view)
  * - Area progress summary with narrative descriptions
  * - Loading state handling
  * - Empty state handling
+ *
+ * Note: Recognition metrics table has been moved to AreaPerformanceTable
+ * within each Division card (see DivisionPerformanceCard).
  *
  * @component
  * @example
@@ -202,10 +206,7 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
       {/* Criteria Explanation - Requirements 2, 3, 4 */}
       <CriteriaExplanation defaultExpanded={false} />
 
-      {/* Area Progress Table - Requirements 5, 6, 9.1, 9.2 */}
-      <AreaProgressTable areas={areasWithDivision} isLoading={false} />
-
-      {/* Area Progress Summary - Requirements 5, 6, 9.1, 9.4 */}
+      {/* Area Progress Summary - Requirements 5, 6, 10.2, 10.3 */}
       <AreaProgressSummary areas={areasWithDivision} isLoading={false} />
 
       {/* Summary Footer - Requirement 1.3: Consistent styling */}

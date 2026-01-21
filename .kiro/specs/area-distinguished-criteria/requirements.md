@@ -114,24 +114,27 @@ This feature adds a new "Area Recognition" tab to the District page that display
 2. THE Criteria_Display SHALL maintain readability with minimum 14px font size for body text
 3. THE Criteria_Display SHALL use appropriate spacing and padding for touch interaction on mobile devices
 
-### Requirement 9: Preserve AreaProgressTable Component
+### Requirement 9: Merged Area Performance Table
 
-**User Story:** As a district leader, I want to retain the tabular view of area progress data, so that I can quickly scan and compare metrics across areas.
+**User Story:** As a district leader, I want area recognition metrics integrated into the existing area cards within each division, so that all area information is consolidated in one place without needing a separate table.
 
 #### Acceptance Criteria for Requirement 9
 
-1. THE System SHALL preserve the AreaProgressTable component alongside the new AreaProgressSummary component
-2. THE AreaProgressTable SHALL continue to display paid clubs, distinguished clubs, and recognition level metrics
-3. THE AreaProgressTable SHALL remain available for future integration into area cards
-4. THE System SHALL display both AreaProgressTable and AreaProgressSummary in the Area Recognition section
+1. THE AreaPerformanceTable (inside Division cards) SHALL display the following columns in order: Area, Paid/Base, Distinguished, First Round Visits, Second Round Visits, Recognition, Gap to D, Gap to S, Gap to P
+2. THE Paid/Base column SHALL show paid clubs count vs club base with percentage (e.g., "5/5 100%")
+3. THE Distinguished column SHALL show distinguished clubs count vs club base with percentage (calculated against club base, not paid clubs)
+4. THE First Round Visits and Second Round Visits columns SHALL be retained from the original AreaPerformanceTable
+5. THE Recognition column SHALL display a badge indicating the current recognition level (Distinguished, Select Distinguished, President's Distinguished, Not Distinguished, or Net Loss)
+6. THE Gap to D, Gap to S, and Gap to P columns SHALL show the number of additional distinguished clubs needed for each recognition level
+7. THE System SHALL remove the old Paid Clubs, Distinguished Clubs, and Status columns (replaced by the new columns)
 
-### Requirement 10: Future Area Card Integration (Deferred)
+### Requirement 10: Remove Standalone AreaProgressTable
 
-**User Story:** As a district leader, I want area recognition data eventually integrated into the existing area cards, so that all area information is consolidated in one place.
+**User Story:** As a district leader, I want a single consolidated view of area metrics without redundant tables, so that the interface is cleaner and easier to navigate.
 
-#### Acceptance Criteria for Requirement 10 (Future Implementation)
+#### Acceptance Criteria for Requirement 10
 
-1. THE System SHALL eventually merge AreaProgressTable content into the existing area cards
-2. THE merged area cards SHALL retain first-round and second-round visit information
-3. THE merged area cards SHALL replace other content with AreaProgressTable-style metrics
-4. THIS requirement is deferred and documented for future implementation
+1. THE System SHALL remove the standalone AreaProgressTable component from the Area Recognition section
+2. THE System SHALL retain the AreaProgressSummary component (paragraph-based progress descriptions) in the Area Recognition section
+3. THE AreaRecognitionPanel SHALL display only CriteriaExplanation and AreaProgressSummary (not AreaProgressTable)
+4. THE standalone AreaProgressTable.tsx component file MAY be deleted after migration is complete

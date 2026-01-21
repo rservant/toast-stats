@@ -33,7 +33,7 @@
  */
 
 import React, { useMemo } from 'react'
-import { AreaWithDivision } from './AreaProgressTable'
+import { AreaPerformance } from '../utils/divisionStatus'
 import {
   calculateAreaGapAnalysis,
   RecognitionLevel,
@@ -45,6 +45,19 @@ import {
 } from '../utils/areaProgressText'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
+
+/**
+ * Area performance data with parent division context
+ *
+ * Extends AreaPerformance with the division ID to provide context
+ * when displaying areas outside of their division grouping.
+ *
+ * Requirements: 5.1
+ */
+export interface AreaWithDivision extends AreaPerformance {
+  /** Parent division identifier */
+  divisionId: string
+}
 
 /**
  * Props for the AreaProgressSummary component

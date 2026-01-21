@@ -206,7 +206,8 @@ describe('CriteriaExplanation', () => {
       const table = screen.getByRole('table', {
         name: /recognition level requirements/i,
       })
-      const rows = table.querySelectorAll('tbody tr')
+      // Verify table exists (rows are checked via content assertions below)
+      expect(table).toBeInTheDocument()
 
       // Distinguished and Select require ≥ Club Base
       // President's requires ≥ Club Base + 1

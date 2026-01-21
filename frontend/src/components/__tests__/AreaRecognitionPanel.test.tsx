@@ -2,13 +2,20 @@
  * AreaRecognitionPanel Component Tests
  *
  * Tests for the Area Recognition Panel container component that combines
- * CriteriaExplanation and AreaProgressTable components to display
+ * CriteriaExplanation and AreaProgressSummary components to display
  * Distinguished Area Program (DAP) criteria and progress.
+ *
+ * Note: The standalone AreaProgressTable has been removed from this panel.
+ * Recognition metrics are now displayed in the AreaPerformanceTable within
+ * each Division card (see DivisionPerformanceCard).
  *
  * Requirements validated:
  * - 1.1: Display Area Recognition section alongside existing content
  * - 1.2: Position logically within existing tab layout
  * - 1.3: Maintain consistent styling with existing components
+ * - 10.1: Remove standalone AreaProgressTable from Area Recognition section
+ * - 10.2: Retain AreaProgressSummary (paragraph-based progress descriptions)
+ * - 10.3: Display only CriteriaExplanation and AreaProgressSummary
  *
  * Test categories:
  * 1. Rendering with valid division data
@@ -156,17 +163,17 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Validates: Requirement 1.1
-     * AreaProgressTable component should be rendered
+     * Validates: Requirement 10.2, 10.3
+     * AreaProgressSummary component should be rendered (not AreaProgressTable)
      */
-    it('should render AreaProgressTable component', () => {
+    it('should render AreaProgressSummary component', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // AreaProgressTable has a table with this aria-label
+      // AreaProgressSummary has a region with this aria-label
       expect(
-        screen.getByRole('grid', { name: /area progress table/i })
+        screen.getByRole('region', { name: /area progress summary/i })
       ).toBeInTheDocument()
     })
 
@@ -261,13 +268,13 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Tests that AreaProgressTable is NOT rendered in empty state
+     * Tests that AreaProgressSummary is NOT rendered in empty state
      */
-    it('should not render AreaProgressTable in empty state', () => {
+    it('should not render AreaProgressSummary in empty state', () => {
       renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
 
       expect(
-        screen.queryByRole('grid', { name: /area progress table/i })
+        screen.queryByRole('region', { name: /area progress summary/i })
       ).not.toBeInTheDocument()
     })
 
@@ -330,9 +337,9 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Tests that AreaProgressTable is not rendered during loading
+     * Tests that AreaProgressSummary is not rendered during loading
      */
-    it('should not render AreaProgressTable during loading', () => {
+    it('should not render AreaProgressSummary during loading', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(
@@ -340,7 +347,7 @@ describe('AreaRecognitionPanel', () => {
       )
 
       expect(
-        screen.queryByRole('grid', { name: /area progress table/i })
+        screen.queryByRole('region', { name: /area progress summary/i })
       ).not.toBeInTheDocument()
     })
 
@@ -384,12 +391,12 @@ describe('AreaRecognitionPanel', () => {
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // All 5 areas should be displayed
-      expect(screen.getByText('A1')).toBeInTheDocument()
-      expect(screen.getByText('A2')).toBeInTheDocument()
-      expect(screen.getByText('B1')).toBeInTheDocument()
-      expect(screen.getByText('B2')).toBeInTheDocument()
-      expect(screen.getByText('B3')).toBeInTheDocument()
+      // All 5 areas should be displayed in AreaProgressSummary
+      expect(screen.getByText(/Area A1 \(Division A\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Area A2 \(Division A\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Area B1 \(Division B\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Area B2 \(Division B\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Area B3 \(Division B\)/)).toBeInTheDocument()
     })
 
     /**
@@ -403,7 +410,7 @@ describe('AreaRecognitionPanel', () => {
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // Division context should be displayed (appears in both AreaProgressTable and AreaProgressSummary)
+      // Division context should be displayed in AreaProgressSummary
       expect(screen.getAllByText('Division A').length).toBeGreaterThanOrEqual(1)
       expect(screen.getAllByText('Division B').length).toBeGreaterThanOrEqual(1)
     })
@@ -419,8 +426,8 @@ describe('AreaRecognitionPanel', () => {
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // Only B1 should be displayed
-      expect(screen.getByText('B1')).toBeInTheDocument()
+      // Only B1 should be displayed in AreaProgressSummary
+      expect(screen.getByText(/Area B1 \(Division B\)/)).toBeInTheDocument()
       // Summary should show 1 area across 2 divisions
       expect(
         screen.getByText(/Showing 1 area across 2 divisions/)
@@ -428,9 +435,9 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Tests that area metrics are passed correctly to AreaProgressTable
+     * Tests that area metrics are passed correctly to AreaProgressSummary
      */
-    it('should pass area metrics correctly to AreaProgressTable', () => {
+    it('should pass area metrics correctly to AreaProgressSummary', () => {
       const divisions = [
         {
           ...createDivision(),
@@ -464,10 +471,10 @@ describe('AreaRecognitionPanel', () => {
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // Verify metrics are displayed (4/5 paid clubs, 3/5 distinguished of club base)
-      // Note: Distinguished clubs are now shown against club base (5), not paid clubs (4)
-      expect(screen.getByText('4/5')).toBeInTheDocument()
-      expect(screen.getByText('3/5')).toBeInTheDocument()
+      // Verify metrics are displayed in AreaProgressSummary
+      // Progress text should include metrics like "4 of 5 clubs paid"
+      expect(screen.getByText(/4 of 5 clubs paid/)).toBeInTheDocument()
+      expect(screen.getByText(/3 of 5 distinguished/)).toBeInTheDocument()
     })
   })
 
@@ -517,8 +524,8 @@ describe('AreaRecognitionPanel', () => {
 
   describe('AreaProgressSummary Integration', () => {
     /**
-     * Validates: Requirement 9.1
-     * THE System SHALL preserve the AreaProgressTable component alongside the new AreaProgressSummary component
+     * Validates: Requirement 10.2, 10.3
+     * THE AreaRecognitionPanel SHALL display only CriteriaExplanation and AreaProgressSummary
      */
     it('should render AreaProgressSummary component', () => {
       const divisions = [createDivision()]
@@ -532,21 +539,18 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Validates: Requirement 9.1, 9.4
-     * THE System SHALL display both AreaProgressTable and AreaProgressSummary in the Area Recognition section
+     * Validates: Requirement 10.1, 10.3
+     * THE System SHALL remove the standalone AreaProgressTable from the Area Recognition section
      */
-    it('should render both AreaProgressTable and AreaProgressSummary', () => {
+    it('should NOT render AreaProgressTable (removed per Requirement 10.1)', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // Both components should be present
+      // AreaProgressTable should NOT be present (it was removed)
       expect(
-        screen.getByRole('grid', { name: /area progress table/i })
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole('region', { name: /area progress summary/i })
-      ).toBeInTheDocument()
+        screen.queryByRole('grid', { name: /area progress table/i })
+      ).not.toBeInTheDocument()
     })
 
     /**
@@ -640,22 +644,19 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      const { container } = renderWithProviders(
-        <AreaRecognitionPanel divisions={divisions} />
-      )
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
       // Division headers should be present in AreaProgressSummary
-      // Note: Division headers appear in both AreaProgressTable and AreaProgressSummary
       const divisionAHeaders = screen.getAllByText('Division A')
       const divisionBHeaders = screen.getAllByText('Division B')
 
-      // Should have at least 2 occurrences (one in table, one in summary)
-      expect(divisionAHeaders.length).toBeGreaterThanOrEqual(2)
-      expect(divisionBHeaders.length).toBeGreaterThanOrEqual(2)
+      // Should have at least 1 occurrence in AreaProgressSummary
+      expect(divisionAHeaders.length).toBeGreaterThanOrEqual(1)
+      expect(divisionBHeaders.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
-     * Validates: Requirement 9.1
+     * Validates: Requirement 10.2
      * AreaProgressSummary should NOT be rendered in empty state
      */
     it('should not render AreaProgressSummary in empty state', () => {
@@ -667,7 +668,7 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Validates: Requirement 9.1
+     * Validates: Requirement 10.2
      * AreaProgressSummary should NOT be rendered during loading
      */
     it('should not render AreaProgressSummary during loading', () => {

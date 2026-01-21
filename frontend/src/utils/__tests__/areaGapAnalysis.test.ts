@@ -26,7 +26,6 @@ import {
   calculateDistinguishedPercentage,
   determineRecognitionLevel,
   calculateAreaGapAnalysis,
-  type AreaMetrics,
 } from '../areaGapAnalysis'
 
 describe('calculatePaidClubsGap', () => {

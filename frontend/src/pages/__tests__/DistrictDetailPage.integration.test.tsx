@@ -395,7 +395,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
 
       // Verify table headers exist (appears in both tables)
       expect(screen.getAllByText('Area').length).toBeGreaterThanOrEqual(2)
-      expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(2)
+      expect(screen.getAllByText('Recognition').length).toBeGreaterThanOrEqual(
+        2
+      )
     })
 
     it('should maintain proper heading hierarchy', () => {

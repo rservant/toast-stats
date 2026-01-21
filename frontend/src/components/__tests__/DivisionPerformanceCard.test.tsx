@@ -87,13 +87,24 @@ describe('DivisionPerformanceCard', () => {
     })
 
     it('should render AreaPerformanceTable below summary', () => {
-      render(<DivisionPerformanceCard division={mockDivision} />)
+      const { container } = render(
+        <DivisionPerformanceCard division={mockDivision} />
+      )
 
-      // Verify table headers are rendered
-      expect(screen.getByText('Area')).toBeInTheDocument()
-      expect(screen.getByText('First Round Visits')).toBeInTheDocument()
-      expect(screen.getByText('Second Round Visits')).toBeInTheDocument()
-      expect(screen.getByText('Status')).toBeInTheDocument()
+      // Verify table headers are rendered (new column structure per Requirement 9.1)
+      // Use container queries to target table headers specifically
+      const tableHeaders = container.querySelectorAll('th')
+      const headerTexts = Array.from(tableHeaders).map(th => th.textContent)
+
+      expect(headerTexts).toContain('Area')
+      expect(headerTexts).toContain('Paid/Base')
+      expect(headerTexts).toContain('Distinguished')
+      expect(headerTexts).toContain('First Round Visits')
+      expect(headerTexts).toContain('Second Round Visits')
+      expect(headerTexts).toContain('Recognition')
+      expect(headerTexts).toContain('Gap to D')
+      expect(headerTexts).toContain('Gap to S')
+      expect(headerTexts).toContain('Gap to P')
 
       // Verify area rows are rendered
       expect(screen.getByText('A1')).toBeInTheDocument()
@@ -117,17 +128,9 @@ describe('DivisionPerformanceCard', () => {
       // Verify area-level data is displayed
       expect(screen.getByText('A1')).toBeInTheDocument()
       expect(screen.getByText('A2')).toBeInTheDocument()
-      // Area table formats numbers without spaces around slash
-      expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === '11/10' || false
-        })
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === '7/8' || false
-        })
-      ).toBeInTheDocument()
+      // Area table now shows Paid/Base with percentage (e.g., "11/10 110%")
+      expect(screen.getByText(/11\/10 110%/)).toBeInTheDocument()
+      expect(screen.getByText(/7\/8 88%/)).toBeInTheDocument()
     })
   })
 
@@ -203,7 +206,12 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={presidentsDiv} />)
 
-      expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
+      // Use aria-label to target the division status badge specifically
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: President's Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
 
     it('should render Select Distinguished division', () => {
@@ -217,7 +225,11 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={selectDiv} />)
 
-      expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Select Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
 
     it('should render Not Distinguished division', () => {
@@ -231,7 +243,11 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={notDistDiv} />)
 
-      expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Not Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
   })
 

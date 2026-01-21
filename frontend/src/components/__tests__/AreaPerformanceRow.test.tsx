@@ -30,8 +30,8 @@ describe('AreaPerformanceRow', () => {
     ...overrides,
   })
 
-  describe('Requirement 6.2: Area Identifier Display', () => {
-    it('should display the area identifier', () => {
+  describe('Requirement 9.1: Column Order - Area Identifier Display', () => {
+    it('should display the area identifier in the first column', () => {
       const area = createMockArea({ areaId: 'B3' })
       render(
         <table>
@@ -45,10 +45,10 @@ describe('AreaPerformanceRow', () => {
     })
   })
 
-  describe('Requirement 6.3: Paid Clubs with Net Growth', () => {
-    it('should display paid clubs in "current/base" format', () => {
+  describe('Requirement 9.2: Paid/Base Column with Percentage', () => {
+    it('should display paid clubs vs club base with percentage', () => {
       const area = createMockArea({ paidClubs: 12, clubBase: 10 })
-      render(
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -56,12 +56,14 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('12/10')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      // Cell 1 is Paid/Base column
+      expect(cells[1].textContent).toBe('12/10 120%')
     })
 
-    it('should display positive net growth with + sign', () => {
-      const area = createMockArea({ paidClubs: 12, clubBase: 10, netGrowth: 2 })
-      render(
+    it('should display 100% when paid equals base', () => {
+      const area = createMockArea({ paidClubs: 10, clubBase: 10 })
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -69,12 +71,13 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('(+2)')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      expect(cells[1].textContent).toBe('10/10 100%')
     })
 
-    it('should display negative net growth with - sign', () => {
-      const area = createMockArea({ paidClubs: 8, clubBase: 10, netGrowth: -2 })
-      render(
+    it('should display percentage below 100% when paid is less than base', () => {
+      const area = createMockArea({ paidClubs: 8, clubBase: 10 })
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -82,30 +85,18 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('(-2)')).toBeInTheDocument()
-    })
-
-    it('should display zero net growth', () => {
-      const area = createMockArea({ paidClubs: 10, clubBase: 10, netGrowth: 0 })
-      render(
-        <table>
-          <tbody>
-            <AreaPerformanceRow area={area} />
-          </tbody>
-        </table>
-      )
-
-      expect(screen.getByText('(0)')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      expect(cells[1].textContent).toBe('8/10 80%')
     })
   })
 
-  describe('Requirement 6.4: Distinguished Clubs Progress', () => {
-    it('should display distinguished clubs in "current/required" format', () => {
+  describe('Requirement 9.3: Distinguished Column with Percentage', () => {
+    it('should display distinguished clubs vs club base with percentage', () => {
       const area = createMockArea({
         distinguishedClubs: 6,
-        requiredDistinguishedClubs: 5,
+        clubBase: 10,
       })
-      render(
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -113,11 +104,30 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('6/5')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      // Cell 2 is Distinguished column
+      expect(cells[2].textContent).toBe('6/10 60%')
+    })
+
+    it('should display 50% when distinguished is half of base', () => {
+      const area = createMockArea({
+        distinguishedClubs: 5,
+        clubBase: 10,
+      })
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const cells = container.querySelectorAll('td')
+      expect(cells[2].textContent).toBe('5/10 50%')
     })
   })
 
-  describe('Requirement 6.5: First Round Visit Status', () => {
+  describe('First Round Visit Status', () => {
     it('should display first round visit status with checkmark when threshold met', () => {
       const area = createMockArea({
         firstRoundVisits: {
@@ -125,12 +135,6 @@ describe('AreaPerformanceRow', () => {
           required: 8,
           percentage: 80,
           meetsThreshold: true,
-        },
-        secondRoundVisits: {
-          completed: 7,
-          required: 8,
-          percentage: 87.5,
-          meetsThreshold: false,
         },
       })
       const { container } = render(
@@ -141,8 +145,8 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      // Get all cells and check the 4th one (first round visits)
       const cells = container.querySelectorAll('td')
+      // Cell 3 is First Round Visits column
       expect(cells[3].textContent).toBe('8/8 ✓')
     })
 
@@ -155,7 +159,7 @@ describe('AreaPerformanceRow', () => {
           meetsThreshold: false,
         },
       })
-      render(
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -163,11 +167,12 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('5/8 ✗')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      expect(cells[3].textContent).toBe('5/8 ✗')
     })
   })
 
-  describe('Requirement 6.6: Second Round Visit Status', () => {
+  describe('Second Round Visit Status', () => {
     it('should display second round visit status with checkmark when threshold met', () => {
       const area = createMockArea({
         secondRoundVisits: {
@@ -177,7 +182,7 @@ describe('AreaPerformanceRow', () => {
           meetsThreshold: true,
         },
       })
-      render(
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -185,7 +190,9 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('9/8 ✓')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      // Cell 4 is Second Round Visits column
+      expect(cells[4].textContent).toBe('9/8 ✓')
     })
 
     it('should display second round visit status with X when threshold not met', () => {
@@ -197,7 +204,7 @@ describe('AreaPerformanceRow', () => {
           meetsThreshold: false,
         },
       })
-      render(
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -205,13 +212,19 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('6/8 ✗')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      expect(cells[4].textContent).toBe('6/8 ✗')
     })
   })
 
-  describe('Requirement 6.7: Status Display', () => {
-    it('should display "President\'s Distinguished" status', () => {
-      const area = createMockArea({ status: 'presidents-distinguished' })
+  describe('Requirement 9.5: Recognition Badge Display', () => {
+    it('should display "President\'s Distinguished" badge when criteria met', () => {
+      // President's: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% + 1
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 11,
+        distinguishedClubs: 6, // 50% of 10 = 5, need 6 for President's
+      })
       render(
         <table>
           <tbody>
@@ -223,8 +236,13 @@ describe('AreaPerformanceRow', () => {
       expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
     })
 
-    it('should display "Select Distinguished" status', () => {
-      const area = createMockArea({ status: 'select-distinguished' })
+    it('should display "Select Distinguished" badge when criteria met', () => {
+      // Select: paidClubs >= clubBase AND distinguishedClubs >= 50% + 1
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 6, // 50% of 10 = 5, need 6 for Select
+      })
       render(
         <table>
           <tbody>
@@ -236,8 +254,13 @@ describe('AreaPerformanceRow', () => {
       expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
     })
 
-    it('should display "Distinguished" status', () => {
-      const area = createMockArea({ status: 'distinguished' })
+    it('should display "Distinguished" badge when criteria met', () => {
+      // Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50%
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 5, // 50% of 10 = 5
+      })
       render(
         <table>
           <tbody>
@@ -249,21 +272,12 @@ describe('AreaPerformanceRow', () => {
       expect(screen.getByText('Distinguished')).toBeInTheDocument()
     })
 
-    it('should display "Not Qualified" status', () => {
-      const area = createMockArea({ status: 'not-qualified' })
-      render(
-        <table>
-          <tbody>
-            <AreaPerformanceRow area={area} />
-          </tbody>
-        </table>
-      )
-
-      expect(screen.getByText('Not Qualified')).toBeInTheDocument()
-    })
-
-    it('should display "Not Distinguished" status', () => {
-      const area = createMockArea({ status: 'not-distinguished' })
+    it('should display "Not Distinguished" badge when criteria not met', () => {
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 4, // Below 50% threshold
+      })
       render(
         <table>
           <tbody>
@@ -274,9 +288,131 @@ describe('AreaPerformanceRow', () => {
 
       expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
     })
+
+    it('should display "Net Loss" badge when paid clubs below club base', () => {
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 8, // Below club base
+        distinguishedClubs: 5,
+      })
+      render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      expect(screen.getByText('Net Loss')).toBeInTheDocument()
+    })
+
+    it('should have aria-label for recognition status', () => {
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 5,
+      })
+      render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const badge = screen.getByLabelText('Recognition status: Distinguished')
+      expect(badge).toBeInTheDocument()
+    })
   })
 
-  describe('Requirements 8.1, 8.2: Brand Styling', () => {
+  describe('Requirement 9.6: Gap Columns Display', () => {
+    it('should display "-" for achieved levels', () => {
+      // Area at Distinguished level
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 5, // Meets Distinguished (50%)
+      })
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const cells = container.querySelectorAll('td')
+      // Cell 6 is Gap to D - should be "-" since Distinguished is achieved
+      expect(cells[6].textContent).toBe('-')
+    })
+
+    it('should display gap count for unachieved levels', () => {
+      // Area not at Distinguished level
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 4, // Below 50% threshold (needs 5)
+      })
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const cells = container.querySelectorAll('td')
+      // Cell 6 is Gap to D - needs 1 more distinguished club
+      expect(cells[6].textContent).toBe('+1')
+    })
+
+    it('should display "N/A" for levels not achievable due to net loss', () => {
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 8, // Net loss - below club base
+        distinguishedClubs: 5,
+      })
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const cells = container.querySelectorAll('td')
+      // All gap columns should show N/A since no net loss requirement not met
+      expect(cells[6].textContent).toBe('N/A') // Gap to D
+      expect(cells[7].textContent).toBe('N/A') // Gap to S
+      expect(cells[8].textContent).toBe('N/A') // Gap to P
+    })
+
+    it('should show correct gaps for area needing clubs for each level', () => {
+      // Area with 4 clubs, 4 paid, 1 distinguished
+      const area = createMockArea({
+        clubBase: 4,
+        paidClubs: 4,
+        distinguishedClubs: 1, // Needs 2 for D (50%), 3 for S (50%+1)
+      })
+      const { container } = render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const cells = container.querySelectorAll('td')
+      // Gap to D: needs 2 - 1 = 1 more
+      expect(cells[6].textContent).toBe('+1')
+      // Gap to S: needs 3 - 1 = 2 more
+      expect(cells[7].textContent).toBe('+2')
+      // Gap to P: needs 3 - 1 = 2 more distinguished, plus 1 paid
+      expect(cells[8].textContent).toBe('+2')
+    })
+  })
+
+  describe('Brand Styling', () => {
     it('should apply Toastmasters brand font classes', () => {
       const area = createMockArea()
       const { container } = render(
@@ -292,8 +428,12 @@ describe('AreaPerformanceRow', () => {
       expect(bodyElements.length).toBeGreaterThan(0)
     })
 
-    it('should apply brand-approved colors for status badges', () => {
-      const area = createMockArea({ status: 'presidents-distinguished' })
+    it("should apply brand-approved colors for President's Distinguished badge", () => {
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 11,
+        distinguishedClubs: 6,
+      })
       render(
         <table>
           <tbody>
@@ -302,10 +442,26 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      // Check that status badge has brand color classes
       const statusBadge = screen.getByText("President's Distinguished")
-      expect(statusBadge.className).toMatch(/bg-tm-happy-yellow-20/)
-      expect(statusBadge.className).toMatch(/text-tm-true-maroon/)
+      expect(statusBadge.className).toMatch(/bg-tm-happy-yellow/)
+    })
+
+    it('should apply brand-approved colors for Distinguished badge', () => {
+      const area = createMockArea({
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 5,
+      })
+      render(
+        <table>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const statusBadge = screen.getByText('Distinguished')
+      expect(statusBadge.className).toMatch(/bg-tm-true-maroon/)
     })
   })
 
@@ -314,9 +470,7 @@ describe('AreaPerformanceRow', () => {
       const area = createMockArea({
         clubBase: 0,
         paidClubs: 0,
-        netGrowth: 0,
         distinguishedClubs: 0,
-        requiredDistinguishedClubs: 0,
       })
       const { container } = render(
         <table>
@@ -326,21 +480,20 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      // Check that both paid clubs and distinguished clubs show 0/0
       const cells = container.querySelectorAll('td')
-      expect(cells[1].textContent).toContain('0/0')
-      expect(cells[2].textContent).toBe('0/0')
+      // Paid/Base should show 0/0 0%
+      expect(cells[1].textContent).toBe('0/0 0%')
+      // Distinguished should show 0/0 0%
+      expect(cells[2].textContent).toBe('0/0 0%')
     })
 
     it('should handle large numbers', () => {
       const area = createMockArea({
         paidClubs: 100,
         clubBase: 95,
-        netGrowth: 5,
         distinguishedClubs: 55,
-        requiredDistinguishedClubs: 48,
       })
-      render(
+      const { container } = render(
         <table>
           <tbody>
             <AreaPerformanceRow area={area} />
@@ -348,14 +501,14 @@ describe('AreaPerformanceRow', () => {
         </table>
       )
 
-      expect(screen.getByText('100/95')).toBeInTheDocument()
-      expect(screen.getByText('(+5)')).toBeInTheDocument()
-      expect(screen.getByText('55/48')).toBeInTheDocument()
+      const cells = container.querySelectorAll('td')
+      expect(cells[1].textContent).toBe('100/95 105%')
+      expect(cells[2].textContent).toBe('55/95 58%')
     })
   })
 
   describe('Row Structure', () => {
-    it('should render exactly 6 table cells for all required data elements', () => {
+    it('should render exactly 9 table cells for all required columns', () => {
       const area = createMockArea()
       const { container } = render(
         <table>
@@ -368,8 +521,8 @@ describe('AreaPerformanceRow', () => {
       const row = container.querySelector('tr')
       const cells = row?.querySelectorAll('td')
 
-      // Must have exactly 6 cells: areaId, paidClubs, distinguishedClubs, firstRound, secondRound, status
-      expect(cells?.length).toBe(6)
+      // Must have exactly 9 cells: Area, Paid/Base, Distinguished, First Round, Second Round, Recognition, Gap to D, Gap to S, Gap to P
+      expect(cells?.length).toBe(9)
     })
 
     it('should render all data elements in correct cell positions', () => {
@@ -377,9 +530,7 @@ describe('AreaPerformanceRow', () => {
         areaId: 'C5',
         paidClubs: 15,
         clubBase: 12,
-        netGrowth: 3,
         distinguishedClubs: 8,
-        requiredDistinguishedClubs: 6,
         firstRoundVisits: {
           completed: 10,
           required: 10,
@@ -392,7 +543,6 @@ describe('AreaPerformanceRow', () => {
           percentage: 90,
           meetsThreshold: false,
         },
-        status: 'select-distinguished',
       })
       const { container } = render(
         <table>
@@ -406,17 +556,22 @@ describe('AreaPerformanceRow', () => {
 
       // Cell 0: Area identifier
       expect(cells[0].textContent).toContain('C5')
-      // Cell 1: Paid clubs with net growth
-      expect(cells[1].textContent).toContain('15/12')
-      expect(cells[1].textContent).toContain('(+3)')
-      // Cell 2: Distinguished clubs
-      expect(cells[2].textContent).toBe('8/6')
+      // Cell 1: Paid/Base with percentage
+      expect(cells[1].textContent).toBe('15/12 125%')
+      // Cell 2: Distinguished with percentage
+      expect(cells[2].textContent).toBe('8/12 67%')
       // Cell 3: First round visits
       expect(cells[3].textContent).toBe('10/10 ✓')
       // Cell 4: Second round visits
       expect(cells[4].textContent).toBe('9/10 ✗')
-      // Cell 5: Status
-      expect(cells[5].textContent).toContain('Select Distinguished')
+      // Cell 5: Recognition badge (President's Distinguished: 15 >= 13, 8 >= 7)
+      expect(cells[5].textContent).toContain("President's Distinguished")
+      // Cell 6: Gap to D (achieved)
+      expect(cells[6].textContent).toBe('-')
+      // Cell 7: Gap to S (achieved)
+      expect(cells[7].textContent).toBe('-')
+      // Cell 8: Gap to P (achieved)
+      expect(cells[8].textContent).toBe('-')
     })
   })
 
@@ -455,16 +610,13 @@ describe('AreaPerformanceRow', () => {
 
       const text = container.textContent ?? ''
 
-      // Verify all input values appear in the output
+      // Verify key input values appear in the output
       expect(text).toContain('D7')
-      expect(text).toContain('6')
-      expect(text).toContain('8')
-      expect(text).toContain('2')
-      expect(text).toContain('4')
-      expect(text).toContain('5')
-      expect(text).toContain('7')
-      expect(text).toContain('3')
-      expect(text).toContain('Not Qualified')
+      expect(text).toContain('6/8') // Paid/Base
+      expect(text).toContain('2/8') // Distinguished
+      expect(text).toContain('5/7') // First round visits
+      expect(text).toContain('3/7') // Second round visits
+      expect(text).toContain('Net Loss') // Recognition badge for net loss
     })
 
     it('should produce consistent output for the same input data', () => {
@@ -472,7 +624,6 @@ describe('AreaPerformanceRow', () => {
         areaId: 'E2',
         paidClubs: 11,
         clubBase: 10,
-        netGrowth: 1,
       })
 
       // Render twice with the same data

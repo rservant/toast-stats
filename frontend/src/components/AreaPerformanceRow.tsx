@@ -1,5 +1,11 @@
 import React from 'react'
-import { AreaPerformance, DistinguishedStatus } from '../utils/divisionStatus'
+import { AreaPerformance } from '../utils/divisionStatus'
+import {
+  calculateAreaGapAnalysis,
+  calculatePaidClubsPercentage,
+  calculateDistinguishedPercentage,
+  RecognitionLevel,
+} from '../utils/areaGapAnalysis'
 
 /**
  * Props for the AreaPerformanceRow component
@@ -10,21 +16,118 @@ interface AreaPerformanceRowProps {
 }
 
 /**
+ * Get recognition badge styling and label based on recognition level
+ *
+ * Uses Toastmasters brand colors for status indicators:
+ * - President's Distinguished: TM Happy Yellow background
+ * - Select Distinguished: TM Cool Gray background
+ * - Distinguished: TM True Maroon background
+ * - Not Distinguished: Gray background
+ * - Net Loss: Red background (special indicator)
+ *
+ * Requirements: 9.5
+ */
+const getRecognitionBadge = (
+  level: RecognitionLevel,
+  meetsNoNetLossRequirement: boolean
+): { className: string; label: string } => {
+  // If no net loss requirement not met, show special indicator
+  if (!meetsNoNetLossRequirement) {
+    return {
+      className: 'bg-red-100 text-red-800 border-red-300',
+      label: 'Net Loss',
+    }
+  }
+
+  switch (level) {
+    case 'presidents':
+      return {
+        className:
+          'bg-tm-happy-yellow text-gray-900 border-yellow-500 font-semibold',
+        label: "President's Distinguished",
+      }
+    case 'select':
+      return {
+        className: 'bg-tm-cool-gray text-gray-900 border-gray-400',
+        label: 'Select Distinguished',
+      }
+    case 'distinguished':
+      return {
+        className: 'bg-tm-true-maroon text-white border-tm-true-maroon',
+        label: 'Distinguished',
+      }
+    default:
+      return {
+        className: 'bg-gray-100 text-gray-600 border-gray-300',
+        label: 'Not Distinguished',
+      }
+  }
+}
+
+/**
+ * Get styling for visit status indicator
+ * Meets threshold: TM Loyal Blue, does not meet: TM True Maroon
+ */
+const getVisitStatusStyle = (meetsThreshold: boolean): string => {
+  return meetsThreshold ? 'text-tm-loyal-blue' : 'text-tm-true-maroon'
+}
+
+/**
+ * Format visit status display
+ */
+const formatVisitStatus = (
+  completed: number,
+  required: number,
+  meetsThreshold: boolean
+): string => {
+  return `${completed}/${required} ${meetsThreshold ? '✓' : '✗'}`
+}
+
+/**
+ * Format gap display - shows the number of additional distinguished clubs needed
+ * Returns "-" if level is already achieved, "N/A" if not achievable
+ *
+ * Requirements: 9.6
+ */
+const formatGap = (
+  distinguishedClubsNeeded: number,
+  achieved: boolean,
+  achievable: boolean
+): string => {
+  if (achieved) {
+    return '-'
+  }
+  if (!achievable) {
+    return 'N/A'
+  }
+  return `+${distinguishedClubsNeeded}`
+}
+
+/**
  * AreaPerformanceRow Component
  *
  * Displays performance metrics for a single area in a table row format.
- * Shows area identifier, paid clubs with net growth, distinguished clubs progress,
- * visit completion status for both rounds, and current distinguished status.
+ * Shows area identifier, paid/base with percentage, distinguished clubs with percentage,
+ * visit completion status for both rounds, recognition badge, and gap analysis.
+ *
+ * Column Structure (matching AreaPerformanceTable):
+ * - Area: Area identifier
+ * - Paid/Base: paid clubs count vs club base with percentage
+ * - Distinguished: distinguished clubs count vs club base with percentage
+ * - First Round Visits: first round visit completion status
+ * - Second Round Visits: second round visit completion status
+ * - Recognition: badge showing current recognition level
+ * - Gap to D: distinguished clubs needed for Distinguished
+ * - Gap to S: distinguished clubs needed for Select Distinguished
+ * - Gap to P: distinguished clubs needed for President's Distinguished
  *
  * Requirements:
- * - 6.2: Display area identifier
- * - 6.3: Display paid clubs in "current/base" format with net growth indicator
- * - 6.4: Display distinguished clubs in "current/required" format
- * - 6.5: Display first round visit completion status
- * - 6.6: Display second round visit completion status
- * - 6.7: Display current status level with appropriate styling
- * - 8.1: Use TM Loyal Blue for primary elements
- * - 8.2: Apply brand-approved colors for status indicators
+ * - 9.1: Display columns in order: Area, Paid/Base, Distinguished, First Round Visits,
+ *        Second Round Visits, Recognition, Gap to D, Gap to S, Gap to P
+ * - 9.2: Paid/Base column shows paid clubs count vs club base with percentage
+ * - 9.3: Distinguished column shows distinguished clubs count vs club base with percentage
+ * - 9.5: Recognition column displays badge indicating current recognition level
+ * - 9.6: Gap columns show number of additional distinguished clubs needed
  *
  * @component
  * @example
@@ -48,89 +151,32 @@ interface AreaPerformanceRowProps {
 export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
   area,
 }) => {
-  /**
-   * Get status badge styling based on distinguished status
-   * Uses Toastmasters brand colors for status indicators per Requirement 8.2
-   */
-  const getStatusBadge = (status: DistinguishedStatus): string => {
-    switch (status) {
-      case 'presidents-distinguished':
-        return 'bg-tm-happy-yellow-20 text-tm-true-maroon border-tm-happy-yellow'
-      case 'select-distinguished':
-        return 'bg-tm-loyal-blue-10 text-tm-loyal-blue border-tm-loyal-blue-30'
-      case 'distinguished':
-        return 'bg-tm-loyal-blue-20 text-tm-loyal-blue border-tm-loyal-blue-40'
-      case 'not-qualified':
-        return 'bg-tm-true-maroon-10 text-tm-true-maroon border-tm-true-maroon-30'
-      case 'not-distinguished':
-        return 'bg-tm-cool-gray-20 text-tm-black border-tm-cool-gray-40'
-      default:
-        return 'bg-tm-cool-gray-20 text-tm-black border-tm-cool-gray-40'
-    }
-  }
+  // Calculate gap analysis for this area
+  const gapAnalysis = calculateAreaGapAnalysis({
+    clubBase: area.clubBase,
+    paidClubs: area.paidClubs,
+    distinguishedClubs: area.distinguishedClubs,
+  })
 
-  /**
-   * Get display label for distinguished status
-   */
-  const getStatusLabel = (status: DistinguishedStatus): string => {
-    switch (status) {
-      case 'presidents-distinguished':
-        return "President's Distinguished"
-      case 'select-distinguished':
-        return 'Select Distinguished'
-      case 'distinguished':
-        return 'Distinguished'
-      case 'not-qualified':
-        return 'Not Qualified'
-      case 'not-distinguished':
-        return 'Not Distinguished'
-      default:
-        return 'Unknown'
-    }
-  }
+  // Calculate percentages
+  const paidPercentage = calculatePaidClubsPercentage(
+    area.clubBase,
+    area.paidClubs
+  )
+  const distinguishedPercentage = calculateDistinguishedPercentage(
+    area.clubBase,
+    area.distinguishedClubs
+  )
 
-  /**
-   * Get styling for net growth indicator
-   * Positive growth: TM Loyal Blue, negative: TM True Maroon, zero: TM Cool Gray
-   * Uses brand-approved colors per Requirement 8.2
-   */
-  const getNetGrowthStyle = (netGrowth: number): string => {
-    if (netGrowth > 0) return 'text-tm-loyal-blue'
-    if (netGrowth < 0) return 'text-tm-true-maroon'
-    return 'text-tm-cool-gray'
-  }
-
-  /**
-   * Format net growth with +/- sign
-   */
-  const formatNetGrowth = (netGrowth: number): string => {
-    if (netGrowth > 0) return `+${netGrowth}`
-    return `${netGrowth}`
-  }
-
-  /**
-   * Get styling for visit status indicator
-   * Meets threshold: TM Loyal Blue, does not meet: TM True Maroon
-   * Uses brand-approved colors per Requirement 8.2
-   */
-  const getVisitStatusStyle = (meetsThreshold: boolean): string => {
-    return meetsThreshold ? 'text-tm-loyal-blue' : 'text-tm-true-maroon'
-  }
-
-  /**
-   * Format visit status display
-   */
-  const formatVisitStatus = (
-    completed: number,
-    required: number,
-    meetsThreshold: boolean
-  ): string => {
-    return `${completed}/${required} ${meetsThreshold ? '✓' : '✗'}`
-  }
+  // Get recognition badge
+  const badge = getRecognitionBadge(
+    gapAnalysis.currentLevel,
+    gapAnalysis.meetsNoNetLossRequirement
+  )
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      {/* Area Identifier - Requirement 6.2 */}
+      {/* Area Identifier */}
       <td className="px-4 py-3 whitespace-nowrap">
         <div
           className="font-medium text-gray-900 font-tm-body"
@@ -140,34 +186,27 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         </div>
       </td>
 
-      {/* Paid Clubs with Net Growth - Requirement 6.3 */}
-      <td
-        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-        style={{ fontSize: '14px' }}
-      >
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-gray-900 tabular-nums">
-            {area.paidClubs}/{area.clubBase}
-          </span>
-          <span
-            className={`font-medium tabular-nums ${getNetGrowthStyle(area.netGrowth)}`}
-          >
-            ({formatNetGrowth(area.netGrowth)})
-          </span>
-        </div>
-      </td>
-
-      {/* Distinguished Clubs Progress - Requirement 6.4 */}
+      {/* Paid/Base with percentage - Requirement 9.2 */}
       <td
         className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
         style={{ fontSize: '14px' }}
       >
         <span className="text-gray-900 tabular-nums">
-          {area.distinguishedClubs}/{area.requiredDistinguishedClubs}
+          {area.paidClubs}/{area.clubBase} {paidPercentage}%
         </span>
       </td>
 
-      {/* First Round Visit Status - Requirement 6.5 */}
+      {/* Distinguished with percentage - Requirement 9.3 */}
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
+        <span className="text-gray-900 tabular-nums">
+          {area.distinguishedClubs}/{area.clubBase} {distinguishedPercentage}%
+        </span>
+      </td>
+
+      {/* First Round Visit Status */}
       <td
         className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
         style={{ fontSize: '14px' }}
@@ -183,7 +222,7 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         </span>
       </td>
 
-      {/* Second Round Visit Status - Requirement 6.6 */}
+      {/* Second Round Visit Status */}
       <td
         className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
         style={{ fontSize: '14px' }}
@@ -199,13 +238,55 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         </span>
       </td>
 
-      {/* Status Badge - Requirement 6.7, 8.1, 8.2 */}
+      {/* Recognition Badge - Requirement 9.5 */}
       <td className="px-4 py-3 whitespace-nowrap text-center">
         <span
-          className={`px-2 py-1 font-medium rounded-sm border ${getStatusBadge(area.status)} font-tm-body`}
-          style={{ fontSize: '14px' }}
+          className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
+          aria-label={`Recognition status: ${badge.label}`}
         >
-          {getStatusLabel(area.status)}
+          {badge.label}
+        </span>
+      </td>
+
+      {/* Gap to D - Requirement 9.6 */}
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
+        <span className="text-gray-900 tabular-nums">
+          {formatGap(
+            gapAnalysis.distinguishedGap.distinguishedClubsNeeded,
+            gapAnalysis.distinguishedGap.achieved,
+            gapAnalysis.distinguishedGap.achievable
+          )}
+        </span>
+      </td>
+
+      {/* Gap to S - Requirement 9.6 */}
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
+        <span className="text-gray-900 tabular-nums">
+          {formatGap(
+            gapAnalysis.selectGap.distinguishedClubsNeeded,
+            gapAnalysis.selectGap.achieved,
+            gapAnalysis.selectGap.achievable
+          )}
+        </span>
+      </td>
+
+      {/* Gap to P - Requirement 9.6 */}
+      <td
+        className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
+        style={{ fontSize: '14px' }}
+      >
+        <span className="text-gray-900 tabular-nums">
+          {formatGap(
+            gapAnalysis.presidentsGap.distinguishedClubsNeeded,
+            gapAnalysis.presidentsGap.achieved,
+            gapAnalysis.presidentsGap.achievable
+          )}
         </span>
       </td>
     </tr>

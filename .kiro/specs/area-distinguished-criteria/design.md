@@ -13,11 +13,18 @@ The feature follows the existing frontend architecture:
 ```text
 DistrictDetailPage.tsx
 └── Divisions & Areas Tab
-    ├── DivisionPerformanceCards (existing)
-    └── AreaRecognitionPanel (new)
-        ├── CriteriaExplanation (new)
-        └── AreaProgressSummary (new)
+    ├── DivisionPerformanceCards (existing, enhanced)
+    │   └── DivisionPerformanceCard
+    │       ├── DivisionSummary
+    │       └── AreaPerformanceTable (merged with recognition metrics)
+    │           Columns: Area | Paid/Base | Distinguished | First Round Visits |
+    │                    Second Round Visits | Recognition | Gap to D | Gap to S | Gap to P
+    └── AreaRecognitionPanel
+        ├── CriteriaExplanation
+        └── AreaProgressSummary
 ```
+
+Note: The standalone AreaProgressTable component has been removed. Its columns have been merged into the AreaPerformanceTable within each Division card.
 
 ### Data Flow
 
@@ -26,11 +33,15 @@ graph TD
     A[DistrictDetailPage] --> B[useDistrictStatistics hook]
     B --> C[extractDivisionPerformance utility]
     C --> D[DivisionPerformance array]
-    D --> E[AreaRecognitionPanel]
-    E --> F[CriteriaExplanation]
-    E --> G[AreaProgressSummary]
-    G --> H[generateAreaProgressText utility]
-    H --> I[calculateGapAnalysis utility]
+    D --> E[DivisionPerformanceCards]
+    E --> F[DivisionPerformanceCard]
+    F --> G[AreaPerformanceTable - merged columns]
+    G --> H[calculateGapAnalysis utility]
+    D --> I[AreaRecognitionPanel]
+    I --> J[CriteriaExplanation]
+    I --> K[AreaProgressSummary]
+    K --> L[generateAreaProgressText utility]
+    L --> H
 ```
 
 ## Components and Interfaces
@@ -45,6 +56,32 @@ interface AreaRecognitionPanelProps {
   divisions: DivisionPerformance[]
   /** Loading state indicator */
   isLoading?: boolean
+}
+```
+
+Note: AreaRecognitionPanel no longer includes AreaProgressTable. It only contains CriteriaExplanation and AreaProgressSummary.
+
+### AreaPerformanceTable Component (Enhanced)
+
+The existing AreaPerformanceTable within each DivisionPerformanceCard has been enhanced to include recognition metrics. This consolidates all area information in one place.
+
+**Column Structure:**
+| Column | Description |
+|--------|-------------|
+| Area | Area identifier |
+| Paid/Base | Paid clubs count vs club base with percentage (e.g., "5/5 100%") |
+| Distinguished | Distinguished clubs count vs club base with percentage |
+| First Round Visits | First round visit completion status |
+| Second Round Visits | Second round visit completion status |
+| Recognition | Badge showing current recognition level |
+| Gap to D | Distinguished clubs needed for Distinguished (50% of base) |
+| Gap to S | Distinguished clubs needed for Select (50% + 1) |
+| Gap to P | Distinguished clubs needed for President's (base+1, 50%+1) |
+
+```typescript
+interface AreaPerformanceTableProps {
+  /** Array of area performance data to display */
+  areas: AreaPerformance[]
 }
 ```
 

@@ -20,10 +20,9 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { AreaProgressSummary } from '../AreaProgressSummary'
-import { AreaWithDivision } from '../AreaProgressTable'
+import { AreaProgressSummary, AreaWithDivision } from '../AreaProgressSummary'
 import {
   renderWithProviders,
   cleanupAllResources,

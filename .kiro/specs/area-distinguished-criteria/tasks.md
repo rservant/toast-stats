@@ -178,6 +178,63 @@ This implementation adds an Area Recognition section to the existing Divisions &
     - Verify both AreaProgressTable and AreaProgressSummary render correctly
     - Verify integration works correctly
 
+- [x] 17. Merge recognition columns into AreaPerformanceTable
+  - [x] 17.1 Update `AreaPerformanceTable.tsx` to add recognition columns
+    - Add Paid/Base column (paid clubs vs club base with percentage)
+    - Add Distinguished column (distinguished clubs vs club base with percentage)
+    - Add Recognition badge column
+    - Add Gap to D, Gap to S, Gap to P columns
+    - Import and use `calculateAreaGapAnalysis` utility
+    - _Requirements: 9.1, 9.2, 9.3, 9.5, 9.6_
+  - [x] 17.2 Update `AreaPerformanceTable.tsx` to remove old columns
+    - Remove old Paid Clubs column (replaced by Paid/Base)
+    - Remove old Distinguished Clubs column (replaced by Distinguished of club base)
+    - Remove old Status column (replaced by Recognition badge)
+    - _Requirements: 9.7_
+  - [x] 17.3 Update `AreaPerformanceRow.tsx` to match new column structure
+    - Update row rendering to match new column order
+    - Add gap analysis calculations per row
+    - Add recognition badge rendering
+    - _Requirements: 9.1, 9.2, 9.3, 9.5, 9.6_
+  - [x] 17.4 Update unit tests for AreaPerformanceTable
+    - Update test cases for new column structure
+    - Add tests for gap analysis display
+    - Add tests for recognition badge display
+    - _Requirements: 9.1, 9.2, 9.3, 9.5, 9.6, 9.7_
+
+- [x] 18. Remove standalone AreaProgressTable from AreaRecognitionPanel
+  - [x] 18.1 Update `AreaRecognitionPanel.tsx` to remove AreaProgressTable
+    - Remove AreaProgressTable import
+    - Remove AreaProgressTable rendering
+    - Keep CriteriaExplanation and AreaProgressSummary
+    - _Requirements: 10.1, 10.2, 10.3_
+  - [x] 18.2 Update AreaRecognitionPanel tests
+    - Remove tests for AreaProgressTable rendering
+    - Verify CriteriaExplanation and AreaProgressSummary still render
+    - _Requirements: 10.1, 10.2, 10.3_
+
+- [x] 19. Clean up standalone AreaProgressTable component
+  - [x] 19.1 Delete `AreaProgressTable.tsx` component file
+    - Remove frontend/src/components/AreaProgressTable.tsx
+    - _Requirements: 10.4_
+  - [x] 19.2 Delete AreaProgressTable test file
+    - Remove frontend/src/components/**tests**/AreaProgressTable.test.tsx
+    - _Requirements: 10.4_
+  - [x] 19.3 Remove any remaining AreaProgressTable imports
+    - Check for and remove any imports of AreaProgressTable
+    - Update component index.ts if needed
+    - _Requirements: 10.4_
+
+- [x] 20. Final checkpoint - Verify merged implementation
+  - [x] 20.1 Ensure all tests pass
+    - Run frontend test suite
+    - Verify no TypeScript errors
+    - Verify no lint errors
+  - [x] 20.2 Verify visual integration
+    - Confirm Division cards show merged columns
+    - Confirm Area Recognition section shows only CriteriaExplanation and AreaProgressSummary
+    - Confirm no duplicate data display
+
 ## Notes
 
 - All tasks including tests are required for comprehensive coverage
@@ -186,4 +243,7 @@ This implementation adds an Area Recognition section to the existing Divisions &
 - Follow existing component patterns in the codebase for consistency
 - **UPDATED**: Tasks 9-12 added to update implementation for revised DAP criteria from TOASTMASTERS_DASHBOARD_KNOWLEDGE.md
 - **UPDATED**: Tasks 13-16 added to add paragraph-based progress summaries alongside the existing table
-- **PRESERVED**: AreaProgressTable is retained for future integration into area cards (keeping first/second round visits, replacing other content with AreaProgressTable-style metrics)
+- **UPDATED**: Tasks 17-20 added to merge AreaProgressTable columns into AreaPerformanceTable (inside Division cards) and remove the standalone AreaProgressTable
+- **MERGED**: Recognition metrics (Paid/Base, Distinguished, Recognition badge, Gap columns) now display in the AreaPerformanceTable within each Division card
+- **REMOVED**: Standalone AreaProgressTable component - its functionality is now in the Division cards
+- **PRESERVED**: AreaProgressSummary remains in the Area Recognition section for paragraph-based progress descriptions

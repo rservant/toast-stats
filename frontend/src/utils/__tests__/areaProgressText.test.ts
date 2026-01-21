@@ -18,13 +18,9 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import {
-  generateAreaProgressText,
-  ClubVisitInfo,
-  AreaProgressText,
-} from '../areaProgressText'
-import { AreaWithDivision } from '../../components/AreaProgressTable'
-import { calculateAreaGapAnalysis, GapAnalysis } from '../areaGapAnalysis'
+import { generateAreaProgressText, ClubVisitInfo } from '../areaProgressText'
+import { AreaWithDivision } from '../../components/AreaProgressSummary'
+import { calculateAreaGapAnalysis } from '../areaGapAnalysis'
 import { DistinguishedStatus } from '../divisionStatus'
 
 /**
