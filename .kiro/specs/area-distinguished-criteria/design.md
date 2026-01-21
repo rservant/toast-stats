@@ -10,13 +10,13 @@ The design leverages existing data structures (`AreaPerformance`, `DivisionPerfo
 
 The feature follows the existing frontend architecture:
 
-```
+```text
 DistrictDetailPage.tsx
 └── Divisions & Areas Tab
     ├── DivisionPerformanceCards (existing)
     └── AreaRecognitionPanel (new)
         ├── CriteriaExplanation (new)
-        └── AreaProgressTable (new)
+        └── AreaProgressSummary (new)
 ```
 
 ### Data Flow
@@ -28,8 +28,9 @@ graph TD
     C --> D[DivisionPerformance array]
     D --> E[AreaRecognitionPanel]
     E --> F[CriteriaExplanation]
-    E --> G[AreaProgressTable]
-    G --> H[calculateGapAnalysis utility]
+    E --> G[AreaProgressSummary]
+    G --> H[generateAreaProgressText utility]
+    H --> I[calculateGapAnalysis utility]
 ```
 
 ## Components and Interfaces
@@ -58,12 +59,12 @@ interface CriteriaExplanationProps {
 }
 ```
 
-### AreaProgressTable Component
+### AreaProgressSummary Component
 
-Displays all areas with their current progress and gap analysis.
+Displays all areas with concise English paragraphs describing their progress and what's needed for each recognition level.
 
 ```typescript
-interface AreaProgressTableProps {
+interface AreaProgressSummaryProps {
   /** All areas from all divisions */
   areas: AreaWithDivision[]
   /** Loading state indicator */
@@ -74,6 +75,49 @@ interface AreaWithDivision extends AreaPerformance {
   /** Parent division identifier */
   divisionId: string
 }
+```
+
+### Area Progress Text Generation
+
+Generates a concise English paragraph for each area describing:
+
+1. Current status and recognition level achieved
+2. Eligibility requirements (no net club loss + club visits if data available)
+3. What's needed for the next level (building incrementally)
+4. Additional requirements for higher levels (only the differences)
+
+```typescript
+interface AreaProgressText {
+  /** Area identifier with division context */
+  areaLabel: string
+  /** Current recognition level achieved */
+  currentLevel: RecognitionLevel
+  /** Concise paragraph describing progress and gaps */
+  progressText: string
+}
+
+/**
+ * Generates a concise English paragraph describing an area's progress.
+ * Includes all DAP criteria: paid clubs, distinguished clubs, and club visits.
+ *
+ * Examples:
+ * - "Area A1 (Division A) has achieved President's Distinguished status with all club visits complete."
+ * - "Area A2 (Division A) has achieved Distinguished status (4 of 4 clubs paid, 2 of 4 distinguished).
+ *    For Select Distinguished, 1 more club needs to become distinguished.
+ *    For President's Distinguished, also add 1 paid club.
+ *    Club visits: 4 of 4 first-round complete, 2 of 4 second-round complete."
+ * - "Area B1 (Division B) has a net club loss (3 of 4 clubs paid). To become eligible,
+ *    add 1 paid club. Then for Distinguished, 2 clubs need to become distinguished.
+ *    Club visits: first-round 75% complete (3 of 4), second-round not started."
+ * - "Area C1 (Division C) is not yet distinguished (4 of 4 clubs paid, 1 of 4 distinguished).
+ *    For Distinguished, 1 more club needs to become distinguished.
+ *    For Select Distinguished, 1 additional club. For President's Distinguished, also add 1 paid club.
+ *    Club visits: status unknown."
+ */
+function generateAreaProgressText(
+  area: AreaWithDivision,
+  gapAnalysis: GapAnalysis
+): AreaProgressText
 ```
 
 ### Gap Analysis Types
@@ -144,27 +188,40 @@ _A property is a characteristic or behavior that should hold true across all val
 
 ### Property 1: All Areas Displayed
 
-_For any_ set of divisions containing areas, when the AreaProgressTable is rendered, all areas from all divisions should appear in the output exactly once.
+_For any_ set of divisions containing areas, when the AreaProgressSummary is rendered, all areas from all divisions should appear in the output exactly once, each with a progress paragraph.
 
 **Validates: Requirements 5.1**
 
-### Property 2: Area Metrics Display Completeness
+### Property 2: Progress Text Completeness
 
-_For any_ area with valid performance data (clubBase, paidClubs, distinguishedClubs), the rendered output should contain the paid clubs count, total clubs count (clubBase), and distinguished clubs count.
+_For any_ area with valid performance data, the generated progress text should mention:
 
-**Validates: Requirements 5.2, 5.3**
+- The area's current recognition level (or that it's not yet distinguished)
+- What's needed to reach the next achievable level (if not at President's Distinguished)
+- The incremental differences for higher levels (building on previous requirements)
 
-### Property 3: Paid Clubs Percentage Calculation
+**Validates: Requirements 5.2, 5.3, 5.6**
 
-_For any_ area where clubBase > 0, the displayed paid clubs percentage should equal `Math.round((paidClubs / clubBase) * 100)`.
+### Property 3: Incremental Gap Description
 
-**Validates: Requirements 5.4**
+_For any_ area not at President's Distinguished, the progress text should describe gaps incrementally:
 
-### Property 4: Distinguished Clubs Percentage Calculation
+- First mention what's needed for the next level
+- Then mention only the additional requirements for higher levels (not repeating previous requirements)
 
-_For any_ area where clubBase > 0, the displayed distinguished clubs percentage should equal `Math.round((distinguishedClubs / clubBase) * 100)`. When clubBase = 0, the percentage should be 0.
+Example: "For Select Distinguished, 1 more club needs to become distinguished. For President's Distinguished, also add 1 paid club."
 
-**Validates: Requirements 5.5**
+**Validates: Requirements 6.2, 6.3, 6.4**
+
+### Property 4: Net Loss Blocker Description
+
+_For any_ area where paidClubs < clubBase, the progress text should:
+
+- Clearly state the net club loss situation
+- Explain that paid clubs must be added before recognition is possible
+- Then describe what's needed for each level after eligibility is met
+
+**Validates: Requirements 6.1, 6.6**
 
 ### Property 5: Recognition Level Classification
 
@@ -178,30 +235,11 @@ _For any_ area with valid metrics, the recognition level should be determined as
 
 **Validates: Requirements 5.6, 6.5**
 
-### Property 6: Paid Clubs Gap Calculation
+### Property 6: Achieved Status Description
 
-_For any_ area:
+_For any_ area that has achieved a recognition level, the progress text should clearly state the achievement. If President's Distinguished is achieved, no further gaps should be mentioned.
 
-- For Distinguished/Select: paidClubsNeeded = `max(0, clubBase - paidClubs)`
-- For President's Distinguished: paidClubsNeeded = `max(0, clubBase + 1 - paidClubs)`
-
-**Validates: Requirements 6.1**
-
-### Property 7: Distinguished Clubs Gap Calculation
-
-_For any_ area where the no net loss requirement is met (paidClubs >= clubBase):
-
-- Distinguished gap = `max(0, Math.ceil(clubBase * 0.50) - distinguishedClubs)`
-- Select Distinguished gap = `max(0, Math.ceil(clubBase * 0.50) + 1 - distinguishedClubs)`
-- President's Distinguished gap = `max(0, Math.ceil(clubBase * 0.50) + 1 - distinguishedClubs)`
-
-**Validates: Requirements 6.2, 6.3, 6.4**
-
-### Property 8: No Net Loss Blocker Display
-
-_For any_ area where paidClubs < clubBase, the gap analysis for all recognition levels should indicate that the no net club loss requirement must be met first, rather than showing distinguished club gaps.
-
-**Validates: Requirements 6.6**
+**Validates: Requirements 6.5**
 
 ## Error Handling
 
@@ -244,13 +282,19 @@ Unit tests should cover:
 - Loading state display
 - Criteria explanation content is present and accurate
 
-**Gap Calculation Logic:**
+**Progress Text Generation:**
 
-- Paid clubs gap for Distinguished/Select: area with 4 club base, 3 paid → needs 1 more (to match club base)
-- Paid clubs gap for President's: area with 4 club base, 4 paid → needs 1 more (club base + 1)
-- Distinguished gap: 4 club base, 1 distinguished → needs 1 for Distinguished (50% of 4 = 2)
-- Select gap: 4 club base, 2 distinguished → needs 1 for Select (50% + 1 = 3)
-- Presidents gap: 4 club base, 2 distinguished → needs 1 for Presidents (50% + 1 = 3, but also needs paid clubs)
+- Area at President's Distinguished: "Area A1 (Division A) has achieved President's Distinguished status."
+- Area at Select Distinguished: mentions achievement and what's needed for President's (1 more paid club)
+- Area at Distinguished: mentions achievement and incremental gaps for Select and President's
+- Area not distinguished but eligible: describes gaps to each level incrementally
+- Area with net club loss: explains eligibility requirement first, then gaps
+
+**Incremental Gap Description:**
+
+- Gaps build on each other (don't repeat requirements)
+- Select gap only mentions distinguished clubs needed beyond Distinguished
+- President's gap only mentions paid club needed beyond Select
 
 **Recognition Level Classification:**
 
@@ -274,10 +318,12 @@ Unit tests should cover:
 
 ### Test File Structure
 
-```
+```text
 frontend/src/components/__tests__/
 ├── AreaRecognitionPanel.test.tsx    # Main component tests
-├── AreaProgressTable.test.tsx       # Table component tests
+├── AreaProgressSummary.test.tsx     # Summary component tests
 ├── CriteriaExplanation.test.tsx     # Criteria display tests
-└── gapCalculation.test.ts           # Gap calculation utility tests
+frontend/src/utils/__tests__/
+├── areaGapAnalysis.test.ts          # Gap calculation utility tests
+└── areaProgressText.test.ts         # Progress text generation tests
 ```

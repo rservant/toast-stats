@@ -125,6 +125,59 @@ This implementation adds an Area Recognition section to the existing Divisions &
   - Ensure all tests pass with new DAP criteria
   - Verify integration tests still work
 
+- [x] 13. Create progress text generation utility
+  - [x] 13.1 Create `generateAreaProgressText` function in `frontend/src/utils/areaProgressText.ts`
+    - Generate concise English paragraph for each area
+    - Include current metrics: paid clubs (X of Y), distinguished clubs (X of Y)
+    - Describe current recognition level achieved
+    - Build incrementally on differences between levels (don't repeat requirements)
+    - Handle net club loss scenario with eligibility explanation
+    - Include club visit status (first-round and second-round) when data available
+    - Show "Club visits: status unknown" when visit data unavailable
+    - _Requirements: 5.1, 5.2, 5.3, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
+  - [x] 13.2 Write unit tests for progress text generation
+    - Test President's Distinguished achieved text (includes all metrics)
+    - Test Select Distinguished with incremental gap to President's
+    - Test Distinguished with incremental gaps to Select and President's
+    - Test not distinguished with all gaps described incrementally
+    - Test net club loss scenario with eligibility explanation
+    - Test club visit status display (complete, partial, unknown)
+    - Test edge cases (0 clubs, 1 club)
+    - _Requirements: 5.1, 5.2, 5.3, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
+
+- [x] 14. Create AreaProgressSummary component
+  - [x] 14.1 Create `AreaProgressSummary.tsx` component in `frontend/src/components/`
+    - Display one paragraph per area with progress description
+    - Group areas by division for context
+    - Use semantic HTML (article/section elements)
+    - Follow Toastmasters brand guidelines
+    - Support loading and empty states
+    - _Requirements: 5.1, 5.2, 5.3, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+  - [x] 14.2 Write unit tests for AreaProgressSummary component
+    - Test all areas are displayed with paragraphs
+    - Test division grouping
+    - Test empty state
+    - Test loading state
+    - Test accessibility attributes
+    - _Requirements: 5.1, 7.4_
+
+- [x] 15. Add AreaProgressSummary alongside AreaProgressTable
+  - [x] 15.1 Update `AreaRecognitionPanel.tsx` to include AreaProgressSummary
+    - Add AreaProgressSummary import
+    - Display both AreaProgressTable and AreaProgressSummary
+    - Position AreaProgressSummary after AreaProgressTable
+    - _Requirements: 1.1, 1.2, 9.1, 9.4_
+  - [x] 15.2 Update AreaRecognitionPanel tests
+    - Add tests to verify paragraph-based display
+    - Keep existing table-specific test assertions
+    - _Requirements: 1.1, 9.1_
+
+- [x] 16. Final checkpoint
+  - [x] 16.1 Final checkpoint - Ensure all tests pass
+    - Verify all tests pass
+    - Verify both AreaProgressTable and AreaProgressSummary render correctly
+    - Verify integration works correctly
+
 ## Notes
 
 - All tasks including tests are required for comprehensive coverage
@@ -132,3 +185,5 @@ This implementation adds an Area Recognition section to the existing Divisions &
 - The implementation reuses existing types from `divisionStatus.ts`
 - Follow existing component patterns in the codebase for consistency
 - **UPDATED**: Tasks 9-12 added to update implementation for revised DAP criteria from TOASTMASTERS_DASHBOARD_KNOWLEDGE.md
+- **UPDATED**: Tasks 13-16 added to add paragraph-based progress summaries alongside the existing table
+- **PRESERVED**: AreaProgressTable is retained for future integration into area cards (keeping first/second round visits, replacing other content with AreaProgressTable-style metrics)

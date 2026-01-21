@@ -403,9 +403,9 @@ describe('AreaRecognitionPanel', () => {
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // Division context should be displayed
-      expect(screen.getByText('Division A')).toBeInTheDocument()
-      expect(screen.getByText('Division B')).toBeInTheDocument()
+      // Division context should be displayed (appears in both AreaProgressTable and AreaProgressSummary)
+      expect(screen.getAllByText('Division A').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText('Division B').length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -512,6 +512,218 @@ describe('AreaRecognitionPanel', () => {
 
       const sections = container.querySelectorAll('section')
       expect(sections.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('AreaProgressSummary Integration', () => {
+    /**
+     * Validates: Requirement 9.1
+     * THE System SHALL preserve the AreaProgressTable component alongside the new AreaProgressSummary component
+     */
+    it('should render AreaProgressSummary component', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+
+      // AreaProgressSummary has a region with this aria-label
+      expect(
+        screen.getByRole('region', { name: /area progress summary/i })
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 9.1, 9.4
+     * THE System SHALL display both AreaProgressTable and AreaProgressSummary in the Area Recognition section
+     */
+    it('should render both AreaProgressTable and AreaProgressSummary', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+
+      // Both components should be present
+      expect(
+        screen.getByRole('grid', { name: /area progress table/i })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('region', { name: /area progress summary/i })
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 5.1
+     * THE System SHALL display all areas in the district with their current progress as concise English paragraphs
+     */
+    it('should display progress paragraphs for each area', () => {
+      const divisions = [
+        createDivisionWithAreas('A', ['A1', 'A2']),
+        createDivisionWithAreas('B', ['B1']),
+      ]
+
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+
+      // Progress paragraphs should contain area labels with division context
+      expect(screen.getByText(/Area A1 \(Division A\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Area A2 \(Division A\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Area B1 \(Division B\)/)).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 5.1
+     * Progress paragraphs should include metrics (paid clubs, distinguished clubs)
+     */
+    it('should display progress paragraphs with metrics', () => {
+      const divisions = [
+        {
+          ...createDivision(),
+          divisionId: 'A',
+          areas: [
+            {
+              areaId: 'A1',
+              clubBase: 4,
+              paidClubs: 4,
+              distinguishedClubs: 2,
+              netGrowth: 0,
+              requiredDistinguishedClubs: 2,
+              firstRoundVisits: {
+                completed: 4,
+                required: 3,
+                percentage: 100,
+                meetsThreshold: true,
+              },
+              secondRoundVisits: {
+                completed: 2,
+                required: 3,
+                percentage: 50,
+                meetsThreshold: false,
+              },
+              status: 'distinguished' as const,
+              isQualified: true,
+            },
+          ],
+        },
+      ]
+
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+
+      // Progress text should include metrics
+      expect(screen.getByText(/4 of 4 clubs paid/)).toBeInTheDocument()
+      expect(screen.getByText(/2 of 4 distinguished/)).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 1.1
+     * Area count should be shown in both AreaProgressSummary header and panel footer
+     */
+    it('should display area count in AreaProgressSummary header', () => {
+      const divisions = [
+        createDivisionWithAreas('A', ['A1', 'A2']),
+        createDivisionWithAreas('B', ['B1']),
+      ]
+
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+
+      // AreaProgressSummary header shows "X areas in Y divisions"
+      expect(screen.getByText('3 areas in 2 divisions')).toBeInTheDocument()
+      // Panel footer shows "Showing X areas across Y divisions"
+      expect(
+        screen.getByText(/Showing 3 areas across 2 divisions/)
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 5.5
+     * Progress descriptions should be grouped by division for context
+     */
+    it('should group progress paragraphs by division', () => {
+      const divisions = [
+        createDivisionWithAreas('A', ['A1', 'A2']),
+        createDivisionWithAreas('B', ['B1']),
+      ]
+
+      const { container } = renderWithProviders(
+        <AreaRecognitionPanel divisions={divisions} />
+      )
+
+      // Division headers should be present in AreaProgressSummary
+      // Note: Division headers appear in both AreaProgressTable and AreaProgressSummary
+      const divisionAHeaders = screen.getAllByText('Division A')
+      const divisionBHeaders = screen.getAllByText('Division B')
+
+      // Should have at least 2 occurrences (one in table, one in summary)
+      expect(divisionAHeaders.length).toBeGreaterThanOrEqual(2)
+      expect(divisionBHeaders.length).toBeGreaterThanOrEqual(2)
+    })
+
+    /**
+     * Validates: Requirement 9.1
+     * AreaProgressSummary should NOT be rendered in empty state
+     */
+    it('should not render AreaProgressSummary in empty state', () => {
+      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
+
+      expect(
+        screen.queryByRole('region', { name: /area progress summary/i })
+      ).not.toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 9.1
+     * AreaProgressSummary should NOT be rendered during loading
+     */
+    it('should not render AreaProgressSummary during loading', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(
+        <AreaRecognitionPanel divisions={divisions} isLoading={true} />
+      )
+
+      expect(
+        screen.queryByRole('region', { name: /area progress summary/i })
+      ).not.toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 5.6
+     * Progress paragraphs should indicate recognition level achieved
+     */
+    it('should display recognition badges in AreaProgressSummary', () => {
+      const divisions = [
+        {
+          ...createDivision(),
+          divisionId: 'A',
+          areas: [
+            // Distinguished area
+            {
+              areaId: 'A1',
+              clubBase: 4,
+              paidClubs: 4,
+              distinguishedClubs: 2,
+              netGrowth: 0,
+              requiredDistinguishedClubs: 2,
+              firstRoundVisits: {
+                completed: 4,
+                required: 3,
+                percentage: 100,
+                meetsThreshold: true,
+              },
+              secondRoundVisits: {
+                completed: 2,
+                required: 3,
+                percentage: 50,
+                meetsThreshold: false,
+              },
+              status: 'distinguished' as const,
+              isQualified: true,
+            },
+          ],
+        },
+      ]
+
+      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+
+      // Recognition badge should be present with aria-label
+      const badge = screen.getByLabelText(/recognition status/i)
+      expect(badge).toBeInTheDocument()
     })
   })
 

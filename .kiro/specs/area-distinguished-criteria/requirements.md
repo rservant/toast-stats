@@ -65,29 +65,32 @@ This feature adds a new "Area Recognition" tab to the District page that display
 
 ### Requirement 5: Area Progress Display
 
-**User Story:** As an Area Director, I want to see what my area has achieved and what remains to be done, so that I can take action to reach distinguished status.
+**User Story:** As an Area Director, I want to see what my area has achieved and what remains to be done in a clear, readable format, so that I can take action to reach distinguished status.
 
 #### Acceptance Criteria for Requirement 5
 
-1. THE System SHALL display all areas in the district with their current progress
-2. FOR EACH area, THE System SHALL display the current paid clubs count and club base count
-3. FOR EACH area, THE System SHALL display the current distinguished clubs count
-4. FOR EACH area, THE System SHALL calculate and display whether no net club loss requirement is met (paid clubs >= club base)
-5. FOR EACH area, THE System SHALL calculate and display the distinguished clubs percentage achieved (of club base)
+1. THE System SHALL display all areas in the district with their current progress as concise English paragraphs
+2. FOR EACH area, THE System SHALL describe the current recognition level achieved (or that it's not yet distinguished)
+3. FOR EACH area, THE System SHALL describe what's needed to reach the next achievable level
+4. FOR EACH area, THE System SHALL describe the incremental differences for higher levels (building on previous requirements, not repeating them)
+5. THE progress descriptions SHALL be grouped by division for context
 6. FOR EACH area, THE System SHALL indicate which recognition level the area currently qualifies for (if any)
 
 ### Requirement 6: Gap Analysis Display
 
-**User Story:** As an Area Director, I want to see exactly what my area needs to achieve each recognition level, so that I can set clear goals and track progress.
+**User Story:** As an Area Director, I want to see exactly what my area needs to achieve each recognition level in plain English, so that I can set clear goals and track progress.
 
 #### Acceptance Criteria for Requirement 6
 
-1. FOR EACH area, THE System SHALL calculate and display the number of additional paid clubs needed to meet the no net loss requirement (if not already met)
-2. FOR EACH area, THE System SHALL calculate and display the number of additional distinguished clubs needed for Distinguished Area status (50% of club base)
-3. FOR EACH area, THE System SHALL calculate and display the number of additional distinguished clubs needed for Select Distinguished Area status (50% of club base + 1)
-4. FOR EACH area, THE System SHALL calculate and display the number of additional paid clubs AND distinguished clubs needed for President's Distinguished Area status (club base + 1 paid, 50% of club base + 1 distinguished)
-5. WHEN an area has already achieved a recognition level, THE System SHALL indicate that level as "Achieved"
-6. WHEN an area cannot achieve a recognition level due to net club loss, THE System SHALL indicate the no net loss requirement must be met first
+1. FOR EACH area with net club loss, THE System SHALL first explain the eligibility requirement (paid clubs needed to meet club base)
+2. FOR EACH area, THE System SHALL describe the distinguished clubs needed for Distinguished Area status (50% of club base)
+3. FOR EACH area, THE System SHALL describe the additional distinguished clubs needed for Select Distinguished Area status (only the increment beyond Distinguished)
+4. FOR EACH area, THE System SHALL describe the additional paid clubs needed for President's Distinguished Area status (only the increment beyond Select)
+5. WHEN an area has already achieved a recognition level, THE System SHALL clearly state the achievement
+6. WHEN an area has achieved President's Distinguished, THE System SHALL not mention any further gaps
+7. THE gap descriptions SHALL build incrementally (e.g., "For Select Distinguished, 1 more club needs to become distinguished. For President's Distinguished, also add 1 paid club.")
+8. FOR EACH area, THE System SHALL include club visit status (first-round and second-round completion) when data is available
+9. WHEN club visit data is unavailable, THE System SHALL indicate "Club visits: status unknown"
 
 ### Requirement 7: Accessibility and Brand Compliance
 
@@ -110,3 +113,25 @@ This feature adds a new "Area Recognition" tab to the District page that display
 1. THE Criteria_Display SHALL adapt layout for mobile, tablet, and desktop viewports
 2. THE Criteria_Display SHALL maintain readability with minimum 14px font size for body text
 3. THE Criteria_Display SHALL use appropriate spacing and padding for touch interaction on mobile devices
+
+### Requirement 9: Preserve AreaProgressTable Component
+
+**User Story:** As a district leader, I want to retain the tabular view of area progress data, so that I can quickly scan and compare metrics across areas.
+
+#### Acceptance Criteria for Requirement 9
+
+1. THE System SHALL preserve the AreaProgressTable component alongside the new AreaProgressSummary component
+2. THE AreaProgressTable SHALL continue to display paid clubs, distinguished clubs, and recognition level metrics
+3. THE AreaProgressTable SHALL remain available for future integration into area cards
+4. THE System SHALL display both AreaProgressTable and AreaProgressSummary in the Area Recognition section
+
+### Requirement 10: Future Area Card Integration (Deferred)
+
+**User Story:** As a district leader, I want area recognition data eventually integrated into the existing area cards, so that all area information is consolidated in one place.
+
+#### Acceptance Criteria for Requirement 10 (Future Implementation)
+
+1. THE System SHALL eventually merge AreaProgressTable content into the existing area cards
+2. THE merged area cards SHALL retain first-round and second-round visit information
+3. THE merged area cards SHALL replace other content with AreaProgressTable-style metrics
+4. THIS requirement is deferred and documented for future implementation
