@@ -5,6 +5,18 @@
  * in the Distinguished Area Program (DAP). It determines what an area
  * needs to achieve each recognition level.
  *
+ * DAP Criteria (from TOASTMASTERS_DASHBOARD_KNOWLEDGE.md):
+ * - Eligibility: No net club loss (paidClubs >= clubBase)
+ * - Distinguished Area: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+ * - Select Distinguished Area: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+ * - President's Distinguished Area: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+ *
+ * Key differences from previous implementation:
+ * - Distinguished percentage is calculated against club base, not paid clubs
+ * - Paid clubs threshold is >= club base (no net loss), not 75%
+ * - Select Distinguished requires 50% + 1 additional club
+ * - President's Distinguished requires club base + 1 paid clubs AND 50% + 1 distinguished
+ *
  * Requirements: 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 
@@ -12,9 +24,9 @@
  * Recognition levels for areas in the Distinguished Area Program
  *
  * - 'none': Does not meet any recognition level criteria
- * - 'distinguished': Meets Distinguished Area criteria (≥50% of paid clubs distinguished)
- * - 'select': Meets Select Distinguished Area criteria (≥75% of paid clubs distinguished)
- * - 'presidents': Meets President's Distinguished Area criteria (100% of paid clubs distinguished)
+ * - 'distinguished': Meets Distinguished Area criteria
+ * - 'select': Meets Select Distinguished Area criteria
+ * - 'presidents': Meets President's Distinguished Area criteria
  */
 export type RecognitionLevel =
   | 'none'
@@ -29,8 +41,14 @@ export interface GapToLevel {
   /** Whether this level is already achieved */
   achieved: boolean
   /** Number of additional distinguished clubs needed (0 if achieved) */
+  distinguishedClubsNeeded: number
+  /**
+   * @deprecated Use distinguishedClubsNeeded instead. Kept for backward compatibility.
+   */
   clubsNeeded: number
-  /** Whether this level is achievable (paid threshold met) */
+  /** Number of additional paid clubs needed for this level (0 if met) */
+  paidClubsNeeded: number
+  /** Whether this level is achievable (no net loss requirement met) */
   achievable: boolean
 }
 
@@ -38,15 +56,19 @@ export interface GapToLevel {
  * Complete gap analysis for an area
  *
  * Contains the current recognition level achieved and the gaps
- * to each recognition level, including whether the paid clubs
- * threshold is met.
+ * to each recognition level, including whether the no net club loss
+ * requirement is met.
  */
 export interface GapAnalysis {
   /** Current recognition level achieved */
   currentLevel: RecognitionLevel
-  /** Whether paid clubs threshold (75%) is met */
+  /** Whether no net club loss requirement is met (paidClubs >= clubBase) */
+  meetsNoNetLossRequirement: boolean
+  /**
+   * @deprecated Use meetsNoNetLossRequirement instead. Kept for backward compatibility.
+   */
   meetsPaidThreshold: boolean
-  /** Number of additional paid clubs needed (0 if threshold met) */
+  /** Number of additional paid clubs needed to meet club base (0 if met) */
   paidClubsNeeded: number
   /** Gap to Distinguished level */
   distinguishedGap: GapToLevel
@@ -69,25 +91,21 @@ export interface AreaMetrics {
 }
 
 /**
- * DAP threshold constants
- */
-const PAID_CLUBS_THRESHOLD = 0.75 // 75% of clubs must be paid
-const DISTINGUISHED_THRESHOLD = 0.5 // 50% for Distinguished
-const SELECT_THRESHOLD = 0.75 // 75% for Select Distinguished
-const PRESIDENTS_THRESHOLD = 1.0 // 100% for President's Distinguished
-
-/**
- * Calculates the number of paid clubs needed to meet the 75% threshold
+ * Calculates the number of paid clubs needed to meet the no net club loss requirement
  *
- * Property 6: Paid Clubs Gap = max(0, Math.ceil(clubBase * 0.75) - paidClubs)
+ * Property 6: Paid Clubs Gap
+ * - For Distinguished/Select: max(0, clubBase - paidClubs)
+ * - For President's: max(0, clubBase + 1 - paidClubs)
+ *
+ * This function calculates the base requirement (no net loss).
  *
  * @param clubBase - Number of clubs at the start of the program year
  * @param paidClubs - Current number of paid clubs
- * @returns Number of additional paid clubs needed (0 if threshold met)
+ * @returns Number of additional paid clubs needed (0 if requirement met)
  *
  * @example
- * calculatePaidClubsGap(4, 2) // Returns 1 (need 3 paid clubs, have 2)
- * calculatePaidClubsGap(4, 3) // Returns 0 (threshold met)
+ * calculatePaidClubsGap(4, 3) // Returns 1 (need 4 paid clubs, have 3)
+ * calculatePaidClubsGap(4, 4) // Returns 0 (requirement met)
  * calculatePaidClubsGap(0, 0) // Returns 0 (edge case: no clubs)
  *
  * Requirements: 6.1
@@ -101,18 +119,18 @@ export function calculatePaidClubsGap(
     return 0
   }
 
-  const requiredPaidClubs = Math.ceil(clubBase * PAID_CLUBS_THRESHOLD)
-  return Math.max(0, requiredPaidClubs - paidClubs)
+  // No net club loss: paidClubs must be >= clubBase
+  return Math.max(0, clubBase - paidClubs)
 }
 
 /**
- * Calculates the paid clubs percentage
+ * Calculates the paid clubs percentage (of club base)
  *
  * Property 3: Paid Clubs Percentage = Math.round((paidClubs / clubBase) * 100)
  *
  * @param clubBase - Number of clubs at the start of the program year
  * @param paidClubs - Current number of paid clubs
- * @returns Paid clubs percentage (0-100), 0 when clubBase is 0
+ * @returns Paid clubs percentage (0-100+), 0 when clubBase is 0
  *
  * Requirements: 5.4
  */
@@ -127,35 +145,52 @@ export function calculatePaidClubsPercentage(
 }
 
 /**
- * Calculates the distinguished clubs percentage (of paid clubs)
+ * Calculates the distinguished clubs percentage (of club base)
  *
- * Property 4: Distinguished Clubs Percentage = Math.round((distinguishedClubs / paidClubs) * 100),
- * 0 when paidClubs = 0
+ * Property 4: Distinguished Clubs Percentage = Math.round((distinguishedClubs / clubBase) * 100)
+ * When clubBase = 0, the percentage should be 0.
  *
- * @param paidClubs - Current number of paid clubs
+ * Note: This is calculated against club base, NOT paid clubs.
+ *
+ * @param clubBase - Number of clubs at the start of the program year
  * @param distinguishedClubs - Current number of distinguished clubs
- * @returns Distinguished clubs percentage (0-100), 0 when paidClubs is 0
+ * @returns Distinguished clubs percentage (0-100+), 0 when clubBase is 0
  *
  * Requirements: 5.5
  */
 export function calculateDistinguishedPercentage(
-  paidClubs: number,
+  clubBase: number,
   distinguishedClubs: number
 ): number {
-  if (paidClubs === 0) {
+  if (clubBase === 0) {
     return 0
   }
-  return Math.round((distinguishedClubs / paidClubs) * 100)
+  return Math.round((distinguishedClubs / clubBase) * 100)
+}
+
+/**
+ * Calculates the required number of distinguished clubs for a given threshold
+ *
+ * @param clubBase - Number of clubs at the start of the program year
+ * @param additionalClubs - Additional clubs required beyond 50% (0 for Distinguished, 1 for Select/Presidents)
+ * @returns Required number of distinguished clubs
+ */
+function calculateRequiredDistinguishedClubs(
+  clubBase: number,
+  additionalClubs: number
+): number {
+  // 50% of club base, rounded up, plus any additional clubs
+  return Math.ceil(clubBase * 0.5) + additionalClubs
 }
 
 /**
  * Determines the current recognition level based on metrics
  *
- * Property 5: Recognition Level Classification based on thresholds:
- * - If paidClubs/clubBase < 0.75: "none" (paid threshold not met)
- * - Else if distinguishedClubs/paidClubs >= 1.0: "presidents"
- * - Else if distinguishedClubs/paidClubs >= 0.75: "select"
- * - Else if distinguishedClubs/paidClubs >= 0.50: "distinguished"
+ * Property 5: Recognition Level Classification
+ * - If paidClubs < clubBase: "none" (net club loss - not eligible)
+ * - Else if paidClubs >= clubBase + 1 AND distinguishedClubs >= Math.ceil(clubBase * 0.50) + 1: "presidents"
+ * - Else if paidClubs >= clubBase AND distinguishedClubs >= Math.ceil(clubBase * 0.50) + 1: "select"
+ * - Else if paidClubs >= clubBase AND distinguishedClubs >= Math.ceil(clubBase * 0.50): "distinguished"
  * - Else: "none"
  *
  * @param metrics - Area metrics (clubBase, paidClubs, distinguishedClubs)
@@ -173,28 +208,30 @@ export function determineRecognitionLevel(
     return 'none'
   }
 
-  // Check paid threshold first (75% of clubs must be paid)
-  const paidRatio = paidClubs / clubBase
-  if (paidRatio < PAID_CLUBS_THRESHOLD) {
+  // Check no net club loss requirement first (paidClubs >= clubBase)
+  if (paidClubs < clubBase) {
     return 'none'
   }
 
-  // Edge case: zero paid clubs means no recognition possible
-  if (paidClubs === 0) {
-    return 'none'
-  }
+  // Calculate distinguished thresholds
+  const distinguishedThreshold = calculateRequiredDistinguishedClubs(
+    clubBase,
+    0
+  ) // 50% of clubBase
+  const selectThreshold = calculateRequiredDistinguishedClubs(clubBase, 1) // 50% of clubBase + 1
 
-  // Calculate distinguished ratio (of paid clubs)
-  const distinguishedRatio = distinguishedClubs / paidClubs
-
-  // Check recognition levels in descending order
-  if (distinguishedRatio >= PRESIDENTS_THRESHOLD) {
+  // Check President's Distinguished: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% + 1
+  if (paidClubs >= clubBase + 1 && distinguishedClubs >= selectThreshold) {
     return 'presidents'
   }
-  if (distinguishedRatio >= SELECT_THRESHOLD) {
+
+  // Check Select Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% + 1
+  if (paidClubs >= clubBase && distinguishedClubs >= selectThreshold) {
     return 'select'
   }
-  if (distinguishedRatio >= DISTINGUISHED_THRESHOLD) {
+
+  // Check Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50%
+  if (paidClubs >= clubBase && distinguishedClubs >= distinguishedThreshold) {
     return 'distinguished'
   }
 
@@ -202,60 +239,175 @@ export function determineRecognitionLevel(
 }
 
 /**
- * Calculates the gap to a specific recognition level
+ * Calculates the gap to Distinguished level
  *
- * Property 7: Distinguished Clubs Gap Calculation
- * - Distinguished gap = max(0, Math.ceil(paidClubs * 0.50) - distinguishedClubs)
- * - Select Distinguished gap = max(0, Math.ceil(paidClubs * 0.75) - distinguishedClubs)
- * - President's Distinguished gap = max(0, paidClubs - distinguishedClubs)
+ * Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
  *
- * @param paidClubs - Current number of paid clubs
- * @param distinguishedClubs - Current number of distinguished clubs
- * @param threshold - The threshold ratio for the level (0.5, 0.75, or 1.0)
- * @param meetsPaidThreshold - Whether the paid clubs threshold is met
- * @returns Gap information for the level
+ * @param metrics - Area metrics
+ * @param meetsNoNetLossRequirement - Whether no net club loss requirement is met
+ * @returns Gap information for Distinguished level
  *
- * Requirements: 6.2, 6.3, 6.4, 6.6
+ * Requirements: 6.2, 6.6
  */
-function calculateGapToLevel(
-  paidClubs: number,
-  distinguishedClubs: number,
-  threshold: number,
-  meetsPaidThreshold: boolean
+function calculateDistinguishedGap(
+  metrics: AreaMetrics,
+  meetsNoNetLossRequirement: boolean
 ): GapToLevel {
-  // Property 8: If paid threshold not met, level is not achievable
-  if (!meetsPaidThreshold) {
+  const { clubBase, paidClubs, distinguishedClubs } = metrics
+
+  // Property 8: If no net loss requirement not met, level is not achievable
+  if (!meetsNoNetLossRequirement) {
     return {
       achieved: false,
-      clubsNeeded: 0,
+      distinguishedClubsNeeded: 0,
+      clubsNeeded: 0, // backward compatibility
+      paidClubsNeeded: Math.max(0, clubBase - paidClubs),
       achievable: false,
     }
   }
 
-  // Edge case: zero paid clubs
-  if (paidClubs === 0) {
+  // Edge case: zero clubs
+  if (clubBase === 0) {
     return {
       achieved: false,
-      clubsNeeded: 0,
+      distinguishedClubsNeeded: 0,
+      clubsNeeded: 0, // backward compatibility
+      paidClubsNeeded: 0,
       achievable: false,
     }
   }
 
-  // Calculate required distinguished clubs for this level
-  // For President's Distinguished (100%), we need exactly paidClubs
-  // For other levels, we use Math.ceil to round up
-  const requiredDistinguished =
-    threshold === PRESIDENTS_THRESHOLD
-      ? paidClubs
-      : Math.ceil(paidClubs * threshold)
-
-  const clubsNeeded = Math.max(0, requiredDistinguished - distinguishedClubs)
-  const achieved = clubsNeeded === 0
+  // Distinguished requires: paidClubs >= clubBase (already met) AND distinguishedClubs >= 50% of clubBase
+  const requiredDistinguished = calculateRequiredDistinguishedClubs(clubBase, 0)
+  const distinguishedClubsNeeded = Math.max(
+    0,
+    requiredDistinguished - distinguishedClubs
+  )
+  const achieved = distinguishedClubsNeeded === 0
 
   return {
     achieved,
-    clubsNeeded,
+    distinguishedClubsNeeded,
+    clubsNeeded: distinguishedClubsNeeded, // backward compatibility
+    paidClubsNeeded: 0, // No net loss already met
     achievable: true,
+  }
+}
+
+/**
+ * Calculates the gap to Select Distinguished level
+ *
+ * Select Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+ *
+ * @param metrics - Area metrics
+ * @param meetsNoNetLossRequirement - Whether no net club loss requirement is met
+ * @returns Gap information for Select Distinguished level
+ *
+ * Requirements: 6.3, 6.6
+ */
+function calculateSelectGap(
+  metrics: AreaMetrics,
+  meetsNoNetLossRequirement: boolean
+): GapToLevel {
+  const { clubBase, paidClubs, distinguishedClubs } = metrics
+
+  // Property 8: If no net loss requirement not met, level is not achievable
+  if (!meetsNoNetLossRequirement) {
+    return {
+      achieved: false,
+      distinguishedClubsNeeded: 0,
+      clubsNeeded: 0, // backward compatibility
+      paidClubsNeeded: Math.max(0, clubBase - paidClubs),
+      achievable: false,
+    }
+  }
+
+  // Edge case: zero clubs
+  if (clubBase === 0) {
+    return {
+      achieved: false,
+      distinguishedClubsNeeded: 0,
+      clubsNeeded: 0, // backward compatibility
+      paidClubsNeeded: 0,
+      achievable: false,
+    }
+  }
+
+  // Select requires: paidClubs >= clubBase (already met) AND distinguishedClubs >= 50% of clubBase + 1
+  const requiredDistinguished = calculateRequiredDistinguishedClubs(clubBase, 1)
+  const distinguishedClubsNeeded = Math.max(
+    0,
+    requiredDistinguished - distinguishedClubs
+  )
+  const achieved = distinguishedClubsNeeded === 0
+
+  return {
+    achieved,
+    distinguishedClubsNeeded,
+    clubsNeeded: distinguishedClubsNeeded, // backward compatibility
+    paidClubsNeeded: 0, // No net loss already met
+    achievable: true,
+  }
+}
+
+/**
+ * Calculates the gap to President's Distinguished level
+ *
+ * President's Distinguished: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+ *
+ * @param metrics - Area metrics
+ * @param meetsNoNetLossRequirement - Whether no net club loss requirement is met
+ * @returns Gap information for President's Distinguished level
+ *
+ * Requirements: 6.4, 6.6
+ */
+function calculatePresidentsGap(
+  metrics: AreaMetrics,
+  meetsNoNetLossRequirement: boolean
+): GapToLevel {
+  const { clubBase, paidClubs, distinguishedClubs } = metrics
+
+  // Property 8: If no net loss requirement not met, level is not achievable
+  if (!meetsNoNetLossRequirement) {
+    return {
+      achieved: false,
+      distinguishedClubsNeeded: 0,
+      clubsNeeded: 0, // backward compatibility
+      paidClubsNeeded: Math.max(0, clubBase - paidClubs),
+      achievable: false,
+    }
+  }
+
+  // Edge case: zero clubs
+  if (clubBase === 0) {
+    return {
+      achieved: false,
+      distinguishedClubsNeeded: 0,
+      clubsNeeded: 0, // backward compatibility
+      paidClubsNeeded: 0,
+      achievable: false,
+    }
+  }
+
+  // President's requires: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+  const requiredPaidClubs = clubBase + 1
+  const requiredDistinguished = calculateRequiredDistinguishedClubs(clubBase, 1)
+
+  const paidClubsNeeded = Math.max(0, requiredPaidClubs - paidClubs)
+  const distinguishedClubsNeeded = Math.max(
+    0,
+    requiredDistinguished - distinguishedClubs
+  )
+
+  // Achieved only if both requirements are met
+  const achieved = paidClubsNeeded === 0 && distinguishedClubsNeeded === 0
+
+  return {
+    achieved,
+    distinguishedClubsNeeded,
+    clubsNeeded: distinguishedClubsNeeded, // backward compatibility
+    paidClubsNeeded,
+    achievable: true, // Achievable since no net loss is met
   }
 }
 
@@ -266,80 +418,78 @@ function calculateGapToLevel(
  * the gaps to each recognition level (Distinguished, Select Distinguished,
  * President's Distinguished).
  *
+ * DAP Thresholds:
+ * - Eligibility: No net club loss (paidClubs >= clubBase)
+ * - Distinguished Area: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+ * - Select Distinguished Area: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+ * - President's Distinguished Area: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+ *
  * Properties implemented:
  * - Property 3: Paid Clubs Percentage calculation
- * - Property 4: Distinguished Clubs Percentage calculation
+ * - Property 4: Distinguished Clubs Percentage calculation (against club base)
  * - Property 5: Recognition Level Classification
  * - Property 6: Paid Clubs Gap calculation
  * - Property 7: Distinguished Clubs Gaps for each level
- * - Property 8: Paid Threshold Blocker Display
+ * - Property 8: No Net Loss Blocker Display
  *
  * @param metrics - Area metrics (clubBase, paidClubs, distinguishedClubs)
  * @returns Complete gap analysis for the area
  *
  * @example
- * // Area with 4 clubs, 3 paid, 2 distinguished
- * calculateAreaGapAnalysis({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 })
+ * // Area with 4 clubs, 4 paid, 2 distinguished
+ * calculateAreaGapAnalysis({ clubBase: 4, paidClubs: 4, distinguishedClubs: 2 })
  * // Returns: {
  * //   currentLevel: 'distinguished',
- * //   meetsPaidThreshold: true,
+ * //   meetsNoNetLossRequirement: true,
  * //   paidClubsNeeded: 0,
- * //   distinguishedGap: { achieved: true, clubsNeeded: 0, achievable: true },
- * //   selectGap: { achieved: false, clubsNeeded: 1, achievable: true },
- * //   presidentsGap: { achieved: false, clubsNeeded: 1, achievable: true }
+ * //   distinguishedGap: { achieved: true, distinguishedClubsNeeded: 0, paidClubsNeeded: 0, achievable: true },
+ * //   selectGap: { achieved: false, distinguishedClubsNeeded: 1, paidClubsNeeded: 0, achievable: true },
+ * //   presidentsGap: { achieved: false, distinguishedClubsNeeded: 1, paidClubsNeeded: 1, achievable: true }
  * // }
  *
  * @example
- * // Area below paid threshold
- * calculateAreaGapAnalysis({ clubBase: 4, paidClubs: 2, distinguishedClubs: 2 })
+ * // Area with net club loss (paidClubs < clubBase)
+ * calculateAreaGapAnalysis({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 })
  * // Returns: {
  * //   currentLevel: 'none',
- * //   meetsPaidThreshold: false,
+ * //   meetsNoNetLossRequirement: false,
  * //   paidClubsNeeded: 1,
- * //   distinguishedGap: { achieved: false, clubsNeeded: 0, achievable: false },
- * //   selectGap: { achieved: false, clubsNeeded: 0, achievable: false },
- * //   presidentsGap: { achieved: false, clubsNeeded: 0, achievable: false }
+ * //   distinguishedGap: { achieved: false, distinguishedClubsNeeded: 0, paidClubsNeeded: 1, achievable: false },
+ * //   selectGap: { achieved: false, distinguishedClubsNeeded: 0, paidClubsNeeded: 1, achievable: false },
+ * //   presidentsGap: { achieved: false, distinguishedClubsNeeded: 0, paidClubsNeeded: 1, achievable: false }
  * // }
  *
  * Requirements: 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
  */
 export function calculateAreaGapAnalysis(metrics: AreaMetrics): GapAnalysis {
-  const { clubBase, paidClubs, distinguishedClubs } = metrics
+  const { clubBase, paidClubs } = metrics
 
-  // Calculate paid clubs gap (Property 6)
+  // Calculate paid clubs gap for no net loss requirement (Property 6)
   const paidClubsNeeded = calculatePaidClubsGap(clubBase, paidClubs)
 
-  // Determine if paid threshold is met
-  const meetsPaidThreshold = paidClubsNeeded === 0 && clubBase > 0
+  // Determine if no net loss requirement is met
+  const meetsNoNetLossRequirement = paidClubsNeeded === 0 && clubBase > 0
 
   // Determine current recognition level (Property 5)
   const currentLevel = determineRecognitionLevel(metrics)
 
   // Calculate gaps to each level (Property 7, Property 8)
-  const distinguishedGap = calculateGapToLevel(
-    paidClubs,
-    distinguishedClubs,
-    DISTINGUISHED_THRESHOLD,
-    meetsPaidThreshold
+  const distinguishedGap = calculateDistinguishedGap(
+    metrics,
+    meetsNoNetLossRequirement
   )
 
-  const selectGap = calculateGapToLevel(
-    paidClubs,
-    distinguishedClubs,
-    SELECT_THRESHOLD,
-    meetsPaidThreshold
-  )
+  const selectGap = calculateSelectGap(metrics, meetsNoNetLossRequirement)
 
-  const presidentsGap = calculateGapToLevel(
-    paidClubs,
-    distinguishedClubs,
-    PRESIDENTS_THRESHOLD,
-    meetsPaidThreshold
+  const presidentsGap = calculatePresidentsGap(
+    metrics,
+    meetsNoNetLossRequirement
   )
 
   return {
     currentLevel,
-    meetsPaidThreshold,
+    meetsNoNetLossRequirement,
+    meetsPaidThreshold: meetsNoNetLossRequirement, // backward compatibility
     paidClubsNeeded,
     distinguishedGap,
     selectGap,

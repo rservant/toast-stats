@@ -4,29 +4,36 @@
  * Tests for the Area Progress Table component that displays all areas
  * with their current progress toward Distinguished Area recognition levels.
  *
+ * Updated for revised DAP criteria:
+ * - No net club loss requirement (paidClubs >= clubBase) instead of 75% paid threshold
+ * - Distinguished percentage calculated against club base, not paid clubs
+ * - Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+ * - Select Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+ * - President's Distinguished: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+ *
  * Correctness Properties validated:
  * - Property 1: All areas displayed exactly once
- * - Property 2: Area metrics display completeness (paid clubs, total clubs, distinguished clubs)
- * - Property 3: Paid clubs percentage calculation
- * - Property 4: Distinguished clubs percentage calculation
- * - Property 5: Recognition level classification
- * - Property 6: Paid clubs gap calculation
- * - Property 7: Distinguished clubs gap calculation
- * - Property 8: Paid threshold blocker display
+ * - Property 2: Area metrics display completeness (paid clubs, club base, distinguished clubs)
+ * - Property 3: Paid clubs percentage calculation (against club base)
+ * - Property 4: Distinguished clubs percentage calculation (against club base)
+ * - Property 5: Recognition level classification (new DAP thresholds)
+ * - Property 6: Paid clubs gap calculation (no net loss requirement)
+ * - Property 7: Distinguished clubs gap calculation (50% of club base thresholds)
+ * - Property 8: No net loss blocker display
  *
  * Requirements validated:
  * - 5.1: Display all areas in the district with their current progress
- * - 5.2: Display current paid clubs count and total clubs count
- * - 5.3: Display current distinguished clubs count (of paid clubs)
- * - 5.4: Calculate and display paid clubs percentage achieved
- * - 5.5: Calculate and display distinguished clubs percentage achieved
+ * - 5.2: Display current paid clubs count and club base count
+ * - 5.3: Display current distinguished clubs count (of club base)
+ * - 5.4: Calculate and display whether no net club loss requirement is met
+ * - 5.5: Calculate and display distinguished clubs percentage (of club base)
  * - 5.6: Indicate which recognition level the area currently qualifies for
- * - 6.1: Calculate and display paid clubs gap
- * - 6.2: Calculate and display distinguished clubs gap for Distinguished
- * - 6.3: Calculate and display distinguished clubs gap for Select Distinguished
+ * - 6.1: Calculate and display paid clubs gap (to meet no net loss)
+ * - 6.2: Calculate and display distinguished clubs gap for Distinguished (50% of club base)
+ * - 6.3: Calculate and display distinguished clubs gap for Select Distinguished (50% + 1)
  * - 6.4: Calculate and display distinguished clubs gap for President's Distinguished
  * - 6.5: Indicate when level is achieved
- * - 6.6: Indicate when paid clubs requirement must be met first
+ * - 6.6: Indicate when no net loss requirement must be met first
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
@@ -47,7 +54,7 @@ const createArea = (
   areaId: 'A1',
   divisionId: 'A',
   clubBase: 4,
-  paidClubs: 3,
+  paidClubs: 4,
   distinguishedClubs: 2,
   netGrowth: 0,
   requiredDistinguishedClubs: 2,
@@ -130,36 +137,87 @@ describe('AreaProgressTable', () => {
     })
   })
 
+  describe('Column Headers - New DAP Criteria Labels', () => {
+    /**
+     * Validates: Requirements 5.2, 5.3
+     * Column headers should reflect new DAP criteria terminology
+     */
+    it('should display "Paid / Base" column header with subtitle', () => {
+      const areas: AreaWithDivision[] = [createArea()]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      // Check for "Paid / Base" header
+      expect(screen.getByText('Paid / Base')).toBeInTheDocument()
+      // Check for subtitle explaining the requirement
+      expect(screen.getByText('(≥ club base required)')).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 5.3
+     * Distinguished column should show it's calculated against club base
+     */
+    it('should display "Distinguished" column header with "(of club base)" subtitle', () => {
+      const areas: AreaWithDivision[] = [createArea()]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      // Check for "Distinguished" header (use getAllByText since it appears in header and badge)
+      const distinguishedElements = screen.getAllByText('Distinguished')
+      expect(distinguishedElements.length).toBeGreaterThanOrEqual(1)
+      // Check for subtitle explaining calculation basis
+      expect(screen.getByText('(of club base)')).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirements 6.2, 6.3, 6.4
+     * Gap columns should show new threshold descriptions
+     */
+    it('should display gap column headers with new threshold descriptions', () => {
+      const areas: AreaWithDivision[] = [createArea()]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      // Gap to Distinguished: 50% of base
+      expect(screen.getByText('(50% of base)')).toBeInTheDocument()
+      // Gap to Select: 50% + 1
+      expect(screen.getByText('(50% + 1)')).toBeInTheDocument()
+      // Gap to President's: base+1 paid, 50%+1 distinguished
+      expect(screen.getByText('(base+1, 50%+1)')).toBeInTheDocument()
+    })
+  })
+
   describe('Property 2: Area Metrics Display Completeness', () => {
     /**
      * Validates: Requirements 5.2, 5.3
-     * FOR EACH area, THE System SHALL display paid clubs count, total clubs count,
-     * and distinguished clubs count
+     * FOR EACH area, THE System SHALL display paid clubs count and club base count
+     * Paid clubs shown as "X / clubBase" (not "X / totalClubs")
      */
-    it('should display paid clubs count and total clubs count', () => {
+    it('should display paid clubs count and club base count', () => {
       const areas: AreaWithDivision[] = [
         createArea({ clubBase: 5, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // Paid clubs / total clubs format
+      // Paid clubs / club base format
       expect(screen.getByText('4/5')).toBeInTheDocument()
     })
 
     /**
      * Validates: Requirement 5.3
-     * FOR EACH area, THE System SHALL display distinguished clubs count (of paid clubs)
+     * FOR EACH area, THE System SHALL display distinguished clubs count of club base
+     * Distinguished clubs shown as "X / clubBase" (not "X / paidClubs")
      */
-    it('should display distinguished clubs count of paid clubs', () => {
+    it('should display distinguished clubs count of club base', () => {
       const areas: AreaWithDivision[] = [
         createArea({ clubBase: 5, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // Distinguished clubs / paid clubs format
-      expect(screen.getByText('2/4')).toBeInTheDocument()
+      // Distinguished clubs / club base format (not / paidClubs)
+      expect(screen.getByText('2/5')).toBeInTheDocument()
     })
   })
 
@@ -182,7 +240,7 @@ describe('AreaProgressTable', () => {
 
     /**
      * Validates: Requirement 5.4
-     * Edge case: 100% paid clubs
+     * Edge case: 100% paid clubs (meets no net loss requirement)
      */
     it('should display 100% when all clubs are paid', () => {
       const areas: AreaWithDivision[] = [
@@ -215,16 +273,17 @@ describe('AreaProgressTable', () => {
     /**
      * Validates: Requirement 5.5
      * FOR EACH area, THE System SHALL calculate and display distinguished clubs percentage
-     * Percentage = Math.round((distinguishedClubs / paidClubs) * 100)
+     * Percentage = Math.round((distinguishedClubs / clubBase) * 100)
+     * Note: Calculated against club base, NOT paid clubs
      */
-    it('should display distinguished clubs percentage correctly', () => {
+    it('should display distinguished clubs percentage against club base', () => {
       const areas: AreaWithDivision[] = [
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // 2/4 = 50%
+      // 2/4 = 50% (against club base)
       expect(screen.getByText('50%')).toBeInTheDocument()
     })
 
@@ -232,7 +291,7 @@ describe('AreaProgressTable', () => {
      * Validates: Requirement 5.5
      * Edge case: 100% distinguished
      */
-    it('should display 100% when all paid clubs are distinguished', () => {
+    it('should display 100% when all clubs in base are distinguished', () => {
       const areas: AreaWithDivision[] = [
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 4 }),
       ]
@@ -261,13 +320,29 @@ describe('AreaProgressTable', () => {
     })
   })
 
-  describe('Property 5: Recognition Level Indicators', () => {
+  describe('Property 5: Recognition Level Indicators - New DAP Criteria', () => {
+    /**
+     * Validates: Requirements 5.6, 6.6
+     * When paidClubs < clubBase (net club loss), show "Net Loss" badge
+     */
+    it('should display "Net Loss" when paidClubs < clubBase', () => {
+      const areas: AreaWithDivision[] = [
+        // Net club loss: 3 paid < 4 club base
+        createArea({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 }),
+      ]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      expect(screen.getByText('Net Loss')).toBeInTheDocument()
+    })
+
     /**
      * Validates: Requirements 5.6, 6.5
      * FOR EACH area, THE System SHALL indicate which recognition level the area qualifies for
      */
-    it('should display "Not Distinguished" when below 50% distinguished', () => {
+    it('should display "Not Distinguished" when below 50% distinguished of club base', () => {
       const areas: AreaWithDivision[] = [
+        // 4 club base, 4 paid (meets no net loss), 1 distinguished = 25% < 50%
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 1 }),
       ]
 
@@ -278,10 +353,12 @@ describe('AreaProgressTable', () => {
 
     /**
      * Validates: Requirements 5.6, 6.5
-     * Distinguished Area requires at least 50% of paid clubs distinguished
+     * Distinguished Area: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+     * For clubBase=4: need 2 distinguished (ceil(4*0.5) = 2)
      */
-    it('should display "Distinguished" when at 50% distinguished', () => {
+    it('should display "Distinguished" when at 50% distinguished of club base', () => {
       const areas: AreaWithDivision[] = [
+        // 4 club base, 4 paid, 2 distinguished = 50% of club base
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
@@ -295,10 +372,12 @@ describe('AreaProgressTable', () => {
 
     /**
      * Validates: Requirements 5.6, 6.5
-     * Select Distinguished Area requires at least 75% of paid clubs distinguished
+     * Select Distinguished Area: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+     * For clubBase=4: need 3 distinguished (ceil(4*0.5) + 1 = 3)
      */
-    it('should display "Select Distinguished" when at 75% distinguished', () => {
+    it('should display "Select Distinguished" when at 50% + 1 distinguished of club base', () => {
       const areas: AreaWithDivision[] = [
+        // 4 club base, 4 paid, 3 distinguished = 50% + 1 of club base
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 3 }),
       ]
 
@@ -309,11 +388,13 @@ describe('AreaProgressTable', () => {
 
     /**
      * Validates: Requirements 5.6, 6.5
-     * President's Distinguished Area requires 100% of paid clubs distinguished
+     * President's Distinguished Area: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+     * For clubBase=4: need 5 paid AND 3 distinguished
      */
-    it('should display "President\'s Distinguished" when at 100% distinguished', () => {
+    it('should display "President\'s Distinguished" when at clubBase+1 paid AND 50%+1 distinguished', () => {
       const areas: AreaWithDivision[] = [
-        createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 4 }),
+        // 4 club base, 5 paid (clubBase+1), 3 distinguished (50%+1)
+        createArea({ clubBase: 4, paidClubs: 5, distinguishedClubs: 3 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
@@ -322,29 +403,35 @@ describe('AreaProgressTable', () => {
     })
 
     /**
-     * Validates: Requirement 6.6
-     * When paid threshold not met, show special indicator
+     * Validates: Requirements 5.6, 6.5
+     * Edge case: Having 50%+1 distinguished but only clubBase paid = Select, not President's
      */
-    it('should display "Paid Threshold Not Met" when below 75% paid', () => {
+    it('should display "Select Distinguished" when 50%+1 distinguished but only clubBase paid', () => {
       const areas: AreaWithDivision[] = [
-        createArea({ clubBase: 4, paidClubs: 2, distinguishedClubs: 2 }),
+        // 4 club base, 4 paid (not clubBase+1), 3 distinguished (50%+1)
+        createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 3 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      expect(screen.getByText('Paid Threshold Not Met')).toBeInTheDocument()
+      // Should be Select, not President's (missing the +1 paid requirement)
+      expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
+      expect(
+        screen.queryByText("President's Distinguished")
+      ).not.toBeInTheDocument()
     })
   })
 
-  describe('Property 6: Paid Clubs Gap Display', () => {
+  describe('Property 6: Paid Clubs Gap Display - No Net Loss Requirement', () => {
     /**
      * Validates: Requirement 6.1
      * FOR EACH area, THE System SHALL calculate and display paid clubs gap
+     * Gap = max(0, clubBase - paidClubs) for no net loss requirement
      */
-    it('should display paid clubs needed when below 75% threshold', () => {
+    it('should display paid clubs needed when below club base (net loss)', () => {
       const areas: AreaWithDivision[] = [
-        // 4 clubs, 2 paid = 50%, need 1 more to reach 75% (3 clubs)
-        createArea({ clubBase: 4, paidClubs: 2, distinguishedClubs: 1 }),
+        // 4 club base, 3 paid = need 1 more to meet no net loss
+        createArea({ clubBase: 4, paidClubs: 3, distinguishedClubs: 1 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
@@ -355,28 +442,49 @@ describe('AreaProgressTable', () => {
 
     /**
      * Validates: Requirement 6.1
-     * No gap shown when threshold is met
+     * No gap shown when no net loss requirement is met
      */
-    it('should not display paid clubs gap when threshold is met', () => {
+    it('should not display paid clubs gap when no net loss requirement is met', () => {
       const areas: AreaWithDivision[] = [
-        createArea({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 }),
+        // 4 club base, 4 paid = no net loss requirement met
+        createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // Should not show "needed" text for paid clubs when threshold met
+      // Should not show "needed" text for paid clubs when requirement met
+      expect(screen.queryByText(/\+\d+ needed/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 6.1
+     * Edge case: More paid clubs than club base (growth)
+     */
+    it('should not display paid clubs gap when paidClubs > clubBase', () => {
+      const areas: AreaWithDivision[] = [
+        // 4 club base, 5 paid = growth, no gap
+        createArea({ clubBase: 4, paidClubs: 5, distinguishedClubs: 2 }),
+      ]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      // Should not show "needed" text
       expect(screen.queryByText(/\+\d+ needed/)).not.toBeInTheDocument()
     })
   })
 
-  describe('Property 7: Distinguished Clubs Gap Display', () => {
+  describe('Property 7: Distinguished Clubs Gap Display - New Thresholds', () => {
     /**
      * Validates: Requirements 6.2, 6.3, 6.4
      * FOR EACH area, THE System SHALL calculate and display distinguished clubs gaps
+     * Distinguished: 50% of club base
+     * Select: 50% of club base + 1
+     * President's: 50% of club base + 1 (plus clubBase+1 paid)
      */
-    it('should display gap to Distinguished level', () => {
+    it('should display gap to Distinguished level (50% of club base)', () => {
       const areas: AreaWithDivision[] = [
-        // 4 paid clubs, 1 distinguished = 25%, need 1 more for 50% (2 clubs)
+        // 4 club base, 4 paid, 1 distinguished
+        // Distinguished needs ceil(4*0.5) = 2, so gap = 1
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 1 }),
       ]
 
@@ -393,7 +501,7 @@ describe('AreaProgressTable', () => {
      */
     it('should display checkmark when Distinguished level is achieved', () => {
       const areas: AreaWithDivision[] = [
-        // 4 paid clubs, 2 distinguished = 50%, Distinguished achieved
+        // 4 club base, 4 paid, 2 distinguished = 50%, Distinguished achieved
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
@@ -406,21 +514,23 @@ describe('AreaProgressTable', () => {
 
     /**
      * Validates: Requirements 6.2, 6.3, 6.4
-     * Should show gaps for all three levels
+     * Should show gaps for all three levels with new thresholds
+     * For clubBase=4: Distinguished=2, Select=3, President's=3 (plus 5 paid)
      */
-    it('should display gaps for all recognition levels', () => {
+    it('should display gaps for all recognition levels with new thresholds', () => {
       const areas: AreaWithDivision[] = [
-        // 4 paid clubs, 0 distinguished
-        // Distinguished (50%) needs 2, Select (75%) needs 3, Presidents (100%) needs 4
+        // 4 club base, 4 paid, 0 distinguished
+        // Distinguished (50%) needs 2, Select (50%+1) needs 3, Presidents needs 3 (but also +1 paid)
         createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 0 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // Should show multiple gap values
-      expect(screen.getByText('+2')).toBeInTheDocument()
-      expect(screen.getByText('+3')).toBeInTheDocument()
-      expect(screen.getByText('+4')).toBeInTheDocument()
+      // Should show gap values for each level
+      expect(screen.getByText('+2')).toBeInTheDocument() // Distinguished gap
+      // Select and President's both need +3, so use getAllByText
+      const plus3Elements = screen.getAllByText('+3')
+      expect(plus3Elements.length).toBe(2) // One for Select, one for President's
     })
 
     /**
@@ -429,8 +539,9 @@ describe('AreaProgressTable', () => {
      */
     it('should display checkmarks for all achieved levels', () => {
       const areas: AreaWithDivision[] = [
-        // 4 paid clubs, 4 distinguished = 100%, all levels achieved
-        createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 4 }),
+        // 4 club base, 5 paid (clubBase+1), 3 distinguished (50%+1)
+        // All levels achieved: Distinguished, Select, President's
+        createArea({ clubBase: 4, paidClubs: 5, distinguishedClubs: 3 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
@@ -441,16 +552,16 @@ describe('AreaProgressTable', () => {
     })
   })
 
-  describe('Property 8: Paid Threshold Blocker Display', () => {
+  describe('Property 8: No Net Loss Blocker Display', () => {
     /**
      * Validates: Requirement 6.6
-     * WHEN an area cannot achieve a recognition level due to insufficient paid clubs,
-     * THE System SHALL indicate the paid clubs requirement must be met first
+     * WHEN an area cannot achieve a recognition level due to net club loss,
+     * THE System SHALL indicate the no net loss requirement must be met first
      */
-    it('should display dash for gaps when paid threshold not met', () => {
+    it('should display dash for gaps when no net loss requirement not met', () => {
       const areas: AreaWithDivision[] = [
-        // 4 clubs, 2 paid = 50%, below 75% threshold
-        createArea({ clubBase: 4, paidClubs: 2, distinguishedClubs: 2 }),
+        // 4 club base, 3 paid = net loss, below requirement
+        createArea({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
@@ -464,9 +575,9 @@ describe('AreaProgressTable', () => {
      * Validates: Requirement 6.6
      * Gap dashes should have appropriate title attribute explaining the blocker
      */
-    it('should have tooltip explaining paid threshold requirement on gap dashes', () => {
+    it('should have tooltip explaining no net loss requirement on gap dashes', () => {
       const areas: AreaWithDivision[] = [
-        createArea({ clubBase: 4, paidClubs: 2, distinguishedClubs: 2 }),
+        createArea({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
@@ -475,7 +586,8 @@ describe('AreaProgressTable', () => {
       const dashElements = screen.getAllByText('—')
       const gapDashes = dashElements.filter(
         element =>
-          element.getAttribute('title') === 'Meet paid clubs threshold first'
+          element.getAttribute('title') ===
+          'Meet no net club loss requirement first'
       )
       expect(gapDashes.length).toBe(3) // One for each recognition level gap
     })
@@ -622,20 +734,18 @@ describe('AreaProgressTable', () => {
     })
 
     /**
-     * Tests area with exactly threshold values (boundary conditions)
+     * Tests area with exactly no net loss threshold (paidClubs = clubBase)
      */
-    it('should correctly classify area at exact 75% paid threshold', () => {
+    it('should correctly classify area at exact no net loss threshold', () => {
       const areas: AreaWithDivision[] = [
-        // 4 clubs, 3 paid = 75% exactly
-        createArea({ clubBase: 4, paidClubs: 3, distinguishedClubs: 2 }),
+        // 4 club base, 4 paid = exactly meets no net loss
+        createArea({ clubBase: 4, paidClubs: 4, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // Should meet threshold and show recognition level
-      expect(
-        screen.queryByText('Paid Threshold Not Met')
-      ).not.toBeInTheDocument()
+      // Should meet requirement and show recognition level (not "Net Loss")
+      expect(screen.queryByText('Net Loss')).not.toBeInTheDocument()
       // Use getAllByText since "Distinguished" appears in header and badge
       const distinguishedElements = screen.getAllByText('Distinguished')
       expect(distinguishedElements.length).toBeGreaterThanOrEqual(1)
@@ -643,30 +753,34 @@ describe('AreaProgressTable', () => {
 
     /**
      * Tests area with 1 club (minimum case)
+     * For clubBase=1: Distinguished needs ceil(1*0.5)=1, Select needs 2, President's needs 2 (and 2 paid)
      */
     it('should handle area with single club', () => {
       const areas: AreaWithDivision[] = [
-        createArea({ clubBase: 1, paidClubs: 1, distinguishedClubs: 1 }),
+        // 1 club base, 2 paid (clubBase+1), 2 distinguished (50%+1)
+        createArea({ clubBase: 1, paidClubs: 2, distinguishedClubs: 2 }),
       ]
 
       renderWithProviders(<AreaProgressTable areas={areas} />)
 
-      // Should render and show President's Distinguished (100%)
+      // Should render and show President's Distinguished
       expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
     })
 
     /**
-     * Tests multiple areas with different recognition levels
+     * Tests multiple areas with different recognition levels under new DAP criteria
      */
     it('should display multiple areas with different recognition levels', () => {
       const areas: AreaWithDivision[] = [
+        // President's Distinguished: 5 paid (clubBase+1), 3 distinguished (50%+1)
         createArea({
           areaId: 'A1',
           divisionId: 'A',
           clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 4,
+          paidClubs: 5,
+          distinguishedClubs: 3,
         }),
+        // Select Distinguished: 4 paid (clubBase), 3 distinguished (50%+1)
         createArea({
           areaId: 'A2',
           divisionId: 'A',
@@ -674,6 +788,7 @@ describe('AreaProgressTable', () => {
           paidClubs: 4,
           distinguishedClubs: 3,
         }),
+        // Distinguished: 4 paid (clubBase), 2 distinguished (50%)
         createArea({
           areaId: 'B1',
           divisionId: 'B',
@@ -681,6 +796,7 @@ describe('AreaProgressTable', () => {
           paidClubs: 4,
           distinguishedClubs: 2,
         }),
+        // Not Distinguished: 4 paid (clubBase), 1 distinguished (25%)
         createArea({
           areaId: 'B2',
           divisionId: 'B',
@@ -699,9 +815,37 @@ describe('AreaProgressTable', () => {
       expect(distinguishedElements.length).toBeGreaterThanOrEqual(1)
       expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
     })
+
+    /**
+     * Tests area with net club loss among multiple areas
+     */
+    it('should display "Net Loss" for area with paidClubs < clubBase among multiple areas', () => {
+      const areas: AreaWithDivision[] = [
+        // Distinguished: meets requirements
+        createArea({
+          areaId: 'A1',
+          divisionId: 'A',
+          clubBase: 4,
+          paidClubs: 4,
+          distinguishedClubs: 2,
+        }),
+        // Net Loss: paidClubs < clubBase
+        createArea({
+          areaId: 'A2',
+          divisionId: 'A',
+          clubBase: 4,
+          paidClubs: 3,
+          distinguishedClubs: 2,
+        }),
+      ]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      expect(screen.getByText('Net Loss')).toBeInTheDocument()
+    })
   })
 
-  describe('Table Footer Legend', () => {
+  describe('Table Footer Legend - Updated Text', () => {
     /**
      * Tests that legend is displayed when areas exist
      */
@@ -714,7 +858,26 @@ describe('AreaProgressTable', () => {
 
       expect(screen.getByText(/Gap columns:/)).toBeInTheDocument()
       expect(screen.getByText(/Level achieved/)).toBeInTheDocument()
-      expect(screen.getByText(/Meet paid threshold first/)).toBeInTheDocument()
+    })
+
+    /**
+     * Tests that legend shows updated text for no net loss requirement
+     * Should say "Meet no net loss requirement first" instead of "Meet paid threshold first"
+     */
+    it('should display "Meet no net loss requirement first" in legend', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({ areaId: 'A1', divisionId: 'A' }),
+      ]
+
+      renderWithProviders(<AreaProgressTable areas={areas} />)
+
+      expect(
+        screen.getByText(/Meet no net loss requirement first/)
+      ).toBeInTheDocument()
+      // Should NOT have old text
+      expect(
+        screen.queryByText(/Meet paid threshold first/)
+      ).not.toBeInTheDocument()
     })
 
     /**

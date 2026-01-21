@@ -82,9 +82,9 @@ interface AreaWithDivision extends AreaPerformance {
 interface GapAnalysis {
   /** Current recognition level achieved */
   currentLevel: 'none' | 'distinguished' | 'select' | 'presidents'
-  /** Whether paid clubs threshold (75%) is met */
-  meetsPaidThreshold: boolean
-  /** Number of additional paid clubs needed (0 if threshold met) */
+  /** Whether no net club loss requirement is met (paidClubs >= clubBase) */
+  meetsNoNetLossRequirement: boolean
+  /** Number of additional paid clubs needed to meet club base (0 if met) */
   paidClubsNeeded: number
   /** Gap to Distinguished level */
   distinguishedGap: GapToLevel
@@ -98,8 +98,10 @@ interface GapToLevel {
   /** Whether this level is already achieved */
   achieved: boolean
   /** Number of additional distinguished clubs needed (0 if achieved) */
-  clubsNeeded: number
-  /** Whether this level is achievable (paid threshold met) */
+  distinguishedClubsNeeded: number
+  /** Number of additional paid clubs needed for this level (0 if met) */
+  paidClubsNeeded: number
+  /** Whether this level is achievable (no net loss requirement met) */
   achievable: boolean
 }
 ```
@@ -114,13 +116,27 @@ The feature reuses existing types:
 - `DivisionPerformance`: Contains `divisionId` and `areas: AreaPerformance[]`
 - `DistinguishedStatus`: Status enum including recognition levels
 
-### DAP Thresholds (from toastmasters-rules-reference.md)
+### DAP Thresholds (from TOASTMASTERS_DASHBOARD_KNOWLEDGE.md)
 
-| Level                          | Paid Clubs | Distinguished Clubs (of paid) |
-| ------------------------------ | ---------- | ----------------------------- |
-| Distinguished Area             | ≥ 75%      | ≥ 50%                         |
-| Select Distinguished Area      | ≥ 75%      | ≥ 75%                         |
-| President's Distinguished Area | ≥ 75%      | 100%                          |
+**Eligibility Requirements:**
+
+1. No net club loss (paidClubs >= clubBase)
+2. Club Visits: 75% of club base for first-round visits by Nov 30, 75% for second-round by May 31
+
+**Recognition Levels:**
+
+| Level                          | Paid Clubs      | Distinguished Clubs (of club base) |
+| ------------------------------ | --------------- | ---------------------------------- |
+| Distinguished Area             | ≥ club base     | ≥ 50%                              |
+| Select Distinguished Area      | ≥ club base     | ≥ 50% + 1 club                     |
+| President's Distinguished Area | ≥ club base + 1 | ≥ 50% + 1 club                     |
+
+**Key Differences from Previous Implementation:**
+
+- Distinguished percentage is calculated against **club base**, not paid clubs
+- Paid clubs threshold is **≥ club base** (no net loss), not 75%
+- Select Distinguished requires 50% + 1 additional club (not 75%)
+- President's Distinguished requires club base + 1 paid clubs AND 50% + 1 distinguished
 
 ## Correctness Properties
 
@@ -146,7 +162,7 @@ _For any_ area where clubBase > 0, the displayed paid clubs percentage should eq
 
 ### Property 4: Distinguished Clubs Percentage Calculation
 
-_For any_ area where paidClubs > 0, the displayed distinguished clubs percentage should equal `Math.round((distinguishedClubs / paidClubs) * 100)`. When paidClubs = 0, the percentage should be 0.
+_For any_ area where clubBase > 0, the displayed distinguished clubs percentage should equal `Math.round((distinguishedClubs / clubBase) * 100)`. When clubBase = 0, the percentage should be 0.
 
 **Validates: Requirements 5.5**
 
@@ -154,33 +170,36 @@ _For any_ area where paidClubs > 0, the displayed distinguished clubs percentage
 
 _For any_ area with valid metrics, the recognition level should be determined as follows:
 
-- If paidClubs/clubBase < 0.75: "Not Eligible" (paid threshold not met)
-- Else if distinguishedClubs/paidClubs >= 1.0: "President's Distinguished"
-- Else if distinguishedClubs/paidClubs >= 0.75: "Select Distinguished"
-- Else if distinguishedClubs/paidClubs >= 0.50: "Distinguished"
+- If paidClubs < clubBase: "Not Eligible" (net club loss)
+- Else if paidClubs >= clubBase + 1 AND distinguishedClubs >= Math.ceil(clubBase \* 0.50) + 1: "President's Distinguished"
+- Else if paidClubs >= clubBase AND distinguishedClubs >= Math.ceil(clubBase \* 0.50) + 1: "Select Distinguished"
+- Else if paidClubs >= clubBase AND distinguishedClubs >= Math.ceil(clubBase \* 0.50): "Distinguished"
 - Else: "Not Distinguished"
 
 **Validates: Requirements 5.6, 6.5**
 
 ### Property 6: Paid Clubs Gap Calculation
 
-_For any_ area, the number of additional paid clubs needed should equal `max(0, Math.ceil(clubBase * 0.75) - paidClubs)`.
+_For any_ area:
+
+- For Distinguished/Select: paidClubsNeeded = `max(0, clubBase - paidClubs)`
+- For President's Distinguished: paidClubsNeeded = `max(0, clubBase + 1 - paidClubs)`
 
 **Validates: Requirements 6.1**
 
 ### Property 7: Distinguished Clubs Gap Calculation
 
-_For any_ area where the paid threshold is met (paidClubs/clubBase >= 0.75):
+_For any_ area where the no net loss requirement is met (paidClubs >= clubBase):
 
-- Distinguished gap = `max(0, Math.ceil(paidClubs * 0.50) - distinguishedClubs)`
-- Select Distinguished gap = `max(0, Math.ceil(paidClubs * 0.75) - distinguishedClubs)`
-- President's Distinguished gap = `max(0, paidClubs - distinguishedClubs)`
+- Distinguished gap = `max(0, Math.ceil(clubBase * 0.50) - distinguishedClubs)`
+- Select Distinguished gap = `max(0, Math.ceil(clubBase * 0.50) + 1 - distinguishedClubs)`
+- President's Distinguished gap = `max(0, Math.ceil(clubBase * 0.50) + 1 - distinguishedClubs)`
 
 **Validates: Requirements 6.2, 6.3, 6.4**
 
-### Property 8: Paid Threshold Blocker Display
+### Property 8: No Net Loss Blocker Display
 
-_For any_ area where paidClubs/clubBase < 0.75, the gap analysis for all recognition levels should indicate that the paid clubs requirement must be met first, rather than showing distinguished club gaps.
+_For any_ area where paidClubs < clubBase, the gap analysis for all recognition levels should indicate that the no net club loss requirement must be met first, rather than showing distinguished club gaps.
 
 **Validates: Requirements 6.6**
 
@@ -227,18 +246,18 @@ Unit tests should cover:
 
 **Gap Calculation Logic:**
 
-- Paid clubs gap: area with 4 clubs, 2 paid → needs 1 more (75% = 3)
-- Paid clubs gap: area with 4 clubs, 3 paid → needs 0 (threshold met)
-- Distinguished gap: 4 paid clubs, 1 distinguished → needs 1 for Distinguished (50% = 2)
-- Select gap: 4 paid clubs, 2 distinguished → needs 1 for Select (75% = 3)
-- Presidents gap: 4 paid clubs, 3 distinguished → needs 1 for Presidents (100% = 4)
+- Paid clubs gap for Distinguished/Select: area with 4 club base, 3 paid → needs 1 more (to match club base)
+- Paid clubs gap for President's: area with 4 club base, 4 paid → needs 1 more (club base + 1)
+- Distinguished gap: 4 club base, 1 distinguished → needs 1 for Distinguished (50% of 4 = 2)
+- Select gap: 4 club base, 2 distinguished → needs 1 for Select (50% + 1 = 3)
+- Presidents gap: 4 club base, 2 distinguished → needs 1 for Presidents (50% + 1 = 3, but also needs paid clubs)
 
 **Recognition Level Classification:**
 
-- Area below paid threshold → "Not Eligible"
-- Area at 50% distinguished → "Distinguished"
-- Area at 75% distinguished → "Select Distinguished"
-- Area at 100% distinguished → "President's Distinguished"
+- Area with net club loss (paidClubs < clubBase) → "Not Eligible"
+- Area at 50% distinguished of club base → "Distinguished"
+- Area at 50% + 1 distinguished of club base → "Select Distinguished"
+- Area at 50% + 1 distinguished AND club base + 1 paid → "President's Distinguished"
 
 **Edge Cases:**
 

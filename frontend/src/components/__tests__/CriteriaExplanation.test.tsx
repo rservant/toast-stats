@@ -5,17 +5,18 @@
  * Validates content display, expand/collapse functionality, and accessibility.
  *
  * Requirements validated:
- * - 2.1: Show eligibility gate requirement prominently at the top
- * - 2.2: Explain that at least two club visits per club must be completed
- * - 2.3: Indicate that club visit data is not currently available
- * - 2.4: Display eligibility status as "Unknown" when data unavailable
- * - 3.1: Show that at least 75% of clubs must be paid clubs
+ * - 2.1: Show eligibility gate requirements prominently at the top
+ * - 2.2: Explain that areas must have no net club loss (paid clubs >= club base)
+ * - 2.3: Explain that 75% of club base must have first-round visits by Nov 30 and 75% must have second-round visits by May 31
+ * - 2.4: Indicate that club visit data is not currently available from dashboard exports
+ * - 2.5: Display eligibility status as "Unknown" when club visit data unavailable
+ * - 3.1: Show that paid clubs must be at least equal to club base (no net loss)
  * - 3.2: Explain what constitutes a "paid club" (Active status, dues current)
- * - 3.3: Explain what statuses disqualify a club from being "paid"
- * - 4.1: Show Distinguished Area requires at least 50% of paid clubs distinguished
- * - 4.2: Show Select Distinguished requires at least 75% of paid clubs distinguished
- * - 4.3: Show President's Distinguished requires 100% of paid clubs distinguished
- * - 4.4: Indicate percentages are calculated against paid clubs only
+ * - 3.3: Explain what statuses disqualify a club from being "paid" (Suspended, Ineligible, Low)
+ * - 4.1: Show Distinguished Area requires paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+ * - 4.2: Show Select Distinguished requires paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+ * - 4.3: Show President's Distinguished requires paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+ * - 4.4: Indicate percentages are calculated against club base, not paid clubs
  * - 4.5: Present recognition levels in ascending order of achievement
  * - 7.4: Use semantic HTML with appropriate ARIA labels
  */
@@ -37,31 +38,50 @@ describe('CriteriaExplanation', () => {
   describe('Criteria Content Display', () => {
     /**
      * Validates: Requirements 2.1, 2.2
-     * THE Criteria_Display SHALL show the eligibility gate requirement prominently
-     * THE Criteria_Display SHALL explain that at least two club visits per club must be completed
+     * THE Criteria_Display SHALL show the eligibility gate requirements prominently
+     * THE Criteria_Display SHALL explain that areas must have no net club loss
      */
-    it('should display eligibility gate section with club visits requirement', () => {
+    it('should display eligibility gate section with no net club loss requirement', () => {
       renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
 
       // Check eligibility gate heading is present
       expect(screen.getByText('Eligibility Gate')).toBeInTheDocument()
 
-      // Check club visits requirement is explained
-      expect(screen.getByText('Club Visit Reports')).toBeInTheDocument()
+      // Check no net club loss requirement is explained
+      expect(screen.getByText('No Net Club Loss')).toBeInTheDocument()
       expect(
-        screen.getByText(/at least two Area Director Club Visit Reports/i)
+        screen.getByText(/paid clubs must be at least equal to the club base/i)
       ).toBeInTheDocument()
     })
 
     /**
-     * Validates: Requirements 2.3, 2.4
+     * Validates: Requirements 2.3
+     * THE Criteria_Display SHALL explain that 75% of club base must have first-round visits by Nov 30
+     * and 75% must have second-round visits by May 31
+     */
+    it('should display club visits requirement with specific deadlines', () => {
+      renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
+
+      // Check club visits requirement is explained
+      expect(screen.getByText('Club Visit Reports')).toBeInTheDocument()
+      expect(
+        screen.getByText(/75% of club base must have first-round visits/i)
+      ).toBeInTheDocument()
+      expect(screen.getByText(/November 30/i)).toBeInTheDocument()
+      expect(screen.getByText(/May 31/i)).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirements 2.4, 2.5
      * THE Criteria_Display SHALL indicate that club visit data is not currently available
      * WHEN club visit data is unavailable, THE System SHALL display eligibility status as "Unknown"
      */
     it('should display "Status: Unknown" for club visit data', () => {
       renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
 
-      expect(screen.getByText('Status: Unknown')).toBeInTheDocument()
+      expect(
+        screen.getByText(/Club Visit Status: Unknown/i)
+      ).toBeInTheDocument()
       expect(
         screen.getByText(/Club visit data is not currently available/i)
       ).toBeInTheDocument()
@@ -69,14 +89,20 @@ describe('CriteriaExplanation', () => {
 
     /**
      * Validates: Requirement 3.1
-     * THE Criteria_Display SHALL show that at least 75% of clubs must be paid clubs
+     * THE Criteria_Display SHALL show that paid clubs must be at least equal to club base (no net loss)
      */
-    it('should display paid clubs 75% threshold requirement', () => {
+    it('should display no net club loss requirement section', () => {
       renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
 
-      expect(screen.getByText('Paid Clubs Requirement')).toBeInTheDocument()
-      expect(screen.getByText('75%')).toBeInTheDocument()
-      expect(screen.getByText(/75% of clubs/i)).toBeInTheDocument()
+      expect(
+        screen.getByText('No Net Club Loss Requirement')
+      ).toBeInTheDocument()
+      expect(screen.getByText('≥ Base')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          /Paid clubs.*must be at least equal to the.*club base/i
+        )
+      ).toBeInTheDocument()
     })
 
     /**
@@ -101,44 +127,47 @@ describe('CriteriaExplanation', () => {
 
     /**
      * Validates: Requirements 4.1, 4.2, 4.3, 4.5
-     * THE Criteria_Display SHALL show all three recognition levels with correct percentages
+     * THE Criteria_Display SHALL show all three recognition levels with correct thresholds
      * THE Criteria_Display SHALL present recognition levels in ascending order
      */
-    it('should display all three recognition levels with correct percentages', () => {
+    it('should display all three recognition levels with correct thresholds', () => {
       renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
 
       expect(screen.getByText('Recognition Levels')).toBeInTheDocument()
 
-      // Distinguished Area - 50%
+      // Distinguished Area - ≥ Club Base paid, ≥ 50% of Club Base distinguished
       expect(screen.getByText('Distinguished Area')).toBeInTheDocument()
-      expect(screen.getByText('≥ 50%')).toBeInTheDocument()
+      expect(screen.getByText('≥ 50% of Club Base')).toBeInTheDocument()
 
-      // Select Distinguished Area - 75%
+      // Select Distinguished Area - ≥ Club Base paid, ≥ 50% of Club Base + 1 distinguished
       expect(screen.getByText('Select Distinguished Area')).toBeInTheDocument()
-      // Note: There are multiple ≥ 75% values (paid clubs column and distinguished column)
-      const seventyFivePercentElements = screen.getAllByText('≥ 75%')
-      expect(seventyFivePercentElements.length).toBeGreaterThanOrEqual(1)
+      // Note: There are multiple "≥ 50% of Club Base + 1" values (Select and President's distinguished columns)
+      const fiftyPlusOneElements = screen.getAllByText('≥ 50% of Club Base + 1')
+      expect(fiftyPlusOneElements.length).toBe(2)
 
-      // President's Distinguished Area - 100%
+      // President's Distinguished Area - ≥ Club Base + 1 paid, ≥ 50% of Club Base + 1 distinguished
       expect(
         screen.getByText("President's Distinguished Area")
       ).toBeInTheDocument()
-      expect(screen.getByText('100%')).toBeInTheDocument()
+      expect(screen.getByText('≥ Club Base + 1')).toBeInTheDocument()
     })
 
     /**
      * Validates: Requirement 4.4
-     * THE Criteria_Display SHALL indicate percentages are calculated against paid clubs only
+     * THE Criteria_Display SHALL indicate percentages are calculated against club base, not paid clubs
      */
-    it('should display note about percentages calculated against paid clubs', () => {
+    it('should display note about percentages calculated against club base', () => {
       renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
 
+      // Check for the important note about calculation basis
+      // The text is split across elements due to <strong> tags, so we check for key parts
       expect(
         screen.getByText(
           /Distinguished club percentages are calculated against/i
         )
       ).toBeInTheDocument()
-      expect(screen.getByText(/paid clubs only/i)).toBeInTheDocument()
+      // Verify the note mentions "not paid clubs" to confirm it's about club base
+      expect(screen.getByText(/not paid clubs/i)).toBeInTheDocument()
     })
 
     /**
@@ -153,15 +182,38 @@ describe('CriteriaExplanation', () => {
       })
       const rows = table.querySelectorAll('tbody tr')
 
-      // Verify order: Distinguished (50%), Select (75%), President's (100%)
+      // Verify order: Distinguished, Select, President's
       expect(rows[0]).toHaveTextContent('Distinguished Area')
-      expect(rows[0]).toHaveTextContent('≥ 50%')
+      expect(rows[0]).toHaveTextContent('≥ Club Base')
+      expect(rows[0]).toHaveTextContent('≥ 50% of Club Base')
 
       expect(rows[1]).toHaveTextContent('Select Distinguished Area')
-      expect(rows[1]).toHaveTextContent('≥ 75%')
+      expect(rows[1]).toHaveTextContent('≥ Club Base')
+      expect(rows[1]).toHaveTextContent('≥ 50% of Club Base + 1')
 
       expect(rows[2]).toHaveTextContent("President's Distinguished Area")
-      expect(rows[2]).toHaveTextContent('100%')
+      expect(rows[2]).toHaveTextContent('≥ Club Base + 1')
+      expect(rows[2]).toHaveTextContent('≥ 50% of Club Base + 1')
+    })
+
+    /**
+     * Validates: Requirements 4.1, 4.2, 4.3
+     * Verify the paid clubs column shows correct thresholds for each level
+     */
+    it('should display correct paid clubs thresholds for each recognition level', () => {
+      renderWithProviders(<CriteriaExplanation defaultExpanded={true} />)
+
+      const table = screen.getByRole('table', {
+        name: /recognition level requirements/i,
+      })
+      const rows = table.querySelectorAll('tbody tr')
+
+      // Distinguished and Select require ≥ Club Base
+      // President's requires ≥ Club Base + 1
+      const clubBaseElements = screen.getAllByText('≥ Club Base')
+      expect(clubBaseElements.length).toBe(2) // Distinguished and Select
+
+      expect(screen.getByText('≥ Club Base + 1')).toBeInTheDocument() // President's only
     })
   })
 
@@ -300,12 +352,12 @@ describe('CriteriaExplanation', () => {
       expect(eligibilitySection).toBeInTheDocument()
       expect(document.getElementById('eligibility-heading')).toBeInTheDocument()
 
-      // Paid clubs section
-      const paidClubsSection = document.querySelector(
-        '[aria-labelledby="paid-clubs-heading"]'
+      // No net loss section (updated from paid-clubs-heading)
+      const noNetLossSection = document.querySelector(
+        '[aria-labelledby="no-net-loss-heading"]'
       )
-      expect(paidClubsSection).toBeInTheDocument()
-      expect(document.getElementById('paid-clubs-heading')).toBeInTheDocument()
+      expect(noNetLossSection).toBeInTheDocument()
+      expect(document.getElementById('no-net-loss-heading')).toBeInTheDocument()
 
       // Recognition levels section
       const recognitionSection = document.querySelector(

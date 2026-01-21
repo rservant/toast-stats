@@ -7,17 +7,18 @@
  * President's Distinguished status.
  *
  * Requirements validated:
- * - 2.1: Show eligibility gate requirement prominently at the top
- * - 2.2: Explain that at least two club visits per club must be completed
- * - 2.3: Indicate that club visit data is not currently available
- * - 2.4: Display eligibility status as "Unknown" when data unavailable
- * - 3.1: Show that at least 75% of clubs must be paid clubs
+ * - 2.1: Show eligibility gate requirements prominently at the top
+ * - 2.2: Explain that areas must have no net club loss (paid clubs >= club base)
+ * - 2.3: Explain that 75% of club base must have first-round visits by Nov 30 and 75% must have second-round visits by May 31
+ * - 2.4: Indicate that club visit data is not currently available from dashboard exports
+ * - 2.5: Display eligibility status as "Unknown" when club visit data unavailable
+ * - 3.1: Show that paid clubs must be at least equal to club base (no net loss)
  * - 3.2: Explain what constitutes a "paid club" (Active status, dues current)
- * - 3.3: Explain what statuses disqualify a club from being "paid"
- * - 4.1: Show Distinguished Area requires at least 50% of paid clubs distinguished
- * - 4.2: Show Select Distinguished requires at least 75% of paid clubs distinguished
- * - 4.3: Show President's Distinguished requires 100% of paid clubs distinguished
- * - 4.4: Indicate percentages are calculated against paid clubs only
+ * - 3.3: Explain what statuses disqualify a club from being "paid" (Suspended, Ineligible, Low)
+ * - 4.1: Show Distinguished Area requires paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+ * - 4.2: Show Select Distinguished requires paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+ * - 4.3: Show President's Distinguished requires paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+ * - 4.4: Indicate percentages are calculated against club base, not paid clubs
  * - 4.5: Present recognition levels in ascending order of achievement
  *
  * Brand Guidelines:
@@ -140,10 +141,38 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
             Eligibility Gate
           </h4>
           <div className="bg-tm-cool-gray-10 border border-tm-cool-gray-30 rounded-lg p-4">
-            <p className="text-gray-800 font-tm-body mb-2">
+            <p className="text-gray-800 font-tm-body mb-3">
               Before an area can be considered for recognition, the following
-              prerequisite must be met:
+              prerequisites must be met:
             </p>
+
+            {/* No Net Club Loss Requirement */}
+            <div className="flex items-start gap-3 bg-white rounded-md p-3 border border-tm-cool-gray-20 mb-3">
+              <svg
+                className="w-5 h-5 text-tm-loyal-blue flex-shrink-0 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div>
+                <p className="font-semibold text-gray-900 font-tm-body">
+                  No Net Club Loss
+                </p>
+                <p className="text-gray-700 font-tm-body text-sm">
+                  The area must have no net club loss — paid clubs must be at
+                  least equal to the club base (the number of clubs at the start
+                  of the program year).
+                </p>
+              </div>
+            </div>
+
+            {/* Club Visit Requirement */}
             <div className="flex items-start gap-3 bg-white rounded-md p-3 border border-tm-cool-gray-20">
               <svg
                 className="w-5 h-5 text-tm-loyal-blue flex-shrink-0 mt-0.5"
@@ -163,12 +192,14 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
                   Club Visit Reports
                 </p>
                 <p className="text-gray-700 font-tm-body text-sm">
-                  At least two Area Director Club Visit Reports must be
-                  completed and submitted for each club in the area.
+                  75% of club base must have first-round visits completed by
+                  November 30, and 75% must have second-round visits completed
+                  by May 31.
                 </p>
               </div>
             </div>
-            {/* Data unavailable notice - Requirement 2.3, 2.4 */}
+
+            {/* Data unavailable notice - Requirement 2.4, 2.5 */}
             <div className="mt-3 flex items-start gap-2 text-sm">
               <svg
                 className="w-4 h-4 text-tm-true-maroon flex-shrink-0 mt-0.5"
@@ -184,7 +215,7 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
               </svg>
               <p className="text-gray-600 font-tm-body">
                 <span className="font-semibold text-tm-true-maroon">
-                  Status: Unknown
+                  Club Visit Status: Unknown
                 </span>{' '}
                 — Club visit data is not currently available from dashboard
                 exports. This requirement cannot be verified automatically.
@@ -193,10 +224,10 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
           </div>
         </section>
 
-        {/* Paid Clubs Requirement Section - Requirement 3 */}
-        <section className="mb-6" aria-labelledby="paid-clubs-heading">
+        {/* No Net Club Loss Requirement Section - Requirement 3 */}
+        <section className="mb-6" aria-labelledby="no-net-loss-heading">
           <h4
-            id="paid-clubs-heading"
+            id="no-net-loss-heading"
             className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
           >
             <svg
@@ -212,16 +243,24 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
                 clipRule="evenodd"
               />
             </svg>
-            Paid Clubs Requirement
+            No Net Club Loss Requirement
           </h4>
           <div className="bg-tm-cool-gray-10 border border-tm-cool-gray-30 rounded-lg p-4">
             <div className="flex items-center gap-3 mb-3">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-tm-loyal-blue text-white font-bold text-lg font-tm-headline">
-                75%
+              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-tm-loyal-blue text-white font-bold text-sm font-tm-headline px-2">
+                ≥ Base
               </span>
               <p className="text-gray-800 font-tm-body">
-                At least <strong>75% of clubs</strong> in the area must be{' '}
-                <strong>paid clubs</strong> (in good standing).
+                <strong>Paid clubs</strong> must be at least equal to the{' '}
+                <strong>club base</strong> (no net loss of clubs).
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+              <p className="text-sm text-blue-800 font-tm-body">
+                <strong>Club Base</strong> is the number of clubs in the area at
+                the start of the program year. This is the baseline against
+                which club growth or loss is measured.
               </p>
             </div>
 
@@ -333,8 +372,8 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
               </svg>
               <span>
                 <strong>Important:</strong> Distinguished club percentages are
-                calculated against <strong>paid clubs only</strong>, not total
-                clubs in the area.
+                calculated against the <strong>club base</strong> (starting
+                clubs), not paid clubs.
               </span>
             </p>
           </div>
@@ -388,11 +427,11 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center font-tm-body text-gray-700">
-                    ≥ 75%
+                    ≥ Club Base
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-tm-happy-yellow-20 text-gray-900 font-semibold font-tm-body">
-                      ≥ 50%
+                      ≥ 50% of Club Base
                     </span>
                   </td>
                 </tr>
@@ -417,11 +456,11 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center font-tm-body text-gray-700">
-                    ≥ 75%
+                    ≥ Club Base
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-tm-cool-gray-30 text-gray-900 font-semibold font-tm-body">
-                      ≥ 75%
+                      ≥ 50% of Club Base + 1
                     </span>
                   </td>
                 </tr>
@@ -446,11 +485,11 @@ export const CriteriaExplanation: React.FC<CriteriaExplanationProps> = ({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center font-tm-body text-gray-700">
-                    ≥ 75%
+                    ≥ Club Base + 1
                   </td>
                   <td className="px-4 py-3 text-center rounded-br-lg">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-tm-loyal-blue-20 text-tm-loyal-blue font-semibold font-tm-body">
-                      100%
+                      ≥ 50% of Club Base + 1
                     </span>
                   </td>
                 </tr>

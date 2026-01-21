@@ -6,7 +6,7 @@ This implementation adds an Area Recognition section to the existing Divisions &
 
 ## Tasks
 
-- [ ] 1. Create gap calculation utility
+- [x] 1. Create gap calculation utility
   - [x] 1.1 Create `calculateAreaGapAnalysis` function in `frontend/src/utils/areaGapAnalysis.ts`
     - Calculate paid clubs gap (clubs needed to reach 75% threshold)
     - Calculate distinguished clubs gaps for each recognition level
@@ -20,7 +20,7 @@ This implementation adds an Area Recognition section to the existing Divisions &
     - Test edge cases (0 clubs, boundary values)
     - _Requirements: 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 2. Create CriteriaExplanation component
+- [x] 2. Create CriteriaExplanation component
   - [x] 2.1 Create `CriteriaExplanation.tsx` component in `frontend/src/components/`
     - Display eligibility gate requirement (club visits)
     - Display paid clubs requirement (75% threshold)
@@ -37,7 +37,7 @@ This implementation adds an Area Recognition section to the existing Divisions &
 - [x] 3. Checkpoint - Ensure utility and criteria component work
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Create AreaProgressTable component
+- [x] 4. Create AreaProgressTable component
   - [x] 4.1 Create `AreaProgressTable.tsx` component in `frontend/src/components/`
     - Display all areas with division grouping
     - Show paid clubs count, percentage, and gap
@@ -56,7 +56,7 @@ This implementation adds an Area Recognition section to the existing Divisions &
     - Test loading state
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 5. Create AreaRecognitionPanel container component
+- [x] 5. Create AreaRecognitionPanel container component
   - [x] 5.1 Create `AreaRecognitionPanel.tsx` component in `frontend/src/components/`
     - Combine CriteriaExplanation and AreaProgressTable
     - Extract areas from DivisionPerformance data
@@ -72,7 +72,7 @@ This implementation adds an Area Recognition section to the existing Divisions &
 - [x] 6. Checkpoint - Ensure all components work independently
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Integrate into DistrictDetailPage
+- [x] 7. Integrate into DistrictDetailPage
   - [x] 7.1 Add AreaRecognitionPanel to Divisions & Areas tab in `DistrictDetailPage.tsx`
     - Import AreaRecognitionPanel component
     - Pass districtStatistics data to component
@@ -86,9 +86,49 @@ This implementation adds an Area Recognition section to the existing Divisions &
 - [x] 8. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
+- [x] 9. Update implementation for revised DAP criteria
+  - [x] 9.1 Update `areaGapAnalysis.ts` with new recognition level thresholds
+    - Change from 75% paid threshold to no net club loss (paidClubs >= clubBase)
+    - Change distinguished percentage calculation from paid clubs to club base
+    - Update Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+    - Update Select Distinguished: paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+    - Update President's Distinguished: paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+    - _Requirements: 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+  - [x] 9.2 Update unit tests for new gap calculation logic
+    - Update test cases for no net club loss requirement
+    - Update test cases for new recognition level thresholds
+    - Update test cases for distinguished percentage against club base
+    - _Requirements: 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+
+- [x] 10. Update CriteriaExplanation component for revised criteria
+  - [x] 10.1 Update `CriteriaExplanation.tsx` with new eligibility and recognition criteria
+    - Update eligibility gate to show no net club loss + club visits requirements
+    - Update recognition level table with new thresholds
+    - Update explanation text for distinguished percentage calculation
+    - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4_
+  - [x] 10.2 Update unit tests for CriteriaExplanation component
+    - Update test cases for new criteria content
+    - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4_
+
+- [x] 11. Update AreaProgressTable component for revised criteria
+  - [x] 11.1 Update `AreaProgressTable.tsx` to display new metrics
+    - Update column headers and labels for no net club loss
+    - Update gap display for new thresholds
+    - Update recognition level badges
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+  - [x] 11.2 Update unit tests for AreaProgressTable component
+    - Update test cases for new metrics display
+    - Update test cases for new recognition level indicators
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+
+- [x] 12. Final checkpoint - Ensure all updated tests pass
+  - Ensure all tests pass with new DAP criteria
+  - Verify integration tests still work
+
 ## Notes
 
 - All tasks including tests are required for comprehensive coverage
 - Each task references specific requirements for traceability
 - The implementation reuses existing types from `divisionStatus.ts`
 - Follow existing component patterns in the codebase for consistency
+- **UPDATED**: Tasks 9-12 added to update implementation for revised DAP criteria from TOASTMASTERS_DASHBOARD_KNOWLEDGE.md

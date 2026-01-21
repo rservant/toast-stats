@@ -71,13 +71,13 @@ const getRecognitionLabel = (level: RecognitionLevel): string => {
  */
 const getRecognitionBadge = (
   level: RecognitionLevel,
-  meetsPaidThreshold: boolean
+  meetsNoNetLossRequirement: boolean
 ): { className: string; label: string } => {
-  // Property 8: If paid threshold not met, show special indicator
-  if (!meetsPaidThreshold) {
+  // Property 8: If no net loss requirement not met, show special indicator
+  if (!meetsNoNetLossRequirement) {
     return {
       className: 'bg-red-100 text-red-800 border-red-300',
-      label: 'Paid Threshold Not Met',
+      label: 'Net Loss',
     }
   }
 
@@ -169,7 +169,7 @@ const SortIcon: React.FC<{
  * Renders gap information for a recognition level
  *
  * Property 7: Distinguished Clubs Gap Calculation
- * Property 8: Paid Threshold Blocker Display
+ * Property 8: No Net Loss Blocker Display
  * Requirements: 6.2, 6.3, 6.4, 6.6
  */
 const GapDisplay: React.FC<{
@@ -180,7 +180,7 @@ const GapDisplay: React.FC<{
     return (
       <span
         className="text-xs text-gray-400"
-        title="Meet paid clubs threshold first"
+        title="Meet no net club loss requirement first"
       >
         —
       </span>
@@ -201,9 +201,9 @@ const GapDisplay: React.FC<{
   return (
     <span
       className="text-xs text-tm-true-maroon font-medium"
-      title={`Need ${gap.clubsNeeded} more distinguished club(s) for ${label}`}
+      title={`Need ${gap.distinguishedClubsNeeded} more distinguished club(s) for ${label}`}
     >
-      +{gap.clubsNeeded}
+      +{gap.distinguishedClubsNeeded}
     </span>
   )
 }
@@ -270,8 +270,9 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
         area.paidClubs
       )
 
+      // Distinguished percentage is calculated against club base, not paid clubs
       const distinguishedPercentage = calculateDistinguishedPercentage(
-        area.paidClubs,
+        area.clubBase,
         area.distinguishedClubs
       )
 
@@ -385,9 +386,9 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
                   scope="col"
                 >
                   <div className="flex flex-col items-center">
-                    <span>Paid Clubs</span>
+                    <span>Paid / Base</span>
                     <span className="text-[10px] font-normal normal-case text-gray-500">
-                      (≥75% required)
+                      (≥ club base required)
                     </span>
                   </div>
                 </th>
@@ -398,7 +399,7 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
                   <div className="flex flex-col items-center">
                     <span>Distinguished</span>
                     <span className="text-[10px] font-normal normal-case text-gray-500">
-                      (of paid clubs)
+                      (of club base)
                     </span>
                   </div>
                 </th>
@@ -426,36 +427,36 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
                 <th
                   className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider"
                   scope="col"
-                  title="Clubs needed for Distinguished (50%)"
+                  title="Clubs needed for Distinguished (50% of club base)"
                 >
                   <div className="flex flex-col items-center">
                     <span>Gap to D</span>
                     <span className="text-[10px] font-normal normal-case text-gray-500">
-                      (50%)
+                      (50% of base)
                     </span>
                   </div>
                 </th>
                 <th
                   className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider"
                   scope="col"
-                  title="Clubs needed for Select Distinguished (75%)"
+                  title="Clubs needed for Select Distinguished (50% of club base + 1)"
                 >
                   <div className="flex flex-col items-center">
                     <span>Gap to S</span>
                     <span className="text-[10px] font-normal normal-case text-gray-500">
-                      (75%)
+                      (50% + 1)
                     </span>
                   </div>
                 </th>
                 <th
                   className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider"
                   scope="col"
-                  title="Clubs needed for President's Distinguished (100%)"
+                  title="Clubs needed for President's Distinguished (club base + 1 paid, 50% of club base + 1 distinguished)"
                 >
                   <div className="flex flex-col items-center">
                     <span>Gap to P</span>
                     <span className="text-[10px] font-normal normal-case text-gray-500">
-                      (100%)
+                      (base+1, 50%+1)
                     </span>
                   </div>
                 </th>
@@ -465,7 +466,7 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
               {processedAreas.map(area => {
                 const badge = getRecognitionBadge(
                   area.gapAnalysis.currentLevel,
-                  area.gapAnalysis.meetsPaidThreshold
+                  area.gapAnalysis.meetsNoNetLossRequirement
                 )
 
                 return (
@@ -493,13 +494,13 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
                         </span>
                         <span
                           className={`text-xs tabular-nums ${
-                            area.gapAnalysis.meetsPaidThreshold
+                            area.gapAnalysis.meetsNoNetLossRequirement
                               ? 'text-green-600'
                               : 'text-red-600'
                           }`}
                         >
                           {area.paidPercentage}%
-                          {!area.gapAnalysis.meetsPaidThreshold &&
+                          {!area.gapAnalysis.meetsNoNetLossRequirement &&
                             area.gapAnalysis.paidClubsNeeded > 0 && (
                               <span className="ml-1 text-red-600">
                                 (+{area.gapAnalysis.paidClubsNeeded} needed)
@@ -509,11 +510,11 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Distinguished Clubs - Property 2, 4 */}
+                    {/* Distinguished Clubs - Property 2, 4 (now against club base) */}
                     <td className="px-4 py-3 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-medium text-gray-900 tabular-nums">
-                          {area.distinguishedClubs}/{area.paidClubs}
+                          {area.distinguishedClubs}/{area.clubBase}
                         </span>
                         <span className="text-xs text-gray-500 tabular-nums">
                           {area.distinguishedPercentage}%
@@ -526,8 +527,8 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
                         title={
-                          !area.gapAnalysis.meetsPaidThreshold
-                            ? `Need ${area.gapAnalysis.paidClubsNeeded} more paid club(s) to meet 75% threshold`
+                          !area.gapAnalysis.meetsNoNetLossRequirement
+                            ? `Need ${area.gapAnalysis.paidClubsNeeded} more paid club(s) to meet no net loss requirement`
                             : getRecognitionLabel(area.gapAnalysis.currentLevel)
                         }
                       >
@@ -580,7 +581,7 @@ export const AreaProgressTable: React.FC<AreaProgressTableProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-gray-400">—</span>
-              <span>Meet paid threshold first</span>
+              <span>Meet no net loss requirement first</span>
             </div>
           </div>
         </div>

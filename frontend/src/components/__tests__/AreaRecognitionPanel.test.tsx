@@ -464,9 +464,10 @@ describe('AreaRecognitionPanel', () => {
 
       renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
 
-      // Verify metrics are displayed (4/5 paid clubs, 3/4 distinguished)
+      // Verify metrics are displayed (4/5 paid clubs, 3/5 distinguished of club base)
+      // Note: Distinguished clubs are now shown against club base (5), not paid clubs (4)
       expect(screen.getByText('4/5')).toBeInTheDocument()
-      expect(screen.getByText('3/4')).toBeInTheDocument()
+      expect(screen.getByText('3/5')).toBeInTheDocument()
     })
   })
 
