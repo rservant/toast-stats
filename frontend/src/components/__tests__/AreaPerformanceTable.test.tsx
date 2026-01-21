@@ -177,9 +177,9 @@ describe('AreaPerformanceTable', () => {
     it('should render all required column headers', () => {
       render(<AreaPerformanceTable areas={[mockArea1]} />)
 
-      // Requirement 9.1: Column order
+      // Requirement 9.1: Column order - headers now have subtitles
       expect(screen.getByText('Area')).toBeInTheDocument()
-      expect(screen.getByText('Paid/Base')).toBeInTheDocument()
+      expect(screen.getByText('Paid / Base')).toBeInTheDocument()
       expect(screen.getByText('Distinguished')).toBeInTheDocument()
       expect(screen.getByText('First Round Visits')).toBeInTheDocument()
       expect(screen.getByText('Second Round Visits')).toBeInTheDocument()
@@ -187,6 +187,18 @@ describe('AreaPerformanceTable', () => {
       expect(screen.getByText('Gap to D')).toBeInTheDocument()
       expect(screen.getByText('Gap to S')).toBeInTheDocument()
       expect(screen.getByText('Gap to P')).toBeInTheDocument()
+    })
+
+    it('should render column header subtitles', () => {
+      render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      // Verify subtitles are displayed
+      expect(screen.getByText('(≥ club base required)')).toBeInTheDocument()
+      expect(screen.getByText('(of club base)')).toBeInTheDocument()
+      expect(screen.getAllByText('(75% of club base)').length).toBe(2) // First and Second Round Visits
+      expect(screen.getByText('(50% of base)')).toBeInTheDocument()
+      expect(screen.getByText('(50% + 1)')).toBeInTheDocument()
+      expect(screen.getByText('(base+1, 50%+1)')).toBeInTheDocument()
     })
 
     it('should use thead and tbody elements for proper table structure', () => {
@@ -358,7 +370,7 @@ describe('AreaPerformanceTable', () => {
     it('should not display old Paid Clubs column header', () => {
       render(<AreaPerformanceTable areas={[mockArea1]} />)
 
-      // Old column header should not exist (replaced by Paid/Base)
+      // Old column header should not exist (replaced by Paid / Base)
       const headers = screen.getAllByRole('columnheader')
       const headerTexts = headers.map(h => h.textContent)
 

@@ -179,37 +179,57 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             {/* Paid/Base column header - Requirement 9.2 */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              Paid/Base
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                Paid / Base
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (≥ club base required)
+              </div>
             </th>
 
             {/* Distinguished column header - Requirement 9.3 */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              Distinguished
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                Distinguished
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (of club base)
+              </div>
             </th>
 
             {/* First Round Visits column header */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              First Round Visits
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                First Round Visits
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (75% of club base)
+              </div>
             </th>
 
             {/* Second Round Visits column header */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              Second Round Visits
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                Second Round Visits
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (75% of club base)
+              </div>
             </th>
 
             {/* Recognition column header - Requirement 9.5 */}
@@ -224,28 +244,43 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             {/* Gap to D column header - Requirement 9.6 */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              Gap to D
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                Gap to D
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (50% of base)
+              </div>
             </th>
 
             {/* Gap to S column header - Requirement 9.6 */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              Gap to S
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                Gap to S
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (50% + 1)
+              </div>
             </th>
 
             {/* Gap to P column header - Requirement 9.6 */}
             <th
               scope="col"
-              className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-              style={{ fontSize: '14px', minHeight: '44px' }}
+              className="px-4 py-3 text-center font-tm-headline"
+              style={{ minHeight: '44px' }}
             >
-              Gap to P
+              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+                Gap to P
+              </div>
+              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+                (base+1, 50%+1)
+              </div>
             </th>
           </tr>
         </thead>
