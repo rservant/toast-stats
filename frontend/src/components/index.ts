@@ -27,3 +27,7 @@ export type {
   FullYearRankingChartProps,
   RankMetric,
 } from './FullYearRankingChart'
+
+// Area Recognition Components
+export { CriteriaExplanation } from './CriteriaExplanation'
+export type { CriteriaExplanationProps } from './CriteriaExplanation'

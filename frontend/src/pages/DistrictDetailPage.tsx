@@ -15,6 +15,7 @@ import {
   getMostRecentDateInProgramYear,
 } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
+import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
 import { VulnerableClubsPanel } from '../components/VulnerableClubsPanel'
 import { InterventionRequiredClubsPanel } from '../components/InterventionRequiredClubsPanel'
@@ -30,6 +31,7 @@ import { LeadershipInsights } from '../components/LeadershipInsights'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
+import { AreaRecognitionPanel } from '../components/AreaRecognitionPanel'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -449,6 +451,14 @@ const DistrictDetailPage: React.FC = () => {
                     districtSnapshot={districtStatistics}
                     isLoading={isLoadingStatistics}
                     snapshotTimestamp={districtStatistics.asOfDate}
+                  />
+                )}
+
+                {/* Area Recognition Panel - DAP criteria and progress */}
+                {districtStatistics && (
+                  <AreaRecognitionPanel
+                    divisions={extractDivisionPerformance(districtStatistics)}
+                    isLoading={isLoadingStatistics}
                   />
                 )}
 
