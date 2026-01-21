@@ -97,14 +97,19 @@ describe('DivisionPerformanceCard', () => {
       const headerTexts = Array.from(tableHeaders).map(th => th.textContent)
 
       expect(headerTexts).toContain('Area')
-      expect(headerTexts).toContain('Paid/Base')
-      expect(headerTexts).toContain('Distinguished')
-      expect(headerTexts).toContain('First Round Visits')
-      expect(headerTexts).toContain('Second Round Visits')
+      // Header includes additional context text
+      expect(headerTexts.some(h => h?.includes('Paid'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('Distinguished'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('First Round Visits'))).toBe(
+        true
+      )
+      expect(headerTexts.some(h => h?.includes('Second Round Visits'))).toBe(
+        true
+      )
       expect(headerTexts).toContain('Recognition')
-      expect(headerTexts).toContain('Gap to D')
-      expect(headerTexts).toContain('Gap to S')
-      expect(headerTexts).toContain('Gap to P')
+      expect(headerTexts.some(h => h?.includes('Gap to D'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('Gap to S'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('Gap to P'))).toBe(true)
 
       // Verify area rows are rendered
       expect(screen.getByText('A1')).toBeInTheDocument()
@@ -233,12 +238,16 @@ describe('DivisionPerformanceCard', () => {
     })
 
     it('should render Not Distinguished division', () => {
+      // Create a division that is "Not Distinguished" but meets no net loss requirement
+      // (paidClubs >= clubBase) so it shows "Not Distinguished" instead of "Net Loss"
+      // Per Requirement 9.1: Show "Net Loss" when paidClubs < clubBase
       const notDistDiv: DivisionPerformance = {
         ...mockDivision,
         status: 'not-distinguished',
-        paidClubs: 48,
-        netGrowth: -2,
-        distinguishedClubs: 20,
+        clubBase: 50,
+        paidClubs: 50, // Meets no net loss requirement
+        netGrowth: 0,
+        distinguishedClubs: 20, // Below 45% threshold (need 23)
       }
 
       render(<DivisionPerformanceCard division={notDistDiv} />)
@@ -246,6 +255,26 @@ describe('DivisionPerformanceCard', () => {
       expect(
         screen.getByRole('status', {
           name: /Division status: Not Distinguished/i,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it('should render Net Loss division when paidClubs < clubBase', () => {
+      // Per Requirement 9.1: Show "Net Loss" when there's net club loss
+      const netLossDiv: DivisionPerformance = {
+        ...mockDivision,
+        status: 'not-distinguished',
+        clubBase: 50,
+        paidClubs: 48, // Net club loss
+        netGrowth: -2,
+        distinguishedClubs: 20,
+      }
+
+      render(<DivisionPerformanceCard division={netLossDiv} />)
+
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Net Loss/i,
         })
       ).toBeInTheDocument()
     })

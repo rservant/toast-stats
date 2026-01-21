@@ -14,7 +14,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
  */
 
-import { AreaWithDivision } from '../components/AreaProgressSummary'
+import { AreaWithDivision } from '../components/DivisionAreaProgressSummary'
 import { GapAnalysis, RecognitionLevel } from './areaGapAnalysis'
 
 /**

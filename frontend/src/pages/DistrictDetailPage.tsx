@@ -31,7 +31,7 @@ import { LeadershipInsights } from '../components/LeadershipInsights'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
-import { AreaRecognitionPanel } from '../components/AreaRecognitionPanel'
+import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -454,9 +454,9 @@ const DistrictDetailPage: React.FC = () => {
                   />
                 )}
 
-                {/* Area Recognition Panel - DAP criteria and progress */}
+                {/* Division and Area Recognition Panel - DDP and DAP criteria and progress */}
                 {districtStatistics && (
-                  <AreaRecognitionPanel
+                  <DivisionAreaRecognitionPanel
                     divisions={extractDivisionPerformance(districtStatistics)}
                     isLoading={isLoadingStatistics}
                   />

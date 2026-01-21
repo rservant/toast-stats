@@ -4,7 +4,7 @@
  * Displays high-level division performance metrics including division identifier,
  * distinguished status, paid clubs progress, and distinguished clubs progress.
  *
- * This component validates Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 8.1, 8.3:
+ * This component validates Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 8.1, 8.3, 9.1-9.7:
  * - 3.1: Display division identifier
  * - 3.2: Display current distinguished status level
  * - 3.3: Display paid clubs progress as "current / base" with net growth indicator
@@ -12,10 +12,18 @@
  * - 3.5: Use visual indicators (colors, icons) to communicate status at a glance
  * - 8.1: Use TM Loyal Blue (#004165) for primary elements
  * - 8.3: Use Montserrat font for headings
+ * - 9.1: Display recognition badge (Distinguished, Select Distinguished, President's Distinguished, Not Distinguished, Net Loss)
+ * - 9.2: Display Gap to D (distinguished clubs needed for 45%)
+ * - 9.3: Display Gap to S (distinguished clubs + paid clubs needed for 50% + base+1)
+ * - 9.4: Display Gap to P (distinguished clubs + paid clubs needed for 55% + base+2)
+ * - 9.5: Show "✓" when level is achieved
+ * - 9.6: Show number of clubs needed when level is not achieved
+ * - 9.7: Show indicator when net loss blocks achievability
  */
 
 import React from 'react'
 import type { DistinguishedStatus } from '../utils/divisionStatus'
+import type { DivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 
 export interface DivisionSummaryProps {
   /** Division identifier (e.g., "A", "B", "C") */
@@ -30,8 +38,10 @@ export interface DivisionSummaryProps {
   netGrowth: number
   /** Current number of clubs that have achieved Distinguished status */
   distinguishedClubs: number
-  /** Required number of distinguished clubs (50% of club base, rounded up) */
+  /** Required number of distinguished clubs (45% of club base for Distinguished) */
   requiredDistinguishedClubs: number
+  /** Gap analysis for recognition levels (optional) */
+  gapAnalysis?: DivisionGapAnalysis
 }
 
 /**
@@ -53,13 +63,37 @@ function getStatusLabel(
 }
 
 /**
+ * Returns the recognition badge label based on gap analysis
+ * Requirement 9.1: Display recognition badge (Distinguished, Select Distinguished,
+ * President's Distinguished, Not Distinguished, Net Loss)
+ */
+function getRecognitionBadgeLabel(
+  status: Exclude<DistinguishedStatus, 'not-qualified'>,
+  gapAnalysis?: DivisionGapAnalysis
+): string {
+  // If we have gap analysis and there's a net loss, show "Net Loss"
+  if (gapAnalysis && !gapAnalysis.meetsNoNetLossRequirement) {
+    return 'Net Loss'
+  }
+
+  // Otherwise, use the status label
+  return getStatusLabel(status)
+}
+
+/**
  * Returns the CSS classes for status badge styling
  */
 function getStatusBadgeClasses(
-  status: Exclude<DistinguishedStatus, 'not-qualified'>
+  status: Exclude<DistinguishedStatus, 'not-qualified'>,
+  gapAnalysis?: DivisionGapAnalysis
 ): string {
   const baseClasses =
     'inline-flex items-center px-3 py-1.5 tm-rounded-lg tm-body-small font-semibold'
+
+  // If there's a net loss, use maroon color to indicate warning
+  if (gapAnalysis && !gapAnalysis.meetsNoNetLossRequirement) {
+    return `${baseClasses} tm-bg-true-maroon tm-text-white`
+  }
 
   switch (status) {
     case 'presidents-distinguished':
@@ -95,10 +129,94 @@ function getNetGrowthIcon(netGrowth: number): string {
 }
 
 /**
+ * Gap indicator display value
+ * Requirements 9.5, 9.6, 9.7:
+ * - Show "✓" when level is achieved
+ * - Show number of clubs needed when level is not achieved
+ * - Show "N/A" when net loss blocks achievability
+ */
+interface GapIndicatorValue {
+  /** Display text (✓, number, or N/A) */
+  display: string
+  /** Whether the level is achieved */
+  achieved: boolean
+  /** Whether the level is achievable (not blocked by net loss) */
+  achievable: boolean
+  /** Aria label for accessibility */
+  ariaLabel: string
+}
+
+/**
+ * Calculates the gap indicator display value for a recognition level
+ */
+function getGapIndicatorValue(
+  gap: {
+    achieved: boolean
+    distinguishedClubsNeeded: number
+    paidClubsNeeded: number
+    achievable: boolean
+  },
+  levelName: string
+): GapIndicatorValue {
+  if (gap.achieved) {
+    return {
+      display: '✓',
+      achieved: true,
+      achievable: true,
+      ariaLabel: `${levelName}: Achieved`,
+    }
+  }
+
+  if (!gap.achievable) {
+    return {
+      display: 'N/A',
+      achieved: false,
+      achievable: false,
+      ariaLabel: `${levelName}: Not achievable due to net club loss`,
+    }
+  }
+
+  // Calculate total clubs needed (distinguished + paid)
+  const totalNeeded = gap.distinguishedClubsNeeded + gap.paidClubsNeeded
+  const parts: string[] = []
+  if (gap.distinguishedClubsNeeded > 0) {
+    parts.push(`${gap.distinguishedClubsNeeded} distinguished`)
+  }
+  if (gap.paidClubsNeeded > 0) {
+    parts.push(`${gap.paidClubsNeeded} paid`)
+  }
+
+  return {
+    display: String(totalNeeded),
+    achieved: false,
+    achievable: true,
+    ariaLabel: `${levelName}: Need ${parts.join(' and ')} club${totalNeeded !== 1 ? 's' : ''}`,
+  }
+}
+
+/**
+ * Returns CSS classes for gap indicator based on state
+ */
+function getGapIndicatorClasses(indicator: GapIndicatorValue): string {
+  const baseClasses =
+    'flex flex-col items-center justify-center min-w-[44px] min-h-[44px] px-2 py-1 rounded'
+
+  if (indicator.achieved) {
+    return `${baseClasses} tm-bg-loyal-blue-20 tm-text-loyal-blue`
+  }
+
+  if (!indicator.achievable) {
+    return `${baseClasses} tm-bg-cool-gray-20 tm-text-cool-gray`
+  }
+
+  return `${baseClasses} tm-bg-happy-yellow-20 tm-text-black`
+}
+
+/**
  * DivisionSummary Component
  *
  * Renders division identifier, status badge, paid clubs progress,
- * and distinguished clubs progress with visual indicators.
+ * distinguished clubs progress, and gap indicators with visual indicators.
  */
 const DivisionSummary: React.FC<DivisionSummaryProps> = ({
   divisionId,
@@ -108,11 +226,26 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
   netGrowth,
   distinguishedClubs,
   requiredDistinguishedClubs,
+  gapAnalysis,
 }) => {
-  const statusLabel = getStatusLabel(status)
-  const statusBadgeClasses = getStatusBadgeClasses(status)
+  const statusLabel = getRecognitionBadgeLabel(status, gapAnalysis)
+  const statusBadgeClasses = getStatusBadgeClasses(status, gapAnalysis)
   const netGrowthClasses = getNetGrowthClasses(netGrowth)
   const netGrowthIcon = getNetGrowthIcon(netGrowth)
+
+  // Calculate gap indicators if gap analysis is provided
+  const gapToD = gapAnalysis
+    ? getGapIndicatorValue(gapAnalysis.distinguishedGap, 'Distinguished')
+    : null
+  const gapToS = gapAnalysis
+    ? getGapIndicatorValue(gapAnalysis.selectGap, 'Select Distinguished')
+    : null
+  const gapToP = gapAnalysis
+    ? getGapIndicatorValue(
+        gapAnalysis.presidentsGap,
+        "President's Distinguished"
+      )
+    : null
 
   return (
     <div className="p-6 border-b border-gray-200">
@@ -169,6 +302,56 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Gap Indicators - Only shown when gapAnalysis is provided */}
+      {gapAnalysis && gapToD && gapToS && gapToP && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <p className="tm-body-small tm-text-cool-gray mb-2">
+            Gap to Recognition
+          </p>
+          <div
+            className="flex gap-3"
+            role="group"
+            aria-label="Gap indicators for recognition levels"
+          >
+            {/* Gap to Distinguished */}
+            <div
+              className={getGapIndicatorClasses(gapToD)}
+              aria-label={gapToD.ariaLabel}
+              data-testid="gap-to-d"
+            >
+              <span className="tm-body-small font-semibold">
+                {gapToD.display}
+              </span>
+              <span className="tm-body-small tm-text-cool-gray">D</span>
+            </div>
+
+            {/* Gap to Select Distinguished */}
+            <div
+              className={getGapIndicatorClasses(gapToS)}
+              aria-label={gapToS.ariaLabel}
+              data-testid="gap-to-s"
+            >
+              <span className="tm-body-small font-semibold">
+                {gapToS.display}
+              </span>
+              <span className="tm-body-small tm-text-cool-gray">S</span>
+            </div>
+
+            {/* Gap to President's Distinguished */}
+            <div
+              className={getGapIndicatorClasses(gapToP)}
+              aria-label={gapToP.ariaLabel}
+              data-testid="gap-to-p"
+            >
+              <span className="tm-body-small font-semibold">
+                {gapToP.display}
+              </span>
+              <span className="tm-body-small tm-text-cool-gray">P</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,33 +1,36 @@
 /**
- * AreaRecognitionPanel Component Tests
+ * DivisionAreaRecognitionPanel Component Tests
  *
- * Tests for the Area Recognition Panel container component that combines
- * CriteriaExplanation and AreaProgressSummary components to display
- * Distinguished Area Program (DAP) criteria and progress.
+ * Tests for the Division and Area Recognition Panel container component that combines
+ * DivisionCriteriaExplanation, CriteriaExplanation, and AreaProgressSummary components
+ * to display Distinguished Division Program (DDP) and Distinguished Area Program (DAP)
+ * criteria and progress.
  *
  * Note: The standalone AreaProgressTable has been removed from this panel.
  * Recognition metrics are now displayed in the AreaPerformanceTable within
  * each Division card (see DivisionPerformanceCard).
  *
  * Requirements validated:
- * - 1.1: Display Area Recognition section alongside existing content
+ * - 10.1: Rename AreaRecognitionPanel to DivisionAreaRecognitionPanel
+ * - 10.2: Rename section header from "Area Recognition" to "Division and Area Recognition"
+ * - 10.3: Include DivisionCriteriaExplanation component explaining DDP eligibility and recognition criteria
+ * - 10.4: Include existing CriteriaExplanation component for DAP
+ * - 1.1: Display Division and Area Recognition section alongside existing content
  * - 1.2: Position logically within existing tab layout
  * - 1.3: Maintain consistent styling with existing components
- * - 10.1: Remove standalone AreaProgressTable from Area Recognition section
- * - 10.2: Retain AreaProgressSummary (paragraph-based progress descriptions)
- * - 10.3: Display only CriteriaExplanation and AreaProgressSummary
  *
  * Test categories:
  * 1. Rendering with valid division data
  * 2. Empty state when no divisions
  * 3. Loading state
  * 4. Data extraction (areas from divisions)
+ * 5. DivisionCriteriaExplanation rendering
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { AreaRecognitionPanel } from '../AreaRecognitionPanel'
+import { DivisionAreaRecognitionPanel } from '../DivisionAreaRecognitionPanel'
 import { DivisionPerformance } from '../../utils/divisionStatus'
 import {
   renderWithProviders,
@@ -112,47 +115,75 @@ const createDivisionWithAreas = (
   status: 'distinguished',
 })
 
-describe('AreaRecognitionPanel', () => {
+describe('DivisionAreaRecognitionPanel', () => {
   afterEach(() => {
     cleanupAllResources()
   })
 
   describe('Rendering with Valid Division Data', () => {
     /**
-     * Validates: Requirement 1.1
-     * WHEN a user views the Divisions & Areas tab, THE System SHALL display
-     * an Area Recognition section alongside existing content
+     * Validates: Requirement 10.2
+     * THE System SHALL rename the section header from "Area Recognition" to "Division and Area Recognition"
      */
-    it('should display section header with title', () => {
+    it('should display section header with "Division and Area Recognition" title', () => {
       const divisions = [createDivision()]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
-
-      expect(screen.getByText('Area Recognition')).toBeInTheDocument()
-    })
-
-    /**
-     * Validates: Requirement 1.1
-     * Section should include description text
-     */
-    it('should display section description', () => {
-      const divisions = [createDivision()]
-
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       expect(
-        screen.getByText(/Track progress toward Distinguished Area Program/i)
+        screen.getByText('Division and Area Recognition')
       ).toBeInTheDocument()
     })
 
     /**
-     * Validates: Requirement 1.1
-     * CriteriaExplanation component should be rendered
+     * Validates: Requirement 10.2, 10.7
+     * Section should include description text mentioning both DDP and DAP
      */
-    it('should render CriteriaExplanation component', () => {
+    it('should display section description mentioning DDP and DAP', () => {
       const divisions = [createDivision()]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
+
+      expect(
+        screen.getByText(
+          /Track progress toward Distinguished Division Program \(DDP\) and/i
+        )
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 10.3
+     * THE DivisionAreaRecognitionPanel SHALL include a DivisionCriteriaExplanation component
+     */
+    it('should render DivisionCriteriaExplanation component', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
+
+      // DivisionCriteriaExplanation has a toggle button with this text
+      expect(
+        screen.getByRole('button', {
+          name: /Distinguished Division Program Criteria/i,
+        })
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 10.4
+     * THE DivisionAreaRecognitionPanel SHALL include the existing CriteriaExplanation component for DAP
+     */
+    it('should render CriteriaExplanation component for DAP', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // CriteriaExplanation has a toggle button with this text
       expect(
@@ -163,13 +194,44 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Validates: Requirement 10.2, 10.3
-     * AreaProgressSummary component should be rendered (not AreaProgressTable)
+     * Validates: Requirement 10.3, 10.4
+     * DivisionCriteriaExplanation should appear before CriteriaExplanation
+     */
+    it('should render DivisionCriteriaExplanation before CriteriaExplanation', () => {
+      const divisions = [createDivision()]
+
+      const { container } = renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
+
+      // Get all buttons that are criteria explanation toggles
+      const ddpButton = screen.getByRole('button', {
+        name: /Distinguished Division Program Criteria/i,
+      })
+      const dapButton = screen.getByRole('button', {
+        name: /Distinguished Area Program Criteria/i,
+      })
+
+      // Get their positions in the DOM
+      const allButtons = container.querySelectorAll('button')
+      const buttonArray = Array.from(allButtons)
+      const ddpIndex = buttonArray.indexOf(ddpButton)
+      const dapIndex = buttonArray.indexOf(dapButton)
+
+      // DDP should appear before DAP
+      expect(ddpIndex).toBeLessThan(dapIndex)
+    })
+
+    /**
+     * Validates: Requirement 1.1
+     * AreaProgressSummary component should be rendered
      */
     it('should render AreaProgressSummary component', () => {
       const divisions = [createDivision()]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // AreaProgressSummary has a region with this aria-label
       expect(
@@ -187,7 +249,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Should show "Showing 3 areas across 2 divisions" in footer
       expect(
@@ -202,7 +266,9 @@ describe('AreaRecognitionPanel', () => {
     it('should display singular form for single area', () => {
       const divisions = [createDivisionWithAreas('A', ['A1'])]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Should show "Showing 1 area across 1 division" in footer
       expect(
@@ -211,16 +277,91 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Validates: Requirement 1.3
-     * Section should have proper aria-label for accessibility
+     * Validates: Requirement 10.1, 10.2
+     * Section should have proper aria-label for accessibility referencing "Division and Area Recognition"
      */
     it('should have proper aria-label on section', () => {
       const divisions = [createDivision()]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
-      const section = screen.getByRole('region', { name: /area recognition/i })
+      const section = screen.getByRole('region', {
+        name: /division and area recognition/i,
+      })
       expect(section).toBeInTheDocument()
+    })
+  })
+
+  describe('DivisionCriteriaExplanation Rendering', () => {
+    /**
+     * Validates: Requirement 10.3
+     * THE DivisionAreaRecognitionPanel SHALL include a DivisionCriteriaExplanation component
+     * explaining DDP eligibility and recognition criteria
+     */
+    it('should render DivisionCriteriaExplanation with DDP criteria toggle', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
+
+      const ddpButton = screen.getByRole('button', {
+        name: /Distinguished Division Program Criteria/i,
+      })
+      expect(ddpButton).toBeInTheDocument()
+      expect(ddpButton).toHaveAttribute('aria-expanded', 'false')
+    })
+
+    /**
+     * Validates: Requirement 10.3
+     * DivisionCriteriaExplanation should have proper aria-label
+     */
+    it('should render DivisionCriteriaExplanation with proper aria-label', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
+
+      expect(
+        screen.getByLabelText(
+          /Distinguished Division Program criteria explanation/i
+        )
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 10.3
+     * DivisionCriteriaExplanation should NOT be rendered in empty state
+     */
+    it('should not render DivisionCriteriaExplanation in empty state', () => {
+      renderWithProviders(<DivisionAreaRecognitionPanel divisions={[]} />)
+
+      expect(
+        screen.queryByRole('button', {
+          name: /Distinguished Division Program Criteria/i,
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 10.3
+     * DivisionCriteriaExplanation should NOT be rendered during loading
+     */
+    it('should not render DivisionCriteriaExplanation during loading', () => {
+      const divisions = [createDivision()]
+
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} isLoading={true} />
+      )
+
+      expect(
+        screen.queryByRole('button', {
+          name: /Distinguished Division Program Criteria/i,
+        })
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -229,16 +370,18 @@ describe('AreaRecognitionPanel', () => {
      * Tests empty state when divisions array is empty
      */
     it('should display empty state message when no divisions', () => {
-      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
+      renderWithProviders(<DivisionAreaRecognitionPanel divisions={[]} />)
 
-      expect(screen.getByText('No Area Data Available')).toBeInTheDocument()
+      expect(
+        screen.getByText('No Division or Area Data Available')
+      ).toBeInTheDocument()
     })
 
     /**
      * Tests empty state description text
      */
     it('should display empty state description', () => {
-      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
+      renderWithProviders(<DivisionAreaRecognitionPanel divisions={[]} />)
 
       expect(
         screen.getByText(/Division and area performance data is not available/i)
@@ -246,19 +389,22 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Tests that section header is still displayed in empty state
+     * Validates: Requirement 10.2
+     * Tests that section header is still displayed in empty state with updated title
      */
-    it('should still display section header in empty state', () => {
-      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
+    it('should still display "Division and Area Recognition" header in empty state', () => {
+      renderWithProviders(<DivisionAreaRecognitionPanel divisions={[]} />)
 
-      expect(screen.getByText('Area Recognition')).toBeInTheDocument()
+      expect(
+        screen.getByText('Division and Area Recognition')
+      ).toBeInTheDocument()
     })
 
     /**
      * Tests that CriteriaExplanation is NOT rendered in empty state
      */
     it('should not render CriteriaExplanation in empty state', () => {
-      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
+      renderWithProviders(<DivisionAreaRecognitionPanel divisions={[]} />)
 
       expect(
         screen.queryByRole('button', {
@@ -271,7 +417,7 @@ describe('AreaRecognitionPanel', () => {
      * Tests that AreaProgressSummary is NOT rendered in empty state
      */
     it('should not render AreaProgressSummary in empty state', () => {
-      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
+      renderWithProviders(<DivisionAreaRecognitionPanel divisions={[]} />)
 
       expect(
         screen.queryByRole('region', { name: /area progress summary/i })
@@ -284,12 +430,14 @@ describe('AreaRecognitionPanel', () => {
     it('should handle undefined divisions gracefully', () => {
       // TypeScript would normally prevent this, but testing defensive behavior
       renderWithProviders(
-        <AreaRecognitionPanel
+        <DivisionAreaRecognitionPanel
           divisions={undefined as unknown as DivisionPerformance[]}
         />
       )
 
-      expect(screen.getByText('No Area Data Available')).toBeInTheDocument()
+      expect(
+        screen.getByText('No Division or Area Data Available')
+      ).toBeInTheDocument()
     })
   })
 
@@ -299,7 +447,7 @@ describe('AreaRecognitionPanel', () => {
      */
     it('should display loading skeletons when isLoading is true', () => {
       renderWithProviders(
-        <AreaRecognitionPanel divisions={[]} isLoading={true} />
+        <DivisionAreaRecognitionPanel divisions={[]} isLoading={true} />
       )
 
       // LoadingSkeleton with variant="card" has role="status" and aria-label="Loading"
@@ -308,14 +456,15 @@ describe('AreaRecognitionPanel', () => {
     })
 
     /**
-     * Tests aria-busy attribute during loading
+     * Validates: Requirement 10.2
+     * Tests aria-busy attribute during loading with updated aria-label
      */
     it('should set aria-busy attribute when loading', () => {
       renderWithProviders(
-        <AreaRecognitionPanel divisions={[]} isLoading={true} />
+        <DivisionAreaRecognitionPanel divisions={[]} isLoading={true} />
       )
 
-      const section = screen.getByLabelText('Area Recognition')
+      const section = screen.getByLabelText('Division and Area Recognition')
       expect(section).toHaveAttribute('aria-busy', 'true')
     })
 
@@ -326,7 +475,7 @@ describe('AreaRecognitionPanel', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(
-        <AreaRecognitionPanel divisions={divisions} isLoading={true} />
+        <DivisionAreaRecognitionPanel divisions={divisions} isLoading={true} />
       )
 
       expect(
@@ -343,7 +492,7 @@ describe('AreaRecognitionPanel', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(
-        <AreaRecognitionPanel divisions={divisions} isLoading={true} />
+        <DivisionAreaRecognitionPanel divisions={divisions} isLoading={true} />
       )
 
       expect(
@@ -356,11 +505,11 @@ describe('AreaRecognitionPanel', () => {
      */
     it('should not show empty state during loading', () => {
       renderWithProviders(
-        <AreaRecognitionPanel divisions={[]} isLoading={true} />
+        <DivisionAreaRecognitionPanel divisions={[]} isLoading={true} />
       )
 
       expect(
-        screen.queryByText('No Area Data Available')
+        screen.queryByText('No Division or Area Data Available')
       ).not.toBeInTheDocument()
     })
 
@@ -369,7 +518,7 @@ describe('AreaRecognitionPanel', () => {
      */
     it('should display table loading skeleton', () => {
       renderWithProviders(
-        <AreaRecognitionPanel divisions={[]} isLoading={true} />
+        <DivisionAreaRecognitionPanel divisions={[]} isLoading={true} />
       )
 
       // LoadingSkeleton with variant="table" has aria-label="Loading table"
@@ -389,7 +538,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1', 'B2', 'B3']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // All 5 areas should be displayed in AreaProgressSummary
       expect(screen.getByText(/Area A1 \(Division A\)/)).toBeInTheDocument()
@@ -408,7 +559,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Division context should be displayed in AreaProgressSummary
       expect(screen.getAllByText('Division A').length).toBeGreaterThanOrEqual(1)
@@ -424,7 +577,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Only B1 should be displayed in AreaProgressSummary
       expect(screen.getByText(/Area B1 \(Division B\)/)).toBeInTheDocument()
@@ -469,12 +624,16 @@ describe('AreaRecognitionPanel', () => {
         },
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Verify metrics are displayed in AreaProgressSummary
-      // Progress text should include metrics like "4 of 5 clubs paid"
-      expect(screen.getByText(/4 of 5 clubs paid/)).toBeInTheDocument()
-      expect(screen.getByText(/3 of 5 distinguished/)).toBeInTheDocument()
+      // Progress text should include metrics like "4 of 5 clubs paid" (both division and area narratives)
+      const paidClubsTexts = screen.getAllByText(/4 of 5 clubs paid/)
+      expect(paidClubsTexts.length).toBeGreaterThanOrEqual(1)
+      const distinguishedTexts = screen.getAllByText(/3 of 5 distinguished/)
+      expect(distinguishedTexts.length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -485,9 +644,13 @@ describe('AreaRecognitionPanel', () => {
     it('should have role="region" on main section', () => {
       const divisions = [createDivision()]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
-      const section = screen.getByRole('region', { name: /area recognition/i })
+      const section = screen.getByRole('region', {
+        name: /division and area recognition/i,
+      })
       expect(section).toBeInTheDocument()
     })
 
@@ -498,7 +661,7 @@ describe('AreaRecognitionPanel', () => {
       const divisions = [createDivision()]
 
       const { container } = renderWithProviders(
-        <AreaRecognitionPanel divisions={divisions} />
+        <DivisionAreaRecognitionPanel divisions={divisions} />
       )
 
       const decorativeIcons = container.querySelectorAll(
@@ -514,7 +677,7 @@ describe('AreaRecognitionPanel', () => {
       const divisions = [createDivision()]
 
       const { container } = renderWithProviders(
-        <AreaRecognitionPanel divisions={divisions} />
+        <DivisionAreaRecognitionPanel divisions={divisions} />
       )
 
       const sections = container.querySelectorAll('section')
@@ -524,33 +687,20 @@ describe('AreaRecognitionPanel', () => {
 
   describe('AreaProgressSummary Integration', () => {
     /**
-     * Validates: Requirement 10.2, 10.3
-     * THE AreaRecognitionPanel SHALL display only CriteriaExplanation and AreaProgressSummary
+     * Validates: Requirement 10.4
+     * AreaProgressSummary component should be rendered
      */
     it('should render AreaProgressSummary component', () => {
       const divisions = [createDivision()]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // AreaProgressSummary has a region with this aria-label
       expect(
         screen.getByRole('region', { name: /area progress summary/i })
       ).toBeInTheDocument()
-    })
-
-    /**
-     * Validates: Requirement 10.1, 10.3
-     * THE System SHALL remove the standalone AreaProgressTable from the Area Recognition section
-     */
-    it('should NOT render AreaProgressTable (removed per Requirement 10.1)', () => {
-      const divisions = [createDivision()]
-
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
-
-      // AreaProgressTable should NOT be present (it was removed)
-      expect(
-        screen.queryByRole('grid', { name: /area progress table/i })
-      ).not.toBeInTheDocument()
     })
 
     /**
@@ -563,7 +713,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Progress paragraphs should contain area labels with division context
       expect(screen.getByText(/Area A1 \(Division A\)/)).toBeInTheDocument()
@@ -607,11 +759,15 @@ describe('AreaRecognitionPanel', () => {
         },
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
-      // Progress text should include metrics
-      expect(screen.getByText(/4 of 4 clubs paid/)).toBeInTheDocument()
-      expect(screen.getByText(/2 of 4 distinguished/)).toBeInTheDocument()
+      // Progress text should include metrics (both division and area narratives)
+      const paidClubsTexts = screen.getAllByText(/4 of 4 clubs paid/)
+      expect(paidClubsTexts.length).toBeGreaterThanOrEqual(1)
+      const distinguishedTexts = screen.getAllByText(/2 of 4 distinguished/)
+      expect(distinguishedTexts.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -624,7 +780,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // AreaProgressSummary header shows "X areas in Y divisions"
       expect(screen.getByText('3 areas in 2 divisions')).toBeInTheDocument()
@@ -644,7 +802,9 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Division headers should be present in AreaProgressSummary
       const divisionAHeaders = screen.getAllByText('Division A')
@@ -653,34 +813,6 @@ describe('AreaRecognitionPanel', () => {
       // Should have at least 1 occurrence in AreaProgressSummary
       expect(divisionAHeaders.length).toBeGreaterThanOrEqual(1)
       expect(divisionBHeaders.length).toBeGreaterThanOrEqual(1)
-    })
-
-    /**
-     * Validates: Requirement 10.2
-     * AreaProgressSummary should NOT be rendered in empty state
-     */
-    it('should not render AreaProgressSummary in empty state', () => {
-      renderWithProviders(<AreaRecognitionPanel divisions={[]} />)
-
-      expect(
-        screen.queryByRole('region', { name: /area progress summary/i })
-      ).not.toBeInTheDocument()
-    })
-
-    /**
-     * Validates: Requirement 10.2
-     * AreaProgressSummary should NOT be rendered during loading
-     */
-    it('should not render AreaProgressSummary during loading', () => {
-      const divisions = [createDivision()]
-
-      renderWithProviders(
-        <AreaRecognitionPanel divisions={divisions} isLoading={true} />
-      )
-
-      expect(
-        screen.queryByRole('region', { name: /area progress summary/i })
-      ).not.toBeInTheDocument()
     })
 
     /**
@@ -720,11 +852,13 @@ describe('AreaRecognitionPanel', () => {
         },
       ]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
-      // Recognition badge should be present with aria-label
-      const badge = screen.getByLabelText(/recognition status/i)
-      expect(badge).toBeInTheDocument()
+      // Recognition badges should be present with aria-label (both division and area badges)
+      const badges = screen.getAllByLabelText(/recognition status/i)
+      expect(badges.length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -739,7 +873,9 @@ describe('AreaRecognitionPanel', () => {
         ])
       )
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Should show "Showing 10 areas across 10 divisions" in footer
       expect(
@@ -754,7 +890,9 @@ describe('AreaRecognitionPanel', () => {
       const areaIds = Array.from({ length: 20 }, (_, i) => `A${i + 1}`)
       const divisions = [createDivisionWithAreas('A', areaIds)]
 
-      renderWithProviders(<AreaRecognitionPanel divisions={divisions} />)
+      renderWithProviders(
+        <DivisionAreaRecognitionPanel divisions={divisions} />
+      )
 
       // Should show "Showing 20 areas across 1 division" in footer
       expect(
@@ -769,7 +907,7 @@ describe('AreaRecognitionPanel', () => {
       const initialDivisions = [createDivisionWithAreas('A', ['A1'])]
 
       const { rerender } = renderWithProviders(
-        <AreaRecognitionPanel divisions={initialDivisions} />
+        <DivisionAreaRecognitionPanel divisions={initialDivisions} />
       )
 
       expect(
@@ -782,11 +920,26 @@ describe('AreaRecognitionPanel', () => {
         createDivisionWithAreas('B', ['B1']),
       ]
 
-      rerender(<AreaRecognitionPanel divisions={updatedDivisions} />)
+      rerender(<DivisionAreaRecognitionPanel divisions={updatedDivisions} />)
 
       expect(
         screen.getByText(/Showing 3 areas across 2 divisions/)
       ).toBeInTheDocument()
+    })
+  })
+
+  describe('Backward Compatibility', () => {
+    /**
+     * Validates: Requirement 10.1
+     * The old AreaRecognitionPanel export should still work for backward compatibility
+     */
+    it('should export AreaRecognitionPanel as alias for backward compatibility', async () => {
+      // Import the alias
+      const { AreaRecognitionPanel } =
+        await import('../DivisionAreaRecognitionPanel')
+
+      // Should be the same component
+      expect(AreaRecognitionPanel).toBe(DivisionAreaRecognitionPanel)
     })
   })
 })

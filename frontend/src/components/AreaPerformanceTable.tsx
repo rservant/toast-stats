@@ -182,10 +182,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 Paid / Base
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (≥ club base required)
               </div>
             </th>
@@ -196,10 +202,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 Distinguished
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (of club base)
               </div>
             </th>
@@ -210,10 +222,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 First Round Visits
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (75% of club base)
               </div>
             </th>
@@ -224,10 +242,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 Second Round Visits
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (75% of club base)
               </div>
             </th>
@@ -247,10 +271,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 Gap to D
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (50% of base)
               </div>
             </th>
@@ -261,10 +291,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 Gap to S
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (50% + 1)
               </div>
             </th>
@@ -275,10 +311,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               className="px-4 py-3 text-center font-tm-headline"
               style={{ minHeight: '44px' }}
             >
-              <div className="font-semibold text-gray-900" style={{ fontSize: '14px' }}>
+              <div
+                className="font-semibold text-gray-900"
+                style={{ fontSize: '14px' }}
+              >
                 Gap to P
               </div>
-              <div className="font-normal text-gray-500" style={{ fontSize: '11px' }}>
+              <div
+                className="font-normal text-gray-500"
+                style={{ fontSize: '11px' }}
+              >
                 (base+1, 50%+1)
               </div>
             </th>

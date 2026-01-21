@@ -19,7 +19,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { generateAreaProgressText, ClubVisitInfo } from '../areaProgressText'
-import { AreaWithDivision } from '../../components/AreaProgressSummary'
+import { AreaWithDivision } from '../../components/DivisionAreaProgressSummary'
 import { calculateAreaGapAnalysis } from '../areaGapAnalysis'
 import { DistinguishedStatus } from '../divisionStatus'
 

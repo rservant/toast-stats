@@ -1,10 +1,10 @@
 /**
- * Integration Tests for District Detail Page - Area Recognition Panel
+ * Integration Tests for District Detail Page - Division and Area Recognition Panel
  *
- * Tests the integration of AreaRecognitionPanel component within the District Detail Page context,
+ * Tests the integration of DivisionAreaRecognitionPanel component within the District Detail Page context,
  * verifying:
  * - Component renders correctly in the Divisions & Areas tab
- * - Data flows correctly from districtStatistics to AreaRecognitionPanel
+ * - Data flows correctly from districtStatistics to DivisionAreaRecognitionPanel
  * - Loading state is passed correctly
  *
  * Validates Requirements: 1.1 (Integration with Divisions & Areas Tab)
@@ -481,7 +481,7 @@ const renderDistrictDetailPage = (districtId: string = 'D101') => {
   )
 }
 
-describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
+describe('DistrictDetailPage - Division and Area Recognition Panel Integration', () => {
   const mockUseDistrictStatistics = vi.mocked(useDistrictStatistics)
 
   beforeEach(() => {
@@ -505,13 +505,13 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
     vi.clearAllMocks()
   })
 
-  describe('AreaRecognitionPanel renders in Divisions & Areas tab (Requirement 1.1)', () => {
+  describe('DivisionAreaRecognitionPanel renders in Divisions & Areas tab (Requirement 1.1)', () => {
     /**
      * Validates: Requirement 1.1
      * WHEN a user views the Divisions & Areas tab, THE System SHALL display
-     * an Area Recognition section alongside existing content
+     * a Division and Area Recognition section alongside existing content
      */
-    it('should render AreaRecognitionPanel when navigating to Divisions & Areas tab', async () => {
+    it('should render DivisionAreaRecognitionPanel when navigating to Divisions & Areas tab', async () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
@@ -521,14 +521,18 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Verify AreaRecognitionPanel is rendered
+      // Verify DivisionAreaRecognitionPanel is rendered
       await waitFor(() => {
-        expect(screen.getByText('Area Recognition')).toBeInTheDocument()
+        expect(
+          screen.getByText('Division and Area Recognition')
+        ).toBeInTheDocument()
       })
 
-      // Verify the section description is present
+      // Verify the section description is present (updated to match new component text)
       expect(
-        screen.getByText(/Track progress toward Distinguished Area Program/i)
+        screen.getByText(
+          /Track progress toward Distinguished Division Program/i
+        )
       ).toBeInTheDocument()
     })
 
@@ -558,11 +562,11 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
 
     /**
      * Validates: Requirement 10.1, 10.2, 10.3
-     * The standalone AreaProgressTable component has been removed from AreaRecognitionPanel.
-     * AreaRecognitionPanel now displays only CriteriaExplanation and AreaProgressSummary.
+     * The standalone AreaProgressTable component has been removed from DivisionAreaRecognitionPanel.
+     * DivisionAreaRecognitionPanel now displays only CriteriaExplanation and DivisionAreaProgressSummary.
      * Recognition metrics are now displayed in the AreaPerformanceTable within Division cards.
      */
-    it('should render AreaProgressSummary component in the tab (AreaProgressTable removed per Requirement 10.1)', async () => {
+    it('should render DivisionAreaProgressSummary component in the tab (AreaProgressTable removed per Requirement 10.1)', async () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
@@ -572,14 +576,14 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Verify AreaProgressSummary is present (has role="region" with name "Area Progress Summary")
+      // Verify DivisionAreaProgressSummary is present (has role="region" with name "Area Progress Summary")
       await waitFor(() => {
         expect(
           screen.getByRole('region', { name: /area progress summary/i })
         ).toBeInTheDocument()
       })
 
-      // Verify the standalone AreaProgressTable is NOT rendered in AreaRecognitionPanel
+      // Verify the standalone AreaProgressTable is NOT rendered in DivisionAreaRecognitionPanel
       // (it was removed per Requirement 10.1 - recognition metrics are now in Division cards)
       expect(
         screen.queryByRole('grid', { name: /area progress table/i })
@@ -606,8 +610,10 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
         expect(
           screen.getByText('Division & Area Performance')
         ).toBeInTheDocument()
-        // AreaRecognitionPanel header
-        expect(screen.getByText('Area Recognition')).toBeInTheDocument()
+        // DivisionAreaRecognitionPanel header
+        expect(
+          screen.getByText('Division and Area Recognition')
+        ).toBeInTheDocument()
       })
     })
   })
@@ -615,7 +621,7 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
   describe('Data flows correctly from page to component (Requirement 1.1)', () => {
     /**
      * Validates: Requirement 1.1
-     * Data from districtStatistics should flow to AreaRecognitionPanel
+     * Data from districtStatistics should flow to DivisionAreaRecognitionPanel
      */
     it('should display all areas from districtStatistics data', async () => {
       const user = userEvent.setup()
@@ -668,7 +674,7 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
     /**
      * Validates: Requirement 1.1
      * Area metrics should be calculated and displayed correctly
-     * Note: AreaProgressTable was removed per Requirement 10.1. Metrics are now in AreaProgressSummary.
+     * Note: AreaProgressTable was removed per Requirement 10.1. Metrics are now in DivisionAreaProgressSummary.
      */
     it('should display correct area metrics from data', async () => {
       const user = userEvent.setup()
@@ -680,7 +686,7 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Wait for the AreaProgressSummary to render (AreaProgressTable was removed per Requirement 10.1)
+      // Wait for the DivisionAreaProgressSummary to render (AreaProgressTable was removed per Requirement 10.1)
       await waitFor(() => {
         expect(
           screen.getByRole('region', { name: /area progress summary/i })
@@ -695,7 +701,7 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
     /**
      * Validates: Requirement 1.1
      * extractDivisionPerformance utility should correctly process the data
-     * Note: AreaProgressTable was removed per Requirement 10.1. Metrics are now in AreaProgressSummary.
+     * Note: AreaProgressTable was removed per Requirement 10.1. Metrics are now in DivisionAreaProgressSummary.
      */
     it('should correctly extract and display paid clubs data', async () => {
       const user = userEvent.setup()
@@ -707,7 +713,7 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Wait for the AreaProgressSummary to render (AreaProgressTable was removed per Requirement 10.1)
+      // Wait for the DivisionAreaProgressSummary to render (AreaProgressTable was removed per Requirement 10.1)
       await waitFor(() => {
         expect(
           screen.getByRole('region', { name: /area progress summary/i })
@@ -717,17 +723,18 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       // Area A1: 3 active clubs out of 4 total (club 100004 is Suspended)
       // Area A2: 4 active clubs out of 4 total
       // Area B1: 4 active clubs out of 5 total (club 100012 is Low)
-      // The AreaProgressSummary shows paid/total in progress text as "X of Y clubs paid"
-      expect(screen.getByText(/3 of 4 clubs paid/)).toBeInTheDocument() // A1: 3 paid / 4 total
-      expect(screen.getByText(/4 of 4 clubs paid/)).toBeInTheDocument() // A2: 4 paid / 4 total
-      expect(screen.getByText(/4 of 5 clubs paid/)).toBeInTheDocument() // B1: 4 paid / 5 total
+      // The DivisionAreaProgressSummary shows paid/total in progress text as "X of Y clubs paid"
+      // Use getAllByText since text may appear in multiple places (Division and Area summaries)
+      expect(screen.getAllByText(/3 of 4 clubs paid/).length).toBeGreaterThan(0) // A1: 3 paid / 4 total
+      expect(screen.getAllByText(/4 of 4 clubs paid/).length).toBeGreaterThan(0) // A2: 4 paid / 4 total
+      expect(screen.getAllByText(/4 of 5 clubs paid/).length).toBeGreaterThan(0) // B1: 4 paid / 5 total
     })
   })
 
   describe('Loading state is passed correctly (Requirement 1.1)', () => {
     /**
      * Validates: Requirement 1.1
-     * Loading state should be passed to AreaRecognitionPanel
+     * Loading state should be passed to DivisionAreaRecognitionPanel
      */
     it('should show loading state when data is loading', async () => {
       // Mock loading state
@@ -776,7 +783,9 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
 
       // Verify content is rendered (not loading)
       await waitFor(() => {
-        expect(screen.getByText('Area Recognition')).toBeInTheDocument()
+        expect(
+          screen.getByText('Division and Area Recognition')
+        ).toBeInTheDocument()
         expect(
           screen.queryByText('Loading division performance data...')
         ).not.toBeInTheDocument()
@@ -813,9 +822,12 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       })
       await user.click(divisionsTab)
 
-      // Verify empty state is shown for AreaRecognitionPanel
+      // Verify empty state is shown for DivisionAreaRecognitionPanel
+      // Updated to match the actual component text: "No Division or Area Data Available"
       await waitFor(() => {
-        expect(screen.getByText('No Area Data Available')).toBeInTheDocument()
+        expect(
+          screen.getByText('No Division or Area Data Available')
+        ).toBeInTheDocument()
       })
     })
 
@@ -846,10 +858,12 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
       // When districtStatistics is null, the components should not render
       // or should show an appropriate empty/no data state
       await waitFor(() => {
-        // AreaRecognitionPanel should not be rendered when there's no data
+        // DivisionAreaRecognitionPanel should not be rendered when there's no data
         // The page conditionally renders based on districtStatistics
-        const areaRecognitionSection = screen.queryByText('Area Recognition')
-        // Either no Area Recognition section, or a "No Data" message
+        const areaRecognitionSection = screen.queryByText(
+          'Division and Area Recognition'
+        )
+        // Either no Division and Area Recognition section, or a "No Data" message
         const noDataMessage =
           screen.queryByText(/No Data/i) || screen.queryByText(/No.*Available/i)
         expect(
@@ -875,7 +889,9 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
 
       // Wait for content to render
       await waitFor(() => {
-        expect(screen.getByText('Area Recognition')).toBeInTheDocument()
+        expect(
+          screen.getByText('Division and Area Recognition')
+        ).toBeInTheDocument()
       })
 
       // Run axe accessibility tests
@@ -884,9 +900,9 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
     })
 
     /**
-     * Tests that AreaRecognitionPanel has proper ARIA attributes
+     * Tests that DivisionAreaRecognitionPanel has proper ARIA attributes
      */
-    it('should have proper ARIA attributes on AreaRecognitionPanel', async () => {
+    it('should have proper ARIA attributes on DivisionAreaRecognitionPanel', async () => {
       const user = userEvent.setup()
       renderDistrictDetailPage()
 
@@ -898,7 +914,9 @@ describe('DistrictDetailPage - Area Recognition Panel Integration', () => {
 
       // Verify ARIA region is present
       await waitFor(() => {
-        const region = screen.getByRole('region', { name: /area recognition/i })
+        const region = screen.getByRole('region', {
+          name: /division and area recognition/i,
+        })
         expect(region).toBeInTheDocument()
       })
     })

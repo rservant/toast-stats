@@ -22,7 +22,10 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { AreaProgressSummary, AreaWithDivision } from '../AreaProgressSummary'
+import {
+  AreaProgressSummary,
+  AreaWithDivision,
+} from '../DivisionAreaProgressSummary'
 import {
   renderWithProviders,
   cleanupAllResources,
@@ -103,9 +106,11 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      // Should contain progress text with metrics
-      expect(screen.getByText(/4 of 4 clubs paid/)).toBeInTheDocument()
-      expect(screen.getByText(/2 of 4 distinguished/)).toBeInTheDocument()
+      // Should contain progress text with metrics (both division and area narratives)
+      const paidClubsTexts = screen.getAllByText(/4 of 4 clubs paid/)
+      expect(paidClubsTexts.length).toBeGreaterThanOrEqual(1)
+      const distinguishedTexts = screen.getAllByText(/2 of 4 distinguished/)
+      expect(distinguishedTexts.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -173,13 +178,14 @@ describe('AreaProgressSummary', () => {
         <AreaProgressSummary areas={areas} />
       )
 
-      // Get all area headings within Division A section
+      // Get all area headings within Division A section (excluding division narrative heading)
       const divisionASection = container.querySelector(
         '[aria-labelledby="division-A-heading"]'
       )
       expect(divisionASection).toBeInTheDocument()
 
-      const areaHeadings = divisionASection!.querySelectorAll('h5')
+      // Get area headings (h5 elements with id starting with "area-")
+      const areaHeadings = divisionASection!.querySelectorAll('h5[id^="area-"]')
       const areaTexts = Array.from(areaHeadings).map(h => h.textContent)
 
       // Should be sorted: A1, A2, A3
@@ -243,7 +249,7 @@ describe('AreaProgressSummary', () => {
     it('should display empty state message when no areas', () => {
       renderWithProviders(<AreaProgressSummary areas={[]} />)
 
-      expect(screen.getByText('No Area Data')).toBeInTheDocument()
+      expect(screen.getByText('No Division Data')).toBeInTheDocument()
     })
 
     /**
@@ -253,7 +259,7 @@ describe('AreaProgressSummary', () => {
       renderWithProviders(<AreaProgressSummary areas={[]} />)
 
       expect(
-        screen.getByText(/No area performance data is available/i)
+        screen.getByText(/No division performance data is available/i)
       ).toBeInTheDocument()
     })
 
@@ -263,7 +269,9 @@ describe('AreaProgressSummary', () => {
     it('should still display section header in empty state', () => {
       renderWithProviders(<AreaProgressSummary areas={[]} />)
 
-      expect(screen.getByText('Area Progress Summary')).toBeInTheDocument()
+      expect(
+        screen.getByText('Division and Area Progress Summary')
+      ).toBeInTheDocument()
     })
 
     /**
@@ -292,7 +300,7 @@ describe('AreaProgressSummary', () => {
         />
       )
 
-      expect(screen.getByText('No Area Data')).toBeInTheDocument()
+      expect(screen.getByText('No Division Data')).toBeInTheDocument()
     })
   })
 
@@ -305,7 +313,9 @@ describe('AreaProgressSummary', () => {
 
       // Loading state should have role="status" and aria-label
       expect(
-        screen.getByRole('status', { name: /loading area progress summaries/i })
+        screen.getByRole('status', {
+          name: /loading division and area progress summaries/i,
+        })
       ).toBeInTheDocument()
     })
 
@@ -316,7 +326,7 @@ describe('AreaProgressSummary', () => {
       renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
 
       const loadingContainer = screen.getByRole('status', {
-        name: /loading area progress summaries/i,
+        name: /loading division and area progress summaries/i,
       })
       expect(loadingContainer).toHaveAttribute('aria-busy', 'true')
     })
@@ -343,7 +353,7 @@ describe('AreaProgressSummary', () => {
     it('should not show empty state during loading', () => {
       renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
 
-      expect(screen.queryByText('No Area Data')).not.toBeInTheDocument()
+      expect(screen.queryByText('No Division Data')).not.toBeInTheDocument()
     })
 
     /**
@@ -353,7 +363,7 @@ describe('AreaProgressSummary', () => {
       renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
 
       expect(
-        screen.getByText('Loading area progress summaries...')
+        screen.getByText('Loading division and area progress summaries...')
       ).toBeInTheDocument()
     })
   })
@@ -369,7 +379,7 @@ describe('AreaProgressSummary', () => {
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
       const section = screen.getByRole('region', {
-        name: /area progress summary/i,
+        name: /division and area progress summary/i,
       })
       expect(section).toBeInTheDocument()
     })
@@ -388,8 +398,9 @@ describe('AreaProgressSummary', () => {
         <AreaProgressSummary areas={areas} />
       )
 
+      // Articles include: 1 division narrative + 2 area narratives = 3 total
       const articles = container.querySelectorAll('article')
-      expect(articles.length).toBe(2)
+      expect(articles.length).toBe(3)
     })
 
     /**
@@ -405,8 +416,15 @@ describe('AreaProgressSummary', () => {
         <AreaProgressSummary areas={areas} />
       )
 
-      const article = container.querySelector('article')
-      expect(article).toHaveAttribute('aria-labelledby', 'area-A-A1-heading')
+      // Get the area article (not the division narrative article)
+      const areaArticle = container.querySelector(
+        'article[aria-labelledby="area-A-A1-heading"]'
+      )
+      expect(areaArticle).toBeInTheDocument()
+      expect(areaArticle).toHaveAttribute(
+        'aria-labelledby',
+        'area-A-A1-heading'
+      )
     })
 
     /**
@@ -426,9 +444,9 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      // Badge should have aria-label describing the recognition status
-      const badge = screen.getByLabelText(/recognition status/i)
-      expect(badge).toBeInTheDocument()
+      // Both division and area badges should have aria-label describing the recognition status
+      const badges = screen.getAllByLabelText(/recognition status/i)
+      expect(badges.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -542,7 +560,9 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
+      // Both division and area may show Not Distinguished badge
+      const badges = screen.getAllByText('Not Distinguished')
+      expect(badges.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -562,7 +582,9 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      expect(screen.getByText('Net Loss')).toBeInTheDocument()
+      // Both division and area may show Net Loss badge
+      const badges = screen.getAllByText('Net Loss')
+      expect(badges.length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -662,8 +684,9 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      // Should render and show metrics
-      expect(screen.getByText(/1 of 1 clubs paid/)).toBeInTheDocument()
+      // Should render and show metrics (both division and area narratives)
+      const paidClubsTexts = screen.getAllByText(/1 of 1 clubs paid/)
+      expect(paidClubsTexts.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -715,13 +738,21 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
-      expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
-      // Use getAllByText since "Distinguished" appears multiple times
+      // Use getAllByText since division and area badges may both show these statuses
+      const presidentsDistinguishedBadges = screen.getAllByText(
+        "President's Distinguished"
+      )
+      expect(presidentsDistinguishedBadges.length).toBeGreaterThanOrEqual(1)
+      const selectDistinguishedBadges = screen.getAllByText(
+        'Select Distinguished'
+      )
+      expect(selectDistinguishedBadges.length).toBeGreaterThanOrEqual(1)
       const distinguishedBadges = screen.getAllByText('Distinguished')
       expect(distinguishedBadges.length).toBeGreaterThanOrEqual(1)
-      expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
-      expect(screen.getByText('Net Loss')).toBeInTheDocument()
+      const notDistinguishedBadges = screen.getAllByText('Not Distinguished')
+      expect(notDistinguishedBadges.length).toBeGreaterThanOrEqual(1)
+      const netLossBadges = screen.getAllByText('Net Loss')
+      expect(netLossBadges.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -832,9 +863,11 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      // Should mention net club loss and eligibility
-      expect(screen.getByText(/has a net club loss/)).toBeInTheDocument()
-      expect(screen.getByText(/To become eligible/)).toBeInTheDocument()
+      // Should mention net club loss and eligibility (both division and area narratives)
+      const netLossTexts = screen.getAllByText(/has a net club loss/)
+      expect(netLossTexts.length).toBeGreaterThanOrEqual(1)
+      const eligibilityTexts = screen.getAllByText(/To become eligible/)
+      expect(eligibilityTexts.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -853,10 +886,11 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      // Should mention achievement
-      expect(
-        screen.getByText(/has achieved President's Distinguished status/)
-      ).toBeInTheDocument()
+      // Should mention achievement (area narrative)
+      const achievementTexts = screen.getAllByText(
+        /has achieved President's Distinguished status/
+      )
+      expect(achievementTexts.length).toBeGreaterThanOrEqual(1)
     })
 
     /**
@@ -875,9 +909,238 @@ describe('AreaProgressSummary', () => {
 
       renderWithProviders(<AreaProgressSummary areas={areas} />)
 
-      // Should mention gaps to each level
-      expect(screen.getByText(/is not yet distinguished/)).toBeInTheDocument()
-      expect(screen.getByText(/For Distinguished/)).toBeInTheDocument()
+      // Should mention gaps to each level (both division and area narratives may contain these)
+      const notDistinguishedTexts = screen.getAllByText(
+        /is not yet distinguished/
+      )
+      expect(notDistinguishedTexts.length).toBeGreaterThanOrEqual(1)
+      const forDistinguishedTexts = screen.getAllByText(/For Distinguished/)
+      expect(forDistinguishedTexts.length).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  describe('Division Progress Narratives', () => {
+    /**
+     * Validates: Requirements 10.5, 11.2
+     * THE System SHALL augment the existing AreaProgressSummary to include division progress narratives
+     * FOR EACH division, THE System SHALL first display the division's progress narrative
+     */
+    it('should display division progress narrative for each division', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({ areaId: 'A1', divisionId: 'A' }),
+        createArea({ areaId: 'B1', divisionId: 'B' }),
+      ]
+
+      renderWithProviders(<AreaProgressSummary areas={areas} />)
+
+      // Each division should have a progress narrative heading
+      expect(screen.getByText('Division A Progress')).toBeInTheDocument()
+      expect(screen.getByText('Division B Progress')).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirements 10.6, 11.2, 11.3
+     * THE division progress narratives SHALL appear before the area progress narratives
+     * FOR EACH division, THE System SHALL first display the division's progress narrative
+     * FOR EACH division, THE System SHALL then display the area progress narratives
+     */
+    it('should display division narrative before area narratives within each division', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({ areaId: 'A1', divisionId: 'A' }),
+        createArea({ areaId: 'A2', divisionId: 'A' }),
+      ]
+
+      const { container } = renderWithProviders(
+        <AreaProgressSummary areas={areas} />
+      )
+
+      // Get the Division A section
+      const divisionASection = container.querySelector(
+        '[aria-labelledby="division-A-heading"]'
+      )
+      expect(divisionASection).toBeInTheDocument()
+
+      // Get all articles within the division section
+      const articles = divisionASection!.querySelectorAll('article')
+
+      // First article should be the division narrative (has division-A-narrative-heading)
+      expect(articles[0]).toHaveAttribute(
+        'aria-labelledby',
+        'division-A-narrative-heading'
+      )
+
+      // Subsequent articles should be area narratives
+      expect(articles[1]).toHaveAttribute(
+        'aria-labelledby',
+        'area-A-A1-heading'
+      )
+      expect(articles[2]).toHaveAttribute(
+        'aria-labelledby',
+        'area-A-A2-heading'
+      )
+    })
+
+    /**
+     * Validates: Requirement 11.4
+     * THE division narratives SHALL use the same paragraph-based format as area narratives
+     */
+    it('should use paragraph-based format for division narratives', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({
+          areaId: 'A1',
+          divisionId: 'A',
+          clubBase: 4,
+          paidClubs: 4,
+          distinguishedClubs: 2,
+        }),
+      ]
+
+      renderWithProviders(<AreaProgressSummary areas={areas} />)
+
+      // Division narrative should contain progress text with metrics
+      // Division A has 4 clubs paid, 2 distinguished (same as the single area)
+      expect(
+        screen.getByText(/Division A has achieved Distinguished status/)
+      ).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirement 11.5
+     * THE division narratives SHALL be visually distinguished from area narratives
+     */
+    it('should visually distinguish division narratives from area narratives', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({ areaId: 'A1', divisionId: 'A' }),
+      ]
+
+      const { container } = renderWithProviders(
+        <AreaProgressSummary areas={areas} />
+      )
+
+      // Division narrative article should have distinct styling
+      const divisionNarrativeArticle = container.querySelector(
+        'article[aria-labelledby="division-A-narrative-heading"]'
+      )
+      expect(divisionNarrativeArticle).toBeInTheDocument()
+
+      // Division narrative should have tm-loyal-blue background styling
+      expect(divisionNarrativeArticle).toHaveClass('bg-tm-loyal-blue/10')
+      expect(divisionNarrativeArticle).toHaveClass('border-2')
+      expect(divisionNarrativeArticle).toHaveClass('border-tm-loyal-blue/30')
+
+      // Area narrative article should have different styling
+      const areaArticle = container.querySelector(
+        'article[aria-labelledby="area-A-A1-heading"]'
+      )
+      expect(areaArticle).toBeInTheDocument()
+      expect(areaArticle).toHaveClass('bg-gray-50')
+      expect(areaArticle).toHaveClass('border-gray-200')
+    })
+
+    /**
+     * Validates: Requirement 11.5
+     * Division narrative heading should be bold and use brand color
+     */
+    it('should have bold heading with brand color for division narratives', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({ areaId: 'A1', divisionId: 'A' }),
+      ]
+
+      const { container } = renderWithProviders(
+        <AreaProgressSummary areas={areas} />
+      )
+
+      // Division narrative heading should be bold and use tm-loyal-blue
+      const divisionNarrativeHeading = container.querySelector(
+        '#division-A-narrative-heading'
+      )
+      expect(divisionNarrativeHeading).toBeInTheDocument()
+      expect(divisionNarrativeHeading).toHaveClass('font-bold')
+      expect(divisionNarrativeHeading).toHaveClass('text-tm-loyal-blue')
+    })
+
+    /**
+     * Validates: Requirements 10.5, 11.1
+     * Division narratives should include recognition badge
+     */
+    it('should display recognition badge for division narratives', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({
+          areaId: 'A1',
+          divisionId: 'A',
+          clubBase: 4,
+          paidClubs: 4,
+          distinguishedClubs: 2,
+        }),
+      ]
+
+      renderWithProviders(<AreaProgressSummary areas={areas} />)
+
+      // Division narrative should have a recognition badge with aria-label
+      const divisionBadge = screen.getByLabelText(
+        /Division recognition status/i
+      )
+      expect(divisionBadge).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirements 10.5, 11.2
+     * Division narrative should show division-level metrics (aggregated from areas)
+     */
+    it('should show division-level metrics in division narrative', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({
+          areaId: 'A1',
+          divisionId: 'A',
+          clubBase: 4,
+          paidClubs: 4,
+          distinguishedClubs: 2,
+        }),
+        createArea({
+          areaId: 'A2',
+          divisionId: 'A',
+          clubBase: 6,
+          paidClubs: 6,
+          distinguishedClubs: 3,
+        }),
+      ]
+
+      renderWithProviders(<AreaProgressSummary areas={areas} />)
+
+      // Division A should show aggregated metrics: 10 clubs paid, 5 distinguished
+      // (4+6 = 10 paid, 2+3 = 5 distinguished)
+      expect(screen.getByText(/10 of 10 clubs paid/)).toBeInTheDocument()
+      expect(screen.getByText(/5 of 10 distinguished/)).toBeInTheDocument()
+    })
+
+    /**
+     * Validates: Requirements 10.6, 11.3
+     * Each division should have its own division narrative followed by its areas
+     */
+    it('should group division narrative with its areas for multiple divisions', () => {
+      const areas: AreaWithDivision[] = [
+        createArea({ areaId: 'A1', divisionId: 'A' }),
+        createArea({ areaId: 'B1', divisionId: 'B' }),
+        createArea({ areaId: 'B2', divisionId: 'B' }),
+      ]
+
+      const { container } = renderWithProviders(
+        <AreaProgressSummary areas={areas} />
+      )
+
+      // Division A section should have 1 division narrative + 1 area = 2 articles
+      const divisionASection = container.querySelector(
+        '[aria-labelledby="division-A-heading"]'
+      )
+      const divisionAArticles = divisionASection!.querySelectorAll('article')
+      expect(divisionAArticles.length).toBe(2)
+
+      // Division B section should have 1 division narrative + 2 areas = 3 articles
+      const divisionBSection = container.querySelector(
+        '[aria-labelledby="division-B-heading"]'
+      )
+      const divisionBArticles = divisionBSection!.querySelectorAll('article')
+      expect(divisionBArticles.length).toBe(3)
     })
   })
 })

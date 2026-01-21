@@ -15,6 +15,7 @@
 
 import React from 'react'
 import { DivisionPerformance } from '../utils/divisionStatus'
+import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 import DivisionSummary from './DivisionSummary'
 import { AreaPerformanceTable } from './AreaPerformanceTable'
 import { Card } from './ui/Card/Card'
@@ -60,6 +61,14 @@ export interface DivisionPerformanceCardProps {
 export const DivisionPerformanceCard: React.FC<
   DivisionPerformanceCardProps
 > = ({ division }) => {
+  // Calculate gap analysis for the division
+  // Requirements: 9.1, 9.2, 9.3, 9.4
+  const gapAnalysis = calculateDivisionGapAnalysis({
+    clubBase: division.clubBase,
+    paidClubs: division.paidClubs,
+    distinguishedClubs: division.distinguishedClubs,
+  })
+
   return (
     <Card
       variant="default"
@@ -76,6 +85,7 @@ export const DivisionPerformanceCard: React.FC<
         netGrowth={division.netGrowth}
         distinguishedClubs={division.distinguishedClubs}
         requiredDistinguishedClubs={division.requiredDistinguishedClubs}
+        gapAnalysis={gapAnalysis}
       />
 
       {/* Area Performance Table - displays detailed area metrics */}

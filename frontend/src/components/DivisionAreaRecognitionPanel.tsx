@@ -1,25 +1,28 @@
 /**
- * AreaRecognitionPanel Component
+ * DivisionAreaRecognitionPanel Component
  *
- * Container component for the Area Recognition section within the Divisions & Areas tab.
- * This component combines the CriteriaExplanation and AreaProgressSummary components to
- * provide a comprehensive view of Distinguished Area Program (DAP) criteria and each
- * area's progress toward recognition.
+ * Container component for the Division and Area Recognition section within the Divisions & Areas tab.
+ * This component combines the DivisionCriteriaExplanation, CriteriaExplanation, and AreaProgressSummary
+ * components to provide a comprehensive view of Distinguished Division Program (DDP) and
+ * Distinguished Area Program (DAP) criteria and each division/area's progress toward recognition.
  *
  * Note: The standalone AreaProgressTable has been removed from this panel. Recognition
  * metrics are now displayed in the AreaPerformanceTable within each Division card.
  *
  * Requirements validated:
+ * - 10.1: Rename AreaRecognitionPanel to DivisionAreaRecognitionPanel
+ * - 10.2: Rename section header from "Area Recognition" to "Division and Area Recognition"
+ * - 10.3: Include DivisionCriteriaExplanation component
+ * - 10.4: Include existing CriteriaExplanation component for DAP
+ * - 10.7: Update all references from "Area Recognition" to "Division and Area Recognition"
  * - 1.1: Display Area Recognition section alongside existing content
  * - 1.2: Position logically within existing tab layout
  * - 1.3: Maintain consistent styling with existing components
- * - 10.1: Remove standalone AreaProgressTable from Area Recognition section
- * - 10.2: Retain AreaProgressSummary (paragraph-based progress descriptions)
- * - 10.3: Display only CriteriaExplanation and AreaProgressSummary
  *
  * Architecture:
  * ```
- * AreaRecognitionPanel (this component)
+ * DivisionAreaRecognitionPanel (this component)
+ * ├── DivisionCriteriaExplanation - DDP criteria and eligibility requirements
  * ├── CriteriaExplanation - DAP criteria and eligibility requirements
  * └── AreaProgressSummary - Area progress with narrative descriptions
  * ```
@@ -34,14 +37,18 @@
 
 import React, { useMemo } from 'react'
 import { DivisionPerformance } from '../utils/divisionStatus'
+import { DivisionCriteriaExplanation } from './DivisionCriteriaExplanation'
 import { CriteriaExplanation } from './CriteriaExplanation'
-import { AreaProgressSummary, AreaWithDivision } from './AreaProgressSummary'
+import {
+  AreaProgressSummary,
+  AreaWithDivision,
+} from './DivisionAreaProgressSummary'
 import { LoadingSkeleton } from './LoadingSkeleton'
 
 /**
- * Props for the AreaRecognitionPanel component
+ * Props for the DivisionAreaRecognitionPanel component
  */
-export interface AreaRecognitionPanelProps {
+export interface DivisionAreaRecognitionPanelProps {
   /** Division performance data containing area information */
   divisions: DivisionPerformance[]
   /** Loading state indicator */
@@ -49,15 +56,16 @@ export interface AreaRecognitionPanelProps {
 }
 
 /**
- * AreaRecognitionPanel Component
+ * DivisionAreaRecognitionPanel Component
  *
- * Main container component for the area recognition section. Extracts areas
+ * Main container component for the division and area recognition section. Extracts areas
  * from division performance data and renders the criteria explanation and
  * progress summary components.
  *
  * Features:
  * - Section header with title and description
- * - Criteria explanation (collapsible)
+ * - Division criteria explanation (collapsible) - DDP
+ * - Area criteria explanation (collapsible) - DAP
  * - Area progress summary with narrative descriptions
  * - Loading state handling
  * - Empty state handling
@@ -68,16 +76,15 @@ export interface AreaRecognitionPanelProps {
  * @component
  * @example
  * ```tsx
- * <AreaRecognitionPanel
+ * <DivisionAreaRecognitionPanel
  *   divisions={divisionPerformanceData}
  *   isLoading={false}
  * />
  * ```
  */
-export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
-  divisions,
-  isLoading = false,
-}) => {
+export const DivisionAreaRecognitionPanel: React.FC<
+  DivisionAreaRecognitionPanelProps
+> = ({ divisions, isLoading = false }) => {
   /**
    * Extract all areas from divisions with their parent division context
    *
@@ -104,7 +111,7 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
     return (
       <section
         className="space-y-6"
-        aria-label="Area Recognition"
+        aria-label="Division and Area Recognition"
         aria-busy="true"
       >
         {/* Section Header Skeleton */}
@@ -127,17 +134,18 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
   // Empty state - no divisions provided
   if (!divisions || divisions.length === 0) {
     return (
-      <section className="space-y-6" aria-label="Area Recognition">
+      <section className="space-y-6" aria-label="Division and Area Recognition">
         {/* Section Header */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold text-gray-900 font-tm-headline">
-            Area Recognition
+            Division and Area Recognition
           </h2>
           <p
             className="text-gray-600 mt-1 font-tm-body"
             style={{ fontSize: '14px' }}
           >
-            Distinguished Area Program (DAP) criteria and progress tracking
+            Distinguished Division Program (DDP) and Distinguished Area Program
+            (DAP) criteria and progress tracking
           </p>
         </div>
 
@@ -162,7 +170,7 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
               className="font-tm-headline font-semibold text-gray-900 mb-2"
               style={{ fontSize: '18px' }}
             >
-              No Area Data Available
+              No Division or Area Data Available
             </h3>
             <p
               className="font-tm-body text-gray-600"
@@ -179,8 +187,12 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
 
   // Main render - display section with criteria and progress table
   return (
-    <section className="space-y-6" aria-label="Area Recognition" role="region">
-      {/* Section Header - Requirement 1.3: Consistent styling */}
+    <section
+      className="space-y-6"
+      aria-label="Division and Area Recognition"
+      role="region"
+    >
+      {/* Section Header - Requirement 10.2, 10.7: Updated header */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center gap-3 mb-2">
           <svg
@@ -192,18 +204,22 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
           <h2 className="text-2xl font-bold text-gray-900 font-tm-headline">
-            Area Recognition
+            Division and Area Recognition
           </h2>
         </div>
         <p className="text-gray-600 font-tm-body" style={{ fontSize: '14px' }}>
-          Track progress toward Distinguished Area Program (DAP) recognition.
-          Review the criteria below and see how each area is performing against
-          the requirements for Distinguished, Select Distinguished, and
+          Track progress toward Distinguished Division Program (DDP) and
+          Distinguished Area Program (DAP) recognition. Review the criteria
+          below and see how each division and area is performing against the
+          requirements for Distinguished, Select Distinguished, and
           President&apos;s Distinguished status.
         </p>
       </div>
 
-      {/* Criteria Explanation - Requirements 2, 3, 4 */}
+      {/* Division Criteria Explanation - Requirements 10.3: DDP criteria */}
+      <DivisionCriteriaExplanation defaultExpanded={false} />
+
+      {/* Area Criteria Explanation - Requirements 2, 3, 4 (DAP) - Requirement 10.4 */}
       <CriteriaExplanation defaultExpanded={false} />
 
       {/* Area Progress Summary - Requirements 5, 6, 10.2, 10.3 */}
@@ -224,4 +240,14 @@ export const AreaRecognitionPanel: React.FC<AreaRecognitionPanelProps> = ({
   )
 }
 
-export default AreaRecognitionPanel
+/**
+ * @deprecated Use DivisionAreaRecognitionPanel instead. This alias is provided for backward compatibility.
+ */
+export const AreaRecognitionPanel = DivisionAreaRecognitionPanel
+
+/**
+ * @deprecated Use DivisionAreaRecognitionPanelProps instead. This alias is provided for backward compatibility.
+ */
+export type AreaRecognitionPanelProps = DivisionAreaRecognitionPanelProps
+
+export default DivisionAreaRecognitionPanel
