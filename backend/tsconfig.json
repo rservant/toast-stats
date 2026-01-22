@@ -41,6 +41,11 @@
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/**/__tests__/**/*",
-    "src/**/__*"
+    "src/**/__*",
+    "src/services/TestServiceFactory.ts",
+    "src/utils/test-*.ts",
+    "src/utils/global-test-cleanup.ts",
+    "src/utils/TestIsolationManager.ts",
+    "src/utils/PropertyTestInfrastructure.ts"
   ]
 }
