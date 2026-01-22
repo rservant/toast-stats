@@ -1,11 +1,11 @@
 # Backend Dockerfile
 # Multi-stage build for optimized production image
 #
-# Build from monorepo root:
-#   docker build -f backend/Dockerfile -t toast-stats-backend .
+# For Cloud Build (build context is backend/):
+#   docker build -t toast-stats-backend .
 #
-# Or build from backend directory with root context:
-#   docker build -f Dockerfile -t toast-stats-backend ..
+# For local build from repo root:
+#   docker build -f backend/Dockerfile -t toast-stats-backend backend/
 
 # ============================================
 # Stage 1: Build
@@ -14,22 +14,17 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy root package files for workspace dependency resolution
-COPY package.json package-lock.json ./
-
-# Copy backend package.json
-COPY backend/package.json ./backend/
+# Copy package files
+COPY package.json ./
 
 # Install all dependencies (including devDependencies for build)
-# Skip prepare script (husky install) - not needed in Docker build
-RUN npm ci --workspace=backend --ignore-scripts
+RUN npm install
 
-# Copy backend source code
-COPY backend/tsconfig.json ./backend/
-COPY backend/src ./backend/src
+# Copy source code and TypeScript config
+COPY tsconfig.json ./
+COPY src ./src
 
 # Build TypeScript to JavaScript
-WORKDIR /app/backend
 RUN npm run build
 
 # ============================================
@@ -48,19 +43,15 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy root package files for workspace dependency resolution
-COPY package.json package-lock.json ./
-
-# Copy backend package.json
-COPY backend/package.json ./backend/
+# Copy package.json for production install
+COPY package.json ./
 
 # Install production dependencies only
-# Skip prepare script (husky install) which requires devDependencies
-RUN npm ci --workspace=backend --omit=dev --ignore-scripts && \
+RUN npm install --omit=dev && \
     npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder /app/backend/dist ./backend/dist
+COPY --from=builder /app/dist ./dist
 
 # Create cache directory with proper permissions
 RUN mkdir -p /app/cache && \
@@ -68,8 +59,6 @@ RUN mkdir -p /app/cache && \
 
 # Switch to non-root user
 USER nodejs
-
-WORKDIR /app/backend
 
 # Environment variables
 ENV NODE_ENV=production
