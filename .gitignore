@@ -59,3 +59,4 @@ debug_*.js
 *.temp
 backend/reconciliation-config.json
 logs
+.firebase/
