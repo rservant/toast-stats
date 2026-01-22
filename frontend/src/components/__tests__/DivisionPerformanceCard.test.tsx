@@ -79,11 +79,9 @@ describe('DivisionPerformanceCard', () => {
       expect(
         screen.getByRole('status', { name: /Division status: Distinguished/i })
       ).toBeInTheDocument()
-      // "Paid Clubs" and "Distinguished Clubs" appear in both summary and table, so use getAllByText
-      expect(screen.getAllByText('Paid Clubs').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Distinguished Clubs').length).toBeGreaterThan(
-        0
-      )
+      // New compact layout uses "Paid:" and "Distinguished:" labels
+      expect(screen.getByText('Paid:')).toBeInTheDocument()
+      expect(screen.getByText('Distinguished:')).toBeInTheDocument()
     })
 
     it('should render AreaPerformanceTable below summary', () => {
@@ -119,9 +117,9 @@ describe('DivisionPerformanceCard', () => {
     it('should pass division data to DivisionSummary', () => {
       render(<DivisionPerformanceCard division={mockDivision} />)
 
-      // Verify division-level metrics are displayed
-      expect(screen.getByText(/52 \/ 50/)).toBeInTheDocument() // Paid clubs
-      expect(screen.getByText(/26 \/ 25/)).toBeInTheDocument() // Distinguished clubs
+      // Verify division-level metrics are displayed (new compact format without spaces)
+      expect(screen.getByText('52/50')).toBeInTheDocument() // Paid clubs
+      expect(screen.getByText('26/25')).toBeInTheDocument() // Distinguished clubs
       expect(
         screen.getByLabelText(/Net growth: positive 2/i)
       ).toBeInTheDocument()
@@ -368,7 +366,7 @@ describe('DivisionPerformanceCard', () => {
       render(<DivisionPerformanceCard division={zeroBaseDiv} />)
 
       expect(screen.getByText('Division A')).toBeInTheDocument()
-      expect(screen.getAllByText(/0 \/ 0/)).toHaveLength(2)
+      expect(screen.getAllByText('0/0')).toHaveLength(2)
     })
 
     it('should handle large numbers', () => {
@@ -383,8 +381,8 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={largeDiv} />)
 
-      expect(screen.getByText(/105 \/ 100/)).toBeInTheDocument()
-      expect(screen.getByText(/55 \/ 50/)).toBeInTheDocument()
+      expect(screen.getByText('105/100')).toBeInTheDocument()
+      expect(screen.getByText('55/50')).toBeInTheDocument()
     })
   })
 })
