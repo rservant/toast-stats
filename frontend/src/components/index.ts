@@ -27,3 +27,32 @@ export type {
   FullYearRankingChartProps,
   RankMetric,
 } from './FullYearRankingChart'
+
+// Area Recognition Components
+export { CriteriaExplanation } from './CriteriaExplanation'
+export type { CriteriaExplanationProps } from './CriteriaExplanation'
+
+// Division Recognition Components
+export { DivisionCriteriaExplanation } from './DivisionCriteriaExplanation'
+export type { DivisionCriteriaExplanationProps } from './DivisionCriteriaExplanation'
+
+// Division and Area Recognition Panel
+export {
+  DivisionAreaRecognitionPanel,
+  AreaRecognitionPanel, // Deprecated alias for backward compatibility
+} from './DivisionAreaRecognitionPanel'
+export type {
+  DivisionAreaRecognitionPanelProps,
+  AreaRecognitionPanelProps, // Deprecated alias for backward compatibility
+} from './DivisionAreaRecognitionPanel'
+
+// Division and Area Progress Summary
+export {
+  DivisionAreaProgressSummary,
+  AreaProgressSummary, // Deprecated alias for backward compatibility
+} from './DivisionAreaProgressSummary'
+export type {
+  DivisionAreaProgressSummaryProps,
+  AreaProgressSummaryProps, // Deprecated alias for backward compatibility
+  AreaWithDivision, // Deprecated - use DivisionPerformance[] instead
+} from './DivisionAreaProgressSummary'

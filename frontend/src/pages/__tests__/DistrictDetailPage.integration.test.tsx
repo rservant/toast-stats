@@ -188,12 +188,13 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       // Verify Division A data - 2 clubs in division A, both active and distinguished
       // Club base from "Division Club Base" = 50, but actual clubs = 2
       // Since we have 2 clubs with "Division Club Base": "50", the division uses 50 as base
-      expect(screen.getByText(/2 \/ 50/)).toBeInTheDocument() // Paid clubs (2 active / 50 base)
-      expect(screen.getByText(/2 \/ 25/)).toBeInTheDocument() // Distinguished clubs (2 / 25 required)
+      // New compact format without spaces
+      expect(screen.getByText('2/50')).toBeInTheDocument() // Paid clubs (2 active / 50 base)
+      expect(screen.getByText('2/25')).toBeInTheDocument() // Distinguished clubs (2 / 25 required)
 
       // Verify Division B data - 1 club in division B
-      expect(screen.getByText(/1 \/ 40/)).toBeInTheDocument() // Paid clubs (1 active / 40 base)
-      expect(screen.getByText(/1 \/ 20/)).toBeInTheDocument() // Distinguished clubs (1 / 20 required)
+      expect(screen.getByText('1/40')).toBeInTheDocument() // Paid clubs (1 active / 40 base)
+      expect(screen.getByText('1/20')).toBeInTheDocument() // Distinguished clubs (1 / 20 required)
     })
 
     it('should display area performance tables', () => {
@@ -322,8 +323,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
 
       // Verify key metrics are visible and readable
       // Division A: 2 paid clubs / 50 base, 2 distinguished / 25 required
-      expect(screen.getByText(/2 \/ 50/)).toBeVisible()
-      expect(screen.getByText(/2 \/ 25/)).toBeVisible()
+      // New compact format without spaces
+      expect(screen.getByText('2/50')).toBeVisible()
+      expect(screen.getByText('2/25')).toBeVisible()
     })
 
     it('should handle horizontal scrolling for area tables on mobile', () => {
@@ -395,7 +397,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
 
       // Verify table headers exist (appears in both tables)
       expect(screen.getAllByText('Area').length).toBeGreaterThanOrEqual(2)
-      expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(2)
+      expect(screen.getAllByText('Recognition').length).toBeGreaterThanOrEqual(
+        2
+      )
     })
 
     it('should maintain proper heading hierarchy', () => {

@@ -1484,31 +1484,25 @@ Toastmasters International recognizes Areas and Divisions that achieve specific 
 
 An Area is eligible for recognition **only if ALL** of the following are true:
 
-1. **Club Visits**: At least two club visits per club are completed and submitted using the official Area Director Club Visit Report.
+1. Areas must have **no net club loss**.
+2. **Club Visits**: Areas must submit the Area Director's Club Visit Report for 75% of their **club base** for first-round visits by November 30 and for 75% of their **club base** for second-round visits by May 31.
 
 If this condition is false, the Area is **ineligible**, regardless of all other metrics.
 
 #### Scored Metrics
 
-Once eligible, recognition is determined by two independent percentage thresholds:
-
-**Paid Clubs Percentage**:
-
-- ≥ 75% of clubs in the Area must be paid clubs
-- A "paid club" is a club in good standing with Toastmasters International (dues paid)
-
 **Distinguished Clubs Percentage**:
 
-- Percentage is calculated **only against paid clubs**
+- Percentage is calculated **only against club base**
 - Required thresholds vary by recognition level
 
 #### Recognition Levels (Area)
 
-| Recognition Level              | Paid Clubs | Distinguished Clubs (of paid clubs) |
-| ------------------------------ | ---------- | ----------------------------------- |
-| Distinguished Area             | ≥ 75% paid | ≥ 50% Distinguished                 |
-| Select Distinguished Area      | ≥ 75% paid | ≥ 75% Distinguished                 |
-| President's Distinguished Area | ≥ 75% paid | 100% Distinguished                  |
+| Recognition Level              | Paid Clubs      | Distinguished Clubs (of paid clubs) |
+| ------------------------------ | --------------- | ----------------------------------- |
+| Distinguished Area             | ≥ club base     | ≥ 50% Distinguished                 |
+| Select Distinguished Area      | ≥ club base     | ≥ 50% Distinguished +1 club         |
+| President's Distinguished Area | ≥ club base + 1 | ≥ 50% Distinguished +1 club         |
 
 ### Distinguished Division Program (DDP)
 
@@ -1516,7 +1510,7 @@ Once eligible, recognition is determined by two independent percentage threshold
 
 A Division is eligible for recognition **only if ALL** of the following are true:
 
-1. **Area Club Visits**: Areas in the Division have completed required Area Director club visits (two per club).
+1. Division must have no **net club loss**.
 
 If this condition is false, the Division is **ineligible**, regardless of all other metrics.
 
@@ -1524,32 +1518,25 @@ If this condition is false, the Division is **ineligible**, regardless of all ot
 
 Once eligible, recognition is determined by two independent percentage thresholds:
 
-**Paid Areas Percentage**:
+**Distinguished Club Percentage**:
 
-- ≥ 85% of Areas in the Division must be paid Areas
-- A "paid Area" is an Area not suspended due to unpaid clubs
-
-**Distinguished Areas Percentage**:
-
-- Percentage is calculated **only against paid Areas**
+- Percentage is calculated **only against club base**
 - Required thresholds vary by recognition level
 
 #### Recognition Levels (Division)
 
-| Recognition Level                  | Paid Areas | Distinguished Areas (of paid areas) |
-| ---------------------------------- | ---------- | ----------------------------------- |
-| Distinguished Division             | ≥ 85% paid | ≥ 50% Distinguished                 |
-| Select Distinguished Division      | ≥ 85% paid | ≥ 75% Distinguished                 |
-| President's Distinguished Division | ≥ 85% paid | 100% Distinguished                  |
+| Recognition Level                  | Paid Clubs      | Distinguished Clubs |
+| ---------------------------------- | --------------- | ------------------- |
+| Distinguished Division             | ≥ club base     | ≥ 45% Distinguished |
+| Select Distinguished Division      | ≥ club base + 1 | ≥ 50% Distinguished |
+| President's Distinguished Division | ≥ club base + 2 | ≥ 55% Distinguished |
 
 ### Canonical Dependency Rules
 
 These rules govern DAP/DDP calculations:
 
-1. **Paid status is a prerequisite**, not a score multiplier
-2. **Distinguished percentages are always calculated against paid units only**
-3. **Eligibility gates hard-block recognition**
-4. **Recognition levels are ordinal**: Distinguished < Select Distinguished < President's Distinguished
+1. **Eligibility gates hard-block recognition**
+2. **Recognition levels are ordinal**: Distinguished < Select Distinguished < President's Distinguished
 
 ### Data Availability Notes
 

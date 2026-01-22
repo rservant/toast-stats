@@ -315,6 +315,19 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
       const area = createMockAreaPerformance()
       const { container } = render(
         <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
           <tbody>
             <AreaPerformanceRow area={area} />
           </tbody>
@@ -325,14 +338,27 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
       expect(results).toHaveNoViolations()
     })
 
-    it('should have no accessibility violations with not-qualified status', async () => {
+    it('should have no accessibility violations with net loss status', async () => {
       const area: AreaPerformance = {
         ...createMockAreaPerformance(),
-        status: 'not-qualified',
+        paidClubs: 3, // Below club base of 5, triggers net loss
         isQualified: false,
       }
       const { container } = render(
         <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
           <tbody>
             <AreaPerformanceRow area={area} />
           </tbody>
@@ -419,20 +445,61 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
     it('should have proper ARIA labels for area status', () => {
       const area = createMockAreaPerformance()
-      render(<AreaPerformanceRow area={area} />)
+      const { container } = render(
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
 
-      // Check for status announcement
-      const statusElement = screen.getByText(/president's distinguished/i)
-      expect(statusElement).toBeInTheDocument()
+      // Check for recognition badge with aria-label
+      const badge = container.querySelector(
+        '[aria-label*="Recognition status"]'
+      )
+      expect(badge).toBeInTheDocument()
     })
 
     it('should announce visit completion status', () => {
       const area = createMockAreaPerformance()
-      render(<AreaPerformanceRow area={area} />)
+      const { container } = render(
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
 
       // Check for visit status indicators
-      const visitElements = screen.getAllByText(/✓|✗|4\/4|80%/i)
-      expect(visitElements.length).toBeGreaterThan(0)
+      const text = container.textContent ?? ''
+      expect(text).toMatch(/✓|✗/)
+      expect(text).toMatch(/4\/4/)
     })
 
     it('should have proper table structure for screen readers', () => {
@@ -513,7 +580,26 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
     it('should have proper ARIA labels for visit status indicators', () => {
       const area = createMockAreaPerformance()
-      const { container } = render(<AreaPerformanceRow area={area} />)
+      const { container } = render(
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
 
       // Check for visit status with proper labeling
       const visitElements = container.querySelectorAll(
@@ -552,15 +638,31 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
     it('should use icons or text in addition to color for visit status', () => {
       const area = createMockAreaPerformance()
-      const { container } = render(<AreaPerformanceRow area={area} />)
+      const { container } = render(
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
 
       // Visit status should have text or icons, not just color
-      const visitIndicators = container.querySelectorAll(
-        'svg, .icon, [aria-label*="visit"]'
-      )
-      const visitText = screen.getAllByText(/✓|✗|4\/4|80%/i)
-
-      expect(visitIndicators.length + visitText.length).toBeGreaterThan(0)
+      const text = container.textContent ?? ''
+      expect(text).toMatch(/✓|✗/)
+      expect(text).toMatch(/4\/4/)
     })
   })
 
@@ -629,18 +731,37 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
 
     it('should announce all area metrics', () => {
       const area = createMockAreaPerformance()
-      render(<AreaPerformanceRow area={area} />)
+      const { container } = render(
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Paid/Base</th>
+              <th>Distinguished</th>
+              <th>First Round Visits</th>
+              <th>Second Round Visits</th>
+              <th>Recognition</th>
+              <th>Gap to D</th>
+              <th>Gap to S</th>
+              <th>Gap to P</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AreaPerformanceRow area={area} />
+          </tbody>
+        </table>
+      )
+
+      const text = container.textContent ?? ''
 
       // Check for area identifier
-      expect(screen.getByText(/a1/i)).toBeInTheDocument()
+      expect(text).toContain('A1')
 
-      // Check for status
-      expect(screen.getByText(/president's distinguished/i)).toBeInTheDocument()
-
-      // Check for club metrics
-      expect(screen.getByText(/6/)).toBeInTheDocument() // paid clubs
-      expect(screen.getByText(/5/)).toBeInTheDocument() // club base
-      expect(screen.getByText(/3/)).toBeInTheDocument() // distinguished clubs
+      // Check for club metrics (Paid/Base and Distinguished with percentages)
+      expect(text).toContain('6/5') // paid/base
+      expect(text).toContain('3/5') // distinguished/base
+      expect(text).toContain('120%') // paid percentage
+      expect(text).toContain('60%') // distinguished percentage
     })
   })
 })

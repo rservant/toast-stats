@@ -11,7 +11,12 @@ import { AreaPerformance } from '../../utils/divisionStatus'
  * - Requirement 6.8: Order areas by area identifier
  * - Requirement 8.6: Ensure accessibility (table semantics, headers)
  * - Requirement 8.7: Apply responsive table styling
- * - Requirement 9.3: Maintain table accessibility
+ * - Requirement 9.1: Display columns in order: Area, Paid/Base, Distinguished, First Round Visits,
+ *                    Second Round Visits, Recognition, Gap to D, Gap to S, Gap to P
+ * - Requirement 9.2: Paid/Base column shows paid clubs count vs club base with percentage
+ * - Requirement 9.3: Distinguished column shows distinguished clubs count vs club base with percentage
+ * - Requirement 9.5: Recognition column displays badge indicating current recognition level
+ * - Requirement 9.6: Gap columns show number of additional distinguished clubs needed
  */
 describe('AreaPerformanceTable', () => {
   const mockArea1: AreaPerformance = {
@@ -165,18 +170,35 @@ describe('AreaPerformanceTable', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 
       const headers = container.querySelectorAll('th[scope="col"]')
-      expect(headers.length).toBe(6) // Area, Paid Clubs, Distinguished Clubs, First Round, Second Round, Status
+      // 9 columns: Area, Paid/Base, Distinguished, First Round Visits, Second Round Visits, Recognition, Gap to D, Gap to S, Gap to P
+      expect(headers.length).toBe(9)
     })
 
     it('should render all required column headers', () => {
       render(<AreaPerformanceTable areas={[mockArea1]} />)
 
+      // Requirement 9.1: Column order - headers now have subtitles
       expect(screen.getByText('Area')).toBeInTheDocument()
-      expect(screen.getByText('Paid Clubs')).toBeInTheDocument()
-      expect(screen.getByText('Distinguished Clubs')).toBeInTheDocument()
+      expect(screen.getByText('Paid / Base')).toBeInTheDocument()
+      expect(screen.getByText('Distinguished')).toBeInTheDocument()
       expect(screen.getByText('First Round Visits')).toBeInTheDocument()
       expect(screen.getByText('Second Round Visits')).toBeInTheDocument()
-      expect(screen.getByText('Status')).toBeInTheDocument()
+      expect(screen.getByText('Recognition')).toBeInTheDocument()
+      expect(screen.getByText('Gap to D')).toBeInTheDocument()
+      expect(screen.getByText('Gap to S')).toBeInTheDocument()
+      expect(screen.getByText('Gap to P')).toBeInTheDocument()
+    })
+
+    it('should render column header subtitles', () => {
+      render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      // Verify subtitles are displayed
+      expect(screen.getByText('(≥ club base required)')).toBeInTheDocument()
+      expect(screen.getByText('(of club base)')).toBeInTheDocument()
+      expect(screen.getAllByText('(75% of club base)').length).toBe(2) // First and Second Round Visits
+      expect(screen.getByText('(50% of base)')).toBeInTheDocument()
+      expect(screen.getByText('(50% + 1)')).toBeInTheDocument()
+      expect(screen.getByText('(base+1, 50%+1)')).toBeInTheDocument()
     })
 
     it('should use thead and tbody elements for proper table structure', () => {
@@ -236,28 +258,57 @@ describe('AreaPerformanceTable', () => {
     })
   })
 
-  describe('Integration with AreaPerformanceRow', () => {
-    it('should render AreaPerformanceRow components for each area', () => {
+  describe('Integration with row rendering', () => {
+    it('should render row data for each area', () => {
       const areas = [mockArea1, mockArea2]
       render(<AreaPerformanceTable areas={areas} />)
 
-      // Verify that area data is rendered (AreaPerformanceRow responsibility)
+      // Verify that area data is rendered
       expect(screen.getByText('A1')).toBeInTheDocument()
       expect(screen.getByText('A2')).toBeInTheDocument()
     })
 
-    it('should pass correct area data to each AreaPerformanceRow', () => {
+    it('should display correct area data with new column format', () => {
       const areas = [mockArea1]
       render(<AreaPerformanceTable areas={areas} />)
 
       // Verify area identifier is displayed
       expect(screen.getByText('A1')).toBeInTheDocument()
 
-      // Verify paid clubs data is displayed (format: current/base)
-      expect(screen.getByText(/11\/10/)).toBeInTheDocument()
+      // Requirement 9.2: Paid/Base column shows paid clubs count vs club base with percentage
+      // mockArea1 has paidClubs: 11, clubBase: 10, so "11/10 110%"
+      expect(screen.getByText(/11\/10 110%/)).toBeInTheDocument()
 
-      // Verify distinguished clubs data is displayed (format: current/required)
-      expect(screen.getByText(/6\/5/)).toBeInTheDocument()
+      // Requirement 9.3: Distinguished column shows distinguished clubs count vs club base with percentage
+      // mockArea1 has distinguishedClubs: 6, clubBase: 10, so "6/10 60%"
+      expect(screen.getByText(/6\/10 60%/)).toBeInTheDocument()
+    })
+
+    it('should display recognition badge', () => {
+      const areas = [mockArea1]
+      render(<AreaPerformanceTable areas={areas} />)
+
+      // Requirement 9.5: Recognition column displays badge
+      // mockArea1 should be President's Distinguished (paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% + 1)
+      const badge = screen.getByLabelText(/Recognition status:/i)
+      expect(badge).toBeInTheDocument()
+    })
+
+    it('should display gap columns', () => {
+      // Create an area that is not yet distinguished
+      const notDistinguishedArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'A3',
+        paidClubs: 10,
+        clubBase: 10,
+        distinguishedClubs: 3, // Need 5 for Distinguished (50% of 10)
+        netGrowth: 0,
+      }
+      render(<AreaPerformanceTable areas={[notDistinguishedArea]} />)
+
+      // Requirement 9.6: Gap columns show number of additional distinguished clubs needed
+      // Gap to D: need 5 - 3 = 2 more distinguished clubs
+      expect(screen.getByText('+2')).toBeInTheDocument()
     })
   })
 
@@ -312,6 +363,198 @@ describe('AreaPerformanceTable', () => {
 
       // Verify original array is unchanged
       expect(areas).toEqual(originalOrder)
+    })
+  })
+
+  describe('Requirement 9.7: Old columns removed', () => {
+    it('should not display old Paid Clubs column header', () => {
+      render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      // Old column header should not exist (replaced by Paid / Base)
+      const headers = screen.getAllByRole('columnheader')
+      const headerTexts = headers.map(h => h.textContent)
+
+      // Should not have standalone "Paid Clubs" header
+      expect(headerTexts).not.toContain('Paid Clubs')
+    })
+
+    it('should not display old Distinguished Clubs column header', () => {
+      render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      // Old column header should not exist (replaced by Distinguished)
+      const headers = screen.getAllByRole('columnheader')
+      const headerTexts = headers.map(h => h.textContent)
+
+      // Should not have standalone "Distinguished Clubs" header
+      expect(headerTexts).not.toContain('Distinguished Clubs')
+    })
+
+    it('should not display old Status column header', () => {
+      render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      // Old column header should not exist (replaced by Recognition)
+      const headers = screen.getAllByRole('columnheader')
+      const headerTexts = headers.map(h => h.textContent)
+
+      // Should not have "Status" header
+      expect(headerTexts).not.toContain('Status')
+    })
+  })
+
+  describe('Requirement 9.5: Recognition badge variations', () => {
+    it('should display Net Loss badge when paidClubs < clubBase', () => {
+      // mockArea2 has paidClubs: 7, clubBase: 8 (net loss)
+      render(<AreaPerformanceTable areas={[mockArea2]} />)
+
+      const badge = screen.getByLabelText(/Recognition status: Net Loss/i)
+      expect(badge).toBeInTheDocument()
+      expect(badge).toHaveTextContent('Net Loss')
+    })
+
+    it("should display President's Distinguished badge when criteria met", () => {
+      // Create area that meets President's Distinguished criteria
+      // paidClubs >= clubBase + 1 AND distinguishedClubs >= 50% of clubBase + 1
+      const presidentsArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'P1',
+        clubBase: 10,
+        paidClubs: 11, // >= clubBase + 1 (11)
+        distinguishedClubs: 6, // >= 50% of 10 + 1 = 6
+      }
+      render(<AreaPerformanceTable areas={[presidentsArea]} />)
+
+      const badge = screen.getByLabelText(
+        /Recognition status: President's Distinguished/i
+      )
+      expect(badge).toBeInTheDocument()
+      expect(badge).toHaveTextContent("President's Distinguished")
+    })
+
+    it('should display Select Distinguished badge when criteria met', () => {
+      // Create area that meets Select Distinguished criteria
+      // paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase + 1
+      const selectArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'S1',
+        clubBase: 10,
+        paidClubs: 10, // >= clubBase (10) but not clubBase + 1
+        distinguishedClubs: 6, // >= 50% of 10 + 1 = 6
+      }
+      render(<AreaPerformanceTable areas={[selectArea]} />)
+
+      const badge = screen.getByLabelText(
+        /Recognition status: Select Distinguished/i
+      )
+      expect(badge).toBeInTheDocument()
+      expect(badge).toHaveTextContent('Select Distinguished')
+    })
+
+    it('should display Distinguished badge when criteria met', () => {
+      // Create area that meets Distinguished criteria
+      // paidClubs >= clubBase AND distinguishedClubs >= 50% of clubBase
+      const distinguishedArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'D1',
+        clubBase: 10,
+        paidClubs: 10, // >= clubBase (10)
+        distinguishedClubs: 5, // >= 50% of 10 = 5
+      }
+      render(<AreaPerformanceTable areas={[distinguishedArea]} />)
+
+      const badge = screen.getByLabelText(/Recognition status: Distinguished/i)
+      expect(badge).toBeInTheDocument()
+      expect(badge).toHaveTextContent('Distinguished')
+      // Should not be Select or President's
+      expect(badge).not.toHaveTextContent('Select')
+      expect(badge).not.toHaveTextContent("President's")
+    })
+
+    it('should display Not Distinguished badge when no criteria met', () => {
+      // Create area that doesn't meet any criteria
+      const notDistinguishedArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'N1',
+        clubBase: 10,
+        paidClubs: 10, // >= clubBase (10)
+        distinguishedClubs: 4, // < 50% of 10 = 5
+      }
+      render(<AreaPerformanceTable areas={[notDistinguishedArea]} />)
+
+      const badge = screen.getByLabelText(
+        /Recognition status: Not Distinguished/i
+      )
+      expect(badge).toBeInTheDocument()
+      expect(badge).toHaveTextContent('Not Distinguished')
+    })
+  })
+
+  describe('Requirement 9.6: Gap column display variations', () => {
+    it('should display "-" for achieved gap levels', () => {
+      // mockArea3 is President's Distinguished - all gaps should show "-"
+      render(<AreaPerformanceTable areas={[mockArea3]} />)
+
+      // All three gap columns should show "-" for achieved levels
+      const cells = screen.getAllByText('-')
+      expect(cells.length).toBeGreaterThanOrEqual(3)
+    })
+
+    it('should display "N/A" for gaps when net loss blocks achievement', () => {
+      // mockArea2 has net loss - gaps should show "N/A"
+      render(<AreaPerformanceTable areas={[mockArea2]} />)
+
+      // Gap columns should show "N/A" when not achievable
+      const naCells = screen.getAllByText('N/A')
+      expect(naCells.length).toBe(3) // Gap to D, Gap to S, Gap to P
+    })
+
+    it('should display "+N" for gaps that need more clubs', () => {
+      // Create area that needs more distinguished clubs
+      const needsMoreArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'G1',
+        clubBase: 10,
+        paidClubs: 10,
+        distinguishedClubs: 3, // Need 5 for Distinguished (50% of 10)
+      }
+      render(<AreaPerformanceTable areas={[needsMoreArea]} />)
+
+      // Gap to D should show +2 (need 5, have 3)
+      expect(screen.getByText('+2')).toBeInTheDocument()
+      // Gap to S and Gap to P both show +3 (need 6, have 3)
+      // Use getAllByText since both columns have the same value
+      const plusThreeCells = screen.getAllByText('+3')
+      expect(plusThreeCells.length).toBe(2) // Gap to S and Gap to P
+    })
+  })
+
+  describe('Requirement 9.2 & 9.3: Percentage calculations', () => {
+    it('should display 0% when clubBase is 0', () => {
+      const zeroBaseArea: AreaPerformance = {
+        ...mockArea1,
+        areaId: 'Z1',
+        clubBase: 0,
+        paidClubs: 0,
+        distinguishedClubs: 0,
+      }
+      render(<AreaPerformanceTable areas={[zeroBaseArea]} />)
+
+      // Should display 0/0 0% for both columns
+      const zeroCells = screen.getAllByText(/0\/0 0%/)
+      expect(zeroCells.length).toBe(2) // Paid/Base and Distinguished columns
+    })
+
+    it('should display percentage over 100% when paidClubs > clubBase', () => {
+      // mockArea1 has paidClubs: 11, clubBase: 10 = 110%
+      render(<AreaPerformanceTable areas={[mockArea1]} />)
+
+      expect(screen.getByText(/11\/10 110%/)).toBeInTheDocument()
+    })
+
+    it('should display percentage under 100% when paidClubs < clubBase', () => {
+      // mockArea2 has paidClubs: 7, clubBase: 8 = 88% (rounded)
+      render(<AreaPerformanceTable areas={[mockArea2]} />)
+
+      expect(screen.getByText(/7\/8 88%/)).toBeInTheDocument()
     })
   })
 })

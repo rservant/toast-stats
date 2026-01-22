@@ -79,21 +79,35 @@ describe('DivisionPerformanceCard', () => {
       expect(
         screen.getByRole('status', { name: /Division status: Distinguished/i })
       ).toBeInTheDocument()
-      // "Paid Clubs" and "Distinguished Clubs" appear in both summary and table, so use getAllByText
-      expect(screen.getAllByText('Paid Clubs').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Distinguished Clubs').length).toBeGreaterThan(
-        0
-      )
+      // New compact layout uses "Paid:" and "Distinguished:" labels
+      expect(screen.getByText('Paid:')).toBeInTheDocument()
+      expect(screen.getByText('Distinguished:')).toBeInTheDocument()
     })
 
     it('should render AreaPerformanceTable below summary', () => {
-      render(<DivisionPerformanceCard division={mockDivision} />)
+      const { container } = render(
+        <DivisionPerformanceCard division={mockDivision} />
+      )
 
-      // Verify table headers are rendered
-      expect(screen.getByText('Area')).toBeInTheDocument()
-      expect(screen.getByText('First Round Visits')).toBeInTheDocument()
-      expect(screen.getByText('Second Round Visits')).toBeInTheDocument()
-      expect(screen.getByText('Status')).toBeInTheDocument()
+      // Verify table headers are rendered (new column structure per Requirement 9.1)
+      // Use container queries to target table headers specifically
+      const tableHeaders = container.querySelectorAll('th')
+      const headerTexts = Array.from(tableHeaders).map(th => th.textContent)
+
+      expect(headerTexts).toContain('Area')
+      // Header includes additional context text
+      expect(headerTexts.some(h => h?.includes('Paid'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('Distinguished'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('First Round Visits'))).toBe(
+        true
+      )
+      expect(headerTexts.some(h => h?.includes('Second Round Visits'))).toBe(
+        true
+      )
+      expect(headerTexts).toContain('Recognition')
+      expect(headerTexts.some(h => h?.includes('Gap to D'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('Gap to S'))).toBe(true)
+      expect(headerTexts.some(h => h?.includes('Gap to P'))).toBe(true)
 
       // Verify area rows are rendered
       expect(screen.getByText('A1')).toBeInTheDocument()
@@ -103,9 +117,9 @@ describe('DivisionPerformanceCard', () => {
     it('should pass division data to DivisionSummary', () => {
       render(<DivisionPerformanceCard division={mockDivision} />)
 
-      // Verify division-level metrics are displayed
-      expect(screen.getByText(/52 \/ 50/)).toBeInTheDocument() // Paid clubs
-      expect(screen.getByText(/26 \/ 25/)).toBeInTheDocument() // Distinguished clubs
+      // Verify division-level metrics are displayed (new compact format without spaces)
+      expect(screen.getByText('52/50')).toBeInTheDocument() // Paid clubs
+      expect(screen.getByText('26/25')).toBeInTheDocument() // Distinguished clubs
       expect(
         screen.getByLabelText(/Net growth: positive 2/i)
       ).toBeInTheDocument()
@@ -117,17 +131,9 @@ describe('DivisionPerformanceCard', () => {
       // Verify area-level data is displayed
       expect(screen.getByText('A1')).toBeInTheDocument()
       expect(screen.getByText('A2')).toBeInTheDocument()
-      // Area table formats numbers without spaces around slash
-      expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === '11/10' || false
-        })
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText((content, element) => {
-          return element?.textContent === '7/8' || false
-        })
-      ).toBeInTheDocument()
+      // Area table now shows Paid/Base with percentage (e.g., "11/10 110%")
+      expect(screen.getByText(/11\/10 110%/)).toBeInTheDocument()
+      expect(screen.getByText(/7\/8 88%/)).toBeInTheDocument()
     })
   })
 
@@ -203,7 +209,12 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={presidentsDiv} />)
 
-      expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
+      // Use aria-label to target the division status badge specifically
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: President's Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
 
     it('should render Select Distinguished division', () => {
@@ -217,21 +228,53 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={selectDiv} />)
 
-      expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Select Distinguished/i,
+        })
+      ).toBeInTheDocument()
     })
 
     it('should render Not Distinguished division', () => {
+      // Create a division that is "Not Distinguished" but meets no net loss requirement
+      // (paidClubs >= clubBase) so it shows "Not Distinguished" instead of "Net Loss"
+      // Per Requirement 9.1: Show "Net Loss" when paidClubs < clubBase
       const notDistDiv: DivisionPerformance = {
         ...mockDivision,
         status: 'not-distinguished',
-        paidClubs: 48,
-        netGrowth: -2,
-        distinguishedClubs: 20,
+        clubBase: 50,
+        paidClubs: 50, // Meets no net loss requirement
+        netGrowth: 0,
+        distinguishedClubs: 20, // Below 45% threshold (need 23)
       }
 
       render(<DivisionPerformanceCard division={notDistDiv} />)
 
-      expect(screen.getByText('Not Distinguished')).toBeInTheDocument()
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Not Distinguished/i,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it('should render Net Loss division when paidClubs < clubBase', () => {
+      // Per Requirement 9.1: Show "Net Loss" when there's net club loss
+      const netLossDiv: DivisionPerformance = {
+        ...mockDivision,
+        status: 'not-distinguished',
+        clubBase: 50,
+        paidClubs: 48, // Net club loss
+        netGrowth: -2,
+        distinguishedClubs: 20,
+      }
+
+      render(<DivisionPerformanceCard division={netLossDiv} />)
+
+      expect(
+        screen.getByRole('status', {
+          name: /Division status: Net Loss/i,
+        })
+      ).toBeInTheDocument()
     })
   })
 
@@ -323,7 +366,7 @@ describe('DivisionPerformanceCard', () => {
       render(<DivisionPerformanceCard division={zeroBaseDiv} />)
 
       expect(screen.getByText('Division A')).toBeInTheDocument()
-      expect(screen.getAllByText(/0 \/ 0/)).toHaveLength(2)
+      expect(screen.getAllByText('0/0')).toHaveLength(2)
     })
 
     it('should handle large numbers', () => {
@@ -338,8 +381,8 @@ describe('DivisionPerformanceCard', () => {
 
       render(<DivisionPerformanceCard division={largeDiv} />)
 
-      expect(screen.getByText(/105 \/ 100/)).toBeInTheDocument()
-      expect(screen.getByText(/55 \/ 50/)).toBeInTheDocument()
+      expect(screen.getByText('105/100')).toBeInTheDocument()
+      expect(screen.getByText('55/50')).toBeInTheDocument()
     })
   })
 })
