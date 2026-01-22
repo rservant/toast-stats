@@ -172,8 +172,8 @@ describe('DivisionSummary', () => {
         />
       )
 
-      expect(screen.getByText('Paid Clubs')).toBeInTheDocument()
-      expect(screen.getByText(/12 \/ 10/)).toBeInTheDocument()
+      expect(screen.getByText('Paid:')).toBeInTheDocument()
+      expect(screen.getByText('12/10')).toBeInTheDocument()
     })
 
     it('should display positive net growth with up arrow and plus sign', () => {
@@ -248,8 +248,8 @@ describe('DivisionSummary', () => {
         />
       )
 
-      expect(screen.getByText('Distinguished Clubs')).toBeInTheDocument()
-      expect(screen.getByText(/5 \/ 5/)).toBeInTheDocument()
+      expect(screen.getByText('Distinguished:')).toBeInTheDocument()
+      expect(screen.getByText('5/5')).toBeInTheDocument()
     })
 
     it('should display checkmark when threshold is met', () => {
@@ -265,7 +265,9 @@ describe('DivisionSummary', () => {
         />
       )
 
-      expect(screen.getByLabelText('Threshold met')).toBeInTheDocument()
+      expect(
+        screen.getByLabelText(/Distinguished clubs: 5 of 5, threshold met/i)
+      ).toBeInTheDocument()
     })
 
     it('should display checkmark when threshold is exceeded', () => {
@@ -281,7 +283,9 @@ describe('DivisionSummary', () => {
         />
       )
 
-      expect(screen.getByLabelText('Threshold met')).toBeInTheDocument()
+      expect(
+        screen.getByLabelText(/Distinguished clubs: 6 of 5, threshold met/i)
+      ).toBeInTheDocument()
     })
 
     it('should not display checkmark when threshold is not met', () => {
@@ -425,9 +429,9 @@ describe('DivisionSummary', () => {
         />
       )
 
-      expect(screen.getByText('Paid Clubs')).toBeInTheDocument()
-      expect(screen.getByText('Distinguished Clubs')).toBeInTheDocument()
-      expect(screen.getAllByText(/0 \/ 0/)).toHaveLength(2)
+      expect(screen.getByText('Paid:')).toBeInTheDocument()
+      expect(screen.getByText('Distinguished:')).toBeInTheDocument()
+      expect(screen.getAllByText('0/0')).toHaveLength(2)
     })
 
     it('should handle large numbers', () => {
@@ -443,8 +447,8 @@ describe('DivisionSummary', () => {
         />
       )
 
-      expect(screen.getByText(/100 \/ 95/)).toBeInTheDocument()
-      expect(screen.getByText(/50 \/ 48/)).toBeInTheDocument()
+      expect(screen.getByText('100/95')).toBeInTheDocument()
+      expect(screen.getByText('50/48')).toBeInTheDocument()
     })
   })
 
@@ -852,8 +856,9 @@ describe('DivisionSummary', () => {
 
       const gapToS = screen.getByTestId('gap-to-s')
       expect(gapToS).toBeInTheDocument()
-      // Total needed: 2 distinguished + 1 paid = 3
-      expect(gapToS).toHaveTextContent('3')
+      // 2 distinguished + 1 paid shown as "2+1p"
+      expect(gapToS).toHaveTextContent('2')
+      expect(gapToS).toHaveTextContent('+1p')
       expect(gapToS).toHaveTextContent('S')
     })
 
@@ -901,8 +906,9 @@ describe('DivisionSummary', () => {
 
       const gapToP = screen.getByTestId('gap-to-p')
       expect(gapToP).toBeInTheDocument()
-      // Total needed: 3 distinguished + 1 paid = 4
-      expect(gapToP).toHaveTextContent('4')
+      // 3 distinguished + 1 paid shown as "3+1p"
+      expect(gapToP).toHaveTextContent('3')
+      expect(gapToP).toHaveTextContent('+1p')
       expect(gapToP).toHaveTextContent('P')
     })
 
@@ -1201,12 +1207,14 @@ describe('DivisionSummary', () => {
       )
 
       const gapToS = screen.getByTestId('gap-to-s')
-      // 2 distinguished + 1 paid = 3 total
-      expect(gapToS).toHaveTextContent('3')
+      // 2 distinguished + 1 paid shown as "2+1p"
+      expect(gapToS).toHaveTextContent('2')
+      expect(gapToS).toHaveTextContent('+1p')
 
       const gapToP = screen.getByTestId('gap-to-p')
-      // 5 distinguished + 2 paid = 7 total
-      expect(gapToP).toHaveTextContent('7')
+      // 5 distinguished + 2 paid shown as "5+2p"
+      expect(gapToP).toHaveTextContent('5')
+      expect(gapToP).toHaveTextContent('+2p')
     })
 
     /**

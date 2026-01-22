@@ -138,6 +138,8 @@ function getNetGrowthIcon(netGrowth: number): string {
 interface GapIndicatorValue {
   /** Display text (✓, number, or N/A) */
   display: string
+  /** Secondary display text for paid clubs needed (empty if none) */
+  paidDisplay: string
   /** Whether the level is achieved */
   achieved: boolean
   /** Whether the level is achievable (not blocked by net loss) */
@@ -161,6 +163,7 @@ function getGapIndicatorValue(
   if (gap.achieved) {
     return {
       display: '✓',
+      paidDisplay: '',
       achieved: true,
       achievable: true,
       ariaLabel: `${levelName}: Achieved`,
@@ -170,14 +173,14 @@ function getGapIndicatorValue(
   if (!gap.achievable) {
     return {
       display: 'N/A',
+      paidDisplay: '',
       achieved: false,
       achievable: false,
       ariaLabel: `${levelName}: Not achievable due to net club loss`,
     }
   }
 
-  // Calculate total clubs needed (distinguished + paid)
-  const totalNeeded = gap.distinguishedClubsNeeded + gap.paidClubsNeeded
+  // Build aria label parts
   const parts: string[] = []
   if (gap.distinguishedClubsNeeded > 0) {
     parts.push(`${gap.distinguishedClubsNeeded} distinguished`)
@@ -186,8 +189,13 @@ function getGapIndicatorValue(
     parts.push(`${gap.paidClubsNeeded} paid`)
   }
 
+  const totalNeeded = gap.distinguishedClubsNeeded + gap.paidClubsNeeded
+
+  // Show distinguished clubs needed as main display
+  // Show paid clubs needed as secondary display (if any)
   return {
-    display: String(totalNeeded),
+    display: String(gap.distinguishedClubsNeeded),
+    paidDisplay: gap.paidClubsNeeded > 0 ? `+${gap.paidClubsNeeded}p` : '',
     achieved: false,
     achievable: true,
     ariaLabel: `${levelName}: Need ${parts.join(' and ')} club${totalNeeded !== 1 ? 's' : ''}`,
@@ -210,6 +218,37 @@ function getGapIndicatorClasses(indicator: GapIndicatorValue): string {
   }
 
   return `${baseClasses} tm-bg-happy-yellow-20 tm-text-black`
+}
+
+/**
+ * Returns CSS classes for distinguished clubs badge based on progress
+ */
+function getDistinguishedBadgeClasses(
+  distinguishedClubs: number,
+  requiredDistinguishedClubs: number
+): string {
+  const baseClasses =
+    'inline-flex items-center px-3 py-1.5 tm-rounded-lg tm-body-small font-semibold'
+
+  if (distinguishedClubs >= requiredDistinguishedClubs) {
+    return `${baseClasses} tm-bg-loyal-blue tm-text-white`
+  }
+
+  // Calculate progress percentage
+  const progress =
+    requiredDistinguishedClubs > 0
+      ? distinguishedClubs / requiredDistinguishedClubs
+      : 0
+
+  if (progress >= 0.75) {
+    return `${baseClasses} tm-bg-loyal-blue-60 tm-text-white`
+  }
+
+  if (progress >= 0.5) {
+    return `${baseClasses} tm-bg-happy-yellow tm-text-black`
+  }
+
+  return `${baseClasses} tm-bg-cool-gray-40 tm-text-black`
 }
 
 /**
@@ -247,10 +286,16 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
       )
     : null
 
+  // Get distinguished badge classes
+  const distinguishedBadgeClasses = getDistinguishedBadgeClasses(
+    distinguishedClubs,
+    requiredDistinguishedClubs
+  )
+
   return (
     <div className="p-6 border-b border-gray-200">
       {/* Division Identifier and Status Badge */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="tm-h2 tm-text-loyal-blue">Division {divisionId}</h2>
         <div
           className={statusBadgeClasses}
@@ -262,68 +307,66 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
         </div>
       </div>
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Single Line Metrics */}
+      <div className="flex flex-wrap items-center gap-4">
         {/* Paid Clubs Progress */}
-        <div>
-          <p className="tm-body-small tm-text-cool-gray mb-1">Paid Clubs</p>
-          <div className="flex items-baseline gap-2">
-            <span className="tm-h3 tm-text-black">
-              {paidClubs} / {clubBase}
-            </span>
-            <span
-              className={`tm-body-small ${netGrowthClasses}`}
-              aria-label={`Net growth: ${netGrowth > 0 ? 'positive' : netGrowth < 0 ? 'negative' : 'neutral'} ${Math.abs(netGrowth)}`}
-            >
-              <span aria-hidden="true">{netGrowthIcon}</span>{' '}
-              {netGrowth > 0 ? '+' : ''}
-              {netGrowth}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="tm-body-small tm-text-cool-gray">Paid:</span>
+          <span className="tm-body font-semibold tm-text-black">
+            {paidClubs}/{clubBase}
+          </span>
+          <span
+            className={`tm-body-small ${netGrowthClasses}`}
+            aria-label={`Net growth: ${netGrowth > 0 ? 'positive' : netGrowth < 0 ? 'negative' : 'neutral'} ${Math.abs(netGrowth)}`}
+          >
+            <span aria-hidden="true">{netGrowthIcon}</span>
+            {netGrowth > 0 ? '+' : ''}
+            {netGrowth}
+          </span>
         </div>
 
-        {/* Distinguished Clubs Progress */}
-        <div>
-          <p className="tm-body-small tm-text-cool-gray mb-1">
-            Distinguished Clubs
-          </p>
-          <div className="flex items-baseline gap-2">
-            <span className="tm-h3 tm-text-black">
-              {distinguishedClubs} / {requiredDistinguishedClubs}
-            </span>
+        {/* Distinguished Clubs Progress with Badge */}
+        <div className="flex items-center gap-2">
+          <span className="tm-body-small tm-text-cool-gray">
+            Distinguished:
+          </span>
+          <div
+            className={distinguishedBadgeClasses}
+            aria-label={`Distinguished clubs: ${distinguishedClubs} of ${requiredDistinguishedClubs}${distinguishedClubs >= requiredDistinguishedClubs ? ', threshold met' : ''}`}
+          >
+            {distinguishedClubs}/{requiredDistinguishedClubs}
             {distinguishedClubs >= requiredDistinguishedClubs && (
-              <span
-                className="tm-body-small tm-text-loyal-blue font-semibold"
-                aria-label="Threshold met"
-              >
+              <span className="ml-1" aria-hidden="true">
                 ✓
               </span>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Gap Indicators - Only shown when gapAnalysis is provided */}
-      {gapAnalysis && gapToD && gapToS && gapToP && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="tm-body-small tm-text-cool-gray mb-2">
-            Gap to Recognition
-          </p>
+        {/* Gap Indicators - Inline when gapAnalysis is provided */}
+        {gapAnalysis && gapToD && gapToS && gapToP && (
           <div
-            className="flex gap-3"
+            className="flex items-center gap-2"
             role="group"
             aria-label="Gap indicators for recognition levels"
           >
+            <span className="tm-body-small tm-text-cool-gray">Gap:</span>
             {/* Gap to Distinguished */}
             <div
               className={getGapIndicatorClasses(gapToD)}
               aria-label={gapToD.ariaLabel}
               data-testid="gap-to-d"
+              style={{ minWidth: '36px', minHeight: '36px' }}
             >
               <span className="tm-body-small font-semibold">
                 {gapToD.display}
+                {gapToD.paidDisplay && (
+                  <span className="text-xs tm-text-true-maroon">
+                    {gapToD.paidDisplay}
+                  </span>
+                )}
               </span>
-              <span className="tm-body-small tm-text-cool-gray">D</span>
+              <span className="tm-body-small tm-text-cool-gray text-xs">D</span>
             </div>
 
             {/* Gap to Select Distinguished */}
@@ -331,11 +374,17 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
               className={getGapIndicatorClasses(gapToS)}
               aria-label={gapToS.ariaLabel}
               data-testid="gap-to-s"
+              style={{ minWidth: '36px', minHeight: '36px' }}
             >
               <span className="tm-body-small font-semibold">
                 {gapToS.display}
+                {gapToS.paidDisplay && (
+                  <span className="text-xs tm-text-true-maroon">
+                    {gapToS.paidDisplay}
+                  </span>
+                )}
               </span>
-              <span className="tm-body-small tm-text-cool-gray">S</span>
+              <span className="tm-body-small tm-text-cool-gray text-xs">S</span>
             </div>
 
             {/* Gap to President's Distinguished */}
@@ -343,15 +392,21 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
               className={getGapIndicatorClasses(gapToP)}
               aria-label={gapToP.ariaLabel}
               data-testid="gap-to-p"
+              style={{ minWidth: '36px', minHeight: '36px' }}
             >
               <span className="tm-body-small font-semibold">
                 {gapToP.display}
+                {gapToP.paidDisplay && (
+                  <span className="text-xs tm-text-true-maroon">
+                    {gapToP.paidDisplay}
+                  </span>
+                )}
               </span>
-              <span className="tm-body-small tm-text-cool-gray">P</span>
+              <span className="tm-body-small tm-text-cool-gray text-xs">P</span>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
