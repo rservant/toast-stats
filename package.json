@@ -40,7 +40,7 @@
     "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh"
   },
   "devDependencies": {
-    "prettier": "^3.8.0",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "prettier": "^3.8.0"
   }
 }
