@@ -8,6 +8,11 @@
  * - Performance metrics reset
  *
  * Requirements: 3.1, 3.2, 3.3, 3.7
+ *
+ * Storage Abstraction:
+ * These routes use the ISnapshotStorage interface from the storage abstraction
+ * layer, enabling environment-based selection between local filesystem and
+ * GCP cloud storage backends.
  */
 
 import { Router } from 'express'
@@ -17,12 +22,12 @@ import {
   getServiceFactory,
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
-import { FileSnapshotStore } from '../../services/SnapshotStore.js'
+import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 
 export const monitoringRouter = Router()
 
 // ============================================================================
-// Type definitions for optional FileSnapshotStore methods
+// Type definitions for optional ISnapshotStorage methods
 // ============================================================================
 
 interface PerformanceMetrics {
@@ -43,7 +48,13 @@ interface IntegrityResult {
   validatedAt?: string
 }
 
-type FileSnapshotStoreWithOptionalMethods = FileSnapshotStore & {
+/**
+ * Extended ISnapshotStorage interface with optional monitoring methods
+ *
+ * These methods may be available on some storage implementations
+ * (e.g., LocalSnapshotStorage) but not others (e.g., FirestoreSnapshotStorage).
+ */
+type ISnapshotStorageWithOptionalMethods = ISnapshotStorage & {
   validateIntegrity?: () => Promise<IntegrityResult>
   getPerformanceMetrics?: () => PerformanceMetrics
   resetPerformanceMetrics?: () => void
@@ -81,17 +92,19 @@ monitoringRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
 
       // Check if store is ready
-      const isReady = await snapshotStore.isReady()
+      const isReady = await snapshotStorage.isReady()
 
       // Get current snapshot info
-      const currentSnapshot = await snapshotStore.getLatestSuccessful()
-      const latestSnapshot = await snapshotStore.getLatest()
+      const currentSnapshot = await snapshotStorage.getLatestSuccessful()
+      const latestSnapshot = await snapshotStorage.getLatest()
 
       // Get recent snapshots for analysis
-      const recentSnapshots = await snapshotStore.listSnapshots(10)
+      const recentSnapshots = await snapshotStorage.listSnapshots(10)
 
       const duration = Date.now() - startTime
 
@@ -200,11 +213,13 @@ monitoringRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore =
-        factory.createSnapshotStore() as FileSnapshotStoreWithOptionalMethods
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // Cast to extended type for optional monitoring methods
+      const snapshotStorage =
+        factory.createSnapshotStorage() as ISnapshotStorageWithOptionalMethods
 
-      // Validate integrity (this assumes FileSnapshotStore has validateIntegrity method)
-      const integrityResult = (await snapshotStore.validateIntegrity?.()) || {
+      // Validate integrity (this method may not be available on all storage implementations)
+      const integrityResult = (await snapshotStorage.validateIntegrity?.()) || {
         isValid: true,
         corruptionIssues: [],
         recoveryRecommendations: [],
@@ -277,11 +292,13 @@ monitoringRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore =
-        factory.createSnapshotStore() as FileSnapshotStoreWithOptionalMethods
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // Cast to extended type for optional monitoring methods
+      const snapshotStorage =
+        factory.createSnapshotStorage() as ISnapshotStorageWithOptionalMethods
 
-      // Get performance metrics (this assumes FileSnapshotStore has getPerformanceMetrics method)
-      const performanceMetrics = snapshotStore.getPerformanceMetrics?.() || {
+      // Get performance metrics (this method may not be available on all storage implementations)
+      const performanceMetrics = snapshotStorage.getPerformanceMetrics?.() || {
         totalReads: 0,
         cacheHits: 0,
         cacheMisses: 0,
@@ -376,12 +393,14 @@ monitoringRouter.post(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore =
-        factory.createSnapshotStore() as FileSnapshotStoreWithOptionalMethods
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // Cast to extended type for optional monitoring methods
+      const snapshotStorage =
+        factory.createSnapshotStorage() as ISnapshotStorageWithOptionalMethods
 
-      // Reset performance metrics (this assumes FileSnapshotStore has resetPerformanceMetrics method)
-      if (typeof snapshotStore.resetPerformanceMetrics === 'function') {
-        snapshotStore.resetPerformanceMetrics()
+      // Reset performance metrics (this method may not be available on all storage implementations)
+      if (typeof snapshotStorage.resetPerformanceMetrics === 'function') {
+        snapshotStorage.resetPerformanceMetrics()
       }
 
       const duration = Date.now() - startTime

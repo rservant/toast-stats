@@ -3,6 +3,13 @@
  *
  * Provides factory methods for creating production instances of services
  * with proper dependency injection and lifecycle management.
+ *
+ * Storage Abstraction:
+ * This factory now supports the storage abstraction layer, enabling
+ * environment-based selection between local filesystem and GCP cloud storage.
+ * The storage provider is determined by the STORAGE_PROVIDER environment variable.
+ *
+ * Requirements: 1.3, 1.4
  */
 
 import {
@@ -14,10 +21,15 @@ import {
   DefaultServiceContainer,
   createServiceToken,
   createServiceFactory,
+  createInterfaceToken,
 } from './ServiceContainer.js'
 import { CacheConfigService } from './CacheConfigService.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { ILogger, ICircuitBreakerManager } from '../types/serviceInterfaces.js'
+import type {
+  ISnapshotStorage,
+  IRawCSVStorage,
+} from '../types/storageInterfaces.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
@@ -34,6 +46,7 @@ import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { MonthEndDataMapper } from './MonthEndDataMapper.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { config } from '../config/index.js'
+import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**
  * Production configuration provider
@@ -119,8 +132,41 @@ export interface ProductionServiceFactory {
 
   /**
    * Create SnapshotStore instance
+   *
+   * @deprecated Use createSnapshotStorage() for storage abstraction layer support.
+   * This method returns FileSnapshotStore directly for backward compatibility.
    */
   createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore
+
+  /**
+   * Create ISnapshotStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalSnapshotStorage (wraps FileSnapshotStore)
+   * - 'gcp': Returns FirestoreSnapshotStorage
+   *
+   * This method should be preferred over createSnapshotStore() for new code
+   * to ensure compatibility with both local and cloud storage backends.
+   *
+   * Requirements: 1.3, 1.4
+   */
+  createSnapshotStorage(): ISnapshotStorage
+
+  /**
+   * Create IRawCSVStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalRawCSVStorage (wraps RawCSVCacheService)
+   * - 'gcp': Returns GCSRawCSVStorage
+   *
+   * This method should be preferred over createRawCSVCacheService() for new code
+   * to ensure compatibility with both local and cloud storage backends.
+   *
+   * Requirements: 1.3, 1.4
+   */
+  createRawCSVStorage(): IRawCSVStorage
 
   /**
    * Create RefreshService instance
@@ -134,6 +180,9 @@ export interface ProductionServiceFactory {
 
   /**
    * Create RawCSVCacheService instance
+   *
+   * @deprecated Use createRawCSVStorage() for storage abstraction layer support.
+   * This method returns RawCSVCacheService directly for backward compatibility.
    */
   createRawCSVCacheService(cacheConfig?: CacheConfigService): RawCSVCacheService
 
@@ -229,6 +278,50 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
+    // =========================================================================
+    // Storage Abstraction Layer
+    // =========================================================================
+    // Register storage providers using the StorageProviderFactory.
+    // This enables environment-based selection between local filesystem
+    // and GCP cloud storage (Firestore + GCS).
+    //
+    // The provider is determined by the STORAGE_PROVIDER environment variable:
+    // - 'local' (default): Uses local filesystem storage
+    // - 'gcp': Uses Cloud Firestore for snapshots and GCS for CSV files
+    //
+    // Requirements: 1.3, 1.4
+    // =========================================================================
+
+    // Create storage providers from environment configuration
+    // This is done once and cached to ensure consistent provider instances
+    const storageProviders = StorageProviderFactory.createFromEnvironment()
+
+    // Register ISnapshotStorage interface
+    // Provides abstracted snapshot storage operations that work with both
+    // local filesystem and Cloud Firestore backends
+    container.registerInterface<ISnapshotStorage>(
+      'ISnapshotStorage',
+      createServiceFactory(
+        () => storageProviders.snapshotStorage,
+        async () => {
+          // Storage providers don't have dispose methods
+        }
+      )
+    )
+
+    // Register IRawCSVStorage interface
+    // Provides abstracted CSV cache operations that work with both
+    // local filesystem and Cloud Storage backends
+    container.registerInterface<IRawCSVStorage>(
+      'IRawCSVStorage',
+      createServiceFactory(
+        () => storageProviders.rawCSVStorage,
+        async () => {
+          // Storage providers don't have dispose methods
+        }
+      )
+    )
+
     // Register AnalyticsEngine
     container.register(
       ServiceTokens.AnalyticsEngine,
@@ -304,7 +397,10 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       ServiceTokens.RefreshService,
       createServiceFactory(
         (container: ServiceContainer) => {
-          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
+          // Use ISnapshotStorage from the storage abstraction layer
+          // This enables environment-based selection between local and cloud storage
+          const snapshotStorage =
+            container.resolveInterface<ISnapshotStorage>('ISnapshotStorage')
           const rawCSVCacheService = container.resolve(
             ServiceTokens.RawCSVCacheService
           )
@@ -313,8 +409,9 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
           )
 
           // RefreshService now uses SnapshotBuilder internally (no scraping)
+          // and accepts ISnapshotStorage for storage abstraction
           return new RefreshService(
-            snapshotStore,
+            snapshotStorage,
             rawCSVCacheService,
             undefined, // districtConfigService
             rankingCalculator
@@ -416,6 +513,9 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
 
   /**
    * Create SnapshotStore instance
+   *
+   * @deprecated Use createSnapshotStorage() for storage abstraction layer support.
+   * This method returns FileSnapshotStore directly for backward compatibility.
    */
   createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore {
     const config = cacheConfig || this.createCacheConfigService()
@@ -429,7 +529,47 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
+   * Create ISnapshotStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalSnapshotStorage (wraps FileSnapshotStore)
+   * - 'gcp': Returns FirestoreSnapshotStorage
+   *
+   * This method should be preferred over createSnapshotStore() for new code
+   * to ensure compatibility with both local and cloud storage backends.
+   *
+   * Requirements: 1.3, 1.4
+   */
+  createSnapshotStorage(): ISnapshotStorage {
+    const storageProviders = StorageProviderFactory.createFromEnvironment()
+    return storageProviders.snapshotStorage
+  }
+
+  /**
+   * Create IRawCSVStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalRawCSVStorage (wraps RawCSVCacheService)
+   * - 'gcp': Returns GCSRawCSVStorage
+   *
+   * This method should be preferred over createRawCSVCacheService() for new code
+   * to ensure compatibility with both local and cloud storage backends.
+   *
+   * Requirements: 1.3, 1.4
+   */
+  createRawCSVStorage(): IRawCSVStorage {
+    const storageProviders = StorageProviderFactory.createFromEnvironment()
+    return storageProviders.rawCSVStorage
+  }
+
+  /**
    * Create RefreshService instance
+   *
+   * Note: This method creates a RefreshService with a FileSnapshotStore for
+   * backward compatibility. For production use with storage abstraction,
+   * use createProductionContainer() which uses ISnapshotStorage.
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
     const store = snapshotStore || this.createSnapshotStore()
@@ -437,6 +577,7 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const rankingCalculator = this.createRankingCalculator()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
+    // Accepts SnapshotStore for backward compatibility
     const service = new RefreshService(
       store,
       rawCSVCacheService,
@@ -458,6 +599,9 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
 
   /**
    * Create RawCSVCacheService instance
+   *
+   * @deprecated Use createRawCSVStorage() for storage abstraction layer support.
+   * This method returns RawCSVCacheService directly for backward compatibility.
    */
   createRawCSVCacheService(
     cacheConfig?: CacheConfigService
@@ -561,6 +705,33 @@ export const ServiceTokens = {
   ),
   RefreshService: createServiceToken('RefreshService', RefreshService),
   BackfillService: createServiceToken('BackfillService', BackfillService),
+}
+
+/**
+ * Interface tokens for storage abstraction layer
+ *
+ * These tokens enable interface-based dependency injection for the
+ * storage abstraction layer, allowing services to depend on storage
+ * interfaces rather than concrete implementations.
+ *
+ * Requirements: 1.3, 1.4
+ */
+export const InterfaceTokens = {
+  /**
+   * Token for ISnapshotStorage interface
+   *
+   * Resolves to either LocalSnapshotStorage or FirestoreSnapshotStorage
+   * based on the STORAGE_PROVIDER environment variable.
+   */
+  ISnapshotStorage: createInterfaceToken<ISnapshotStorage>('ISnapshotStorage'),
+
+  /**
+   * Token for IRawCSVStorage interface
+   *
+   * Resolves to either LocalRawCSVStorage or GCSRawCSVStorage
+   * based on the STORAGE_PROVIDER environment variable.
+   */
+  IRawCSVStorage: createInterfaceToken<IRawCSVStorage>('IRawCSVStorage'),
 }
 
 /**

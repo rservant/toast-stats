@@ -19,12 +19,15 @@ import os from 'os'
 import { monitoringRouter } from '../monitoring.js'
 import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
+import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 
 // Test snapshot store instance
 let testSnapshotStore: FileSnapshotStore
 
 // Mock the production service factory to use our test snapshot store
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
+  createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
   createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: vi.fn(),
   createRefreshService: vi.fn(),
@@ -219,11 +222,11 @@ describe('Monitoring Routes', () => {
 
     it('should handle health check errors gracefully', async () => {
       // Create a mock that throws an error
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           isReady: () => Promise.reject(new Error('Store unavailable')),
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshot-store/health'
@@ -234,7 +237,7 @@ describe('Monitoring Routes', () => {
       expect(response.body.error.details).toContain('Store unavailable')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 
@@ -266,12 +269,12 @@ describe('Monitoring Routes', () => {
 
     it('should handle integrity check errors gracefully', async () => {
       // Create a mock that throws an error
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           validateIntegrity: () =>
             Promise.reject(new Error('Integrity check failed')),
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshot-store/integrity'
@@ -282,16 +285,16 @@ describe('Monitoring Routes', () => {
       expect(response.body.error.details).toContain('Integrity check failed')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should return default values when validateIntegrity method is missing', async () => {
       // Create a mock without validateIntegrity method
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           // No validateIntegrity method
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshot-store/integrity'
@@ -301,7 +304,7 @@ describe('Monitoring Routes', () => {
       expect(response.body.integrity.isValid).toBe(true)
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 
@@ -360,8 +363,8 @@ describe('Monitoring Routes', () => {
 
     it('should return no_data efficiency when no reads have occurred', async () => {
       // Create a mock with zero reads
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           getPerformanceMetrics: () => ({
             totalReads: 0,
@@ -371,7 +374,7 @@ describe('Monitoring Routes', () => {
             concurrentReads: 0,
             maxConcurrentReads: 0,
           }),
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshot-store/performance'
@@ -382,18 +385,18 @@ describe('Monitoring Routes', () => {
       expect(response.body.performance.cache_hit_rate_percent).toBe(0)
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should handle performance metrics errors gracefully', async () => {
       // Create a mock that throws an error
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           getPerformanceMetrics: () => {
             throw new Error('Metrics unavailable')
           },
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshot-store/performance'
@@ -404,16 +407,16 @@ describe('Monitoring Routes', () => {
       expect(response.body.error.details).toContain('Metrics unavailable')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should return default values when getPerformanceMetrics method is missing', async () => {
       // Create a mock without getPerformanceMetrics method
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           // No getPerformanceMetrics method
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshot-store/performance'
@@ -423,7 +426,7 @@ describe('Monitoring Routes', () => {
       expect(response.body.performance.totalReads).toBe(0)
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 
@@ -457,13 +460,13 @@ describe('Monitoring Routes', () => {
 
     it('should handle reset errors gracefully', async () => {
       // Create a mock that throws an error
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           resetPerformanceMetrics: () => {
             throw new Error('Reset failed')
           },
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).post(
         '/api/admin/snapshot-store/performance/reset'
@@ -474,16 +477,16 @@ describe('Monitoring Routes', () => {
       expect(response.body.error.details).toContain('Reset failed')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should succeed when resetPerformanceMetrics method is missing', async () => {
       // Create a mock without resetPerformanceMetrics method
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           // No resetPerformanceMetrics method
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).post(
         '/api/admin/snapshot-store/performance/reset'
@@ -493,7 +496,7 @@ describe('Monitoring Routes', () => {
       expect(response.body.success).toBe(true)
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should verify metrics are actually reset', async () => {

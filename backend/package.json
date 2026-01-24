@@ -23,6 +23,13 @@
     "typecheck:errors": "tsc --noEmit --skipLibCheck --project tsconfig.json 2>&1 | grep -E \"error TS[0-9]+\" || echo \"No TypeScript errors found\"",
     "typecheck:errors:test": "tsc --noEmit --skipLibCheck --project tsconfig.test.json 2>&1 | grep -E \"error TS[0-9]+\" || echo \"No TypeScript errors found\"",
     "typecheck:errors:all": "tsc --noEmit --skipLibCheck --project tsconfig.all.json 2>&1 | grep -E \"error TS[0-9]+\" || echo \"No TypeScript errors found\"",
+    "emulator:firestore": "firebase emulators:start --only firestore --project demo-project",
+    "emulator:firestore:ui": "firebase emulators:start --only firestore --project demo-project",
+    "emulator:gcs": "docker run -d --name fake-gcs-server -p 4443:4443 fsouza/fake-gcs-server -scheme http -port 4443",
+    "emulator:gcs:stop": "docker rm -f fake-gcs-server || true",
+    "emulators:start": "npm run emulator:gcs && firebase emulators:start --only firestore --project demo-project",
+    "emulators:stop": "npm run emulator:gcs:stop",
+    "test:integration": "FIRESTORE_EMULATOR_HOST=localhost:8080 GCS_EMULATOR_HOST=http://localhost:4443 STORAGE_EMULATOR_HOST=http://localhost:4443 GCP_PROJECT_ID=demo-project GCS_BUCKET_NAME=test-bucket vitest --run",
     "reconciliation:init": "tsx src/scripts/init-reconciliation.ts",
     "reconciliation:migrate": "tsx src/scripts/reconciliation-migrations.ts migrate",
     "reconciliation:rollback": "tsx src/scripts/reconciliation-migrations.ts rollback",
@@ -34,6 +41,8 @@
     "snapshot-debug": "tsx src/scripts/snapshot-debug.ts"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^7.11.0",
+    "@google-cloud/storage": "^7.16.0",
     "@types/uuid": "^11.0.0",
     "axios": "^1.6.2",
     "commander": "^14.0.2",

@@ -19,7 +19,10 @@ import {
   type RawDistrictData,
 } from './DataNormalizer.js'
 import type { RankingCalculator } from './RankingCalculator.js'
-import type { IRawCSVCacheService } from '../types/serviceInterfaces.js'
+import type {
+  IRawCSVStorage,
+  ISnapshotStorage,
+} from '../types/storageInterfaces.js'
 import type { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import type { FileSnapshotStore } from './SnapshotStore.js'
 import type {
@@ -129,21 +132,40 @@ export interface ILogger {
  * - 3.7: Preserve closing period metadata from cache
  * - 6.3: Validate cache data integrity before processing
  * - 6.4: Skip corrupted files with appropriate error logging
+ *
+ * Storage Abstraction (Requirements 1.3, 1.4):
+ * - Uses ISnapshotStorage interface for snapshot persistence
+ * - Uses IRawCSVStorage interface for raw CSV cache operations
+ * - Supports both local filesystem and cloud storage backends
  */
 export class SnapshotBuilder {
-  private readonly rawCSVCache: IRawCSVCacheService
+  private readonly rawCSVCache: IRawCSVStorage
   private readonly districtConfigService: DistrictConfigurationService
-  private readonly snapshotStore: FileSnapshotStore
+  private readonly snapshotStorage: ISnapshotStorage
   private readonly validator: DataValidator
   private readonly closingPeriodDetector: ClosingPeriodDetector
   private readonly dataNormalizer: DataNormalizer
   private readonly rankingCalculator?: RankingCalculator
   private readonly log: ILogger
 
+  /**
+   * Create a new SnapshotBuilder instance
+   *
+   * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
+   *                      Supports both local filesystem and cloud storage backends
+   * @param districtConfigService - District configuration service
+   * @param snapshotStorage - Storage interface for snapshot operations (ISnapshotStorage or FileSnapshotStore)
+   *                          Supports both local filesystem and cloud storage backends
+   * @param validator - Optional data validator
+   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
+   * @param closingPeriodDetector - Optional closing period detector
+   * @param dataNormalizer - Optional data normalizer
+   * @param customLogger - Optional custom logger
+   */
   constructor(
-    rawCSVCache: IRawCSVCacheService,
+    rawCSVCache: IRawCSVStorage,
     districtConfigService: DistrictConfigurationService,
-    snapshotStore: FileSnapshotStore,
+    snapshotStorage: ISnapshotStorage | FileSnapshotStore,
     validator?: DataValidator,
     rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,
@@ -152,7 +174,9 @@ export class SnapshotBuilder {
   ) {
     this.rawCSVCache = rawCSVCache
     this.districtConfigService = districtConfigService
-    this.snapshotStore = snapshotStore
+    // ISnapshotStorage is a superset of FileSnapshotStore's writeSnapshot method
+    // so we can safely cast for backward compatibility
+    this.snapshotStorage = snapshotStorage as ISnapshotStorage
     this.validator = validator ?? new DataValidator()
     this.log = customLogger ?? logger
 
@@ -910,7 +934,7 @@ export class SnapshotBuilder {
 
     // Write snapshot to store with the effective date as override
     // This ensures the snapshot is stored in the correct date-based directory
-    await this.snapshotStore.writeSnapshot(snapshot, allDistrictsRankings, {
+    await this.snapshotStorage.writeSnapshot(snapshot, allDistrictsRankings, {
       overrideSnapshotDate: effectiveSnapshotDate,
     })
 

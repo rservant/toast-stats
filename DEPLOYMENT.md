@@ -398,7 +398,213 @@ rm -rf backend/cache/historical_index.json
 - **Elastic Beanstalk**: Deploy using Node.js platform
 - **Lambda**: Use serverless framework for API deployment
 
-### Google Cloud Platform
+### Google Cloud Platform - Cloud Run with GCP Storage
+
+This section covers deploying the backend to Cloud Run with Cloud Firestore for snapshot storage and Cloud Storage (GCS) for raw CSV caching.
+
+#### Prerequisites
+
+- Google Cloud SDK (`gcloud`) installed and configured
+- GCP project with billing enabled
+- Cloud Run, Firestore, and Cloud Storage APIs enabled
+- Service account with appropriate permissions
+
+#### Enable Required APIs
+
+```bash
+# Enable required GCP APIs
+gcloud services enable run.googleapis.com
+gcloud services enable firestore.googleapis.com
+gcloud services enable storage.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+```
+
+#### Service Account Setup
+
+Create a dedicated service account for the Cloud Run service:
+
+```bash
+# Create service account
+gcloud iam service-accounts create toast-stats-backend \
+  --display-name="Toast Stats Backend Service"
+
+# Get the service account email
+SA_EMAIL="toast-stats-backend@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+```
+
+#### IAM Permissions Required
+
+Grant the service account the following roles:
+
+```bash
+PROJECT_ID="your-gcp-project-id"
+SA_EMAIL="toast-stats-backend@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# Firestore access for snapshot storage
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/datastore.user"
+
+# Cloud Storage access for raw CSV cache
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+```
+
+| Role                        | Purpose                                   |
+| --------------------------- | ----------------------------------------- |
+| `roles/datastore.user`      | Read/write access to Firestore documents  |
+| `roles/storage.objectAdmin` | Full control of GCS objects in the bucket |
+
+#### Cloud Firestore Setup
+
+Create a Firestore database in Native mode:
+
+```bash
+# Create Firestore database (if not already created)
+gcloud firestore databases create --location=us-central1
+```
+
+**Index Requirements**: No custom indexes are required. The application uses:
+
+- Document ID queries (snapshot date as YYYY-MM-DD)
+- Ordering by document ID descending for latest snapshot lookup
+
+These operations are supported by default Firestore indexes.
+
+#### Cloud Storage Bucket Configuration
+
+Create and configure a GCS bucket for raw CSV storage:
+
+```bash
+PROJECT_ID="your-gcp-project-id"
+BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
+REGION="us-central1"
+
+# Create bucket
+gcloud storage buckets create gs://${BUCKET_NAME} \
+  --location=${REGION} \
+  --uniform-bucket-level-access
+
+# Set lifecycle policy to delete old cache files (optional)
+cat > lifecycle.json << 'EOF'
+{
+  "rule": [
+    {
+      "action": {"type": "Delete"},
+      "condition": {"age": 90}
+    }
+  ]
+}
+EOF
+
+gcloud storage buckets update gs://${BUCKET_NAME} --lifecycle-file=lifecycle.json
+```
+
+**Recommended Bucket Settings**:
+
+| Setting                     | Value                    | Rationale                         |
+| --------------------------- | ------------------------ | --------------------------------- |
+| Location                    | Same region as Cloud Run | Minimize latency                  |
+| Storage Class               | Standard                 | Frequent access pattern           |
+| Public Access               | Prevented                | Security best practice            |
+| Versioning                  | Disabled                 | Snapshots are immutable by design |
+| Uniform Bucket-Level Access | Enabled                  | Simplified IAM management         |
+
+#### Storage Provider Configuration
+
+Set the following environment variables for GCP storage mode:
+
+| Variable           | Required | Description                              |
+| ------------------ | -------- | ---------------------------------------- |
+| `STORAGE_PROVIDER` | Yes      | Set to `gcp` for Cloud Run deployment    |
+| `GCP_PROJECT_ID`   | Yes      | Your GCP project ID                      |
+| `GCS_BUCKET_NAME`  | Yes      | Name of the GCS bucket for raw CSV cache |
+
+**Note**: When `STORAGE_PROVIDER=gcp`, the application will fail fast with a clear error if `GCP_PROJECT_ID` or `GCS_BUCKET_NAME` are not set.
+
+#### Deploy to Cloud Run
+
+Build and deploy the backend to Cloud Run:
+
+```bash
+PROJECT_ID="your-gcp-project-id"
+REGION="us-central1"
+SERVICE_NAME="toast-stats-backend"
+BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
+SA_EMAIL="toast-stats-backend@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# Build and deploy
+gcloud run deploy ${SERVICE_NAME} \
+  --source=./backend \
+  --region=${REGION} \
+  --platform=managed \
+  --service-account=${SA_EMAIL} \
+  --set-env-vars="NODE_ENV=production" \
+  --set-env-vars="STORAGE_PROVIDER=gcp" \
+  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID}" \
+  --set-env-vars="GCS_BUCKET_NAME=${BUCKET_NAME}" \
+  --set-env-vars="CORS_ORIGIN=https://your-frontend-domain.com" \
+  --set-secrets="JWT_SECRET=jwt-secret:latest" \
+  --allow-unauthenticated \
+  --memory=512Mi \
+  --cpu=1 \
+  --min-instances=0 \
+  --max-instances=10
+```
+
+#### Using Secret Manager for Sensitive Values
+
+Store sensitive configuration in Secret Manager:
+
+```bash
+# Create JWT secret
+echo -n "your-secure-jwt-secret" | gcloud secrets create jwt-secret --data-file=-
+
+# Grant service account access to the secret
+gcloud secrets add-iam-policy-binding jwt-secret \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+#### Health Check Verification
+
+After deployment, verify the service is healthy:
+
+```bash
+SERVICE_URL=$(gcloud run services describe ${SERVICE_NAME} \
+  --region=${REGION} \
+  --format='value(status.url)')
+
+curl ${SERVICE_URL}/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "uptime": 123.456,
+  "environment": "production"
+}
+```
+
+#### Storage Migration Notes
+
+When migrating from local filesystem storage to GCP storage:
+
+1. **No Data Migration Required**: Per the design, backward compatibility with existing local data is not required. The GCP storage starts fresh.
+
+2. **Provider Selection**: The `STORAGE_PROVIDER` environment variable controls which storage backend is used:
+   - `local` (default): Uses local filesystem (development)
+   - `gcp`: Uses Cloud Firestore + Cloud Storage (production)
+
+3. **Rollback**: To rollback to local storage, simply change `STORAGE_PROVIDER` back to `local`. Note that data stored in GCP will not be accessible in local mode.
+
+4. **Testing GCP Storage Locally**: For local development with GCP emulators, see `backend/docs/gcp-emulator-setup.md`.
+
+### Google Cloud Platform - Traditional Deployment
 
 - **Compute Engine**: Install Node.js and PM2, deploy directly
 - **App Engine**: Deploy using Node.js runtime

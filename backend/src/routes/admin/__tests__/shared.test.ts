@@ -28,8 +28,10 @@ vi.mock('../../../utils/logger.js', () => ({
 }))
 
 // Mock ProductionServiceFactory
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 vi.mock('../../../services/ProductionServiceFactory.js', () => ({
   getProductionServiceFactory: vi.fn(() => ({
+    createSnapshotStorage: vi.fn(),
     createSnapshotStore: vi.fn(),
     createCacheConfigService: vi.fn(),
     createRefreshService: vi.fn(),

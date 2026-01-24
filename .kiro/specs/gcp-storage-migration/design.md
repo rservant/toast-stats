@@ -24,38 +24,38 @@ graph TB
         RS[RefreshService]
         API[API Routes]
     end
-    
+
     subgraph "Storage Abstraction Layer"
         SSI[ISnapshotStorage]
         CSI[IRawCSVStorage]
         SPF[StorageProviderFactory]
     end
-    
+
     subgraph "Local Provider"
         LSS[LocalSnapshotStorage]
         LCS[LocalRawCSVStorage]
         FS[(Local Filesystem)]
     end
-    
+
     subgraph "GCP Provider"
         FSS[FirestoreSnapshotStorage]
         GCSS[GCSRawCSVStorage]
         FDB[(Cloud Firestore)]
         GCS[(Cloud Storage)]
     end
-    
+
     RS --> SSI
     RS --> CSI
     API --> SSI
-    
+
     SPF --> SSI
     SPF --> CSI
-    
+
     SSI -.-> LSS
     SSI -.-> FSS
     CSI -.-> LCS
     CSI -.-> GCSS
-    
+
     LSS --> FS
     LCS --> FS
     FSS --> FDB
@@ -97,20 +97,37 @@ interface ISnapshotStorage {
     allDistrictsRankings?: AllDistrictsRankingsData,
     options?: WriteSnapshotOptions
   ): Promise<void>
-  listSnapshots(limit?: number, filters?: SnapshotFilters): Promise<SnapshotMetadata[]>
+  listSnapshots(
+    limit?: number,
+    filters?: SnapshotFilters
+  ): Promise<SnapshotMetadata[]>
   getSnapshot(snapshotId: string): Promise<Snapshot | null>
   isReady(): Promise<boolean>
-  
+
   // Per-district operations
-  writeDistrictData(snapshotId: string, districtId: string, data: DistrictStatistics): Promise<void>
-  readDistrictData(snapshotId: string, districtId: string): Promise<DistrictStatistics | null>
+  writeDistrictData(
+    snapshotId: string,
+    districtId: string,
+    data: DistrictStatistics
+  ): Promise<void>
+  readDistrictData(
+    snapshotId: string,
+    districtId: string
+  ): Promise<DistrictStatistics | null>
   listDistrictsInSnapshot(snapshotId: string): Promise<string[]>
   getSnapshotManifest(snapshotId: string): Promise<SnapshotManifest | null>
-  getSnapshotMetadata(snapshotId: string): Promise<PerDistrictSnapshotMetadata | null>
-  
+  getSnapshotMetadata(
+    snapshotId: string
+  ): Promise<PerDistrictSnapshotMetadata | null>
+
   // Rankings operations
-  writeAllDistrictsRankings(snapshotId: string, rankingsData: AllDistrictsRankingsData): Promise<void>
-  readAllDistrictsRankings(snapshotId: string): Promise<AllDistrictsRankingsData | null>
+  writeAllDistrictsRankings(
+    snapshotId: string,
+    rankingsData: AllDistrictsRankingsData
+  ): Promise<void>
+  readAllDistrictsRankings(
+    snapshotId: string
+  ): Promise<AllDistrictsRankingsData | null>
   hasAllDistrictsRankings(snapshotId: string): Promise<boolean>
 }
 
@@ -120,8 +137,17 @@ interface ISnapshotStorage {
  */
 interface IRawCSVStorage {
   // Core cache operations
-  getCachedCSV(date: string, type: CSVType, districtId?: string): Promise<string | null>
-  setCachedCSV(date: string, type: CSVType, csvContent: string, districtId?: string): Promise<void>
+  getCachedCSV(
+    date: string,
+    type: CSVType,
+    districtId?: string
+  ): Promise<string | null>
+  setCachedCSV(
+    date: string,
+    type: CSVType,
+    csvContent: string,
+    districtId?: string
+  ): Promise<void>
   setCachedCSVWithMetadata(
     date: string,
     type: CSVType,
@@ -129,16 +155,23 @@ interface IRawCSVStorage {
     districtId?: string,
     additionalMetadata?: ClosingPeriodMetadata
   ): Promise<void>
-  hasCachedCSV(date: string, type: CSVType, districtId?: string): Promise<boolean>
-  
+  hasCachedCSV(
+    date: string,
+    type: CSVType,
+    districtId?: string
+  ): Promise<boolean>
+
   // Metadata management
   getCacheMetadata(date: string): Promise<RawCSVCacheMetadata | null>
-  updateCacheMetadata(date: string, metadata: Partial<RawCSVCacheMetadata>): Promise<void>
-  
+  updateCacheMetadata(
+    date: string,
+    metadata: Partial<RawCSVCacheMetadata>
+  ): Promise<void>
+
   // Cache management
   clearCacheForDate(date: string): Promise<void>
   getCachedDates(): Promise<string[]>
-  
+
   // Health and statistics
   getCacheStorageInfo(): Promise<CacheStorageInfo>
   getCacheStatistics(): Promise<RawCSVCacheStatistics>
@@ -154,17 +187,17 @@ interface IRawCSVStorage {
  */
 interface StorageConfig {
   provider: 'local' | 'gcp'
-  
+
   // Local provider config
   local?: {
     cacheDir: string
   }
-  
+
   // GCP provider config
   gcp?: {
     projectId: string
     bucketName: string
-    firestoreCollection?: string  // defaults to 'snapshots'
+    firestoreCollection?: string // defaults to 'snapshots'
   }
 }
 
@@ -176,7 +209,7 @@ class StorageProviderFactory {
     snapshotStorage: ISnapshotStorage
     rawCSVStorage: IRawCSVStorage
   }
-  
+
   static create(config: StorageConfig): {
     snapshotStorage: ISnapshotStorage
     rawCSVStorage: IRawCSVStorage
@@ -195,7 +228,7 @@ The local providers wrap the existing `FileSnapshotStore` and `RawCSVCacheServic
  */
 class LocalSnapshotStorage implements ISnapshotStorage {
   private readonly store: FileSnapshotStore
-  
+
   constructor(config: { cacheDir: string })
 }
 
@@ -205,11 +238,8 @@ class LocalSnapshotStorage implements ISnapshotStorage {
  */
 class LocalRawCSVStorage implements IRawCSVStorage {
   private readonly cache: RawCSVCacheService
-  
-  constructor(
-    cacheConfigService: ICacheConfigService,
-    logger: ILogger
-  )
+
+  constructor(cacheConfigService: ICacheConfigService, logger: ILogger)
 }
 ```
 
@@ -218,17 +248,17 @@ class LocalRawCSVStorage implements IRawCSVStorage {
 ```typescript
 /**
  * Firestore document structure for snapshots
- * 
+ *
  * Collection: snapshots
  * Document ID: YYYY-MM-DD (ISO date)
- * 
+ *
  * Document structure:
  * {
  *   metadata: PerDistrictSnapshotMetadata,
  *   manifest: SnapshotManifest,
  *   rankings?: AllDistrictsRankingsData
  * }
- * 
+ *
  * Subcollection: districts
  * Document ID: district_{id}
  * {
@@ -239,12 +269,12 @@ class LocalRawCSVStorage implements IRawCSVStorage {
 class FirestoreSnapshotStorage implements ISnapshotStorage {
   private readonly firestore: Firestore
   private readonly collectionName: string
-  
+
   constructor(config: {
     projectId: string
-    collectionName?: string  // defaults to 'snapshots'
+    collectionName?: string // defaults to 'snapshots'
   })
-  
+
   // Implementation uses Firestore queries for latest snapshot lookup
   // District data stored in subcollection for efficient per-district access
 }
@@ -255,24 +285,21 @@ class FirestoreSnapshotStorage implements ISnapshotStorage {
 ```typescript
 /**
  * GCS object path structure:
- * 
+ *
  * raw-csv/{date}/all-districts.csv
  * raw-csv/{date}/district-{id}/club-performance.csv
  * raw-csv/{date}/district-{id}/division-performance.csv
  * raw-csv/{date}/metadata.json
- * 
+ *
  * Metadata stored alongside CSV files for atomic operations
  */
 class GCSRawCSVStorage implements IRawCSVStorage {
   private readonly storage: Storage
   private readonly bucket: Bucket
   private readonly circuitBreaker: CircuitBreaker
-  
-  constructor(config: {
-    projectId: string
-    bucketName: string
-  })
-  
+
+  constructor(config: { projectId: string; bucketName: string })
+
   // Implementation uses GCS client for object operations
   // Maintains path convention from existing filesystem implementation
 }
@@ -289,7 +316,7 @@ class GCSRawCSVStorage implements IRawCSVStorage {
 interface FirestoreSnapshotDocument {
   // Snapshot metadata (same as PerDistrictSnapshotMetadata)
   snapshotId: string
-  createdAt: string  // ISO timestamp
+  createdAt: string // ISO timestamp
   schemaVersion: string
   calculationVersion: string
   rankingVersion?: string
@@ -304,7 +331,7 @@ interface FirestoreSnapshotDocument {
   isClosingPeriodData?: boolean
   collectionDate?: string
   logicalDate?: string
-  
+
   // Manifest data (embedded for single-read efficiency)
   manifest: {
     totalDistricts: number
@@ -317,7 +344,7 @@ interface FirestoreSnapshotDocument {
       status: 'present' | 'missing'
     }
   }
-  
+
   // Rankings data (embedded if present, null otherwise)
   rankings?: AllDistrictsRankingsData
 }
@@ -396,15 +423,18 @@ The GCP providers integrate with the existing `CircuitBreaker` utility:
 
 ```typescript
 // GCS provider circuit breaker configuration
-const gcsCircuitBreaker = CircuitBreaker.createCacheCircuitBreaker('gcs-raw-csv')
+const gcsCircuitBreaker =
+  CircuitBreaker.createCacheCircuitBreaker('gcs-raw-csv')
 
-// Firestore provider circuit breaker configuration  
-const firestoreCircuitBreaker = CircuitBreaker.createCacheCircuitBreaker('firestore-snapshots')
+// Firestore provider circuit breaker configuration
+const firestoreCircuitBreaker = CircuitBreaker.createCacheCircuitBreaker(
+  'firestore-snapshots'
+)
 ```
 
 ## Correctness Properties
 
-*Per the property-testing-guidance steering document, property-based tests are reserved for cases where they genuinely add value—specifically for mathematical invariants, complex input spaces, and universal business rules. The properties below have been evaluated against this guidance.*
+_Per the property-testing-guidance steering document, property-based tests are reserved for cases where they genuinely add value—specifically for mathematical invariants, complex input spaces, and universal business rules. The properties below have been evaluated against this guidance._
 
 ### Properties Warranting PBT
 
@@ -412,35 +442,35 @@ The following properties involve encoding/decoding roundtrips with complex input
 
 #### Property 1: Snapshot Round-Trip Consistency (PBT)
 
-*For any* valid Snapshot object, writing it to storage and then reading it back (via `getSnapshot`) SHALL produce an equivalent Snapshot object with identical metadata, status, and district data.
+_For any_ valid Snapshot object, writing it to storage and then reading it back (via `getSnapshot`) SHALL produce an equivalent Snapshot object with identical metadata, status, and district data.
 
 Validates: Requirements 2.1, 2.2
 
-*Rationale: Snapshot objects have complex nested structures with many fields. PBT can explore edge cases in field combinations that manual examples might miss.*
+_Rationale: Snapshot objects have complex nested structures with many fields. PBT can explore edge cases in field combinations that manual examples might miss._
 
 #### Property 2: CSV Content Round-Trip Consistency (PBT)
 
-*For any* valid CSV content string, date, type, and optional districtId, calling `setCachedCSV` followed by `getCachedCSV` with the same parameters SHALL return the identical CSV content string.
+_For any_ valid CSV content string, date, type, and optional districtId, calling `setCachedCSV` followed by `getCachedCSV` with the same parameters SHALL return the identical CSV content string.
 
 Validates: Requirements 3.1, 3.2
 
-*Rationale: CSV content can contain special characters, unicode, varying line endings, and edge cases. PBT ensures content integrity across the input space.*
+_Rationale: CSV content can contain special characters, unicode, varying line endings, and edge cases. PBT ensures content integrity across the input space._
 
 #### Property 3: Latest Successful Snapshot Ordering (PBT)
 
-*For any* set of snapshots with varying dates and statuses (success/partial/failed), `getLatestSuccessful` SHALL return the snapshot with the most recent date among those with status 'success', or null if no successful snapshots exist.
+_For any_ set of snapshots with varying dates and statuses (success/partial/failed), `getLatestSuccessful` SHALL return the snapshot with the most recent date among those with status 'success', or null if no successful snapshots exist.
 
 Validates: Requirements 2.3, 2.4
 
-*Rationale: This is a sorting/ordering invariant with a complex input space (multiple snapshots with varying dates and statuses). PBT can verify the ordering logic holds across many combinations.*
+_Rationale: This is a sorting/ordering invariant with a complex input space (multiple snapshots with varying dates and statuses). PBT can verify the ordering logic holds across many combinations._
 
 #### Property 4: Provider Contract Equivalence (PBT)
 
-*For any* sequence of valid storage operations, both LocalSnapshotStorage and FirestoreSnapshotStorage (and LocalRawCSVStorage and GCSRawCSVStorage) SHALL produce equivalent observable results when given the same inputs.
+_For any_ sequence of valid storage operations, both LocalSnapshotStorage and FirestoreSnapshotStorage (and LocalRawCSVStorage and GCSRawCSVStorage) SHALL produce equivalent observable results when given the same inputs.
 
 Validates: Requirements 4.4, 1.1, 1.2
 
-*Rationale: This is a critical invariant ensuring both implementations behave identically. PBT can generate operation sequences to verify behavioral equivalence.*
+_Rationale: This is a critical invariant ensuring both implementations behave identically. PBT can generate operation sequences to verify behavioral equivalence._
 
 ### Properties Suitable for Unit Tests
 
@@ -452,7 +482,7 @@ Writing AllDistrictsRankingsData via `writeAllDistrictsRankings` and reading via
 
 Validates: Requirements 2.5
 
-*Rationale: Rankings have a bounded, well-defined structure. 3-5 examples covering empty, single, and multiple rankings provide equivalent confidence.*
+_Rationale: Rankings have a bounded, well-defined structure. 3-5 examples covering empty, single, and multiple rankings provide equivalent confidence._
 
 #### Property 6: Cache Metadata Round-Trip Consistency (Unit Test)
 
@@ -460,7 +490,7 @@ Calling `updateCacheMetadata` followed by `getCacheMetadata` SHALL return metada
 
 Validates: Requirements 3.5
 
-*Rationale: Metadata is a simple object with known fields. Example-based tests are clearer and sufficient.*
+_Rationale: Metadata is a simple object with known fields. Example-based tests are clearer and sufficient._
 
 #### Property 7: Provider Factory Selection (Unit Test)
 
@@ -468,7 +498,7 @@ Validates: Requirements 3.5
 
 Validates: Requirements 1.3, 5.1
 
-*Rationale: Only two provider types exist (local, gcp). Two unit tests fully cover this.*
+_Rationale: Only two provider types exist (local, gcp). Two unit tests fully cover this._
 
 #### Property 8: Missing GCP Configuration Fails Fast (Unit Test)
 
@@ -476,7 +506,7 @@ When `provider` is 'gcp' but required config is missing, `StorageProviderFactory
 
 Validates: Requirements 5.7
 
-*Rationale: Finite set of missing config scenarios. Unit tests with specific examples are clearer.*
+_Rationale: Finite set of missing config scenarios. Unit tests with specific examples are clearer._
 
 #### Property 9: Storage Errors Include Operation Context (Unit Test)
 
@@ -484,7 +514,7 @@ Validates: Requirements 5.7
 
 Validates: Requirements 7.1, 7.2
 
-*Rationale: Error construction is straightforward. Unit tests verifying error fields are sufficient.*
+_Rationale: Error construction is straightforward. Unit tests verifying error fields are sufficient._
 
 #### Property 10: GCS Path Convention (Unit Test)
 
@@ -492,7 +522,7 @@ GCS object paths SHALL follow `raw-csv/{date}/[district-{districtId}/]{type}.csv
 
 Validates: Requirements 3.3
 
-*Rationale: Path building is deterministic string formatting. Unit tests with examples are clearer.*
+_Rationale: Path building is deterministic string formatting. Unit tests with examples are clearer._
 
 #### Property 11: Snapshot ID Format (Unit Test)
 
@@ -500,7 +530,7 @@ Firestore document IDs SHALL be valid ISO date strings (YYYY-MM-DD) matching dat
 
 Validates: Requirements 2.6
 
-*Rationale: Date format validation is simple. Unit tests with valid/invalid examples suffice.*
+_Rationale: Date format validation is simple. Unit tests with valid/invalid examples suffice._
 
 #### Property 12: CSV Existence Check Consistency (Unit Test)
 
@@ -508,7 +538,7 @@ Validates: Requirements 2.6
 
 Validates: Requirements 3.4
 
-*Rationale: Boolean existence check is straightforward. Unit tests covering present/absent cases are sufficient.*
+_Rationale: Boolean existence check is straightforward. Unit tests covering present/absent cases are sufficient._
 
 ## Testing Strategy
 

@@ -19,10 +19,13 @@ import os from 'os'
 import adminRoutes from '../index.js'
 import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
+import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 
 // Mock the production service factory to use our test snapshot store
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 let testSnapshotStore: FileSnapshotStore
 const mockFactory = {
+  createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
   createSnapshotStore: () => testSnapshotStore,
 }
 

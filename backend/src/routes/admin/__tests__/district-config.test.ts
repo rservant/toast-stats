@@ -20,6 +20,7 @@ import os from 'os'
 import { districtConfigRouter } from '../district-config.js'
 import { DistrictConfigurationService } from '../../../services/DistrictConfigurationService.js'
 import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
+import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 
 // Test instances
 let testDistrictConfigService: DistrictConfigurationService
@@ -31,7 +32,9 @@ const mockCacheConfig = {
   getConfiguration: () => ({ baseDirectory: tempDir }),
 }
 
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
+  createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
   createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: () => mockCacheConfig,
   createRefreshService: vi.fn(),

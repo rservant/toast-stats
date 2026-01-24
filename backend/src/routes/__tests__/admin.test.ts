@@ -38,7 +38,9 @@ const mockCacheConfigService = {
   })),
 }
 
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
+  createSnapshotStorage: vi.fn(() => mockSnapshotStore),
   createSnapshotStore: vi.fn(() => mockSnapshotStore),
   createCacheConfigService: vi.fn(() => mockCacheConfigService),
 }
