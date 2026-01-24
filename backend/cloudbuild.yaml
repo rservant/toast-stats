@@ -87,5 +87,8 @@ substitutions:
   _AR_PROJECT_ID: 'artful-bonito-485102-i9' # Your GCP Project ID (can also use built-in PROJECT_ID)
   _AR_REPOSITORY: 'cloud-run-source-deploy' # Name of your Artifact Registry repository (e.g., 'cloud-run-source-deploy')
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+  
 # Optional: Define timeout for the entire build process
 timeout: '1200s' # 20 minutes
