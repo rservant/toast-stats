@@ -3,6 +3,9 @@
  *
  * Main orchestrator for all backfill operations with modern API design,
  * comprehensive error handling, and performance optimizations.
+ *
+ * Storage Abstraction: Uses ISnapshotStorage interface to support both
+ * local filesystem and cloud storage backends (Requirements 1.3, 1.4).
  */
 
 import { logger } from '../../utils/logger.js'
@@ -22,16 +25,17 @@ import {
   IntermediateCacheManager,
 } from '../../utils/IntermediateCache.js'
 import { RefreshService } from '../RefreshService.js'
-import { FileSnapshotStore } from '../SnapshotStore.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import type { RankingCalculator } from '../RankingCalculator.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type {
   Snapshot,
+  SnapshotStore,
   NormalizedData,
   AllDistrictsRankingsData,
   DistrictRanking,
 } from '../../types/snapshots.js'
+import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 
 import { JobManager } from './JobManager.js'
 import { DataSourceSelector } from './DataSourceSelector.js'
@@ -50,7 +54,7 @@ export class BackfillService {
   private jobManager: JobManager
   private dataSourceSelector: DataSourceSelector
   private scopeManager: ScopeManager
-  private snapshotStore: FileSnapshotStore
+  private snapshotStore: ISnapshotStorage
   // Infrastructure components for future use
   // @ts-expect-error - These will be used in future implementations
   private _alertManager: AlertManager
@@ -68,16 +72,28 @@ export class BackfillService {
   private concurrencyLimiter: ConcurrencyLimiter
   private intermediateCache: IntermediateCache<DistrictStatistics[]>
 
+  /**
+   * Create a new BackfillService instance
+   *
+   * @param refreshService - Service for executing refresh operations
+   * @param snapshotStore - Storage interface for snapshot operations (ISnapshotStorage)
+   *                        Supports both local filesystem and cloud storage backends
+   * @param configService - District configuration service
+   * @param alertManager - Optional alert manager for notifications
+   * @param circuitBreakerManager - Optional circuit breaker manager
+   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
+   */
   constructor(
     refreshService: RefreshService,
-    snapshotStore: FileSnapshotStore,
+    snapshotStore: ISnapshotStorage | SnapshotStore,
     configService: DistrictConfigurationService,
     alertManager?: AlertManager,
     circuitBreakerManager?: ICircuitBreakerManager,
     rankingCalculator?: RankingCalculator
   ) {
     this._refreshService = refreshService
-    this.snapshotStore = snapshotStore
+    // ISnapshotStorage is a superset of SnapshotStore, so we can safely cast
+    this.snapshotStore = snapshotStore as ISnapshotStorage
     this.configService = configService
     this._alertManager = alertManager || new AlertManager()
     if (rankingCalculator !== undefined) {

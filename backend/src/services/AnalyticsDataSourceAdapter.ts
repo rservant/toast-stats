@@ -1,11 +1,12 @@
 /**
  * Analytics Data Source Adapter
  *
- * Provides an adapter that wraps DistrictDataAggregator and FileSnapshotStore
+ * Provides an adapter that wraps DistrictDataAggregator and ISnapshotStorage
  * to implement the IAnalyticsDataSource interface. This enables the AnalyticsEngine
  * to use the new snapshot-based data architecture while maintaining a clean abstraction.
  *
  * Requirements: 1.1, 2.1, 2.2, 2.3
+ * Storage Abstraction: Requirements 1.3, 1.4 (uses ISnapshotStorage for provider flexibility)
  */
 
 import { logger } from '../utils/logger.js'
@@ -15,11 +16,9 @@ import type {
   IAnalyticsDataSource,
   AnalyticsSnapshotInfo,
 } from '../types/serviceInterfaces.js'
+import type { ISnapshotStorage } from '../types/storageInterfaces.js'
 import type { DistrictDataAggregator } from './DistrictDataAggregator.js'
-import type {
-  FileSnapshotStore,
-  PerDistrictSnapshotMetadata,
-} from './SnapshotStore.js'
+import type { PerDistrictSnapshotMetadata } from './SnapshotStore.js'
 
 /**
  * Configuration for the AnalyticsDataSourceAdapter
@@ -32,17 +31,20 @@ export interface AnalyticsDataSourceAdapterConfig {
 /**
  * Analytics Data Source Adapter
  *
- * Wraps DistrictDataAggregator and FileSnapshotStore to provide
+ * Wraps DistrictDataAggregator and ISnapshotStorage to provide
  * the IAnalyticsDataSource interface for the AnalyticsEngine.
+ *
+ * Storage Abstraction: Uses ISnapshotStorage interface to support both
+ * local filesystem and cloud storage backends (Requirements 1.3, 1.4).
  */
 export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
   private readonly aggregator: DistrictDataAggregator
-  private readonly snapshotStore: FileSnapshotStore
+  private readonly snapshotStore: ISnapshotStorage
   private readonly config: Required<AnalyticsDataSourceAdapterConfig>
 
   constructor(
     aggregator: DistrictDataAggregator,
-    snapshotStore: FileSnapshotStore,
+    snapshotStore: ISnapshotStorage,
     config: AnalyticsDataSourceAdapterConfig = {}
   ) {
     this.aggregator = aggregator
@@ -366,7 +368,7 @@ export class AnalyticsDataSourceAdapter implements IAnalyticsDataSource {
  */
 export function createAnalyticsDataSourceAdapter(
   aggregator: DistrictDataAggregator,
-  snapshotStore: FileSnapshotStore,
+  snapshotStore: ISnapshotStorage,
   config?: AnalyticsDataSourceAdapterConfig
 ): AnalyticsDataSourceAdapter {
   return new AnalyticsDataSourceAdapter(aggregator, snapshotStore, config)

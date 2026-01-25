@@ -1775,9 +1775,24 @@ export class FileSnapshotStore
    */
   private async findLatestSuccessfulByScanning(): Promise<Snapshot | null> {
     const startTime = Date.now()
+
     logger.debug('Starting directory scan for latest successful snapshot', {
       operation: 'findLatestSuccessfulByScanning',
     })
+
+    // Handle missing directory gracefully (Requirements 3.1, 3.3, 3.4)
+    try {
+      await fs.access(this.snapshotsDir)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        logger.debug('Snapshots directory does not exist, returning null', {
+          operation: 'findLatestSuccessfulByScanning',
+          snapshotsDir: this.snapshotsDir,
+        })
+        return null
+      }
+      throw error
+    }
 
     const files = await fs.readdir(this.snapshotsDir)
 

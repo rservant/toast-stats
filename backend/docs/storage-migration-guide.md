@@ -11,6 +11,39 @@ The Toast-Stats application supports two storage backends:
 
 Migration is a one-way process. **Backward compatibility with existing local data is not required** - the GCP storage starts fresh.
 
+## Route Handler Integration Status
+
+> **✅ Migration Complete**: As of the storage provider integration fix, all route handlers now correctly respect the `STORAGE_PROVIDER` environment variable.
+
+### What Was Fixed
+
+The original GCP storage migration implemented the storage abstraction layer (`StorageProviderFactory`, `ISnapshotStorage` interface, etc.) but left an integration gap: the `shared.ts` module in `backend/src/routes/districts/` directly instantiated `FileSnapshotStore` instead of using the `StorageProviderFactory`. This caused route handlers to ignore the `STORAGE_PROVIDER` environment variable and always use local filesystem storage.
+
+### Current Behavior
+
+All district route handlers now:
+
+1. **Respect `STORAGE_PROVIDER`**: Setting `STORAGE_PROVIDER=gcp` correctly routes all storage operations to Cloud Firestore
+2. **Use consistent storage**: All services (`RefreshService`, `BackfillService`, `DistrictDataAggregator`) use the same storage provider instance
+3. **Handle empty storage gracefully**: Return HTTP 503 with `NO_SNAPSHOT_AVAILABLE` instead of 500 errors when no data exists
+
+### Verification
+
+To verify the storage provider is correctly selected:
+
+```bash
+# Check application logs at startup for storage provider selection
+# You should see: "Storage provider selected: gcp" or "Storage provider selected: local"
+
+# Test with GCP storage
+STORAGE_PROVIDER=gcp npm start
+
+# Test with local storage (default)
+STORAGE_PROVIDER=local npm start
+# or simply
+npm start
+```
+
 ## Prerequisites
 
 Before migrating, ensure you have:
@@ -235,6 +268,71 @@ raw-csv/
 ```
 
 ## Troubleshooting
+
+### Empty Storage Scenarios
+
+When the application starts with empty storage (no snapshots available), it returns HTTP 503 responses with the `NO_SNAPSHOT_AVAILABLE` error code. This is expected behavior and indicates that a refresh operation is needed.
+
+#### HTTP 503 `NO_SNAPSHOT_AVAILABLE` Response
+
+**Symptoms**:
+
+- API endpoints return HTTP 503 status code
+- Response body contains:
+
+  ```json
+  {
+    "error": {
+      "code": "NO_SNAPSHOT_AVAILABLE",
+      "message": "No data snapshot available yet",
+      "details": "Run a refresh operation to create the first snapshot"
+    }
+  }
+  ```
+
+- Frontend displays the onboarding dialog
+
+**Cause**: No successful snapshot exists in storage. This is normal for:
+
+- Fresh deployments
+- After switching storage providers
+- After clearing storage data
+
+**Solution**:
+
+1. **Trigger a refresh operation** to populate storage:
+
+   ```bash
+   # Via API
+   curl -X POST https://your-app-url/api/refresh
+
+   # Or use the scraper CLI
+   npx scraper-cli scrape --date $(date +%Y-%m-%d)
+   ```
+
+2. **Verify the refresh completed successfully**:
+
+   ```bash
+   # Check for latest snapshot
+   curl https://your-app-url/api/snapshots/latest
+   ```
+
+3. **Check logs for refresh errors** if the 503 persists after refresh:
+
+   ```bash
+   # Cloud Run logs
+   gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=toast-stats-api" --limit=50
+   ```
+
+#### Empty Directory Handling (Local Storage)
+
+When using local storage (`STORAGE_PROVIDER=local`), the application handles missing or empty snapshot directories gracefully:
+
+- **Missing snapshots directory**: Returns `null` from `getLatestSuccessful()`, triggering 503 response
+- **Empty snapshots directory**: Same behavior as missing directory
+- **No successful snapshots**: Returns `null` even if failed snapshots exist
+
+This ensures the application works correctly on fresh deployments without requiring manual directory creation.
 
 ### Common Issues
 

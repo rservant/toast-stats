@@ -83,4 +83,3 @@ Additionally, when cloud storage is empty (no snapshots available), the backend 
 2. THE error response SHALL include `code`, `message`, and `details` fields
 3. THE `details` field SHALL instruct the user to run a refresh operation
 4. THE HTTP status code SHALL be 503 (Service Unavailable) for missing snapshot scenarios
-

@@ -325,16 +325,16 @@ describe('Snapshot Ordering Property Tests', () => {
      * Property 3a: Edge case - no snapshots
      *
      * When no snapshots exist, getLatestSuccessful should return null.
-     * Note: The underlying FileSnapshotStore throws an error when the snapshots
-     * directory doesn't exist, so we need to write at least one snapshot first
-     * or handle the error case.
+     * Per Requirements 2.3, 2.4, 3.1, 3.2: The storage gracefully handles
+     * missing directories and returns null instead of throwing an error.
      *
-     * **Validates: Requirements 2.3, 2.4**
+     * **Validates: Requirements 2.3, 2.4, 3.1, 3.2**
      */
     it('Property 3a: getLatestSuccessful returns null when no snapshots exist', async () => {
-      // The underlying FileSnapshotStore throws when the directory doesn't exist
-      // This is expected behavior - we test that it throws appropriately
-      await expect(storage.getLatestSuccessful()).rejects.toThrow()
+      // Per Requirement 2.3, 2.4, 3.1, 3.2: getLatestSuccessful returns null
+      // when storage is empty instead of throwing an error
+      const result = await storage.getLatestSuccessful()
+      expect(result).toBeNull()
     })
 
     /**

@@ -482,20 +482,20 @@ netlify deploy --prod --dir=dist
 
 ### Backend Environment Variables
 
-| Variable                     | Required   | Default                            | Description                                        |
-| ---------------------------- | ---------- | ---------------------------------- | -------------------------------------------------- |
-| `NODE_ENV`                   | Yes (prod) | development                        | Environment mode (affects CORS behavior)           |
-| `PORT`                       | No         | 5001                               | Server port                                        |
-| `STORAGE_PROVIDER`           | Yes (prod) | local                              | Storage backend (`local` or `gcp`)                 |
+| Variable                     | Required   | Default                            | Description                                           |
+| ---------------------------- | ---------- | ---------------------------------- | ----------------------------------------------------- |
+| `NODE_ENV`                   | Yes (prod) | development                        | Environment mode (affects CORS behavior)              |
+| `PORT`                       | No         | 5001                               | Server port                                           |
+| `STORAGE_PROVIDER`           | Yes (prod) | local                              | Storage backend (`local` or `gcp`)                    |
 | `GCP_PROJECT_ID`             | Yes (gcp)  | -                                  | GCP project ID (required when `STORAGE_PROVIDER=gcp`) |
-| `GCS_BUCKET_NAME`            | Yes (gcp)  | -                                  | GCS bucket for raw CSV cache                       |
-| `CORS_ORIGIN`                | Yes (prod) | http://localhost:3000              | Allowed CORS origin (API Gateway domain for prod)  |
-| `FIRESTORE_COLLECTION`       | No         | snapshots                          | Firestore collection name for snapshots            |
-| `TOASTMASTERS_DASHBOARD_URL` | No         | https://dashboard.toastmasters.org | Toastmasters dashboard URL                         |
-| `CACHE_DIR`                  | No         | ./cache                            | Local cache directory (local storage only)         |
-| `CACHE_TTL`                  | No         | 900                                | Cache TTL in seconds                               |
-| `RATE_LIMIT_WINDOW_MS`       | No         | 900000                             | Rate limit window in milliseconds                  |
-| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100                                | Max requests per rate limit window                 |
+| `GCS_BUCKET_NAME`            | Yes (gcp)  | -                                  | GCS bucket for raw CSV cache                          |
+| `CORS_ORIGIN`                | Yes (prod) | http://localhost:3000              | Allowed CORS origin (API Gateway domain for prod)     |
+| `FIRESTORE_COLLECTION`       | No         | snapshots                          | Firestore collection name for snapshots               |
+| `TOASTMASTERS_DASHBOARD_URL` | No         | https://dashboard.toastmasters.org | Toastmasters dashboard URL                            |
+| `CACHE_DIR`                  | No         | ./cache                            | Local cache directory (local storage only)            |
+| `CACHE_TTL`                  | No         | 900                                | Cache TTL in seconds                                  |
+| `RATE_LIMIT_WINDOW_MS`       | No         | 900000                             | Rate limit window in milliseconds                     |
+| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100                                | Max requests per rate limit window                    |
 
 ### Frontend Environment Variables
 
@@ -532,14 +532,14 @@ gcloud run services describe toast-stats-api \
 
 For GCP production deployment with API Gateway:
 
-| Variable | Required | Example Value | Notes |
-|----------|----------|---------------|-------|
-| `NODE_ENV` | Yes | `production` | Must be `production` for prod |
-| `STORAGE_PROVIDER` | Yes | `gcp` | Must be `gcp` for cloud storage |
-| `GCP_PROJECT_ID` | Yes | `toast-stats-prod-6d64a` | Your GCP project ID |
-| `GCS_BUCKET_NAME` | Yes | `raw-csv-toast-stats` | GCS bucket for CSV cache |
-| `CORS_ORIGIN` | Yes | `https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog` | API Gateway domain |
-| `JWT_SECRET` | Yes | (from Secret Manager) | Use `--set-secrets` flag |
+| Variable           | Required | Example Value                                                                    | Notes                           |
+| ------------------ | -------- | -------------------------------------------------------------------------------- | ------------------------------- |
+| `NODE_ENV`         | Yes      | `production`                                                                     | Must be `production` for prod   |
+| `STORAGE_PROVIDER` | Yes      | `gcp`                                                                            | Must be `gcp` for cloud storage |
+| `GCP_PROJECT_ID`   | Yes      | `toast-stats-prod-6d64a`                                                         | Your GCP project ID             |
+| `GCS_BUCKET_NAME`  | Yes      | `raw-csv-toast-stats`                                                            | GCS bucket for CSV cache        |
+| `CORS_ORIGIN`      | Yes      | `https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog` | API Gateway domain              |
+| `JWT_SECRET`       | Yes      | (from Secret Manager)                                                            | Use `--set-secrets` flag        |
 
 #### Setting Missing Environment Variables
 
@@ -728,6 +728,127 @@ server {
 ```
 
 ## Troubleshooting
+
+### Verifying Storage Provider Selection
+
+After deployment, verify that the correct storage provider is being used. This is important because the application supports both local filesystem storage and GCP cloud storage.
+
+#### Check Environment Configuration
+
+```bash
+# View STORAGE_PROVIDER setting on Cloud Run
+gcloud run services describe toast-stats-api \
+  --region us-east1 \
+  --format='value(spec.template.spec.containers[0].env[name=STORAGE_PROVIDER].value)'
+```
+
+Expected values:
+
+- `gcp` - Uses Cloud Firestore for snapshots and GCS for raw CSV cache
+- `local` or unset - Uses local filesystem storage
+
+#### Verify via Application Logs
+
+Check the application startup logs to confirm storage provider initialization:
+
+```bash
+# Stream Cloud Run logs and look for storage initialization
+gcloud run services logs read toast-stats-api \
+  --region=us-east1 \
+  --limit=100 | grep -i "storage"
+```
+
+You should see log entries indicating which storage provider was initialized:
+
+- For GCP: `"Storage provider initialized: gcp"` or similar
+- For local: `"Storage provider initialized: local"` or similar
+
+#### Test Storage Provider via API
+
+Make a test request to verify the storage layer is working:
+
+```bash
+# Test via API Gateway
+curl -s https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog/api/health | jq
+
+# Test a data endpoint (will return 503 if no snapshots exist yet)
+curl -s -w "\nHTTP Status: %{http_code}\n" \
+  https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog/api/districts
+```
+
+#### Storage Provider Integration Fix Note
+
+> **Important**: A previous incomplete migration left the route handlers directly instantiating `FileSnapshotStore` instead of using the `StorageProviderFactory`. This has been resolved - all route handlers now correctly respect the `STORAGE_PROVIDER` environment variable.
+>
+> If you're upgrading from an earlier version, ensure you redeploy the backend to get the fix. No data migration is required.
+
+### 503 NO_SNAPSHOT_AVAILABLE Responses
+
+When the storage is empty (no snapshots have been created yet), the API returns HTTP 503 with error code `NO_SNAPSHOT_AVAILABLE`. This is expected behavior for fresh deployments.
+
+#### Symptoms
+
+- API endpoints return HTTP 503 status code
+- Response body contains:
+
+  ```json
+  {
+    "error": {
+      "code": "NO_SNAPSHOT_AVAILABLE",
+      "message": "No data snapshot available yet",
+      "details": "Run a refresh operation to create the first snapshot"
+    }
+  }
+  ```
+
+- Frontend displays an onboarding dialog prompting to run a refresh
+
+#### Cause
+
+This occurs when:
+
+1. Fresh deployment with no data yet
+2. Storage was cleared or reset
+3. All previous refresh operations failed
+
+#### Resolution
+
+1. **Run a refresh operation** to create the first snapshot:
+
+   ```bash
+   # Via API (if refresh endpoint is available)
+   curl -X POST https://your-api-gateway/api/refresh
+
+   # Or via scraper-cli
+   npm run scraper-cli -- scrape
+   ```
+
+2. **Verify the refresh succeeded**:
+
+   ```bash
+   # Check for snapshots in Firestore (GCP)
+   gcloud firestore documents list \
+     --collection=snapshots \
+     --project=toast-stats-prod-6d64a \
+     --limit=5
+
+   # Or check local storage
+   ls -la backend/cache/snapshots/
+   ```
+
+3. **Check refresh logs** if the operation failed:
+
+   ```bash
+   gcloud run services logs read toast-stats-api \
+     --region=us-east1 \
+     --limit=100 | grep -i "refresh\|snapshot\|error"
+   ```
+
+#### Distinguishing from Other 5xx Errors
+
+- **503 with `NO_SNAPSHOT_AVAILABLE`**: Expected for empty storage, run a refresh
+- **500 Internal Server Error**: Unexpected error, check logs for details
+- **503 Service Unavailable (generic)**: Cloud Run scaling issue, retry after a moment
 
 ### Firebase Hosting Issues
 

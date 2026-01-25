@@ -109,9 +109,11 @@ describe('LocalSnapshotStorage', () => {
     })
 
     describe('getLatestSuccessful', () => {
-      it('should throw error when no snapshots exist (directory not initialized)', async () => {
-        // FileSnapshotStore throws when the snapshots directory doesn't exist
-        await expect(storage.getLatestSuccessful()).rejects.toThrow()
+      it('should return null when no snapshots exist (directory not initialized)', async () => {
+        // Per Requirement 2.3, 2.4, 3.1, 3.2: getLatestSuccessful returns null
+        // when storage is empty instead of throwing an error
+        const result = await storage.getLatestSuccessful()
+        expect(result).toBeNull()
       })
 
       it('should return the latest successful snapshot', async () => {
