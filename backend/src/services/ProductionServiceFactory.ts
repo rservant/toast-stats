@@ -433,7 +433,12 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
           const rankingCalculator = container.resolve(
             ServiceTokens.RankingCalculator
           )
-          const configService = new DistrictConfigurationService()
+          // Create DistrictConfigurationService with storage from StorageProviderFactory
+          const storageProviders =
+            StorageProviderFactory.createFromEnvironment()
+          const configService = new DistrictConfigurationService(
+            storageProviders.districtConfigStorage
+          )
 
           return new BackfillService(
             refreshService,
@@ -638,7 +643,14 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   ): BackfillService {
     const refresh = refreshService || this.createRefreshService()
     const store = snapshotStore || this.createSnapshotStore()
-    const config = configService || new DistrictConfigurationService()
+    // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
+    let config = configService
+    if (!config) {
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
+      config = new DistrictConfigurationService(
+        storageProviders.districtConfigStorage
+      )
+    }
     const rankingCalculator = this.createRankingCalculator()
 
     const service = new BackfillService(

@@ -14,23 +14,23 @@ graph TB
         AR[Admin Routes]
         DR[District Routes]
     end
-    
+
     subgraph "Service Layer"
         DCS[DistrictConfigurationService]
         SM[ScopeManager]
     end
-    
+
     subgraph "Storage Abstraction"
         IDCS[IDistrictConfigStorage]
         LDCS[LocalDistrictConfigStorage]
         FDCS[FirestoreDistrictConfigStorage]
     end
-    
+
     subgraph "Infrastructure"
         FS[Local Filesystem]
         FI[Firestore]
     end
-    
+
     AR --> DCS
     DR --> DCS
     SM --> DCS
@@ -39,11 +39,11 @@ graph TB
     IDCS -.-> FDCS
     LDCS --> FS
     FDCS --> FI
-    
+
     subgraph "Factory"
         SPF[StorageProviderFactory]
     end
-    
+
     SPF --> LDCS
     SPF --> FDCS
 ```
@@ -69,7 +69,7 @@ The storage interface defines the contract for district configuration persistenc
 ```typescript
 /**
  * District configuration storage interface
- * 
+ *
  * Abstracts the persistence layer for district configuration,
  * enabling swappable implementations for local and cloud storage.
  */
@@ -77,11 +77,11 @@ export interface IDistrictConfigStorage {
   // Core configuration operations
   getConfiguration(): Promise<DistrictConfiguration | null>
   saveConfiguration(config: DistrictConfiguration): Promise<void>
-  
+
   // Audit log operations
   appendChangeLog(change: ConfigurationChange): Promise<void>
   getChangeHistory(limit: number): Promise<ConfigurationChange[]>
-  
+
   // Health check
   isReady(): Promise<boolean>
 }
@@ -95,31 +95,31 @@ Local filesystem implementation that maintains backward compatibility with exist
 export class LocalDistrictConfigStorage implements IDistrictConfigStorage {
   private readonly configFilePath: string
   private readonly auditLogPath: string
-  
+
   constructor(cacheDir: string) {
     const configDir = path.join(cacheDir, 'config')
     this.configFilePath = path.join(configDir, 'districts.json')
     this.auditLogPath = path.join(configDir, 'district-changes.log')
   }
-  
+
   async getConfiguration(): Promise<DistrictConfiguration | null> {
     // Read from cache/config/districts.json
     // Return null if file doesn't exist
   }
-  
+
   async saveConfiguration(config: DistrictConfiguration): Promise<void> {
     // Atomic write using temp file + rename
     // Create directories if needed
   }
-  
+
   async appendChangeLog(change: ConfigurationChange): Promise<void> {
     // Append JSON line to audit log
   }
-  
+
   async getChangeHistory(limit: number): Promise<ConfigurationChange[]> {
     // Read and parse audit log, return most recent entries
   }
-  
+
   async isReady(): Promise<boolean> {
     // Check if config directory is accessible
   }
@@ -135,33 +135,33 @@ export class FirestoreDistrictConfigStorage implements IDistrictConfigStorage {
   private readonly firestore: Firestore
   private readonly circuitBreaker: CircuitBreaker
   private readonly configDocPath = 'config/districts'
-  
+
   constructor(config: { projectId: string }) {
     this.firestore = new Firestore({ projectId: config.projectId })
     this.circuitBreaker = CircuitBreaker.createCacheCircuitBreaker(
       'firestore-district-config'
     )
   }
-  
+
   async getConfiguration(): Promise<DistrictConfiguration | null> {
     // Read from config/districts document
     // Return null if document doesn't exist
   }
-  
+
   async saveConfiguration(config: DistrictConfiguration): Promise<void> {
     // Write to config/districts document
     // Use circuit breaker for resilience
   }
-  
+
   async appendChangeLog(change: ConfigurationChange): Promise<void> {
     // Add document to config/districts/history subcollection
     // Use auto-generated document ID with timestamp
   }
-  
+
   async getChangeHistory(limit: number): Promise<ConfigurationChange[]> {
     // Query history subcollection, ordered by timestamp desc
   }
-  
+
   async isReady(): Promise<boolean> {
     // Attempt simple read to verify connectivity
   }
@@ -182,7 +182,7 @@ export interface StorageProviders {
 export class StorageProviderFactory {
   static createFromEnvironment(): StorageProviders {
     const provider = this.parseProviderType(process.env['STORAGE_PROVIDER'])
-    
+
     if (provider === 'gcp') {
       return {
         snapshotStorage: new FirestoreSnapshotStorage({ ... }),
@@ -190,7 +190,7 @@ export class StorageProviderFactory {
         districtConfigStorage: new FirestoreDistrictConfigStorage({ ... })
       }
     }
-    
+
     return {
       snapshotStorage: new LocalSnapshotStorage({ ... }),
       rawCSVStorage: new LocalRawCSVStorage({ ... }),
@@ -209,7 +209,7 @@ export class DistrictConfigurationService {
   private readonly storage: IDistrictConfigStorage
   private cachedConfig: DistrictConfiguration | null = null
   private readonly defaultConfig: DistrictConfiguration
-  
+
   constructor(storage: IDistrictConfigStorage) {
     this.storage = storage
     this.defaultConfig = {
@@ -219,21 +219,23 @@ export class DistrictConfigurationService {
       version: 1,
     }
   }
-  
+
   // All existing public methods remain unchanged
   // Internal storage operations delegate to this.storage
-  
+
   private async loadConfiguration(): Promise<DistrictConfiguration> {
     if (this.cachedConfig) return this.cachedConfig
-    
+
     const config = await this.storage.getConfiguration()
     if (!config) return this.defaultConfig
-    
+
     this.cachedConfig = config
     return config
   }
-  
-  private async saveConfiguration(config: DistrictConfiguration): Promise<void> {
+
+  private async saveConfiguration(
+    config: DistrictConfiguration
+  ): Promise<void> {
     await this.storage.saveConfiguration(config)
     this.cachedConfig = config
   }
@@ -293,15 +295,13 @@ export interface IDistrictConfigStorage {
 }
 ```
 
-
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Configuration Round-Trip Consistency
 
-*For any* valid DistrictConfiguration object, saving it to storage and then reading it back SHALL produce an equivalent configuration object.
+_For any_ valid DistrictConfiguration object, saving it to storage and then reading it back SHALL produce an equivalent configuration object.
 
 **Validates: Requirements 2.1, 3.1**
 
@@ -309,7 +309,7 @@ This is a round-trip property that ensures storage implementations correctly per
 
 ### Property 2: Storage Provider Selection Consistency
 
-*For any* value of the STORAGE_PROVIDER environment variable, the StorageProviderFactory SHALL create the correct storage implementation type (LocalDistrictConfigStorage for 'local'/unset, FirestoreDistrictConfigStorage for 'gcp').
+_For any_ value of the STORAGE_PROVIDER environment variable, the StorageProviderFactory SHALL create the correct storage implementation type (LocalDistrictConfigStorage for 'local'/unset, FirestoreDistrictConfigStorage for 'gcp').
 
 **Validates: Requirements 4.1, 4.2, 4.3**
 
@@ -317,7 +317,7 @@ This property ensures the factory correctly maps environment configuration to st
 
 ### Property 3: Service Delegation Completeness
 
-*For any* storage operation performed through DistrictConfigurationService, the operation SHALL be delegated to the injected IDistrictConfigStorage implementation.
+_For any_ storage operation performed through DistrictConfigurationService, the operation SHALL be delegated to the injected IDistrictConfigStorage implementation.
 
 **Validates: Requirements 5.2**
 
@@ -325,7 +325,7 @@ This property ensures the service correctly delegates all persistence operations
 
 ### Property 4: Validation Preservation
 
-*For any* district ID input, the DistrictConfigurationService SHALL apply the same validation and normalization rules regardless of which storage implementation is used.
+_For any_ district ID input, the DistrictConfigurationService SHALL apply the same validation and normalization rules regardless of which storage implementation is used.
 
 **Validates: Requirements 5.4**
 
@@ -333,7 +333,7 @@ This property ensures business logic (validation, normalization) is independent 
 
 ### Property 5: Error Type Consistency
 
-*For any* storage operation that fails, the storage implementation SHALL throw a StorageOperationError with the operation name and provider type in the error context.
+_For any_ storage operation that fails, the storage implementation SHALL throw a StorageOperationError with the operation name and provider type in the error context.
 
 **Validates: Requirements 7.1**
 
@@ -341,7 +341,7 @@ This property ensures consistent error handling across storage implementations.
 
 ### Property 6: Empty Configuration Default
 
-*For any* storage backend where no configuration exists, reading configuration SHALL return the default empty configuration (empty configuredDistricts array, version 1).
+_For any_ storage backend where no configuration exists, reading configuration SHALL return the default empty configuration (empty configuredDistricts array, version 1).
 
 **Validates: Requirements 8.3**
 
@@ -349,7 +349,7 @@ This property ensures consistent behavior when configuration is missing.
 
 ### Property 7: Change History Ordering
 
-*For any* sequence of configuration changes, getChangeHistory SHALL return changes in reverse chronological order (most recent first).
+_For any_ sequence of configuration changes, getChangeHistory SHALL return changes in reverse chronological order (most recent first).
 
 **Validates: Requirements 1.2, 3.2**
 
@@ -373,13 +373,13 @@ throw new StorageOperationError(
 
 ### Error Categories
 
-| Error Type | Retryable | Example |
-|------------|-----------|---------|
-| Network timeout | Yes | Firestore connection timeout |
-| Permission denied | No | Missing IAM permissions |
-| Invalid data | No | Corrupted configuration file |
-| Resource not found | No | Missing Firestore document (handled as null) |
-| Transient failure | Yes | Firestore UNAVAILABLE status |
+| Error Type         | Retryable | Example                                      |
+| ------------------ | --------- | -------------------------------------------- |
+| Network timeout    | Yes       | Firestore connection timeout                 |
+| Permission denied  | No        | Missing IAM permissions                      |
+| Invalid data       | No        | Corrupted configuration file                 |
+| Resource not found | No        | Missing Firestore document (handled as null) |
+| Transient failure  | Yes       | Firestore UNAVAILABLE status                 |
 
 ### Graceful Degradation
 

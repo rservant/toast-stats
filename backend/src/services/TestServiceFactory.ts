@@ -48,6 +48,7 @@ import { FileSnapshotStore } from './SnapshotStore.js'
 import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
+import { LocalDistrictConfigStorage } from './storage/LocalDistrictConfigStorage.js'
 import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
 import { LocalSnapshotStorage } from './storage/LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './storage/LocalRawCSVStorage.js'
@@ -341,7 +342,14 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   ): BackfillService {
     const refresh = refreshService || this.createRefreshService()
     const store = snapshotStore || this.createSnapshotStore()
-    const config = configService || new DistrictConfigurationService()
+    // Create DistrictConfigurationService with storage if not provided
+    let config = configService
+    if (!config) {
+      const cacheDir =
+        this.createTestConfiguration().getConfiguration().cacheDirectory
+      const storage = new LocalDistrictConfigStorage(cacheDir)
+      config = new DistrictConfigurationService(storage)
+    }
     const rankingCalculator = this.createRankingCalculator()
 
     const service = new BackfillService(
@@ -496,7 +504,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
           const rankingCalculator = container.resolve(
             ServiceTokens.RankingCalculator
           )
-          const configService = new DistrictConfigurationService()
+          // Create DistrictConfigurationService with storage
+          const cacheConfig = container.resolve(
+            ServiceTokens.CacheConfigService
+          )
+          const cacheDir = cacheConfig.getCacheDirectory()
+          const storage = new LocalDistrictConfigStorage(cacheDir)
+          const configService = new DistrictConfigurationService(storage)
 
           return new BackfillService(
             refreshService,

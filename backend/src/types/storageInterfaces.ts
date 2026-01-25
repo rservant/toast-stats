@@ -29,6 +29,10 @@ import type {
   RawCSVCacheStatistics,
   CacheHealthStatus,
 } from './rawCSVCache.js'
+import type {
+  DistrictConfiguration,
+  ConfigurationChange,
+} from '../services/DistrictConfigurationService.js'
 
 /**
  * Closing period metadata for CSV caching
@@ -437,6 +441,85 @@ export interface IRawCSVStorage {
    * @returns Cache health status
    */
   getHealthStatus(): Promise<CacheHealthStatus>
+}
+
+/**
+ * District configuration storage interface - abstracts district config persistence
+ *
+ * This interface defines the contract for district configuration storage operations,
+ * enabling swappable implementations for local filesystem and Firestore storage.
+ *
+ * Mirrors the existing storage abstraction pattern used by ISnapshotStorage
+ * and IRawCSVStorage for consistency across the storage layer.
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.4
+ */
+export interface IDistrictConfigStorage {
+  // ============================================================================
+  // Core Configuration Operations
+  // ============================================================================
+
+  /**
+   * Get the current district configuration
+   *
+   * Retrieves the stored district configuration including the list of
+   * configured districts, timestamps, and version information.
+   * Returns null if no configuration exists.
+   *
+   * @returns The district configuration or null if not found
+   */
+  getConfiguration(): Promise<DistrictConfiguration | null>
+
+  /**
+   * Save the district configuration
+   *
+   * Persists the district configuration atomically. The operation should
+   * either succeed completely or fail without partial writes.
+   *
+   * @param config - The district configuration to persist
+   */
+  saveConfiguration(config: DistrictConfiguration): Promise<void>
+
+  // ============================================================================
+  // Audit Log Operations
+  // ============================================================================
+
+  /**
+   * Append a configuration change to the audit log
+   *
+   * Records a configuration change for audit trail purposes. Changes are
+   * appended to the history and should not modify existing entries.
+   *
+   * @param change - The configuration change to record
+   */
+  appendChangeLog(change: ConfigurationChange): Promise<void>
+
+  /**
+   * Get configuration change history
+   *
+   * Retrieves the most recent configuration changes from the audit log.
+   * Results are returned in reverse chronological order (most recent first).
+   *
+   * @param limit - Maximum number of changes to return
+   * @returns Array of configuration changes sorted by timestamp (newest first)
+   */
+  getChangeHistory(limit: number): Promise<ConfigurationChange[]>
+
+  // ============================================================================
+  // Health Check
+  // ============================================================================
+
+  /**
+   * Check if the storage is properly initialized and accessible
+   *
+   * Verifies that the storage backend is ready for operations. This may
+   * include checking directory existence, database connectivity, or
+   * authentication status. Returns false without throwing when storage
+   * is unavailable.
+   *
+   * @returns True if the storage is ready for operations
+   */
+  isReady(): Promise<boolean>
 }
 
 // ============================================================================

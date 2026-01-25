@@ -5,20 +5,16 @@
  * Provides CRUD operations for district configuration with validation and persistence.
  *
  * Features:
- * - Persistent storage in config/districts.json
+ * - Storage abstraction via IDistrictConfigStorage interface
  * - Support for both numeric ("42") and alphabetic ("F") district IDs
  * - Configuration validation and change tracking
- * - Thread-safe operations with atomic file writes
+ * - Swappable storage backends (local filesystem, Firestore)
+ *
+ * Requirements: 5.1, 5.2, 5.3, 5.4
  */
 
-import fs from 'fs/promises'
-import path from 'path'
+import type { IDistrictConfigStorage } from '../types/storageInterfaces.js'
 import { logger } from '../utils/logger.js'
-
-// Type for Node.js error objects
-interface NodeError extends Error {
-  code?: string
-}
 
 // Interface for snapshot store operations
 interface SnapshotStore {
@@ -116,19 +112,19 @@ export interface DistrictCollectionInfo {
 
 /**
  * District Configuration Service
+ *
+ * Manages the list of districts to collect data for during snapshot operations.
+ * Uses storage abstraction to support both local filesystem and cloud storage backends.
+ *
+ * Requirements: 5.1, 5.2, 5.3, 5.4
  */
 export class DistrictConfigurationService {
-  private readonly configFilePath: string
-  private readonly auditLogPath: string
+  private readonly storage: IDistrictConfigStorage
   private cachedConfig: DistrictConfiguration | null = null
   private readonly defaultConfig: DistrictConfiguration
 
-  constructor(cacheDir: string = './cache') {
-    // Store configuration in cache/config/districts.json
-    const configDir = path.join(cacheDir, 'config')
-    this.configFilePath = path.join(configDir, 'districts.json')
-    this.auditLogPath = path.join(configDir, 'district-changes.log')
-
+  constructor(storage: IDistrictConfigStorage) {
+    this.storage = storage
     this.defaultConfig = {
       configuredDistricts: [],
       lastUpdated: new Date().toISOString(),
@@ -137,8 +133,7 @@ export class DistrictConfigurationService {
     }
 
     logger.debug('DistrictConfigurationService initialized', {
-      configFilePath: this.configFilePath,
-      auditLogPath: this.auditLogPath,
+      storageType: storage.constructor.name,
     })
   }
 
@@ -331,46 +326,9 @@ export class DistrictConfigurationService {
     limit: number = 50
   ): Promise<ConfigurationChange[]> {
     try {
-      // Ensure config directory exists
-      const configDir = path.dirname(this.auditLogPath)
-      await fs.mkdir(configDir, { recursive: true })
-
-      // Try to read audit log file
-      const logData = await fs.readFile(this.auditLogPath, 'utf-8')
-      const lines = logData
-        .trim()
-        .split('\n')
-        .filter(line => line.trim())
-
-      // Parse each line as JSON and return most recent entries
-      const changes: ConfigurationChange[] = []
-      for (const line of lines.slice(-limit)) {
-        try {
-          const change = JSON.parse(line) as ConfigurationChange
-          changes.push(change)
-        } catch (parseError) {
-          logger.warn('Failed to parse audit log entry', {
-            line,
-            error:
-              parseError instanceof Error
-                ? parseError.message
-                : 'Unknown error',
-          })
-        }
-      }
-
-      return changes.reverse() // Most recent first
+      return await this.storage.getChangeHistory(limit)
     } catch (error) {
-      if ((error as NodeError).code === 'ENOENT') {
-        // File doesn't exist, return empty array
-        logger.debug('Audit log file not found, returning empty history', {
-          auditLogPath: this.auditLogPath,
-        })
-        return []
-      }
-
       logger.error('Failed to read configuration history', {
-        auditLogPath: this.auditLogPath,
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       return []
@@ -477,7 +435,7 @@ export class DistrictConfigurationService {
   }
 
   /**
-   * Load configuration from file
+   * Load configuration from storage
    */
   private async loadConfiguration(): Promise<DistrictConfiguration> {
     if (this.cachedConfig) {
@@ -485,18 +443,20 @@ export class DistrictConfigurationService {
     }
 
     try {
-      // Ensure config directory exists
-      const configDir = path.dirname(this.configFilePath)
-      await fs.mkdir(configDir, { recursive: true })
+      const config = await this.storage.getConfiguration()
 
-      // Try to read existing configuration
-      const configData = await fs.readFile(this.configFilePath, 'utf-8')
-      const config = JSON.parse(configData) as DistrictConfiguration
+      if (!config) {
+        // No configuration exists, use default
+        logger.info('No configuration found in storage, using defaults', {
+          storageType: this.storage.constructor.name,
+        })
+        return this.defaultConfig
+      }
 
       // Validate configuration structure
       if (!this.isValidConfigurationStructure(config)) {
         logger.warn('Invalid configuration structure, using defaults', {
-          configFilePath: this.configFilePath,
+          storageType: this.storage.constructor.name,
         })
         return this.defaultConfig
       }
@@ -504,16 +464,8 @@ export class DistrictConfigurationService {
       this.cachedConfig = config
       return config
     } catch (error) {
-      if ((error as NodeError).code === 'ENOENT') {
-        // File doesn't exist, use default configuration
-        logger.info('Configuration file not found, using defaults', {
-          configFilePath: this.configFilePath,
-        })
-        return this.defaultConfig
-      }
-
       logger.error('Failed to load configuration, using defaults', {
-        configFilePath: this.configFilePath,
+        storageType: this.storage.constructor.name,
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       return this.defaultConfig
@@ -521,37 +473,24 @@ export class DistrictConfigurationService {
   }
 
   /**
-   * Save configuration to file atomically
+   * Save configuration to storage
    */
   private async saveConfiguration(
     config: DistrictConfiguration
   ): Promise<void> {
     try {
-      // Ensure config directory exists
-      const configDir = path.dirname(this.configFilePath)
-      await fs.mkdir(configDir, { recursive: true })
-
-      // Write to temporary file first for atomic operation
-      const tempFilePath = `${this.configFilePath}.tmp.${Date.now()}.${Math.random().toString(36).substring(2, 11)}`
-      const configData = JSON.stringify(config, null, 2)
-
-      await fs.writeFile(tempFilePath, configData, 'utf-8')
-
-      // Ensure the target directory still exists (in case of race conditions)
-      await fs.mkdir(configDir, { recursive: true })
-
-      await fs.rename(tempFilePath, this.configFilePath)
+      await this.storage.saveConfiguration(config)
 
       // Update cache
       this.cachedConfig = config
 
       logger.debug('Configuration saved successfully', {
-        configFilePath: this.configFilePath,
+        storageType: this.storage.constructor.name,
         districtCount: config.configuredDistricts.length,
       })
     } catch (error) {
       logger.error('Failed to save configuration', {
-        configFilePath: this.configFilePath,
+        storageType: this.storage.constructor.name,
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       throw new Error(
@@ -823,24 +762,18 @@ export class DistrictConfigurationService {
     change: ConfigurationChange
   ): Promise<void> {
     try {
-      // Ensure config directory exists
-      const configDir = path.dirname(this.auditLogPath)
-      await fs.mkdir(configDir, { recursive: true })
-
-      // Append the change as a JSON line to the audit log
-      const logEntry = JSON.stringify(change) + '\n'
-      await fs.appendFile(this.auditLogPath, logEntry, 'utf-8')
+      await this.storage.appendChangeLog(change)
 
       logger.debug('Configuration change logged', {
         action: change.action,
         districtId: change.districtId,
         adminUser: change.adminUser,
-        auditLogPath: this.auditLogPath,
+        storageType: this.storage.constructor.name,
       })
     } catch (error) {
       logger.error('Failed to log configuration change', {
         change,
-        auditLogPath: this.auditLogPath,
+        storageType: this.storage.constructor.name,
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       // Don't throw error - logging failure shouldn't break the operation

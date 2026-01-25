@@ -56,8 +56,11 @@ export const districtDataAggregator = createDistrictDataAggregator(
 // Initialize services using the production service factory
 const serviceFactory = getProductionServiceFactory()
 export const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+
+// Create DistrictConfigurationService with storage from StorageProviderFactory
+// This respects the STORAGE_PROVIDER environment variable for storage backend selection
 export const districtConfigService = new DistrictConfigurationService(
-  cacheDirectory
+  storageProviders.districtConfigStorage
 )
 
 // Initialize ranking calculator and services (async initialization)

@@ -19,6 +19,7 @@ import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type { SnapshotStore } from '../types/snapshots.js'
 import type { ISnapshotStorage } from '../types/storageInterfaces.js'
+import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**
  * Result of a complete refresh operation
@@ -93,8 +94,16 @@ export class RefreshService {
     // Store the snapshot storage - ISnapshotStorage is a superset of SnapshotStore
     // so we can safely cast SnapshotStore to ISnapshotStorage for backward compatibility
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
-    this.districtConfigService =
-      districtConfigService ?? new DistrictConfigurationService()
+
+    // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
+    if (districtConfigService) {
+      this.districtConfigService = districtConfigService
+    } else {
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
+      this.districtConfigService = new DistrictConfigurationService(
+        storageProviders.districtConfigStorage
+      )
+    }
 
     // Initialize ClosingPeriodDetector
     const detector =

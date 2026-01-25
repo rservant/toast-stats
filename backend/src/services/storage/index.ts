@@ -7,6 +7,7 @@
  * Available implementations:
  * - LocalSnapshotStorage: Local filesystem storage (development)
  * - LocalRawCSVStorage: Local filesystem CSV cache (development)
+ * - LocalDistrictConfigStorage: Local filesystem district config storage (development)
  * - FirestoreSnapshotStorage: Cloud Firestore storage (production)
  * - GCSRawCSVStorage: Cloud Storage CSV cache (production)
  *
@@ -16,8 +17,11 @@
 
 export { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 export { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
+export { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
 export { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
 export type { FirestoreSnapshotStorageConfig } from './FirestoreSnapshotStorage.js'
+export { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
+export type { FirestoreDistrictConfigStorageConfig } from './FirestoreDistrictConfigStorage.js'
 export { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 export type { GCSRawCSVStorageConfig } from './GCSRawCSVStorage.js'
 export { StorageProviderFactory } from './StorageProviderFactory.js'
@@ -27,6 +31,7 @@ export type { StorageProviders } from './StorageProviderFactory.js'
 export type {
   ISnapshotStorage,
   IRawCSVStorage,
+  IDistrictConfigStorage,
   StorageConfig,
   StorageProviderType,
   LocalStorageConfig,

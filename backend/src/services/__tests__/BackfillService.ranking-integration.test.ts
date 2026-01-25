@@ -19,6 +19,7 @@ import {
 } from '../SnapshotStore.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { BordaCountRankingCalculator } from '../RankingCalculator.js'
+import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 
 describe('BackfillService Ranking Integration', () => {
   let testCacheDir: string
@@ -44,7 +45,8 @@ describe('BackfillService Ranking Integration', () => {
       enableCompression: false,
     })
 
-    configService = new DistrictConfigurationService(testCacheDir)
+    const configStorage = new LocalDistrictConfigStorage(testCacheDir)
+    configService = new DistrictConfigurationService(configStorage)
     await configService.addDistrict('42', 'test-admin')
 
     rankingCalculator = new BordaCountRankingCalculator()
