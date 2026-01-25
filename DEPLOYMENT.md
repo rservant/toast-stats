@@ -2,15 +2,189 @@
 
 This guide covers deploying the Toastmasters District Statistics Visualizer to production.
 
+## Architecture Overview
+
+The recommended production deployment uses Firebase Hosting with the following architecture:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Firebase Hosting                            │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    Frontend (SPA)                        │    │
+│  │                   frontend/dist/*                        │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+│                    /api/* requests                               │
+│                              ▼                                   │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │              Firebase Hosting Rewrites                   │    │
+│  │                  (API Gateway)                           │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                   │
+└──────────────────────────────┼───────────────────────────────────┘
+                               ▼
+              ┌────────────────────────────────┐
+              │         Cloud Run              │
+              │    toast-stats-api         │
+              │                                │
+              │  ┌──────────────────────────┐  │
+              │  │   Express.js API Server  │  │
+              │  └──────────────────────────┘  │
+              │              │                 │
+              └──────────────┼─────────────────┘
+                             │
+           ┌─────────────────┼─────────────────┐
+           ▼                 ▼                 ▼
+    ┌────────────┐   ┌────────────┐   ┌────────────┐
+    │ Firestore  │   │   Cloud    │   │  Secret    │
+    │ (Snapshots)│   │  Storage   │   │  Manager   │
+    │            │   │ (CSV Cache)│   │            │
+    └────────────┘   └────────────┘   └────────────┘
+```
+
 ## Prerequisites
 
 - Node.js 20+ installed
+- Firebase CLI installed (`npm install -g firebase-tools`)
+- Google Cloud SDK (`gcloud`) installed and configured
+- GCP project with billing enabled
 - Production environment variables configured
-- SSL/TLS certificates (recommended for production)
-- Domain name configured (for production)
-- Process manager (PM2 recommended for production)
+- Domain name configured (optional, Firebase provides default domain)
 
-## Quick Start with PM2
+## Quick Start with Firebase
+
+### Initial Setup
+
+1. **Install Firebase CLI:**
+
+```bash
+npm install -g firebase-tools
+firebase login
+```
+
+2. **Initialize Firebase project (if not already done):**
+
+```bash
+firebase use toast-stats-prod-6d64a
+```
+
+3. **Enable required GCP APIs:**
+
+```bash
+gcloud services enable run.googleapis.com
+gcloud services enable firestore.googleapis.com
+gcloud services enable storage.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+gcloud services enable secretmanager.googleapis.com
+```
+
+### Deploy Backend to Cloud Run
+
+4. **Set up secrets in Secret Manager:**
+
+```bash
+# Create JWT secret
+echo -n "$(openssl rand -base64 32)" | gcloud secrets create jwt-secret --data-file=-
+```
+
+5. **Deploy backend to Cloud Run:**
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+REGION="us-east1"
+
+gcloud run deploy toast-stats-api \
+  --source=./backend \
+  --region=${REGION} \
+  --platform=managed \
+  --set-env-vars="NODE_ENV=production" \
+  --set-env-vars="STORAGE_PROVIDER=gcp" \
+  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID}" \
+  --set-env-vars="GCS_BUCKET_NAME=toast-stats-raw-csv-${PROJECT_ID}" \
+  --set-secrets="JWT_SECRET=jwt-secret:latest" \
+  --allow-unauthenticated \
+  --memory=512Mi \
+  --cpu=1
+```
+
+6. **Get the Cloud Run service URL:**
+
+```bash
+BACKEND_URL=$(gcloud run services describe toast-stats-api \
+  --region=us-east1 \
+  --format='value(status.url)')
+echo "Backend URL: ${BACKEND_URL}"
+```
+
+### Configure Firebase Hosting with API Gateway
+
+7. **Update firebase.json to route API requests to Cloud Run:**
+
+```json
+{
+  "hosting": {
+    "public": "frontend/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "toast-stats-api",
+          "region": "us-east1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+```
+
+### Build and Deploy Frontend
+
+8. **Build the frontend:**
+
+```bash
+cd frontend
+npm ci
+npm run build
+cd ..
+```
+
+9. **Deploy to Firebase Hosting:**
+
+```bash
+firebase deploy --only hosting
+```
+
+### Verify Deployment
+
+10. **Check deployment status:**
+
+```bash
+# Check backend health via Firebase Hosting
+curl https://toast-stats-prod-6d64a.web.app/api/health
+
+# Or check Cloud Run directly
+curl ${BACKEND_URL}/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "uptime": 123.456,
+  "environment": "production"
+}
+```
+
+## Alternative: Quick Start with PM2 (Local/VM Deployment)
+
+For local development or VM-based deployment without Firebase:
 
 1. **Install PM2 globally:**
 
@@ -27,8 +201,8 @@ cp .env.production.example .env.production
 Edit `.env.production` and set:
 
 - `JWT_SECRET` - Use a strong random string (minimum 32 characters)
-- `CORS_ORIGIN` - Your frontend domain (e.g., https://yourdomain.com)
-- `TOASTMASTERS_DASHBOARD_URL` - Usually https://dashboard.toastmasters.org
+- `CORS_ORIGIN` - Your frontend domain
+- `TOASTMASTERS_DASHBOARD_URL` - Usually `https://dashboard.toastmasters.org`
 
 3. **Build and start services:**
 
@@ -59,6 +233,86 @@ pm2 status
 ```
 
 ## Individual Service Deployment
+
+### Firebase Hosting Deployment (Recommended)
+
+Firebase Hosting serves as both the static file host for the frontend and an API gateway that routes `/api/*` requests to Cloud Run.
+
+#### Firebase Configuration
+
+The `firebase.json` configuration defines hosting behavior:
+
+```json
+{
+  "hosting": {
+    "public": "frontend/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "toast-stats-api",
+          "region": "us-east1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
+```
+
+**Key Configuration Elements:**
+
+| Element | Purpose |
+|---------|---------|
+| `public` | Directory containing built frontend assets |
+| `rewrites[0]` | Routes `/api/**` requests to Cloud Run backend |
+| `rewrites[1]` | SPA fallback - serves `index.html` for client-side routing |
+
+#### API Gateway Benefits
+
+Using Firebase Hosting rewrites as an API gateway provides:
+
+- **Single Domain**: Frontend and API share the same domain (no CORS issues)
+- **Automatic SSL**: Firebase provides free SSL certificates
+- **CDN Distribution**: Static assets served from global CDN
+- **Zero Configuration**: No separate API gateway service to manage
+- **Cost Effective**: Pay only for Cloud Run invocations
+
+#### Deploy Frontend Only
+
+```bash
+# Build frontend
+cd frontend && npm run build && cd ..
+
+# Deploy to Firebase Hosting
+firebase deploy --only hosting
+```
+
+#### Deploy with Preview Channel
+
+For testing before production:
+
+```bash
+# Create a preview channel
+firebase hosting:channel:deploy preview-branch --expires 7d
+```
+
+#### Custom Domain Setup
+
+1. **Add custom domain in Firebase Console:**
+   - Go to Firebase Console → Hosting → Add custom domain
+   - Follow DNS verification steps
+
+2. **Update CORS configuration** (if using direct Cloud Run access):
+
+```bash
+gcloud run services update toast-stats-api \
+  --set-env-vars="CORS_ORIGIN=https://your-custom-domain.com"
+```
 
 ### Scraper CLI Deployment
 
@@ -157,9 +411,17 @@ Expected response:
 
 ## Static Hosting (Frontend Only)
 
-The frontend can be deployed to static hosting services like Vercel, Netlify, or AWS S3.
+The frontend can be deployed to various static hosting services. Firebase Hosting is recommended for this project as it provides integrated API gateway functionality.
 
-### Build for Production
+### Firebase Hosting (Recommended)
+
+See the [Firebase Hosting Deployment](#firebase-hosting-deployment-recommended) section above.
+
+### Alternative Static Hosts
+
+For deployments where the backend is hosted separately:
+
+#### Build for Production
 
 ```bash
 cd frontend
@@ -169,15 +431,15 @@ npm run build
 
 The `dist` directory contains the production build.
 
-### Environment Configuration
+#### Frontend Environment Configuration
 
 Create a `.env.production` file:
 
 ```env
-VITE_API_URL=https://api.yourdomain.com/api
+VITE_API_URL=https://your-backend-domain.com/api
 ```
 
-### Deploy to Vercel
+#### Deploy to Vercel
 
 ```bash
 npm install -g vercel
@@ -185,7 +447,7 @@ cd frontend
 vercel --prod
 ```
 
-### Deploy to Netlify
+#### Deploy to Netlify
 
 ```bash
 npm install -g netlify-cli
@@ -197,23 +459,35 @@ netlify deploy --prod --dir=dist
 
 ### Backend Environment Variables
 
-| Variable                     | Required   | Default     | Description               |
-| ---------------------------- | ---------- | ----------- | ------------------------- |
-| `NODE_ENV`                   | No         | development | Environment mode          |
-| `PORT`                       | No         | 5001        | Server port               |
-| `JWT_SECRET`                 | Yes        | -           | Secret key for JWT tokens |
-| `JWT_EXPIRES_IN`             | No         | 1h          | JWT token expiration      |
-| `TOASTMASTERS_DASHBOARD_URL` | Yes        | -           | Toastmasters API URL      |
-| `CORS_ORIGIN`                | Yes (prod) | \*          | Allowed CORS origins      |
-| `CACHE_TTL`                  | No         | 900         | Cache TTL in seconds      |
-| `RATE_LIMIT_WINDOW_MS`       | No         | 900000      | Rate limit window         |
-| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100         | Max requests per window   |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NODE_ENV` | No | development | Environment mode |
+| `PORT` | No | 5001 | Server port |
+| `JWT_SECRET` | Yes | - | Secret key for JWT tokens |
+| `JWT_EXPIRES_IN` | No | 1h | JWT token expiration |
+| `TOASTMASTERS_DASHBOARD_URL` | Yes | - | Toastmasters API URL |
+| `CORS_ORIGIN` | Yes (prod) | * | Allowed CORS origins |
+| `CACHE_TTL` | No | 900 | Cache TTL in seconds |
+| `RATE_LIMIT_WINDOW_MS` | No | 900000 | Rate limit window |
+| `RATE_LIMIT_MAX_REQUESTS` | No | 100 | Max requests per window |
+| `STORAGE_PROVIDER` | No | local | Storage backend (`local` or `gcp`) |
+| `GCP_PROJECT_ID` | Yes (gcp) | - | GCP project ID (required when `STORAGE_PROVIDER=gcp`) |
+| `GCS_BUCKET_NAME` | Yes (gcp) | - | GCS bucket for raw CSV cache |
 
 ### Frontend Environment Variables
 
-| Variable       | Required | Default | Description     |
-| -------------- | -------- | ------- | --------------- |
-| `VITE_API_URL` | No       | /api    | Backend API URL |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_URL` | No | /api | Backend API URL (use `/api` for Firebase Hosting) |
+
+### Firebase Hosting Notes
+
+When using Firebase Hosting with Cloud Run rewrites:
+
+- Set `VITE_API_URL=/api` (or omit it to use the default)
+- The Firebase Hosting rewrite handles routing to Cloud Run
+- No CORS configuration needed since frontend and API share the same domain
+- SSL is automatically provided by Firebase
 
 ## Security Considerations
 
@@ -240,7 +514,36 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ## Monitoring and Logging
 
-### View Logs
+### Firebase/Cloud Run Monitoring
+
+#### View Cloud Run Logs
+
+```bash
+# Stream logs
+gcloud run services logs read toast-stats-api --region=us-east1 --tail=50
+
+# Or use Cloud Console
+# https://console.cloud.google.com/run/detail/us-east/toast-stats-api/logs
+```
+
+#### Firebase Hosting Analytics
+
+View hosting analytics in the Firebase Console:
+- Request counts and bandwidth
+- Cache hit rates
+- Error rates
+
+#### Cloud Run Metrics
+
+Monitor in Google Cloud Console:
+- Request latency
+- Container instance count
+- Memory and CPU utilization
+- Error rates
+
+### PM2 Monitoring (Local Deployment)
+
+#### View Logs
 
 ```bash
 # PM2 logs
@@ -254,11 +557,14 @@ pm2 logs
 
 Set up monitoring for these endpoints:
 
-- Backend: `http://your-backend:5001/health`
-- Frontend: `http://your-frontend:80/health`
+- **Firebase Hosting**: `https://your-project.web.app/api/health`
+- **Cloud Run Direct**: `https://toast-stats-api-xxxxx.run.app/health`
+- **Local Backend**: `http://your-backend:5001/health`
+- **Local Frontend**: `http://your-frontend:80/health`
 
 Recommended monitoring tools:
 
+- Google Cloud Monitoring (built-in for Cloud Run)
 - Uptime Robot
 - Pingdom
 - DataDog
@@ -268,6 +574,7 @@ Recommended monitoring tools:
 
 For production, consider using:
 
+- Cloud Logging (built-in for GCP/Firebase)
 - ELK Stack (Elasticsearch, Logstash, Kibana)
 - Splunk
 - CloudWatch (AWS)
@@ -275,7 +582,26 @@ For production, consider using:
 
 ## Scaling
 
-### Horizontal Scaling
+### Cloud Run Auto-Scaling (Recommended)
+
+Cloud Run automatically scales based on traffic:
+
+```bash
+# Configure scaling limits
+gcloud run services update toast-stats-api \
+  --region=us-east1 \
+  --min-instances=0 \
+  --max-instances=10 \
+  --concurrency=80
+```
+
+| Setting | Recommended | Description |
+|---------|-------------|-------------|
+| `min-instances` | 0 | Scale to zero when idle (cost savings) |
+| `max-instances` | 10 | Maximum concurrent instances |
+| `concurrency` | 80 | Requests per instance before scaling |
+
+### PM2 Horizontal Scaling (Local Deployment)
 
 Run multiple backend instances with PM2 cluster mode:
 
@@ -283,7 +609,7 @@ Run multiple backend instances with PM2 cluster mode:
 pm2 start dist/index.js --name toastmasters-backend -i max
 ```
 
-### Load Balancer Configuration
+### Load Balancer Configuration (Traditional Deployment)
 
 Use nginx or a cloud load balancer to distribute traffic:
 
@@ -303,25 +629,58 @@ server {
 
 ## Troubleshooting
 
+### Firebase Hosting Issues
+
+#### API Requests Return 404
+
+1. Verify Cloud Run service is deployed and running:
+   ```bash
+   gcloud run services list --region=us-east1
+   ```
+2. Check `firebase.json` has correct rewrite configuration
+3. Ensure the rewrite `serviceId` matches your Cloud Run service name
+4. Verify the region in the rewrite matches your Cloud Run region
+
+#### Firebase Deploy Fails
+
+1. Check you're logged in: `firebase login`
+2. Verify project: `firebase use`
+3. Ensure frontend is built: `cd frontend && npm run build`
+4. Check `firebase.json` syntax is valid
+
+#### Cloud Run Service Not Accessible
+
+1. Verify service allows unauthenticated access:
+   ```bash
+   gcloud run services describe toast-stats-api --region=us-east1
+   ```
+2. Check service account has required permissions
+3. Review Cloud Run logs:
+   ```bash
+   gcloud run services logs read toast-stats-api --region=us-east1
+   ```
+
 ### Backend Won't Start
 
-1. Check logs: `pm2 logs toastmasters-backend`
+1. Check logs: `pm2 logs toastmasters-backend` (PM2) or Cloud Run logs
 2. Verify environment variables are set
-3. Ensure port 5001 is not in use
+3. Ensure port 5001 is not in use (local deployment)
 4. Check JWT_SECRET is configured
 
 ### Frontend Can't Connect to Backend
 
-1. Verify CORS_ORIGIN is configured correctly
-2. Check backend is running: `curl http://localhost:5001/health`
-3. Verify network connectivity
-4. Check web server proxy configuration
+1. For Firebase Hosting: Verify rewrite configuration in `firebase.json`
+2. For separate hosting: Verify CORS_ORIGIN is configured correctly
+3. Check backend is running: `curl http://localhost:5001/health`
+4. Verify network connectivity
+5. Check web server proxy configuration
 
 ### High Memory Usage
 
 1. Adjust cache TTL to reduce memory usage
 2. Implement Redis for distributed caching
 3. Scale horizontally instead of vertically
+4. For Cloud Run: Increase memory allocation or add more instances
 
 ## Backup and Recovery
 
@@ -339,7 +698,26 @@ Backup these files:
 
 ## Updates and Maintenance
 
-### Updating the Application
+### Updating the Application (Firebase Deployment)
+
+```bash
+# Pull latest code
+git pull origin main
+
+# Install dependencies
+npm ci
+
+# Build and deploy backend to Cloud Run
+gcloud run deploy toast-stats-api \
+  --source=./backend \
+  --region=us-east1
+
+# Build and deploy frontend to Firebase Hosting
+cd frontend && npm run build && cd ..
+firebase deploy --only hosting
+```
+
+### Updating the Application (PM2 Deployment)
 
 ```bash
 # Pull latest code
@@ -387,18 +765,146 @@ rm -rf backend/cache/historical_index.json
 
 ### Zero-Downtime Updates
 
-1. Build new version
-2. Use PM2 reload for zero-downtime restart: `pm2 reload toastmasters-backend`
+**Firebase/Cloud Run:**
+Cloud Run automatically handles zero-downtime deployments with traffic migration.
+
+**PM2:**
+Use PM2 reload for zero-downtime restart: `pm2 reload toastmasters-backend`
 
 ## Cloud Platform Deployment
 
-### AWS Deployment
+### Google Cloud Platform - Firebase + Cloud Run (Recommended)
 
-- **EC2**: Install Node.js and PM2, deploy directly
-- **Elastic Beanstalk**: Deploy using Node.js platform
-- **Lambda**: Use serverless framework for API deployment
+This is the recommended production deployment using Firebase Hosting as the frontend host and API gateway, with Cloud Run for the backend.
 
-### Google Cloud Platform - Cloud Run with GCP Storage
+#### Complete Deployment Checklist
+
+- [ ] GCP project created with billing enabled
+- [ ] Firebase project linked to GCP project
+- [ ] Required APIs enabled (Cloud Run, Firestore, Storage, Secret Manager)
+- [ ] Service account created with appropriate permissions
+- [ ] Secrets stored in Secret Manager
+- [ ] Cloud Storage bucket created for raw CSV cache
+- [ ] Backend deployed to Cloud Run
+- [ ] Firebase Hosting configured with Cloud Run rewrite
+- [ ] Frontend built and deployed
+- [ ] Health check verified
+- [ ] Custom domain configured (optional)
+
+#### Service Account Setup
+
+Create a dedicated service account for the Cloud Run service:
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+
+# Create service account
+gcloud iam service-accounts create toast-stats-api \
+  --display-name="Toast Stats Backend Service"
+
+SA_EMAIL="toast-stats-api@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# Grant required permissions
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/datastore.user"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/storage.objectAdmin"
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+| Role | Purpose |
+|------|---------|
+| `roles/datastore.user` | Read/write access to Firestore documents |
+| `roles/storage.objectAdmin` | Full control of GCS objects in the bucket |
+| `roles/secretmanager.secretAccessor` | Access to secrets |
+
+#### Cloud Storage Bucket Configuration
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
+REGION="us-east1"
+
+# Create bucket
+gcloud storage buckets create gs://${BUCKET_NAME} \
+  --location=${REGION} \
+  --uniform-bucket-level-access
+
+# Optional: Set lifecycle policy to delete old cache files
+cat > lifecycle.json << 'EOF'
+{
+  "rule": [
+    {
+      "action": {"type": "Delete"},
+      "condition": {"age": 90}
+    }
+  ]
+}
+EOF
+
+gcloud storage buckets update gs://${BUCKET_NAME} --lifecycle-file=lifecycle.json
+rm lifecycle.json
+```
+
+#### Full Backend Deployment Command
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+REGION="us-east1"
+SERVICE_NAME="toast-stats-api"
+BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
+SA_EMAIL="toast-stats-api@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud run deploy ${SERVICE_NAME} \
+  --source=./backend \
+  --region=${REGION} \
+  --platform=managed \
+  --service-account=${SA_EMAIL} \
+  --set-env-vars="NODE_ENV=production" \
+  --set-env-vars="STORAGE_PROVIDER=gcp" \
+  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID}" \
+  --set-env-vars="GCS_BUCKET_NAME=${BUCKET_NAME}" \
+  --set-secrets="JWT_SECRET=jwt-secret:latest" \
+  --allow-unauthenticated \
+  --memory=512Mi \
+  --cpu=1 \
+  --min-instances=0 \
+  --max-instances=10
+```
+
+**Note**: `--allow-unauthenticated` is required for Firebase Hosting rewrites to work. Authentication is handled at the application level.
+
+#### Firebase Hosting Deployment
+
+After deploying the backend:
+
+```bash
+# Build frontend
+cd frontend && npm ci && npm run build && cd ..
+
+# Deploy to Firebase Hosting
+firebase deploy --only hosting
+```
+
+#### Verify Full Stack Deployment
+
+```bash
+# Test via Firebase Hosting (recommended)
+curl https://toast-stats-prod-6d64a.web.app/api/health
+
+# Test Cloud Run directly (for debugging)
+BACKEND_URL=$(gcloud run services describe toast-stats-api \
+  --region=us-east1 --format='value(status.url)')
+curl ${BACKEND_URL}/health
+```
+
+### Google Cloud Platform - Cloud Run with GCP Storage (Direct Access)
 
 This section covers deploying the backend to Cloud Run with Cloud Firestore for snapshot storage and Cloud Storage (GCS) for raw CSV caching.
 
@@ -425,11 +931,11 @@ Create a dedicated service account for the Cloud Run service:
 
 ```bash
 # Create service account
-gcloud iam service-accounts create toast-stats-backend \
+gcloud iam service-accounts create toast-stats-api \
   --display-name="Toast Stats Backend Service"
 
 # Get the service account email
-SA_EMAIL="toast-stats-backend@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+SA_EMAIL="toast-stats-api@YOUR_PROJECT_ID.iam.gserviceaccount.com"
 ```
 
 #### IAM Permissions Required
@@ -438,7 +944,7 @@ Grant the service account the following roles:
 
 ```bash
 PROJECT_ID="your-gcp-project-id"
-SA_EMAIL="toast-stats-backend@${PROJECT_ID}.iam.gserviceaccount.com"
+SA_EMAIL="toast-stats-api@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # Firestore access for snapshot storage
 gcloud projects add-iam-policy-binding $PROJECT_ID \
@@ -462,7 +968,7 @@ Create a Firestore database in Native mode:
 
 ```bash
 # Create Firestore database (if not already created)
-gcloud firestore databases create --location=us-central1
+gcloud firestore databases create --location=us-east1
 ```
 
 **Index Requirements**: No custom indexes are required. The application uses:
@@ -479,7 +985,7 @@ Create and configure a GCS bucket for raw CSV storage:
 ```bash
 PROJECT_ID="your-gcp-project-id"
 BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
-REGION="us-central1"
+REGION="us-east1"
 
 # Create bucket
 gcloud storage buckets create gs://${BUCKET_NAME} \
@@ -529,10 +1035,10 @@ Build and deploy the backend to Cloud Run:
 
 ```bash
 PROJECT_ID="your-gcp-project-id"
-REGION="us-central1"
-SERVICE_NAME="toast-stats-backend"
+REGION="us-east1"
+SERVICE_NAME="toast-stats-api"
 BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
-SA_EMAIL="toast-stats-backend@${PROJECT_ID}.iam.gserviceaccount.com"
+SA_EMAIL="toast-stats-api@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # Build and deploy
 gcloud run deploy ${SERVICE_NAME} \
@@ -606,14 +1112,24 @@ When migrating from local filesystem storage to GCP storage:
 
 ### Google Cloud Platform - Traditional Deployment
 
+For deployments without Firebase Hosting:
+
 - **Compute Engine**: Install Node.js and PM2, deploy directly
 - **App Engine**: Deploy using Node.js runtime
-- **Cloud Functions**: Use serverless deployment
+- **Cloud Functions**: Use serverless deployment for individual endpoints
+
+### AWS Deployment
+
+- **EC2**: Install Node.js and PM2, deploy directly
+- **Elastic Beanstalk**: Deploy using Node.js platform
+- **Lambda + API Gateway**: Use serverless framework for API deployment
+- **S3 + CloudFront**: Host frontend as static site
 
 ### Azure
 
 - **Virtual Machines**: Install Node.js and PM2, deploy directly
 - **App Service**: Deploy using Node.js runtime
+- **Static Web Apps**: Host frontend with integrated API support
 
 ## Performance Optimization
 

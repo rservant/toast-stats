@@ -24,6 +24,27 @@ securityDefinitions:
 
 paths:
   # ============================================================================
+  # HEALTH CHECK ENDPOINT
+  # ============================================================================
+
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: healthCheck
+      tags:
+        - Health
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app/health
+        path_translation: CONSTANT_ADDRESS
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Service is healthy
+        '503':
+          description: Service unavailable
+
+  # ============================================================================
   # DISTRICT ENDPOINTS
   # ============================================================================
 
