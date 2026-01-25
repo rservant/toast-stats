@@ -295,6 +295,7 @@ const LandingPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <BackfillButton
                     className="px-6 py-3 text-lg"
+                    variant="primary"
                     onBackfillStart={() => {
                       // Optionally show a success message or redirect
                     }}
