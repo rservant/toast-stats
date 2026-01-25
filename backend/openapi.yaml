@@ -1127,3 +1127,175 @@ paths:
           description: Internal server error
         '503':
           description: Service unavailable
+
+  # ============================================================================
+  # ADMIN DISTRICT CONFIGURATION ENDPOINTS
+  # ============================================================================
+
+  /admin/districts/config:
+    get:
+      summary: Get district configuration
+      operationId: getDistrictConfig
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successfully retrieved district configuration
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+    post:
+      summary: Add or replace districts in configuration
+      operationId: updateDistrictConfig
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              districtIds:
+                type: array
+                items:
+                  type: string
+                description: Array of district IDs to add or set
+              replace:
+                type: boolean
+                default: false
+                description: If true, replace entire configuration; if false, add to existing
+            required:
+              - districtIds
+      responses:
+        '200':
+          description: Successfully updated district configuration
+        '400':
+          description: Bad request - invalid district IDs
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
+  /admin/districts/config/{districtId}:
+    delete:
+      summary: Remove a district from configuration
+      operationId: removeDistrictFromConfig
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      parameters:
+        - name: districtId
+          in: path
+          type: string
+          required: true
+          description: District identifier to remove
+      responses:
+        '200':
+          description: Successfully removed district from configuration
+        '400':
+          description: Bad request - invalid district ID
+        '404':
+          description: District not found in configuration
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
+  /admin/districts/config/validate:
+    post:
+      summary: Validate district configuration
+      operationId: validateDistrictConfig
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: false
+          schema:
+            type: object
+            properties:
+              allDistrictIds:
+                type: array
+                items:
+                  type: string
+                description: Optional list of all valid district IDs to validate against
+      responses:
+        '200':
+          description: Successfully validated district configuration
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
+  /admin/districts/config/history:
+    get:
+      summary: Get district configuration change history
+      operationId: getDistrictConfigHistory
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      parameters:
+        - name: limit
+          in: query
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+          description: Maximum number of history entries to return
+          required: false
+        - name: start_date
+          in: query
+          type: string
+          format: date
+          description: Filter history entries after this date
+          required: false
+        - name: end_date
+          in: query
+          type: string
+          format: date
+          description: Filter history entries before this date
+          required: false
+        - name: include_summary
+          in: query
+          type: boolean
+          default: false
+          description: Include summary statistics in response
+          required: false
+      responses:
+        '200':
+          description: Successfully retrieved configuration history
+        '400':
+          description: Bad request - invalid query parameters
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
