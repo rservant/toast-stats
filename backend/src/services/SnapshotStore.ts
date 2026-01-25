@@ -1783,8 +1783,9 @@ export class FileSnapshotStore
     // Handle missing directory gracefully (Requirements 3.1, 3.3, 3.4)
     try {
       await fs.access(this.snapshotsDir)
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    } catch (error: unknown) {
+      const fsError = error as { code?: string }
+      if (fsError.code === 'ENOENT') {
         logger.debug('Snapshots directory does not exist, returning null', {
           operation: 'findLatestSuccessfulByScanning',
           snapshotsDir: this.snapshotsDir,
