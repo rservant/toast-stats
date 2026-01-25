@@ -91,7 +91,7 @@ gcloud services enable secretmanager.googleapis.com
 echo -n "$(openssl rand -base64 32)" | gcloud secrets create jwt-secret --data-file=-
 ```
 
-5. **Deploy backend to Cloud Run:**
+5. **Deploy backend to Cloud Run (without public access):**
 
 ```bash
 PROJECT_ID="toast-stats-prod-6d64a"
@@ -104,14 +104,34 @@ gcloud run deploy toast-stats-api \
   --set-env-vars="NODE_ENV=production" \
   --set-env-vars="STORAGE_PROVIDER=gcp" \
   --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID}" \
-  --set-env-vars="GCS_BUCKET_NAME=toast-stats-raw-csv-${PROJECT_ID}" \
+  --set-env-vars="GCS_BUCKET_NAME=raw-csv-toast-stats" \
+  --set-env-vars="CORS_ORIGIN=https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog" \
   --set-secrets="JWT_SECRET=jwt-secret:latest" \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
   --memory=512Mi \
   --cpu=1
 ```
 
-6. **Get the Cloud Run service URL:**
+6. **Grant API Gateway permission to invoke Cloud Run:**
+
+The API Gateway needs permission to call the Cloud Run service. Grant the `run.invoker` role to the API Gateway's service account:
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+
+# The API Gateway uses the default compute service account
+API_GATEWAY_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+gcloud run services add-iam-policy-binding toast-stats-api \
+  --region=us-east1 \
+  --member="serviceAccount:${API_GATEWAY_SA}" \
+  --role="roles/run.invoker"
+```
+
+This ensures only the API Gateway can reach the backend - direct calls to the Cloud Run URL will be rejected.
+
+7. **Get the Cloud Run service URL:**
 
 ```bash
 BACKEND_URL=$(gcloud run services describe toast-stats-api \
@@ -122,7 +142,7 @@ echo "Backend URL: ${BACKEND_URL}"
 
 ### Configure Firebase Hosting with API Gateway
 
-7. **Update firebase.json to route API requests to Cloud Run:**
+8. **Update firebase.json to route API requests to Cloud Run:**
 
 ```json
 {
@@ -148,7 +168,7 @@ echo "Backend URL: ${BACKEND_URL}"
 
 ### Build and Deploy Frontend
 
-8. **Build the frontend:**
+9. **Build the frontend:**
 
 ```bash
 cd frontend
@@ -157,7 +177,7 @@ npm run build
 cd ..
 ```
 
-9. **Deploy to Firebase Hosting:**
+10. **Deploy to Firebase Hosting:**
 
 ```bash
 firebase deploy --only hosting
@@ -165,14 +185,13 @@ firebase deploy --only hosting
 
 ### Verify Deployment
 
-10. **Check deployment status:**
+11. **Check deployment status:**
 
 ```bash
-# Check backend health via Firebase Hosting
-curl https://toast-stats-prod-6d64a.web.app/api/health
+# Check backend health via API Gateway
+curl https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog/api/health
 
-# Or check Cloud Run directly
-curl ${BACKEND_URL}/health
+# Note: Direct Cloud Run URL will return 403 Forbidden (expected - only API Gateway can access it)
 ```
 
 Expected response:
@@ -463,20 +482,20 @@ netlify deploy --prod --dir=dist
 
 ### Backend Environment Variables
 
-| Variable                     | Required   | Default     | Description                                           |
-| ---------------------------- | ---------- | ----------- | ----------------------------------------------------- |
-| `NODE_ENV`                   | No         | development | Environment mode                                      |
-| `PORT`                       | No         | 5001        | Server port                                           |
-| `JWT_SECRET`                 | Yes        | -           | Secret key for JWT tokens                             |
-| `JWT_EXPIRES_IN`             | No         | 1h          | JWT token expiration                                  |
-| `TOASTMASTERS_DASHBOARD_URL` | Yes        | -           | Toastmasters API URL                                  |
-| `CORS_ORIGIN`                | Yes (prod) | \*          | Allowed CORS origins                                  |
-| `CACHE_TTL`                  | No         | 900         | Cache TTL in seconds                                  |
-| `RATE_LIMIT_WINDOW_MS`       | No         | 900000      | Rate limit window                                     |
-| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100         | Max requests per window                               |
-| `STORAGE_PROVIDER`           | No         | local       | Storage backend (`local` or `gcp`)                    |
-| `GCP_PROJECT_ID`             | Yes (gcp)  | -           | GCP project ID (required when `STORAGE_PROVIDER=gcp`) |
-| `GCS_BUCKET_NAME`            | Yes (gcp)  | -           | GCS bucket for raw CSV cache                          |
+| Variable                     | Required   | Default                            | Description                                        |
+| ---------------------------- | ---------- | ---------------------------------- | -------------------------------------------------- |
+| `NODE_ENV`                   | Yes (prod) | development                        | Environment mode (affects CORS behavior)           |
+| `PORT`                       | No         | 5001                               | Server port                                        |
+| `STORAGE_PROVIDER`           | Yes (prod) | local                              | Storage backend (`local` or `gcp`)                 |
+| `GCP_PROJECT_ID`             | Yes (gcp)  | -                                  | GCP project ID (required when `STORAGE_PROVIDER=gcp`) |
+| `GCS_BUCKET_NAME`            | Yes (gcp)  | -                                  | GCS bucket for raw CSV cache                       |
+| `CORS_ORIGIN`                | Yes (prod) | http://localhost:3000              | Allowed CORS origin (API Gateway domain for prod)  |
+| `FIRESTORE_COLLECTION`       | No         | snapshots                          | Firestore collection name for snapshots            |
+| `TOASTMASTERS_DASHBOARD_URL` | No         | https://dashboard.toastmasters.org | Toastmasters dashboard URL                         |
+| `CACHE_DIR`                  | No         | ./cache                            | Local cache directory (local storage only)         |
+| `CACHE_TTL`                  | No         | 900                                | Cache TTL in seconds                               |
+| `RATE_LIMIT_WINDOW_MS`       | No         | 900000                             | Rate limit window in milliseconds                  |
+| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100                                | Max requests per rate limit window                 |
 
 ### Frontend Environment Variables
 
@@ -492,6 +511,81 @@ When using Firebase Hosting with Cloud Run rewrites:
 - The Firebase Hosting rewrite handles routing to Cloud Run
 - No CORS configuration needed since frontend and API share the same domain
 - SSL is automatically provided by Firebase
+
+### Verifying Environment Variables
+
+After deployment, verify all required environment variables are configured on your Cloud Run service:
+
+```bash
+# View all environment variables
+gcloud run services describe toast-stats-api \
+  --region us-east1 \
+  --format='table(spec.template.spec.containers[0].env.name,spec.template.spec.containers[0].env.value)'
+
+# Or as YAML for detailed view
+gcloud run services describe toast-stats-api \
+  --region us-east1 \
+  --format='yaml(spec.template.spec.containers[0].env)'
+```
+
+#### Required Environment Variables Checklist
+
+For GCP production deployment with API Gateway:
+
+| Variable | Required | Example Value | Notes |
+|----------|----------|---------------|-------|
+| `NODE_ENV` | Yes | `production` | Must be `production` for prod |
+| `STORAGE_PROVIDER` | Yes | `gcp` | Must be `gcp` for cloud storage |
+| `GCP_PROJECT_ID` | Yes | `toast-stats-prod-6d64a` | Your GCP project ID |
+| `GCS_BUCKET_NAME` | Yes | `raw-csv-toast-stats` | GCS bucket for CSV cache |
+| `CORS_ORIGIN` | Yes | `https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog` | API Gateway domain |
+| `JWT_SECRET` | Yes | (from Secret Manager) | Use `--set-secrets` flag |
+
+#### Setting Missing Environment Variables
+
+If any variables are missing, update the service:
+
+```bash
+gcloud run services update toast-stats-api \
+  --region us-east1 \
+  --update-env-vars "NODE_ENV=production,STORAGE_PROVIDER=gcp,GCP_PROJECT_ID=toast-stats-prod-6d64a,GCS_BUCKET_NAME=raw-csv-toast-stats,CORS_ORIGIN=https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog"
+```
+
+For secrets (like JWT_SECRET), use Secret Manager:
+
+```bash
+# Create secret if not exists
+echo -n "$(openssl rand -base64 32)" | gcloud secrets create jwt-secret --data-file=-
+
+# Update service to use secret
+gcloud run services update toast-stats-api \
+  --region us-east1 \
+  --set-secrets="JWT_SECRET=jwt-secret:latest"
+```
+
+#### Verifying API Gateway Configuration
+
+The API Gateway is configured via `backend/openapi.yaml`. Verify the gateway is using the correct backend URL:
+
+```bash
+# List API configs
+gcloud api-gateway api-configs list --api=toast-stats-api
+
+# Describe current gateway
+gcloud api-gateway gateways describe toast-stats-gateway \
+  --location us-east1
+
+# Test API Gateway health endpoint
+curl https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog/api/health
+```
+
+The `x-google-backend.address` in `backend/openapi.yaml` must match your Cloud Run service URL. To find your Cloud Run URL:
+
+```bash
+gcloud run services describe toast-stats-api \
+  --region us-east1 \
+  --format='value(status.url)'
+```
 
 ## Security Considerations
 
@@ -990,7 +1084,7 @@ rm lifecycle.json
 PROJECT_ID="toast-stats-prod-6d64a"
 REGION="us-east1"
 SERVICE_NAME="toast-stats-api"
-BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
+BUCKET_NAME="raw-csv-toast-stats"
 SA_EMAIL="toast-stats-api@${PROJECT_ID}.iam.gserviceaccount.com"
 
 gcloud run deploy ${SERVICE_NAME} \
@@ -1002,15 +1096,31 @@ gcloud run deploy ${SERVICE_NAME} \
   --set-env-vars="STORAGE_PROVIDER=gcp" \
   --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID}" \
   --set-env-vars="GCS_BUCKET_NAME=${BUCKET_NAME}" \
+  --set-env-vars="CORS_ORIGIN=https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog" \
   --set-secrets="JWT_SECRET=jwt-secret:latest" \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
   --memory=512Mi \
   --cpu=1 \
   --min-instances=0 \
   --max-instances=10
 ```
 
-**Note**: `--allow-unauthenticated` is required for Firebase Hosting rewrites to work. Authentication is handled at the application level.
+#### Grant API Gateway Access
+
+After deploying, grant the API Gateway permission to invoke the Cloud Run service:
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+API_GATEWAY_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+gcloud run services add-iam-policy-binding toast-stats-api \
+  --region=us-east1 \
+  --member="serviceAccount:${API_GATEWAY_SA}" \
+  --role="roles/run.invoker"
+```
+
+**Note**: With `--no-allow-unauthenticated`, only the API Gateway can reach the backend. Direct calls to the Cloud Run URL will return 403 Forbidden.
 
 #### Firebase Hosting Deployment
 
@@ -1172,7 +1282,7 @@ SERVICE_NAME="toast-stats-api"
 BUCKET_NAME="toast-stats-raw-csv-${PROJECT_ID}"
 SA_EMAIL="toast-stats-api@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Build and deploy
+# Build and deploy (without public access)
 gcloud run deploy ${SERVICE_NAME} \
   --source=./backend \
   --region=${REGION} \
@@ -1182,13 +1292,22 @@ gcloud run deploy ${SERVICE_NAME} \
   --set-env-vars="STORAGE_PROVIDER=gcp" \
   --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID}" \
   --set-env-vars="GCS_BUCKET_NAME=${BUCKET_NAME}" \
-  --set-env-vars="CORS_ORIGIN=https://your-frontend-domain.com" \
+  --set-env-vars="CORS_ORIGIN=https://your-api-gateway-domain.cloud.goog" \
   --set-secrets="JWT_SECRET=jwt-secret:latest" \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
   --memory=512Mi \
   --cpu=1 \
   --min-instances=0 \
   --max-instances=10
+
+# Grant API Gateway permission to invoke Cloud Run
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+API_GATEWAY_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+gcloud run services add-iam-policy-binding ${SERVICE_NAME} \
+  --region=${REGION} \
+  --member="serviceAccount:${API_GATEWAY_SA}" \
+  --role="roles/run.invoker"
 ```
 
 #### Using Secret Manager for Sensitive Values

@@ -99,27 +99,28 @@ For Cloud Run deployments, set these in your service configuration:
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: toast-stats
+  name: toast-stats-api
 spec:
   template:
     spec:
       containers:
-        - image: gcr.io/YOUR_PROJECT/toast-stats:latest
+        - image: gcr.io/toast-stats-prod-6d64a/toast-stats-api:latest
           env:
             - name: STORAGE_PROVIDER
               value: 'gcp'
             - name: GCP_PROJECT_ID
-              value: 'your-project-id'
+              value: 'toast-stats-prod-6d64a'
             - name: GCS_BUCKET_NAME
-              value: 'your-bucket-name'
+              value: 'toast-stats-raw-csv-toast-stats-prod-6d64a'
 ```
 
 Or using `gcloud`:
 
 ```bash
-gcloud run deploy toast-stats \
-  --image gcr.io/YOUR_PROJECT/toast-stats:latest \
-  --set-env-vars "STORAGE_PROVIDER=gcp,GCP_PROJECT_ID=your-project-id,GCS_BUCKET_NAME=your-bucket-name"
+gcloud run deploy toast-stats-api \
+  --region us-east1 \
+  --image gcr.io/toast-stats-prod-6d64a/toast-stats-api:latest \
+  --set-env-vars "STORAGE_PROVIDER=gcp,GCP_PROJECT_ID=toast-stats-prod-6d64a,GCS_BUCKET_NAME=toast-stats-raw-csv-toast-stats-prod-6d64a"
 ```
 
 ### Step 3: Verify Configuration
@@ -201,7 +202,8 @@ For immediate rollback without data preservation:
 
 ```bash
 # Update Cloud Run service to use local storage
-gcloud run services update toast-stats \
+gcloud run services update toast-stats-api \
+  --region us-east1 \
   --update-env-vars "STORAGE_PROVIDER=local"
 ```
 
@@ -271,7 +273,7 @@ raw-csv/
 curl https://your-app-url/api/health
 
 # View recent logs
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=toast-stats" --limit=50
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=toast-stats-api" --limit=50
 
 # Check Firestore operations
 gcloud logging read "resource.type=datastore_database" --limit=50
