@@ -79,42 +79,46 @@ vi.mock('../shared.js', async importOriginal => {
 
   // Mock the helper functions to simulate empty storage behavior
   // These functions need to be mocked because they capture store references at module load time
-  const mockServeFromPerDistrictSnapshot = vi.fn().mockImplementation(
-    async (
-      res: { status: (code: number) => { json: (body: unknown) => void } },
-      _dataExtractor: unknown,
-      _errorContext: string
-    ) => {
-      // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
-      res.status(503).json({
-        error: {
-          code: 'NO_SNAPSHOT_AVAILABLE',
-          message: 'No data snapshot available yet',
-          details: 'Run a refresh operation to create the first snapshot',
-        },
-      })
-      return null
-    }
-  )
+  const mockServeFromPerDistrictSnapshot = vi
+    .fn()
+    .mockImplementation(
+      async (
+        res: { status: (code: number) => { json: (body: unknown) => void } },
+        _dataExtractor: unknown,
+        _errorContext: string
+      ) => {
+        // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+        res.status(503).json({
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        })
+        return null
+      }
+    )
 
-  const mockServeDistrictFromPerDistrictSnapshot = vi.fn().mockImplementation(
-    async (
-      res: { status: (code: number) => { json: (body: unknown) => void } },
-      _districtId: string,
-      _dataExtractor: unknown,
-      _errorContext: string
-    ) => {
-      // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
-      res.status(503).json({
-        error: {
-          code: 'NO_SNAPSHOT_AVAILABLE',
-          message: 'No data snapshot available yet',
-          details: 'Run a refresh operation to create the first snapshot',
-        },
-      })
-      return null
-    }
-  )
+  const mockServeDistrictFromPerDistrictSnapshot = vi
+    .fn()
+    .mockImplementation(
+      async (
+        res: { status: (code: number) => { json: (body: unknown) => void } },
+        _districtId: string,
+        _dataExtractor: unknown,
+        _errorContext: string
+      ) => {
+        // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+        res.status(503).json({
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        })
+        return null
+      }
+    )
 
   const mockServeDistrictFromPerDistrictSnapshotByDate = vi
     .fn()
@@ -138,24 +142,26 @@ vi.mock('../shared.js', async importOriginal => {
       }
     )
 
-  const mockServeDistrictFromSnapshot = vi.fn().mockImplementation(
-    async (
-      res: { status: (code: number) => { json: (body: unknown) => void } },
-      _districtId: string,
-      _dataExtractor: unknown,
-      _errorContext: string
-    ) => {
-      // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
-      res.status(503).json({
-        error: {
-          code: 'NO_SNAPSHOT_AVAILABLE',
-          message: 'No data snapshot available yet',
-          details: 'Run a refresh operation to create the first snapshot',
-        },
-      })
-      return null
-    }
-  )
+  const mockServeDistrictFromSnapshot = vi
+    .fn()
+    .mockImplementation(
+      async (
+        res: { status: (code: number) => { json: (body: unknown) => void } },
+        _districtId: string,
+        _dataExtractor: unknown,
+        _errorContext: string
+      ) => {
+        // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+        res.status(503).json({
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        })
+        return null
+      }
+    )
 
   return {
     ...original,
