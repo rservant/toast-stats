@@ -44,6 +44,9 @@ import { cacheService } from '../../../services/CacheService.js'
 // ============================================================================
 
 // Mock the shared module to simulate empty storage
+// The key insight is that we need to mock the helper functions themselves,
+// not just the store exports, because the helper functions capture references
+// to the stores at module initialization time.
 vi.mock('../shared.js', async importOriginal => {
   const original = await importOriginal<typeof import('../shared.js')>()
 
@@ -60,7 +63,7 @@ vi.mock('../shared.js', async importOriginal => {
     listDistrictsInSnapshot: vi.fn().mockResolvedValue([]),
     getSnapshotManifest: vi.fn().mockResolvedValue(null),
     getSnapshotMetadata: vi.fn().mockResolvedValue(null),
-    writeAllDistrictsRankings: vi.fn(),
+    writeAllDistrictsRankings: vi.fn().mockResolvedValue(undefined),
     readAllDistrictsRankings: vi.fn().mockResolvedValue(null),
     hasAllDistrictsRankings: vi.fn().mockResolvedValue(false),
   }
@@ -74,18 +77,98 @@ vi.mock('../shared.js', async importOriginal => {
     getSnapshotMetadata: vi.fn().mockResolvedValue(null),
   }
 
+  // Mock the helper functions to simulate empty storage behavior
+  // These functions need to be mocked because they capture store references at module load time
+  const mockServeFromPerDistrictSnapshot = vi.fn().mockImplementation(
+    async (
+      res: { status: (code: number) => { json: (body: unknown) => void } },
+      _dataExtractor: unknown,
+      _errorContext: string
+    ) => {
+      // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
+        },
+      })
+      return null
+    }
+  )
+
+  const mockServeDistrictFromPerDistrictSnapshot = vi.fn().mockImplementation(
+    async (
+      res: { status: (code: number) => { json: (body: unknown) => void } },
+      _districtId: string,
+      _dataExtractor: unknown,
+      _errorContext: string
+    ) => {
+      // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
+        },
+      })
+      return null
+    }
+  )
+
+  const mockServeDistrictFromPerDistrictSnapshotByDate = vi
+    .fn()
+    .mockImplementation(
+      async (
+        res: { status: (code: number) => { json: (body: unknown) => void } },
+        _districtId: string,
+        _requestedDate: string | undefined,
+        _dataExtractor: unknown,
+        _errorContext: string
+      ) => {
+        // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+        res.status(503).json({
+          error: {
+            code: 'NO_SNAPSHOT_AVAILABLE',
+            message: 'No data snapshot available yet',
+            details: 'Run a refresh operation to create the first snapshot',
+          },
+        })
+        return null
+      }
+    )
+
+  const mockServeDistrictFromSnapshot = vi.fn().mockImplementation(
+    async (
+      res: { status: (code: number) => { json: (body: unknown) => void } },
+      _districtId: string,
+      _dataExtractor: unknown,
+      _errorContext: string
+    ) => {
+      // Simulate empty storage - return 503 NO_SNAPSHOT_AVAILABLE
+      res.status(503).json({
+        error: {
+          code: 'NO_SNAPSHOT_AVAILABLE',
+          message: 'No data snapshot available yet',
+          details: 'Run a refresh operation to create the first snapshot',
+        },
+      })
+      return null
+    }
+  )
+
   return {
     ...original,
     snapshotStore: mockEmptySnapshotStore,
     perDistrictSnapshotStore: mockEmptySnapshotStore,
     districtDataAggregator: mockDistrictDataAggregator,
-    // Keep the original helper functions but they will use our mocked stores
-    serveFromPerDistrictSnapshot: original.serveFromPerDistrictSnapshot,
+    // Mock the helper functions to simulate empty storage behavior
+    serveFromPerDistrictSnapshot: mockServeFromPerDistrictSnapshot,
     serveDistrictFromPerDistrictSnapshot:
-      original.serveDistrictFromPerDistrictSnapshot,
+      mockServeDistrictFromPerDistrictSnapshot,
     serveDistrictFromPerDistrictSnapshotByDate:
-      original.serveDistrictFromPerDistrictSnapshotByDate,
-    serveDistrictFromSnapshot: original.serveDistrictFromSnapshot,
+      mockServeDistrictFromPerDistrictSnapshotByDate,
+    serveDistrictFromSnapshot: mockServeDistrictFromSnapshot,
     findNearestSnapshot: vi
       .fn()
       .mockResolvedValue({ snapshot: null, fallbackReason: null }),
