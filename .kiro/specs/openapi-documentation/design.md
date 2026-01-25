@@ -34,14 +34,14 @@ servers:
 
 ### Tag Organization
 
-| Tag | Description |
-|-----|-------------|
-| Districts | Core district data endpoints |
-| Rankings | Global and district ranking endpoints |
-| Analytics | Analytics and insights endpoints |
-| Backfill | Historical data collection endpoints |
-| Admin | Administrative and snapshot management endpoints |
-| Cache | Cache management endpoints |
+| Tag       | Description                                      |
+| --------- | ------------------------------------------------ |
+| Districts | Core district data endpoints                     |
+| Rankings  | Global and district ranking endpoints            |
+| Analytics | Analytics and insights endpoints                 |
+| Backfill  | Historical data collection endpoints             |
+| Admin     | Administrative and snapshot management endpoints |
+| Cache     | Cache management endpoints                       |
 
 ## Endpoint Documentation Strategy
 
@@ -55,22 +55,23 @@ servers:
 
 ### Common Query Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| date | string (date) | Specific date for data retrieval |
-| startDate | string (date) | Start of date range |
-| endDate | string (date) | End of date range |
-| months | integer | Number of months of history |
-| fallback | boolean | Enable fallback to nearest snapshot |
-| format | string | Export format (csv) |
-| limit | integer | Maximum results to return |
-| status | string | Filter by status |
+| Parameter | Type          | Description                         |
+| --------- | ------------- | ----------------------------------- |
+| date      | string (date) | Specific date for data retrieval    |
+| startDate | string (date) | Start of date range                 |
+| endDate   | string (date) | End of date range                   |
+| months    | integer       | Number of months of history         |
+| fallback  | boolean       | Enable fallback to nearest snapshot |
+| format    | string        | Export format (csv)                 |
+| limit     | integer       | Maximum results to return           |
+| status    | string        | Filter by status                    |
 
 ## Schema Design
 
 ### Core Schemas
 
 #### District
+
 ```yaml
 District:
   type: object
@@ -90,7 +91,9 @@ District:
 ```
 
 #### DistrictStatistics
+
 Comprehensive district performance data including:
+
 - Basic info (districtId, districtName)
 - Membership metrics (total, active, growth)
 - Club metrics (total, paid, distinguished counts)
@@ -98,6 +101,7 @@ Comprehensive district performance data including:
 - Division/Area performance arrays
 
 #### DistrictRanking
+
 ```yaml
 DistrictRanking:
   type: object
@@ -119,6 +123,7 @@ DistrictRanking:
 ```
 
 #### BackfillRequest
+
 ```yaml
 BackfillRequest:
   type: object
@@ -142,6 +147,7 @@ BackfillRequest:
 ```
 
 #### BackfillStatus
+
 ```yaml
 BackfillStatus:
   type: object
@@ -238,47 +244,49 @@ SnapshotMetadata:
 
 ## Error Code Enumeration
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| INVALID_DISTRICT_ID | 400 | District ID format is invalid |
-| INVALID_DATE_FORMAT | 400 | Date must be YYYY-MM-DD format |
-| INVALID_DATE_RANGE | 400 | Start date must be before end date |
-| DATE_RANGE_TOO_LARGE | 400 | Date range exceeds maximum allowed |
-| MISSING_DATE_PARAMETERS | 400 | Required date parameters not provided |
-| VALIDATION_ERROR | 400 | Request validation failed |
-| SNAPSHOT_NOT_FOUND | 404 | Requested snapshot does not exist |
-| BACKFILL_NOT_FOUND | 404 | Backfill job not found |
-| CLUB_NOT_FOUND | 404 | Club not found in district |
-| NO_DATA_AVAILABLE | 404 | No cached data available |
-| CANNOT_CANCEL_JOB | 409 | Job cannot be cancelled in current state |
-| ANALYTICS_ERROR | 500 | Analytics generation failed |
-| BACKFILL_ERROR | 500 | Backfill operation failed |
-| INTERNAL_ERROR | 500 | Unexpected internal error |
-| SERVICE_UNAVAILABLE | 503 | Storage service temporarily unavailable |
+| Code                    | HTTP Status | Description                              |
+| ----------------------- | ----------- | ---------------------------------------- |
+| INVALID_DISTRICT_ID     | 400         | District ID format is invalid            |
+| INVALID_DATE_FORMAT     | 400         | Date must be YYYY-MM-DD format           |
+| INVALID_DATE_RANGE      | 400         | Start date must be before end date       |
+| DATE_RANGE_TOO_LARGE    | 400         | Date range exceeds maximum allowed       |
+| MISSING_DATE_PARAMETERS | 400         | Required date parameters not provided    |
+| VALIDATION_ERROR        | 400         | Request validation failed                |
+| SNAPSHOT_NOT_FOUND      | 404         | Requested snapshot does not exist        |
+| BACKFILL_NOT_FOUND      | 404         | Backfill job not found                   |
+| CLUB_NOT_FOUND          | 404         | Club not found in district               |
+| NO_DATA_AVAILABLE       | 404         | No cached data available                 |
+| CANNOT_CANCEL_JOB       | 409         | Job cannot be cancelled in current state |
+| ANALYTICS_ERROR         | 500         | Analytics generation failed              |
+| BACKFILL_ERROR          | 500         | Backfill operation failed                |
+| INTERNAL_ERROR          | 500         | Unexpected internal error                |
+| SERVICE_UNAVAILABLE     | 503         | Storage service temporarily unavailable  |
 
 ## Response Examples
 
 ### Successful District List Response
+
 ```yaml
 example:
   districts:
-    - id: "57"
-      name: "District 57"
-      status: "active"
-      lastUpdated: "2026-01-24T10:30:00Z"
+    - id: '57'
+      name: 'District 57'
+      status: 'active'
+      lastUpdated: '2026-01-24T10:30:00Z'
   _snapshot_metadata:
-    snapshot_id: "2026-01-24"
-    created_at: "2026-01-24T06:00:00Z"
-    status: "success"
+    snapshot_id: '2026-01-24'
+    created_at: '2026-01-24T06:00:00Z'
+    status: 'success'
 ```
 
 ### Error Response Example
+
 ```yaml
 example:
   error:
-    code: "INVALID_DISTRICT_ID"
-    message: "Invalid district ID format"
-    details: "District ID must be alphanumeric"
+    code: 'INVALID_DISTRICT_ID'
+    message: 'Invalid district ID format'
+    details: 'District ID must be alphanumeric'
 ```
 
 ## Implementation Notes
@@ -304,17 +312,21 @@ The specification will be a single YAML file organized as:
 ## Correctness Properties
 
 ### Property 1: Schema Consistency
+
 All response schemas in the specification MUST match the actual TypeScript types defined in `backend/src/types/`.
 
 ### Property 2: Endpoint Coverage
+
 Every route defined in `backend/src/routes/` MUST have a corresponding path in the OpenAPI specification.
 
 ### Property 3: Error Code Accuracy
+
 All error codes documented in the specification MUST match the actual error codes returned by the API.
 
 ## Testing Strategy
 
 Since this is documentation, testing focuses on:
+
 1. OpenAPI validation (syntax correctness)
 2. Manual verification against actual API responses
 3. Schema alignment with TypeScript types

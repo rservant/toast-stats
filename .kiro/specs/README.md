@@ -11,6 +11,7 @@ This directory contains all specifications that are currently active for develop
 **Output**: `docs/openapi.yaml` (~12,000 lines)
 
 Comprehensive OpenAPI 3.0.3 specification documenting all Toast-Stats API endpoints including:
+
 - 30+ endpoints across Districts, Rankings, Analytics, Backfill, and Admin categories
 - Complete request/response schemas with realistic examples
 - Error response documentation with all known error codes

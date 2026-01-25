@@ -38,7 +38,7 @@ This implementation creates a comprehensive OpenAPI 3.0 specification documentin
 - [x] 3. Define core data schemas
   - [x] 3.1 Create District and DistrictsResponse schemas
     - District with id, name, status, lastUpdated
-    - DistrictsResponse with districts array and _snapshot_metadata
+    - DistrictsResponse with districts array and \_snapshot_metadata
     - _Requirements: 6.1_
   - [x] 3.2 Create DistrictStatistics schema
     - Include districtId, districtName
@@ -90,7 +90,7 @@ This implementation creates a comprehensive OpenAPI 3.0 specification documentin
 - [x] 6. Document district endpoints
   - [x] 6.1 Document `GET /districts` endpoint
     - Response schema with districts array
-    - Include _snapshot_metadata in response
+    - Include \_snapshot_metadata in response
     - _Requirements: 2.1_
   - [x] 6.2 Document `GET /districts/rankings` endpoint
     - Query parameters: date, fallback

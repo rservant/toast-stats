@@ -4,7 +4,7 @@ This guide covers deploying the Toastmasters District Statistics Visualizer to p
 
 ## Architecture Overview
 
-The recommended production deployment uses Firebase Hosting with the following architecture:
+The recommended production deployment uses Firebase Hosting with GCP API Gateway:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -13,19 +13,23 @@ The recommended production deployment uses Firebase Hosting with the following a
 │  │                    Frontend (SPA)                        │    │
 │  │                   frontend/dist/*                        │    │
 │  └─────────────────────────────────────────────────────────┘    │
-│                              │                                   │
-│                    /api/* requests                               │
-│                              ▼                                   │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │              Firebase Hosting Rewrites                   │    │
-│  │                  (API Gateway)                           │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                              │                                   │
-└──────────────────────────────┼───────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                     /api/* requests
+                               ▼
+              ┌────────────────────────────────┐
+              │      GCP API Gateway           │
+              │   (backend/openapi.yaml)       │
+              │                                │
+              │  - Route definitions           │
+              │  - Parameter validation        │
+              │  - CORS configuration          │
+              └────────────────────────────────┘
+                               │
                                ▼
               ┌────────────────────────────────┐
               │         Cloud Run              │
-              │    toast-stats-api         │
+              │      toast-stats-api           │
               │                                │
               │  ┌──────────────────────────┐  │
               │  │   Express.js API Server  │  │
@@ -266,10 +270,10 @@ The `firebase.json` configuration defines hosting behavior:
 
 **Key Configuration Elements:**
 
-| Element | Purpose |
-|---------|---------|
-| `public` | Directory containing built frontend assets |
-| `rewrites[0]` | Routes `/api/**` requests to Cloud Run backend |
+| Element       | Purpose                                                    |
+| ------------- | ---------------------------------------------------------- |
+| `public`      | Directory containing built frontend assets                 |
+| `rewrites[0]` | Routes `/api/**` requests to Cloud Run backend             |
 | `rewrites[1]` | SPA fallback - serves `index.html` for client-side routing |
 
 #### API Gateway Benefits
@@ -459,26 +463,26 @@ netlify deploy --prod --dir=dist
 
 ### Backend Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `NODE_ENV` | No | development | Environment mode |
-| `PORT` | No | 5001 | Server port |
-| `JWT_SECRET` | Yes | - | Secret key for JWT tokens |
-| `JWT_EXPIRES_IN` | No | 1h | JWT token expiration |
-| `TOASTMASTERS_DASHBOARD_URL` | Yes | - | Toastmasters API URL |
-| `CORS_ORIGIN` | Yes (prod) | * | Allowed CORS origins |
-| `CACHE_TTL` | No | 900 | Cache TTL in seconds |
-| `RATE_LIMIT_WINDOW_MS` | No | 900000 | Rate limit window |
-| `RATE_LIMIT_MAX_REQUESTS` | No | 100 | Max requests per window |
-| `STORAGE_PROVIDER` | No | local | Storage backend (`local` or `gcp`) |
-| `GCP_PROJECT_ID` | Yes (gcp) | - | GCP project ID (required when `STORAGE_PROVIDER=gcp`) |
-| `GCS_BUCKET_NAME` | Yes (gcp) | - | GCS bucket for raw CSV cache |
+| Variable                     | Required   | Default     | Description                                           |
+| ---------------------------- | ---------- | ----------- | ----------------------------------------------------- |
+| `NODE_ENV`                   | No         | development | Environment mode                                      |
+| `PORT`                       | No         | 5001        | Server port                                           |
+| `JWT_SECRET`                 | Yes        | -           | Secret key for JWT tokens                             |
+| `JWT_EXPIRES_IN`             | No         | 1h          | JWT token expiration                                  |
+| `TOASTMASTERS_DASHBOARD_URL` | Yes        | -           | Toastmasters API URL                                  |
+| `CORS_ORIGIN`                | Yes (prod) | \*          | Allowed CORS origins                                  |
+| `CACHE_TTL`                  | No         | 900         | Cache TTL in seconds                                  |
+| `RATE_LIMIT_WINDOW_MS`       | No         | 900000      | Rate limit window                                     |
+| `RATE_LIMIT_MAX_REQUESTS`    | No         | 100         | Max requests per window                               |
+| `STORAGE_PROVIDER`           | No         | local       | Storage backend (`local` or `gcp`)                    |
+| `GCP_PROJECT_ID`             | Yes (gcp)  | -           | GCP project ID (required when `STORAGE_PROVIDER=gcp`) |
+| `GCS_BUCKET_NAME`            | Yes (gcp)  | -           | GCS bucket for raw CSV cache                          |
 
 ### Frontend Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `VITE_API_URL` | No | /api | Backend API URL (use `/api` for Firebase Hosting) |
+| Variable       | Required | Default | Description                                       |
+| -------------- | -------- | ------- | ------------------------------------------------- |
+| `VITE_API_URL` | No       | /api    | Backend API URL (use `/api` for Firebase Hosting) |
 
 ### Firebase Hosting Notes
 
@@ -529,6 +533,7 @@ gcloud run services logs read toast-stats-api --region=us-east1 --tail=50
 #### Firebase Hosting Analytics
 
 View hosting analytics in the Firebase Console:
+
 - Request counts and bandwidth
 - Cache hit rates
 - Error rates
@@ -536,6 +541,7 @@ View hosting analytics in the Firebase Console:
 #### Cloud Run Metrics
 
 Monitor in Google Cloud Console:
+
 - Request latency
 - Container instance count
 - Memory and CPU utilization
@@ -595,11 +601,11 @@ gcloud run services update toast-stats-api \
   --concurrency=80
 ```
 
-| Setting | Recommended | Description |
-|---------|-------------|-------------|
-| `min-instances` | 0 | Scale to zero when idle (cost savings) |
-| `max-instances` | 10 | Maximum concurrent instances |
-| `concurrency` | 80 | Requests per instance before scaling |
+| Setting         | Recommended | Description                            |
+| --------------- | ----------- | -------------------------------------- |
+| `min-instances` | 0           | Scale to zero when idle (cost savings) |
+| `max-instances` | 10          | Maximum concurrent instances           |
+| `concurrency`   | 80          | Requests per instance before scaling   |
 
 ### PM2 Horizontal Scaling (Local Deployment)
 
@@ -717,6 +723,132 @@ cd frontend && npm run build && cd ..
 firebase deploy --only hosting
 ```
 
+### Updating the API Gateway (GCP API Gateway with OpenAPI)
+
+The API Gateway is configured through an OpenAPI specification in `backend/openapi.yaml`. This uses Google Cloud API Gateway to route requests to Cloud Run.
+
+#### Architecture
+
+```
+Frontend (Firebase Hosting)
+         │
+         ▼
+GCP API Gateway (openapi.yaml)
+         │
+         ▼
+Cloud Run (toast-stats-api)
+```
+
+#### When Updates Are Needed
+
+- Adding new API endpoints
+- Changing endpoint parameters or validation
+- Updating the Cloud Run backend URL
+- Modifying CORS configuration
+
+#### Modifying the API Gateway Configuration
+
+1. **Edit `backend/openapi.yaml`** to add or modify endpoints:
+
+```yaml
+paths:
+  /new-endpoint:
+    get:
+      summary: New endpoint description
+      operationId: newEndpoint
+      tags:
+        - YourTag
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Success
+```
+
+2. **Deploy the updated API Gateway configuration:**
+
+```bash
+PROJECT_ID="toast-stats-prod-6d64a"
+REGION="us-east1"
+API_ID="toast-stats-api"
+CONFIG_ID="toast-stats-config-$(date +%Y%m%d%H%M%S)"
+
+# Create new API config from OpenAPI spec
+gcloud api-gateway api-configs create ${CONFIG_ID} \
+  --api=${API_ID} \
+  --openapi-spec=backend/openapi.yaml \
+  --project=${PROJECT_ID}
+
+# Update the gateway to use the new config
+gcloud api-gateway gateways update toast-stats-gateway \
+  --api=${API_ID} \
+  --api-config=${CONFIG_ID} \
+  --location=${REGION} \
+  --project=${PROJECT_ID}
+```
+
+#### Key OpenAPI Configuration Elements
+
+| Element                             | Purpose                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `host`                              | API Gateway hostname                                                     |
+| `basePath`                          | Base path for all endpoints (`/api`)                                     |
+| `x-google-backend.address`          | Cloud Run service URL                                                    |
+| `x-google-backend.path_translation` | How paths are forwarded (`APPEND_PATH_TO_ADDRESS` or `CONSTANT_ADDRESS`) |
+| `x-google-endpoints`                | CORS and endpoint configuration                                          |
+
+#### Adding New Endpoints
+
+When adding a new endpoint to the backend:
+
+1. Add the route in the Express backend (`backend/src/routes/`)
+2. Add the corresponding path in `backend/openapi.yaml` with `x-google-backend`
+3. Deploy the backend to Cloud Run
+4. Deploy the updated API Gateway config
+
+#### Updating the Backend URL
+
+If the Cloud Run service URL changes:
+
+```bash
+# Find all occurrences and update
+sed -i 's/old-url.run.app/new-url.run.app/g' backend/openapi.yaml
+
+# Then redeploy the API Gateway config
+```
+
+#### Verifying API Gateway Changes
+
+```bash
+# Test through the API Gateway
+curl https://toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog/api/health
+
+# List API configs
+gcloud api-gateway api-configs list --api=toast-stats-api --project=${PROJECT_ID}
+
+# Describe current gateway
+gcloud api-gateway gateways describe toast-stats-gateway \
+  --location=${REGION} \
+  --project=${PROJECT_ID}
+```
+
+#### Rollback API Gateway Changes
+
+```bash
+# List available configs
+gcloud api-gateway api-configs list --api=toast-stats-api --project=${PROJECT_ID}
+
+# Rollback to a previous config
+gcloud api-gateway gateways update toast-stats-gateway \
+  --api=toast-stats-api \
+  --api-config=PREVIOUS_CONFIG_ID \
+  --location=${REGION} \
+  --project=${PROJECT_ID}
+```
+
 ### Updating the Application (PM2 Deployment)
 
 ```bash
@@ -818,11 +950,11 @@ gcloud projects add-iam-policy-binding $PROJECT_ID \
   --role="roles/secretmanager.secretAccessor"
 ```
 
-| Role | Purpose |
-|------|---------|
-| `roles/datastore.user` | Read/write access to Firestore documents |
-| `roles/storage.objectAdmin` | Full control of GCS objects in the bucket |
-| `roles/secretmanager.secretAccessor` | Access to secrets |
+| Role                                 | Purpose                                   |
+| ------------------------------------ | ----------------------------------------- |
+| `roles/datastore.user`               | Read/write access to Firestore documents  |
+| `roles/storage.objectAdmin`          | Full control of GCS objects in the bucket |
+| `roles/secretmanager.secretAccessor` | Access to secrets                         |
 
 #### Cloud Storage Bucket Configuration
 
