@@ -1,0 +1,116 @@
+swagger: '2.0'
+info:
+  title: Toast Stats API Gateway
+  description: API Gateway proxy to private Cloud Run backend
+  version: '1.0.0'
+
+schemes:
+  - https
+
+basePath: /
+
+# Define an apiKey scheme so the converter stops complaining.
+# We are NOT requiring it for operations.
+securityDefinitions:
+  api_key:
+    type: apiKey
+    name: key
+    in: query
+
+paths:
+  /{path}:
+    get:
+      summary: Proxy GET requests
+      operationId: proxyGet
+      parameters:
+        - name: path
+          in: path
+          required: true
+          type: string
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Proxied response
+
+    post:
+      summary: Proxy POST requests
+      operationId: proxyPost
+      parameters:
+        - name: path
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Proxied response
+
+    put:
+      summary: Proxy PUT requests
+      operationId: proxyPut
+      parameters:
+        - name: path
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Proxied response
+
+    delete:
+      summary: Proxy DELETE requests
+      operationId: proxyDelete
+      parameters:
+        - name: path
+          in: path
+          required: true
+          type: string
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Proxied response
+
+    patch:
+      summary: Proxy PATCH requests
+      operationId: proxyPatch
+      parameters:
+        - name: path
+          in: path
+          required: true
+          type: string
+      consumes:
+        - application/json
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Proxied response
+
+    options:
+      summary: Proxy OPTIONS requests
+      operationId: proxyOptions
+      parameters:
+        - name: path
+          in: path
+          required: true
+          type: string
+      x-google-backend:
+        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        '200':
+          description: Proxied response
