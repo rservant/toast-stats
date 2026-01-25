@@ -4,9 +4,12 @@ This directory contains all specifications that are currently active for develop
 
 ## Active Specifications
 
-**No active specifications at this time.**
+### openapi-documentation/
 
-All feature specifications have been completed and archived.
+**Status**: 🔄 IN PROGRESS  
+**Purpose**: Create comprehensive OpenAPI 3.0 specification documenting all Toast-Stats API endpoints
+
+Replaces the proxy-only `backend/openapi.yaml` with proper API documentation including request/response schemas, error codes, and endpoint behaviors.
 
 ## Archived Specifications
 
@@ -21,5 +24,5 @@ See `.kiro/specs-archive/README.md` for details on archived specifications.
 
 ---
 
-**Last Updated**: January 17, 2026  
+**Last Updated**: January 24, 2026  
 **Maintained By**: Development Team
