@@ -13,7 +13,12 @@ schemes:
 
 basePath: /api
 
-host: toast-stats-api-gateway-XXXXX.uc.gateway.dev
+host: toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog
+
+# CORS configuration
+x-google-endpoints:
+  - name: toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog
+    allowCors: true
 
 # Security definition (not required for operations)
 securityDefinitions:
@@ -34,7 +39,7 @@ paths:
       tags:
         - Health
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app/health
+        address: https://toast-stats-api-736334703361.us-east1.run.app/health
         path_translation: CONSTANT_ADDRESS
       produces:
         - application/json
@@ -55,7 +60,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -76,7 +81,7 @@ paths:
       tags:
         - Rankings
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -112,7 +117,7 @@ paths:
       tags:
         - Cache
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -133,7 +138,7 @@ paths:
       tags:
         - Backfill
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       consumes:
         - application/json
@@ -194,7 +199,7 @@ paths:
       tags:
         - Backfill
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -219,7 +224,7 @@ paths:
       tags:
         - Backfill
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -248,7 +253,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -283,7 +288,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -312,7 +317,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -349,7 +354,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -386,7 +391,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -427,7 +432,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -462,7 +467,7 @@ paths:
       tags:
         - Rankings
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -503,7 +508,7 @@ paths:
       tags:
         - Rankings
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -532,7 +537,7 @@ paths:
       tags:
         - Cache
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -566,7 +571,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -607,7 +612,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -648,7 +653,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -682,7 +687,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -711,7 +716,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -752,7 +757,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -793,7 +798,7 @@ paths:
       tags:
         - Analytics
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -828,7 +833,7 @@ paths:
       tags:
         - Districts
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -883,7 +888,7 @@ paths:
       tags:
         - Backfill
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       consumes:
         - application/json
@@ -933,7 +938,7 @@ paths:
       tags:
         - Backfill
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -965,7 +970,7 @@ paths:
       tags:
         - Backfill
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -1005,7 +1010,7 @@ paths:
       tags:
         - Admin
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -1072,7 +1077,7 @@ paths:
       tags:
         - Admin
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
@@ -1101,7 +1106,7 @@ paths:
       tags:
         - Admin
       x-google-backend:
-        address: https://toast-stats-api-ii5boewesq-ue.a.run.app
+        address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
       produces:
         - application/json
