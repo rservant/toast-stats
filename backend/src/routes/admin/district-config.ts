@@ -8,10 +8,7 @@
  */
 
 import { Router } from 'express'
-import {
-  logAdminAccess,
-  generateOperationId,
-} from './shared.js'
+import { logAdminAccess, generateOperationId } from './shared.js'
 import { logger } from '../../utils/logger.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
 import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'

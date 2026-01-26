@@ -29,7 +29,10 @@ import { RefreshService } from '../RefreshService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { StorageProviderFactory } from '../storage/StorageProviderFactory.js'
 import type { RankingCalculator } from '../RankingCalculator.js'
-import type { DistrictStatistics, ScrapedRecord } from '../../types/districts.js'
+import type {
+  DistrictStatistics,
+  ScrapedRecord,
+} from '../../types/districts.js'
 import type {
   Snapshot,
   SnapshotStore,

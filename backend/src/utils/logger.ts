@@ -77,7 +77,10 @@ class Logger {
   }
 
   debug(message: string, data?: unknown): void {
-    this.output(this.formatLog('debug', message, data))
+    const logLevel = process.env['LOG_LEVEL'] || 'info'
+    if (logLevel === 'debug' || this.environment === 'development') {
+      this.output(this.formatLog('debug', message, data))
+    }
   }
 
   // Request logging middleware

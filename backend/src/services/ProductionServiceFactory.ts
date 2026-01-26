@@ -331,8 +331,9 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
           // This enables environment-based selection between local and cloud storage
           const snapshotStorage =
             container.resolveInterface<ISnapshotStorage>('ISnapshotStorage')
-          const districtDataAggregator =
-            createDistrictDataAggregator(snapshotStorage as unknown as FileSnapshotStore)
+          const districtDataAggregator = createDistrictDataAggregator(
+            snapshotStorage as unknown as FileSnapshotStore
+          )
           const dataSource = new AnalyticsDataSourceAdapter(
             districtDataAggregator,
             snapshotStorage as unknown as FileSnapshotStore

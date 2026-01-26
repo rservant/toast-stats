@@ -17,7 +17,10 @@ import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type { SnapshotStore } from '../types/snapshots.js'
-import type { ISnapshotStorage, IRawCSVStorage } from '../types/storageInterfaces.js'
+import type {
+  ISnapshotStorage,
+  IRawCSVStorage,
+} from '../types/storageInterfaces.js'
 import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**

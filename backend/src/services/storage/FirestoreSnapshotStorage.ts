@@ -421,7 +421,7 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
               lastModified: new Date().toISOString(),
             }))
 
-          // Build metadata
+          // Build metadata - only include defined values to avoid Firestore undefined errors
           const metadata: PerDistrictSnapshotMetadata = {
             snapshotId,
             createdAt: snapshot.created_at,
@@ -440,9 +440,17 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
             processingDuration: snapshot.payload.metadata.processingDurationMs,
             source: snapshot.payload.metadata.source,
             dataAsOfDate: snapshot.payload.metadata.dataAsOfDate,
-            isClosingPeriodData: snapshot.payload.metadata.isClosingPeriodData,
-            collectionDate: snapshot.payload.metadata.collectionDate,
-            logicalDate: snapshot.payload.metadata.logicalDate,
+            // Only include closing period fields if they have defined values
+            ...(snapshot.payload.metadata.isClosingPeriodData !== undefined && {
+              isClosingPeriodData:
+                snapshot.payload.metadata.isClosingPeriodData,
+            }),
+            ...(snapshot.payload.metadata.collectionDate !== undefined && {
+              collectionDate: snapshot.payload.metadata.collectionDate,
+            }),
+            ...(snapshot.payload.metadata.logicalDate !== undefined && {
+              logicalDate: snapshot.payload.metadata.logicalDate,
+            }),
           }
 
           // Build manifest

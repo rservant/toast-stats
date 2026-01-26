@@ -82,7 +82,7 @@ substitutions:
   _DEPLOY_REGION: 'us-east1' # e.g., 'us-central1', 'europe-west1'
   _SA_EMAIL: 'toast-stats-backend@artful-bonito-485102-i9.iam.gserviceaccount.com' # e.g., 'my-cloud-run-sa@my-project.iam.gserviceaccount.com'
   _GCS_BUCKET_NAME: 'toast-stats-raw-csv-artful-bonito-485102-i9' # e.g., 'my-app-data-bucket'
-  _CORS_ORIGIN: 'https://ts-taverns.red' # e.g., 'https://my-firebase-app.web.app'
+  _CORS_ORIGIN: 'https://ts.taverns.red' # e.g., 'https://my-firebase-app.web.app'
   _AR_HOSTNAME: 'us-east1-docker.pkg.dev' # Hostname for your Artifact Registry repository (e.g., us-central1-docker.pkg.dev)
   _AR_PROJECT_ID: 'artful-bonito-485102-i9' # Your GCP Project ID (can also use built-in PROJECT_ID)
   _AR_REPOSITORY: 'cloud-run-source-deploy' # Name of your Artifact Registry repository (e.g., 'cloud-run-source-deploy')
