@@ -30,6 +30,10 @@ import type {
   CacheHealthStatus,
 } from './rawCSVCache.js'
 import type {
+  TimeSeriesDataPoint,
+  ProgramYearIndex,
+} from './precomputedAnalytics.js'
+import type {
   DistrictConfiguration,
   ConfigurationChange,
 } from '../services/DistrictConfigurationService.js'
@@ -140,6 +144,19 @@ export interface ISnapshotStorage {
    * @returns The snapshot or null if not found
    */
   getSnapshot(snapshotId: string): Promise<Snapshot | null>
+
+  /**
+   * Delete a snapshot and all its associated data
+   *
+   * Removes the snapshot document/directory and all district data.
+   * Does NOT handle cascading deletion of time-series or analytics data -
+   * that responsibility belongs to the calling code (e.g., admin routes).
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if the snapshot was successfully deleted, false if it didn't exist
+   * @throws StorageOperationError on deletion failure (e.g., permission denied, I/O error)
+   */
+  deleteSnapshot(snapshotId: string): Promise<boolean>
 
   /**
    * Check if the storage is properly initialized and accessible
@@ -504,6 +521,115 @@ export interface IDistrictConfigStorage {
    * @returns Array of configuration changes sorted by timestamp (newest first)
    */
   getChangeHistory(limit: number): Promise<ConfigurationChange[]>
+
+  // ============================================================================
+  // Health Check
+  // ============================================================================
+
+  /**
+   * Check if the storage is properly initialized and accessible
+   *
+   * Verifies that the storage backend is ready for operations. This may
+   * include checking directory existence, database connectivity, or
+   * authentication status. Returns false without throwing when storage
+   * is unavailable.
+   *
+   * @returns True if the storage is ready for operations
+   */
+  isReady(): Promise<boolean>
+}
+
+/**
+ * Time-series index storage interface - abstracts time-series data persistence
+ *
+ * This interface defines the contract for time-series index operations,
+ * enabling swappable implementations for local filesystem and Firestore storage.
+ *
+ * The time-series index stores date-indexed analytics summaries across all
+ * snapshots, enabling efficient trend queries without loading individual
+ * snapshot data. Data is partitioned by program year (July 1 - June 30) to
+ * limit file sizes and support efficient range queries.
+ *
+ * Requirements: 4.1, 4.2, 4.3
+ */
+export interface ITimeSeriesIndexStorage {
+  // ============================================================================
+  // Core Time-Series Operations
+  // ============================================================================
+
+  /**
+   * Append a data point to the time-series index
+   *
+   * Adds a new time-series data point for a district. The data point is
+   * automatically placed in the appropriate program year partition based
+   * on its date. If a data point with the same date already exists, it
+   * will be updated.
+   *
+   * @param districtId - The district identifier (e.g., "42", "61", "F")
+   * @param dataPoint - The time-series data point to append
+   * @throws StorageOperationError on write failure
+   */
+  appendDataPoint(
+    districtId: string,
+    dataPoint: TimeSeriesDataPoint
+  ): Promise<void>
+
+  /**
+   * Get trend data for a date range
+   *
+   * Retrieves all time-series data points for a district within the
+   * specified date range (inclusive). Results are returned in
+   * chronological order.
+   *
+   * @param districtId - The district identifier (e.g., "42", "61", "F")
+   * @param startDate - Start date in ISO format (YYYY-MM-DD)
+   * @param endDate - End date in ISO format (YYYY-MM-DD)
+   * @returns Array of time-series data points in chronological order
+   * @throws StorageOperationError on read failure
+   */
+  getTrendData(
+    districtId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<TimeSeriesDataPoint[]>
+
+  /**
+   * Get all data for a program year
+   *
+   * Retrieves the complete program year index for a district, including
+   * all data points and summary statistics. Returns null if no data
+   * exists for the specified program year.
+   *
+   * @param districtId - The district identifier (e.g., "42", "61", "F")
+   * @param programYear - Program year identifier (e.g., "2023-2024")
+   * @returns Program year index or null if not found
+   * @throws StorageOperationError on read failure
+   */
+  getProgramYearData(
+    districtId: string,
+    programYear: string
+  ): Promise<ProgramYearIndex | null>
+
+  // ============================================================================
+  // Deletion Operations
+  // ============================================================================
+
+  /**
+   * Delete all time-series entries for a specific snapshot
+   *
+   * Removes all data points associated with a given snapshot ID across
+   * all districts and program years. This is used during cascading
+   * deletion to clean up time-series data when a snapshot is deleted.
+   *
+   * The operation scans all districts and program years to find and
+   * remove entries where the snapshotId matches. This may be a slow
+   * operation for large datasets.
+   *
+   * @param snapshotId - The snapshot ID to remove entries for (ISO date format: YYYY-MM-DD)
+   * @returns Number of entries removed across all districts
+   * @throws StorageOperationError on deletion failure
+   */
+  deleteSnapshotEntries(snapshotId: string): Promise<number>
 
   // ============================================================================
   // Health Check

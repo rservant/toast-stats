@@ -234,4 +234,22 @@ export class LocalSnapshotStorage implements ISnapshotStorage {
   async hasAllDistrictsRankings(snapshotId: string): Promise<boolean> {
     return this.store.hasAllDistrictsRankings(snapshotId)
   }
+
+  // ============================================================================
+  // Deletion Operations
+  // ============================================================================
+
+  /**
+   * Delete a snapshot and all its associated data
+   *
+   * Removes the snapshot directory and all district data.
+   * Does NOT handle cascading deletion of time-series or analytics data.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if snapshot was deleted, false if it didn't exist
+   * @throws StorageOperationError on deletion failure
+   */
+  async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    return this.store.deleteSnapshot(snapshotId)
+  }
 }

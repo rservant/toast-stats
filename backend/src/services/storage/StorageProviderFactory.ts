@@ -19,6 +19,7 @@ import type {
   ISnapshotStorage,
   IRawCSVStorage,
   IDistrictConfigStorage,
+  ITimeSeriesIndexStorage,
   StorageConfig,
   StorageProviderType,
 } from '../../types/storageInterfaces.js'
@@ -26,8 +27,10 @@ import { StorageConfigurationError } from '../../types/storageInterfaces.js'
 import { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
 import { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
+import { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
 import { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
 import { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
+import { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStorage.js'
 import { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 import { CacheConfigService } from '../CacheConfigService.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
@@ -52,13 +55,14 @@ const DEFAULT_FIRESTORE_COLLECTION = 'snapshots'
 /**
  * Result of storage provider creation
  *
- * Contains snapshot, raw CSV, and district configuration storage implementations
- * configured for the selected provider type.
+ * Contains snapshot, raw CSV, district configuration, and time-series index
+ * storage implementations configured for the selected provider type.
  */
 export interface StorageProviders {
   snapshotStorage: ISnapshotStorage
   rawCSVStorage: IRawCSVStorage
   districtConfigStorage: IDistrictConfigStorage
+  timeSeriesIndexStorage: ITimeSeriesIndexStorage
 }
 
 // ============================================================================
@@ -232,6 +236,9 @@ export class StorageProviderFactory {
     // Create district configuration storage
     const districtConfigStorage = new LocalDistrictConfigStorage(cacheDir)
 
+    // Create time-series index storage
+    const timeSeriesIndexStorage = new LocalTimeSeriesIndexStorage({ cacheDir })
+
     logger.info('Local storage providers created successfully', {
       operation: 'createLocalProviders',
       cacheDir,
@@ -241,6 +248,7 @@ export class StorageProviderFactory {
       snapshotStorage,
       rawCSVStorage,
       districtConfigStorage,
+      timeSeriesIndexStorage,
     }
   }
 
@@ -351,6 +359,11 @@ export class StorageProviderFactory {
       projectId: gcpConfig.projectId,
     })
 
+    // Create Firestore time-series index storage
+    const timeSeriesIndexStorage = new FirestoreTimeSeriesIndexStorage({
+      projectId: gcpConfig.projectId,
+    })
+
     logger.info('GCP storage providers created successfully', {
       operation: 'createGCPProviders',
       projectId: gcpConfig.projectId,
@@ -362,6 +375,7 @@ export class StorageProviderFactory {
       snapshotStorage,
       rawCSVStorage,
       districtConfigStorage,
+      timeSeriesIndexStorage,
     }
   }
 }

@@ -1487,6 +1487,74 @@ export class FileSnapshotStore
   }
 
   /**
+   * Delete a snapshot and all its associated data
+   *
+   * Removes the snapshot directory and all district files within it.
+   * Does NOT handle cascading deletion of time-series or analytics data.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if snapshot was deleted, false if it didn't exist
+   * @throws Error on deletion failure
+   *
+   * Requirements: 3.1, 3.2, 3.3, 3.4
+   */
+  async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    const startTime = Date.now()
+
+    logger.info('Starting deleteSnapshot operation', {
+      operation: 'deleteSnapshot',
+      snapshot_id: snapshotId,
+    })
+
+    try {
+      // Validate snapshot ID format to prevent path traversal
+      this.validateSnapshotId(snapshotId)
+
+      // Use safe path resolution for the snapshot directory
+      const snapshotDir = this.resolvePathUnderBase(
+        this.snapshotsDir,
+        snapshotId
+      )
+
+      // Check if snapshot exists
+      try {
+        await fs.access(snapshotDir)
+      } catch {
+        logger.info('Snapshot not found for deletion', {
+          operation: 'deleteSnapshot',
+          snapshot_id: snapshotId,
+          duration_ms: Date.now() - startTime,
+        })
+        return false
+      }
+
+      // Delete the entire snapshot directory
+      await fs.rm(snapshotDir, { recursive: true, force: true })
+
+      // Invalidate any cached data for this snapshot
+      this.invalidateSnapshotCache(snapshotId)
+
+      logger.info('Successfully deleted snapshot', {
+        operation: 'deleteSnapshot',
+        snapshot_id: snapshotId,
+        duration_ms: Date.now() - startTime,
+      })
+
+      return true
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to delete snapshot', {
+        operation: 'deleteSnapshot',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+        duration_ms: Date.now() - startTime,
+      })
+      throw error
+    }
+  }
+
+  /**
    * Validate the integrity of the snapshot store
    */
   async validateIntegrity(): Promise<
@@ -1762,6 +1830,32 @@ export class FileSnapshotStore
     logger.debug('Invalidated all in-memory caches', {
       operation: 'invalidateCaches',
       invalidated: ['currentSnapshotCache', 'snapshotListCache'],
+    })
+  }
+
+  /**
+   * Invalidate cached data for a specific snapshot
+   * Called when a snapshot is deleted to ensure cache consistency
+   */
+  private invalidateSnapshotCache(snapshotId: string): void {
+    // Invalidate current snapshot cache if it matches the deleted snapshot
+    if (
+      this.currentSnapshotCache &&
+      this.currentSnapshotCache.snapshot.snapshot_id === snapshotId
+    ) {
+      this.currentSnapshotCache = null
+      logger.debug('Invalidated current snapshot cache for deleted snapshot', {
+        operation: 'invalidateSnapshotCache',
+        snapshot_id: snapshotId,
+      })
+    }
+
+    // Invalidate snapshot list cache since the list has changed
+    this.snapshotListCache = null
+
+    logger.debug('Invalidated snapshot list cache after deletion', {
+      operation: 'invalidateSnapshotCache',
+      snapshot_id: snapshotId,
     })
   }
 

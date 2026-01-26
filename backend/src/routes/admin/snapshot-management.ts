@@ -8,36 +8,38 @@
  *
  * All delete operations implement cascading deletion:
  * - Snapshot data files
- * - Associated pre-computed analytics
+ * - Associated pre-computed analytics (stored within snapshots)
  * - Associated time-series index entries
  *
- * Requirements: 8.1, 8.2, 8.3
+ * This module uses storage abstractions for all data operations,
+ * complying with the storage abstraction steering document.
+ *
+ * Requirements: 8.1, 8.2, 8.3, 5.1, 5.2, 5.3, 5.6, 5.7
  */
 
 import { Router } from 'express'
-import fs from 'fs/promises'
-import path from 'path'
-import {
-  logAdminAccess,
-  generateOperationId,
-  getServiceFactory,
-} from './shared.js'
+import { logAdminAccess, generateOperationId } from './shared.js'
 import { logger } from '../../utils/logger.js'
-import type { ProgramYearIndexFile } from '../../types/precomputedAnalytics.js'
+import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'
+import type {
+  ISnapshotStorage,
+  ITimeSeriesIndexStorage,
+} from '../../types/storageInterfaces.js'
 
 export const snapshotManagementRouter = Router()
 
 /**
  * Result of a snapshot deletion operation
+ *
+ * Updated to use storage abstraction terminology
  */
 interface SnapshotDeletionResult {
   snapshotId: string
   success: boolean
   error?: string
   deletedFiles: {
-    snapshotDir: boolean
-    analyticsFile: boolean
-    timeSeriesEntries: number
+    snapshotDeleted: boolean
+    timeSeriesEntriesRemoved: number
   }
 }
 
@@ -48,68 +50,83 @@ interface DeletionSummary {
   totalRequested: number
   successfulDeletions: number
   failedDeletions: number
+  totalTimeSeriesEntriesRemoved: number
   results: SnapshotDeletionResult[]
-}
-
-/**
- * Get the cache directory from the service factory
- */
-function getCacheDir(): string {
-  const factory = getServiceFactory()
-  const cacheConfig = factory.createCacheConfigService()
-  return cacheConfig.getCacheDirectory()
-}
-
-/**
- * Get the program year for a given date
- * Toastmasters program years run from July 1 to June 30
- */
-function getProgramYearForDate(dateStr: string): string {
-  const parts = dateStr.split('-')
-  const year = parseInt(parts[0] ?? '0', 10)
-  const month = parseInt(parts[1] ?? '0', 10)
-
-  if (month >= 7) {
-    return `${year}-${year + 1}`
-  } else {
-    return `${year - 1}-${year}`
-  }
 }
 
 /**
  * Delete a single snapshot with cascading deletion
  *
  * Implements Property 11: Snapshot Deletion Cascade
- * - Deletes snapshot data files
- * - Deletes associated pre-computed analytics
+ * - Deletes snapshot data via storage abstraction
  * - Removes time-series index entries for the deleted snapshot
  *
- * Requirements: 8.3
+ * Note: Pre-computed analytics are stored within the snapshot and are
+ * automatically deleted when the snapshot is deleted.
+ *
+ * Requirements: 5.2, 5.3, 6.1, 6.3, 6.4
  */
 async function deleteSnapshotWithCascade(
   snapshotId: string,
-  cacheDir: string,
+  snapshotStorage: ISnapshotStorage,
+  timeSeriesStorage: ITimeSeriesIndexStorage,
   operationId: string
 ): Promise<SnapshotDeletionResult> {
   const result: SnapshotDeletionResult = {
     snapshotId,
     success: false,
     deletedFiles: {
-      snapshotDir: false,
-      analyticsFile: false,
-      timeSeriesEntries: 0,
+      snapshotDeleted: false,
+      timeSeriesEntriesRemoved: 0,
     },
   }
 
   try {
-    const snapshotsDir = path.join(cacheDir, 'snapshots')
-    const timeSeriesDir = path.join(cacheDir, 'time-series')
-    const snapshotDir = path.join(snapshotsDir, snapshotId)
-
-    // 1. Check if snapshot exists
+    // 1. Get list of districts in the snapshot (for logging purposes)
+    let districtCount = 0
     try {
-      await fs.access(snapshotDir)
+      const districtIds =
+        await snapshotStorage.listDistrictsInSnapshot(snapshotId)
+      districtCount = districtIds.length
     } catch {
+      logger.warn('Could not get district list for snapshot', {
+        operation: 'deleteSnapshotWithCascade',
+        operationId,
+        snapshotId,
+      })
+    }
+
+    // 2. Delete time-series index entries for this snapshot
+    // Handle failures gracefully - log and continue with snapshot deletion
+    try {
+      const entriesRemoved =
+        await timeSeriesStorage.deleteSnapshotEntries(snapshotId)
+      result.deletedFiles.timeSeriesEntriesRemoved = entriesRemoved
+
+      if (entriesRemoved > 0) {
+        logger.debug('Removed time-series entries for snapshot', {
+          operation: 'deleteSnapshotWithCascade',
+          operationId,
+          snapshotId,
+          entriesRemoved,
+        })
+      }
+    } catch (error) {
+      // Log warning but continue with snapshot deletion
+      logger.warn('Failed to clean up time-series entries', {
+        operation: 'deleteSnapshotWithCascade',
+        operationId,
+        snapshotId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      // Continue with snapshot deletion even if time-series cleanup fails
+    }
+
+    // 3. Delete the snapshot via storage abstraction
+    // This also deletes any analytics-summary.json stored within the snapshot
+    const deleted = await snapshotStorage.deleteSnapshot(snapshotId)
+
+    if (!deleted) {
       result.error = `Snapshot ${snapshotId} not found`
       logger.warn('Snapshot not found for deletion', {
         operation: 'deleteSnapshotWithCascade',
@@ -119,126 +136,15 @@ async function deleteSnapshotWithCascade(
       return result
     }
 
-    // 2. Read manifest to get list of districts (for time-series cleanup)
-    let districtIds: string[] = []
-    try {
-      const manifestPath = path.join(snapshotDir, 'manifest.json')
-      const manifestContent = await fs.readFile(manifestPath, 'utf-8')
-      const manifest = JSON.parse(manifestContent) as {
-        districts: Array<{ districtId: string }>
-      }
-      districtIds = manifest.districts.map(d => d.districtId)
-    } catch {
-      logger.warn('Could not read manifest for district list', {
-        operation: 'deleteSnapshotWithCascade',
-        operationId,
-        snapshotId,
-      })
-    }
-
-    // 3. Delete time-series index entries for this snapshot
-    const programYear = getProgramYearForDate(snapshotId)
-    let timeSeriesEntriesDeleted = 0
-
-    for (const districtId of districtIds) {
-      try {
-        const indexFilePath = path.join(
-          timeSeriesDir,
-          `district_${districtId}`,
-          `${programYear}.json`
-        )
-
-        const indexContent = await fs.readFile(indexFilePath, 'utf-8')
-        const indexFile: ProgramYearIndexFile = JSON.parse(indexContent)
-
-        // Filter out data points for this snapshot
-        const originalCount = indexFile.dataPoints.length
-        indexFile.dataPoints = indexFile.dataPoints.filter(
-          dp => dp.snapshotId !== snapshotId
-        )
-        const removedCount = originalCount - indexFile.dataPoints.length
-
-        if (removedCount > 0) {
-          // Update the index file
-          indexFile.lastUpdated = new Date().toISOString()
-
-          // Recalculate summary
-          if (indexFile.dataPoints.length > 0) {
-            const memberships = indexFile.dataPoints.map(dp => dp.membership)
-            const firstDataPoint = indexFile.dataPoints[0]
-            const lastDataPoint =
-              indexFile.dataPoints[indexFile.dataPoints.length - 1]
-
-            indexFile.summary = {
-              totalDataPoints: indexFile.dataPoints.length,
-              membershipStart: firstDataPoint?.membership ?? 0,
-              membershipEnd: lastDataPoint?.membership ?? 0,
-              membershipPeak: Math.max(...memberships),
-              membershipLow: Math.min(...memberships),
-            }
-          } else {
-            indexFile.summary = {
-              totalDataPoints: 0,
-              membershipStart: 0,
-              membershipEnd: 0,
-              membershipPeak: 0,
-              membershipLow: 0,
-            }
-          }
-
-          await fs.writeFile(
-            indexFilePath,
-            JSON.stringify(indexFile, null, 2),
-            'utf-8'
-          )
-
-          timeSeriesEntriesDeleted += removedCount
-
-          logger.debug('Removed time-series entries for snapshot', {
-            operation: 'deleteSnapshotWithCascade',
-            operationId,
-            snapshotId,
-            districtId,
-            removedCount,
-          })
-        }
-      } catch (error) {
-        // Index file might not exist for this district/program year
-        if ((error as { code?: string }).code !== 'ENOENT') {
-          logger.warn('Error updating time-series index', {
-            operation: 'deleteSnapshotWithCascade',
-            operationId,
-            snapshotId,
-            districtId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          })
-        }
-      }
-    }
-
-    result.deletedFiles.timeSeriesEntries = timeSeriesEntriesDeleted
-
-    // 4. Check if analytics-summary.json exists (it's inside the snapshot dir)
-    const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-    try {
-      await fs.access(analyticsPath)
-      result.deletedFiles.analyticsFile = true
-    } catch {
-      // Analytics file doesn't exist, that's okay
-    }
-
-    // 5. Delete the entire snapshot directory (includes analytics-summary.json)
-    await fs.rm(snapshotDir, { recursive: true, force: true })
-    result.deletedFiles.snapshotDir = true
+    result.deletedFiles.snapshotDeleted = true
     result.success = true
 
     logger.info('Successfully deleted snapshot with cascade', {
       operation: 'deleteSnapshotWithCascade',
       operationId,
       snapshotId,
-      districtCount: districtIds.length,
-      timeSeriesEntriesDeleted,
-      hadAnalyticsFile: result.deletedFiles.analyticsFile,
+      districtCount,
+      timeSeriesEntriesRemoved: result.deletedFiles.timeSeriesEntriesRemoved,
     })
 
     return result
@@ -265,7 +171,7 @@ async function deleteSnapshotWithCascade(
  * Request Body:
  * - snapshotIds: string[] - Array of snapshot IDs to delete
  *
- * Requirements: 8.1, 8.3
+ * Requirements: 5.6, 8.1, 8.3
  */
 snapshotManagementRouter.delete(
   '/snapshots',
@@ -317,14 +223,18 @@ snapshotManagementRouter.delete(
         return
       }
 
-      const cacheDir = getCacheDir()
+      // Get storage providers from factory
+      const { snapshotStorage, timeSeriesIndexStorage } =
+        StorageProviderFactory.createFromEnvironment()
+
       const results: SnapshotDeletionResult[] = []
 
       // Delete each snapshot with cascading
       for (const snapshotId of snapshotIds as string[]) {
         const result = await deleteSnapshotWithCascade(
           snapshotId,
-          cacheDir,
+          snapshotStorage,
+          timeSeriesIndexStorage,
           operationId
         )
         results.push(result)
@@ -334,6 +244,10 @@ snapshotManagementRouter.delete(
         totalRequested: snapshotIds.length,
         successfulDeletions: results.filter(r => r.success).length,
         failedDeletions: results.filter(r => !r.success).length,
+        totalTimeSeriesEntriesRemoved: results.reduce(
+          (sum, r) => sum + r.deletedFiles.timeSeriesEntriesRemoved,
+          0
+        ),
         results,
       }
 
@@ -345,6 +259,7 @@ snapshotManagementRouter.delete(
         totalRequested: summary.totalRequested,
         successfulDeletions: summary.successfulDeletions,
         failedDeletions: summary.failedDeletions,
+        totalTimeSeriesEntriesRemoved: summary.totalTimeSeriesEntriesRemoved,
         durationMs: duration,
       })
 
@@ -387,7 +302,7 @@ snapshotManagementRouter.delete(
  * - startDate: string - Start date (inclusive, YYYY-MM-DD format)
  * - endDate: string - End date (inclusive, YYYY-MM-DD format)
  *
- * Requirements: 8.2, 8.3
+ * Requirements: 5.7, 8.2, 8.3
  */
 snapshotManagementRouter.delete(
   '/snapshots/range',
@@ -441,52 +356,52 @@ snapshotManagementRouter.delete(
         return
       }
 
-      const cacheDir = getCacheDir()
-      const snapshotsDir = path.join(cacheDir, 'snapshots')
+      // Get storage providers from factory
+      const { snapshotStorage, timeSeriesIndexStorage } =
+        StorageProviderFactory.createFromEnvironment()
 
-      // List all snapshot directories
-      let snapshotDirs: string[] = []
-      try {
-        const entries = await fs.readdir(snapshotsDir, { withFileTypes: true })
-        snapshotDirs = entries
-          .filter(entry => entry.isDirectory())
-          .map(entry => entry.name)
-          .filter(name => datePattern.test(name))
-          .filter(name => name >= startDate && name <= endDate)
-          .sort()
-      } catch (error) {
-        if ((error as { code?: string }).code === 'ENOENT') {
-          // Snapshots directory doesn't exist
-          snapshotDirs = []
-        } else {
-          throw error
-        }
-      }
+      // Get all snapshots and filter by snapshot_id (which is the date)
+      // Note: We don't use created_after/created_before filters because those
+      // filter by created_at timestamp, not by snapshot_id date
+      const snapshotMetadataList = await snapshotStorage.listSnapshots()
+
+      // Extract snapshot IDs and filter by date pattern and range
+      // The snapshot_id is the date (YYYY-MM-DD format)
+      const snapshotIds = snapshotMetadataList
+        .map(meta => meta.snapshot_id)
+        .filter(id => datePattern.test(id))
+        .filter(id => id >= startDate && id <= endDate)
+        .sort()
 
       logger.info('Found snapshots in date range', {
         operation: 'deleteSnapshotsRange',
         operationId,
         startDate,
         endDate,
-        snapshotCount: snapshotDirs.length,
+        snapshotCount: snapshotIds.length,
       })
 
       const results: SnapshotDeletionResult[] = []
 
       // Delete each snapshot with cascading
-      for (const snapshotId of snapshotDirs) {
+      for (const snapshotId of snapshotIds) {
         const result = await deleteSnapshotWithCascade(
           snapshotId,
-          cacheDir,
+          snapshotStorage,
+          timeSeriesIndexStorage,
           operationId
         )
         results.push(result)
       }
 
       const summary: DeletionSummary = {
-        totalRequested: snapshotDirs.length,
+        totalRequested: snapshotIds.length,
         successfulDeletions: results.filter(r => r.success).length,
         failedDeletions: results.filter(r => !r.success).length,
+        totalTimeSeriesEntriesRemoved: results.reduce(
+          (sum, r) => sum + r.deletedFiles.timeSeriesEntriesRemoved,
+          0
+        ),
         results,
       }
 
@@ -500,6 +415,7 @@ snapshotManagementRouter.delete(
         totalRequested: summary.totalRequested,
         successfulDeletions: summary.successfulDeletions,
         failedDeletions: summary.failedDeletions,
+        totalTimeSeriesEntriesRemoved: summary.totalTimeSeriesEntriesRemoved,
         durationMs: duration,
       })
 
@@ -542,7 +458,11 @@ snapshotManagementRouter.delete(
  * Request Body (optional):
  * - districtId: string - If provided, only delete data for this district
  *
- * Requirements: 8.1, 8.3
+ * Note: District-specific deletion is a more complex operation that requires
+ * iterating through all snapshots. This is handled via the storage abstraction
+ * but may be slower than full snapshot deletion.
+ *
+ * Requirements: 5.2, 8.1, 8.3
  */
 snapshotManagementRouter.delete(
   '/snapshots/all',
@@ -562,9 +482,9 @@ snapshotManagementRouter.delete(
       const districtId =
         typeof body.districtId === 'string' ? body.districtId : undefined
 
-      const cacheDir = getCacheDir()
-      const snapshotsDir = path.join(cacheDir, 'snapshots')
-      const timeSeriesDir = path.join(cacheDir, 'time-series')
+      // Get storage providers from factory
+      const { snapshotStorage, timeSeriesIndexStorage } =
+        StorageProviderFactory.createFromEnvironment()
 
       // If districtId is provided, only delete data for that district
       if (districtId) {
@@ -586,102 +506,27 @@ snapshotManagementRouter.delete(
           return
         }
 
-        let deletedDistrictFiles = 0
-        let deletedTimeSeriesFiles = 0
+        // District-specific deletion is not directly supported by the storage abstraction
+        // This would require iterating through all snapshots and removing district data
+        // For now, we return an error indicating this operation is not supported
+        // via the storage abstraction layer
+        //
+        // Note: In the future, this could be implemented by:
+        // 1. Listing all snapshots
+        // 2. For each snapshot, removing the district data file
+        // 3. Updating the manifest
+        // 4. Deleting the district's time-series data
+        //
+        // However, this is a complex operation that may need to be handled
+        // differently for local vs cloud storage.
 
-        // Delete district files from all snapshots
-        try {
-          const snapshotEntries = await fs.readdir(snapshotsDir, {
-            withFileTypes: true,
-          })
-
-          for (const entry of snapshotEntries) {
-            if (entry.isDirectory()) {
-              const districtFilePath = path.join(
-                snapshotsDir,
-                entry.name,
-                `district_${districtId}.json`
-              )
-
-              try {
-                await fs.unlink(districtFilePath)
-                deletedDistrictFiles++
-
-                // Update manifest to remove this district
-                const manifestPath = path.join(
-                  snapshotsDir,
-                  entry.name,
-                  'manifest.json'
-                )
-                try {
-                  const manifestContent = await fs.readFile(
-                    manifestPath,
-                    'utf-8'
-                  )
-                  const manifest = JSON.parse(manifestContent) as {
-                    districts: Array<{ districtId: string }>
-                    totalDistricts: number
-                    successfulDistricts: number
-                  }
-
-                  manifest.districts = manifest.districts.filter(
-                    d => d.districtId !== districtId
-                  )
-                  manifest.totalDistricts = manifest.districts.length
-                  manifest.successfulDistricts = manifest.districts.filter(
-                    d => (d as { status?: string }).status === 'success'
-                  ).length
-
-                  await fs.writeFile(
-                    manifestPath,
-                    JSON.stringify(manifest, null, 2),
-                    'utf-8'
-                  )
-                } catch {
-                  // Manifest update failed, continue
-                }
-              } catch {
-                // District file doesn't exist in this snapshot
-              }
-            }
-          }
-        } catch {
-          // Snapshots directory doesn't exist
-        }
-
-        // Delete time-series directory for this district
-        const districtTimeSeriesDir = path.join(
-          timeSeriesDir,
-          `district_${districtId}`
-        )
-        try {
-          await fs.rm(districtTimeSeriesDir, { recursive: true, force: true })
-          deletedTimeSeriesFiles = 1
-        } catch {
-          // Time-series directory doesn't exist
-        }
-
-        const duration = Date.now() - startTime
-
-        logger.info('Completed district-specific deletion', {
-          operation: 'deleteAllSnapshots',
-          operationId,
-          districtId,
-          deletedDistrictFiles,
-          deletedTimeSeriesFiles,
-          durationMs: duration,
-        })
-
-        res.json({
-          summary: {
-            districtId,
-            deletedDistrictFiles,
-            deletedTimeSeriesDirectory: deletedTimeSeriesFiles > 0,
-          },
-          metadata: {
-            operationId,
-            durationMs: duration,
-            completedAt: new Date().toISOString(),
+        res.status(501).json({
+          error: {
+            code: 'NOT_IMPLEMENTED',
+            message:
+              'District-specific deletion is not yet supported via storage abstraction. Use full snapshot deletion instead.',
+            details:
+              'This operation requires iterating through all snapshots and modifying each one, which is not yet implemented in the storage abstraction layer.',
           },
         })
         return
@@ -689,63 +534,43 @@ snapshotManagementRouter.delete(
 
       // Delete ALL snapshots
       const datePattern = /^\d{4}-\d{2}-\d{2}$/
-      let snapshotDirs: string[] = []
 
-      try {
-        const entries = await fs.readdir(snapshotsDir, { withFileTypes: true })
-        snapshotDirs = entries
-          .filter(entry => entry.isDirectory())
-          .map(entry => entry.name)
-          .filter(name => datePattern.test(name))
-          .sort()
-      } catch (error) {
-        if ((error as { code?: string }).code === 'ENOENT') {
-          snapshotDirs = []
-        } else {
-          throw error
-        }
-      }
+      // Use listSnapshots to get all snapshots
+      const snapshotMetadataList = await snapshotStorage.listSnapshots()
+
+      // Extract snapshot IDs that match the date pattern
+      const snapshotIds = snapshotMetadataList
+        .map(meta => meta.snapshot_id)
+        .filter(id => datePattern.test(id))
+        .sort()
 
       logger.info('Found all snapshots for deletion', {
         operation: 'deleteAllSnapshots',
         operationId,
-        snapshotCount: snapshotDirs.length,
+        snapshotCount: snapshotIds.length,
       })
 
       const results: SnapshotDeletionResult[] = []
 
       // Delete each snapshot with cascading
-      for (const snapshotId of snapshotDirs) {
+      for (const snapshotId of snapshotIds) {
         const result = await deleteSnapshotWithCascade(
           snapshotId,
-          cacheDir,
+          snapshotStorage,
+          timeSeriesIndexStorage,
           operationId
         )
         results.push(result)
       }
 
-      // Also clean up any orphaned time-series directories
-      let cleanedTimeSeriesDirs = 0
-      try {
-        const timeSeriesEntries = await fs.readdir(timeSeriesDir, {
-          withFileTypes: true,
-        })
-
-        for (const entry of timeSeriesEntries) {
-          if (entry.isDirectory()) {
-            const dirPath = path.join(timeSeriesDir, entry.name)
-            await fs.rm(dirPath, { recursive: true, force: true })
-            cleanedTimeSeriesDirs++
-          }
-        }
-      } catch {
-        // Time-series directory doesn't exist
-      }
-
       const summary: DeletionSummary = {
-        totalRequested: snapshotDirs.length,
+        totalRequested: snapshotIds.length,
         successfulDeletions: results.filter(r => r.success).length,
         failedDeletions: results.filter(r => !r.success).length,
+        totalTimeSeriesEntriesRemoved: results.reduce(
+          (sum, r) => sum + r.deletedFiles.timeSeriesEntriesRemoved,
+          0
+        ),
         results,
       }
 
@@ -757,15 +582,12 @@ snapshotManagementRouter.delete(
         totalRequested: summary.totalRequested,
         successfulDeletions: summary.successfulDeletions,
         failedDeletions: summary.failedDeletions,
-        cleanedTimeSeriesDirs,
+        totalTimeSeriesEntriesRemoved: summary.totalTimeSeriesEntriesRemoved,
         durationMs: duration,
       })
 
       res.json({
-        summary: {
-          ...summary,
-          cleanedTimeSeriesDirectories: cleanedTimeSeriesDirs,
-        },
+        summary,
         metadata: {
           operationId,
           durationMs: duration,

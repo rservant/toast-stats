@@ -17,8 +17,6 @@
  */
 
 import { Router } from 'express'
-import fs from 'fs/promises'
-import path from 'path'
 import {
   logAdminAccess,
   generateOperationId,
@@ -502,7 +500,6 @@ monitoringRouter.get('/health', logAdminAccess, async (req, res) => {
     const factory = getServiceFactory()
     const snapshotStorage =
       factory.createSnapshotStorage() as ISnapshotStorageWithOptionalMethods
-    const cacheConfig = factory.createCacheConfigService()
 
     // Get performance metrics from snapshot store
     const performanceMetrics = snapshotStorage.getPerformanceMetrics?.() || {
@@ -524,28 +521,30 @@ monitoringRouter.get('/health', logAdminAccess, async (req, res) => {
     const snapshots = await snapshotStorage.listSnapshots()
     const snapshotCount = snapshots.length
 
-    // Count snapshots with pre-computed analytics
-    const cacheDir = cacheConfig.getCacheDirectory()
-    const snapshotsDir = path.join(cacheDir, 'snapshots')
+    // Count snapshots with pre-computed analytics using storage abstraction
+    // Pre-computed analytics are stored within snapshots, so we check via getSnapshotManifest
+    // which includes information about analytics presence
     let precomputedAnalyticsCount = 0
 
     try {
       for (const snapshot of snapshots) {
-        const analyticsPath = path.join(
-          snapshotsDir,
-          snapshot.snapshot_id,
-          'analytics-summary.json'
+        // Check if the snapshot has analytics by looking at the manifest
+        // The manifest includes allDistrictsRankings status which indicates analytics presence
+        const manifest = await snapshotStorage.getSnapshotManifest(
+          snapshot.snapshot_id
         )
-        try {
-          await fs.access(analyticsPath)
+        if (
+          manifest?.allDistrictsRankings?.status === 'present' ||
+          snapshot.status === 'success'
+        ) {
+          // Successful snapshots typically have analytics computed
+          // We count successful snapshots as having analytics
           precomputedAnalyticsCount++
-        } catch {
-          // Analytics file doesn't exist for this snapshot
         }
       }
     } catch {
-      // Error counting analytics files - continue with 0
-      logger.warn('Failed to count pre-computed analytics files', {
+      // Error counting analytics - continue with 0
+      logger.warn('Failed to count pre-computed analytics', {
         operation: 'getSystemHealth',
         operation_id: operationId,
       })

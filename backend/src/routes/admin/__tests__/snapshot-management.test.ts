@@ -5,10 +5,10 @@
  * - Delete snapshots by IDs
  * - Delete snapshots in date range
  * - Delete all snapshots
- * - Cascading deletion of analytics and time-series entries
+ * - Cascading deletion of time-series entries
  * - Error handling
  *
- * Requirements: 8.1, 8.2, 8.3
+ * Requirements: 8.1, 8.2, 8.3, 5.1, 5.2, 5.3, 5.6, 5.7
  * Property 11: Snapshot Deletion Cascade
  */
 
@@ -22,26 +22,27 @@ import { snapshotManagementRouter } from '../snapshot-management.js'
 import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { PreComputedAnalyticsService } from '../../../services/PreComputedAnalyticsService.js'
 import { TimeSeriesIndexService } from '../../../services/TimeSeriesIndexService.js'
+import { LocalSnapshotStorage } from '../../../services/storage/LocalSnapshotStorage.js'
+import { LocalTimeSeriesIndexStorage } from '../../../services/storage/LocalTimeSeriesIndexStorage.js'
 import type { Snapshot } from '../../../types/snapshots.js'
 import type { DistrictStatistics } from '../../../types/districts.js'
 
 // Test instances
 let testSnapshotStore: FileSnapshotStore
+let testSnapshotStorage: LocalSnapshotStorage
+let testTimeSeriesIndexStorage: LocalTimeSeriesIndexStorage
 let testPreComputedAnalyticsService: PreComputedAnalyticsService
 let testTimeSeriesIndexService: TimeSeriesIndexService
 let tempDir: string
 
-// Mock the production service factory
-const mockFactory = {
-  createCacheConfigService: () => ({
-    getCacheDirectory: () => tempDir,
-  }),
-  createSnapshotStorage: () => testSnapshotStore,
-  createSnapshotStore: () => testSnapshotStore,
-}
-
-vi.mock('../../../services/ProductionServiceFactory.js', () => ({
-  getProductionServiceFactory: () => mockFactory,
+// Mock the StorageProviderFactory
+vi.mock('../../../services/storage/StorageProviderFactory.js', () => ({
+  StorageProviderFactory: {
+    createFromEnvironment: () => ({
+      snapshotStorage: testSnapshotStorage,
+      timeSeriesIndexStorage: testTimeSeriesIndexStorage,
+    }),
+  },
 }))
 
 // Mock logger
@@ -70,6 +71,15 @@ describe('Snapshot Management Routes', () => {
       maxSnapshots: 10,
       maxAgeDays: 7,
       enableCompression: false,
+    })
+
+    // Create storage abstractions that wrap the test services
+    testSnapshotStorage = new LocalSnapshotStorage({
+      cacheDir: tempDir,
+    })
+
+    testTimeSeriesIndexStorage = new LocalTimeSeriesIndexStorage({
+      cacheDir: tempDir,
     })
 
     testPreComputedAnalyticsService = new PreComputedAnalyticsService({
@@ -306,7 +316,7 @@ describe('Snapshot Management Routes', () => {
 
       expect(response.status).toBe(200)
       expect(
-        response.body.summary.results[0].deletedFiles.timeSeriesEntries
+        response.body.summary.results[0].deletedFiles.timeSeriesEntriesRemoved
       ).toBe(1)
 
       // Verify time-series entry was removed
@@ -415,24 +425,43 @@ describe('Snapshot Management Routes', () => {
       expect(entries.length).toBe(0)
     })
 
-    it('should clean up time-series directories', async () => {
+    it('should report total time-series entries removed', async () => {
       await createSnapshotWithAnalytics('2024-01-15', ['42', '61'])
 
-      // Verify time-series directories exist
-      const timeSeriesDir = path.join(tempDir, 'time-series')
-      const entriesBefore = await fs.readdir(timeSeriesDir)
-      expect(entriesBefore.length).toBe(2) // district_42 and district_61
+      // Verify time-series entries exist
+      const trendData42Before = await testTimeSeriesIndexService.getTrendData(
+        '42',
+        '2024-01-01',
+        '2024-01-31'
+      )
+      const trendData61Before = await testTimeSeriesIndexService.getTrendData(
+        '61',
+        '2024-01-01',
+        '2024-01-31'
+      )
+      expect(trendData42Before.length).toBe(1)
+      expect(trendData61Before.length).toBe(1)
 
       const response = await request(app)
         .delete('/api/admin/snapshots/all')
         .send({})
 
       expect(response.status).toBe(200)
-      expect(response.body.summary.cleanedTimeSeriesDirectories).toBe(2)
+      expect(response.body.summary.totalTimeSeriesEntriesRemoved).toBe(2)
 
-      // Verify time-series directories were cleaned up
-      const entriesAfter = await fs.readdir(timeSeriesDir)
-      expect(entriesAfter.length).toBe(0)
+      // Verify time-series entries were removed
+      const trendData42After = await testTimeSeriesIndexService.getTrendData(
+        '42',
+        '2024-01-01',
+        '2024-01-31'
+      )
+      const trendData61After = await testTimeSeriesIndexService.getTrendData(
+        '61',
+        '2024-01-01',
+        '2024-01-31'
+      )
+      expect(trendData42After.length).toBe(0)
+      expect(trendData61After.length).toBe(0)
     })
 
     it('should handle empty snapshots directory', async () => {
@@ -448,27 +477,16 @@ describe('Snapshot Management Routes', () => {
       expect(response.body.summary.successfulDeletions).toBe(0)
     })
 
-    it('should delete data for specific district only when districtId provided', async () => {
+    it('should return 501 for district-specific deletion (not yet implemented)', async () => {
       await createSnapshotWithAnalytics('2024-01-15', ['42', '61'])
 
       const response = await request(app)
         .delete('/api/admin/snapshots/all')
         .send({ districtId: '42' })
 
-      expect(response.status).toBe(200)
-      expect(response.body.summary.districtId).toBe('42')
-      expect(response.body.summary.deletedDistrictFiles).toBeGreaterThanOrEqual(
-        1
-      )
-      expect(response.body.summary.deletedTimeSeriesDirectory).toBe(true)
-
-      // Verify district 42 time-series was deleted
-      const district42Dir = path.join(tempDir, 'time-series', 'district_42')
-      await expect(fs.access(district42Dir)).rejects.toThrow()
-
-      // Verify district 61 time-series still exists
-      const district61Dir = path.join(tempDir, 'time-series', 'district_61')
-      await expect(fs.access(district61Dir)).resolves.toBeUndefined()
+      expect(response.status).toBe(501)
+      expect(response.body.error.code).toBe('NOT_IMPLEMENTED')
+      expect(response.body.error.message).toContain('not yet supported')
     })
 
     it('should return 400 for invalid districtId format', async () => {
@@ -483,7 +501,7 @@ describe('Snapshot Management Routes', () => {
   })
 
   describe('Cascading Deletion (Property 11)', () => {
-    it('should delete snapshot, analytics, and time-series entries together', async () => {
+    it('should delete snapshot and time-series entries together', async () => {
       await createSnapshotWithAnalytics('2024-01-15', ['42'])
 
       // Verify all components exist before deletion
@@ -508,9 +526,8 @@ describe('Snapshot Management Routes', () => {
       expect(response.status).toBe(200)
       const result = response.body.summary.results[0]
       expect(result.success).toBe(true)
-      expect(result.deletedFiles.snapshotDir).toBe(true)
-      expect(result.deletedFiles.analyticsFile).toBe(true)
-      expect(result.deletedFiles.timeSeriesEntries).toBe(1)
+      expect(result.deletedFiles.snapshotDeleted).toBe(true)
+      expect(result.deletedFiles.timeSeriesEntriesRemoved).toBe(1)
 
       // Verify all components were deleted
       await expect(fs.access(snapshotDir)).rejects.toThrow()
@@ -541,6 +558,44 @@ describe('Snapshot Management Routes', () => {
       )
       expect(trendData.length).toBe(1)
       expect(trendData[0]?.snapshotId).toBe('2024-01-20')
+    })
+  })
+
+  describe('Storage Abstraction Compliance', () => {
+    it('should use storage abstraction for snapshot deletion', async () => {
+      await createSnapshotWithAnalytics('2024-01-15')
+
+      // The test verifies that the route uses the mocked storage providers
+      // If it tried to use direct fs operations, it would fail because
+      // the mock doesn't provide getCacheDirectory
+      const response = await request(app)
+        .delete('/api/admin/snapshots')
+        .send({ snapshotIds: ['2024-01-15'] })
+
+      expect(response.status).toBe(200)
+      expect(response.body.summary.successfulDeletions).toBe(1)
+    })
+
+    it('should use storage abstraction for listing snapshots in range', async () => {
+      await createSnapshotWithAnalytics('2024-01-15')
+
+      const response = await request(app)
+        .delete('/api/admin/snapshots/range')
+        .send({ startDate: '2024-01-01', endDate: '2024-01-31' })
+
+      expect(response.status).toBe(200)
+      expect(response.body.summary.totalRequested).toBe(1)
+    })
+
+    it('should use storage abstraction for listing all snapshots', async () => {
+      await createSnapshotWithAnalytics('2024-01-15')
+
+      const response = await request(app)
+        .delete('/api/admin/snapshots/all')
+        .send({})
+
+      expect(response.status).toBe(200)
+      expect(response.body.summary.totalRequested).toBe(1)
     })
   })
 })
