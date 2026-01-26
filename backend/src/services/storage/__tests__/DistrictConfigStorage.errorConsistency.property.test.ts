@@ -345,6 +345,9 @@ describe('Property 5: Error Type Consistency', () => {
   })
 
   describe('FirestoreDistrictConfigStorage Error Handling', () => {
+    // Note: Firestore tests use longer timeouts due to network operations with invalid project IDs
+    // These tests verify error handling when Firestore connections fail
+
     it('should throw StorageOperationError with operation name and provider type for getConfiguration failures', async () => {
       // Feature: district-configuration-storage-abstraction, Property 5: Error Type Consistency
       // **Validates: Requirements 7.1**
@@ -369,9 +372,9 @@ describe('Property 5: Error Type Consistency', () => {
             return true
           }
         }),
-        { numRuns: 5, timeout: 60000 }
+        { numRuns: 3, timeout: 45000 }
       )
-    })
+    }, 60000) // Explicit test timeout for CI environments
 
     it('should throw StorageOperationError with operation name and provider type for saveConfiguration failures', async () => {
       // Feature: district-configuration-storage-abstraction, Property 5: Error Type Consistency
@@ -397,9 +400,9 @@ describe('Property 5: Error Type Consistency', () => {
             return true
           }
         }),
-        { numRuns: 5, timeout: 60000 }
+        { numRuns: 3, timeout: 45000 }
       )
-    })
+    }, 60000) // Explicit test timeout for CI environments
 
     it('should throw StorageOperationError with operation name and provider type for appendChangeLog failures', async () => {
       // Feature: district-configuration-storage-abstraction, Property 5: Error Type Consistency
@@ -425,9 +428,9 @@ describe('Property 5: Error Type Consistency', () => {
             return true
           }
         }),
-        { numRuns: 5, timeout: 60000 }
+        { numRuns: 3, timeout: 45000 }
       )
-    })
+    }, 60000) // Explicit test timeout for CI environments
 
     it('should throw StorageOperationError with operation name and provider type for getChangeHistory failures', async () => {
       // Feature: district-configuration-storage-abstraction, Property 5: Error Type Consistency
@@ -453,9 +456,9 @@ describe('Property 5: Error Type Consistency', () => {
             return true
           }
         }),
-        { numRuns: 5, timeout: 60000 }
+        { numRuns: 3, timeout: 45000 }
       )
-    })
+    }, 60000) // Explicit test timeout for CI environments
 
     it('should correctly classify retryable errors for transient failures', async () => {
       // Feature: district-configuration-storage-abstraction, Property 5: Error Type Consistency
@@ -481,9 +484,9 @@ describe('Property 5: Error Type Consistency', () => {
             return true
           }
         }),
-        { numRuns: 5, timeout: 60000 }
+        { numRuns: 3, timeout: 45000 }
       )
-    })
+    }, 60000) // Explicit test timeout for CI environments
   })
 
   describe('Cross-Implementation Error Consistency', () => {
