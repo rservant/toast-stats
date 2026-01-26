@@ -15,7 +15,9 @@ import {
   DistrictDataAggregator,
   createDistrictDataAggregator,
 } from '../../services/DistrictDataAggregator.js'
-import { FileSnapshotStore } from '../../services/SnapshotStore.js'
+import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'
+import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
+import type { PerDistrictSnapshotStoreInterface } from '../../services/SnapshotStore.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type { Snapshot } from '../../types/snapshots.js'
@@ -30,24 +32,36 @@ const cacheConfig = productionFactory.createCacheConfigService()
 
 export const cacheDirectory = cacheConfig.getCacheDirectory()
 
-// Initialize snapshot store and aggregator
-export const snapshotStore = new FileSnapshotStore({
-  cacheDir: cacheDirectory,
-  maxSnapshots: 100,
-  maxAgeDays: 30,
-})
+// Create storage providers from environment configuration
+// This respects the STORAGE_PROVIDER environment variable:
+// - STORAGE_PROVIDER=gcp: Uses FirestoreSnapshotStorage
+// - STORAGE_PROVIDER=local or unset: Uses LocalSnapshotStorage
+const storageProviders = StorageProviderFactory.createFromEnvironment()
+
+// Export the snapshot storage (respects STORAGE_PROVIDER env var)
+export const snapshotStore: ISnapshotStorage = storageProviders.snapshotStorage
 
 // Backward compatibility alias
 export const perDistrictSnapshotStore = snapshotStore
 
-export const districtDataAggregator =
-  createDistrictDataAggregator(snapshotStore)
+// Note: createDistrictDataAggregator expects PerDistrictSnapshotStoreInterface which includes
+// checkVersionCompatibility and shouldUpdateClosingPeriodSnapshot methods. ISnapshotStorage
+// includes all methods that DistrictDataAggregator actually uses. This type assertion is safe
+// because DistrictDataAggregator only uses: readDistrictData, listDistrictsInSnapshot,
+// getSnapshotManifest, and getSnapshotMetadata - all of which are in ISnapshotStorage.
+export const districtDataAggregator = createDistrictDataAggregator(
+  snapshotStore as unknown as PerDistrictSnapshotStoreInterface
+)
 
-// Initialize services using the production service factory
-const serviceFactory = getProductionServiceFactory()
-export const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+// Use rawCSVStorage from StorageProviderFactory to respect STORAGE_PROVIDER env var
+// - STORAGE_PROVIDER=gcp: Uses GCSRawCSVStorage (reads from GCS bucket)
+// - STORAGE_PROVIDER=local or unset: Uses LocalRawCSVStorage (reads from local filesystem)
+export const rawCSVCacheService = storageProviders.rawCSVStorage
+
+// Create DistrictConfigurationService with storage from StorageProviderFactory
+// This respects the STORAGE_PROVIDER environment variable for storage backend selection
 export const districtConfigService = new DistrictConfigurationService(
-  cacheDirectory
+  storageProviders.districtConfigStorage
 )
 
 // Initialize ranking calculator and services (async initialization)
@@ -77,7 +91,8 @@ async function initializeServices(): Promise<void> {
 
   _backfillService = new BackfillService(
     _refreshService,
-    perDistrictSnapshotStore,
+    // BackfillService now accepts ISnapshotStorage, supporting both local and cloud storage
+    snapshotStore,
     districtConfigService,
     undefined, // alertManager
     undefined, // circuitBreakerManager
@@ -87,7 +102,8 @@ async function initializeServices(): Promise<void> {
   _analyticsEngine = new AnalyticsEngine(
     new AnalyticsDataSourceAdapter(
       districtDataAggregator,
-      perDistrictSnapshotStore
+      // AnalyticsDataSourceAdapter now accepts ISnapshotStorage, supporting both local and cloud storage
+      snapshotStore
     )
   )
 }

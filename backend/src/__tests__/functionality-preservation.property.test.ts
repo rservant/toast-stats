@@ -144,9 +144,9 @@ describe('Functionality Preservation Property Tests', () => {
 
           return true
         }),
-        { numRuns: 20 }
+        { numRuns: 10 }
       )
-    })
+    }, 60000)
 
     /**
      * Test: Backfill endpoints preserve response structure

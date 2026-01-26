@@ -96,3 +96,17 @@ console.debug('Test environment configured:', {
   propertyTestIterations: process.env['PROPERTY_TEST_ITERATIONS'],
   propertyTestTimeout: process.env['PROPERTY_TEST_TIMEOUT'],
 })
+
+// Log GCP emulator configuration if available
+const firestoreEmulator = process.env['FIRESTORE_EMULATOR_HOST']
+const gcsEmulator =
+  process.env['GCS_EMULATOR_HOST'] || process.env['STORAGE_EMULATOR_HOST']
+
+if (firestoreEmulator || gcsEmulator) {
+  console.debug('GCP Emulator configuration:', {
+    firestoreEmulatorHost: firestoreEmulator || 'not configured',
+    gcsEmulatorHost: gcsEmulator || 'not configured',
+    gcpProjectId: process.env['GCP_PROJECT_ID'] || 'not configured',
+    gcsBucketName: process.env['GCS_BUCKET_NAME'] || 'not configured',
+  })
+}

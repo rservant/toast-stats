@@ -1,16 +1,17 @@
 /**
  * District configuration routes for admin API
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
+ *
+ * Storage Abstraction:
+ * Uses StorageProviderFactory to create DistrictConfigurationService with
+ * the appropriate storage backend based on STORAGE_PROVIDER environment variable.
  */
 
 import { Router } from 'express'
-import {
-  logAdminAccess,
-  generateOperationId,
-  getServiceFactory,
-} from './shared.js'
+import { logAdminAccess, generateOperationId } from './shared.js'
 import { logger } from '../../utils/logger.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
+import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'
 
 export const districtConfigRouter = Router()
 
@@ -29,12 +30,12 @@ districtConfigRouter.get(
     })
 
     try {
-      const factory = getServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
-        cacheConfig.getConfiguration().baseDirectory
+        storageProviders.districtConfigStorage
       )
-      const snapshotStore = factory.createSnapshotStore()
+      // Use storage abstraction layer to respect STORAGE_PROVIDER env var
+      const snapshotStore = storageProviders.snapshotStorage
 
       const districtConfig = await districtConfigService.getConfiguration()
       const hasDistricts = await districtConfigService.hasConfiguredDistricts()
@@ -156,10 +157,9 @@ districtConfigRouter.post(
         }
       }
 
-      const factory = getServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
-        cacheConfig.getConfiguration().baseDirectory
+        storageProviders.districtConfigStorage
       )
       const adminUser = 'admin'
 
@@ -265,10 +265,9 @@ districtConfigRouter.delete(
         return
       }
 
-      const factory = getServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
-        cacheConfig.getConfiguration().baseDirectory
+        storageProviders.districtConfigStorage
       )
       const adminUser = 'admin'
 
@@ -355,12 +354,12 @@ districtConfigRouter.post(
     })
 
     try {
-      const factory = getServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
-        cacheConfig.getConfiguration().baseDirectory
+        storageProviders.districtConfigStorage
       )
-      const snapshotStore = factory.createSnapshotStore()
+      // Use storage abstraction layer to respect STORAGE_PROVIDER env var
+      const snapshotStore = storageProviders.snapshotStorage
 
       const { allDistrictIds } = req.body as { allDistrictIds?: string[] }
       const validationResult =
@@ -444,10 +443,9 @@ districtConfigRouter.get(
     })
 
     try {
-      const factory = getServiceFactory()
-      const cacheConfig = factory.createCacheConfigService()
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
-        cacheConfig.getConfiguration().baseDirectory
+        storageProviders.districtConfigStorage
       )
 
       const limit = req.query['limit']

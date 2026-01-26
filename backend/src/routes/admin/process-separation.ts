@@ -8,6 +8,11 @@
  * - Read performance independence validation
  *
  * Requirements: 4.1, 4.2, 4.3
+ *
+ * Storage Abstraction:
+ * These routes use the ISnapshotStorage interface from the storage abstraction
+ * layer, enabling environment-based selection between local filesystem and
+ * GCP cloud storage backends.
  */
 
 import { Router } from 'express'
@@ -50,11 +55,14 @@ processSeparationRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
       const refreshService = factory.createRefreshService()
 
+      // ProcessSeparationValidator accepts SnapshotStore which is compatible with ISnapshotStorage
       const validator = new ProcessSeparationValidator(
-        snapshotStore,
+        snapshotStorage,
         refreshService
       )
       const validationResult = await validator.validateProcessSeparation()
@@ -125,11 +133,14 @@ processSeparationRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
       const refreshService = factory.createRefreshService()
 
+      // ProcessSeparationValidator accepts SnapshotStore which is compatible with ISnapshotStorage
       const validator = new ProcessSeparationValidator(
-        snapshotStore,
+        snapshotStorage,
         refreshService
       )
       const monitoringResult = await validator.monitorConcurrentOperations()
@@ -200,11 +211,14 @@ processSeparationRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
       const refreshService = factory.createRefreshService()
 
+      // ProcessSeparationValidator accepts SnapshotStore which is compatible with ISnapshotStorage
       const validator = new ProcessSeparationValidator(
-        snapshotStore,
+        snapshotStorage,
         refreshService
       )
       const complianceMetrics = await validator.getComplianceMetrics()
@@ -275,11 +289,14 @@ processSeparationRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
       const refreshService = factory.createRefreshService()
 
+      // ProcessSeparationValidator accepts SnapshotStore which is compatible with ISnapshotStorage
       const validator = new ProcessSeparationValidator(
-        snapshotStore,
+        snapshotStorage,
         refreshService
       )
       const independenceResult =

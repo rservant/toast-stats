@@ -27,6 +27,8 @@ interface UseAvailableProgramYearsResult {
   isError: boolean
   /** The error if one occurred */
   error: Error | null
+  /** Whether the data is loaded but contains no program years */
+  isEmpty: boolean
   /** Function to manually refetch the data */
   refetch: () => void
 }
@@ -39,16 +41,17 @@ interface UseAvailableProgramYearsResult {
  * including snapshot counts and data completeness status.
  *
  * @param params - Hook parameters including districtId and optional enabled flag
- * @returns Query result with program years data, loading state, error state, and refetch function
+ * @returns Query result with program years data, loading state, error state, isEmpty flag, and refetch function
  *
  * @example
  * ```tsx
- * const { data, isLoading, isError, error, refetch } = useAvailableProgramYears({
+ * const { data, isLoading, isError, error, isEmpty, refetch } = useAvailableProgramYears({
  *   districtId: '57',
  * })
  *
  * if (isLoading) return <LoadingSpinner />
  * if (isError) return <ErrorMessage error={error} onRetry={refetch} />
+ * if (isEmpty) return <EmptyState message="No program years available" />
  *
  * return (
  *   <ProgramYearSelector
@@ -92,11 +95,18 @@ export const useAvailableProgramYears = ({
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
+  // Compute isEmpty: data is loaded but contains no program years
+  const isEmpty =
+    !query.isLoading &&
+    !query.isError &&
+    (query.data?.programYears?.length ?? 0) === 0
+
   return {
     data: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
+    isEmpty,
     refetch: query.refetch,
   }
 }

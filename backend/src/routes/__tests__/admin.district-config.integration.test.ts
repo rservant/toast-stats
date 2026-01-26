@@ -50,6 +50,7 @@ vi.mock('../../utils/logger.js', () => ({
 describe('Admin District Configuration Integration', () => {
   let app: express.Application
   let tempDir: string
+  let originalCacheDir: string | undefined
 
   beforeEach(async () => {
     // Create temporary directory for testing
@@ -58,6 +59,10 @@ describe('Admin District Configuration Integration', () => {
     )
     testCacheDir = tempDir
 
+    // Set CACHE_DIR environment variable for StorageProviderFactory
+    originalCacheDir = process.env['CACHE_DIR']
+    process.env['CACHE_DIR'] = tempDir
+
     // Create test app
     app = express()
     app.use(express.json())
@@ -65,6 +70,13 @@ describe('Admin District Configuration Integration', () => {
   })
 
   afterEach(async () => {
+    // Restore original CACHE_DIR
+    if (originalCacheDir !== undefined) {
+      process.env['CACHE_DIR'] = originalCacheDir
+    } else {
+      delete process.env['CACHE_DIR']
+    }
+
     // Clean up temporary directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true })

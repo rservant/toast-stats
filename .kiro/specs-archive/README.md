@@ -6,6 +6,11 @@ This directory contains specifications that have been completed and are no longe
 
 ### Infrastructure & Architecture
 
+#### gcp-storage-migration/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Storage abstraction layer with GCP Cloud Firestore and Cloud Storage implementations
+
 #### admin-routes-refactor/
 
 **Status**: ✅ COMPLETE  
@@ -73,6 +78,21 @@ This directory contains specifications that have been completed and are no longe
 
 ### Features
 
+#### district-global-rankings/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Global Rankings tab for District Performance page with multi-year comparison
+
+#### division-distinguished-criteria/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Division recognition criteria display with DDP progress and gap analysis
+
+#### area-distinguished-criteria/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Area recognition criteria display with DAP progress and gap analysis
+
 #### 001-assessment-worksheet-generator/
 
 **Status**: ✅ COMPLETE - Feature removed  
@@ -135,6 +155,16 @@ This directory contains specifications that have been completed and are no longe
 
 ### UI & Brand
 
+#### tailwind-v4-migration/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Migrated from Tailwind CSS v3 to v4 with @theme configuration
+
+#### css-layer-architecture/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: CSS Cascade Layers to resolve specificity conflicts between brand CSS and Tailwind utilities
+
 #### brand-compliance-system-removal/
 
 **Status**: ✅ COMPLETE  
@@ -146,6 +176,11 @@ This directory contains specifications that have been completed and are no longe
 **Purpose**: Brand design system fully implemented
 
 ### Bug Fixes & Improvements
+
+#### ranking-consistency-fix/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Fixed global ranking discrepancy between main rankings page and Global Rankings tab by adding overallRank to backend API
 
 #### cache-location-configuration/
 
@@ -214,4 +249,4 @@ This directory contains specifications that have been completed and are no longe
 
 ---
 
-**Last Updated**: January 17, 2026
+**Last Updated**: January 24, 2026

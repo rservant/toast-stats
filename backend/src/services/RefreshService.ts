@@ -6,18 +6,22 @@
  * Scraping is handled separately by the scraper-cli tool.
  *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 8.1, 8.2
+ * Storage Abstraction: Requirements 1.3, 1.4
  */
 
 import { logger } from '../utils/logger.js'
 import { DataValidator } from './DataValidator.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
-import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
 import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type { SnapshotStore } from '../types/snapshots.js'
-import type { FileSnapshotStore } from './SnapshotStore.js'
+import type {
+  ISnapshotStorage,
+  IRawCSVStorage,
+} from '../types/storageInterfaces.js'
+import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**
  * Result of a complete refresh operation
@@ -58,24 +62,51 @@ export interface RefreshResult {
  * - 4.4: Return informative error when cache is missing
  * - 8.1: Remove all scraping-related code from RefreshService
  * - 8.2: Exclusively use SnapshotBuilder to create snapshots
+ *
+ * Storage Abstraction (Requirements 1.3, 1.4):
+ * - Uses ISnapshotStorage interface for snapshot operations
+ * - Supports both local filesystem and cloud storage backends
  */
 export class RefreshService {
   private readonly snapshotBuilder: SnapshotBuilder
   private readonly districtConfigService: DistrictConfigurationService
-  private readonly snapshotStore: SnapshotStore
+  private readonly snapshotStorage: ISnapshotStorage
 
+  /**
+   * Create a new RefreshService instance
+   *
+   * @param snapshotStorage - Storage interface for snapshot operations (ISnapshotStorage)
+   *                          Supports both local filesystem and cloud storage backends
+   * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
+   *                      Supports both local filesystem and cloud storage backends
+   * @param districtConfigService - Optional district configuration service
+   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
+   * @param closingPeriodDetector - Optional closing period detector
+   * @param dataNormalizer - Optional data normalizer
+   * @param validator - Optional data validator
+   */
   constructor(
-    snapshotStore: SnapshotStore,
-    rawCSVCache: RawCSVCacheService,
+    snapshotStorage: ISnapshotStorage | SnapshotStore,
+    rawCSVCache: IRawCSVStorage,
     districtConfigService?: DistrictConfigurationService,
     rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
     validator?: DataValidator
   ) {
-    this.snapshotStore = snapshotStore
-    this.districtConfigService =
-      districtConfigService ?? new DistrictConfigurationService()
+    // Store the snapshot storage - ISnapshotStorage is a superset of SnapshotStore
+    // so we can safely cast SnapshotStore to ISnapshotStorage for backward compatibility
+    this.snapshotStorage = snapshotStorage as ISnapshotStorage
+
+    // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
+    if (districtConfigService) {
+      this.districtConfigService = districtConfigService
+    } else {
+      const storageProviders = StorageProviderFactory.createFromEnvironment()
+      this.districtConfigService = new DistrictConfigurationService(
+        storageProviders.districtConfigStorage
+      )
+    }
 
     // Initialize ClosingPeriodDetector
     const detector =
@@ -90,10 +121,11 @@ export class RefreshService {
       })
 
     // Initialize SnapshotBuilder with all dependencies
+    // SnapshotBuilder accepts ISnapshotStorage for storage operations
     this.snapshotBuilder = new SnapshotBuilder(
       rawCSVCache,
       this.districtConfigService,
-      snapshotStore as FileSnapshotStore,
+      this.snapshotStorage,
       validator ?? new DataValidator(),
       rankingCalculator,
       detector,
@@ -257,7 +289,7 @@ export class RefreshService {
     const basicValidation =
       await this.districtConfigService.validateConfiguration(
         undefined, // No all-districts validation yet
-        this.snapshotStore
+        this.snapshotStorage
       )
 
     return basicValidation

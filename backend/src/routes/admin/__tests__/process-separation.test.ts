@@ -19,6 +19,7 @@ import os from 'os'
 import { processSeparationRouter } from '../process-separation.js'
 import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
+import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 
 // Test snapshot store instance
 let testSnapshotStore: FileSnapshotStore
@@ -31,7 +32,9 @@ const mockRefreshService = {
 }
 
 // Mock the production service factory to use our test snapshot store
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
+  createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
   createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: vi.fn(),
   createRefreshService: () => mockRefreshService,
@@ -204,8 +207,8 @@ describe('Process Separation Routes', () => {
 
     it('should handle validation errors gracefully', async () => {
       // We need to mock at a level that causes the route handler to catch
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () => {
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () => {
         throw new Error('Store unavailable')
       }
 
@@ -220,7 +223,7 @@ describe('Process Separation Routes', () => {
       expect(response.body.error.details).toContain('Store unavailable')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 
@@ -285,8 +288,8 @@ describe('Process Separation Routes', () => {
     it('should handle monitoring errors gracefully', async () => {
       // The ProcessSeparationValidator catches errors internally and throws
       // We need to mock at a level that causes the route handler to catch
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () => {
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () => {
         throw new Error('Monitoring failed')
       }
 
@@ -301,7 +304,7 @@ describe('Process Separation Routes', () => {
       expect(response.body.error.details).toContain('Monitoring failed')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 
@@ -382,8 +385,8 @@ describe('Process Separation Routes', () => {
     it('should handle compliance errors gracefully', async () => {
       // The ProcessSeparationValidator catches errors internally
       // We need to mock at a level that causes the route handler to catch
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () => {
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () => {
         throw new Error('Compliance check failed')
       }
 
@@ -398,7 +401,7 @@ describe('Process Separation Routes', () => {
       expect(response.body.error.details).toContain('Compliance check failed')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 
@@ -496,8 +499,8 @@ describe('Process Separation Routes', () => {
     it('should handle independence validation errors gracefully', async () => {
       // The ProcessSeparationValidator catches errors internally
       // We need to mock at a level that causes the route handler to catch
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () => {
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () => {
         throw new Error('Independence check failed')
       }
 
@@ -512,7 +515,7 @@ describe('Process Separation Routes', () => {
       expect(response.body.error.details).toContain('Independence check failed')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 })

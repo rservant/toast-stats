@@ -6,9 +6,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
+import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 
 describe('DistrictConfigurationService Integration', () => {
   let service: DistrictConfigurationService
+  let storage: LocalDistrictConfigStorage
   let testCacheDir: string
 
   beforeEach(async () => {
@@ -19,7 +21,8 @@ describe('DistrictConfigurationService Integration', () => {
       `district-config-integration-${Date.now()}`
     )
     await fs.mkdir(testCacheDir, { recursive: true })
-    service = new DistrictConfigurationService(testCacheDir)
+    storage = new LocalDistrictConfigStorage(testCacheDir)
+    service = new DistrictConfigurationService(storage)
   })
 
   afterEach(async () => {
@@ -71,8 +74,10 @@ describe('DistrictConfigurationService Integration', () => {
 
   it('should handle concurrent access safely', async () => {
     // Create two service instances pointing to the same cache directory
-    const service1 = new DistrictConfigurationService(testCacheDir)
-    const service2 = new DistrictConfigurationService(testCacheDir)
+    const storage1 = new LocalDistrictConfigStorage(testCacheDir)
+    const storage2 = new LocalDistrictConfigStorage(testCacheDir)
+    const service1 = new DistrictConfigurationService(storage1)
+    const service2 = new DistrictConfigurationService(storage2)
 
     // Add districts sequentially to avoid race conditions
     // (In real usage, concurrent writes would be handled by the application layer)
@@ -94,7 +99,8 @@ describe('DistrictConfigurationService Integration', () => {
   it('should work with default cache directory structure', async () => {
     // Test with the default cache directory pattern
     const defaultCacheDir = './cache'
-    const defaultService = new DistrictConfigurationService(defaultCacheDir)
+    const defaultStorage = new LocalDistrictConfigStorage(defaultCacheDir)
+    const defaultService = new DistrictConfigurationService(defaultStorage)
 
     // This should not throw an error even if the directory doesn't exist
     const districts = await defaultService.getConfiguredDistricts()

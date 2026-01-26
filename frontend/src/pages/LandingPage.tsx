@@ -241,7 +241,10 @@ const LandingPage: React.FC = () => {
       return (
         <div className="min-h-screen bg-gray-100" id="main-content">
           <div className="container mx-auto px-4 py-8">
-            <div className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-8 max-w-2xl mx-auto">
+            <div
+              className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-8 mx-auto"
+              style={{ width: '100%', maxWidth: '42rem' }}
+            >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-tm-loyal-blue rounded-full flex items-center justify-center">
                   <svg
@@ -292,6 +295,7 @@ const LandingPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <BackfillButton
                     className="px-6 py-3 text-lg"
+                    variant="primary"
                     onBackfillStart={() => {
                       // Optionally show a success message or redirect
                     }}

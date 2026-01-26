@@ -6,9 +6,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
+import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 
 describe('DistrictConfigurationService', () => {
   let service: DistrictConfigurationService
+  let storage: LocalDistrictConfigStorage
   let testCacheDir: string
 
   beforeEach(async () => {
@@ -19,7 +21,8 @@ describe('DistrictConfigurationService', () => {
       `district-config-${Date.now()}`
     )
     await fs.mkdir(testCacheDir, { recursive: true })
-    service = new DistrictConfigurationService(testCacheDir)
+    storage = new LocalDistrictConfigStorage(testCacheDir)
+    service = new DistrictConfigurationService(storage)
   })
 
   afterEach(async () => {
@@ -290,7 +293,8 @@ describe('DistrictConfigurationService', () => {
       await service.addDistrict('F', 'test-admin')
 
       // Create new service instance with same cache directory
-      const newService = new DistrictConfigurationService(testCacheDir)
+      const newStorage = new LocalDistrictConfigStorage(testCacheDir)
+      const newService = new DistrictConfigurationService(newStorage)
       const districts = await newService.getConfiguredDistricts()
       expect(districts).toEqual(['42', 'F'])
     })
@@ -371,7 +375,8 @@ describe('DistrictConfigurationService', () => {
       await service.addDistrict('42', 'test-admin')
 
       // Create new service instance with same cache directory
-      const newService = new DistrictConfigurationService(testCacheDir)
+      const newStorage = new LocalDistrictConfigStorage(testCacheDir)
+      const newService = new DistrictConfigurationService(newStorage)
       await newService.addDistrict('15', 'test-admin-2')
 
       const history = await newService.getConfigurationHistory()

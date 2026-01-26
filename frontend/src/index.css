@@ -31,6 +31,17 @@
 /* Tailwind v4 Theme Configuration - replaces tailwind.config.js */
 @theme {
   /* ========================================
+   * CONTAINER CONFIGURATION
+   * Tailwind v4 container behavior
+   * ======================================== */
+  --container-center: true;
+  --container-padding: 1rem;
+  --container-padding-sm: 2rem;
+  --container-padding-lg: 4rem;
+  --container-padding-xl: 5rem;
+  --container-padding-2xl: 6rem;
+
+  /* ========================================
    * TOASTMASTERS BRAND COLORS
    * Per Toastmasters Brand Guidelines
    * ======================================== */
@@ -352,6 +363,59 @@
  * - Form classes: styles/components/forms.css
  * - Card classes: styles/components/cards.css
  * ======================================== */
+
+/* ========================================
+ * CONTAINER CLASS FIX FOR TAILWIND V4
+ * Ensures container class works like Tailwind v3
+ * Using utilities layer to ensure it takes precedence
+ * ======================================== */
+@layer utilities {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+      padding-left: 4rem;
+      padding-right: 4rem;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+      padding-left: 5rem;
+      padding-right: 5rem;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1536px;
+      padding-left: 6rem;
+      padding-right: 6rem;
+    }
+  }
+}
 
 /* Minimum Requirements Enforcement */
 body {

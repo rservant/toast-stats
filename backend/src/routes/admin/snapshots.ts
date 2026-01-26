@@ -7,6 +7,11 @@
  * - Snapshot payload retrieval
  *
  * Requirements: 1.1, 1.2, 1.3, 1.5
+ *
+ * Storage Abstraction:
+ * These routes use the ISnapshotStorage interface from the storage abstraction
+ * layer, enabling environment-based selection between local filesystem and
+ * GCP cloud storage backends.
  */
 
 import { Router } from 'express'
@@ -48,7 +53,9 @@ snapshotsRouter.get('/snapshots', logAdminAccess, async (req, res) => {
 
   try {
     const factory = getServiceFactory()
-    const snapshotStore = factory.createSnapshotStore()
+    // Use ISnapshotStorage interface for storage abstraction layer support
+    // This enables environment-based selection between local and cloud storage
+    const snapshotStorage = factory.createSnapshotStorage()
 
     // Parse query parameters
     const limit = req.query['limit']
@@ -78,7 +85,7 @@ snapshotsRouter.get('/snapshots', logAdminAccess, async (req, res) => {
     }
 
     // Get snapshot metadata
-    const snapshots = await snapshotStore.listSnapshots(limit, filters)
+    const snapshots = await snapshotStorage.listSnapshots(limit, filters)
     const duration = Date.now() - startTime
 
     logger.info('Admin snapshot listing completed', {
@@ -161,10 +168,12 @@ snapshotsRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
 
       // Get the specific snapshot
-      const snapshot = await snapshotStore.getSnapshot(snapshotId)
+      const snapshot = await snapshotStorage.getSnapshot(snapshotId)
 
       if (!snapshot) {
         logger.warn('Admin requested non-existent snapshot', {
@@ -291,10 +300,12 @@ snapshotsRouter.get(
 
     try {
       const factory = getServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      // Use ISnapshotStorage interface for storage abstraction layer support
+      // This enables environment-based selection between local and cloud storage
+      const snapshotStorage = factory.createSnapshotStorage()
 
       // Get the specific snapshot
-      const snapshot = await snapshotStore.getSnapshot(snapshotId)
+      const snapshot = await snapshotStorage.getSnapshot(snapshotId)
 
       if (!snapshot) {
         res.status(404).json({

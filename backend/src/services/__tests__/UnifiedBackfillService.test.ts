@@ -10,12 +10,14 @@ import { RefreshService } from '../RefreshService'
 import { FileSnapshotStore } from '../SnapshotStore'
 import { DistrictConfigurationService } from '../DistrictConfigurationService'
 import { AlertManager } from '../../utils/AlertManager'
+import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage'
 
 // Mock dependencies
 vi.mock('../RefreshService')
 vi.mock('../SnapshotStore')
 vi.mock('../DistrictConfigurationService')
 vi.mock('../../utils/AlertManager')
+vi.mock('../storage/LocalDistrictConfigStorage')
 
 describe('UnifiedBackfillService', () => {
   let refreshService: RefreshService
@@ -30,7 +32,8 @@ describe('UnifiedBackfillService', () => {
     snapshotStore = new FileSnapshotStore({
       cacheDir: './test-cache',
     })
-    configService = new DistrictConfigurationService('./test-cache')
+    const mockStorage = new LocalDistrictConfigStorage('./test-cache')
+    configService = new DistrictConfigurationService(mockStorage)
     alertManager = new AlertManager()
 
     // Create service instance

@@ -1,4 +1,4 @@
-# Dependencies
+# Dependencies (will be installed in Docker)
 node_modules
 
 # Build output (we rebuild in Docker)
@@ -9,6 +9,10 @@ dist
 *.spec.ts
 **/__tests__
 **/TestServiceFactory.ts
+src/utils/test-*.ts
+src/utils/global-test-cleanup.ts
+src/utils/TestIsolationManager.ts
+src/utils/PropertyTestInfrastructure.ts
 test-cache
 test-dir
 test-snapshots
@@ -44,7 +48,6 @@ tsconfig.strict.json
 
 # ESLint
 eslint.config.js
-.eslintignore
 
 # Vitest
 vitest.config.ts

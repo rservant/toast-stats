@@ -19,12 +19,15 @@ import os from 'os'
 import { snapshotsRouter } from '../snapshots.js'
 import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
+import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 
 // Test snapshot store instance
 let testSnapshotStore: FileSnapshotStore
 
 // Mock the production service factory to use our test snapshot store
+// Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
+  createSnapshotStorage: () => testSnapshotStore as ISnapshotStorage,
   createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: vi.fn(),
   createRefreshService: vi.fn(),
@@ -325,11 +328,11 @@ describe('Snapshot Routes', () => {
   describe('Error Handling', () => {
     it('should handle store errors gracefully for list', async () => {
       // Create a mock that throws an error
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           listSnapshots: () => Promise.reject(new Error('Store unavailable')),
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get('/api/admin/snapshots')
 
@@ -338,15 +341,15 @@ describe('Snapshot Routes', () => {
       expect(response.body.error.details).toContain('Store unavailable')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should handle store errors gracefully for get snapshot', async () => {
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           getSnapshot: () => Promise.reject(new Error('Read error')),
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get('/api/admin/snapshots/2024-01-01')
 
@@ -355,15 +358,15 @@ describe('Snapshot Routes', () => {
       expect(response.body.error.details).toContain('Read error')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
 
     it('should handle store errors gracefully for get payload', async () => {
-      const originalCreateSnapshotStore = mockFactory.createSnapshotStore
-      mockFactory.createSnapshotStore = () =>
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
         ({
           getSnapshot: () => Promise.reject(new Error('Payload read error')),
-        }) as unknown as FileSnapshotStore
+        }) as unknown as ISnapshotStorage
 
       const response = await request(app).get(
         '/api/admin/snapshots/2024-01-01/payload'
@@ -374,7 +377,7 @@ describe('Snapshot Routes', () => {
       expect(response.body.error.details).toContain('Payload read error')
 
       // Restore original mock
-      mockFactory.createSnapshotStore = originalCreateSnapshotStore
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
     })
   })
 })

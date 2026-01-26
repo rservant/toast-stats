@@ -25,6 +25,7 @@ import type {
   ICacheConfigService,
   ILogger,
 } from '../../types/serviceInterfaces.js'
+import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 
 // Mock implementations for testing
 class MockCacheConfigService implements ICacheConfigService {
@@ -117,7 +118,8 @@ describe('RefreshService Ranking Integration', () => {
       maxAgeDays: 30,
     })
     validator = new DataValidator()
-    districtConfigService = new DistrictConfigurationService(testCacheDir)
+    const configStorage = new LocalDistrictConfigStorage(testCacheDir)
+    districtConfigService = new DistrictConfigurationService(configStorage)
     rankingCalculator = new BordaCountRankingCalculator()
     rawCSVCache = new RawCSVCacheService(mockCacheConfig, mockLogger)
 
@@ -180,8 +182,9 @@ describe('RefreshService Ranking Integration', () => {
       emptyMockCacheConfig,
       mockLogger
     )
+    const emptyConfigStorage = new LocalDistrictConfigStorage(emptyCacheDir)
     const emptyDistrictConfigService = new DistrictConfigurationService(
-      emptyCacheDir
+      emptyConfigStorage
     )
     await emptyDistrictConfigService.addDistrict('42', 'test-admin')
 

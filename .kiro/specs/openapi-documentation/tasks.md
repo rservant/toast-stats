@@ -1,0 +1,227 @@
+# Implementation Plan: OpenAPI 3.0 Documentation
+
+## Overview
+
+This implementation creates a comprehensive OpenAPI 3.0 specification documenting all Toast-Stats API endpoints. The specification will be created at `docs/openapi.yaml`.
+
+## Tasks
+
+- [x] 1. Create specification foundation
+  - [x] 1.1 Create `docs/openapi.yaml` with OpenAPI 3.0.3 header, info section, and server definitions
+    - Include title, description, version, contact info
+    - Define development server (localhost:3001)
+    - Define production server (Cloud Run URL)
+    - _Requirements: 1.1, 1.2, 1.3, 1.5_
+  - [x] 1.2 Define tags for endpoint organization
+    - Districts, Rankings, Analytics, Backfill, Admin, Cache tags
+    - Include descriptions for each tag
+    - _Requirements: 1.4_
+
+- [x] 2. Define reusable components
+  - [x] 2.1 Create common parameter definitions in components/parameters
+    - districtIdParam (path parameter)
+    - dateQueryParam (query parameter)
+    - startDateParam, endDateParam (query parameters)
+    - monthsParam (query parameter)
+    - limitParam (query parameter)
+    - _Requirements: 6.10_
+  - [x] 2.2 Create error response schemas in components/schemas
+    - ErrorResponse schema with code, message, details, suggestions
+    - Define error code enum with all known codes
+    - _Requirements: 6.8, 7.1, 7.2, 7.3, 7.4, 7.5_
+  - [x] 2.3 Create SnapshotMetadata schema in components/schemas
+    - Include snapshot_id, created_at, status
+    - Include closing period fields
+    - Include fallback fields
+    - _Requirements: 6.9, 8.1, 8.2, 8.3, 8.4_
+
+- [x] 3. Define core data schemas
+  - [x] 3.1 Create District and DistrictsResponse schemas
+    - District with id, name, status, lastUpdated
+    - DistrictsResponse with districts array and \_snapshot_metadata
+    - _Requirements: 6.1_
+  - [x] 3.2 Create DistrictStatistics schema
+    - Include districtId, districtName
+    - Include membership metrics (total, active, growth)
+    - Include club metrics (total, paid, distinguished)
+    - Include performance metrics
+    - Include divisions and areas arrays
+    - _Requirements: 6.2_
+  - [x] 3.3 Create Club schema
+    - Include clubId, clubName, division, area
+    - Include membership counts
+    - Include DCP goals and status
+    - _Requirements: 6.3_
+  - [x] 3.4 Create DistrictRanking and RankingsResponse schemas
+    - Include all ranking metrics (aggregateScore, clubsRank, paymentsRank, distinguishedRank, overallRank)
+    - Include totalDistricts
+    - _Requirements: 6.4_
+
+- [x] 4. Define backfill schemas
+  - [x] 4.1 Create BackfillRequest schema
+    - targetDistricts array
+    - startDate, endDate
+    - collectionType enum
+    - concurrency
+    - _Requirements: 6.5_
+  - [x] 4.2 Create BackfillStatus schema
+    - backfillId, status enum
+    - progress object (total, completed, failed, percentage)
+    - scope object
+    - collectionStrategy object
+    - _Requirements: 6.6_
+
+- [x] 5. Define analytics schemas
+  - [x] 5.1 Create DistrictAnalytics schema
+    - totalMembership, membershipChange
+    - thrivingClubs, vulnerableClubs, interventionRequiredClubs arrays
+    - distinguishedClubs object
+    - membershipTrend array
+    - dateRange object
+    - _Requirements: 6.7_
+  - [x] 5.2 Create ClubTrend schema for club-specific analytics
+    - clubId, clubName
+    - membershipHistory array
+    - healthStatus, trajectory
+  - [x] 5.3 Create LeadershipInsights schema
+  - [x] 5.4 Create DistinguishedClubAnalytics schema
+  - [x] 5.5 Create YearOverYearComparison schema
+
+- [x] 6. Document district endpoints
+  - [x] 6.1 Document `GET /districts` endpoint
+    - Response schema with districts array
+    - Include \_snapshot_metadata in response
+    - _Requirements: 2.1_
+  - [x] 6.2 Document `GET /districts/rankings` endpoint
+    - Query parameters: date, fallback
+    - Response with rankings array and metadata
+    - Document fallback behavior
+    - _Requirements: 2.2_
+  - [x] 6.3 Document `GET /districts/{districtId}/statistics` endpoint
+    - Path parameter: districtId
+    - Query parameter: date
+    - Response with DistrictStatistics
+    - _Requirements: 2.3_
+  - [x] 6.4 Document `GET /districts/{districtId}/clubs` endpoint
+    - Response with clubs array
+    - _Requirements: 2.4_
+  - [x] 6.5 Document `GET /districts/{districtId}/membership-history` endpoint
+    - Query parameter: months
+    - Response with membershipHistory array
+    - _Requirements: 2.5_
+  - [x] 6.6 Document `GET /districts/{districtId}/educational-awards` endpoint
+    - Query parameter: months
+    - _Requirements: 2.6_
+  - [x] 6.7 Document `GET /districts/{districtId}/daily-reports` endpoint
+    - Query parameters: startDate, endDate (required)
+    - Document date range validation
+    - _Requirements: 2.7_
+  - [x] 6.8 Document `GET /districts/{districtId}/daily-reports/{date}` endpoint
+    - Path parameters: districtId, date
+    - _Requirements: 2.8_
+  - [x] 6.9 Document `GET /districts/{districtId}/rank-history` endpoint
+    - Query parameters: startDate, endDate
+    - Response with history array and programYear
+    - _Requirements: 2.9_
+  - [x] 6.10 Document `GET /districts/{districtId}/available-ranking-years` endpoint
+    - Response with programYears array
+    - _Requirements: 2.10_
+  - [x] 6.11 Document `GET /districts/{districtId}/cached-dates` endpoint
+    - Response with dates array and dateRange
+    - _Requirements: 2.11_
+  - [x] 6.12 Document `GET /districts/cache/dates` endpoint
+    - Response with dates array
+    - _Requirements: 2.12_
+
+- [x] 7. Document analytics endpoints
+  - [x] 7.1 Document `GET /districts/{districtId}/analytics` endpoint
+    - Query parameters: startDate, endDate
+    - Response with DistrictAnalytics
+    - Document error responses (404, 503)
+    - _Requirements: 3.1_
+  - [x] 7.2 Document `GET /districts/{districtId}/membership-analytics` endpoint
+    - Query parameters: startDate, endDate
+    - _Requirements: 3.2_
+  - [x] 7.3 Document `GET /districts/{districtId}/clubs/{clubId}/trends` endpoint
+    - Path parameters: districtId, clubId
+    - Response with ClubTrend
+    - _Requirements: 3.3_
+  - [x] 7.4 Document `GET /districts/{districtId}/vulnerable-clubs` endpoint
+    - Response with vulnerableClubs array
+    - _Requirements: 3.4_
+  - [x] 7.5 Document `GET /districts/{districtId}/leadership-insights` endpoint
+    - Query parameters: startDate, endDate
+    - _Requirements: 3.5_
+  - [x] 7.6 Document `GET /districts/{districtId}/distinguished-club-analytics` endpoint
+    - Query parameters: startDate, endDate
+    - _Requirements: 3.6_
+  - [x] 7.7 Document `GET /districts/{districtId}/year-over-year/{date}` endpoint
+    - Path parameters: districtId, date
+    - _Requirements: 3.7_
+  - [x] 7.8 Document `GET /districts/{districtId}/export` endpoint
+    - Query parameters: format, startDate, endDate
+    - Document CSV response content type
+    - _Requirements: 3.8_
+
+- [x] 8. Document backfill endpoints
+  - [x] 8.1 Document `POST /districts/backfill` endpoint
+    - Request body: BackfillRequest
+    - Response: BackfillStatus (202 Accepted)
+    - Document validation errors
+    - _Requirements: 4.1_
+  - [x] 8.2 Document `GET /districts/backfill/{backfillId}` endpoint
+    - Response: BackfillStatus
+    - Document 404 response
+    - _Requirements: 4.2_
+  - [x] 8.3 Document `DELETE /districts/backfill/{backfillId}` endpoint
+    - Document 409 response for non-cancellable jobs
+    - _Requirements: 4.3_
+  - [x] 8.4 Document `POST /districts/{districtId}/backfill` endpoint
+    - Request body with startDate, endDate
+    - _Requirements: 4.4_
+  - [x] 8.5 Document `GET /districts/{districtId}/backfill/{backfillId}` endpoint
+    - _Requirements: 4.5_
+  - [x] 8.6 Document `DELETE /districts/{districtId}/backfill/{backfillId}` endpoint
+    - _Requirements: 4.6_
+
+- [x] 9. Document admin endpoints
+  - [x] 9.1 Document `GET /admin/snapshots` endpoint
+    - Query parameters: limit, status, schema_version, calculation_version, created_after, created_before, min_district_count
+    - Response with snapshots array and metadata
+    - _Requirements: 5.1_
+  - [x] 9.2 Document `GET /admin/snapshots/{snapshotId}` endpoint
+    - Response with inspection data
+    - _Requirements: 5.2_
+  - [x] 9.3 Document `GET /admin/snapshots/{snapshotId}/payload` endpoint
+    - Response with full snapshot payload
+    - _Requirements: 5.3_
+
+- [x] 10. Add examples and validate
+  - [x] 10.1 Add request/response examples for complex endpoints
+    - Rankings response example
+    - BackfillRequest example
+    - DistrictAnalytics response example
+    - Error response examples
+    - _Requirements: 9.2_
+  - [x] 10.2 Validate specification with OpenAPI validator
+    - Run validation tool
+    - Fix any validation errors
+    - _Requirements: 9.1_
+  - [x] 10.3 Review descriptions for completeness
+    - Ensure all endpoints have descriptions
+    - Ensure all parameters have descriptions
+    - Ensure all schema properties have descriptions
+    - _Requirements: 9.3, 9.4_
+
+- [x] 11. Update specs README
+  - [x] 11.1 Update `.kiro/specs/README.md` to list this spec as active
+    - Add entry for openapi-documentation spec
+    - Update last updated date
+
+## Notes
+
+- Property-based tests are NOT included per PBT steering guidance - documentation changes are verifiable through validation tools
+- The existing `backend/openapi.yaml` (API Gateway proxy config) should NOT be modified
+- Schema definitions should align with TypeScript types in `backend/src/types/`
+- Use `$ref` extensively to avoid schema duplication
+- Include realistic examples for complex request/response bodies

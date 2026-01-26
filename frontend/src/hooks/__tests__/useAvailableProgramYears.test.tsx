@@ -394,6 +394,115 @@ describe('useAvailableProgramYears', () => {
       expect(result.current.data?.programYears).toHaveLength(0)
       expect(result.current.isError).toBe(false)
     })
+
+    /**
+     * Test that isEmpty flag is true when data is loaded but contains no program years
+     *
+     * **Validates: Requirements 4.2 (display message when no program years available)**
+     */
+    it('should set isEmpty=true when data is loaded but contains no program years', async () => {
+      const districtId = '57'
+      const mockData: AvailableRankingYearsResponse = {
+        districtId,
+        programYears: [],
+      }
+
+      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+
+      const { result } = renderHook(
+        () => useAvailableProgramYears({ districtId }),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.isEmpty).toBe(true)
+      expect(result.current.isError).toBe(false)
+      expect(result.current.data?.programYears).toHaveLength(0)
+    })
+
+    /**
+     * Test that isEmpty flag is false when data contains program years
+     *
+     * **Validates: Requirements 4.2**
+     */
+    it('should set isEmpty=false when data contains program years', async () => {
+      const districtId = '57'
+      const mockData = createMockResponse(districtId)
+
+      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+
+      const { result } = renderHook(
+        () => useAvailableProgramYears({ districtId }),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(result.current.isEmpty).toBe(false)
+      expect(result.current.data?.programYears.length).toBeGreaterThan(0)
+    })
+
+    /**
+     * Test that isEmpty flag is false while loading
+     *
+     * **Validates: Requirements 4.2**
+     */
+    it('should set isEmpty=false while loading', async () => {
+      const districtId = '57'
+      const mockData = createMockResponse(districtId)
+
+      // Create a delayed response
+      mockedApiClient.get.mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(() => resolve({ data: mockData }), 100)
+          )
+      )
+
+      const { result } = renderHook(
+        () => useAvailableProgramYears({ districtId }),
+        { wrapper: createWrapper() }
+      )
+
+      // While loading, isEmpty should be false
+      expect(result.current.isLoading).toBe(true)
+      expect(result.current.isEmpty).toBe(false)
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+    })
+
+    /**
+     * Test that isEmpty flag is false when in error state
+     *
+     * **Validates: Requirements 4.1, 4.2**
+     */
+    it('should set isEmpty=false when in error state', async () => {
+      const districtId = '57'
+
+      mockedApiClient.get.mockRejectedValue(new Error('Network error'))
+
+      const { result } = renderHook(
+        () => useAvailableProgramYears({ districtId }),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(
+        () => {
+          expect(result.current.isError).toBe(true)
+        },
+        { timeout: 5000 }
+      )
+
+      // When in error state, isEmpty should be false
+      expect(result.current.isEmpty).toBe(false)
+    })
   })
 
   describe('Different Districts', () => {

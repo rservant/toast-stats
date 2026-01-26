@@ -24,7 +24,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fc from 'fast-check'
 import crypto from 'crypto'
 import { SnapshotBuilder } from '../services/SnapshotBuilder.js'
-import type { IRawCSVCacheService } from '../types/serviceInterfaces.js'
+import type { IRawCSVStorage } from '../types/storageInterfaces.js'
 import type { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
 import type {
   FileSnapshotStore,
@@ -67,7 +67,7 @@ function createValidCacheMetadata(date: string): RawCSVCacheMetadata {
  * Mock RawCSVCacheService that tracks all method calls
  * Used to verify SnapshotBuilder only uses cache operations
  */
-function createTrackingMockCacheService(): IRawCSVCacheService & {
+function createTrackingMockCacheService(): IRawCSVStorage & {
   callLog: Array<{ method: string; args: unknown[] }>
 } {
   const callLog: Array<{ method: string; args: unknown[] }> = []
@@ -221,7 +221,7 @@ function createTrackingMockCacheService(): IRawCSVCacheService & {
     }),
   }
 
-  return mockService as unknown as IRawCSVCacheService & {
+  return mockService as unknown as IRawCSVStorage & {
     callLog: Array<{ method: string; args: unknown[] }>
   }
 }
@@ -232,7 +232,7 @@ function createTrackingMockCacheService(): IRawCSVCacheService & {
  */
 function createPartialCacheMockService(
   cachedDistricts: Set<string>
-): IRawCSVCacheService & {
+): IRawCSVStorage & {
   callLog: Array<{ method: string; args: unknown[] }>
 } {
   const callLog: Array<{ method: string; args: unknown[] }> = []
@@ -389,7 +389,7 @@ function createPartialCacheMockService(
     }),
   }
 
-  return mockService as unknown as IRawCSVCacheService & {
+  return mockService as unknown as IRawCSVStorage & {
     callLog: Array<{ method: string; args: unknown[] }>
   }
 }

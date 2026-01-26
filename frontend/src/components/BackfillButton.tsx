@@ -12,6 +12,7 @@ interface BackfillButtonProps {
   onBackfillStart?: (backfillId: string) => void
   districtId?: string // For district-specific backfills
   showAdvancedOptions?: boolean // Show targeting and performance options
+  variant?: 'primary' | 'secondary' | 'accent' | 'ghost' // Button variant
 }
 
 interface ApiError {
@@ -48,6 +49,7 @@ export function BackfillButton({
   onBackfillStart,
   districtId,
   showAdvancedOptions = false,
+  variant = 'accent',
 }: BackfillButtonProps) {
   const [showModal, setShowModal] = useState(false)
   const [backfillId, setBackfillId] = useState<string | null>(null)
@@ -144,7 +146,7 @@ export function BackfillButton({
     <>
       <Button
         onClick={() => setShowModal(true)}
-        variant="accent"
+        variant={variant}
         className={className}
         aria-label="Backfill missing historical data"
       >

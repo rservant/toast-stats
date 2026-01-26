@@ -3,6 +3,12 @@
  *
  * Provides factory methods for creating test instances of services
  * with proper isolation and cleanup capabilities.
+ *
+ * Storage Abstraction:
+ * This factory now supports the storage abstraction layer for test environments,
+ * enabling tests to use the same storage interfaces as production code.
+ *
+ * Requirements: 1.3, 1.4
  */
 
 import {
@@ -17,6 +23,10 @@ import {
   ICircuitBreakerManager,
   IAnalyticsDataSource,
 } from '../types/serviceInterfaces.js'
+import type {
+  ISnapshotStorage,
+  IRawCSVStorage,
+} from '../types/storageInterfaces.js'
 import {
   DefaultServiceContainer,
   createServiceToken,
@@ -38,7 +48,10 @@ import { FileSnapshotStore } from './SnapshotStore.js'
 import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
+import { LocalDistrictConfigStorage } from './storage/LocalDistrictConfigStorage.js'
 import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
+import { LocalSnapshotStorage } from './storage/LocalSnapshotStorage.js'
+import { LocalRawCSVStorage } from './storage/LocalRawCSVStorage.js'
 import path from 'path'
 
 /**
@@ -329,7 +342,14 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   ): BackfillService {
     const refresh = refreshService || this.createRefreshService()
     const store = snapshotStore || this.createSnapshotStore()
-    const config = configService || new DistrictConfigurationService()
+    // Create DistrictConfigurationService with storage if not provided
+    let config = configService
+    if (!config) {
+      const cacheDir =
+        this.createTestConfiguration().getConfiguration().cacheDirectory
+      const storage = new LocalDistrictConfigStorage(cacheDir)
+      config = new DistrictConfigurationService(storage)
+    }
     const rankingCalculator = this.createRankingCalculator()
 
     const service = new BackfillService(
@@ -484,7 +504,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
           const rankingCalculator = container.resolve(
             ServiceTokens.RankingCalculator
           )
-          const configService = new DistrictConfigurationService()
+          // Create DistrictConfigurationService with storage
+          const cacheConfig = container.resolve(
+            ServiceTokens.CacheConfigService
+          )
+          const cacheDir = cacheConfig.getCacheDirectory()
+          const storage = new LocalDistrictConfigStorage(cacheDir)
+          const configService = new DistrictConfigurationService(storage)
 
           return new BackfillService(
             refreshService,
@@ -610,6 +636,46 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         }
       )
     )
+
+    // =========================================================================
+    // Storage Abstraction Layer
+    // =========================================================================
+    // Register storage interfaces for test environments.
+    // Tests use local filesystem storage by default for isolation.
+    //
+    // Requirements: 1.3, 1.4
+    // =========================================================================
+
+    // Register ISnapshotStorage interface
+    container.registerInterface<ISnapshotStorage>(
+      'ISnapshotStorage',
+      createServiceFactory(
+        () => {
+          const cacheConfig = this.createCacheConfigService()
+          return new LocalSnapshotStorage({
+            cacheDir: cacheConfig.getCacheDirectory(),
+          })
+        },
+        async _instance => {
+          // LocalSnapshotStorage doesn't have dispose method
+        }
+      )
+    )
+
+    // Register IRawCSVStorage interface
+    container.registerInterface<IRawCSVStorage>(
+      'IRawCSVStorage',
+      createServiceFactory(
+        () => {
+          const cacheConfig = this.createCacheConfigService()
+          const logger = new TestLogger()
+          return new LocalRawCSVStorage(cacheConfig, logger)
+        },
+        async _instance => {
+          // LocalRawCSVStorage doesn't have dispose method
+        }
+      )
+    )
   }
 
   /**
@@ -679,6 +745,11 @@ export const InterfaceTokens = {
     createInterfaceToken<RankingCalculator>('RankingCalculator'),
   RefreshService: createInterfaceToken<RefreshService>('RefreshService'),
   BackfillService: createInterfaceToken<BackfillService>('BackfillService'),
+
+  // Storage abstraction layer interface tokens
+  // Requirements: 1.3, 1.4
+  ISnapshotStorage: createInterfaceToken<ISnapshotStorage>('ISnapshotStorage'),
+  IRawCSVStorage: createInterfaceToken<IRawCSVStorage>('IRawCSVStorage'),
 }
 
 /**
