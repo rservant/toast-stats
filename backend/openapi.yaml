@@ -1488,3 +1488,113 @@ paths:
           description: Internal server error
         '503':
           description: Service unavailable
+
+  # ============================================================================
+  # ADMIN BACKFILL ENDPOINTS (Pre-computed Analytics)
+  # ============================================================================
+
+  /admin/backfill:
+    post:
+      summary: Trigger backfill of pre-computed analytics
+      description: |
+        Triggers a backfill operation to generate pre-computed analytics for
+        existing snapshots. Can be filtered by date range and district IDs.
+      operationId: triggerAdminBackfill
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: false
+          schema:
+            type: object
+            properties:
+              startDate:
+                type: string
+                format: date
+                description: Start date for backfill range (YYYY-MM-DD)
+              endDate:
+                type: string
+                format: date
+                description: End date for backfill range (YYYY-MM-DD)
+              districtIds:
+                type: array
+                items:
+                  type: string
+                description: Array of district IDs to backfill (optional, defaults to all)
+      responses:
+        '202':
+          description: Backfill job accepted and started
+        '400':
+          description: Bad request - invalid parameters
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
+  /admin/backfill/{jobId}:
+    get:
+      summary: Get backfill job progress
+      description: |
+        Returns the current progress of a backfill job including percentage
+        complete, current snapshot being processed, and any errors.
+      operationId: getAdminBackfillProgress
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      parameters:
+        - name: jobId
+          in: path
+          type: string
+          required: true
+          description: Unique identifier for the backfill job
+      responses:
+        '200':
+          description: Successfully retrieved backfill progress
+        '404':
+          description: Backfill job not found
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+    delete:
+      summary: Cancel a backfill job
+      description: |
+        Cancels a running or pending backfill job. Jobs that are already
+        completed or cancelled cannot be cancelled again.
+      operationId: cancelAdminBackfill
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      parameters:
+        - name: jobId
+          in: path
+          type: string
+          required: true
+          description: Unique identifier for the backfill job
+      responses:
+        '200':
+          description: Backfill job cancelled successfully
+        '400':
+          description: Bad request - job cannot be cancelled (already completed or cancelled)
+        '404':
+          description: Backfill job not found
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
