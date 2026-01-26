@@ -1048,6 +1048,29 @@ paths:
   # ADMIN ENDPOINTS
   # ============================================================================
 
+  /admin/health:
+    get:
+      summary: Get system health metrics
+      description: |
+        Returns aggregated system health metrics including cache hit rates,
+        average response times, pending operations count, snapshot store status,
+        and pre-computed analytics coverage.
+      operationId: getSystemHealth
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successfully retrieved system health metrics
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
   /admin/snapshots:
     get:
       summary: List snapshots
