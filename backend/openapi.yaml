@@ -791,6 +791,51 @@ paths:
         '503':
           description: Service unavailable
 
+  /districts/{districtId}/analytics-summary:
+    get:
+      summary: Get aggregated analytics summary
+      description: |
+        Returns combined analytics data including summary metrics, trend data,
+        and year-over-year comparisons in a single request. Uses pre-computed
+        analytics when available for fast response times (<2 seconds).
+      operationId: getDistrictAnalyticsSummary
+      tags:
+        - Analytics
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      parameters:
+        - name: districtId
+          in: path
+          type: string
+          required: true
+          description: District identifier (e.g., "57", "F")
+        - name: startDate
+          in: query
+          type: string
+          format: date
+          description: Start date for analytics range (YYYY-MM-DD format)
+          required: false
+        - name: endDate
+          in: query
+          type: string
+          format: date
+          description: End date for analytics range (YYYY-MM-DD format)
+          required: false
+      responses:
+        '200':
+          description: Successfully retrieved aggregated analytics summary
+        '400':
+          description: Bad request - invalid parameters
+        '404':
+          description: District not found or no data available
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
   /districts/{districtId}/year-over-year/{date}:
     get:
       summary: Get year-over-year comparison
@@ -1065,6 +1110,127 @@ paths:
           description: Successfully retrieved snapshots list
         '400':
           description: Bad request - invalid query parameters
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+    delete:
+      summary: Delete snapshots by IDs
+      description: |
+        Delete multiple snapshots by their IDs. Implements cascading deletion
+        including snapshot data files, pre-computed analytics, and time-series
+        index entries.
+      operationId: deleteSnapshots
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              snapshotIds:
+                type: array
+                items:
+                  type: string
+                description: Array of snapshot IDs to delete
+            required:
+              - snapshotIds
+      responses:
+        '200':
+          description: Successfully deleted snapshots
+        '400':
+          description: Bad request - invalid snapshot IDs
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
+  /admin/snapshots/range:
+    delete:
+      summary: Delete snapshots in date range
+      description: |
+        Delete all snapshots within a specified date range (inclusive).
+        Implements cascading deletion including snapshot data files,
+        pre-computed analytics, and time-series index entries.
+      operationId: deleteSnapshotsInRange
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              startDate:
+                type: string
+                format: date
+                description: Start date (inclusive, YYYY-MM-DD format)
+              endDate:
+                type: string
+                format: date
+                description: End date (inclusive, YYYY-MM-DD format)
+            required:
+              - startDate
+              - endDate
+      responses:
+        '200':
+          description: Successfully deleted snapshots in range
+        '400':
+          description: Bad request - invalid date range
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable
+
+  /admin/snapshots/all:
+    delete:
+      summary: Delete all snapshots
+      description: |
+        Delete all snapshots, optionally filtered by district ID.
+        Implements cascading deletion including snapshot data files,
+        pre-computed analytics, and time-series index entries.
+      operationId: deleteAllSnapshots
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: false
+          schema:
+            type: object
+            properties:
+              districtId:
+                type: string
+                description: If provided, only delete data for this district
+      responses:
+        '200':
+          description: Successfully deleted all snapshots
+        '400':
+          description: Bad request - invalid district ID
         '500':
           description: Internal server error
         '503':
