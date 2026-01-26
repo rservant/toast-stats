@@ -1321,7 +1321,7 @@ const SystemHealthSection: React.FC = () => {
             View Detailed Metrics
           </summary>
           <div className="px-4 pb-4 pt-2 border-t border-gray-200">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-tm-black">
               {/* Cache Details */}
               <div>
                 <h4 className="font-semibold text-tm-black mb-2">
@@ -1329,20 +1329,28 @@ const SystemHealthSection: React.FC = () => {
                 </h4>
                 <dl className="space-y-1">
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Total Reads:</dt>
-                    <dd className="font-mono">{details.cache.totalReads}</dd>
+                    <dt className="text-gray-600">Total Reads:</dt>
+                    <dd className="font-mono text-tm-black">
+                      {details.cache.totalReads}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Cache Hits:</dt>
-                    <dd className="font-mono">{details.cache.cacheHits}</dd>
+                    <dt className="text-gray-600">Cache Hits:</dt>
+                    <dd className="font-mono text-tm-black">
+                      {details.cache.cacheHits}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Cache Misses:</dt>
-                    <dd className="font-mono">{details.cache.cacheMisses}</dd>
+                    <dt className="text-gray-600">Cache Misses:</dt>
+                    <dd className="font-mono text-tm-black">
+                      {details.cache.cacheMisses}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Efficiency:</dt>
-                    <dd className="font-mono">{details.cache.efficiency}</dd>
+                    <dt className="text-gray-600">Efficiency:</dt>
+                    <dd className="font-mono text-tm-black">
+                      {details.cache.efficiency}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -1354,18 +1362,20 @@ const SystemHealthSection: React.FC = () => {
                 </h4>
                 <dl className="space-y-1">
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Total Snapshots:</dt>
-                    <dd className="font-mono">{details.snapshots.total}</dd>
+                    <dt className="text-gray-600">Total Snapshots:</dt>
+                    <dd className="font-mono text-tm-black">
+                      {details.snapshots.total}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">With Analytics:</dt>
-                    <dd className="font-mono">
+                    <dt className="text-gray-600">With Analytics:</dt>
+                    <dd className="font-mono text-tm-black">
                       {details.snapshots.withPrecomputedAnalytics}
                     </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Coverage:</dt>
-                    <dd className="font-mono">
+                    <dt className="text-gray-600">Coverage:</dt>
+                    <dd className="font-mono text-tm-black">
                       {details.snapshots.analyticsCoverage}%
                     </dd>
                   </div>
@@ -1379,20 +1389,20 @@ const SystemHealthSection: React.FC = () => {
                 </h4>
                 <dl className="space-y-1">
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Avg Response:</dt>
-                    <dd className="font-mono">
+                    <dt className="text-gray-600">Avg Response:</dt>
+                    <dd className="font-mono text-tm-black">
                       {details.performance.averageResponseTime.toFixed(2)}ms
                     </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Concurrent Reads:</dt>
-                    <dd className="font-mono">
+                    <dt className="text-gray-600">Concurrent Reads:</dt>
+                    <dd className="font-mono text-tm-black">
                       {details.performance.concurrentReads}
                     </dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Max Concurrent:</dt>
-                    <dd className="font-mono">
+                    <dt className="text-gray-600">Max Concurrent:</dt>
+                    <dd className="font-mono text-tm-black">
                       {details.performance.maxConcurrentReads}
                     </dd>
                   </div>
