@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAdminSnapshots, SnapshotMetadata } from '../hooks/useAdminSnapshots'
 import {
   useAdminBackfill,
@@ -7,7 +7,6 @@ import {
   BackfillError,
 } from '../hooks/useAdminBackfill'
 import { useAdminMonitoring } from '../hooks/useAdminMonitoring'
-import { useAuth } from '../hooks/useAuth'
 
 /**
  * AdminPage Component
@@ -17,6 +16,9 @@ import { useAuth } from '../hooks/useAuth'
  * - Snapshots: Manage data snapshots (list, delete, regenerate)
  * - Analytics: Manage pre-computed analytics (backfill, status)
  * - System Health: Monitor system metrics and performance
+ *
+ * Note: Authentication removed - this is a trusted small-group application
+ * per production-maintenance steering document.
  *
  * Requirements: 10.1, 10.2, 10.3, 10.7
  */
@@ -164,12 +166,12 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
     >
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md min-w-[320px] p-6">
         <h3
           id="confirm-dialog-title"
           className="text-lg font-semibold text-tm-black font-tm-headline mb-2"
@@ -639,12 +641,12 @@ const SnapshotsSection: React.FC = () => {
       {/* Delete range dialog */}
       {deleteRangeDialog.isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-range-dialog-title"
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md min-w-[320px] p-6">
             <h3
               id="delete-range-dialog-title"
               className="text-lg font-semibold text-tm-black font-tm-headline mb-4"
@@ -1400,78 +1402,7 @@ const SystemHealthSection: React.FC = () => {
   )
 }
 
-/**
- * Access Denied Component
- *
- * Displayed when a user is authenticated but lacks admin privileges.
- * Provides a clear message and navigation back to home.
- *
- * Requirements: 10.7
- */
-const AccessDenied: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full mx-4">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-shrink-0 w-12 h-12 bg-tm-true-maroon rounded-lg flex items-center justify-center text-white">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-tm-black font-tm-headline">
-              Access Denied
-            </h1>
-            <p className="text-sm text-gray-600 font-tm-body">
-              Admin privileges required
-            </p>
-          </div>
-        </div>
-        <p className="text-gray-600 font-tm-body mb-6">
-          You do not have permission to access the Admin Panel. This area is
-          restricted to users with administrative privileges. Please contact
-          your system administrator if you believe you should have access.
-        </p>
-        <Link
-          to="/"
-          className="w-full px-4 py-2 bg-tm-loyal-blue text-white rounded-sm hover:bg-opacity-90 transition-colors min-h-[44px] flex items-center justify-center font-tm-body"
-        >
-          ← Return to Home
-        </Link>
-      </div>
-    </div>
-  )
-}
-
 const AdminPage: React.FC = () => {
-  const { isAuthenticated } = useAuth()
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  // Check admin privileges
-  // In a real application, this would check user roles/permissions from the auth context
-  // For now, we assume authenticated users have admin access
-  const isAdmin = true
-
-  // Show access denied if user is not an admin
-  if (!isAdmin) {
-    return <AccessDenied />
-  }
-
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-6">
