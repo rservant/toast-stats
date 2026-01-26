@@ -41,7 +41,7 @@
     "snapshot-debug": "tsx src/scripts/snapshot-debug.ts"
   },
   "dependencies": {
-    "@google-cloud/firestore": "^7.11.0",
+    "@google-cloud/firestore": "^8.2.0",
     "@google-cloud/storage": "^7.16.0",
     "@types/uuid": "^11.0.0",
     "axios": "^1.6.2",
