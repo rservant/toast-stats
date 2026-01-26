@@ -285,7 +285,11 @@ const SnapshotListItem: React.FC<SnapshotListItemProps> = ({
           aria-label={`Select snapshot ${snapshot.snapshot_id}`}
         />
       </td>
-      <td className="px-4 py-3 font-mono text-sm">{snapshot.snapshot_id}</td>
+      <td className="px-4 py-3 font-mono text-sm text-gray-900">
+        {snapshot.snapshot_id || (
+          <span className="text-gray-400 italic">No ID</span>
+        )}
+      </td>
       <td className="px-4 py-3 text-sm text-gray-600">
         {formatDate(snapshot.created_at)}
       </td>

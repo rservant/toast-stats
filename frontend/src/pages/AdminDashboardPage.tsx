@@ -436,7 +436,11 @@ const AdminDashboardPage: React.FC = () => {
                         className="hover:bg-gray-50"
                       >
                         <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">
-                          {snapshot.snapshot_id.substring(0, 12)}...
+                          {snapshot.snapshot_id ? (
+                            `${snapshot.snapshot_id.substring(0, 12)}...`
+                          ) : (
+                            <span className="text-gray-400 italic">No ID</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
                           {formatDate(snapshot.created_at)}
