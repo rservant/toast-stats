@@ -53,9 +53,10 @@ export const districtDataAggregator = createDistrictDataAggregator(
   snapshotStore as unknown as PerDistrictSnapshotStoreInterface
 )
 
-// Initialize services using the production service factory
-const serviceFactory = getProductionServiceFactory()
-export const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+// Use rawCSVStorage from StorageProviderFactory to respect STORAGE_PROVIDER env var
+// - STORAGE_PROVIDER=gcp: Uses GCSRawCSVStorage (reads from GCS bucket)
+// - STORAGE_PROVIDER=local or unset: Uses LocalRawCSVStorage (reads from local filesystem)
+export const rawCSVCacheService = storageProviders.rawCSVStorage
 
 // Create DistrictConfigurationService with storage from StorageProviderFactory
 // This respects the STORAGE_PROVIDER environment variable for storage backend selection

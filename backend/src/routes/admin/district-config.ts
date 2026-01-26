@@ -11,7 +11,6 @@ import { Router } from 'express'
 import {
   logAdminAccess,
   generateOperationId,
-  getServiceFactory,
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
@@ -34,12 +33,12 @@ districtConfigRouter.get(
     })
 
     try {
-      const factory = getServiceFactory()
       const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
         storageProviders.districtConfigStorage
       )
-      const snapshotStore = factory.createSnapshotStore()
+      // Use storage abstraction layer to respect STORAGE_PROVIDER env var
+      const snapshotStore = storageProviders.snapshotStorage
 
       const districtConfig = await districtConfigService.getConfiguration()
       const hasDistricts = await districtConfigService.hasConfiguredDistricts()
@@ -358,12 +357,12 @@ districtConfigRouter.post(
     })
 
     try {
-      const factory = getServiceFactory()
       const storageProviders = StorageProviderFactory.createFromEnvironment()
       const districtConfigService = new DistrictConfigurationService(
         storageProviders.districtConfigStorage
       )
-      const snapshotStore = factory.createSnapshotStore()
+      // Use storage abstraction layer to respect STORAGE_PROVIDER env var
+      const snapshotStore = storageProviders.snapshotStorage
 
       const { allDistrictIds } = req.body as { allDistrictIds?: string[] }
       const validationResult =

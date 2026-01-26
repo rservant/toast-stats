@@ -12,13 +12,12 @@
 import { logger } from '../utils/logger.js'
 import { DataValidator } from './DataValidator.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
-import { RawCSVCacheService } from './RawCSVCacheService.js'
 import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
 import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type { SnapshotStore } from '../types/snapshots.js'
-import type { ISnapshotStorage } from '../types/storageInterfaces.js'
+import type { ISnapshotStorage, IRawCSVStorage } from '../types/storageInterfaces.js'
 import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**
@@ -75,7 +74,8 @@ export class RefreshService {
    *
    * @param snapshotStorage - Storage interface for snapshot operations (ISnapshotStorage)
    *                          Supports both local filesystem and cloud storage backends
-   * @param rawCSVCache - Cache service for raw CSV data
+   * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
+   *                      Supports both local filesystem and cloud storage backends
    * @param districtConfigService - Optional district configuration service
    * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
    * @param closingPeriodDetector - Optional closing period detector
@@ -84,7 +84,7 @@ export class RefreshService {
    */
   constructor(
     snapshotStorage: ISnapshotStorage | SnapshotStore,
-    rawCSVCache: RawCSVCacheService,
+    rawCSVCache: IRawCSVStorage,
     districtConfigService?: DistrictConfigurationService,
     rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,

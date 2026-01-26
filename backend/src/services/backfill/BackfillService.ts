@@ -8,6 +8,7 @@
  * local filesystem and cloud storage backends (Requirements 1.3, 1.4).
  */
 
+import { parse } from 'csv-parse/sync'
 import { logger } from '../../utils/logger.js'
 import {
   CircuitBreaker,
@@ -26,8 +27,9 @@ import {
 } from '../../utils/IntermediateCache.js'
 import { RefreshService } from '../RefreshService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
+import { StorageProviderFactory } from '../storage/StorageProviderFactory.js'
 import type { RankingCalculator } from '../RankingCalculator.js'
-import type { DistrictStatistics } from '../../types/districts.js'
+import type { DistrictStatistics, ScrapedRecord } from '../../types/districts.js'
 import type {
   Snapshot,
   SnapshotStore,
@@ -36,6 +38,7 @@ import type {
   DistrictRanking,
 } from '../../types/snapshots.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
+import { CSVType } from '../../types/rawCSVCache.js'
 
 import { JobManager } from './JobManager.js'
 import { DataSourceSelector } from './DataSourceSelector.js'
@@ -1224,6 +1227,9 @@ export class BackfillService {
    *
    * Note: This method now reads from cached data only. If data is not in the cache,
    * the scraper-cli tool must be run first to populate the cache.
+   *
+   * Storage Abstraction: Uses IRawCSVStorage interface to support both
+   * local filesystem and GCS storage backends (Requirements 1.3, 1.4).
    */
   private async fetchAndCalculateAllDistrictsRankings(
     backfillId: string,
@@ -1240,27 +1246,35 @@ export class BackfillService {
       }
     )
 
-    const { getProductionServiceFactory } =
-      await import('../ProductionServiceFactory.js')
-
-    const serviceFactory = getProductionServiceFactory()
-    const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
+    // Use storage abstraction layer to respect STORAGE_PROVIDER env var
+    // - STORAGE_PROVIDER=gcp: Uses GCSRawCSVStorage (reads from GCS bucket)
+    // - STORAGE_PROVIDER=local or unset: Uses LocalRawCSVStorage (reads from local filesystem)
+    const storageProviders = StorageProviderFactory.createFromEnvironment()
+    const rawCSVStorage = storageProviders.rawCSVStorage
 
     try {
-      // Read from cache using getAllDistrictsCached which returns parsed records
-      const cachedResult = await rawCSVCacheService.getAllDistrictsCached(date)
+      // Read raw CSV content from cache
+      const csvContent = await rawCSVStorage.getCachedCSV(
+        date,
+        CSVType.ALL_DISTRICTS
+      )
 
-      if (
-        !cachedResult ||
-        !cachedResult.fromCache ||
-        cachedResult.data.length === 0
-      ) {
+      if (!csvContent) {
         throw new Error(
           `No cached All Districts CSV available for date ${date}. Please run scraper-cli to collect data first: npx scraper-cli scrape --date ${date}`
         )
       }
 
-      const cacheMetadata = await rawCSVCacheService.getCacheMetadata(date)
+      // Parse CSV content into records
+      const allDistrictsData = this.parseCSVContent(csvContent)
+
+      if (allDistrictsData.length === 0) {
+        throw new Error(
+          `No valid records found in All Districts CSV for date ${date}. Please run scraper-cli to collect data first: npx scraper-cli scrape --date ${date}`
+        )
+      }
+
+      const cacheMetadata = await rawCSVStorage.getCacheMetadata(date)
       const actualCsvDate = cacheMetadata?.date || date
 
       const closingPeriodInfo = this.detectClosingPeriodFromMetadata(
@@ -1269,8 +1283,6 @@ export class BackfillService {
         cacheMetadata?.dataMonth,
         cacheMetadata?.isClosingPeriod
       )
-
-      const allDistrictsData = cachedResult.data
 
       logger.info('All Districts CSV read from cache successfully', {
         backfillId,
@@ -1532,6 +1544,37 @@ export class BackfillService {
         snapshotDate: actualCsvDate,
         collectionDate: actualCsvDate,
       }
+    }
+  }
+
+  /**
+   * Parse CSV content into ScrapedRecord array
+   *
+   * Uses csv-parse/sync for robust CSV parsing with proper handling of
+   * quoted values, escaped characters, and various CSV formats.
+   *
+   * @param csvContent - Raw CSV content as a string
+   * @returns Array of parsed records
+   */
+  private parseCSVContent(csvContent: string): ScrapedRecord[] {
+    try {
+      const records = parse(csvContent, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        relax_column_count: true,
+        skip_records_with_error: true,
+      }) as ScrapedRecord[]
+
+      return records
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to parse CSV content', {
+        error: errorMessage,
+        operation: 'parseCSVContent',
+      })
+      return []
     }
   }
 
