@@ -62,7 +62,7 @@ paths:
       summary: List all districts
       description: |
         Retrieves a list of all available Toastmasters districts.
-        
+
         The response includes basic information about each district including
         its identifier, name, status, and last update timestamp. Snapshot metadata
         is included to indicate data freshness.
@@ -1455,8 +1455,8 @@ paths:
         a global view of data availability.
 
         The response includes:
-        - **dates**: Array of ISO date strings (YYYY-MM-DD) representing available snapshots
-        - **dateRange**: Object containing the earliest and latest available dates (optional, may be absent if no dates available)
+        - **dates**: Array of ISO date strings (YYYY-MM-DD) for available snapshots
+        - **dateRange**: Object with earliest and latest dates (optional)
 
         This endpoint is useful for:
         - Determining the overall data coverage across the system
@@ -3429,7 +3429,7 @@ paths:
                       currentDate: "2026-01-24"
                       previousYearDate: "2025-01-24"
                       dataAvailable: false
-                      message: "No data available for previous program year (2024-2025). Historical data collection may be required."
+                      message: "No data for previous year (2024-2025). Historical collection may be required."
                       programYears:
                         currentYear: "2025-2026"
                         previousYear: "2024-2025"
@@ -3707,7 +3707,7 @@ paths:
                   CSV formatted data with header row and data rows.
                   Each row represents a club in the district.
               example: |
-                Club ID,Club Name,Division,Area,Member Count,Active Members,Membership Base,Goals Achieved,Distinguished Status,Charter Date,Educational Awards
+                Club ID,Club Name,Division,Area,Members,Active,Base,Goals,Status,Charter,Awards
                 1234567,Downtown Speakers,A,12,25,22,20,7,Select Distinguished,2015-03-15,12
                 7654321,Morning Leaders,A,12,32,30,28,9,President's Distinguished,2010-09-01,18
                 9876543,Evening Orators,B,21,18,15,14,5,Distinguished,2018-06-20,8
@@ -12066,7 +12066,7 @@ components:
       description: |
         Unique identifier for a snapshot, typically an ISO date string (YYYY-MM-DD)
         representing when the data was collected.
-        
+
         Snapshots represent complete, normalized views of the source data at specific
         points in time. Use the `GET /admin/snapshots` endpoint to discover available
         snapshot IDs.

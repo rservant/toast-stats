@@ -5,6 +5,7 @@
 This design addresses production failures caused by missing Firestore composite indexes. The root cause is that Firestore queries using `orderBy` with filters require composite indexes that must be explicitly created. Without these indexes, queries fail with `FAILED_PRECONDITION` errors, cascading to break the date selector, program year selector, and district API endpoints.
 
 The solution involves:
+
 1. Creating a `firestore.indexes.json` configuration file with all required composite indexes
 2. Adding graceful degradation in backend storage services to handle index failures
 3. Improving frontend error handling in date and program year selectors
@@ -24,10 +25,10 @@ graph TB
     subgraph "Backend Storage Layer"
         FSS[FirestoreSnapshotStorage]
         FDCS[FirestoreDistrictConfigStorage]
-        
+
         FSS --> |queries| FS[(Firestore)]
         FDCS --> |queries| FS
-        
+
         FSS --> IH[Index Health Check]
         IH --> FS
     end
@@ -42,7 +43,7 @@ graph TB
         DS[DateSelector]
         PYS[ProgramYearSelector]
         UAPY[useAvailableProgramYears]
-        
+
         DS --> |fetch| API
         PYS --> UAPY
         UAPY --> |fetch| API
@@ -63,9 +64,7 @@ graph TB
     {
       "collectionGroup": "snapshots",
       "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "__name__", "order": "DESCENDING" }
-      ]
+      "fields": [{ "fieldPath": "__name__", "order": "DESCENDING" }]
     },
     {
       "collectionGroup": "snapshots",
@@ -78,9 +77,7 @@ graph TB
     {
       "collectionGroup": "history",
       "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
-      ]
+      "fields": [{ "fieldPath": "timestamp", "order": "DESCENDING" }]
     }
   ],
   "fieldOverrides": []
@@ -188,52 +185,56 @@ interface FieldOverride {
 ### Error Classification
 
 ```typescript
-type FirestoreErrorCode = 
-  | 'FAILED_PRECONDITION'  // Missing index - non-retryable
-  | 'UNAVAILABLE'          // Transient - retryable
-  | 'DEADLINE_EXCEEDED'    // Timeout - retryable
-  | 'INTERNAL'             // Server error - retryable
-  | 'ABORTED'              // Transaction conflict - retryable
+type FirestoreErrorCode =
+  | 'FAILED_PRECONDITION' // Missing index - non-retryable
+  | 'UNAVAILABLE' // Transient - retryable
+  | 'DEADLINE_EXCEEDED' // Timeout - retryable
+  | 'INTERNAL' // Server error - retryable
+  | 'ABORTED' // Transaction conflict - retryable
 
 function isIndexError(error: unknown): boolean {
   if (error instanceof Error) {
-    return error.message.includes('FAILED_PRECONDITION') && 
-           error.message.includes('index')
+    return (
+      error.message.includes('FAILED_PRECONDITION') &&
+      error.message.includes('index')
+    )
   }
   return false
 }
 
 function extractIndexUrl(error: Error): string | null {
-  const urlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]+/)
+  const urlMatch = error.message.match(
+    /https:\/\/console\.firebase\.google\.com[^\s]+/
+  )
   return urlMatch ? urlMatch[0] : null
 }
 ```
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Graceful Degradation on Index Failure
 
-*For any* storage method in `FirestoreSnapshotStorage` or `FirestoreDistrictConfigStorage` that executes a Firestore query requiring a composite index, if the query fails with a `FAILED_PRECONDITION` error containing "index", the method SHALL return a safe default value (empty array for list operations, null for single-item operations) instead of throwing an exception.
+_For any_ storage method in `FirestoreSnapshotStorage` or `FirestoreDistrictConfigStorage` that executes a Firestore query requiring a composite index, if the query fails with a `FAILED_PRECONDITION` error containing "index", the method SHALL return a safe default value (empty array for list operations, null for single-item operations) instead of throwing an exception.
 
 **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
 
 ### Property 2: Index Error Classification
 
-*For any* error object where the message contains both `FAILED_PRECONDITION` and `index`, the `isIndexError` function SHALL return true, and the error SHALL be classified as non-retryable (retryable: false).
+_For any_ error object where the message contains both `FAILED_PRECONDITION` and `index`, the `isIndexError` function SHALL return true, and the error SHALL be classified as non-retryable (retryable: false).
 
 **Validates: Requirements 2.5**
 
 ### Property 3: Index URL Extraction
 
-*For any* Firestore error message containing a Firebase console URL (matching pattern `https://console.firebase.google.com[^\s]+`), the `extractIndexUrl` function SHALL extract and return the complete URL string. For messages without a URL, it SHALL return null.
+_For any_ Firestore error message containing a Firebase console URL (matching pattern `https://console.firebase.google.com[^\s]+`), the `extractIndexUrl` function SHALL extract and return the complete URL string. For messages without a URL, it SHALL return null.
 
 **Validates: Requirements 2.6**
 
 ### Property 4: Health Check Failure Detection
 
-*For any* call to `isIndexHealthy` where the underlying Firestore query fails with a `FAILED_PRECONDITION` error, the method SHALL return an `IndexHealthResult` with `healthy: false` and include the index creation URL in `indexCreationUrls` if available in the error message.
+_For any_ call to `isIndexHealthy` where the underlying Firestore query fails with a `FAILED_PRECONDITION` error, the method SHALL return an `IndexHealthResult` with `healthy: false` and include the index creation URL in `indexCreationUrls` if available in the error message.
 
 **Validates: Requirements 5.3, 5.5**
 
@@ -257,7 +258,8 @@ function extractIndexUrl(error: Error): string | null {
      operation: 'listSnapshots',
      error: errorMessage,
      indexUrl: extractIndexUrl(error),
-     recommendation: 'Deploy indexes using: firebase deploy --only firestore:indexes'
+     recommendation:
+       'Deploy indexes using: firebase deploy --only firestore:indexes',
    })
    ```
 
