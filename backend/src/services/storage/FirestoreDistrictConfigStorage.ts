@@ -38,6 +38,7 @@ import type {
   DistrictConfiguration,
   ConfigurationChange,
 } from '../DistrictConfigurationService.js'
+import { isIndexError, extractIndexUrl } from './FirestoreSnapshotStorage.js'
 
 // ============================================================================
 // Configuration Types
@@ -372,6 +373,9 @@ export class FirestoreDistrictConfigStorage implements IDistrictConfigStorage {
    * Queries the history subcollection and returns the most recent changes
    * in reverse chronological order (most recent first).
    *
+   * Handles missing Firestore indexes gracefully by returning an empty array
+   * with a logged warning instead of throwing an exception.
+   *
    * @param limit - Maximum number of changes to return
    * @returns Array of configuration changes sorted by timestamp (newest first)
    */
@@ -443,6 +447,22 @@ export class FirestoreDistrictConfigStorage implements IDistrictConfigStorage {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
+
+      // Handle index errors gracefully - return empty array instead of throwing
+      // This allows the application to continue operating with reduced functionality
+      // when Firestore indexes are not yet deployed
+      if (isIndexError(error)) {
+        const indexUrl = error instanceof Error ? extractIndexUrl(error) : null
+        logger.warn('Firestore query failed due to missing index', {
+          operation: 'getChangeHistory',
+          error: errorMessage,
+          indexUrl,
+          recommendation:
+            'Deploy indexes using: firebase deploy --only firestore:indexes',
+        })
+        return []
+      }
+
       logger.error('Failed to get change history', {
         operation: 'getChangeHistory',
         error: errorMessage,

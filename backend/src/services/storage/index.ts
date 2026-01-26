@@ -19,7 +19,10 @@ export { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 export { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
 export { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
 export { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
-export type { FirestoreSnapshotStorageConfig } from './FirestoreSnapshotStorage.js'
+export type {
+  FirestoreSnapshotStorageConfig,
+  IndexHealthResult,
+} from './FirestoreSnapshotStorage.js'
 export { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
 export type { FirestoreDistrictConfigStorageConfig } from './FirestoreDistrictConfigStorage.js'
 export { GCSRawCSVStorage } from './GCSRawCSVStorage.js'

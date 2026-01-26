@@ -640,11 +640,12 @@ describe('FirestoreSnapshotStorage', () => {
     })
 
     describe('isReady', () => {
-      it('should return true when Firestore is accessible', async () => {
+      it('should return true when Firestore is accessible and indexes are healthy', async () => {
         const storage = new FirestoreSnapshotStorage({
           projectId: 'test-project',
         })
 
+        // Both connectivity check and index health check succeed
         mockCollection.get.mockResolvedValue(createMockQuerySnapshot([]))
 
         const result = await storage.isReady()
@@ -657,6 +658,40 @@ describe('FirestoreSnapshotStorage', () => {
         })
 
         mockCollection.get.mockRejectedValue(new Error('Connection failed'))
+
+        const result = await storage.isReady()
+        expect(result).toBe(false)
+      })
+
+      it('should return false when indexes are unhealthy (missing index)', async () => {
+        const storage = new FirestoreSnapshotStorage({
+          projectId: 'test-project',
+        })
+
+        // First call (connectivity check) succeeds
+        // Second call (index health check) fails with index error
+        mockCollection.get
+          .mockResolvedValueOnce(createMockQuerySnapshot([]))
+          .mockRejectedValueOnce(
+            new Error(
+              '9 FAILED_PRECONDITION: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/test-project/firestore/indexes'
+            )
+          )
+
+        const result = await storage.isReady()
+        expect(result).toBe(false)
+      })
+
+      it('should return false when index health check fails with non-index error', async () => {
+        const storage = new FirestoreSnapshotStorage({
+          projectId: 'test-project',
+        })
+
+        // First call (connectivity check) succeeds
+        // Second call (index health check) fails with unexpected error
+        mockCollection.get
+          .mockResolvedValueOnce(createMockQuerySnapshot([]))
+          .mockRejectedValueOnce(new Error('Unexpected server error'))
 
         const result = await storage.isReady()
         expect(result).toBe(false)

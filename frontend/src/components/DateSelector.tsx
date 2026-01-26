@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 import type { AvailableDatesResponse } from '../types/districts'
@@ -6,6 +6,16 @@ import type { AvailableDatesResponse } from '../types/districts'
 interface DateSelectorProps {
   onDateChange: (date: string) => void
   selectedDate?: string
+}
+
+/**
+ * Error state interface for DateSelector
+ * Validates: Requirements 3.1, 3.3
+ */
+interface DateSelectorErrorState {
+  hasError: boolean
+  errorMessage: string
+  canRetry: boolean
 }
 
 const MONTHS = [
@@ -39,34 +49,70 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     return { initialMonth: null, initialDay: null }
   }, [selectedDate])
 
-  // Initialize state from selectedDate - use key to reset component when selectedDate changes
+  // Initialize state from selectedDate
   const [selectedMonth, setSelectedMonth] = useState<number | null>(
     initialMonth
   )
   const [selectedDay, setSelectedDay] = useState<number | null>(initialDay)
 
-  // Reset state when selectedDate prop changes (using key would be better but this works)
-  React.useEffect(() => {
-    if (initialMonth !== selectedMonth) {
-      setSelectedMonth(initialMonth)
-    }
-    if (initialDay !== selectedDay) {
-      setSelectedDay(initialDay)
-    }
-  }, [initialMonth, initialDay, selectedMonth, selectedDay])
+  // Track the selectedDate prop to detect when it changes externally
+  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate)
+
+  // Sync state when selectedDate prop changes from parent
+  // This pattern is recommended by React docs for deriving state from props
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (selectedDate !== prevSelectedDate) {
+    setPrevSelectedDate(selectedDate)
+    setSelectedMonth(initialMonth)
+    setSelectedDay(initialDay)
+  }
 
   // Fetch available dates from backend
-  const { data: availableDatesData, isLoading } =
-    useQuery<AvailableDatesResponse>({
-      queryKey: ['available-dates'],
-      queryFn: async () => {
-        const response = await apiClient.get<AvailableDatesResponse>(
-          '/districts/available-dates'
-        )
-        return response.data
-      },
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    })
+  // Extract isError, error, and refetch for error handling
+  // Validates: Requirements 3.1, 3.3, 3.4, 3.5
+  const {
+    data: availableDatesData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<AvailableDatesResponse>({
+    queryKey: ['available-dates'],
+    queryFn: async () => {
+      const response = await apiClient.get<AvailableDatesResponse>(
+        '/districts/available-dates'
+      )
+      return response.data
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2, // Limit retries to prevent infinite retry loops (Requirement 3.4)
+  })
+
+  // Log errors for debugging (Requirement 3.5)
+  useEffect(() => {
+    if (isError && error) {
+      console.error('[DateSelector] Failed to load available dates:', {
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      })
+    }
+  }, [isError, error])
+
+  // Compute error state (Requirement 3.1)
+  const errorState: DateSelectorErrorState = useMemo(() => {
+    if (isError) {
+      return {
+        hasError: true,
+        errorMessage: 'Unable to load available dates. Please try again.',
+        canRetry: true,
+      }
+    }
+    return {
+      hasError: false,
+      errorMessage: '',
+      canRetry: false,
+    }
+  }, [isError])
 
   const availableDates = useMemo(
     () => availableDatesData?.dates || [],
@@ -120,6 +166,12 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     return availableDays.includes(day)
   }
 
+  // Handle retry button click (Requirement 3.3)
+  const handleRetry = () => {
+    refetch()
+  }
+
+  // Loading state - shows skeleton UI (Requirement 3.4)
   if (isLoading) {
     return (
       <div className="flex items-center gap-3">
@@ -127,6 +179,73 @@ const DateSelector: React.FC<DateSelectorProps> = ({
           <div className="h-10 w-32 bg-gray-200 rounded"></div>
           <div className="h-10 w-24 bg-gray-200 rounded"></div>
         </div>
+      </div>
+    )
+  }
+
+  // Error state - shows user-friendly message with retry button (Requirements 3.1, 3.3, 3.4)
+  if (errorState.hasError) {
+    return (
+      <div
+        className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
+        role="alert"
+        aria-live="polite"
+      >
+        <div className="flex items-center gap-2 text-red-600">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span className="text-sm font-medium">{errorState.errorMessage}</span>
+        </div>
+        {errorState.canRetry && (
+          <button
+            onClick={handleRetry}
+            className="px-4 py-2 text-sm font-medium text-tm-loyal-blue border-2 border-tm-loyal-blue rounded-lg hover:bg-tm-loyal-blue hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-offset-2"
+            aria-label="Retry loading available dates"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  // Empty state - shows message when no dates are available (Requirement 3.2)
+  if (availableDates.length === 0) {
+    return (
+      <div
+        className="flex items-center gap-2 text-gray-600"
+        role="status"
+        aria-live="polite"
+      >
+        <svg
+          className="w-5 h-5 flex-shrink-0 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        <span className="text-sm font-medium">
+          No dates available. Data may not have been collected yet.
+        </span>
       </div>
     )
   }

@@ -85,6 +85,99 @@ export interface FirestoreSnapshotStorageConfig {
   collectionName?: string // defaults to 'snapshots'
 }
 
+/**
+ * Result of an index health check operation
+ *
+ * Provides diagnostic information about the availability of required
+ * Firestore composite indexes. When indexes are missing, includes
+ * URLs to the Firebase console for creating them.
+ *
+ * @example
+ * ```typescript
+ * const result = await storage.isIndexHealthy()
+ * if (!result.healthy) {
+ *   console.log('Missing indexes:', result.missingIndexes)
+ *   console.log('Create them at:', result.indexCreationUrls)
+ * }
+ * ```
+ *
+ * Validates: Requirements 5.5
+ */
+export interface IndexHealthResult {
+  /** Whether all required indexes are available and functional */
+  healthy: boolean
+  /** List of index descriptions that are missing or unavailable */
+  missingIndexes: string[]
+  /** Firebase console URLs for creating missing indexes */
+  indexCreationUrls: string[]
+}
+
+// ============================================================================
+// Index Error Detection Utilities
+// ============================================================================
+
+/**
+ * Determines if an error is a Firestore index error (FAILED_PRECONDITION)
+ *
+ * Firestore queries that require composite indexes will fail with
+ * FAILED_PRECONDITION errors when the required index does not exist.
+ * These errors are non-retryable configuration issues.
+ *
+ * @param error - The error to check (can be any type)
+ * @returns True if the error is a Firestore index error
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await query.get()
+ * } catch (error) {
+ *   if (isIndexError(error)) {
+ *     // Handle missing index - return safe default
+ *     return []
+ *   }
+ *   throw error
+ * }
+ * ```
+ *
+ * Validates: Requirements 2.5
+ */
+export function isIndexError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return (
+      error.message.includes('FAILED_PRECONDITION') &&
+      error.message.includes('index')
+    )
+  }
+  return false
+}
+
+/**
+ * Extracts the Firebase console URL from a Firestore index error message
+ *
+ * When Firestore throws an index error, the error message typically includes
+ * a URL to the Firebase console where the index can be created. This function
+ * extracts that URL for logging and operator guidance.
+ *
+ * @param error - The error containing the index creation URL
+ * @returns The Firebase console URL or null if not found
+ *
+ * @example
+ * ```typescript
+ * const url = extractIndexUrl(error)
+ * if (url) {
+ *   logger.warn('Missing index. Create it at:', { indexUrl: url })
+ * }
+ * ```
+ *
+ * Validates: Requirements 2.6
+ */
+export function extractIndexUrl(error: Error): string | null {
+  const urlMatch = error.message.match(
+    /https:\/\/console\.firebase\.google\.com[^\s]+/
+  )
+  return urlMatch ? urlMatch[0] : null
+}
+
 // ============================================================================
 // FirestoreSnapshotStorage Implementation
 // ============================================================================
@@ -294,6 +387,22 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
+
+      // Handle index errors gracefully - return null instead of throwing
+      // This allows the application to continue operating with reduced functionality
+      // when Firestore indexes are not yet deployed
+      if (isIndexError(error)) {
+        const indexUrl = error instanceof Error ? extractIndexUrl(error) : null
+        logger.warn('Firestore query failed due to missing index', {
+          operation: 'getLatestSuccessful',
+          error: errorMessage,
+          indexUrl,
+          recommendation:
+            'Deploy indexes using: firebase deploy --only firestore:indexes',
+        })
+        return null
+      }
+
       logger.error('Failed to get latest successful snapshot', {
         operation: 'getLatestSuccessful',
         error: errorMessage,
@@ -361,6 +470,22 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
+
+      // Handle index errors gracefully - return null instead of throwing
+      // This allows the application to continue operating with reduced functionality
+      // when Firestore indexes are not yet deployed
+      if (isIndexError(error)) {
+        const indexUrl = error instanceof Error ? extractIndexUrl(error) : null
+        logger.warn('Firestore query failed due to missing index', {
+          operation: 'getLatest',
+          error: errorMessage,
+          indexUrl,
+          recommendation:
+            'Deploy indexes using: firebase deploy --only firestore:indexes',
+        })
+        return null
+      }
+
       logger.error('Failed to get latest snapshot', {
         operation: 'getLatest',
         error: errorMessage,
@@ -640,6 +765,22 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
+
+      // Handle index errors gracefully - return empty array instead of throwing
+      // This allows the application to continue operating with reduced functionality
+      // when Firestore indexes are not yet deployed
+      if (isIndexError(error)) {
+        const indexUrl = error instanceof Error ? extractIndexUrl(error) : null
+        logger.warn('Firestore query failed due to missing index', {
+          operation: 'listSnapshots',
+          error: errorMessage,
+          indexUrl,
+          recommendation:
+            'Deploy indexes using: firebase deploy --only firestore:indexes',
+        })
+        return []
+      }
+
       logger.error('Failed to list snapshots', {
         operation: 'listSnapshots',
         error: errorMessage,
@@ -719,12 +860,34 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
   /**
    * Check if the storage is properly initialized and accessible
    *
-   * @returns True if the storage is ready for operations
+   * Performs two checks:
+   * 1. Basic connectivity - verifies Firestore is reachable
+   * 2. Index health - verifies required composite indexes are available
+   *
+   * Both checks must pass for the storage to be considered ready.
+   *
+   * @returns True if the storage is ready for operations (connectivity + indexes)
+   *
+   * Validates: Requirements 5.6
    */
   async isReady(): Promise<boolean> {
     try {
-      // Attempt a simple read operation to verify connectivity
+      // Step 1: Attempt a simple read operation to verify connectivity
       await this.snapshotsCollection.limit(1).get()
+
+      // Step 2: Verify index health
+      const indexHealth = await this.isIndexHealthy()
+      if (!indexHealth.healthy) {
+        logger.warn('Firestore storage not ready - indexes unhealthy', {
+          operation: 'isReady',
+          missingIndexes: indexHealth.missingIndexes,
+          indexCreationUrls: indexHealth.indexCreationUrls,
+          recommendation:
+            'Deploy indexes using: firebase deploy --only firestore:indexes',
+        })
+        return false
+      }
+
       return true
     } catch (error) {
       logger.warn('Firestore storage not ready', {
@@ -732,6 +895,92 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       return false
+    }
+  }
+
+  /**
+   * Validates that required Firestore composite indexes are available
+   *
+   * Executes a minimal query that requires the composite index to verify
+   * index availability. This allows proactive detection of missing indexes
+   * before they affect user-facing operations.
+   *
+   * @returns IndexHealthResult with diagnostic information
+   *
+   * @example
+   * ```typescript
+   * const result = await storage.isIndexHealthy()
+   * if (!result.healthy) {
+   *   console.log('Missing indexes:', result.missingIndexes)
+   *   console.log('Create them at:', result.indexCreationUrls)
+   * }
+   * ```
+   *
+   * Validates: Requirements 5.1, 5.2, 5.3, 5.4
+   */
+  async isIndexHealthy(): Promise<IndexHealthResult> {
+    const startTime = Date.now()
+
+    logger.info('Starting isIndexHealthy operation', {
+      operation: 'isIndexHealthy',
+      collection: this.collectionName,
+    })
+
+    try {
+      // Execute a minimal query that requires the composite index
+      // This query uses orderBy __name__ desc which requires an index
+      await this.snapshotsCollection.orderBy('__name__', 'desc').limit(1).get()
+
+      logger.info('Index health check passed', {
+        operation: 'isIndexHealthy',
+        healthy: true,
+        duration_ms: Date.now() - startTime,
+      })
+
+      return {
+        healthy: true,
+        missingIndexes: [],
+        indexCreationUrls: [],
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      // Check if this is an index error
+      if (isIndexError(error)) {
+        const indexUrl = error instanceof Error ? extractIndexUrl(error) : null
+
+        logger.warn('Index health check failed - missing index detected', {
+          operation: 'isIndexHealthy',
+          healthy: false,
+          error: errorMessage,
+          indexUrl,
+          recommendation:
+            'Deploy indexes using: firebase deploy --only firestore:indexes',
+          duration_ms: Date.now() - startTime,
+        })
+
+        return {
+          healthy: false,
+          missingIndexes: ['snapshots collection index'],
+          indexCreationUrls: indexUrl ? [indexUrl] : [],
+        }
+      }
+
+      // For non-index errors, log and return unhealthy
+      // This follows the graceful degradation pattern
+      logger.error('Index health check failed with unexpected error', {
+        operation: 'isIndexHealthy',
+        healthy: false,
+        error: errorMessage,
+        duration_ms: Date.now() - startTime,
+      })
+
+      return {
+        healthy: false,
+        missingIndexes: ['snapshots collection index (check failed)'],
+        indexCreationUrls: [],
+      }
     }
   }
 
