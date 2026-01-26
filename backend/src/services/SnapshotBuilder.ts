@@ -6,7 +6,7 @@
  * - Scraper CLI: Handles data collection and caching
  * - SnapshotBuilder: Creates snapshots from cached data
  *
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 6.3, 6.4
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 6.3, 6.4, 9.4, 9.5
  */
 
 import * as crypto from 'crypto'
@@ -18,6 +18,10 @@ import {
   type RawData,
   type RawDistrictData,
 } from './DataNormalizer.js'
+import {
+  DistrictIdValidator,
+  type IDistrictIdValidator,
+} from './DistrictIdValidator.js'
 import type { RankingCalculator } from './RankingCalculator.js'
 import type {
   IRawCSVStorage,
@@ -73,6 +77,13 @@ export interface BuildResult {
   errors: string[]
   /** Duration of the build operation in milliseconds */
   duration_ms: number
+  /** Validation summary for rejected records (Requirement 9.5) */
+  validation?: {
+    totalRecords: number
+    validRecords: number
+    rejectedRecords: number
+    rejectionDetails?: Array<{ districtId: string; reason: string }>
+  }
 }
 
 /**
@@ -132,6 +143,8 @@ export interface ILogger {
  * - 3.7: Preserve closing period metadata from cache
  * - 6.3: Validate cache data integrity before processing
  * - 6.4: Skip corrupted files with appropriate error logging
+ * - 9.4: Log warnings for rejected records during validation
+ * - 9.5: Provide rejection count in snapshot metadata
  *
  * Storage Abstraction (Requirements 1.3, 1.4):
  * - Uses ISnapshotStorage interface for snapshot persistence
@@ -143,6 +156,7 @@ export class SnapshotBuilder {
   private readonly districtConfigService: DistrictConfigurationService
   private readonly snapshotStorage: ISnapshotStorage
   private readonly validator: DataValidator
+  private readonly districtIdValidator: IDistrictIdValidator
   private readonly closingPeriodDetector: ClosingPeriodDetector
   private readonly dataNormalizer: DataNormalizer
   private readonly rankingCalculator?: RankingCalculator
@@ -161,6 +175,7 @@ export class SnapshotBuilder {
    * @param closingPeriodDetector - Optional closing period detector
    * @param dataNormalizer - Optional data normalizer
    * @param customLogger - Optional custom logger
+   * @param districtIdValidator - Optional district ID validator for filtering invalid records
    */
   constructor(
     rawCSVCache: IRawCSVStorage,
@@ -170,7 +185,8 @@ export class SnapshotBuilder {
     rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
-    customLogger?: ILogger
+    customLogger?: ILogger,
+    districtIdValidator?: IDistrictIdValidator
   ) {
     this.rawCSVCache = rawCSVCache
     this.districtConfigService = districtConfigService
@@ -178,6 +194,7 @@ export class SnapshotBuilder {
     // so we can safely cast for backward compatibility
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
     this.validator = validator ?? new DataValidator()
+    this.districtIdValidator = districtIdValidator ?? new DistrictIdValidator()
     this.log = customLogger ?? logger
 
     // Initialize ClosingPeriodDetector
@@ -310,6 +327,7 @@ export class SnapshotBuilder {
           status: 'failed',
           errors: validationResult.errors,
           duration_ms: Date.now() - startTime,
+          validation: rawData.validationSummary,
         }
       }
 
@@ -346,6 +364,7 @@ export class SnapshotBuilder {
         districtsIncluded: availability.cachedDistricts.length,
         districtsMissing: availability.missingDistricts.length,
         duration_ms: Date.now() - startTime,
+        validationRejectedRecords: rawData.validationSummary?.rejectedRecords ?? 0,
       })
 
       return {
@@ -357,6 +376,7 @@ export class SnapshotBuilder {
         status: snapshotStatus,
         errors: allErrors,
         duration_ms: Date.now() - startTime,
+        validation: rawData.validationSummary,
       }
     } catch (error) {
       const errorMessage =
@@ -473,6 +493,7 @@ export class SnapshotBuilder {
 
     // Read all-districts data with checksum validation (Requirements 6.3, 6.4)
     let allDistricts: ScrapedRecord[] = []
+    let validationSummary: RawData['validationSummary'] = undefined
     const {
       content: allDistrictsCSV,
       validationResult: allDistrictsValidation,
@@ -492,10 +513,34 @@ export class SnapshotBuilder {
 
     if (allDistrictsCSV) {
       try {
-        allDistricts = this.parseCSV(allDistrictsCSV)
+        const parsedRecords = this.parseCSV(allDistrictsCSV)
+        
+        // Filter out invalid district IDs (Requirements 9.4, 9.5)
+        const districtIdValidationResult = this.districtIdValidator.filterValidRecords(parsedRecords)
+        allDistricts = districtIdValidationResult.valid
+        
+        // Build validation summary for metadata (Requirement 9.5)
+        validationSummary = {
+          totalRecords: parsedRecords.length,
+          validRecords: districtIdValidationResult.valid.length,
+          rejectedRecords: districtIdValidationResult.rejected.length,
+          rejectionDetails: districtIdValidationResult.rejected,
+        }
+        
+        // Track rejected records for metadata
+        if (districtIdValidationResult.rejected.length > 0) {
+          this.log.info('Filtered invalid district records from all-districts data', {
+            date,
+            totalRecords: parsedRecords.length,
+            validRecords: districtIdValidationResult.valid.length,
+            rejectedRecords: districtIdValidationResult.rejected.length,
+          })
+        }
+        
         this.log.debug('Parsed all-districts CSV', {
           date,
           recordCount: allDistricts.length,
+          rejectedCount: districtIdValidationResult.rejected.length,
         })
       } catch (error) {
         const errorMessage =
@@ -564,6 +609,7 @@ export class SnapshotBuilder {
         successfulDistricts,
         failedDistricts,
       },
+      validationSummary,
     }
 
     this.log.info('Cached data read completed', {
@@ -576,6 +622,7 @@ export class SnapshotBuilder {
       corruptedFiles: corruptedFiles.length > 0 ? corruptedFiles : undefined,
       isClosingPeriod: cacheMetadata?.isClosingPeriod,
       dataMonth: cacheMetadata?.dataMonth,
+      validationRejectedRecords: validationSummary?.rejectedRecords ?? 0,
     })
 
     return rawData
@@ -918,6 +965,16 @@ export class SnapshotBuilder {
               timestamp: err.timestamp,
             })
           }
+        }
+      }
+
+      // Add validation summary to metadata (Requirement 9.5)
+      if (rawData.validationSummary) {
+        normalizedData.metadata.validation = {
+          totalRecords: rawData.validationSummary.totalRecords,
+          validRecords: rawData.validationSummary.validRecords,
+          rejectedRecords: rawData.validationSummary.rejectedRecords,
+          rejectionDetails: rawData.validationSummary.rejectionDetails,
         }
       }
     }

@@ -87,6 +87,24 @@ export interface NormalizedData {
      * Format: YYYY-MM-DD
      */
     logicalDate?: string
+
+    /**
+     * Data validation summary (Requirement 9.5)
+     * Contains counts of rejected records during snapshot creation
+     */
+    validation?: {
+      /** Total number of records processed */
+      totalRecords: number
+      /** Number of valid records included in snapshot */
+      validRecords: number
+      /** Number of rejected records filtered out */
+      rejectedRecords: number
+      /** Details of rejected records */
+      rejectionDetails?: Array<{
+        districtId: string
+        reason: string
+      }>
+    }
   }
 }
 

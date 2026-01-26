@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 import HistoricalRankChart from '../components/HistoricalRankChart'
@@ -364,6 +364,12 @@ const LandingPage: React.FC = () => {
                   addBackfill({ backfillId: id, type: 'global' })
                 }
               />
+              <Link
+                to="/admin"
+                className="px-4 py-2 bg-tm-cool-gray text-tm-black rounded-sm hover:bg-opacity-80 transition-colors min-h-[44px] flex items-center text-sm font-medium font-tm-body"
+              >
+                Admin
+              </Link>
             </div>
           </div>
 

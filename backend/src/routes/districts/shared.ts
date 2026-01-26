@@ -16,6 +16,11 @@ import {
   createDistrictDataAggregator,
 } from '../../services/DistrictDataAggregator.js'
 import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'
+import { PreComputedAnalyticsService } from '../../services/PreComputedAnalyticsService.js'
+import {
+  TimeSeriesIndexService,
+  type ITimeSeriesIndexService,
+} from '../../services/TimeSeriesIndexService.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 import type { PerDistrictSnapshotStoreInterface } from '../../services/SnapshotStore.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
@@ -73,6 +78,8 @@ let _rankingCalculator:
 let _refreshService: RefreshService | null = null
 let _backfillService: BackfillService | null = null
 let _analyticsEngine: AnalyticsEngine | null = null
+let _preComputedAnalyticsService: PreComputedAnalyticsService | null = null
+let _timeSeriesIndexService: ITimeSeriesIndexService | null = null
 
 // Async initialization function
 async function initializeServices(): Promise<void> {
@@ -81,6 +88,17 @@ async function initializeServices(): Promise<void> {
   const { BordaCountRankingCalculator } =
     await import('../../services/RankingCalculator.js')
   _rankingCalculator = new BordaCountRankingCalculator()
+
+  // Initialize PreComputedAnalyticsService
+  const snapshotsDir = `${cacheDirectory}/snapshots`
+  _preComputedAnalyticsService = new PreComputedAnalyticsService({
+    snapshotsDir,
+  })
+
+  // Initialize TimeSeriesIndexService
+  _timeSeriesIndexService = new TimeSeriesIndexService({
+    cacheDir: cacheDirectory,
+  })
 
   _refreshService = new RefreshService(
     snapshotStore,
@@ -122,6 +140,16 @@ export async function getBackfillService(): Promise<BackfillService> {
 export async function getAnalyticsEngine(): Promise<AnalyticsEngine> {
   await initializeServices()
   return _analyticsEngine!
+}
+
+export async function getPreComputedAnalyticsService(): Promise<PreComputedAnalyticsService> {
+  await initializeServices()
+  return _preComputedAnalyticsService!
+}
+
+export async function getTimeSeriesIndexService(): Promise<ITimeSeriesIndexService> {
+  await initializeServices()
+  return _timeSeriesIndexService!
 }
 
 // Initialize cache configuration asynchronously (validation happens lazily)

@@ -6,8 +6,9 @@
  * - Integrity check
  * - Performance metrics
  * - Metrics reset
+ * - System health
  *
- * Requirements: 7.1
+ * Requirements: 7.1, 11.1
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -24,12 +25,17 @@ import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 // Test snapshot store instance
 let testSnapshotStore: FileSnapshotStore
 
+// Variable to hold the current temp directory for the mock
+let currentTempDir: string = ''
+
 // Mock the production service factory to use our test snapshot store
 // Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
   createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
   createSnapshotStore: () => testSnapshotStore,
-  createCacheConfigService: vi.fn(),
+  createCacheConfigService: () => ({
+    getCacheDirectory: () => currentTempDir,
+  }),
   createRefreshService: vi.fn(),
 }
 
@@ -47,6 +53,11 @@ vi.mock('../../../utils/logger.js', () => ({
   },
 }))
 
+// Mock the backfill module to control pending operations count
+vi.mock('../backfill.js', () => ({
+  getPendingBackfillJobCount: vi.fn(() => 0),
+}))
+
 describe('Monitoring Routes', () => {
   let app: express.Application
   let tempDir: string
@@ -57,6 +68,9 @@ describe('Monitoring Routes', () => {
     tempDir = await fs.mkdtemp(
       path.join(os.tmpdir(), `monitoring-test-${uniqueId}-`)
     )
+
+    // Update the module-level variable for the mock
+    currentTempDir = tempDir
 
     // Create test snapshot store
     testSnapshotStore = new FileSnapshotStore({
@@ -520,6 +534,169 @@ describe('Monitoring Routes', () => {
         '/api/admin/snapshot-store/performance'
       )
       expect(afterResponse.body.performance.totalReads).toBe(0)
+    })
+  })
+
+  describe('GET /health', () => {
+    it('should return system health metrics', async () => {
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.health).toBeDefined()
+      expect(response.body.health.cacheHitRate).toBeDefined()
+      expect(response.body.health.averageResponseTime).toBeDefined()
+      expect(response.body.health.pendingOperations).toBeDefined()
+      expect(response.body.health.snapshotCount).toBeDefined()
+      expect(response.body.health.precomputedAnalyticsCount).toBeDefined()
+      expect(response.body.metadata.checked_at).toBeDefined()
+      expect(response.body.metadata.operation_id).toBeDefined()
+    })
+
+    it('should return correct snapshot count', async () => {
+      // Create test snapshots
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-01', 'success')
+      )
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-02', 'success')
+      )
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-03', 'success')
+      )
+
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.health.snapshotCount).toBe(3)
+    })
+
+    it('should return zero snapshot count when no snapshots exist', async () => {
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.health.snapshotCount).toBe(0)
+      expect(response.body.health.precomputedAnalyticsCount).toBe(0)
+    })
+
+    it('should include detailed cache information', async () => {
+      // Create a test snapshot and read it to generate metrics
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
+      await testSnapshotStore.writeSnapshot(testSnapshot)
+      await testSnapshotStore.getLatestSuccessful()
+
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.details).toBeDefined()
+      expect(response.body.details.cache).toBeDefined()
+      expect(response.body.details.cache.hitRate).toBeDefined()
+      expect(response.body.details.cache.totalReads).toBeDefined()
+      expect(response.body.details.cache.cacheHits).toBeDefined()
+      expect(response.body.details.cache.cacheMisses).toBeDefined()
+      expect(response.body.details.cache.efficiency).toBeDefined()
+    })
+
+    it('should include snapshot details with analytics coverage', async () => {
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
+      await testSnapshotStore.writeSnapshot(testSnapshot)
+
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.details.snapshots).toBeDefined()
+      expect(response.body.details.snapshots.total).toBe(1)
+      expect(response.body.details.snapshots.withPrecomputedAnalytics).toBeDefined()
+      expect(response.body.details.snapshots.analyticsCoverage).toBeDefined()
+    })
+
+    it('should include operations status', async () => {
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.details.operations).toBeDefined()
+      expect(response.body.details.operations.pending).toBeDefined()
+      expect(response.body.details.operations.status).toBeDefined()
+      expect(['idle', 'processing']).toContain(
+        response.body.details.operations.status
+      )
+    })
+
+    it('should include performance metrics', async () => {
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.details.performance).toBeDefined()
+      expect(response.body.details.performance.averageResponseTime).toBeDefined()
+      expect(response.body.details.performance.concurrentReads).toBeDefined()
+      expect(response.body.details.performance.maxConcurrentReads).toBeDefined()
+    })
+
+    it('should include check duration in metadata', async () => {
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.metadata.check_duration_ms).toBeDefined()
+      expect(typeof response.body.metadata.check_duration_ms).toBe('number')
+    })
+
+    it('should handle health check errors gracefully', async () => {
+      // Create a mock that throws an error
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
+        ({
+          listSnapshots: () => Promise.reject(new Error('Store unavailable')),
+        }) as unknown as ISnapshotStorage
+
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(500)
+      expect(response.body.error.code).toBe('SYSTEM_HEALTH_CHECK_FAILED')
+      expect(response.body.error.details).toContain('Store unavailable')
+
+      // Restore original mock
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
+    })
+
+    it('should return default values when getPerformanceMetrics method is missing', async () => {
+      // Create a mock without getPerformanceMetrics method
+      const originalCreateSnapshotStorage = mockFactory.createSnapshotStorage
+      mockFactory.createSnapshotStorage = () =>
+        ({
+          listSnapshots: () => Promise.resolve([]),
+          getPerformanceMetrics: undefined,
+        }) as unknown as ISnapshotStorage
+
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.health.cacheHitRate).toBe(0)
+      expect(response.body.health.averageResponseTime).toBe(0)
+
+      // Restore original mock
+      mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
+    })
+
+    it('should calculate cache hit rate correctly', async () => {
+      // Create a test snapshot and read it multiple times
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
+      await testSnapshotStore.writeSnapshot(testSnapshot)
+      await testSnapshotStore.getLatestSuccessful() // First read
+      await testSnapshotStore.getLatestSuccessful() // Second read (cache hit)
+      await testSnapshotStore.getLatestSuccessful() // Third read (cache hit)
+
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.health.cacheHitRate).toBeGreaterThanOrEqual(0)
+      expect(response.body.health.cacheHitRate).toBeLessThanOrEqual(100)
+    })
+
+    it('should report idle status when no pending operations', async () => {
+      const response = await request(app).get('/api/admin/health')
+
+      expect(response.status).toBe(200)
+      expect(response.body.health.pendingOperations).toBe(0)
+      expect(response.body.details.operations.status).toBe('idle')
     })
   })
 })

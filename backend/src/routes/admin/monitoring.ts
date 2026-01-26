@@ -6,8 +6,9 @@
  * - Snapshot store integrity validation
  * - Performance metrics retrieval
  * - Performance metrics reset
+ * - System health metrics (cache hit rates, response times, pending operations)
  *
- * Requirements: 3.1, 3.2, 3.3, 3.7
+ * Requirements: 3.1, 3.2, 3.3, 3.7, 11.1
  *
  * Storage Abstraction:
  * These routes use the ISnapshotStorage interface from the storage abstraction
@@ -16,6 +17,8 @@
  */
 
 import { Router } from 'express'
+import fs from 'fs/promises'
+import path from 'path'
 import {
   logAdminAccess,
   generateOperationId,
@@ -23,6 +26,7 @@ import {
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
+import { getPendingBackfillJobCount } from './backfill.js'
 
 export const monitoringRouter = Router()
 
@@ -442,3 +446,188 @@ monitoringRouter.post(
     }
   }
 )
+
+
+// ============================================================================
+// System Health Types
+// ============================================================================
+
+/**
+ * System health metrics for the admin panel
+ *
+ * Provides aggregated metrics from various services including:
+ * - Cache performance (hit rates)
+ * - Response time statistics
+ * - Pending operations count
+ * - Snapshot and analytics coverage
+ *
+ * Requirements: 11.1
+ */
+export interface SystemHealthMetrics {
+  /** Cache hit rate as a percentage (0-100) */
+  cacheHitRate: number
+  /** Average response time in milliseconds for analytics requests */
+  averageResponseTime: number
+  /** Number of pending background operations (e.g., backfill jobs) */
+  pendingOperations: number
+  /** Total number of snapshots in the store */
+  snapshotCount: number
+  /** Number of snapshots with pre-computed analytics */
+  precomputedAnalyticsCount: number
+}
+
+/**
+ * GET /api/admin/health
+ * Get system health metrics for the admin panel
+ *
+ * Returns aggregated metrics including:
+ * - Cache hit rates from snapshot store
+ * - Average response times for analytics requests
+ * - Pending background operations count
+ * - Snapshot store status
+ * - Pre-computed analytics coverage
+ *
+ * Requirements: 11.1
+ */
+monitoringRouter.get('/health', logAdminAccess, async (req, res) => {
+  const startTime = Date.now()
+  const operationId = generateOperationId('system_health')
+
+  logger.info('Admin system health check requested', {
+    operation: 'getSystemHealth',
+    operation_id: operationId,
+    ip: req.ip,
+  })
+
+  try {
+    const factory = getServiceFactory()
+    const snapshotStorage =
+      factory.createSnapshotStorage() as ISnapshotStorageWithOptionalMethods
+    const cacheConfig = factory.createCacheConfigService()
+
+    // Get performance metrics from snapshot store
+    const performanceMetrics = snapshotStorage.getPerformanceMetrics?.() || {
+      totalReads: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+      averageReadTime: 0,
+      concurrentReads: 0,
+      maxConcurrentReads: 0,
+    }
+
+    // Calculate cache hit rate
+    const cacheHitRate =
+      performanceMetrics.totalReads > 0
+        ? (performanceMetrics.cacheHits / performanceMetrics.totalReads) * 100
+        : 0
+
+    // Get snapshot count
+    const snapshots = await snapshotStorage.listSnapshots()
+    const snapshotCount = snapshots.length
+
+    // Count snapshots with pre-computed analytics
+    const cacheDir = cacheConfig.getCacheDirectory()
+    const snapshotsDir = path.join(cacheDir, 'snapshots')
+    let precomputedAnalyticsCount = 0
+
+    try {
+      for (const snapshot of snapshots) {
+        const analyticsPath = path.join(
+          snapshotsDir,
+          snapshot.snapshot_id,
+          'analytics-summary.json'
+        )
+        try {
+          await fs.access(analyticsPath)
+          precomputedAnalyticsCount++
+        } catch {
+          // Analytics file doesn't exist for this snapshot
+        }
+      }
+    } catch {
+      // Error counting analytics files - continue with 0
+      logger.warn('Failed to count pre-computed analytics files', {
+        operation: 'getSystemHealth',
+        operation_id: operationId,
+      })
+    }
+
+    // Count pending backfill operations
+    const pendingOperations = getPendingBackfillJobCount()
+
+    const systemHealth: SystemHealthMetrics = {
+      cacheHitRate: Math.round(cacheHitRate * 100) / 100, // Round to 2 decimal places
+      averageResponseTime: Math.round(performanceMetrics.averageReadTime * 100) / 100,
+      pendingOperations,
+      snapshotCount,
+      precomputedAnalyticsCount,
+    }
+
+    const duration = Date.now() - startTime
+
+    logger.info('Admin system health check completed', {
+      operation: 'getSystemHealth',
+      operation_id: operationId,
+      cache_hit_rate: `${systemHealth.cacheHitRate}%`,
+      snapshot_count: snapshotCount,
+      precomputed_analytics_count: precomputedAnalyticsCount,
+      pending_operations: pendingOperations,
+      duration_ms: duration,
+    })
+
+    res.json({
+      health: systemHealth,
+      details: {
+        cache: {
+          hitRate: systemHealth.cacheHitRate,
+          totalReads: performanceMetrics.totalReads,
+          cacheHits: performanceMetrics.cacheHits,
+          cacheMisses: performanceMetrics.cacheMisses,
+          efficiency:
+            performanceMetrics.totalReads > 0 ? 'operational' : 'no_data',
+        },
+        snapshots: {
+          total: snapshotCount,
+          withPrecomputedAnalytics: precomputedAnalyticsCount,
+          analyticsCoverage:
+            snapshotCount > 0
+              ? Math.round((precomputedAnalyticsCount / snapshotCount) * 100)
+              : 0,
+        },
+        operations: {
+          pending: pendingOperations,
+          status: pendingOperations > 0 ? 'processing' : 'idle',
+        },
+        performance: {
+          averageResponseTime: systemHealth.averageResponseTime,
+          concurrentReads: performanceMetrics.concurrentReads,
+          maxConcurrentReads: performanceMetrics.maxConcurrentReads,
+        },
+      },
+      metadata: {
+        checked_at: new Date().toISOString(),
+        check_duration_ms: duration,
+        operation_id: operationId,
+      },
+    })
+  } catch (error) {
+    const duration = Date.now() - startTime
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
+
+    logger.error('Admin system health check failed', {
+      operation: 'getSystemHealth',
+      operation_id: operationId,
+      error: errorMessage,
+      duration_ms: duration,
+    })
+
+    res.status(500).json({
+      error: {
+        code: 'SYSTEM_HEALTH_CHECK_FAILED',
+        message: 'Failed to retrieve system health metrics',
+        details: errorMessage,
+      },
+    })
+  }
+})

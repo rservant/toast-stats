@@ -58,6 +58,15 @@ interface SnapshotCacheEntry {
 }
 
 /**
+ * In-memory cache entry for snapshot list
+ * Used to avoid repeated directory scans for listSnapshots()
+ */
+interface SnapshotListCacheEntry {
+  metadata: SnapshotMetadata[]
+  cachedAt: number
+}
+
+/**
  * Performance metrics for monitoring read operations
  */
 interface ReadPerformanceMetrics {
@@ -194,6 +203,16 @@ export interface PerDistrictSnapshotStoreInterface {
     snapshotId: string
   ): Promise<PerDistrictSnapshotMetadata | null>
 
+  /**
+   * Get metadata for multiple snapshots in a single batch operation.
+   * Returns a Map where keys are snapshot IDs and values are metadata (or null if not found).
+   *
+   * Requirements: 3.4
+   */
+  getSnapshotMetadataBatch(
+    snapshotIds: string[]
+  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>>
+
   checkVersionCompatibility(snapshotId: string): Promise<{
     isCompatible: boolean
     schemaCompatible: boolean
@@ -226,6 +245,10 @@ export class FileSnapshotStore
   // Performance optimization: In-memory cache for current snapshot
   private currentSnapshotCache: SnapshotCacheEntry | null = null
   private readonly SNAPSHOT_CACHE_TTL = 300000 // 5 minutes
+
+  // Performance optimization: In-memory cache for snapshot list
+  private snapshotListCache: SnapshotListCacheEntry | null = null
+  private readonly SNAPSHOT_LIST_CACHE_TTL = 60000 // 60 seconds minimum per requirements
 
   // Concurrent read handling
   private readonly activeReads = new Map<string, Promise<Snapshot | null>>()
@@ -1085,41 +1108,175 @@ export class FileSnapshotStore
   }
 
   /**
+   * Get metadata for multiple snapshots in a single batch operation.
+   * Uses the cached snapshot list when available to avoid disk reads.
+   *
+   * Property 5: Batch Metadata Retrieval
+   * - Returns metadata for all requested snapshots that exist
+   * - Returns null for snapshots that don't exist
+   * - Returns results in a single operation (not N individual queries)
+   *
+   * @param snapshotIds - Array of snapshot IDs to retrieve metadata for
+   * @returns Map of snapshot ID to metadata (null if snapshot doesn't exist)
+   *
+   * Requirements: 3.4
+   */
+  async getSnapshotMetadataBatch(
+    snapshotIds: string[]
+  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>> {
+    const startTime = Date.now()
+    const results = new Map<string, PerDistrictSnapshotMetadata | null>()
+
+    logger.info('Starting batch metadata retrieval', {
+      operation: 'getSnapshotMetadataBatch',
+      requested_count: snapshotIds.length,
+      snapshot_ids: snapshotIds.slice(0, 10), // Log first 10 for debugging
+    })
+
+    if (snapshotIds.length === 0) {
+      logger.debug('Empty snapshot ID list, returning empty results', {
+        operation: 'getSnapshotMetadataBatch',
+      })
+      return results
+    }
+
+    // Validate all snapshot IDs first
+    const validSnapshotIds: string[] = []
+    for (const snapshotId of snapshotIds) {
+      try {
+        this.validateSnapshotId(snapshotId)
+        validSnapshotIds.push(snapshotId)
+      } catch (error) {
+        logger.warn('Invalid snapshot ID in batch request', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        results.set(snapshotId, null)
+      }
+    }
+
+    // Try to use cached snapshot list to avoid disk reads
+    const cachedList = this.getCachedSnapshotList()
+    const cachedSnapshotIds = cachedList
+      ? new Set(cachedList.map(m => m.snapshot_id))
+      : null
+
+    // Read metadata for all valid snapshot IDs concurrently
+    const metadataPromises = validSnapshotIds.map(async snapshotId => {
+      // If we have a cached list and the snapshot isn't in it, skip disk read
+      if (cachedSnapshotIds && !cachedSnapshotIds.has(snapshotId)) {
+        logger.debug('Snapshot not in cached list, skipping disk read', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+        })
+        return { snapshotId, metadata: null }
+      }
+
+      try {
+        const metadata = await this.getSnapshotMetadata(snapshotId)
+        return { snapshotId, metadata }
+      } catch (error) {
+        logger.warn('Failed to read metadata for snapshot in batch', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        return { snapshotId, metadata: null }
+      }
+    })
+
+    const metadataResults = await Promise.all(metadataPromises)
+
+    // Populate results map
+    for (const { snapshotId, metadata } of metadataResults) {
+      results.set(snapshotId, metadata)
+    }
+
+    const duration = Date.now() - startTime
+    const foundCount = Array.from(results.values()).filter(m => m !== null).length
+    const notFoundCount = results.size - foundCount
+
+    logger.info('Batch metadata retrieval completed', {
+      operation: 'getSnapshotMetadataBatch',
+      requested_count: snapshotIds.length,
+      found_count: foundCount,
+      not_found_count: notFoundCount,
+      used_cache: cachedSnapshotIds !== null,
+      duration_ms: duration,
+    })
+
+    return results
+  }
+
+  /**
    * List snapshots with optional filtering and limiting
+   * Uses in-memory cache with 60-second TTL to avoid repeated directory scans
    */
   async listSnapshots(
     limit?: number,
     filters?: SnapshotFilters
   ): Promise<SnapshotMetadata[]> {
+    const startTime = Date.now()
+
     try {
-      await fs.mkdir(this.snapshotsDir, { recursive: true })
+      // Check if we have valid cached data (unfiltered, unsorted base data)
+      let metadata: SnapshotMetadata[]
+      const cachedData = this.getCachedSnapshotList()
 
-      const files = await fs.readdir(this.snapshotsDir)
+      if (cachedData) {
+        // Use cached data - make a copy to avoid mutating cache
+        metadata = [...cachedData]
 
-      // Get directories (per-district snapshots)
-      const snapshotDirs: string[] = []
+        logger.debug('Snapshot list cache hit', {
+          operation: 'listSnapshots',
+          cache_age_ms: Date.now() - (this.snapshotListCache?.cachedAt ?? 0),
+          cached_count: metadata.length,
+        })
+      } else {
+        // Cache miss - fetch from disk
+        logger.debug('Snapshot list cache miss, reading from disk', {
+          operation: 'listSnapshots',
+        })
 
-      for (const file of files) {
-        const filePath = path.join(this.snapshotsDir, file)
-        const stats = await fs.stat(filePath)
+        await fs.mkdir(this.snapshotsDir, { recursive: true })
 
-        if (stats.isDirectory()) {
-          snapshotDirs.push(file)
+        const files = await fs.readdir(this.snapshotsDir)
+
+        // Get directories (per-district snapshots)
+        const snapshotDirs: string[] = []
+
+        for (const file of files) {
+          const filePath = path.join(this.snapshotsDir, file)
+          const stats = await fs.stat(filePath)
+
+          if (stats.isDirectory()) {
+            snapshotDirs.push(file)
+          }
         }
+
+        const metadataPromises: Promise<SnapshotMetadata>[] = []
+
+        for (const dir of snapshotDirs) {
+          metadataPromises.push(this.getPerDistrictSnapshotMetadataForList(dir))
+        }
+
+        metadata = await Promise.all(metadataPromises)
+
+        // Filter out null results
+        metadata = metadata.filter(m => m !== null) as SnapshotMetadata[]
+
+        // Cache the unfiltered, unsorted base data
+        this.cacheSnapshotList(metadata)
+
+        logger.info('Snapshot list loaded from disk and cached', {
+          operation: 'listSnapshots',
+          snapshot_count: metadata.length,
+          duration_ms: Date.now() - startTime,
+        })
       }
 
-      const metadataPromises: Promise<SnapshotMetadata>[] = []
-
-      for (const dir of snapshotDirs) {
-        metadataPromises.push(this.getPerDistrictSnapshotMetadataForList(dir))
-      }
-
-      let metadata = await Promise.all(metadataPromises)
-
-      // Filter out null results
-      metadata = metadata.filter(m => m !== null) as SnapshotMetadata[]
-
-      // Apply filters
+      // Apply filters (on copy of cached data)
       if (filters) {
         metadata = metadata.filter(item => {
           if (filters.status && item.status !== filters.status) return false
@@ -1594,12 +1751,15 @@ export class FileSnapshotStore
 
   /**
    * Invalidate all in-memory caches
+   * Called when snapshots are written or deleted to ensure consistency
    */
   private invalidateCaches(): void {
     this.currentSnapshotCache = null
+    this.snapshotListCache = null
 
     logger.debug('Invalidated all in-memory caches', {
       operation: 'invalidateCaches',
+      invalidated: ['currentSnapshotCache', 'snapshotListCache'],
     })
   }
 
@@ -1653,6 +1813,48 @@ export class FileSnapshotStore
         error: error instanceof Error ? error.message : 'Unknown error',
       })
     }
+  }
+
+  /**
+   * Get cached snapshot list if valid (within TTL)
+   * Returns null if cache is empty or expired
+   */
+  private getCachedSnapshotList(): SnapshotMetadata[] | null {
+    if (!this.snapshotListCache) {
+      return null
+    }
+
+    const now = Date.now()
+    const cacheAge = now - this.snapshotListCache.cachedAt
+
+    if (cacheAge > this.SNAPSHOT_LIST_CACHE_TTL) {
+      logger.debug('Snapshot list cache expired', {
+        operation: 'getCachedSnapshotList',
+        cache_age_ms: cacheAge,
+        ttl_ms: this.SNAPSHOT_LIST_CACHE_TTL,
+      })
+      this.snapshotListCache = null
+      return null
+    }
+
+    return this.snapshotListCache.metadata
+  }
+
+  /**
+   * Cache the snapshot list in memory
+   * Stores unfiltered, unsorted base data for reuse
+   */
+  private cacheSnapshotList(metadata: SnapshotMetadata[]): void {
+    this.snapshotListCache = {
+      metadata: [...metadata], // Store a copy to prevent external mutation
+      cachedAt: Date.now(),
+    }
+
+    logger.debug('Cached snapshot list in memory', {
+      operation: 'cacheSnapshotList',
+      snapshot_count: metadata.length,
+      ttl_ms: this.SNAPSHOT_LIST_CACHE_TTL,
+    })
   }
 
   /**

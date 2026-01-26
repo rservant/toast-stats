@@ -5,7 +5,7 @@
  * Uses IAnalyticsDataSource for data retrieval from PerDistrictSnapshotStore.
  * Delegates to specialized modules for specific analytics domains.
  *
- * Requirements: 1.1, 1.3, 1.4, 1.6, 1.7
+ * Requirements: 1.1, 1.3, 1.4, 1.6, 1.7, 2.3
  */
 
 import {
@@ -28,6 +28,7 @@ import type {
   DistrictCacheEntry,
   DistrictStatistics,
 } from '../types/districts.js'
+import type { ITimeSeriesIndexService } from './TimeSeriesIndexService.js'
 import { MembershipAnalyticsModule } from './analytics/MembershipAnalyticsModule.js'
 import { DistinguishedClubAnalyticsModule } from './analytics/DistinguishedClubAnalyticsModule.js'
 import { ClubHealthAnalyticsModule } from './analytics/ClubHealthAnalyticsModule.js'
@@ -54,20 +55,23 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   private readonly recognitionModule: AreaDivisionRecognitionModule
   private readonly targetCalculator: ITargetCalculatorService
   private readonly regionRankingService: IRegionRankingService
+  private readonly timeSeriesIndexService?: ITimeSeriesIndexService
 
   /**
    * Create an AnalyticsEngine instance
    *
-   * Requirements: 1.1, 1.4, 7.1, 7.2, 7.3, 7.4
+   * Requirements: 1.1, 1.4, 2.3, 7.1, 7.2, 7.3, 7.4
    *
    * @param dataSource - IAnalyticsDataSource for snapshot-based data retrieval
    * @param targetCalculator - Optional ITargetCalculatorService for target calculations (defaults to TargetCalculatorService)
    * @param regionRankingService - Optional IRegionRankingService for region rankings (defaults to RegionRankingService)
+   * @param timeSeriesIndexService - Optional ITimeSeriesIndexService for efficient range queries (Requirement 2.3)
    */
   constructor(
     dataSource: IAnalyticsDataSource,
     targetCalculator?: ITargetCalculatorService,
-    regionRankingService?: IRegionRankingService
+    regionRankingService?: IRegionRankingService,
+    timeSeriesIndexService?: ITimeSeriesIndexService
   ) {
     this.dataSource = dataSource
     this.membershipModule = new MembershipAnalyticsModule(dataSource)
@@ -79,9 +83,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     this.targetCalculator = targetCalculator ?? new TargetCalculatorService()
     this.regionRankingService =
       regionRankingService ?? new RegionRankingService()
+    this.timeSeriesIndexService = timeSeriesIndexService
 
     logger.info('AnalyticsEngine initialized', {
       operation: 'constructor',
+      hasTimeSeriesIndex: !!timeSeriesIndexService,
     })
   }
 
@@ -131,6 +137,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   /**
    * Load cached data for a district within a date range
    * Uses IAnalyticsDataSource for snapshot-based data retrieval.
+   * 
+   * When a TimeSeriesIndexService is available, reads from the time-series index
+   * for efficient range queries. Falls back to loading individual snapshots if
+   * the index is unavailable or empty.
+   * 
    * Requirements: 1.1, 1.3, 2.1, 2.2, 2.3
    */
   private async loadDistrictData(
@@ -139,6 +150,66 @@ export class AnalyticsEngine implements IAnalyticsEngine {
     endDate?: string
   ): Promise<DistrictCacheEntry[]> {
     try {
+      // Requirement 2.3: Try time-series index first when available
+      if (this.timeSeriesIndexService && startDate && endDate) {
+        try {
+          const trendData = await this.timeSeriesIndexService.getTrendData(
+            districtId,
+            startDate,
+            endDate
+          )
+
+          if (trendData.length > 0) {
+            logger.info('Loaded district data from time-series index', {
+              operation: 'loadDistrictData',
+              districtId,
+              startDate,
+              endDate,
+              dataSource: 'time-series-index',
+              dataPointCount: trendData.length,
+            })
+
+            // Convert TimeSeriesDataPoint to DistrictCacheEntry format
+            // Note: Time-series index contains summary data, not full club performance data
+            // For full analytics, we still need to load the latest snapshot for detailed data
+            const dataEntries: DistrictCacheEntry[] = trendData.map(dp => ({
+              districtId,
+              date: dp.date,
+              districtPerformance: [],
+              divisionPerformance: [],
+              clubPerformance: [],
+              fetchedAt: dp.date,
+              // Store time-series summary data for trend calculations
+              _timeSeriesSummary: {
+                membership: dp.membership,
+                payments: dp.payments,
+                dcpGoals: dp.dcpGoals,
+                distinguishedTotal: dp.distinguishedTotal,
+                clubCounts: dp.clubCounts,
+              },
+            }))
+
+            return dataEntries
+          }
+
+          logger.debug('Time-series index returned no data, falling back to snapshots', {
+            operation: 'loadDistrictData',
+            districtId,
+            startDate,
+            endDate,
+          })
+        } catch (indexError) {
+          logger.warn('Failed to read from time-series index, falling back to snapshots', {
+            operation: 'loadDistrictData',
+            districtId,
+            startDate,
+            endDate,
+            error: indexError instanceof Error ? indexError.message : 'Unknown error',
+          })
+        }
+      }
+
+      // Fallback: Load individual snapshots
       const snapshots = await this.dataSource.getSnapshotsInRange(
         startDate,
         endDate
@@ -151,6 +222,7 @@ export class AnalyticsEngine implements IAnalyticsEngine {
             districtId,
             startDate,
             endDate,
+            dataSource: 'individual-snapshots',
           })
           return []
         }
@@ -164,9 +236,17 @@ export class AnalyticsEngine implements IAnalyticsEngine {
           logger.warn('No district data found in latest snapshot', {
             districtId,
             snapshotId: latestSnapshot.snapshot_id,
+            dataSource: 'individual-snapshots',
           })
           return []
         }
+
+        logger.info('Loaded district data from latest snapshot', {
+          operation: 'loadDistrictData',
+          districtId,
+          snapshotId: latestSnapshot.snapshot_id,
+          dataSource: 'individual-snapshots',
+        })
 
         return [
           this.mapDistrictStatisticsToEntry(
@@ -193,6 +273,16 @@ export class AnalyticsEngine implements IAnalyticsEngine {
       }
 
       dataEntries.sort((a, b) => a.date.localeCompare(b.date))
+
+      logger.info('Loaded district data from individual snapshots', {
+        operation: 'loadDistrictData',
+        districtId,
+        startDate,
+        endDate,
+        dataSource: 'individual-snapshots',
+        snapshotCount: dataEntries.length,
+      })
+
       return dataEntries
     } catch (error) {
       logger.error('Failed to load district data', {

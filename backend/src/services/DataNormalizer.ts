@@ -74,6 +74,18 @@ export interface RawData {
     /** Failed districts */
     failedDistricts: string[]
   }
+
+  /** Validation summary for rejected records (Requirement 9.5) */
+  validationSummary?: {
+    /** Total number of records before validation */
+    totalRecords: number
+    /** Number of valid records after validation */
+    validRecords: number
+    /** Number of rejected records */
+    rejectedRecords: number
+    /** Details of rejected records */
+    rejectionDetails: Array<{ districtId: string; reason: string }>
+  }
 }
 
 /**
