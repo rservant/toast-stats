@@ -26,7 +26,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import type { DistrictStatistics, ScrapedRecord } from '../../types/districts.js'
+import type {
+  DistrictStatistics,
+  ScrapedRecord,
+} from '../../types/districts.js'
 import type { AnalyticsSummaryFile } from '../../types/precomputedAnalytics.js'
 
 describe('PreComputedAnalyticsService - Property Tests', () => {
@@ -37,7 +40,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
   // Helper to create a unique test directory
   const createTestDir = async (): Promise<string> => {
     const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-    const dir = path.join(os.tmpdir(), `precomputed-analytics-property-test-${uniqueId}`)
+    const dir = path.join(
+      os.tmpdir(),
+      `precomputed-analytics-property-test-${uniqueId}`
+    )
     await fs.mkdir(dir, { recursive: true })
     return dir
   }
@@ -168,30 +174,32 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
    */
   const districtStatisticsArb = fc
     .tuple(districtIdArb, dateStringArb, clubsArrayArb)
-    .map(([districtId, asOfDate, clubs]): DistrictStatistics => ({
-      districtId,
-      asOfDate,
-      membership: {
-        total: undefined as unknown as number, // Force calculation from clubs
-        change: 0,
-        changePercent: 0,
-        byClub: [],
-      },
-      clubs: {
-        total: clubs.length,
-        active: clubs.length,
-        suspended: 0,
-        ineligible: 0,
-        low: 0,
-        distinguished: 0,
-      },
-      education: {
-        totalAwards: 0,
-        byType: [],
-        topClubs: [],
-      },
-      clubPerformance: clubs,
-    }))
+    .map(
+      ([districtId, asOfDate, clubs]): DistrictStatistics => ({
+        districtId,
+        asOfDate,
+        membership: {
+          total: undefined as unknown as number, // Force calculation from clubs
+          change: 0,
+          changePercent: 0,
+          byClub: [],
+        },
+        clubs: {
+          total: clubs.length,
+          active: clubs.length,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: 0,
+        },
+        education: {
+          totalAwards: 0,
+          byType: [],
+          topClubs: [],
+        },
+        clubPerformance: clubs,
+      })
+    )
 
   // ========== Property Tests ==========
 
@@ -217,7 +225,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('club health counts sum equals total clubs', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -228,7 +236,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -247,7 +258,9 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }
@@ -264,7 +277,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('total membership equals sum of club memberships', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -275,7 +288,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -299,7 +315,9 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }
@@ -316,7 +334,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('distinguished clubs total equals sum of levels', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -327,7 +345,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -347,7 +368,9 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }
@@ -364,7 +387,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('all counts are non-negative', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -375,7 +398,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -390,23 +416,37 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
               expect(summary.clubCounts.total).toBeGreaterThanOrEqual(0)
               expect(summary.clubCounts.thriving).toBeGreaterThanOrEqual(0)
               expect(summary.clubCounts.vulnerable).toBeGreaterThanOrEqual(0)
-              expect(summary.clubCounts.interventionRequired).toBeGreaterThanOrEqual(0)
+              expect(
+                summary.clubCounts.interventionRequired
+              ).toBeGreaterThanOrEqual(0)
 
               // Distinguished counts must be non-negative
               expect(summary.distinguishedClubs.total).toBeGreaterThanOrEqual(0)
-              expect(summary.distinguishedClubs.smedley).toBeGreaterThanOrEqual(0)
-              expect(summary.distinguishedClubs.presidents).toBeGreaterThanOrEqual(0)
-              expect(summary.distinguishedClubs.select).toBeGreaterThanOrEqual(0)
-              expect(summary.distinguishedClubs.distinguished).toBeGreaterThanOrEqual(0)
+              expect(summary.distinguishedClubs.smedley).toBeGreaterThanOrEqual(
+                0
+              )
+              expect(
+                summary.distinguishedClubs.presidents
+              ).toBeGreaterThanOrEqual(0)
+              expect(summary.distinguishedClubs.select).toBeGreaterThanOrEqual(
+                0
+              )
+              expect(
+                summary.distinguishedClubs.distinguished
+              ).toBeGreaterThanOrEqual(0)
 
               // Trend data point values must be non-negative
-              expect(summary.trendDataPoint.membership).toBeGreaterThanOrEqual(0)
+              expect(summary.trendDataPoint.membership).toBeGreaterThanOrEqual(
+                0
+              )
               expect(summary.trendDataPoint.payments).toBeGreaterThanOrEqual(0)
               expect(summary.trendDataPoint.dcpGoals).toBeGreaterThanOrEqual(0)
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }
@@ -422,7 +462,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('club count total matches input club array length', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -433,7 +473,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -448,7 +491,9 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }
@@ -464,7 +509,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('trend data point date matches input date', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -475,7 +520,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -488,7 +536,9 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }
@@ -505,7 +555,7 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
      */
     it('distinguished clubs cannot exceed total clubs', async () => {
       await fc.assert(
-        fc.asyncProperty(districtStatisticsArb, async (districtStats) => {
+        fc.asyncProperty(districtStatisticsArb, async districtStats => {
           // Create unique snapshot directory for this test run
           const snapshotId = `test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const snapshotDir = path.join(snapshotsDir, snapshotId)
@@ -516,7 +566,10 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             await service.computeAndStore(snapshotId, [districtStats])
 
             // Read the result
-            const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
+            const analyticsPath = path.join(
+              snapshotDir,
+              'analytics-summary.json'
+            )
             const content = await fs.readFile(analyticsPath, 'utf-8')
             const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
 
@@ -531,7 +584,9 @@ describe('PreComputedAnalyticsService - Property Tests', () => {
             }
           } finally {
             // Cleanup this specific snapshot directory
-            await fs.rm(snapshotDir, { recursive: true, force: true }).catch(() => {})
+            await fs
+              .rm(snapshotDir, { recursive: true, force: true })
+              .catch(() => {})
           }
         }),
         { numRuns: 50 }

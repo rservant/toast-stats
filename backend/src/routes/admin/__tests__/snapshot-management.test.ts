@@ -305,7 +305,9 @@ describe('Snapshot Management Routes', () => {
         .send({ snapshotIds: ['2024-01-15'] })
 
       expect(response.status).toBe(200)
-      expect(response.body.summary.results[0].deletedFiles.timeSeriesEntries).toBe(1)
+      expect(
+        response.body.summary.results[0].deletedFiles.timeSeriesEntries
+      ).toBe(1)
 
       // Verify time-series entry was removed
       const trendDataAfter = await testTimeSeriesIndexService.getTrendData(
@@ -455,7 +457,9 @@ describe('Snapshot Management Routes', () => {
 
       expect(response.status).toBe(200)
       expect(response.body.summary.districtId).toBe('42')
-      expect(response.body.summary.deletedDistrictFiles).toBeGreaterThanOrEqual(1)
+      expect(response.body.summary.deletedDistrictFiles).toBeGreaterThanOrEqual(
+        1
+      )
       expect(response.body.summary.deletedTimeSeriesDirectory).toBe(true)
 
       // Verify district 42 time-series was deleted

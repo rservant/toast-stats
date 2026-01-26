@@ -481,7 +481,9 @@ export class RefreshService {
    *
    * @param snapshotId - The snapshot ID to update time-series index for
    */
-  private async triggerTimeSeriesIndexUpdate(snapshotId: string): Promise<void> {
+  private async triggerTimeSeriesIndexUpdate(
+    snapshotId: string
+  ): Promise<void> {
     if (!this.timeSeriesIndexService) {
       return
     }
@@ -506,10 +508,13 @@ export class RefreshService {
       const districtData = snapshot.payload.districts
 
       if (districtData.length === 0) {
-        logger.warn('No district data in snapshot for time-series index update', {
-          operation: 'triggerTimeSeriesIndexUpdate',
-          snapshotId,
-        })
+        logger.warn(
+          'No district data in snapshot for time-series index update',
+          {
+            operation: 'triggerTimeSeriesIndexUpdate',
+            snapshotId,
+          }
+        )
         return
       }
 
@@ -648,9 +653,7 @@ export class RefreshService {
       const aprRenewals = this.parseIntSafe(
         club['Apr. Ren.'] ?? club['Apr. Ren']
       )
-      const newMembers = this.parseIntSafe(
-        club['New Members'] ?? club['New']
-      )
+      const newMembers = this.parseIntSafe(club['New Members'] ?? club['New'])
 
       return total + octRenewals + aprRenewals + newMembers
     }, 0)
@@ -793,9 +796,7 @@ export class RefreshService {
   /**
    * Parse an integer value safely, returning 0 for invalid values
    */
-  private parseIntSafe(
-    value: string | number | null | undefined
-  ): number {
+  private parseIntSafe(value: string | number | null | undefined): number {
     if (value === null || value === undefined || value === '') {
       return 0
     }

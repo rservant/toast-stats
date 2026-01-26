@@ -91,7 +91,8 @@ export const RejectionReasons = {
   EMPTY: 'District ID is empty or null',
   WHITESPACE_ONLY: 'District ID contains only whitespace',
   DATE_PATTERN: 'District ID matches date pattern (e.g., "As of MM/DD/YYYY")',
-  INVALID_CHARACTERS: 'District ID contains invalid characters (only alphanumeric allowed)',
+  INVALID_CHARACTERS:
+    'District ID contains invalid characters (only alphanumeric allowed)',
 } as const
 
 /**
@@ -248,9 +249,7 @@ export class DistrictIdValidator implements IDistrictIdValidator {
 
     for (const record of records) {
       // Extract district ID from DISTRICT or District field
-      const districtId = String(
-        record['DISTRICT'] ?? record['District'] ?? ''
-      )
+      const districtId = String(record['DISTRICT'] ?? record['District'] ?? '')
 
       const validationResult = this.validate(districtId)
 

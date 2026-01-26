@@ -30,7 +30,6 @@ import type {
   ProgramYearSummary,
   TimeSeriesIndexMetadata,
 } from '../types/precomputedAnalytics.js'
-import { TIME_SERIES_INDEX_SCHEMA_VERSION } from '../types/precomputedAnalytics.js'
 
 /**
  * Configuration for TimeSeriesIndexService
@@ -138,7 +137,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
       const programYear = this.getProgramYearForDate(dataPoint.date)
 
       // Ensure district directory exists
-      const districtDir = await this.ensureDistrictDirectory(districtId)
+      await this.ensureDistrictDirectory(districtId)
 
       // Read or create program year index file
       const indexFile = await this.readOrCreateProgramYearIndex(
@@ -148,7 +147,8 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
 
       // Check if data point already exists (by date and snapshotId)
       const existingIndex = indexFile.dataPoints.findIndex(
-        dp => dp.date === dataPoint.date && dp.snapshotId === dataPoint.snapshotId
+        dp =>
+          dp.date === dataPoint.date && dp.snapshotId === dataPoint.snapshotId
       )
 
       if (existingIndex >= 0) {
@@ -254,7 +254,10 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
       const allDataPoints: TimeSeriesDataPoint[] = []
 
       for (const programYear of programYears) {
-        const indexFile = await this.readProgramYearIndex(districtId, programYear)
+        const indexFile = await this.readProgramYearIndex(
+          districtId,
+          programYear
+        )
 
         if (indexFile) {
           // Filter data points within the date range
@@ -389,11 +392,14 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
 
     // This is a placeholder - actual implementation will be in BackfillService
     // which will iterate through snapshots and call appendDataPoint for each
-    logger.warn('rebuildIndex is a placeholder - use BackfillService for actual rebuild', {
-      operation: 'rebuildIndex',
-      districtId,
-      fromDate,
-    })
+    logger.warn(
+      'rebuildIndex is a placeholder - use BackfillService for actual rebuild',
+      {
+        operation: 'rebuildIndex',
+        districtId,
+        fromDate,
+      }
+    )
   }
 
   // ========== Program Year Calculation Methods ==========
@@ -546,7 +552,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
 
       return indexFile
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as { code?: string }).code === 'ENOENT') {
         logger.debug('Program year index file not found', {
           operation: 'readProgramYearIndex',
           districtId,
@@ -584,11 +590,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
     )
 
     try {
-      await fs.writeFile(
-        filePath,
-        JSON.stringify(indexFile, null, 2),
-        'utf-8'
-      )
+      await fs.writeFile(filePath, JSON.stringify(indexFile, null, 2), 'utf-8')
 
       logger.debug('Wrote program year index file', {
         operation: 'writeProgramYearIndex',
@@ -634,7 +636,10 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
       // Count total data points
       let totalDataPoints = 0
       for (const programYear of programYears) {
-        const indexFile = await this.readProgramYearIndex(districtId, programYear)
+        const indexFile = await this.readProgramYearIndex(
+          districtId,
+          programYear
+        )
         if (indexFile) {
           totalDataPoints += indexFile.dataPoints.length
         }
@@ -713,7 +718,9 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
     }
 
     if (!VALID_DISTRICT_ID_PATTERN.test(districtId)) {
-      throw new Error('Invalid district ID format: only alphanumeric characters allowed')
+      throw new Error(
+        'Invalid district ID format: only alphanumeric characters allowed'
+      )
     }
   }
 
@@ -722,11 +729,19 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
    */
   private validateProgramYear(programYear: string): void {
     if (!VALID_PROGRAM_YEAR_PATTERN.test(programYear)) {
-      throw new Error('Invalid program year format: expected YYYY-YYYY (e.g., "2023-2024")')
+      throw new Error(
+        'Invalid program year format: expected YYYY-YYYY (e.g., "2023-2024")'
+      )
     }
 
-    const [startYear, endYear] = programYear.split('-').map(y => parseInt(y, 10))
-    if (startYear === undefined || endYear === undefined || endYear !== startYear + 1) {
+    const [startYear, endYear] = programYear
+      .split('-')
+      .map(y => parseInt(y, 10))
+    if (
+      startYear === undefined ||
+      endYear === undefined ||
+      endYear !== startYear + 1
+    ) {
       throw new Error('Invalid program year: end year must be start year + 1')
     }
   }

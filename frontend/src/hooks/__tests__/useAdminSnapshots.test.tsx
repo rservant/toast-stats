@@ -84,7 +84,6 @@ const createMockDeleteResponse = (snapshotIds: string[]) => ({
   },
 })
 
-
 // Create a wrapper with QueryClientProvider for testing hooks
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -205,7 +204,6 @@ describe('useAdminSnapshots', () => {
     })
   })
 
-
   describe('useDeleteSnapshots', () => {
     /**
      * Test that hook deletes snapshots by IDs
@@ -306,7 +304,6 @@ describe('useAdminSnapshots', () => {
       expect(mutationResult?.summary.successfulDeletions).toBe(5)
     })
   })
-
 
   describe('useDeleteAllSnapshots', () => {
     /**

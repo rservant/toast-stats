@@ -605,7 +605,9 @@ describe('Monitoring Routes', () => {
       expect(response.status).toBe(200)
       expect(response.body.details.snapshots).toBeDefined()
       expect(response.body.details.snapshots.total).toBe(1)
-      expect(response.body.details.snapshots.withPrecomputedAnalytics).toBeDefined()
+      expect(
+        response.body.details.snapshots.withPrecomputedAnalytics
+      ).toBeDefined()
       expect(response.body.details.snapshots.analyticsCoverage).toBeDefined()
     })
 
@@ -626,7 +628,9 @@ describe('Monitoring Routes', () => {
 
       expect(response.status).toBe(200)
       expect(response.body.details.performance).toBeDefined()
-      expect(response.body.details.performance.averageResponseTime).toBeDefined()
+      expect(
+        response.body.details.performance.averageResponseTime
+      ).toBeDefined()
       expect(response.body.details.performance.concurrentReads).toBeDefined()
       expect(response.body.details.performance.maxConcurrentReads).toBeDefined()
     })

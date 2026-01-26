@@ -1194,7 +1194,9 @@ export class FileSnapshotStore
     }
 
     const duration = Date.now() - startTime
-    const foundCount = Array.from(results.values()).filter(m => m !== null).length
+    const foundCount = Array.from(results.values()).filter(
+      m => m !== null
+    ).length
     const notFoundCount = results.size - foundCount
 
     logger.info('Batch metadata retrieval completed', {

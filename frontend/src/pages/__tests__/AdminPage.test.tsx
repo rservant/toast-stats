@@ -11,9 +11,9 @@ describe('AdminPage', () => {
 
   describe('Authorization', () => {
     it('should redirect to login when user is not authenticated', () => {
-      renderWithProviders(<AdminPage />, { 
+      renderWithProviders(<AdminPage />, {
         isAuthenticated: false,
-        initialEntries: ['/admin']
+        initialEntries: ['/admin'],
       })
 
       // When not authenticated, the page should redirect to /login
@@ -26,7 +26,9 @@ describe('AdminPage', () => {
 
       expect(screen.getByText('Admin Panel')).toBeInTheDocument()
       expect(
-        screen.getByText('Manage snapshots, analytics, and monitor system health')
+        screen.getByText(
+          'Manage snapshots, analytics, and monitor system health'
+        )
       ).toBeInTheDocument()
     })
   })
@@ -41,7 +43,9 @@ describe('AdminPage', () => {
 
       expect(screen.getByText('Admin Panel')).toBeInTheDocument()
       expect(
-        screen.getByText('Manage snapshots, analytics, and monitor system health')
+        screen.getByText(
+          'Manage snapshots, analytics, and monitor system health'
+        )
       ).toBeInTheDocument()
     })
 
@@ -101,7 +105,9 @@ describe('AdminPage', () => {
       renderWithProviders(<AdminPage />)
 
       // Find links by their text and check href
-      const adminDashboardLink = screen.getByText('Admin Dashboard').closest('a')
+      const adminDashboardLink = screen
+        .getByText('Admin Dashboard')
+        .closest('a')
       const districtConfigLink = screen
         .getByText('District Configuration')
         .closest('a')
@@ -184,7 +190,10 @@ describe('AdminPage', () => {
       // There are multiple "View Detailed Metrics" links
       const viewMetricsLinks = screen.getAllByText('View Detailed Metrics')
       expect(viewMetricsLinks.length).toBeGreaterThan(0)
-      expect(viewMetricsLinks[0].closest('a')).toHaveAttribute('href', '/admin/dashboard')
+      expect(viewMetricsLinks[0].closest('a')).toHaveAttribute(
+        'href',
+        '/admin/dashboard'
+      )
     })
   })
 
@@ -197,15 +206,9 @@ describe('AdminPage', () => {
       renderWithProviders(<AdminPage />)
 
       // Check that sections have proper aria-labelledby attributes
-      const snapshotsSection = screen
-        .getByText('Snapshots')
-        .closest('section')
-      const analyticsSection = screen
-        .getByText('Analytics')
-        .closest('section')
-      const healthSection = screen
-        .getByText('System Health')
-        .closest('section')
+      const snapshotsSection = screen.getByText('Snapshots').closest('section')
+      const analyticsSection = screen.getByText('Analytics').closest('section')
+      const healthSection = screen.getByText('System Health').closest('section')
 
       expect(snapshotsSection).toHaveAttribute(
         'aria-labelledby',

@@ -189,7 +189,10 @@ export function getBackfillJob(jobId: string): BackfillJob | undefined {
 export function getPendingBackfillJobCount(): number {
   let count = 0
   for (const job of backfillJobs.values()) {
-    if (job.progress.status === 'pending' || job.progress.status === 'running') {
+    if (
+      job.progress.status === 'pending' ||
+      job.progress.status === 'running'
+    ) {
       count++
     }
   }
@@ -284,7 +287,10 @@ export interface IBackfillService {
  * testing the endpoints.
  */
 class PlaceholderBackfillService implements IBackfillService {
-  async startBackfill(jobId: string, _options: BackfillJobOptions): Promise<void> {
+  async startBackfill(
+    jobId: string,
+    _options: BackfillJobOptions
+  ): Promise<void> {
     // In the real implementation, this would:
     // 1. List all snapshots in the date range
     // 2. Process each snapshot in chronological order
@@ -313,7 +319,10 @@ class PlaceholderBackfillService implements IBackfillService {
       return false
     }
 
-    if (job.progress.status !== 'running' && job.progress.status !== 'pending') {
+    if (
+      job.progress.status !== 'running' &&
+      job.progress.status !== 'pending'
+    ) {
       return false
     }
 
@@ -429,7 +438,11 @@ backfillRouter.post('/', logAdminAccess, async (req, res): Promise<void> => {
     }
 
     // Validate date range if both provided
-    if (options.startDate && options.endDate && options.startDate > options.endDate) {
+    if (
+      options.startDate &&
+      options.endDate &&
+      options.startDate > options.endDate
+    ) {
       res.status(400).json({
         error: {
           code: 'INVALID_REQUEST',
@@ -540,7 +553,8 @@ backfillRouter.post('/', logAdminAccess, async (req, res): Promise<void> => {
 
     res.status(202).json(response)
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
 
     logger.error('Failed to create backfill job', {
       operation: 'triggerBackfill',
@@ -570,74 +584,79 @@ backfillRouter.post('/', logAdminAccess, async (req, res): Promise<void> => {
  *
  * Requirements: 7.1
  */
-backfillRouter.get('/:jobId', logAdminAccess, async (req, res): Promise<void> => {
-  const operationId = generateOperationId('get_backfill_progress')
-  const jobId = req.params['jobId'] as string
+backfillRouter.get(
+  '/:jobId',
+  logAdminAccess,
+  async (req, res): Promise<void> => {
+    const operationId = generateOperationId('get_backfill_progress')
+    const jobId = req.params['jobId'] as string
 
-  logger.info('Admin backfill progress requested', {
-    operation: 'getBackfillProgress',
-    operationId,
-    jobId,
-    ip: req.ip,
-  })
+    logger.info('Admin backfill progress requested', {
+      operation: 'getBackfillProgress',
+      operationId,
+      jobId,
+      ip: req.ip,
+    })
 
-  try {
-    const job = backfillJobs.get(jobId)
+    try {
+      const job = backfillJobs.get(jobId)
 
-    if (!job) {
-      logger.warn('Backfill job not found', {
+      if (!job) {
+        logger.warn('Backfill job not found', {
+          operation: 'getBackfillProgress',
+          operationId,
+          jobId,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'JOB_NOT_FOUND',
+            message: `Backfill job with ID '${jobId}' not found`,
+          },
+        })
+        return
+      }
+
+      const response: BackfillProgressResponse = {
+        jobId: job.jobId,
+        options: job.options,
+        progress: job.progress,
+        metadata: {
+          operationId,
+          retrievedAt: new Date().toISOString(),
+        },
+      }
+
+      logger.debug('Backfill progress retrieved', {
         operation: 'getBackfillProgress',
         operationId,
         jobId,
+        status: job.progress.status,
+        percentComplete: job.progress.percentComplete,
       })
 
-      res.status(404).json({
+      res.json(response)
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      logger.error('Failed to get backfill progress', {
+        operation: 'getBackfillProgress',
+        operationId,
+        jobId,
+        error: errorMessage,
+      })
+
+      res.status(500).json({
         error: {
-          code: 'JOB_NOT_FOUND',
-          message: `Backfill job with ID '${jobId}' not found`,
+          code: 'PROGRESS_RETRIEVAL_FAILED',
+          message: 'Failed to retrieve backfill progress',
+          details: errorMessage,
         },
       })
-      return
     }
-
-    const response: BackfillProgressResponse = {
-      jobId: job.jobId,
-      options: job.options,
-      progress: job.progress,
-      metadata: {
-        operationId,
-        retrievedAt: new Date().toISOString(),
-      },
-    }
-
-    logger.debug('Backfill progress retrieved', {
-      operation: 'getBackfillProgress',
-      operationId,
-      jobId,
-      status: job.progress.status,
-      percentComplete: job.progress.percentComplete,
-    })
-
-    res.json(response)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-
-    logger.error('Failed to get backfill progress', {
-      operation: 'getBackfillProgress',
-      operationId,
-      jobId,
-      error: errorMessage,
-    })
-
-    res.status(500).json({
-      error: {
-        code: 'PROGRESS_RETRIEVAL_FAILED',
-        message: 'Failed to retrieve backfill progress',
-        details: errorMessage,
-      },
-    })
   }
-})
+)
 
 /**
  * DELETE /api/admin/backfill/:jobId
@@ -758,7 +777,8 @@ backfillRouter.delete(
 
       res.json(response)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
 
       logger.error('Failed to cancel backfill job', {
         operation: 'cancelBackfill',

@@ -359,10 +359,25 @@ export function requestDeduplicationMiddleware(
         // Store original end to detect when response is complete
         const originalEnd = res.end.bind(res)
 
+        // Type for buffer encoding (matches Node.js BufferEncoding)
+        type Encoding =
+          | 'ascii'
+          | 'utf8'
+          | 'utf-8'
+          | 'utf16le'
+          | 'utf-16le'
+          | 'ucs2'
+          | 'ucs-2'
+          | 'base64'
+          | 'base64url'
+          | 'latin1'
+          | 'binary'
+          | 'hex'
+
         // Override res.end to resolve the promise
         res.end = function (
           chunk?: Buffer | string | (() => void),
-          encodingOrCallback?: BufferEncoding | (() => void),
+          encodingOrCallback?: Encoding | (() => void),
           callback?: () => void
         ): Response {
           // Resolve with captured response data

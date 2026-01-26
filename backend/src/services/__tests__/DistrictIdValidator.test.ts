@@ -14,7 +14,10 @@ import {
   RejectionReasons,
   createDistrictIdValidator,
 } from '../DistrictIdValidator.js'
-import type { DistrictStatistics, ScrapedRecord } from '../../types/districts.js'
+import type {
+  DistrictStatistics,
+  ScrapedRecord,
+} from '../../types/districts.js'
 
 // Mock the logger to verify logging behavior
 vi.mock('../../utils/logger.js', () => ({
@@ -453,7 +456,10 @@ describe('DistrictIdValidator', () => {
     /**
      * Helper to create a minimal ScrapedRecord for testing
      */
-    function createScrapedRecord(districtId: string, useUpperCase = true): ScrapedRecord {
+    function createScrapedRecord(
+      districtId: string,
+      useUpperCase = true
+    ): ScrapedRecord {
       const key = useUpperCase ? 'DISTRICT' : 'District'
       return {
         [key]: districtId,

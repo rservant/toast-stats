@@ -1,9 +1,9 @@
 /**
  * Tests for AnalyticsEngine Time-Series Index Integration
- * 
- * Requirement 2.3: WHEN querying analytics for a date range, THE Analytics_Engine 
+ *
+ * Requirement 2.3: WHEN querying analytics for a date range, THE Analytics_Engine
  * SHALL read from the time-series index instead of loading individual snapshots
- * 
+ *
  * These tests verify:
  * 1. AnalyticsEngine uses time-series index when available
  * 2. Falls back to individual snapshots when index is unavailable
@@ -15,9 +15,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { AnalyticsEngine } from '../AnalyticsEngine.js'
-import {
-  PerDistrictFileSnapshotStore,
-} from '../SnapshotStore.js'
+import { PerDistrictFileSnapshotStore } from '../SnapshotStore.js'
 import { AnalyticsDataSourceAdapter } from '../AnalyticsDataSourceAdapter.js'
 import { createDistrictDataAggregator } from '../DistrictDataAggregator.js'
 import {
@@ -180,7 +178,8 @@ describe('AnalyticsEngine Time-Series Index Integration', () => {
         },
       ]
 
-      const mockTimeSeriesService = createMockTimeSeriesIndexService(mockTrendData)
+      const mockTimeSeriesService =
+        createMockTimeSeriesIndexService(mockTrendData)
 
       // Create AnalyticsEngine with time-series service
       const analyticsEngine = new AnalyticsEngine(
@@ -349,7 +348,8 @@ describe('AnalyticsEngine Time-Series Index Integration', () => {
       )
 
       // Generate analytics without date range
-      const analytics = await analyticsEngine.generateDistrictAnalytics(districtId)
+      const analytics =
+        await analyticsEngine.generateDistrictAnalytics(districtId)
 
       // Time-series service should NOT be called when no date range provided
       // (because we need both startDate and endDate for efficient range queries)

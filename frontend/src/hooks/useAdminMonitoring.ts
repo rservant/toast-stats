@@ -162,7 +162,8 @@ export function useSystemHealth(
   return useQuery({
     queryKey: ['admin-health'],
     queryFn: async () => {
-      const response = await apiClient.get<SystemHealthResponse>('/admin/health')
+      const response =
+        await apiClient.get<SystemHealthResponse>('/admin/health')
       return response.data
     },
     enabled,

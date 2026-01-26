@@ -132,8 +132,12 @@ describe('FileSnapshotStore listSnapshots Cache', () => {
 
     it('should apply filters on cached data without re-reading from disk', async () => {
       // Create test snapshots with different statuses
-      await snapshotStore.writeSnapshot(createTestSnapshot('2024-01-01', 'success'))
-      await snapshotStore.writeSnapshot(createTestSnapshot('2024-01-02', 'success'))
+      await snapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-01', 'success')
+      )
+      await snapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-02', 'success')
+      )
 
       // First call - populates cache
       const allSnapshots = await snapshotStore.listSnapshots()
@@ -196,7 +200,9 @@ describe('FileSnapshotStore listSnapshots Cache', () => {
 
       // Access the private TTL constant via type assertion
       // The TTL should be at least 60000ms (60 seconds) per requirements
-      const store = snapshotStore as unknown as { SNAPSHOT_LIST_CACHE_TTL: number }
+      const store = snapshotStore as unknown as {
+        SNAPSHOT_LIST_CACHE_TTL: number
+      }
       expect(store.SNAPSHOT_LIST_CACHE_TTL).toBeGreaterThanOrEqual(60000)
     })
 

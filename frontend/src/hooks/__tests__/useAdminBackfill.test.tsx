@@ -80,9 +80,7 @@ const createMockProgressResponse = (
   },
 })
 
-const createMockCancelResponse = (
-  jobId: string
-): BackfillCancelResponse => ({
+const createMockCancelResponse = (jobId: string): BackfillCancelResponse => ({
   jobId,
   cancelled: true,
   previousStatus: 'running',

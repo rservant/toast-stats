@@ -78,9 +78,29 @@ describe('DistrictIdValidator - Property Tests', () => {
    */
   const invalidCharacterArb = fc
     .tuple(
-      fc.string({ minLength: 0, maxLength: 5 }).filter(s => /^[A-Za-z0-9]*$/.test(s)),
-      fc.constantFrom('-', '_', ' ', '.', '/', '@', '#', '!', '$', '%', '^', '&', '*', '(', ')'),
-      fc.string({ minLength: 0, maxLength: 5 }).filter(s => /^[A-Za-z0-9]*$/.test(s))
+      fc
+        .string({ minLength: 0, maxLength: 5 })
+        .filter(s => /^[A-Za-z0-9]*$/.test(s)),
+      fc.constantFrom(
+        '-',
+        '_',
+        ' ',
+        '.',
+        '/',
+        '@',
+        '#',
+        '!',
+        '$',
+        '%',
+        '^',
+        '&',
+        '*',
+        '(',
+        ')'
+      ),
+      fc
+        .string({ minLength: 0, maxLength: 5 })
+        .filter(s => /^[A-Za-z0-9]*$/.test(s))
     )
     .map(([prefix, invalidChar, suffix]) => `${prefix}${invalidChar}${suffix}`)
     .filter(s => s.trim().length > 0) // Exclude pure whitespace (handled separately)
@@ -255,10 +275,7 @@ describe('DistrictIdValidator - Property Tests', () => {
      */
     it('accepts all mixed alphanumeric strings', () => {
       const mixedAlphanumericArb = fc
-        .tuple(
-          fc.stringMatching(/^[A-Za-z]+$/),
-          fc.stringMatching(/^[0-9]+$/)
-        )
+        .tuple(fc.stringMatching(/^[A-Za-z]+$/), fc.stringMatching(/^[0-9]+$/))
         .chain(([letters, numbers]) =>
           fc.constantFrom(
             `${letters}${numbers}`,
@@ -291,7 +308,9 @@ describe('DistrictIdValidator - Property Tests', () => {
           fc.integer({ min: 1, max: 31 }),
           fc.integer({ min: 2000, max: 2030 })
         )
-        .map(([prefix, month, day, year]) => `${prefix} ${month}/${day}/${year}`)
+        .map(
+          ([prefix, month, day, year]) => `${prefix} ${month}/${day}/${year}`
+        )
 
       fc.assert(
         fc.property(comprehensiveDateArb, (dateString: string) => {
@@ -315,7 +334,9 @@ describe('DistrictIdValidator - Property Tests', () => {
           fc.stringMatching(/^[A-Za-z0-9]+$/).filter(s => s.length > 0),
           fc.constantFrom('', ' ', '\t', '  ')
         )
-        .map(([leading, content, trailing]) => `${leading}${content}${trailing}`)
+        .map(
+          ([leading, content, trailing]) => `${leading}${content}${trailing}`
+        )
 
       fc.assert(
         fc.property(paddedAlphanumericArb, (paddedString: string) => {
@@ -335,7 +356,38 @@ describe('DistrictIdValidator - Property Tests', () => {
       const specialCharMixArb = fc
         .tuple(
           fc.stringMatching(/^[A-Za-z0-9]{1,5}$/),
-          fc.constantFrom('!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '+', '=', '[', ']', '{', '}', '|', '\\', ':', ';', '"', "'", '<', '>', ',', '.', '?', '/'),
+          fc.constantFrom(
+            '!',
+            '@',
+            '#',
+            '$',
+            '%',
+            '^',
+            '&',
+            '*',
+            '(',
+            ')',
+            '-',
+            '_',
+            '+',
+            '=',
+            '[',
+            ']',
+            '{',
+            '}',
+            '|',
+            '\\',
+            ':',
+            ';',
+            '"',
+            "'",
+            '<',
+            '>',
+            ',',
+            '.',
+            '?',
+            '/'
+          ),
           fc.stringMatching(/^[A-Za-z0-9]{0,5}$/)
         )
         .map(([prefix, special, suffix]) => `${prefix}${special}${suffix}`)

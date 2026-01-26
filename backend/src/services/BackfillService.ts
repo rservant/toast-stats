@@ -18,8 +18,14 @@
  */
 
 import { logger } from '../utils/logger.js'
-import type { IBackfillService, BackfillJobOptions } from '../routes/admin/backfill.js'
-import { updateBackfillJobProgress, getBackfillJob } from '../routes/admin/backfill.js'
+import type {
+  IBackfillService,
+  BackfillJobOptions,
+} from '../routes/admin/backfill.js'
+import {
+  updateBackfillJobProgress,
+  getBackfillJob,
+} from '../routes/admin/backfill.js'
 import type { PreComputedAnalyticsService } from './PreComputedAnalyticsService.js'
 import type { ITimeSeriesIndexService } from './TimeSeriesIndexService.js'
 import type { FileSnapshotStore } from './SnapshotStore.js'
@@ -82,7 +88,10 @@ export class BackfillService implements IBackfillService {
    * @param jobId - Unique job identifier for tracking
    * @param options - Backfill configuration options
    */
-  async startBackfill(jobId: string, options: BackfillJobOptions): Promise<void> {
+  async startBackfill(
+    jobId: string,
+    options: BackfillJobOptions
+  ): Promise<void> {
     const operationId = `backfill_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
     logger.info('Starting backfill job', {
@@ -130,7 +139,8 @@ export class BackfillService implements IBackfillService {
         jobId,
       })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
 
       logger.error('Backfill job failed', {
         operation: 'startBackfill',
@@ -179,7 +189,10 @@ export class BackfillService implements IBackfillService {
       }
 
       // Job exists but is not active (already completed/failed/cancelled)
-      if (job.progress.status !== 'running' && job.progress.status !== 'pending') {
+      if (
+        job.progress.status !== 'running' &&
+        job.progress.status !== 'pending'
+      ) {
         return false
       }
 
@@ -255,7 +268,11 @@ export class BackfillService implements IBackfillService {
       percentComplete: 0,
     })
 
-    const errors: Array<{ snapshotId: string; message: string; occurredAt: string }> = []
+    const errors: Array<{
+      snapshotId: string
+      message: string
+      occurredAt: string
+    }> = []
     let processedCount = 0
 
     // Process each snapshot in chronological order
@@ -293,13 +310,19 @@ export class BackfillService implements IBackfillService {
           })
         } else {
           // Process this snapshot
-          await this.processSnapshot(snapshotId, options.districtIds, operationId)
+          await this.processSnapshot(
+            snapshotId,
+            options.districtIds,
+            operationId
+          )
         }
 
         processedCount++
 
         // Update progress
-        const percentComplete = Math.round((processedCount / snapshots.length) * 100)
+        const percentComplete = Math.round(
+          (processedCount / snapshots.length) * 100
+        )
         const estimatedTimeRemaining = this.estimateTimeRemaining(
           processedCount,
           snapshots.length,
@@ -323,7 +346,8 @@ export class BackfillService implements IBackfillService {
         })
       } catch (error) {
         // Handle errors gracefully - log and continue with next snapshot
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
 
         logger.warn('Failed to process snapshot, continuing with next', {
           operation: 'runBackfill',
@@ -367,7 +391,9 @@ export class BackfillService implements IBackfillService {
    *
    * Requirement 7.2: Process snapshots in chronological order
    */
-  private async getSnapshotsToProcess(options: BackfillJobOptions): Promise<string[]> {
+  private async getSnapshotsToProcess(
+    options: BackfillJobOptions
+  ): Promise<string[]> {
     // Get all snapshots
     const allSnapshots = await this.snapshotStore.listSnapshots(undefined, {
       status: 'success',
@@ -414,15 +440,18 @@ export class BackfillService implements IBackfillService {
       }
 
       // Check if analytics summary exists by trying to get analytics for the first district
-      const firstDistrictEntry = manifest.districts.find(d => d.status === 'success')
+      const firstDistrictEntry = manifest.districts.find(
+        d => d.status === 'success'
+      )
       if (!firstDistrictEntry) {
         return false
       }
 
-      const analytics = await this.preComputedAnalyticsService.getAnalyticsSummary(
-        firstDistrictEntry.districtId,
-        snapshotId
-      )
+      const analytics =
+        await this.preComputedAnalyticsService.getAnalyticsSummary(
+          firstDistrictEntry.districtId,
+          snapshotId
+        )
 
       return analytics !== null
     } catch {
@@ -457,7 +486,9 @@ export class BackfillService implements IBackfillService {
     }
 
     // Get successful districts
-    const successfulDistricts = manifest.districts.filter(d => d.status === 'success')
+    const successfulDistricts = manifest.districts.filter(
+      d => d.status === 'success'
+    )
 
     // Filter by district IDs if specified
     const districtsToProcess = districtIds
@@ -487,7 +518,8 @@ export class BackfillService implements IBackfillService {
           districtData.push(data)
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
         logger.warn('Failed to read district data', {
           operation: 'processSnapshot',
           operationId,
@@ -509,15 +541,22 @@ export class BackfillService implements IBackfillService {
     }
 
     // Compute and store pre-computed analytics
-    await this.preComputedAnalyticsService.computeAndStore(snapshotId, districtData)
+    await this.preComputedAnalyticsService.computeAndStore(
+      snapshotId,
+      districtData
+    )
 
     // Update time-series index for each district
     for (const district of districtData) {
       try {
         const dataPoint = this.buildTimeSeriesDataPoint(snapshotId, district)
-        await this.timeSeriesIndexService.appendDataPoint(district.districtId, dataPoint)
+        await this.timeSeriesIndexService.appendDataPoint(
+          district.districtId,
+          dataPoint
+        )
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
         logger.warn('Failed to update time-series index for district', {
           operation: 'processSnapshot',
           operationId,
@@ -557,7 +596,9 @@ export class BackfillService implements IBackfillService {
 
     for (const club of clubs) {
       const membership = this.parseIntSafe(
-        club['Active Members'] ?? club['Active Membership'] ?? club['Membership']
+        club['Active Members'] ??
+          club['Active Membership'] ??
+          club['Membership']
       )
       const memBase = this.parseIntSafe(club['Mem. Base'])
       const netGrowth = membership - memBase
@@ -567,8 +608,12 @@ export class BackfillService implements IBackfillService {
       totalDcpGoals += dcpGoals
 
       // Calculate payments
-      const octRenewals = this.parseIntSafe(club['Oct. Ren.'] ?? club['Oct. Ren'])
-      const aprRenewals = this.parseIntSafe(club['Apr. Ren.'] ?? club['Apr. Ren'])
+      const octRenewals = this.parseIntSafe(
+        club['Oct. Ren.'] ?? club['Oct. Ren']
+      )
+      const aprRenewals = this.parseIntSafe(
+        club['Apr. Ren.'] ?? club['Apr. Ren']
+      )
       const newMembers = this.parseIntSafe(club['New Members'] ?? club['New'])
       totalPayments += octRenewals + aprRenewals + newMembers
 

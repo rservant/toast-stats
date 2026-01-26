@@ -48,7 +48,10 @@ describe('Backfill Routes', () => {
       cancelBackfill: vi.fn().mockImplementation((jobId: string) => {
         const job = getBackfillJob(jobId)
         if (!job) return false
-        if (job.progress.status !== 'running' && job.progress.status !== 'pending') {
+        if (
+          job.progress.status !== 'running' &&
+          job.progress.status !== 'pending'
+        ) {
           return false
         }
         // Update job status to cancelled
@@ -74,9 +77,7 @@ describe('Backfill Routes', () => {
 
   describe('POST /api/admin/backfill', () => {
     it('should create a backfill job with no options', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({})
+      const response = await request(app).post('/api/admin/backfill').send({})
 
       expect(response.status).toBe(202)
       expect(response.body.jobId).toBeDefined()
@@ -93,12 +94,10 @@ describe('Backfill Routes', () => {
     })
 
     it('should create a backfill job with startDate and endDate', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          startDate: '2024-01-01',
-          endDate: '2024-06-30',
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        startDate: '2024-01-01',
+        endDate: '2024-06-30',
+      })
 
       expect(response.status).toBe(202)
       expect(response.body.jobId).toBeDefined()
@@ -152,11 +151,9 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 400 for invalid startDate format', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          startDate: '01-01-2024',
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        startDate: '01-01-2024',
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('INVALID_REQUEST')
@@ -164,11 +161,9 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 400 for non-string startDate', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          startDate: 20240101,
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        startDate: 20240101,
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('INVALID_REQUEST')
@@ -176,11 +171,9 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 400 for invalid endDate format', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          endDate: '2024/06/30',
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        endDate: '2024/06/30',
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('INVALID_REQUEST')
@@ -188,12 +181,10 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 400 when startDate is after endDate', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          startDate: '2024-06-30',
-          endDate: '2024-01-01',
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        startDate: '2024-06-30',
+        endDate: '2024-01-01',
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('INVALID_REQUEST')
@@ -201,11 +192,9 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 400 for non-array districtIds', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          districtIds: '42',
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        districtIds: '42',
+      })
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('INVALID_REQUEST')
@@ -241,14 +230,14 @@ describe('Backfill Routes', () => {
       // The service failure happens asynchronously, so the initial response
       // should still be 202. The job status will be updated to failed.
       const failingService: IBackfillService = {
-        startBackfill: vi.fn().mockRejectedValue(new Error('Service unavailable')),
+        startBackfill: vi
+          .fn()
+          .mockRejectedValue(new Error('Service unavailable')),
         cancelBackfill: vi.fn().mockReturnValue(false),
       }
       setBackfillService(failingService)
 
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({})
+      const response = await request(app).post('/api/admin/backfill').send({})
 
       // Initial response should still be 202 (accepted)
       expect(response.status).toBe(202)
@@ -266,8 +255,7 @@ describe('Backfill Routes', () => {
       const jobId = createResponse.body.jobId
 
       // Then get its progress
-      const response = await request(app)
-        .get(`/api/admin/backfill/${jobId}`)
+      const response = await request(app).get(`/api/admin/backfill/${jobId}`)
 
       expect(response.status).toBe(200)
       expect(response.body.jobId).toBe(jobId)
@@ -283,8 +271,9 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 404 for non-existent job', async () => {
-      const response = await request(app)
-        .get('/api/admin/backfill/nonexistent_job_id')
+      const response = await request(app).get(
+        '/api/admin/backfill/nonexistent_job_id'
+      )
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('JOB_NOT_FOUND')
@@ -304,8 +293,7 @@ describe('Backfill Routes', () => {
       const jobId = createResponse.body.jobId
 
       // Get progress
-      const response = await request(app)
-        .get(`/api/admin/backfill/${jobId}`)
+      const response = await request(app).get(`/api/admin/backfill/${jobId}`)
 
       expect(response.status).toBe(200)
       expect(response.body.options.startDate).toBe('2024-01-01')
@@ -324,8 +312,7 @@ describe('Backfill Routes', () => {
       const jobId = createResponse.body.jobId
 
       // Cancel it
-      const response = await request(app)
-        .delete(`/api/admin/backfill/${jobId}`)
+      const response = await request(app).delete(`/api/admin/backfill/${jobId}`)
 
       expect(response.status).toBe(200)
       expect(response.body.jobId).toBe(jobId)
@@ -337,8 +324,9 @@ describe('Backfill Routes', () => {
     })
 
     it('should return 404 for non-existent job', async () => {
-      const response = await request(app)
-        .delete('/api/admin/backfill/nonexistent_job_id')
+      const response = await request(app).delete(
+        '/api/admin/backfill/nonexistent_job_id'
+      )
 
       expect(response.status).toBe(404)
       expect(response.body.error.code).toBe('JOB_NOT_FOUND')
@@ -361,8 +349,7 @@ describe('Backfill Routes', () => {
       await request(app).delete(`/api/admin/backfill/${jobId}`)
 
       // Second cancel should fail because job is already cancelled
-      const response = await request(app)
-        .delete(`/api/admin/backfill/${jobId}`)
+      const response = await request(app).delete(`/api/admin/backfill/${jobId}`)
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('JOB_ALREADY_CANCELLED')
@@ -380,8 +367,7 @@ describe('Backfill Routes', () => {
       await request(app).delete(`/api/admin/backfill/${jobId}`)
 
       // Try to cancel again
-      const response = await request(app)
-        .delete(`/api/admin/backfill/${jobId}`)
+      const response = await request(app).delete(`/api/admin/backfill/${jobId}`)
 
       expect(response.status).toBe(400)
       expect(response.body.error.code).toBe('JOB_ALREADY_CANCELLED')
@@ -399,8 +385,9 @@ describe('Backfill Routes', () => {
       await request(app).delete(`/api/admin/backfill/${jobId}`)
 
       // Check status
-      const statusResponse = await request(app)
-        .get(`/api/admin/backfill/${jobId}`)
+      const statusResponse = await request(app).get(
+        `/api/admin/backfill/${jobId}`
+      )
 
       expect(statusResponse.status).toBe(200)
       expect(statusResponse.body.progress.status).toBe('cancelled')
@@ -419,23 +406,24 @@ describe('Backfill Routes', () => {
       const jobId = createResponse.body.jobId
 
       // Check initial status
-      const initialStatus = await request(app)
-        .get(`/api/admin/backfill/${jobId}`)
+      const initialStatus = await request(app).get(
+        `/api/admin/backfill/${jobId}`
+      )
 
       expect(initialStatus.body.progress.status).toMatch(/pending|running/)
       expect(initialStatus.body.options.startDate).toBe('2024-01-01')
       expect(initialStatus.body.options.endDate).toBe('2024-12-31')
 
       // Cancel job
-      const cancelResponse = await request(app)
-        .delete(`/api/admin/backfill/${jobId}`)
+      const cancelResponse = await request(app).delete(
+        `/api/admin/backfill/${jobId}`
+      )
 
       expect(cancelResponse.status).toBe(200)
       expect(cancelResponse.body.cancelled).toBe(true)
 
       // Verify final status
-      const finalStatus = await request(app)
-        .get(`/api/admin/backfill/${jobId}`)
+      const finalStatus = await request(app).get(`/api/admin/backfill/${jobId}`)
 
       expect(finalStatus.body.progress.status).toBe('cancelled')
     })
@@ -455,10 +443,12 @@ describe('Backfill Routes', () => {
       expect(job1Response.body.jobId).not.toBe(job2Response.body.jobId)
 
       // Both jobs should be retrievable
-      const status1 = await request(app)
-        .get(`/api/admin/backfill/${job1Response.body.jobId}`)
-      const status2 = await request(app)
-        .get(`/api/admin/backfill/${job2Response.body.jobId}`)
+      const status1 = await request(app).get(
+        `/api/admin/backfill/${job1Response.body.jobId}`
+      )
+      const status2 = await request(app).get(
+        `/api/admin/backfill/${job2Response.body.jobId}`
+      )
 
       expect(status1.status).toBe(200)
       expect(status2.status).toBe(200)
@@ -469,23 +459,19 @@ describe('Backfill Routes', () => {
 
   describe('Input Validation Edge Cases', () => {
     it('should accept same startDate and endDate', async () => {
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          startDate: '2024-01-15',
-          endDate: '2024-01-15',
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        startDate: '2024-01-15',
+        endDate: '2024-01-15',
+      })
 
       expect(response.status).toBe(202)
     })
 
     it('should accept empty districtIds array', async () => {
       // Empty array is technically valid - means "all districts"
-      const response = await request(app)
-        .post('/api/admin/backfill')
-        .send({
-          districtIds: [],
-        })
+      const response = await request(app).post('/api/admin/backfill').send({
+        districtIds: [],
+      })
 
       expect(response.status).toBe(202)
     })

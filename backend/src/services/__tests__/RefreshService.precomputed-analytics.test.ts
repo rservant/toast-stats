@@ -266,7 +266,9 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
 
       // Create a mock PreComputedAnalyticsService that throws an error
       const failingAnalyticsService = {
-        computeAndStore: vi.fn().mockRejectedValue(new Error('Analytics computation failed')),
+        computeAndStore: vi
+          .fn()
+          .mockRejectedValue(new Error('Analytics computation failed')),
         getAnalyticsSummary: vi.fn(),
         getLatestSummary: vi.fn(),
       } as unknown as PreComputedAnalyticsService

@@ -146,7 +146,9 @@ describe('FileSnapshotStore getSnapshotMetadataBatch', () => {
     it('should handle single snapshot request', async () => {
       await snapshotStore.writeSnapshot(createTestSnapshot('2024-01-01'))
 
-      const results = await snapshotStore.getSnapshotMetadataBatch(['2024-01-01'])
+      const results = await snapshotStore.getSnapshotMetadataBatch([
+        '2024-01-01',
+      ])
 
       expect(results.size).toBe(1)
       expect(results.get('2024-01-01')).not.toBeNull()
@@ -275,7 +277,8 @@ describe('FileSnapshotStore getSnapshotMetadataBatch', () => {
 
       // Measure batch retrieval time
       const batchStart = Date.now()
-      const batchResults = await snapshotStore.getSnapshotMetadataBatch(snapshotIds)
+      const batchResults =
+        await snapshotStore.getSnapshotMetadataBatch(snapshotIds)
       const batchDuration = Date.now() - batchStart
 
       // Verify batch results
@@ -299,8 +302,12 @@ describe('FileSnapshotStore getSnapshotMetadataBatch', () => {
 
   describe('Metadata content verification', () => {
     it('should return complete metadata for each snapshot', async () => {
-      await snapshotStore.writeSnapshot(createTestSnapshot('2024-01-01', 'success'))
-      await snapshotStore.writeSnapshot(createTestSnapshot('2024-01-02', 'failed'))
+      await snapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-01', 'success')
+      )
+      await snapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-02', 'failed')
+      )
 
       const results = await snapshotStore.getSnapshotMetadataBatch([
         '2024-01-01',

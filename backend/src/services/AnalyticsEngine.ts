@@ -137,11 +137,11 @@ export class AnalyticsEngine implements IAnalyticsEngine {
   /**
    * Load cached data for a district within a date range
    * Uses IAnalyticsDataSource for snapshot-based data retrieval.
-   * 
+   *
    * When a TimeSeriesIndexService is available, reads from the time-series index
    * for efficient range queries. Falls back to loading individual snapshots if
    * the index is unavailable or empty.
-   * 
+   *
    * Requirements: 1.1, 1.3, 2.1, 2.2, 2.3
    */
   private async loadDistrictData(
@@ -192,20 +192,29 @@ export class AnalyticsEngine implements IAnalyticsEngine {
             return dataEntries
           }
 
-          logger.debug('Time-series index returned no data, falling back to snapshots', {
-            operation: 'loadDistrictData',
-            districtId,
-            startDate,
-            endDate,
-          })
+          logger.debug(
+            'Time-series index returned no data, falling back to snapshots',
+            {
+              operation: 'loadDistrictData',
+              districtId,
+              startDate,
+              endDate,
+            }
+          )
         } catch (indexError) {
-          logger.warn('Failed to read from time-series index, falling back to snapshots', {
-            operation: 'loadDistrictData',
-            districtId,
-            startDate,
-            endDate,
-            error: indexError instanceof Error ? indexError.message : 'Unknown error',
-          })
+          logger.warn(
+            'Failed to read from time-series index, falling back to snapshots',
+            {
+              operation: 'loadDistrictData',
+              districtId,
+              startDate,
+              endDate,
+              error:
+                indexError instanceof Error
+                  ? indexError.message
+                  : 'Unknown error',
+            }
+          )
         }
       }
 

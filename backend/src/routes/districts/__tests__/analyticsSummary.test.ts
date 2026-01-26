@@ -17,7 +17,7 @@ import { analyticsSummaryRouter } from '../analyticsSummary.js'
 
 // Mock the shared module
 vi.mock('../shared.js', () => ({
-  getValidDistrictId: vi.fn((req) => {
+  getValidDistrictId: vi.fn(req => {
     const districtId = req.params['districtId']
     if (!districtId || !/^[A-Za-z0-9]+$/.test(districtId)) {
       return null
@@ -37,7 +37,9 @@ vi.mock('../shared.js', () => ({
       throw new Error(`Missing ${paramName} parameter`)
     }
     if (Array.isArray(value)) {
-      throw new Error(`Invalid ${paramName} parameter: expected string, got array`)
+      throw new Error(
+        `Invalid ${paramName} parameter: expected string, got array`
+      )
     }
     return value
   }),
@@ -48,7 +50,15 @@ vi.mock('../shared.js', () => ({
 
 // Mock the cache middleware
 vi.mock('../../../middleware/cache.js', () => ({
-  cacheMiddleware: vi.fn(() => (req: express.Request, res: express.Response, next: express.NextFunction) => next()),
+  cacheMiddleware: vi.fn(
+    () =>
+      (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction
+      ) =>
+        next()
+  ),
 }))
 
 // Mock the cache keys utility
@@ -68,7 +78,7 @@ vi.mock('../../../utils/logger.js', () => ({
 
 // Mock the transformers
 vi.mock('../../../utils/transformers.js', () => ({
-  transformErrorResponse: vi.fn((error) => ({
+  transformErrorResponse: vi.fn(error => ({
     code: 'TEST_ERROR',
     message: error instanceof Error ? error.message : 'Unknown error',
     details: 'Test error details',
@@ -125,15 +135,27 @@ describe('Analytics Summary Route', () => {
             thrivingClubs: [],
             vulnerableClubs: [],
             interventionRequiredClubs: [],
-            distinguishedClubs: { total: 0, smedley: 0, presidents: 0, select: 0, distinguished: 0 },
+            distinguishedClubs: {
+              total: 0,
+              smedley: 0,
+              presidents: 0,
+              select: 0,
+              distinguished: 0,
+            },
             distinguishedProjection: 0,
             membershipTrend: [],
           }),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -194,8 +216,34 @@ describe('Analytics Summary Route', () => {
         }
 
         const mockTrendData = [
-          { date: '2024-01-01', snapshotId: '2024-01-01', membership: 1400, payments: 180, dcpGoals: 140, distinguishedTotal: 20, clubCounts: { total: 50, thriving: 28, vulnerable: 17, interventionRequired: 5 } },
-          { date: '2024-01-15', snapshotId: '2024-01-15', membership: 1500, payments: 200, dcpGoals: 150, distinguishedTotal: 25, clubCounts: { total: 50, thriving: 30, vulnerable: 15, interventionRequired: 5 } },
+          {
+            date: '2024-01-01',
+            snapshotId: '2024-01-01',
+            membership: 1400,
+            payments: 180,
+            dcpGoals: 140,
+            distinguishedTotal: 20,
+            clubCounts: {
+              total: 50,
+              thriving: 28,
+              vulnerable: 17,
+              interventionRequired: 5,
+            },
+          },
+          {
+            date: '2024-01-15',
+            snapshotId: '2024-01-15',
+            membership: 1500,
+            payments: 200,
+            dcpGoals: 150,
+            distinguishedTotal: 25,
+            clubCounts: {
+              total: 50,
+              thriving: 30,
+              vulnerable: 15,
+              interventionRequired: 5,
+            },
+          },
         ]
 
         const mockPreComputedService = {
@@ -208,9 +256,15 @@ describe('Analytics Summary Route', () => {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -234,9 +288,25 @@ describe('Analytics Summary Route', () => {
           computedAt: '2024-01-15T10:00:00Z',
           totalMembership: 1500,
           membershipChange: 50,
-          clubCounts: { total: 50, thriving: 30, vulnerable: 15, interventionRequired: 5 },
-          distinguishedClubs: { smedley: 2, presidents: 5, select: 8, distinguished: 10, total: 25 },
-          trendDataPoint: { date: '2024-01-15', membership: 1500, payments: 200, dcpGoals: 150 },
+          clubCounts: {
+            total: 50,
+            thriving: 30,
+            vulnerable: 15,
+            interventionRequired: 5,
+          },
+          distinguishedClubs: {
+            smedley: 2,
+            presidents: 5,
+            select: 8,
+            distinguished: 10,
+            total: 25,
+          },
+          trendDataPoint: {
+            date: '2024-01-15',
+            membership: 1500,
+            payments: 200,
+            dcpGoals: 150,
+          },
         }
 
         const mockYoY = {
@@ -244,9 +314,38 @@ describe('Analytics Summary Route', () => {
           previousYearDate: '2023-01-15',
           dataAvailable: true,
           metrics: {
-            membership: { current: 1500, previous: 1400, change: 100, percentageChange: 7.14 },
-            distinguishedClubs: { current: 25, previous: 20, change: 5, percentageChange: 25, byLevel: { smedley: { current: 2, previous: 1, change: 1 }, presidents: { current: 5, previous: 4, change: 1 }, select: { current: 8, previous: 7, change: 1 }, distinguished: { current: 10, previous: 8, change: 2 } } },
-            clubHealth: { thrivingClubs: { current: 30, previous: 25, change: 5, percentageChange: 20 }, vulnerableClubs: { current: 15, previous: 18, change: -3, percentageChange: -16.67 } },
+            membership: {
+              current: 1500,
+              previous: 1400,
+              change: 100,
+              percentageChange: 7.14,
+            },
+            distinguishedClubs: {
+              current: 25,
+              previous: 20,
+              change: 5,
+              percentageChange: 25,
+              byLevel: {
+                smedley: { current: 2, previous: 1, change: 1 },
+                presidents: { current: 5, previous: 4, change: 1 },
+                select: { current: 8, previous: 7, change: 1 },
+                distinguished: { current: 10, previous: 8, change: 2 },
+              },
+            },
+            clubHealth: {
+              thrivingClubs: {
+                current: 30,
+                previous: 25,
+                change: 5,
+                percentageChange: 20,
+              },
+              vulnerableClubs: {
+                current: 15,
+                previous: 18,
+                change: -3,
+                percentageChange: -16.67,
+              },
+            },
           },
         }
 
@@ -260,9 +359,15 @@ describe('Analytics Summary Route', () => {
           calculateYearOverYear: vi.fn().mockResolvedValue(mockYoY),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -283,10 +388,22 @@ describe('Analytics Summary Route', () => {
           membershipChange: 50,
           thrivingClubs: Array(30).fill({ clubId: '1', clubName: 'Test' }),
           vulnerableClubs: Array(15).fill({ clubId: '2', clubName: 'Test' }),
-          interventionRequiredClubs: Array(5).fill({ clubId: '3', clubName: 'Test' }),
-          distinguishedClubs: { smedley: 2, presidents: 5, select: 8, distinguished: 10, total: 25 },
+          interventionRequiredClubs: Array(5).fill({
+            clubId: '3',
+            clubName: 'Test',
+          }),
+          distinguishedClubs: {
+            smedley: 2,
+            presidents: 5,
+            select: 8,
+            distinguished: 10,
+            total: 25,
+          },
           distinguishedProjection: 30,
-          membershipTrend: [{ date: '2024-01-01', count: 1400 }, { date: '2024-01-15', count: 1500 }],
+          membershipTrend: [
+            { date: '2024-01-01', count: 1400 },
+            { date: '2024-01-15', count: 1500 },
+          ],
         }
 
         const mockPreComputedService = {
@@ -297,12 +414,20 @@ describe('Analytics Summary Route', () => {
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi.fn().mockResolvedValue(mockComputedAnalytics),
+          generateDistrictAnalytics: vi
+            .fn()
+            .mockResolvedValue(mockComputedAnalytics),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -325,9 +450,25 @@ describe('Analytics Summary Route', () => {
           computedAt: '2024-01-15T10:00:00Z',
           totalMembership: 1500,
           membershipChange: 50,
-          clubCounts: { total: 50, thriving: 30, vulnerable: 15, interventionRequired: 5 },
-          distinguishedClubs: { smedley: 2, presidents: 5, select: 8, distinguished: 10, total: 25 },
-          trendDataPoint: { date: '2024-01-15', membership: 1500, payments: 200, dcpGoals: 150 },
+          clubCounts: {
+            total: 50,
+            thriving: 30,
+            vulnerable: 15,
+            interventionRequired: 5,
+          },
+          distinguishedClubs: {
+            smedley: 2,
+            presidents: 5,
+            select: 8,
+            distinguished: 10,
+            total: 25,
+          },
+          trendDataPoint: {
+            date: '2024-01-15',
+            membership: 1500,
+            payments: 200,
+            dcpGoals: 150,
+          },
         }
 
         const mockPreComputedService = {
@@ -340,9 +481,15 @@ describe('Analytics Summary Route', () => {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -371,12 +518,20 @@ describe('Analytics Summary Route', () => {
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi.fn().mockRejectedValue(new Error('No cached data available')),
+          generateDistrictAnalytics: vi
+            .fn()
+            .mockRejectedValue(new Error('No cached data available')),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -394,12 +549,20 @@ describe('Analytics Summary Route', () => {
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi.fn().mockRejectedValue(new Error('ENOENT: no such file or directory')),
+          generateDistrictAnalytics: vi
+            .fn()
+            .mockRejectedValue(new Error('ENOENT: no such file or directory')),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -415,24 +578,48 @@ describe('Analytics Summary Route', () => {
           computedAt: '2024-01-15T10:00:00Z',
           totalMembership: 1500,
           membershipChange: 50,
-          clubCounts: { total: 50, thriving: 30, vulnerable: 15, interventionRequired: 5 },
-          distinguishedClubs: { smedley: 2, presidents: 5, select: 8, distinguished: 10, total: 25 },
-          trendDataPoint: { date: '2024-01-15', membership: 1500, payments: 200, dcpGoals: 150 },
+          clubCounts: {
+            total: 50,
+            thriving: 30,
+            vulnerable: 15,
+            interventionRequired: 5,
+          },
+          distinguishedClubs: {
+            smedley: 2,
+            presidents: 5,
+            select: 8,
+            distinguished: 10,
+            total: 25,
+          },
+          trendDataPoint: {
+            date: '2024-01-15',
+            membership: 1500,
+            payments: 200,
+            dcpGoals: 150,
+          },
         }
 
         const mockPreComputedService = {
           getLatestSummary: vi.fn().mockResolvedValue(mockSummary),
         }
         const mockTimeSeriesService = {
-          getTrendData: vi.fn().mockRejectedValue(new Error('Index file not found')),
+          getTrendData: vi
+            .fn()
+            .mockRejectedValue(new Error('Index file not found')),
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
         }
 
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(mockPreComputedService as never)
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(mockTimeSeriesService as never)
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(mockAnalyticsEngine as never)
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
 
         // Should still return 200 with summary data, just without trend data
         const response = await request(app)

@@ -213,13 +213,17 @@ analyticsSummaryRouter.get(
 
       // Determine date range for queries
       const effectiveEndDate =
-        typeof endDate === 'string' ? endDate : new Date().toISOString().split('T')[0]
-      
+        typeof endDate === 'string'
+          ? endDate
+          : new Date().toISOString().split('T')[0]
+
       // Default to current program year start if no start date provided
       const effectiveStartDate =
         typeof startDate === 'string'
           ? startDate
-          : getProgramYearStartDate(effectiveEndDate ?? new Date().toISOString().split('T')[0] ?? '')
+          : getProgramYearStartDate(
+              effectiveEndDate ?? new Date().toISOString().split('T')[0] ?? ''
+            )
 
       // Try to get pre-computed analytics first
       let summary: PreComputedAnalyticsSummary | null = null
@@ -229,12 +233,16 @@ analyticsSummaryRouter.get(
 
       if (!summary) {
         // Requirement 11.3: Log warning when pre-computed analytics are missing
-        logger.warn('Pre-computed analytics not available for requested date range', {
-          operation: 'analyticsRequest',
-          districtId,
-          data_source: 'computed',
-          message: 'Backfill may be needed to generate pre-computed analytics',
-        })
+        logger.warn(
+          'Pre-computed analytics not available for requested date range',
+          {
+            operation: 'analyticsRequest',
+            districtId,
+            data_source: 'computed',
+            message:
+              'Backfill may be needed to generate pre-computed analytics',
+          }
+        )
         dataSource = 'computed'
       }
 
@@ -270,7 +278,8 @@ analyticsSummaryRouter.get(
           operation: 'getAnalyticsSummary',
           operationId,
           districtId,
-          error: trendError instanceof Error ? trendError.message : 'Unknown error',
+          error:
+            trendError instanceof Error ? trendError.message : 'Unknown error',
         })
         // Continue without trend data - we can still return summary
       }
@@ -285,11 +294,17 @@ analyticsSummaryRouter.get(
           effectiveEndDate ?? new Date().toISOString().split('T')[0] ?? ''
         )
 
-        if (yoyComparison && yoyComparison.dataAvailable && yoyComparison.metrics) {
+        if (
+          yoyComparison &&
+          yoyComparison.dataAvailable &&
+          yoyComparison.metrics
+        ) {
           yearOverYear = {
             membershipChange: yoyComparison.metrics.membership.change,
-            distinguishedChange: yoyComparison.metrics.distinguishedClubs.change,
-            clubHealthChange: yoyComparison.metrics.clubHealth.thrivingClubs.change,
+            distinguishedChange:
+              yoyComparison.metrics.distinguishedClubs.change,
+            clubHealthChange:
+              yoyComparison.metrics.clubHealth.thrivingClubs.change,
           }
         }
       } catch (yoyError) {
@@ -350,15 +365,17 @@ analyticsSummaryRouter.get(
           operation: 'analyticsRequest',
           districtId,
           data_source: 'computed',
-          message: 'Pre-computed analytics not available, backfill may be needed',
+          message:
+            'Pre-computed analytics not available, backfill may be needed',
         })
 
         const analyticsEngine = await getAnalyticsEngine()
-        const computedAnalytics = await analyticsEngine.generateDistrictAnalytics(
-          districtId,
-          effectiveStartDate,
-          effectiveEndDate
-        )
+        const computedAnalytics =
+          await analyticsEngine.generateDistrictAnalytics(
+            districtId,
+            effectiveStartDate,
+            effectiveEndDate
+          )
 
         response = {
           districtId,
@@ -373,13 +390,15 @@ analyticsSummaryRouter.get(
                 computedAnalytics.interventionRequiredClubs.length,
               thriving: computedAnalytics.thrivingClubs.length,
               vulnerable: computedAnalytics.vulnerableClubs.length,
-              interventionRequired: computedAnalytics.interventionRequiredClubs.length,
+              interventionRequired:
+                computedAnalytics.interventionRequiredClubs.length,
             },
             distinguishedClubs: {
               smedley: computedAnalytics.distinguishedClubs.smedley ?? 0,
               presidents: computedAnalytics.distinguishedClubs.presidents ?? 0,
               select: computedAnalytics.distinguishedClubs.select ?? 0,
-              distinguished: computedAnalytics.distinguishedClubs.distinguished ?? 0,
+              distinguished:
+                computedAnalytics.distinguishedClubs.distinguished ?? 0,
               total: computedAnalytics.distinguishedClubs.total,
             },
             distinguishedProjection: computedAnalytics.distinguishedProjection,
@@ -536,8 +555,11 @@ function calculateDistinguishedProjection(
   }
 
   // Calculate progress through program year (0 to 1)
-  const totalDays = (programYearEnd.getTime() - programYearStart.getTime()) / (1000 * 60 * 60 * 24)
-  const elapsedDays = (now.getTime() - programYearStart.getTime()) / (1000 * 60 * 60 * 24)
+  const totalDays =
+    (programYearEnd.getTime() - programYearStart.getTime()) /
+    (1000 * 60 * 60 * 24)
+  const elapsedDays =
+    (now.getTime() - programYearStart.getTime()) / (1000 * 60 * 60 * 24)
   const progress = Math.min(1, Math.max(0, elapsedDays / totalDays))
 
   // If we're very early in the year, don't project

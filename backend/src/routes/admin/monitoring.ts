@@ -447,7 +447,6 @@ monitoringRouter.post(
   }
 )
 
-
 // ============================================================================
 // System Health Types
 // ============================================================================
@@ -557,7 +556,8 @@ monitoringRouter.get('/health', logAdminAccess, async (req, res) => {
 
     const systemHealth: SystemHealthMetrics = {
       cacheHitRate: Math.round(cacheHitRate * 100) / 100, // Round to 2 decimal places
-      averageResponseTime: Math.round(performanceMetrics.averageReadTime * 100) / 100,
+      averageResponseTime:
+        Math.round(performanceMetrics.averageReadTime * 100) / 100,
       pendingOperations,
       snapshotCount,
       precomputedAnalyticsCount,

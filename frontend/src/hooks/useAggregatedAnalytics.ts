@@ -301,22 +301,21 @@ export function useAggregatedAnalytics(
 
       // Try aggregated endpoint first
       try {
-        const data = await fetchAggregatedAnalytics(districtId, startDate, endDate)
+        const data = await fetchAggregatedAnalytics(
+          districtId,
+          startDate,
+          endDate
+        )
         return { data, usedFallback: false }
-      } catch (aggregatedError) {
+      } catch {
         // Fall back to individual endpoint
-        try {
-          const analytics = await fetchIndividualAnalytics(
-            districtId,
-            startDate,
-            endDate
-          )
-          const data = convertToAggregatedFormat(analytics)
-          return { data, usedFallback: true }
-        } catch (fallbackError) {
-          // Both failed, throw the fallback error (more likely to be meaningful)
-          throw fallbackError
-        }
+        const analytics = await fetchIndividualAnalytics(
+          districtId,
+          startDate,
+          endDate
+        )
+        const data = convertToAggregatedFormat(analytics)
+        return { data, usedFallback: true }
       }
     },
     enabled: !!districtId,
@@ -364,4 +363,3 @@ export function useAggregatedAnalytics(
     usedFallback: query.data?.usedFallback ?? false,
   }
 }
-

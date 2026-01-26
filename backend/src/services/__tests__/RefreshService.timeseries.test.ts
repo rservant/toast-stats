@@ -272,7 +272,9 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
 
       // Create a mock TimeSeriesIndexService that throws an error
       const failingTimeSeriesService = {
-        appendDataPoint: vi.fn().mockRejectedValue(new Error('Time-series index update failed')),
+        appendDataPoint: vi
+          .fn()
+          .mockRejectedValue(new Error('Time-series index update failed')),
         getTrendData: vi.fn(),
         getProgramYearData: vi.fn(),
         rebuildIndex: vi.fn(),
@@ -371,8 +373,8 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       // total = thriving + vulnerable + interventionRequired
       expect(dataPoint?.clubCounts.total).toBe(
         dataPoint?.clubCounts.thriving +
-        dataPoint?.clubCounts.vulnerable +
-        dataPoint?.clubCounts.interventionRequired
+          dataPoint?.clubCounts.vulnerable +
+          dataPoint?.clubCounts.interventionRequired
       )
     })
 

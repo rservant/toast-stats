@@ -16,7 +16,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import type { DistrictStatistics, ScrapedRecord } from '../../types/districts.js'
+import type {
+  DistrictStatistics,
+  ScrapedRecord,
+} from '../../types/districts.js'
 import type { AnalyticsSummaryFile } from '../../types/precomputedAnalytics.js'
 
 describe('PreComputedAnalyticsService', () => {
@@ -430,9 +433,7 @@ describe('PreComputedAnalyticsService', () => {
       const snapshotDir = path.join(snapshotsDir, snapshotId)
       await fs.mkdir(snapshotDir, { recursive: true })
 
-      const districtData = [
-        createDistrictStatistics({ districtId: '42' }),
-      ]
+      const districtData = [createDistrictStatistics({ districtId: '42' })]
 
       await service.computeAndStore(snapshotId, districtData)
 

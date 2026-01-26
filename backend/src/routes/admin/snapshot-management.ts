@@ -204,7 +204,7 @@ async function deleteSnapshotWithCascade(
         }
       } catch (error) {
         // Index file might not exist for this district/program year
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        if ((error as { code?: string }).code !== 'ENOENT') {
           logger.warn('Error updating time-series index', {
             operation: 'deleteSnapshotWithCascade',
             operationId,
@@ -411,7 +411,8 @@ snapshotManagementRouter.delete(
         res.status(400).json({
           error: {
             code: 'INVALID_REQUEST',
-            message: 'startDate and endDate must be strings in YYYY-MM-DD format',
+            message:
+              'startDate and endDate must be strings in YYYY-MM-DD format',
           },
         })
         return
@@ -454,7 +455,7 @@ snapshotManagementRouter.delete(
           .filter(name => name >= startDate && name <= endDate)
           .sort()
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as { code?: string }).code === 'ENOENT') {
           // Snapshots directory doesn't exist
           snapshotDirs = []
         } else {
@@ -613,7 +614,10 @@ snapshotManagementRouter.delete(
                   'manifest.json'
                 )
                 try {
-                  const manifestContent = await fs.readFile(manifestPath, 'utf-8')
+                  const manifestContent = await fs.readFile(
+                    manifestPath,
+                    'utf-8'
+                  )
                   const manifest = JSON.parse(manifestContent) as {
                     districts: Array<{ districtId: string }>
                     totalDistricts: number
@@ -695,7 +699,7 @@ snapshotManagementRouter.delete(
           .filter(name => datePattern.test(name))
           .sort()
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as { code?: string }).code === 'ENOENT') {
           snapshotDirs = []
         } else {
           throw error

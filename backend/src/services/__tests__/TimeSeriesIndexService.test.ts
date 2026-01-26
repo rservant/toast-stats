@@ -133,7 +133,10 @@ describe('TimeSeriesIndexService', () => {
 
   describe('appendDataPoint', () => {
     it('should create index file and append data point', async () => {
-      const dataPoint = createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15')
+      const dataPoint = createSampleDataPoint(
+        '2024-01-15',
+        'snapshot-2024-01-15'
+      )
 
       await service.appendDataPoint('42', dataPoint)
 
@@ -154,9 +157,21 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should append multiple data points in chronological order', async () => {
-      const dataPoint1 = createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1000)
-      const dataPoint2 = createSampleDataPoint('2024-01-10', 'snapshot-2024-01-10', 950)
-      const dataPoint3 = createSampleDataPoint('2024-01-20', 'snapshot-2024-01-20', 1050)
+      const dataPoint1 = createSampleDataPoint(
+        '2024-01-15',
+        'snapshot-2024-01-15',
+        1000
+      )
+      const dataPoint2 = createSampleDataPoint(
+        '2024-01-10',
+        'snapshot-2024-01-10',
+        950
+      )
+      const dataPoint3 = createSampleDataPoint(
+        '2024-01-20',
+        'snapshot-2024-01-20',
+        1050
+      )
 
       await service.appendDataPoint('42', dataPoint1)
       await service.appendDataPoint('42', dataPoint2)
@@ -173,8 +188,16 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should update existing data point with same date and snapshotId', async () => {
-      const dataPoint1 = createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1000)
-      const dataPoint2 = createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1100)
+      const dataPoint1 = createSampleDataPoint(
+        '2024-01-15',
+        'snapshot-2024-01-15',
+        1000
+      )
+      const dataPoint2 = createSampleDataPoint(
+        '2024-01-15',
+        'snapshot-2024-01-15',
+        1100
+      )
 
       await service.appendDataPoint('42', dataPoint1)
       await service.appendDataPoint('42', dataPoint2)
@@ -188,9 +211,15 @@ describe('TimeSeriesIndexService', () => {
 
     it('should partition data by program year', async () => {
       // Data point in 2023-2024 program year
-      const dataPoint1 = createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15')
+      const dataPoint1 = createSampleDataPoint(
+        '2024-01-15',
+        'snapshot-2024-01-15'
+      )
       // Data point in 2024-2025 program year
-      const dataPoint2 = createSampleDataPoint('2024-08-15', 'snapshot-2024-08-15')
+      const dataPoint2 = createSampleDataPoint(
+        '2024-08-15',
+        'snapshot-2024-08-15'
+      )
 
       await service.appendDataPoint('42', dataPoint1)
       await service.appendDataPoint('42', dataPoint2)
@@ -238,9 +267,9 @@ describe('TimeSeriesIndexService', () => {
     it('should reject invalid district ID', async () => {
       const dataPoint = createSampleDataPoint('2024-01-15', 'snapshot-1')
 
-      await expect(
-        service.appendDataPoint('', dataPoint)
-      ).rejects.toThrow('Invalid district ID')
+      await expect(service.appendDataPoint('', dataPoint)).rejects.toThrow(
+        'Invalid district ID'
+      )
 
       await expect(
         service.appendDataPoint('district-42', dataPoint)
@@ -288,7 +317,11 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should return data points within date range', async () => {
-      const result = await service.getTrendData('42', '2024-01-01', '2024-06-30')
+      const result = await service.getTrendData(
+        '42',
+        '2024-01-01',
+        '2024-06-30'
+      )
 
       expect(result).toHaveLength(2)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -296,7 +329,11 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should return data points across program year boundaries', async () => {
-      const result = await service.getTrendData('42', '2024-01-01', '2024-12-31')
+      const result = await service.getTrendData(
+        '42',
+        '2024-01-01',
+        '2024-12-31'
+      )
 
       expect(result).toHaveLength(3)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -305,19 +342,31 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should return empty array for date range with no data', async () => {
-      const result = await service.getTrendData('42', '2022-01-01', '2022-12-31')
+      const result = await service.getTrendData(
+        '42',
+        '2022-01-01',
+        '2022-12-31'
+      )
 
       expect(result).toEqual([])
     })
 
     it('should return empty array for non-existent district', async () => {
-      const result = await service.getTrendData('99', '2024-01-01', '2024-12-31')
+      const result = await service.getTrendData(
+        '99',
+        '2024-01-01',
+        '2024-12-31'
+      )
 
       expect(result).toEqual([])
     })
 
     it('should include boundary dates (inclusive)', async () => {
-      const result = await service.getTrendData('42', '2024-01-15', '2024-06-15')
+      const result = await service.getTrendData(
+        '42',
+        '2024-01-15',
+        '2024-06-15'
+      )
 
       expect(result).toHaveLength(2)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -325,7 +374,11 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should return data sorted chronologically', async () => {
-      const result = await service.getTrendData('42', '2023-07-01', '2025-06-30')
+      const result = await service.getTrendData(
+        '42',
+        '2023-07-01',
+        '2025-06-30'
+      )
 
       expect(result).toHaveLength(5)
       for (let i = 1; i < result.length; i++) {
@@ -372,9 +425,9 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should reject invalid program year format', async () => {
-      await expect(
-        service.getProgramYearData('42', '2024')
-      ).rejects.toThrow('Invalid program year format')
+      await expect(service.getProgramYearData('42', '2024')).rejects.toThrow(
+        'Invalid program year format'
+      )
 
       await expect(
         service.getProgramYearData('42', '2024-2026')

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document specifies requirements for fixing the district analytics page performance issues that cause 504 Gateway Timeout errors. The current implementation makes expensive operations that take 30-72 seconds, exceeding gateway timeout limits. 
+This document specifies requirements for fixing the district analytics page performance issues that cause 504 Gateway Timeout errors. The current implementation makes expensive operations that take 30-72 seconds, exceeding gateway timeout limits.
 
 The scale of data is significant: up to 365 snapshots per program year across approximately 15 years of historical data. The frontend displays trends for entire program years and compares across multiple years. The solution must reduce API response times to under 10 seconds while maintaining data accuracy by pre-computing analytics during snapshot creation.
 

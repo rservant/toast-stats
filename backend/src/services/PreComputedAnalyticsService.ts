@@ -253,10 +253,7 @@ export class PreComputedAnalyticsService {
       const distinguishedClubs = this.calculateDistinguishedClubCounts(district)
 
       // Build trend data point for this snapshot
-      const trendDataPoint = this.buildTrendDataPoint(
-        district,
-        totalMembership
-      )
+      const trendDataPoint = this.buildTrendDataPoint(district, totalMembership)
 
       // Build the summary
       const summary: PreComputedAnalyticsSummary = {
@@ -428,7 +425,8 @@ export class PreComputedAnalyticsService {
 
     // Primary: Try to extract from Club Distinguished Status field
     const statusField = club['Club Distinguished Status']
-    const levelFromStatus = this.extractDistinguishedLevelFromStatus(statusField)
+    const levelFromStatus =
+      this.extractDistinguishedLevelFromStatus(statusField)
 
     if (levelFromStatus) {
       return levelFromStatus
@@ -572,9 +570,7 @@ export class PreComputedAnalyticsService {
       const aprRenewals = this.parseIntSafe(
         club['Apr. Ren.'] ?? club['Apr. Ren']
       )
-      const newMembers = this.parseIntSafe(
-        club['New Members'] ?? club['New']
-      )
+      const newMembers = this.parseIntSafe(club['New Members'] ?? club['New'])
 
       return total + octRenewals + aprRenewals + newMembers
     }, 0)
@@ -595,9 +591,7 @@ export class PreComputedAnalyticsService {
   /**
    * Parse an integer value safely, returning 0 for invalid values
    */
-  private parseIntSafe(
-    value: string | number | null | undefined
-  ): number {
+  private parseIntSafe(value: string | number | null | undefined): number {
     if (value === null || value === undefined || value === '') {
       return 0
     }
@@ -683,7 +677,7 @@ export class PreComputedAnalyticsService {
 
       return summaryFile
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as { code?: string }).code === 'ENOENT') {
         logger.debug('Analytics summary file not found', {
           operation: 'readAnalyticsSummaryFile',
           snapshotId,
@@ -739,7 +733,7 @@ export class PreComputedAnalyticsService {
 
       return null
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as { code?: string }).code === 'ENOENT') {
         logger.debug('Snapshots directory not found', {
           operation: 'findLatestSnapshotWithAnalytics',
           snapshotsDir: this.snapshotsDir,

@@ -364,7 +364,8 @@ export class SnapshotBuilder {
         districtsIncluded: availability.cachedDistricts.length,
         districtsMissing: availability.missingDistricts.length,
         duration_ms: Date.now() - startTime,
-        validationRejectedRecords: rawData.validationSummary?.rejectedRecords ?? 0,
+        validationRejectedRecords:
+          rawData.validationSummary?.rejectedRecords ?? 0,
       })
 
       return {
@@ -514,11 +515,12 @@ export class SnapshotBuilder {
     if (allDistrictsCSV) {
       try {
         const parsedRecords = this.parseCSV(allDistrictsCSV)
-        
+
         // Filter out invalid district IDs (Requirements 9.4, 9.5)
-        const districtIdValidationResult = this.districtIdValidator.filterValidRecords(parsedRecords)
+        const districtIdValidationResult =
+          this.districtIdValidator.filterValidRecords(parsedRecords)
         allDistricts = districtIdValidationResult.valid
-        
+
         // Build validation summary for metadata (Requirement 9.5)
         validationSummary = {
           totalRecords: parsedRecords.length,
@@ -526,17 +528,20 @@ export class SnapshotBuilder {
           rejectedRecords: districtIdValidationResult.rejected.length,
           rejectionDetails: districtIdValidationResult.rejected,
         }
-        
+
         // Track rejected records for metadata
         if (districtIdValidationResult.rejected.length > 0) {
-          this.log.info('Filtered invalid district records from all-districts data', {
-            date,
-            totalRecords: parsedRecords.length,
-            validRecords: districtIdValidationResult.valid.length,
-            rejectedRecords: districtIdValidationResult.rejected.length,
-          })
+          this.log.info(
+            'Filtered invalid district records from all-districts data',
+            {
+              date,
+              totalRecords: parsedRecords.length,
+              validRecords: districtIdValidationResult.valid.length,
+              rejectedRecords: districtIdValidationResult.rejected.length,
+            }
+          )
         }
-        
+
         this.log.debug('Parsed all-districts CSV', {
           date,
           recordCount: allDistricts.length,

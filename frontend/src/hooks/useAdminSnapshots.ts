@@ -139,7 +139,10 @@ export function useSnapshotList(
         if (filters.created_before)
           params.append('created_before', filters.created_before)
         if (filters.min_district_count !== undefined)
-          params.append('min_district_count', filters.min_district_count.toString())
+          params.append(
+            'min_district_count',
+            filters.min_district_count.toString()
+          )
       }
 
       const queryString = params.toString()

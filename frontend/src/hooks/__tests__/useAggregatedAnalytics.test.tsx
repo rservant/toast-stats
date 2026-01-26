@@ -189,10 +189,9 @@ describe('useAggregatedAnalytics', () => {
       const mockResponse = createMockAggregatedResponse()
       mockedApiClient.get.mockResolvedValue({ data: mockResponse })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -259,10 +258,9 @@ describe('useAggregatedAnalytics', () => {
       const mockResponse = createMockAggregatedResponse()
       mockedApiClient.get.mockResolvedValue({ data: mockResponse })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -298,10 +296,9 @@ describe('useAggregatedAnalytics', () => {
      * Test that hook does not fetch when districtId is null
      */
     it('should not fetch when districtId is null', async () => {
-      const { result } = renderHook(
-        () => useAggregatedAnalytics(null),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics(null), {
+        wrapper: createWrapper(),
+      })
 
       // Wait a bit to ensure no fetch happens
       await new Promise(resolve => setTimeout(resolve, 100))
@@ -330,10 +327,9 @@ describe('useAggregatedAnalytics', () => {
         return Promise.resolve({ data: individualResponse })
       })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -368,10 +364,9 @@ describe('useAggregatedAnalytics', () => {
         return Promise.resolve({ data: individualResponse })
       })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -432,10 +427,9 @@ describe('useAggregatedAnalytics', () => {
 
       mockedApiClient.get.mockRejectedValue(error)
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -457,10 +451,9 @@ describe('useAggregatedAnalytics', () => {
 
       mockedApiClient.get.mockRejectedValue(notFoundError)
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -481,10 +474,9 @@ describe('useAggregatedAnalytics', () => {
 
       mockedApiClient.get.mockRejectedValue(badRequestError)
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -504,10 +496,9 @@ describe('useAggregatedAnalytics', () => {
         () => new Promise(() => {}) // Never resolves
       )
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       expect(result.current.isLoading).toBe(true)
       expect(result.current.data).toBeNull()
@@ -520,10 +511,9 @@ describe('useAggregatedAnalytics', () => {
       const mockResponse = createMockAggregatedResponse()
       mockedApiClient.get.mockResolvedValue({ data: mockResponse })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       expect(result.current.isLoading).toBe(true)
 
@@ -545,10 +535,9 @@ describe('useAggregatedAnalytics', () => {
       })
       mockedApiClient.get.mockResolvedValue({ data: mockResponse })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
@@ -569,10 +558,9 @@ describe('useAggregatedAnalytics', () => {
       })
       mockedApiClient.get.mockResolvedValue({ data: mockResponse })
 
-      const { result } = renderHook(
-        () => useAggregatedAnalytics('42'),
-        { wrapper: createWrapper() }
-      )
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)

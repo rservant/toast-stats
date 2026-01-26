@@ -1,9 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import {
-  useAdminSnapshots,
-  SnapshotMetadata,
-} from '../hooks/useAdminSnapshots'
+import { useAdminSnapshots, SnapshotMetadata } from '../hooks/useAdminSnapshots'
 import {
   useAdminBackfill,
   BackfillJobStatus,
@@ -69,7 +66,6 @@ const SectionCard: React.FC<SectionCardProps> = ({
   )
 }
 
-
 interface ActionButtonProps {
   onClick?: () => void
   disabled?: boolean
@@ -110,7 +106,11 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   }
 
   return (
-    <button onClick={onClick} disabled={disabled || isLoading} className={className}>
+    <button
+      onClick={onClick}
+      disabled={disabled || isLoading}
+      className={className}
+    >
       {isLoading && (
         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
           <circle
@@ -133,7 +133,6 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     </button>
   )
 }
-
 
 /**
  * Confirmation Dialog Component
@@ -179,7 +178,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </h3>
         <p className="text-gray-600 font-tm-body mb-6">{message}</p>
         <div className="flex justify-end gap-3">
-          <ActionButton variant="secondary" onClick={onCancel} disabled={isLoading}>
+          <ActionButton
+            variant="secondary"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
             {cancelLabel}
           </ActionButton>
           <ActionButton
@@ -194,7 +197,6 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     </div>
   )
 }
-
 
 /**
  * Status badge component for snapshot status
@@ -256,7 +258,6 @@ function formatDate(dateString: string): string {
   })
 }
 
-
 /**
  * Snapshot list item component
  */
@@ -305,7 +306,6 @@ const SnapshotListItem: React.FC<SnapshotListItemProps> = ({
     </tr>
   )
 }
-
 
 /**
  * Delete range dialog state
@@ -383,7 +383,6 @@ const SnapshotsSection: React.FC = () => {
     })
   }, [selectedSnapshots.size])
 
-
   const handleDeleteRange = useCallback(() => {
     setDeleteRangeDialog({
       isOpen: true,
@@ -443,9 +442,10 @@ const SnapshotsSection: React.FC = () => {
     snapshots.length > 0 && selectedSnapshots.size === snapshots.length
   const someSelected = selectedSnapshots.size > 0 && !allSelected
 
-
   // Calculate pre-computation status
-  const successfulSnapshots = snapshots.filter(s => s.status === 'success').length
+  const successfulSnapshots = snapshots.filter(
+    s => s.status === 'success'
+  ).length
   const totalSnapshots = snapshots.length
 
   return (
@@ -454,7 +454,9 @@ const SnapshotsSection: React.FC = () => {
         {/* Summary stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-gray-50 rounded-sm p-3 border-l-4 border-l-tm-loyal-blue">
-            <p className="text-xs text-gray-500 font-tm-body">Total Snapshots</p>
+            <p className="text-xs text-gray-500 font-tm-body">
+              Total Snapshots
+            </p>
             <p className="text-2xl font-bold text-tm-black font-tm-headline">
               {isLoading ? '--' : totalSnapshots}
             </p>
@@ -468,9 +470,7 @@ const SnapshotsSection: React.FC = () => {
           <div className="bg-gray-50 rounded-sm p-3 border-l-4 border-l-yellow-500">
             <p className="text-xs text-gray-500 font-tm-body">Pre-computed</p>
             <p className="text-2xl font-bold text-tm-black font-tm-headline">
-              {isLoading
-                ? '--'
-                : `${successfulSnapshots}/${totalSnapshots}`}
+              {isLoading ? '--' : `${successfulSnapshots}/${totalSnapshots}`}
             </p>
           </div>
         </div>
@@ -508,7 +508,6 @@ const SnapshotsSection: React.FC = () => {
             Delete All
           </ActionButton>
         </div>
-
 
         {/* Error state */}
         {isError && (
@@ -558,7 +557,6 @@ const SnapshotsSection: React.FC = () => {
             </span>
           </div>
         )}
-
 
         {/* Snapshot table */}
         {!isLoading && !isError && (
@@ -625,7 +623,6 @@ const SnapshotsSection: React.FC = () => {
           </div>
         )}
       </div>
-
 
       {/* Confirm delete dialog */}
       <ConfirmDialog
@@ -733,7 +730,6 @@ const SnapshotsSection: React.FC = () => {
     </>
   )
 }
-
 
 /**
  * Get status badge color based on backfill status
@@ -897,7 +893,9 @@ const AnalyticsSection: React.FC = () => {
 
   // Calculate pre-computation statistics
   const totalSnapshots = snapshots.length
-  const successfulSnapshots = snapshots.filter(s => s.status === 'success').length
+  const successfulSnapshots = snapshots.filter(
+    s => s.status === 'success'
+  ).length
   const coveragePercent =
     totalSnapshots > 0
       ? Math.round((successfulSnapshots / totalSnapshots) * 100)
@@ -980,7 +978,9 @@ const AnalyticsSection: React.FC = () => {
               disabled={isBackfillRunning || triggerBackfill.isPending}
               isLoading={triggerBackfill.isPending}
             >
-              {isBackfillRunning ? 'Backfill in Progress...' : 'Trigger Backfill'}
+              {isBackfillRunning
+                ? 'Backfill in Progress...'
+                : 'Trigger Backfill'}
             </ActionButton>
             {isBackfillRunning && (
               <ActionButton
@@ -1018,7 +1018,10 @@ const AnalyticsSection: React.FC = () => {
             {/* Progress Bar */}
             {backfillStatus && (
               <div className="mb-3">
-                <ProgressBar percent={progressPercent} status={backfillStatus} />
+                <ProgressBar
+                  percent={progressPercent}
+                  status={backfillStatus}
+                />
               </div>
             )}
 
@@ -1124,7 +1127,6 @@ const AnalyticsSection: React.FC = () => {
   )
 }
 
-
 /**
  * System Health Section Component
  *
@@ -1139,15 +1141,8 @@ const AnalyticsSection: React.FC = () => {
  * Requirements: 10.5
  */
 const SystemHealthSection: React.FC = () => {
-  const {
-    health,
-    details,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    lastUpdated,
-  } = useAdminMonitoring()
+  const { health, details, isLoading, isError, error, refetch, lastUpdated } =
+    useAdminMonitoring()
 
   /**
    * Format the last updated timestamp for display
@@ -1206,7 +1201,9 @@ const SystemHealthSection: React.FC = () => {
       {/* Metrics grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Cache Hit Rate */}
-        <div className={`bg-gray-50 rounded-sm p-4 border-l-4 ${getCacheStatusColor()}`}>
+        <div
+          className={`bg-gray-50 rounded-sm p-4 border-l-4 ${getCacheStatusColor()}`}
+        >
           <p className="text-xs text-gray-500 font-tm-body">Cache Hit Rate</p>
           <p className="text-2xl font-bold text-tm-black font-tm-headline">
             {isLoading ? (
@@ -1225,8 +1222,12 @@ const SystemHealthSection: React.FC = () => {
         </div>
 
         {/* Average Response Time */}
-        <div className={`bg-gray-50 rounded-sm p-4 border-l-4 ${getResponseTimeStatusColor()}`}>
-          <p className="text-xs text-gray-500 font-tm-body">Avg Response Time</p>
+        <div
+          className={`bg-gray-50 rounded-sm p-4 border-l-4 ${getResponseTimeStatusColor()}`}
+        >
+          <p className="text-xs text-gray-500 font-tm-body">
+            Avg Response Time
+          </p>
           <p className="text-2xl font-bold text-tm-black font-tm-headline">
             {isLoading ? (
               <span className="animate-pulse">--</span>
@@ -1244,8 +1245,12 @@ const SystemHealthSection: React.FC = () => {
         </div>
 
         {/* Pending Operations */}
-        <div className={`bg-gray-50 rounded-sm p-4 border-l-4 ${getPendingOpsStatusColor()}`}>
-          <p className="text-xs text-gray-500 font-tm-body">Pending Operations</p>
+        <div
+          className={`bg-gray-50 rounded-sm p-4 border-l-4 ${getPendingOpsStatusColor()}`}
+        >
+          <p className="text-xs text-gray-500 font-tm-body">
+            Pending Operations
+          </p>
           <p className="text-2xl font-bold text-tm-black font-tm-headline">
             {isLoading ? (
               <span className="animate-pulse">--</span>
@@ -1313,7 +1318,9 @@ const SystemHealthSection: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
               {/* Cache Details */}
               <div>
-                <h4 className="font-semibold text-tm-black mb-2">Cache Performance</h4>
+                <h4 className="font-semibold text-tm-black mb-2">
+                  Cache Performance
+                </h4>
                 <dl className="space-y-1">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Total Reads:</dt>
@@ -1336,7 +1343,9 @@ const SystemHealthSection: React.FC = () => {
 
               {/* Snapshot Details */}
               <div>
-                <h4 className="font-semibold text-tm-black mb-2">Snapshot Coverage</h4>
+                <h4 className="font-semibold text-tm-black mb-2">
+                  Snapshot Coverage
+                </h4>
                 <dl className="space-y-1">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Total Snapshots:</dt>
@@ -1344,30 +1353,42 @@ const SystemHealthSection: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">With Analytics:</dt>
-                    <dd className="font-mono">{details.snapshots.withPrecomputedAnalytics}</dd>
+                    <dd className="font-mono">
+                      {details.snapshots.withPrecomputedAnalytics}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Coverage:</dt>
-                    <dd className="font-mono">{details.snapshots.analyticsCoverage}%</dd>
+                    <dd className="font-mono">
+                      {details.snapshots.analyticsCoverage}%
+                    </dd>
                   </div>
                 </dl>
               </div>
 
               {/* Performance Details */}
               <div>
-                <h4 className="font-semibold text-tm-black mb-2">Performance</h4>
+                <h4 className="font-semibold text-tm-black mb-2">
+                  Performance
+                </h4>
                 <dl className="space-y-1">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Avg Response:</dt>
-                    <dd className="font-mono">{details.performance.averageResponseTime.toFixed(2)}ms</dd>
+                    <dd className="font-mono">
+                      {details.performance.averageResponseTime.toFixed(2)}ms
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Concurrent Reads:</dt>
-                    <dd className="font-mono">{details.performance.concurrentReads}</dd>
+                    <dd className="font-mono">
+                      {details.performance.concurrentReads}
+                    </dd>
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Max Concurrent:</dt>
-                    <dd className="font-mono">{details.performance.maxConcurrentReads}</dd>
+                    <dd className="font-mono">
+                      {details.performance.maxConcurrentReads}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -1378,7 +1399,6 @@ const SystemHealthSection: React.FC = () => {
     </div>
   )
 }
-
 
 /**
  * Access Denied Component
@@ -1433,7 +1453,6 @@ const AccessDenied: React.FC = () => {
     </div>
   )
 }
-
 
 const AdminPage: React.FC = () => {
   const { isAuthenticated } = useAuth()
@@ -1502,7 +1521,6 @@ const AdminPage: React.FC = () => {
             <SnapshotsSection />
           </SectionCard>
 
-
           {/* Analytics Section */}
           <SectionCard
             title="Analytics"
@@ -1527,7 +1545,6 @@ const AdminPage: React.FC = () => {
             <AnalyticsSection />
           </SectionCard>
 
-
           {/* System Health Section */}
           <SectionCard
             title="System Health"
@@ -1551,8 +1568,6 @@ const AdminPage: React.FC = () => {
           >
             <SystemHealthSection />
           </SectionCard>
-
-
 
           {/* Quick Links */}
           <section className="bg-white rounded-lg shadow-sm p-6">
