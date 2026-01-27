@@ -29,6 +29,7 @@ import { ILogger, ICircuitBreakerManager } from '../types/serviceInterfaces.js'
 import type {
   ISnapshotStorage,
   IRawCSVStorage,
+  ITimeSeriesIndexStorage,
 } from '../types/storageInterfaces.js'
 import { AnalyticsEngine } from './AnalyticsEngine.js'
 import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
@@ -167,6 +168,21 @@ export interface ProductionServiceFactory {
    * Requirements: 1.3, 1.4
    */
   createRawCSVStorage(): IRawCSVStorage
+
+  /**
+   * Create ITimeSeriesIndexStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalTimeSeriesIndexStorage
+   * - 'gcp': Returns FirestoreTimeSeriesIndexStorage
+   *
+   * This method provides access to time-series index operations including
+   * deleteSnapshotEntries for cascading deletion support.
+   *
+   * Requirements: 4.4, 4.5
+   */
+  createTimeSeriesIndexStorage(): ITimeSeriesIndexStorage
 
   /**
    * Create RefreshService instance
@@ -316,6 +332,21 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       'IRawCSVStorage',
       createServiceFactory(
         () => storageProviders.rawCSVStorage,
+        async () => {
+          // Storage providers don't have dispose methods
+        }
+      )
+    )
+
+    // Register ITimeSeriesIndexStorage interface
+    // Provides abstracted time-series index operations that work with both
+    // local filesystem and Cloud Firestore backends
+    // Includes deleteSnapshotEntries for cascading deletion support
+    // Requirements: 4.1, 4.4, 4.5
+    container.registerInterface<ITimeSeriesIndexStorage>(
+      'ITimeSeriesIndexStorage',
+      createServiceFactory(
+        () => storageProviders.timeSeriesIndexStorage,
         async () => {
           // Storage providers don't have dispose methods
         }
@@ -575,6 +606,24 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
+   * Create ITimeSeriesIndexStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalTimeSeriesIndexStorage
+   * - 'gcp': Returns FirestoreTimeSeriesIndexStorage
+   *
+   * This method provides access to time-series index operations including
+   * deleteSnapshotEntries for cascading deletion support.
+   *
+   * Requirements: 4.4, 4.5
+   */
+  createTimeSeriesIndexStorage(): ITimeSeriesIndexStorage {
+    const storageProviders = StorageProviderFactory.createFromEnvironment()
+    return storageProviders.timeSeriesIndexStorage
+  }
+
+  /**
    * Create RefreshService instance
    *
    * This method creates a RefreshService using the storage abstraction layer,
@@ -762,6 +811,19 @@ export const InterfaceTokens = {
    * based on the STORAGE_PROVIDER environment variable.
    */
   IRawCSVStorage: createInterfaceToken<IRawCSVStorage>('IRawCSVStorage'),
+
+  /**
+   * Token for ITimeSeriesIndexStorage interface
+   *
+   * Resolves to either LocalTimeSeriesIndexStorage or FirestoreTimeSeriesIndexStorage
+   * based on the STORAGE_PROVIDER environment variable.
+   * Includes deleteSnapshotEntries for cascading deletion support.
+   *
+   * Requirements: 4.1, 4.4, 4.5
+   */
+  ITimeSeriesIndexStorage: createInterfaceToken<ITimeSeriesIndexStorage>(
+    'ITimeSeriesIndexStorage'
+  ),
 }
 
 /**

@@ -19,6 +19,8 @@ import type {
   ISnapshotStorage,
   IRawCSVStorage,
   IDistrictConfigStorage,
+  ITimeSeriesIndexStorage,
+  IBackfillJobStorage,
   StorageConfig,
   StorageProviderType,
 } from '../../types/storageInterfaces.js'
@@ -26,8 +28,12 @@ import { StorageConfigurationError } from '../../types/storageInterfaces.js'
 import { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
 import { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
+import { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
+import { LocalBackfillJobStorage } from './LocalBackfillJobStorage.js'
 import { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
 import { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
+import { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStorage.js'
+import { FirestoreBackfillJobStorage } from './FirestoreBackfillJobStorage.js'
 import { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 import { CacheConfigService } from '../CacheConfigService.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
@@ -52,13 +58,15 @@ const DEFAULT_FIRESTORE_COLLECTION = 'snapshots'
 /**
  * Result of storage provider creation
  *
- * Contains snapshot, raw CSV, and district configuration storage implementations
- * configured for the selected provider type.
+ * Contains snapshot, raw CSV, district configuration, time-series index,
+ * and backfill job storage implementations configured for the selected provider type.
  */
 export interface StorageProviders {
   snapshotStorage: ISnapshotStorage
   rawCSVStorage: IRawCSVStorage
   districtConfigStorage: IDistrictConfigStorage
+  timeSeriesIndexStorage: ITimeSeriesIndexStorage
+  backfillJobStorage: IBackfillJobStorage
 }
 
 // ============================================================================
@@ -232,6 +240,12 @@ export class StorageProviderFactory {
     // Create district configuration storage
     const districtConfigStorage = new LocalDistrictConfigStorage(cacheDir)
 
+    // Create time-series index storage
+    const timeSeriesIndexStorage = new LocalTimeSeriesIndexStorage({ cacheDir })
+
+    // Create backfill job storage
+    const backfillJobStorage = new LocalBackfillJobStorage(cacheDir)
+
     logger.info('Local storage providers created successfully', {
       operation: 'createLocalProviders',
       cacheDir,
@@ -241,6 +255,8 @@ export class StorageProviderFactory {
       snapshotStorage,
       rawCSVStorage,
       districtConfigStorage,
+      timeSeriesIndexStorage,
+      backfillJobStorage,
     }
   }
 
@@ -351,6 +367,16 @@ export class StorageProviderFactory {
       projectId: gcpConfig.projectId,
     })
 
+    // Create Firestore time-series index storage
+    const timeSeriesIndexStorage = new FirestoreTimeSeriesIndexStorage({
+      projectId: gcpConfig.projectId,
+    })
+
+    // Create Firestore backfill job storage
+    const backfillJobStorage = new FirestoreBackfillJobStorage({
+      projectId: gcpConfig.projectId,
+    })
+
     logger.info('GCP storage providers created successfully', {
       operation: 'createGCPProviders',
       projectId: gcpConfig.projectId,
@@ -362,6 +388,8 @@ export class StorageProviderFactory {
       snapshotStorage,
       rawCSVStorage,
       districtConfigStorage,
+      timeSeriesIndexStorage,
+      backfillJobStorage,
     }
   }
 }

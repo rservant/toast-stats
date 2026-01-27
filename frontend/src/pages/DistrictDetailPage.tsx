@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useLeadershipInsights } from '../hooks/useLeadershipInsights'
 import { useDistinguishedClubAnalytics } from '../hooks/useDistinguishedClubAnalytics'
@@ -35,10 +36,8 @@ import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognit
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
-import { DistrictBackfillButton } from '../components/DistrictBackfillButton'
 import { DistrictExportButton } from '../components/DistrictExportButton'
 import { LazyChart } from '../components/LazyChart'
-import { useBackfillContext } from '../contexts/BackfillContext'
 import GlobalRankingsTab from '../components/GlobalRankingsTab'
 
 type TabType =
@@ -54,7 +53,6 @@ const DistrictDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
-  const { addBackfill } = useBackfillContext()
 
   // Use program year context
   const {
@@ -108,7 +106,23 @@ const DistrictDetailPage: React.FC = () => {
     setSelectedDate,
   ])
 
-  // Fetch analytics with program year boundaries
+  // Fetch aggregated analytics for overview tab (summary, trends, yearOverYear)
+  // This uses pre-computed data for faster response times
+  // Requirements: 5.1, 5.2
+  const {
+    data: aggregatedAnalytics,
+    isLoading: isLoadingAggregated,
+    error: aggregatedError,
+    refetch: refetchAggregated,
+    usedFallback: aggregatedUsedFallback,
+  } = useAggregatedAnalytics(
+    districtId || null,
+    selectedProgramYear.startDate,
+    selectedDate || selectedProgramYear.endDate
+  )
+
+  // Fetch full analytics for detailed views (clubs, divisions, analytics tabs)
+  // This provides full club arrays needed for tables and detailed panels
   const {
     data: analytics,
     isLoading: isLoadingAnalytics,
@@ -165,6 +179,41 @@ const DistrictDetailPage: React.FC = () => {
     return analytics?.vulnerableClubs || []
   }, [analytics?.vulnerableClubs])
 
+  // Derive overview data from aggregated analytics (for overview tab)
+  // This uses pre-computed data for faster initial load
+  // Requirements: 5.1, 5.2
+  const overviewData = React.useMemo(() => {
+    if (!aggregatedAnalytics) return null
+
+    return {
+      // Summary metrics from aggregated endpoint
+      totalMembership: aggregatedAnalytics.summary.totalMembership,
+      membershipChange: aggregatedAnalytics.summary.membershipChange,
+      clubCounts: aggregatedAnalytics.summary.clubCounts,
+      distinguishedClubs: aggregatedAnalytics.summary.distinguishedClubs,
+      distinguishedProjection:
+        aggregatedAnalytics.summary.distinguishedProjection,
+      // Trend data from time-series index
+      membershipTrend: aggregatedAnalytics.trends.membership,
+      // Year-over-year comparison
+      yearOverYear: aggregatedAnalytics.yearOverYear,
+      // Metadata
+      dataSource: aggregatedAnalytics.dataSource,
+      computedAt: aggregatedAnalytics.computedAt,
+    }
+  }, [aggregatedAnalytics])
+
+  // Determine if we have data for the overview tab
+  // Use aggregated data if available, otherwise fall back to full analytics
+  const hasOverviewData = overviewData !== null || analytics !== null
+
+  // Loading state for overview tab - prefer aggregated, but show loading if both are loading
+  const isLoadingOverview = isLoadingAggregated && isLoadingAnalytics
+
+  // Error state for overview - only show error if both fail
+  const overviewError =
+    aggregatedError && analyticsError ? aggregatedError : null
+
   // Get available dates sorted in descending order (filtered by program year)
   const availableDates = cachedDatesInProgramYear.sort((a, b) =>
     b.localeCompare(a)
@@ -198,17 +247,6 @@ const DistrictDetailPage: React.FC = () => {
 
   // Format date for display (using utility to avoid UTC timezone shift)
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
-
-  // Handle backfill start
-  const handleBackfillStart = (backfillId: string) => {
-    if (districtId) {
-      addBackfill({
-        backfillId,
-        type: 'district',
-        districtId,
-      })
-    }
-  }
 
   return (
     <ErrorBoundary>
@@ -302,11 +340,7 @@ const DistrictDetailPage: React.FC = () => {
                       Actions
                     </label>
                     <div className="flex gap-2">
-                      <DistrictBackfillButton
-                        districtId={districtId}
-                        onBackfillStart={handleBackfillStart}
-                      />
-                      {analytics && (
+                      {hasOverviewData && (
                         <DistrictExportButton
                           districtId={districtId}
                           startDate={selectedProgramYear.startDate}
@@ -353,32 +387,58 @@ const DistrictDetailPage: React.FC = () => {
           </div>
 
           {/* Global Error State */}
-          {analyticsError && activeTab === 'overview' && (
+          {overviewError && activeTab === 'overview' && (
             <ErrorDisplay
-              error={analyticsError}
+              error={overviewError}
               title="Failed to Load District Data"
-              onRetry={() => refetchAnalytics()}
+              onRetry={() => {
+                refetchAggregated()
+                refetchAnalytics()
+              }}
               showDetails={true}
             />
           )}
 
-          {/* No Data Prompt with Backfill Button */}
-          {!isLoadingAnalytics &&
-            !analyticsError &&
-            !analytics &&
+          {/* Fallback Data Warning - shown when aggregated endpoint failed but individual succeeded */}
+          {aggregatedUsedFallback &&
+            activeTab === 'overview' &&
+            hasOverviewData && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-yellow-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <span className="text-sm font-tm-body text-yellow-800">
+                    Using fallback data source. Pre-computed analytics may not
+                    be available.
+                  </span>
+                </div>
+              </div>
+            )}
+
+          {/* No Data Prompt - Direct to Admin Panel for Backfill */}
+          {!isLoadingOverview &&
+            !overviewError &&
+            !hasOverviewData &&
             districtId && (
               <EmptyState
                 title="No District Data Available"
-                message="This district doesn't have any cached historical data yet. Start a backfill to collect performance data and unlock powerful analytics."
+                message="This district doesn't have any cached historical data yet. Use the Admin Panel to start a backfill and collect performance data."
                 icon="backfill"
                 action={{
-                  label: 'Start Backfill',
+                  label: 'Go to Admin Panel',
                   onClick: () => {
-                    // This will be handled by the DistrictBackfillButton component
-                    const backfillBtn = document.querySelector(
-                      '[data-district-backfill]'
-                    ) as HTMLButtonElement
-                    if (backfillBtn) backfillBtn.click()
+                    navigate('/admin')
                   },
                 }}
               />
@@ -386,7 +446,7 @@ const DistrictDetailPage: React.FC = () => {
 
           {/* Tab Content */}
           <div className="space-y-4 sm:space-y-6">
-            {activeTab === 'overview' && districtId && analytics && (
+            {activeTab === 'overview' && districtId && hasOverviewData && (
               <>
                 {/* District Overview - Now uses global date selector */}
                 <DistrictOverview
@@ -396,7 +456,7 @@ const DistrictDetailPage: React.FC = () => {
                   programYearStartDate={selectedProgramYear.startDate}
                 />
 
-                {/* Intervention Required Clubs Panel */}
+                {/* Intervention Required Clubs Panel - uses full analytics for club details */}
                 {analytics && (
                   <InterventionRequiredClubsPanel
                     clubs={interventionRequiredClubs}
@@ -404,7 +464,7 @@ const DistrictDetailPage: React.FC = () => {
                   />
                 )}
 
-                {/* Vulnerable Clubs Panel */}
+                {/* Vulnerable Clubs Panel - uses full analytics for club details */}
                 {analytics && (
                   <VulnerableClubsPanel
                     clubs={vulnerableClubs}
@@ -412,19 +472,33 @@ const DistrictDetailPage: React.FC = () => {
                   />
                 )}
 
-                {/* Distinguished Progress Chart - Lazy Loaded */}
-                {analytics && (
-                  <LazyChart height="300px">
-                    <DistinguishedProgressChart
-                      distinguishedClubs={analytics.distinguishedClubs}
-                      distinguishedProjection={
-                        analytics.distinguishedProjection
+                {/* Distinguished Progress Chart - uses aggregated data for faster load */}
+                {/* Falls back to full analytics if aggregated not available */}
+                <LazyChart height="300px">
+                  <DistinguishedProgressChart
+                    distinguishedClubs={
+                      overviewData?.distinguishedClubs ??
+                      analytics?.distinguishedClubs ?? {
+                        smedley: 0,
+                        presidents: 0,
+                        select: 0,
+                        distinguished: 0,
+                        total: 0,
                       }
-                      totalClubs={analytics.allClubs.length}
-                      isLoading={isLoadingAnalytics}
-                    />
-                  </LazyChart>
-                )}
+                    }
+                    distinguishedProjection={
+                      overviewData?.distinguishedProjection ??
+                      analytics?.distinguishedProjection ??
+                      0
+                    }
+                    totalClubs={
+                      overviewData?.clubCounts.total ??
+                      analytics?.allClubs.length ??
+                      0
+                    }
+                    isLoading={isLoadingOverview}
+                  />
+                </LazyChart>
               </>
             )}
 

@@ -592,13 +592,15 @@ describe('StorageProviderFactory', () => {
   // ============================================================================
 
   describe('Return Type Verification', () => {
-    it('should return object with snapshotStorage, rawCSVStorage, and districtConfigStorage properties', () => {
+    it('should return object with snapshotStorage, rawCSVStorage, districtConfigStorage, timeSeriesIndexStorage, and backfillJobStorage properties', () => {
       const result = StorageProviderFactory.createFromEnvironment()
 
       expect(result).toHaveProperty('snapshotStorage')
       expect(result).toHaveProperty('rawCSVStorage')
       expect(result).toHaveProperty('districtConfigStorage')
-      expect(Object.keys(result)).toHaveLength(3)
+      expect(result).toHaveProperty('timeSeriesIndexStorage')
+      expect(result).toHaveProperty('backfillJobStorage')
+      expect(Object.keys(result)).toHaveLength(5)
     })
 
     it('should return ISnapshotStorage-compatible snapshotStorage for local provider', () => {

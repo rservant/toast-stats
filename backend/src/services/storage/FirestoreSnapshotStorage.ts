@@ -858,6 +858,100 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
   }
 
   /**
+   * Delete a snapshot and all its associated data
+   *
+   * Removes the snapshot document and all district documents in the
+   * districts subcollection. Uses batched deletes for efficiency when
+   * there are many district documents (max 500 operations per batch).
+   *
+   * Does NOT handle cascading deletion of time-series or analytics data -
+   * that responsibility belongs to the calling code (e.g., admin routes).
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if the snapshot was successfully deleted, false if it didn't exist
+   * @throws StorageOperationError on deletion failure
+   *
+   * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
+   */
+  async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    const startTime = Date.now()
+    this.validateSnapshotId(snapshotId)
+
+    logger.info('Starting deleteSnapshot operation', {
+      operation: 'deleteSnapshot',
+      snapshot_id: snapshotId,
+    })
+
+    try {
+      return await this.circuitBreaker.execute(
+        async () => {
+          const snapshotDocRef = this.getSnapshotDocRef(snapshotId)
+          const docSnapshot = await snapshotDocRef.get()
+
+          if (!docSnapshot.exists) {
+            logger.info('Snapshot not found for deletion', {
+              operation: 'deleteSnapshot',
+              snapshot_id: snapshotId,
+              duration_ms: Date.now() - startTime,
+            })
+            return false
+          }
+
+          // Delete all documents in the districts subcollection
+          const districtsCollection = this.getDistrictsCollection(snapshotId)
+          const districtsSnapshot = await districtsCollection.get()
+
+          // Use batched deletes for efficiency (max 500 operations per batch)
+          const batchSize = 500
+          let deletedCount = 0
+
+          for (let i = 0; i < districtsSnapshot.docs.length; i += batchSize) {
+            const batch = this.firestore.batch()
+            const chunk = districtsSnapshot.docs.slice(i, i + batchSize)
+
+            for (const doc of chunk) {
+              batch.delete(doc.ref)
+              deletedCount++
+            }
+
+            await batch.commit()
+          }
+
+          // Delete the root snapshot document
+          await snapshotDocRef.delete()
+
+          logger.info('Successfully deleted snapshot', {
+            operation: 'deleteSnapshot',
+            snapshot_id: snapshotId,
+            districts_deleted: deletedCount,
+            duration_ms: Date.now() - startTime,
+          })
+
+          return true
+        },
+        { operation: 'deleteSnapshot', snapshotId }
+      )
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to delete snapshot', {
+        operation: 'deleteSnapshot',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+        duration_ms: Date.now() - startTime,
+      })
+
+      throw new StorageOperationError(
+        `Failed to delete snapshot ${snapshotId}: ${errorMessage}`,
+        'deleteSnapshot',
+        'firestore',
+        this.isRetryableError(error),
+        error instanceof Error ? error : undefined
+      )
+    }
+  }
+
+  /**
    * Check if the storage is properly initialized and accessible
    *
    * Performs two checks:

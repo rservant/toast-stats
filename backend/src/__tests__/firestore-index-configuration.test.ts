@@ -121,7 +121,7 @@ describe('Feature: firestore-index-fix - Index Configuration Validation', () => 
       })
     })
 
-    describe('Required indexes (Requirements 1.1, 1.2, 1.3)', () => {
+    describe('Required indexes (Requirements 1.1, 1.2)', () => {
       let config: FirestoreIndexConfig
 
       beforeAll(() => {
@@ -159,22 +159,13 @@ describe('Feature: firestore-index-fix - Index Configuration Validation', () => 
         expect(snapshotsCompositeIndex?.queryScope).toBe('COLLECTION')
       })
 
-      it('should define index for history subcollection with timestamp descending (Requirement 1.3)', () => {
-        const historyIndex = config.indexes.find(
-          index =>
-            index.collectionGroup === 'history' &&
-            index.fields.length === 1 &&
-            index.fields[0]?.fieldPath === 'timestamp' &&
-            index.fields[0]?.order === 'DESCENDING'
-        )
+      // Note: Single-field indexes like history.timestamp are automatically
+      // managed by Firestore and don't need to be defined in firestore.indexes.json
 
-        expect(historyIndex).toBeDefined()
-        expect(historyIndex?.queryScope).toBe('COLLECTION')
-      })
-
-      it('should have exactly 3 required indexes defined', () => {
-        // This ensures we don't have missing or extra indexes
-        expect(config.indexes.length).toBe(3)
+      it('should have exactly 2 required composite indexes defined', () => {
+        // Only composite indexes need to be explicitly defined
+        // Single-field indexes are automatically created by Firestore
+        expect(config.indexes.length).toBe(2)
       })
     })
   })

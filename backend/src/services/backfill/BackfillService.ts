@@ -42,6 +42,10 @@ import type {
 } from '../../types/snapshots.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 import { CSVType } from '../../types/rawCSVCache.js'
+import {
+  DistrictIdValidator,
+  type IDistrictIdValidator,
+} from '../DistrictIdValidator.js'
 
 import { JobManager } from './JobManager.js'
 import { DataSourceSelector } from './DataSourceSelector.js'
@@ -72,6 +76,7 @@ export class BackfillService {
   // @ts-expect-error - These will be used in future implementations
   private _cacheCircuitBreaker: CircuitBreaker
   private rankingCalculator?: RankingCalculator
+  private readonly districtIdValidator: IDistrictIdValidator
 
   // Performance optimization components (Requirement 9.1, 9.2, 9.3)
   private rateLimiter: RateLimiter
@@ -105,6 +110,9 @@ export class BackfillService {
     if (rankingCalculator !== undefined) {
       this.rankingCalculator = rankingCalculator
     }
+
+    // Initialize district ID validator for filtering invalid records
+    this.districtIdValidator = new DistrictIdValidator()
 
     // Initialize managers
     this.jobManager = new JobManager()
@@ -1277,6 +1285,33 @@ export class BackfillService {
         )
       }
 
+      // Filter invalid district IDs before processing (Requirements 2.1, 2.2, 2.3, 2.4)
+      const validationResult =
+        this.districtIdValidator.filterValidRecords(allDistrictsData)
+      const validRecords = validationResult.valid
+
+      // Log validation summary if records were rejected
+      if (validationResult.rejected.length > 0) {
+        logger.info(
+          'Filtered invalid district records during backfill rankings calculation',
+          {
+            backfillId,
+            date,
+            totalRecords: allDistrictsData.length,
+            validRecords: validRecords.length,
+            rejectedRecords: validationResult.rejected.length,
+            operation: 'fetchAndCalculateAllDistrictsRankings',
+          }
+        )
+      }
+
+      // Throw error if no valid records remain after filtering
+      if (validRecords.length === 0) {
+        throw new Error(
+          `No valid district records found in All Districts CSV for date ${date} after filtering invalid IDs.`
+        )
+      }
+
       const cacheMetadata = await rawCSVStorage.getCacheMetadata(date)
       const actualCsvDate = cacheMetadata?.date || date
 
@@ -1291,55 +1326,53 @@ export class BackfillService {
         backfillId,
         requestedDate: date,
         actualCsvDate,
-        recordCount: allDistrictsData.length,
+        recordCount: validRecords.length,
         isClosingPeriod: closingPeriodInfo.isClosingPeriod,
         snapshotDate: closingPeriodInfo.snapshotDate,
         dataMonth: closingPeriodInfo.dataMonth,
         operation: 'fetchAndCalculateAllDistrictsRankings',
       })
 
-      // Convert CSV records to DistrictStatistics format for ranking calculation
-      const districtStats: DistrictStatistics[] = allDistrictsData.map(
-        record => {
-          const districtId = String(
-            record['DISTRICT'] || record['District'] || ''
-          )
-            .replace(/^District\s+/i, '')
-            .trim()
+      // Convert filtered CSV records to DistrictStatistics format for ranking calculation
+      const districtStats: DistrictStatistics[] = validRecords.map(record => {
+        const districtId = String(
+          record['DISTRICT'] || record['District'] || ''
+        )
+          .replace(/^District\s+/i, '')
+          .trim()
 
-          return {
-            districtId,
-            asOfDate: actualCsvDate,
-            membership: {
-              total: 0,
-              change: 0,
-              changePercent: 0,
-              byClub: [],
-            },
-            clubs: {
-              total: 0,
-              active: 0,
-              suspended: 0,
-              ineligible: 0,
-              low: 0,
-              distinguished: 0,
-            },
-            education: {
-              totalAwards: 0,
-              byType: [],
-              topClubs: [],
-            },
-            districtPerformance: [record],
-            divisionPerformance: [],
-            clubPerformance: [],
-          }
+        return {
+          districtId,
+          asOfDate: actualCsvDate,
+          membership: {
+            total: 0,
+            change: 0,
+            changePercent: 0,
+            byClub: [],
+          },
+          clubs: {
+            total: 0,
+            active: 0,
+            suspended: 0,
+            ineligible: 0,
+            low: 0,
+            distinguished: 0,
+          },
+          education: {
+            totalAwards: 0,
+            byType: [],
+            topClubs: [],
+          },
+          districtPerformance: [record],
+          divisionPerformance: [],
+          clubPerformance: [],
         }
-      )
+      })
 
       logger.debug('Converted All Districts CSV to DistrictStatistics', {
         backfillId,
         date,
-        inputCount: allDistrictsData.length,
+        inputCount: validRecords.length,
         outputCount: districtStats.length,
         operation: 'fetchAndCalculateAllDistrictsRankings',
       })
