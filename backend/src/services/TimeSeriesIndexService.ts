@@ -538,15 +538,31 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
       `${programYear}.json`
     )
 
+    // Normalize and ensure the resolved path stays within the timeSeriesDir
+    const resolvedRoot = path.resolve(this.timeSeriesDir)
+    const resolvedPath = path.resolve(filePath)
+
+    if (!resolvedPath.startsWith(resolvedRoot + path.sep)) {
+      logger.error('Resolved index file path is outside of timeSeriesDir', {
+        operation: 'readProgramYearIndex',
+        districtId,
+        programYear,
+        timeSeriesDir: resolvedRoot,
+        resolvedPath,
+      })
+      // Treat as not found to avoid exposing filesystem details
+      return null
+    }
+
     try {
-      const content = await fs.readFile(filePath, 'utf-8')
+      const content = await fs.readFile(resolvedPath, 'utf-8')
       const indexFile: ProgramYearIndexFile = JSON.parse(content)
 
       logger.debug('Read program year index file', {
         operation: 'readProgramYearIndex',
         districtId,
         programYear,
-        filePath,
+        filePath: resolvedPath,
         dataPointCount: indexFile.dataPoints.length,
       })
 
@@ -557,7 +573,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
           operation: 'readProgramYearIndex',
           districtId,
           programYear,
-          filePath,
+          filePath: resolvedPath,
         })
         return null
       }
@@ -568,7 +584,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
         operation: 'readProgramYearIndex',
         districtId,
         programYear,
-        filePath,
+        filePath: resolvedPath,
         error: errorMessage,
       })
       throw new Error(`Failed to read program year index: ${errorMessage}`)
