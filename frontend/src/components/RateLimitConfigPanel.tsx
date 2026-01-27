@@ -7,7 +7,7 @@
  * Requirements: 12.1, 12.2
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   useRateLimitConfig,
   useUpdateRateLimitConfig,
@@ -312,11 +312,22 @@ export const RateLimitConfigPanel: React.FC<RateLimitConfigPanelProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   // Sync form values with fetched config
+  // Track the last config we synced to avoid unnecessary updates
+  const lastSyncedConfigRef = useRef<string | null>(null)
+
+  // This effect syncs external config data to local form state.
+  // This is a valid pattern for form initialization from async data.
   useEffect(() => {
     if (currentConfig) {
-      setFormValues(currentConfig)
-      setHasChanges(false)
-      setValidationErrors({})
+      const configString = JSON.stringify(currentConfig)
+      // Only update if the config has actually changed
+      if (lastSyncedConfigRef.current !== configString) {
+        lastSyncedConfigRef.current = configString
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Valid pattern for syncing external data to form state
+        setFormValues(currentConfig)
+        setHasChanges(false)
+        setValidationErrors({})
+      }
     }
   }, [currentConfig])
 

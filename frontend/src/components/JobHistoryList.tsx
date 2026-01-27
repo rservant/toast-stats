@@ -598,9 +598,13 @@ export interface JobHistoryListProps {
  */
 export const JobHistoryList: React.FC<JobHistoryListProps> = ({
   pageSize = DEFAULT_PAGE_SIZE,
-  autoRefresh: _autoRefresh = false, // Available for future use
-  refreshInterval: _refreshInterval = 30000, // Available for future use
-  onJobSelect: _onJobSelect, // Available for future use
+  // These props are defined in the interface for future use but not yet implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  autoRefresh = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  refreshInterval = 30000,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onJobSelect,
   className = '',
 }) => {
   // Filter state

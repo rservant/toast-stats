@@ -37,7 +37,11 @@ import {
   AnalyticsGenerator,
   type GenerationProgress,
 } from './AnalyticsGenerator.js'
-import { RecoveryManager, type RecoveryResult } from './RecoveryManager.js'
+import {
+  RecoveryManager,
+  type RecoveryResult,
+  type RecoveryStatus,
+} from './RecoveryManager.js'
 import { logger } from '../../../utils/logger.js'
 
 // ============================================================================
@@ -517,7 +521,7 @@ export class UnifiedBackfillService {
    *
    * @returns Current recovery status
    */
-  getRecoveryStatus() {
+  getRecoveryStatus(): RecoveryStatus {
     return this.recoveryManager.getRecoveryStatus()
   }
 
