@@ -534,8 +534,8 @@ export const JobProgressDisplay: React.FC<JobProgressDisplayProps> = ({
   result,
   error,
   startedAt,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  completedAt, // Available for future use - will be used for duration display
+  // Using underscore prefix to indicate intentionally unused - will be used for duration display
+  completedAt: _completedAt,
   resumedAt,
   rateLimitConfig,
   rateLimitConfigLoading = false,

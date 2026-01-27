@@ -32,6 +32,11 @@ export default [
       ...reactHooks.configs.recommended.rules,
       // TypeScript Steering Document Requirements - Relaxed for Maintenance Mode
       '@typescript-eslint/no-explicit-any': 'error',
+      // Allow underscore-prefixed variables to be unused (for intentionally unused params)
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/explicit-function-return-type': [
         'off', // Disabled for maintenance mode - too many warnings
         {
