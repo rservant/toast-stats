@@ -781,12 +781,46 @@ export class LocalBackfillJobStorage implements IBackfillJobStorage {
   // ============================================================================
 
   /**
+   * Validate a job ID to prevent path traversal and other unsafe characters.
+   *
+   * Job IDs are expected to be simple identifiers (for example, UUID-like strings)
+   * and must not contain path separators or other characters that could affect
+   * filesystem paths.
+   *
+   * @param jobId - The job identifier to validate
+   * @throws StorageOperationError if the jobId is invalid
+   */
+  private validateJobId(jobId: string): void {
+    const isValid =
+      typeof jobId === 'string' &&
+      jobId.length > 0 &&
+      /^[A-Za-z0-9_-]+$/.test(jobId)
+
+    if (!isValid) {
+      logger.warn('Invalid job ID format detected', {
+        jobId,
+        jobsDir: this.jobsDir,
+        provider: 'local',
+        operation: 'validateJobId',
+      })
+
+      throw new StorageOperationError(
+        `Invalid job ID format: '${jobId}'`,
+        'validateJobId',
+        'local',
+        false
+      )
+    }
+  }
+
+  /**
    * Get the file path for a job
    *
    * @param jobId - The job identifier
    * @returns The full file path for the job
    */
   private getJobFilePath(jobId: string): string {
+    this.validateJobId(jobId)
     return path.join(this.jobsDir, `${jobId}.json`)
   }
 
