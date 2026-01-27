@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAdminSnapshots, SnapshotMetadata } from '../hooks/useAdminSnapshots'
-import {
-  useAdminBackfill,
-  BackfillJobStatus,
-  BackfillError,
-} from '../hooks/useAdminBackfill'
 import { useAdminMonitoring } from '../hooks/useAdminMonitoring'
+import {
+  useUnifiedBackfill,
+  BackfillJobType,
+  JobPreview,
+} from '../hooks/useUnifiedBackfill'
+import { JobProgressDisplay } from '../components/JobProgressDisplay'
 
 /**
  * AdminPage Component
@@ -738,161 +739,215 @@ const SnapshotsSection: React.FC = () => {
 }
 
 /**
- * Get status badge color based on backfill status
+ * Preview Dialog Component for showing dry run results
  */
-function getBackfillStatusColor(status: BackfillJobStatus): string {
-  switch (status) {
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'running':
-      return 'bg-blue-100 text-blue-800'
-    case 'completed':
-      return 'bg-green-100 text-green-800'
-    case 'failed':
-      return 'bg-red-100 text-red-800'
-    case 'cancelled':
-      return 'bg-gray-100 text-gray-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
+interface PreviewDialogProps {
+  isOpen: boolean
+  preview: JobPreview | null
+  isLoading: boolean
+  onConfirm: () => void
+  onCancel: () => void
 }
 
-/**
- * Get human-readable status label
- */
-function getBackfillStatusLabel(status: BackfillJobStatus): string {
-  switch (status) {
-    case 'pending':
-      return 'Pending'
-    case 'running':
-      return 'Running'
-    case 'completed':
-      return 'Completed'
-    case 'failed':
-      return 'Failed'
-    case 'cancelled':
-      return 'Cancelled'
-    default:
-      return 'Unknown'
-  }
-}
-
-/**
- * Format estimated time remaining
- */
-function formatTimeRemaining(seconds: number | undefined): string {
-  if (seconds === undefined || seconds <= 0) return '--'
-  if (seconds < 60) return `${Math.round(seconds)}s`
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`
-  return `${Math.round(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`
-}
-
-/**
- * BackfillErrorList component - displays errors from backfill operation
- */
-interface BackfillErrorListProps {
-  errors: BackfillError[]
-  maxDisplay?: number
-}
-
-const BackfillErrorList: React.FC<BackfillErrorListProps> = ({
-  errors,
-  maxDisplay = 5,
+const PreviewDialog: React.FC<PreviewDialogProps> = ({
+  isOpen,
+  preview,
+  isLoading,
+  onConfirm,
+  onCancel,
 }) => {
-  const [showAll, setShowAll] = useState(false)
-  const displayedErrors = showAll ? errors : errors.slice(0, maxDisplay)
-  const hasMore = errors.length > maxDisplay
+  if (!isOpen) return null
 
-  if (errors.length === 0) return null
-
-  return (
-    <div className="mt-4 bg-red-50 border border-red-200 rounded-sm p-3">
-      <h4 className="text-sm font-semibold text-red-800 mb-2">
-        Errors ({errors.length})
-      </h4>
-      <ul className="space-y-1 text-sm text-red-700">
-        {displayedErrors.map((error, index) => (
-          <li key={`${error.snapshotId}-${index}`} className="flex gap-2">
-            <span className="font-mono text-xs bg-red-100 px-1 rounded">
-              {error.snapshotId}
-            </span>
-            <span>{error.message}</span>
-          </li>
-        ))}
-      </ul>
-      {hasMore && !showAll && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-        >
-          Show all {errors.length} errors
-        </button>
-      )}
-    </div>
-  )
-}
-
-/**
- * ProgressBar component for backfill progress
- */
-interface ProgressBarProps {
-  percent: number
-  status: BackfillJobStatus
-}
-
-const ProgressBar: React.FC<ProgressBarProps> = ({ percent, status }) => {
-  const getBarColor = () => {
-    switch (status) {
-      case 'running':
-      case 'pending':
-        return 'bg-tm-loyal-blue'
-      case 'completed':
-        return 'bg-green-500'
-      case 'failed':
-        return 'bg-red-500'
-      case 'cancelled':
-        return 'bg-gray-400'
-      default:
-        return 'bg-gray-400'
-    }
+  const formatDuration = (ms: number): string => {
+    if (ms < 60000) return `${Math.round(ms / 1000)}s`
+    if (ms < 3600000) return `${Math.round(ms / 60000)}m`
+    return `${Math.round(ms / 3600000)}h ${Math.round((ms % 3600000) / 60000)}m`
   }
 
   return (
-    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all duration-300 ${getBarColor()}`}
-        style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
-        role="progressbar"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="preview-dialog-title"
+    >
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg min-w-[320px] p-6">
+        <h3
+          id="preview-dialog-title"
+          className="text-lg font-semibold text-tm-black font-tm-headline mb-4"
+        >
+          Backfill Preview
+        </h3>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <svg
+              className="animate-spin h-8 w-8 text-tm-loyal-blue"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <span className="ml-2 text-gray-600 font-tm-body">
+              Generating preview...
+            </span>
+          </div>
+        ) : preview ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-sm p-3">
+                <p className="text-xs text-gray-500 font-tm-body">Job Type</p>
+                <p className="text-sm font-semibold text-tm-black font-tm-headline">
+                  {preview.jobType === 'data-collection'
+                    ? 'Data Collection'
+                    : 'Analytics Generation'}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-sm p-3">
+                <p className="text-xs text-gray-500 font-tm-body">
+                  Total Items
+                </p>
+                <p className="text-sm font-semibold text-tm-black font-tm-headline">
+                  {preview.totalItems}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-sm p-3">
+                <p className="text-xs text-gray-500 font-tm-body">Date Range</p>
+                <p className="text-sm font-semibold text-tm-black font-tm-headline">
+                  {preview.dateRange.startDate} - {preview.dateRange.endDate}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-sm p-3">
+                <p className="text-xs text-gray-500 font-tm-body">
+                  Est. Duration
+                </p>
+                <p className="text-sm font-semibold text-tm-black font-tm-headline">
+                  {formatDuration(preview.estimatedDuration)}
+                </p>
+              </div>
+            </div>
+
+            {preview.affectedDistricts.length > 0 && (
+              <div className="bg-gray-50 rounded-sm p-3">
+                <p className="text-xs text-gray-500 font-tm-body mb-1">
+                  Affected Districts ({preview.affectedDistricts.length})
+                </p>
+                <p className="text-sm text-tm-black font-mono">
+                  {preview.affectedDistricts.slice(0, 10).join(', ')}
+                  {preview.affectedDistricts.length > 10 &&
+                    ` +${preview.affectedDistricts.length - 10} more`}
+                </p>
+              </div>
+            )}
+
+            {preview.itemBreakdown.dates &&
+              preview.itemBreakdown.dates.length > 0 && (
+                <div className="bg-gray-50 rounded-sm p-3">
+                  <p className="text-xs text-gray-500 font-tm-body mb-1">
+                    Dates to Process ({preview.itemBreakdown.dates.length})
+                  </p>
+                  <p className="text-sm text-tm-black font-mono">
+                    {preview.itemBreakdown.dates.slice(0, 5).join(', ')}
+                    {preview.itemBreakdown.dates.length > 5 &&
+                      ` +${preview.itemBreakdown.dates.length - 5} more`}
+                  </p>
+                </div>
+              )}
+
+            {preview.itemBreakdown.snapshotIds &&
+              preview.itemBreakdown.snapshotIds.length > 0 && (
+                <div className="bg-gray-50 rounded-sm p-3">
+                  <p className="text-xs text-gray-500 font-tm-body mb-1">
+                    Snapshots to Process (
+                    {preview.itemBreakdown.snapshotIds.length})
+                  </p>
+                  <p className="text-sm text-tm-black font-mono truncate">
+                    {preview.itemBreakdown.snapshotIds.slice(0, 3).join(', ')}
+                    {preview.itemBreakdown.snapshotIds.length > 3 &&
+                      ` +${preview.itemBreakdown.snapshotIds.length - 3} more`}
+                  </p>
+                </div>
+              )}
+
+            <p className="text-sm text-gray-600 font-tm-body">
+              Are you sure you want to start this backfill operation?
+            </p>
+          </div>
+        ) : (
+          <p className="text-gray-600 font-tm-body">
+            No preview data available.
+          </p>
+        )}
+
+        <div className="flex justify-end gap-3 mt-6">
+          <ActionButton variant="secondary" onClick={onCancel}>
+            Cancel
+          </ActionButton>
+          <ActionButton
+            variant="primary"
+            onClick={onConfirm}
+            disabled={isLoading || !preview || preview.totalItems === 0}
+          >
+            Start Backfill
+          </ActionButton>
+        </div>
+      </div>
     </div>
   )
 }
 
 /**
- * Analytics Section Component
+ * Unified Backfill Section Component
  *
  * Provides controls for:
- * - Triggering backfill operations
- * - Displaying real-time backfill progress
- * - Showing pre-computation status summary
+ * - Selecting job type (data-collection or analytics-generation)
+ * - Specifying date ranges for data collection
+ * - Previewing what would be processed (dry run)
+ * - Starting and monitoring backfill jobs
+ * - Viewing job progress and errors
  *
- * Requirements: 10.4, 10.6
+ * Requirements: 8.1, 8.2, 8.3, 11.1, 11.4
  */
-const AnalyticsSection: React.FC = () => {
+const BackfillSection: React.FC = () => {
+  // Form state
+  const [jobType, setJobType] = useState<BackfillJobType>('data-collection')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [skipExisting, setSkipExisting] = useState(true)
+
+  // UI state
   const [currentJobId, setCurrentJobId] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewData, setPreviewData] = useState<JobPreview | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
 
+  // Hooks
   const {
-    triggerBackfill,
-    progress,
-    cancelBackfill,
-    isBackfillRunning,
-    isBackfillComplete,
-    backfillStatus,
-  } = useAdminBackfill(currentJobId)
+    createJob,
+    jobStatus,
+    cancelJob,
+    previewJob,
+    rateLimitConfig,
+    isJobRunning,
+    isJobComplete,
+  } = useUnifiedBackfill({
+    jobId: currentJobId,
+    statusEnabled: !!currentJobId,
+    pollingInterval: 2000,
+    rateLimitConfigEnabled: true,
+  })
 
   // Get snapshot data for pre-computation status
   const { snapshots, isLoading: isLoadingSnapshots } = useAdminSnapshots(100)
@@ -902,102 +957,218 @@ const AnalyticsSection: React.FC = () => {
   const successfulSnapshots = snapshots.filter(
     s => s.status === 'success'
   ).length
-  const coveragePercent =
-    totalSnapshots > 0
-      ? Math.round((successfulSnapshots / totalSnapshots) * 100)
-      : 0
 
-  const handleTriggerBackfill = useCallback(async () => {
+  // Calculate yesterday's date for max date constraint
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const maxDate = yesterday.toISOString().split('T')[0]
+
+  // Handle preview request
+  const handlePreview = useCallback(async () => {
     try {
-      const result = await triggerBackfill.mutateAsync({})
-      setCurrentJobId(result.jobId)
+      const result = await previewJob.mutateAsync({
+        jobType,
+        ...(jobType === 'data-collection' && startDate && { startDate }),
+        ...(jobType === 'data-collection' && endDate && { endDate }),
+        ...(jobType === 'data-collection' && { skipExisting }),
+      })
+      setPreviewData(result.preview)
+      setShowPreview(true)
     } catch {
       // Error is handled by the mutation
     }
-  }, [triggerBackfill])
+  }, [jobType, startDate, endDate, skipExisting, previewJob])
 
+  // Handle job creation
+  const handleStartBackfill = useCallback(async () => {
+    try {
+      const result = await createJob.mutateAsync({
+        jobType,
+        ...(jobType === 'data-collection' && startDate && { startDate }),
+        ...(jobType === 'data-collection' && endDate && { endDate }),
+        ...(jobType === 'data-collection' && { skipExisting }),
+      })
+      setCurrentJobId(result.jobId)
+      setShowPreview(false)
+      setPreviewData(null)
+    } catch {
+      // Error is handled by the mutation
+    }
+  }, [jobType, startDate, endDate, skipExisting, createJob])
+
+  // Handle job cancellation
   const handleCancelBackfill = useCallback(async () => {
     if (!currentJobId) return
     try {
-      await cancelBackfill.mutateAsync(currentJobId)
+      await cancelJob.mutateAsync(currentJobId)
       setConfirmCancel(false)
     } catch {
       // Error is handled by the mutation
     }
-  }, [cancelBackfill, currentJobId])
+  }, [cancelJob, currentJobId])
 
+  // Handle dismiss progress
   const handleDismissProgress = useCallback(() => {
     setCurrentJobId(null)
     setConfirmCancel(false)
   }, [])
 
-  // Progress data
-  const progressData = progress.data?.progress
-  const progressPercent = progressData?.percentComplete ?? 0
-  const processedSnapshots = progressData?.processedSnapshots ?? 0
-  const totalToProcess = progressData?.totalSnapshots ?? 0
-  const currentSnapshot = progressData?.currentSnapshot
-  const errors = progressData?.errors ?? []
-  const startedAt = progressData?.startedAt
-  const completedAt = progressData?.completedAt
-  const estimatedTimeRemaining = progressData?.estimatedTimeRemaining
+  // completedAt is used in the summary stats section
+  const completedAt = jobStatus.data?.completedAt
 
   return (
     <>
       <div className="space-y-4">
-        {/* Pre-computation Status Summary */}
+        {/* Summary stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-gray-50 rounded-sm p-3 border-l-4 border-l-tm-loyal-blue">
             <p className="text-xs text-gray-500 font-tm-body">
-              Pre-computed Status
+              Total Snapshots
             </p>
             <p className="text-2xl font-bold text-tm-black font-tm-headline">
-              {isLoadingSnapshots
-                ? '--'
-                : `${successfulSnapshots}/${totalSnapshots}`}
+              {isLoadingSnapshots ? '--' : totalSnapshots}
             </p>
           </div>
           <div className="bg-gray-50 rounded-sm p-3 border-l-4 border-l-green-500">
-            <p className="text-xs text-gray-500 font-tm-body">Last Backfill</p>
+            <p className="text-xs text-gray-500 font-tm-body">Successful</p>
+            <p className="text-2xl font-bold text-tm-black font-tm-headline">
+              {isLoadingSnapshots ? '--' : successfulSnapshots}
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-sm p-3 border-l-4 border-l-tm-happy-yellow">
+            <p className="text-xs text-gray-500 font-tm-body">Last Completed</p>
             <p className="text-lg font-semibold text-tm-black font-tm-headline">
               {completedAt ? formatDate(completedAt) : '--'}
             </p>
           </div>
-          <div className="bg-gray-50 rounded-sm p-3 border-l-4 border-l-tm-happy-yellow">
-            <p className="text-xs text-gray-500 font-tm-body">Coverage</p>
-            <p className="text-2xl font-bold text-tm-black font-tm-headline">
-              {isLoadingSnapshots ? '--' : `${coveragePercent}%`}
-            </p>
-          </div>
         </div>
 
-        {/* Backfill Controls */}
+        {/* Backfill Configuration */}
         <div className="bg-gray-50 rounded-sm p-4">
-          <p className="text-sm text-gray-600 mb-3 font-tm-body">
-            Analytics management controls for pre-computed data. Trigger
-            backfill operations to generate analytics for existing snapshots.
-          </p>
+          <h4 className="text-sm font-semibold text-tm-black font-tm-headline mb-3">
+            Backfill Configuration
+          </h4>
+
+          {/* Job Type Selector */}
+          <div className="mb-4">
+            <label
+              htmlFor="job-type"
+              className="block text-sm font-medium text-gray-700 mb-1 font-tm-body"
+            >
+              Job Type
+            </label>
+            <select
+              id="job-type"
+              value={jobType}
+              onChange={e => setJobType(e.target.value as BackfillJobType)}
+              disabled={isJobRunning}
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] disabled:bg-gray-100 disabled:cursor-not-allowed"
+            >
+              <option value="data-collection">Data Collection</option>
+              <option value="analytics-generation">Analytics Generation</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1 font-tm-body">
+              {jobType === 'data-collection'
+                ? 'Fetch historical Toastmasters dashboard data for specified date range'
+                : 'Generate pre-computed analytics for existing snapshots'}
+            </p>
+          </div>
+
+          {/* Date Range (only for data-collection) */}
+          {jobType === 'data-collection' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label
+                  htmlFor="start-date-backfill"
+                  className="block text-sm font-medium text-gray-700 mb-1 font-tm-body"
+                >
+                  Start Date (optional)
+                </label>
+                <input
+                  type="date"
+                  id="start-date-backfill"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  max={maxDate}
+                  disabled={isJobRunning}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Defaults to program year start
+                </p>
+              </div>
+              <div>
+                <label
+                  htmlFor="end-date-backfill"
+                  className="block text-sm font-medium text-gray-700 mb-1 font-tm-body"
+                >
+                  End Date (optional)
+                </label>
+                <input
+                  type="date"
+                  id="end-date-backfill"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  max={maxDate}
+                  disabled={isJobRunning}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Defaults to yesterday (dashboard data is delayed)
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Options (only for data-collection) */}
+          {jobType === 'data-collection' && (
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipExisting}
+                  onChange={e => setSkipExisting(e.target.checked)}
+                  disabled={isJobRunning}
+                  className="h-4 w-4 text-tm-loyal-blue rounded border-gray-300 focus:ring-tm-loyal-blue disabled:cursor-not-allowed"
+                />
+                <span className="text-sm text-gray-700 font-tm-body">
+                  Skip existing data (recommended)
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 mt-1 ml-6">
+                Only fetch data for dates that aren't already cached
+              </p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
           <div className="flex flex-wrap gap-3">
             <ActionButton
-              variant="primary"
-              onClick={handleTriggerBackfill}
-              disabled={isBackfillRunning || triggerBackfill.isPending}
-              isLoading={triggerBackfill.isPending}
+              variant="secondary"
+              onClick={handlePreview}
+              disabled={isJobRunning || previewJob.isPending}
+              isLoading={previewJob.isPending}
             >
-              {isBackfillRunning
-                ? 'Backfill in Progress...'
-                : 'Trigger Backfill'}
+              Preview
             </ActionButton>
-            {isBackfillRunning && (
+            <ActionButton
+              variant="primary"
+              onClick={handleStartBackfill}
+              disabled={isJobRunning || createJob.isPending}
+              isLoading={createJob.isPending}
+            >
+              {isJobRunning ? 'Backfill in Progress...' : 'Start Backfill'}
+            </ActionButton>
+            {isJobRunning && (
               <ActionButton
                 variant="danger"
                 onClick={() => setConfirmCancel(true)}
-                disabled={cancelBackfill.isPending}
+                disabled={cancelJob.isPending}
               >
                 Cancel Backfill
               </ActionButton>
             )}
-            {isBackfillComplete && currentJobId && (
+            {isJobComplete && currentJobId && (
               <ActionButton variant="secondary" onClick={handleDismissProgress}>
                 Dismiss
               </ActionButton>
@@ -1006,128 +1177,77 @@ const AnalyticsSection: React.FC = () => {
         </div>
 
         {/* Backfill Progress Display */}
-        {currentJobId && (
-          <div className="bg-white border border-gray-200 rounded-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-tm-black font-tm-headline">
-                Backfill Progress
-              </h4>
-              {backfillStatus && (
-                <span
-                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBackfillStatusColor(backfillStatus)}`}
-                >
-                  {getBackfillStatusLabel(backfillStatus)}
-                </span>
-              )}
-            </div>
+        {currentJobId && jobStatus.data && (
+          <JobProgressDisplay
+            jobId={currentJobId}
+            jobType={jobStatus.data.jobType}
+            status={jobStatus.data.status}
+            progress={jobStatus.data.progress}
+            result={jobStatus.data.result}
+            error={jobStatus.data.error}
+            startedAt={jobStatus.data.startedAt}
+            completedAt={jobStatus.data.completedAt}
+            resumedAt={jobStatus.data.resumedAt}
+            rateLimitConfig={rateLimitConfig.data}
+            rateLimitConfigLoading={rateLimitConfig.isLoading}
+            isLoading={jobStatus.isLoading}
+            loadError={
+              jobStatus.error instanceof Error ? jobStatus.error : null
+            }
+            onCancel={() => setConfirmCancel(true)}
+            isCancelling={cancelJob.isPending}
+            onDismiss={handleDismissProgress}
+          />
+        )}
 
-            {/* Progress Bar */}
-            {backfillStatus && (
-              <div className="mb-3">
-                <ProgressBar
-                  percent={progressPercent}
-                  status={backfillStatus}
-                />
-              </div>
-            )}
-
-            {/* Progress Details */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-              <div>
-                <p className="text-gray-500 font-tm-body">Progress</p>
-                <p className="font-semibold text-tm-black">
-                  {processedSnapshots} / {totalToProcess} ({progressPercent}%)
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500 font-tm-body">Current Snapshot</p>
-                <p className="font-mono text-xs text-tm-black">
-                  {currentSnapshot ?? '--'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500 font-tm-body">Started</p>
-                <p className="text-tm-black">
-                  {startedAt ? formatDate(startedAt) : '--'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500 font-tm-body">Est. Remaining</p>
-                <p className="text-tm-black">
-                  {formatTimeRemaining(estimatedTimeRemaining)}
-                </p>
-              </div>
-            </div>
-
-            {/* Error Display */}
-            <BackfillErrorList errors={errors} />
-
-            {/* Loading State */}
-            {progress.isLoading && !progressData && (
-              <div className="flex items-center justify-center py-4">
-                <svg
-                  className="animate-spin h-5 w-5 text-tm-loyal-blue mr-2"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                <span className="text-gray-600 font-tm-body">
-                  Loading progress...
-                </span>
-              </div>
-            )}
-
-            {/* Error State */}
-            {progress.isError && (
-              <div className="mt-3 bg-red-50 border border-red-200 rounded-sm p-3">
-                <p className="text-sm text-red-800 font-tm-body">
-                  Failed to load progress:{' '}
-                  {progress.error instanceof Error
-                    ? progress.error.message
-                    : 'Unknown error'}
-                </p>
-              </div>
-            )}
+        {/* Create Job Error Display */}
+        {createJob.isError && (
+          <div className="bg-red-50 border border-red-200 rounded-sm p-4">
+            <p className="text-red-800 font-tm-body">
+              Failed to create backfill job:{' '}
+              {createJob.error instanceof Error
+                ? createJob.error.message
+                : 'Unknown error'}
+            </p>
           </div>
         )}
 
-        {/* Trigger Error Display */}
-        {triggerBackfill.isError && (
+        {/* Preview Error Display */}
+        {previewJob.isError && (
           <div className="bg-red-50 border border-red-200 rounded-sm p-4">
             <p className="text-red-800 font-tm-body">
-              Failed to trigger backfill:{' '}
-              {triggerBackfill.error instanceof Error
-                ? triggerBackfill.error.message
+              Failed to generate preview:{' '}
+              {previewJob.error instanceof Error
+                ? previewJob.error.message
                 : 'Unknown error'}
             </p>
           </div>
         )}
       </div>
 
+      {/* Preview Dialog */}
+      <PreviewDialog
+        isOpen={showPreview}
+        preview={previewData}
+        isLoading={previewJob.isPending}
+        onConfirm={handleStartBackfill}
+        onCancel={() => {
+          setShowPreview(false)
+          setPreviewData(null)
+        }}
+      />
+
       {/* Cancel Confirmation Dialog */}
       <ConfirmDialog
         isOpen={confirmCancel}
         title="Cancel Backfill"
-        message="Are you sure you want to cancel the running backfill operation? Progress will be lost and you will need to restart from the beginning."
+        message="Are you sure you want to cancel the running backfill operation? Progress will be saved and you can resume later if needed."
         confirmLabel="Cancel Backfill"
         cancelLabel="Continue Running"
         variant="warning"
         onConfirm={handleCancelBackfill}
         onCancel={() => setConfirmCancel(false)}
-        isLoading={cancelBackfill.isPending}
+        isLoading={cancelJob.isPending}
       />
     </>
   )
@@ -1466,10 +1586,10 @@ const AdminPage: React.FC = () => {
             <SnapshotsSection />
           </SectionCard>
 
-          {/* Analytics Section */}
+          {/* Unified Backfill Section */}
           <SectionCard
-            title="Analytics"
-            description="Manage pre-computed analytics - trigger backfill and view computation status"
+            title="Unified Backfill"
+            description="Manage backfill operations - data collection and analytics generation"
             icon={
               <svg
                 className="w-6 h-6"
@@ -1482,12 +1602,12 @@ const AdminPage: React.FC = () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
             }
           >
-            <AnalyticsSection />
+            <BackfillSection />
           </SectionCard>
 
           {/* System Health Section */}

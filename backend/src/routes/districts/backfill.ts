@@ -2,9 +2,18 @@
  * Backfill routes module
  * Handles global and district-specific backfill operations
  * Requirements: 2.3
+ *
+ * @deprecated These endpoints are deprecated and will be removed in a future release.
+ * Please use the new unified backfill API at /api/admin/unified-backfill/* instead.
+ *
+ * Migration guide:
+ * - POST /api/districts/backfill -> POST /api/admin/unified-backfill
+ * - GET /api/districts/backfill/:id -> GET /api/admin/unified-backfill/:jobId
+ * - DELETE /api/districts/backfill/:id -> DELETE /api/admin/unified-backfill/:jobId
+ * - POST /api/districts/:districtId/backfill -> POST /api/admin/unified-backfill (with targetDistricts)
  */
 
-import { Router, type Request, type Response } from 'express'
+import { Router, type Request, type Response, type NextFunction } from 'express'
 import { logger } from '../../utils/logger.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
 import type { BackfillRequest } from '../../services/UnifiedBackfillService.js'
@@ -19,8 +28,48 @@ import {
 export const backfillRouter = Router()
 
 /**
+ * Deprecation message for old backfill endpoints
+ */
+const DEPRECATION_MESSAGE =
+  'This endpoint is deprecated. Please use /api/admin/unified-backfill instead. See documentation for migration guide.'
+
+/**
+ * Middleware to add deprecation warnings to all responses
+ * Logs a warning and adds Deprecation header to responses
+ */
+function deprecationMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  // Log deprecation warning
+  logger.warn('Deprecated endpoint called', {
+    operation: `${req.method} ${req.originalUrl}`,
+    deprecated_endpoint: req.path,
+    replacement: '/api/admin/unified-backfill',
+    user_agent: req.get('user-agent'),
+    ip: req.ip,
+  })
+
+  // Add deprecation headers to response
+  // Using the standard Deprecation header (RFC 8594)
+  res.set({
+    Deprecation: 'true',
+    'X-Deprecation-Notice': DEPRECATION_MESSAGE,
+    Link: '</api/admin/unified-backfill>; rel="successor-version"',
+  })
+
+  next()
+}
+
+// Apply deprecation middleware to all routes in this router
+backfillRouter.use(deprecationMiddleware)
+
+/**
  * POST /api/districts/backfill
  * Initiate backfill of historical data with modern API design
+ *
+ * @deprecated This endpoint is deprecated. Use POST /api/admin/unified-backfill instead.
  *
  * Enhanced features:
  * - Comprehensive input validation with detailed error messages
@@ -31,12 +80,13 @@ export const backfillRouter = Router()
 backfillRouter.post('/backfill', async (req: Request, res: Response) => {
   const requestId = `backfill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-  logger.info('Received backfill initiation request', {
+  logger.info('Received backfill initiation request (DEPRECATED ENDPOINT)', {
     operation: 'POST /api/districts/backfill',
     request_id: requestId,
     user_agent: req.get('user-agent'),
     ip: req.ip,
     body_keys: Object.keys(req.body || {}),
+    deprecation_notice: DEPRECATION_MESSAGE,
   })
 
   try {
@@ -129,6 +179,12 @@ backfillRouter.post('/backfill', async (req: Request, res: Response) => {
         self: `/api/districts/backfill/${backfillId}`,
         cancel: `/api/districts/backfill/${backfillId}`,
       },
+      deprecation: {
+        deprecated: true,
+        message: DEPRECATION_MESSAGE,
+        replacement: '/api/admin/unified-backfill',
+        sunset: 'This endpoint will be removed in a future release',
+      },
     })
 
     logger.info('Backfill initiated successfully', {
@@ -179,6 +235,8 @@ backfillRouter.post('/backfill', async (req: Request, res: Response) => {
  * GET /api/districts/backfill/:backfillId
  * Get backfill progress/status with enhanced response format
  *
+ * @deprecated This endpoint is deprecated. Use GET /api/admin/unified-backfill/:jobId instead.
+ *
  * Enhanced features:
  * - Detailed progress information
  * - Proper HTTP status codes
@@ -191,12 +249,13 @@ backfillRouter.get(
     const requestId = `backfill_status_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const { backfillId } = req.params
 
-    logger.info('Received backfill status request', {
+    logger.info('Received backfill status request (DEPRECATED ENDPOINT)', {
       operation: 'GET /api/districts/backfill/:backfillId',
       request_id: requestId,
       backfill_id: backfillId,
       user_agent: req.get('user-agent'),
       ip: req.ip,
+      deprecation_notice: DEPRECATION_MESSAGE,
     })
 
     try {
@@ -290,6 +349,12 @@ backfillRouter.get(
           efficiency_rating: status.collectionStrategy.estimatedEfficiency,
           collection_method: status.collectionStrategy.type,
         },
+        deprecation: {
+          deprecated: true,
+          message: DEPRECATION_MESSAGE,
+          replacement: '/api/admin/unified-backfill/:jobId',
+          sunset: 'This endpoint will be removed in a future release',
+        },
       }
 
       // Remove undefined values from links
@@ -337,6 +402,8 @@ backfillRouter.get(
  * DELETE /api/districts/backfill/:backfillId
  * Cancel a backfill job with enhanced error handling
  *
+ * @deprecated This endpoint is deprecated. Use DELETE /api/admin/unified-backfill/:jobId instead.
+ *
  * Enhanced features:
  * - Detailed validation and error messages
  * - Proper HTTP status codes
@@ -349,13 +416,17 @@ backfillRouter.delete(
     const requestId = `backfill_cancel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const { backfillId } = req.params
 
-    logger.info('Received backfill cancellation request', {
-      operation: 'DELETE /api/districts/backfill/:backfillId',
-      request_id: requestId,
-      backfill_id: backfillId,
-      user_agent: req.get('user-agent'),
-      ip: req.ip,
-    })
+    logger.info(
+      'Received backfill cancellation request (DEPRECATED ENDPOINT)',
+      {
+        operation: 'DELETE /api/districts/backfill/:backfillId',
+        request_id: requestId,
+        backfill_id: backfillId,
+        user_agent: req.get('user-agent'),
+        ip: req.ip,
+        deprecation_notice: DEPRECATION_MESSAGE,
+      }
+    )
 
     try {
       // Validate backfill ID format
@@ -473,6 +544,12 @@ backfillRouter.delete(
         links: {
           status: `/api/districts/backfill/${backfillId}`,
         },
+        deprecation: {
+          deprecated: true,
+          message: DEPRECATION_MESSAGE,
+          replacement: '/api/admin/unified-backfill/:jobId',
+          sunset: 'This endpoint will be removed in a future release',
+        },
       })
 
       logger.info('Backfill cancelled successfully', {
@@ -508,10 +585,19 @@ backfillRouter.delete(
 /**
  * POST /api/districts/:districtId/backfill
  * Initiate backfill of historical data for a specific district
+ *
+ * @deprecated This endpoint is deprecated. Use POST /api/admin/unified-backfill with targetDistricts instead.
  */
 backfillRouter.post(
   '/:districtId/backfill',
   async (req: Request, res: Response) => {
+    // Log deprecation warning for district-specific endpoint
+    logger.warn('Deprecated district-specific backfill endpoint called', {
+      operation: 'POST /api/districts/:districtId/backfill',
+      district_id: req.params['districtId'],
+      deprecation_notice: DEPRECATION_MESSAGE,
+    })
+
     try {
       const districtId = getValidDistrictId(req)
       const { startDate, endDate } = req.body
@@ -607,7 +693,15 @@ backfillRouter.post(
 
       const status = backfillService.getBackfillStatus(backfillId)
 
-      res.json(status)
+      res.json({
+        ...status,
+        deprecation: {
+          deprecated: true,
+          message: DEPRECATION_MESSAGE,
+          replacement: '/api/admin/unified-backfill',
+          sunset: 'This endpoint will be removed in a future release',
+        },
+      })
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
 
@@ -649,10 +743,23 @@ backfillRouter.post(
 /**
  * GET /api/districts/:districtId/backfill/:backfillId
  * Check backfill status for a specific district
+ *
+ * @deprecated This endpoint is deprecated. Use GET /api/admin/unified-backfill/:jobId instead.
  */
 backfillRouter.get(
   '/:districtId/backfill/:backfillId',
   async (req: Request, res: Response) => {
+    // Log deprecation warning for district-specific endpoint
+    logger.warn(
+      'Deprecated district-specific backfill status endpoint called',
+      {
+        operation: 'GET /api/districts/:districtId/backfill/:backfillId',
+        district_id: req.params['districtId'],
+        backfill_id: req.params['backfillId'],
+        deprecation_notice: DEPRECATION_MESSAGE,
+      }
+    )
+
     try {
       const districtId = getValidDistrictId(req)
       const backfillId = req.params['backfillId']
@@ -703,7 +810,15 @@ backfillRouter.get(
         return
       }
 
-      res.json(status)
+      res.json({
+        ...status,
+        deprecation: {
+          deprecated: true,
+          message: DEPRECATION_MESSAGE,
+          replacement: '/api/admin/unified-backfill/:jobId',
+          sunset: 'This endpoint will be removed in a future release',
+        },
+      })
     } catch (error) {
       const errorResponse = transformErrorResponse(error)
 
@@ -721,10 +836,23 @@ backfillRouter.get(
 /**
  * DELETE /api/districts/:districtId/backfill/:backfillId
  * Cancel a backfill job for a specific district
+ *
+ * @deprecated This endpoint is deprecated. Use DELETE /api/admin/unified-backfill/:jobId instead.
  */
 backfillRouter.delete(
   '/:districtId/backfill/:backfillId',
   async (req: Request, res: Response) => {
+    // Log deprecation warning for district-specific endpoint
+    logger.warn(
+      'Deprecated district-specific backfill cancel endpoint called',
+      {
+        operation: 'DELETE /api/districts/:districtId/backfill/:backfillId',
+        district_id: req.params['districtId'],
+        backfill_id: req.params['backfillId'],
+        deprecation_notice: DEPRECATION_MESSAGE,
+      }
+    )
+
     try {
       const districtId = getValidDistrictId(req)
       const backfillId = req.params['backfillId']
@@ -793,6 +921,12 @@ backfillRouter.delete(
       res.json({
         success: true,
         message: 'Backfill cancelled successfully',
+        deprecation: {
+          deprecated: true,
+          message: DEPRECATION_MESSAGE,
+          replacement: '/api/admin/unified-backfill/:jobId',
+          sunset: 'This endpoint will be removed in a future release',
+        },
       })
     } catch (error) {
       const errorResponse = transformErrorResponse(error)

@@ -855,3 +855,517 @@ export class StorageOperationError extends StorageError {
     Object.setPrototypeOf(this, StorageOperationError.prototype)
   }
 }
+
+// ============================================================================
+// Backfill Job Storage Types
+// ============================================================================
+
+/**
+ * Backfill job type
+ *
+ * Defines the two types of backfill operations supported by the unified service:
+ * - 'data-collection': Fetches historical Toastmasters dashboard data for specified date ranges
+ * - 'analytics-generation': Generates pre-computed analytics for existing snapshots
+ *
+ * Requirements: 2.1, 2.4
+ */
+export type BackfillJobType = 'data-collection' | 'analytics-generation'
+
+/**
+ * Backfill job status
+ *
+ * Represents the lifecycle states of a backfill job:
+ * - 'pending': Job created but not yet started
+ * - 'running': Job is actively processing items
+ * - 'completed': Job finished successfully
+ * - 'failed': Job terminated due to an error
+ * - 'cancelled': Job was manually cancelled by user
+ * - 'recovering': Job is being resumed after server restart
+ *
+ * Requirements: 1.4, 2.1, 7.2
+ */
+export type BackfillJobStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'recovering'
+
+/**
+ * Job configuration
+ *
+ * Configuration options for a backfill job, including date range,
+ * target districts, and rate limiting overrides.
+ *
+ * Requirements: 4.1, 4.2, 12.3
+ */
+export interface JobConfig {
+  /**
+   * Start date for the backfill operation (ISO format: YYYY-MM-DD)
+   * For data-collection: start of date range to fetch
+   * For analytics-generation: optional filter for snapshot selection
+   */
+  startDate?: string
+
+  /**
+   * End date for the backfill operation (ISO format: YYYY-MM-DD)
+   * For data-collection: end of date range to fetch
+   * For analytics-generation: optional filter for snapshot selection
+   */
+  endDate?: string
+
+  /**
+   * Target districts for data-collection jobs
+   * If not specified, all configured districts are processed
+   */
+  targetDistricts?: string[]
+
+  /**
+   * Skip existing data during data-collection
+   * When true, dates with existing snapshots are skipped
+   */
+  skipExisting?: boolean
+
+  /**
+   * Rate limiting overrides for this specific job
+   * Merged with global rate limit configuration
+   */
+  rateLimitOverrides?: Partial<RateLimitConfig>
+}
+
+/**
+ * District progress tracking
+ *
+ * Tracks the progress of processing for an individual district
+ * within a backfill job.
+ *
+ * Requirements: 5.3
+ */
+export interface DistrictProgress {
+  /** The district identifier */
+  districtId: string
+
+  /** Current processing status for this district */
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
+
+  /** Number of items processed for this district */
+  itemsProcessed: number
+
+  /** Total number of items to process for this district */
+  itemsTotal: number
+
+  /** Last error message if status is 'failed' */
+  lastError: string | null
+}
+
+/**
+ * Job error record
+ *
+ * Records details about an error that occurred during job processing.
+ *
+ * Requirements: 5.4
+ */
+export interface JobError {
+  /** Identifier of the item that caused the error */
+  itemId: string
+
+  /** Human-readable error message */
+  message: string
+
+  /** ISO timestamp when the error occurred */
+  occurredAt: string
+
+  /** Whether the operation can be retried */
+  isRetryable: boolean
+}
+
+/**
+ * Job progress tracking
+ *
+ * Comprehensive progress information for a backfill job, including
+ * overall counts and per-district breakdown.
+ *
+ * Requirements: 5.1, 5.3, 5.4
+ */
+export interface JobProgress {
+  /** Total number of items to process */
+  totalItems: number
+
+  /** Number of items successfully processed */
+  processedItems: number
+
+  /** Number of items that failed processing */
+  failedItems: number
+
+  /** Number of items skipped (e.g., already exist) */
+  skippedItems: number
+
+  /** Identifier of the item currently being processed */
+  currentItem: string | null
+
+  /**
+   * Per-district progress breakdown
+   * Uses Record instead of Map for JSON serialization compatibility
+   */
+  districtProgress: Record<string, DistrictProgress>
+
+  /** List of errors encountered during processing */
+  errors: JobError[]
+}
+
+/**
+ * Job checkpoint for recovery
+ *
+ * Stores checkpoint information to enable resuming a job after
+ * server restart. Contains the last processed item and a list
+ * of completed items for skip-on-resume logic.
+ *
+ * Requirements: 1.4, 10.2, 10.3
+ */
+export interface JobCheckpoint {
+  /** Identifier of the last successfully processed item */
+  lastProcessedItem: string
+
+  /** ISO timestamp of the last checkpoint update */
+  lastProcessedAt: string
+
+  /** List of completed item IDs for skip-on-resume */
+  itemsCompleted: string[]
+}
+
+/**
+ * Job result summary
+ *
+ * Summary of job execution results, recorded when a job completes
+ * (successfully or with partial failures).
+ *
+ * Requirements: 5.1, 6.2
+ */
+export interface JobResult {
+  /** Number of items successfully processed */
+  itemsProcessed: number
+
+  /** Number of items that failed processing */
+  itemsFailed: number
+
+  /** Number of items skipped */
+  itemsSkipped: number
+
+  /** Snapshot IDs created (for data-collection jobs) */
+  snapshotIds: string[]
+
+  /** Total job duration in milliseconds */
+  duration: number
+}
+
+/**
+ * Rate limit configuration
+ *
+ * Configuration for rate limiting during backfill operations to
+ * prevent overwhelming external services.
+ *
+ * Requirements: 12.1, 12.2, 12.5
+ */
+export interface RateLimitConfig {
+  /** Maximum requests per minute */
+  maxRequestsPerMinute: number
+
+  /** Maximum concurrent requests */
+  maxConcurrent: number
+
+  /** Minimum delay between requests in milliseconds */
+  minDelayMs: number
+
+  /** Maximum delay between requests in milliseconds (for backoff) */
+  maxDelayMs: number
+
+  /** Multiplier for exponential backoff */
+  backoffMultiplier: number
+}
+
+/**
+ * Backfill job
+ *
+ * Complete representation of a backfill job including configuration,
+ * progress, checkpoint, timing, and results.
+ *
+ * Requirements: 1.2, 2.1, 2.4, 5.1, 10.2
+ */
+export interface BackfillJob {
+  /** Unique job identifier */
+  jobId: string
+
+  /** Type of backfill operation */
+  jobType: BackfillJobType
+
+  /** Current job status */
+  status: BackfillJobStatus
+
+  /** Job configuration */
+  config: JobConfig
+
+  /** Progress tracking information */
+  progress: JobProgress
+
+  /** Checkpoint for recovery (null if no checkpoint saved) */
+  checkpoint: JobCheckpoint | null
+
+  /** ISO timestamp when the job was created */
+  createdAt: string
+
+  /** ISO timestamp when the job started processing (null if pending) */
+  startedAt: string | null
+
+  /** ISO timestamp when the job completed (null if not completed) */
+  completedAt: string | null
+
+  /** ISO timestamp when the job was resumed after restart (null if not recovered) */
+  resumedAt: string | null
+
+  /** Job result summary (null if not completed) */
+  result: JobResult | null
+
+  /** Error message if job failed (null otherwise) */
+  error: string | null
+}
+
+/**
+ * Options for listing backfill jobs
+ *
+ * Filtering and pagination options for the listJobs operation.
+ *
+ * Requirements: 1.6, 6.3, 9.5
+ */
+export interface ListJobsOptions {
+  /** Maximum number of jobs to return */
+  limit?: number
+
+  /** Number of jobs to skip (for pagination) */
+  offset?: number
+
+  /** Filter by job status */
+  status?: BackfillJobStatus[]
+
+  /** Filter by job type */
+  jobType?: BackfillJobType[]
+
+  /** Filter by start date (jobs created on or after this date) */
+  startDateFrom?: string
+
+  /** Filter by start date (jobs created on or before this date) */
+  startDateTo?: string
+}
+
+/**
+ * Backfill job storage interface - abstracts backfill job persistence
+ *
+ * This interface defines the contract for backfill job storage operations,
+ * enabling swappable implementations for local filesystem and Firestore storage.
+ *
+ * Follows the existing storage abstraction pattern established by
+ * ISnapshotStorage, IRawCSVStorage, and IDistrictConfigStorage.
+ *
+ * Requirements: 1.1, 1.2, 1.5, 1.6, 1.7, 12.5
+ */
+export interface IBackfillJobStorage {
+  // ============================================================================
+  // Job CRUD Operations
+  // ============================================================================
+
+  /**
+   * Create a new backfill job
+   *
+   * Persists a new backfill job record. The job must have a unique jobId.
+   * Throws an error if a job with the same ID already exists.
+   *
+   * @param job - The backfill job to create
+   * @throws StorageOperationError if the job already exists or write fails
+   *
+   * Requirements: 1.2
+   */
+  createJob(job: BackfillJob): Promise<void>
+
+  /**
+   * Get a backfill job by ID
+   *
+   * Retrieves a backfill job by its unique identifier.
+   * Returns null if the job does not exist.
+   *
+   * @param jobId - The unique job identifier
+   * @returns The backfill job or null if not found
+   * @throws StorageOperationError on read failure
+   *
+   * Requirements: 1.2
+   */
+  getJob(jobId: string): Promise<BackfillJob | null>
+
+  /**
+   * Update an existing backfill job
+   *
+   * Partially updates a backfill job with the provided fields.
+   * Only the specified fields are updated; other fields remain unchanged.
+   * Throws an error if the job does not exist.
+   *
+   * @param jobId - The unique job identifier
+   * @param updates - Partial job data to merge with existing job
+   * @throws StorageOperationError if the job doesn't exist or update fails
+   *
+   * Requirements: 1.2, 1.3
+   */
+  updateJob(jobId: string, updates: Partial<BackfillJob>): Promise<void>
+
+  /**
+   * Delete a backfill job
+   *
+   * Removes a backfill job and all its associated data.
+   * Returns true if the job was deleted, false if it didn't exist.
+   *
+   * @param jobId - The unique job identifier
+   * @returns true if deleted, false if job didn't exist
+   * @throws StorageOperationError on deletion failure
+   *
+   * Requirements: 1.7
+   */
+  deleteJob(jobId: string): Promise<boolean>
+
+  // ============================================================================
+  // Job Queries
+  // ============================================================================
+
+  /**
+   * List backfill jobs with optional filtering and pagination
+   *
+   * Returns backfill jobs matching the specified criteria.
+   * Results are sorted by creation time (newest first).
+   *
+   * @param options - Optional filtering and pagination options
+   * @returns Array of backfill jobs sorted by creation time (newest first)
+   * @throws StorageOperationError on read failure
+   *
+   * Requirements: 1.6, 6.3, 9.5
+   */
+  listJobs(options?: ListJobsOptions): Promise<BackfillJob[]>
+
+  /**
+   * Get the currently active (running or recovering) job
+   *
+   * Returns the job that is currently running or being recovered.
+   * Returns null if no job is active. Used for one-job-at-a-time enforcement.
+   *
+   * @returns The active job or null if none is active
+   * @throws StorageOperationError on read failure
+   *
+   * Requirements: 3.1, 3.3
+   */
+  getActiveJob(): Promise<BackfillJob | null>
+
+  /**
+   * Get jobs by status
+   *
+   * Returns all jobs matching any of the specified statuses.
+   * Results are sorted by creation time (newest first).
+   *
+   * @param status - Array of statuses to filter by
+   * @returns Array of matching jobs sorted by creation time (newest first)
+   * @throws StorageOperationError on read failure
+   *
+   * Requirements: 6.3
+   */
+  getJobsByStatus(status: BackfillJobStatus[]): Promise<BackfillJob[]>
+
+  // ============================================================================
+  // Checkpoint Operations
+  // ============================================================================
+
+  /**
+   * Update the checkpoint for a job
+   *
+   * Saves checkpoint information for job recovery. The checkpoint is
+   * stored as part of the job record and can be retrieved with getCheckpoint.
+   *
+   * @param jobId - The unique job identifier
+   * @param checkpoint - The checkpoint data to save
+   * @throws StorageOperationError if the job doesn't exist or update fails
+   *
+   * Requirements: 1.3, 10.2
+   */
+  updateCheckpoint(jobId: string, checkpoint: JobCheckpoint): Promise<void>
+
+  /**
+   * Get the checkpoint for a job
+   *
+   * Retrieves the most recent checkpoint for a job.
+   * Returns null if no checkpoint exists.
+   *
+   * @param jobId - The unique job identifier
+   * @returns The checkpoint or null if not found
+   * @throws StorageOperationError on read failure
+   *
+   * Requirements: 10.2
+   */
+  getCheckpoint(jobId: string): Promise<JobCheckpoint | null>
+
+  // ============================================================================
+  // Configuration
+  // ============================================================================
+
+  /**
+   * Get the rate limit configuration
+   *
+   * Retrieves the global rate limit configuration for backfill operations.
+   * Returns default configuration if none has been set.
+   *
+   * @returns The rate limit configuration
+   * @throws StorageOperationError on read failure
+   *
+   * Requirements: 12.1, 12.5
+   */
+  getRateLimitConfig(): Promise<RateLimitConfig>
+
+  /**
+   * Set the rate limit configuration
+   *
+   * Persists the global rate limit configuration for backfill operations.
+   * Overwrites any existing configuration.
+   *
+   * @param config - The rate limit configuration to save
+   * @throws StorageOperationError on write failure
+   *
+   * Requirements: 12.2, 12.5
+   */
+  setRateLimitConfig(config: RateLimitConfig): Promise<void>
+
+  // ============================================================================
+  // Maintenance
+  // ============================================================================
+
+  /**
+   * Clean up old completed/failed jobs
+   *
+   * Removes jobs older than the specified retention period.
+   * Only removes jobs with terminal status (completed, failed, cancelled).
+   * Running and pending jobs are never removed.
+   *
+   * @param retentionDays - Number of days to retain jobs
+   * @returns Number of jobs removed
+   * @throws StorageOperationError on deletion failure
+   *
+   * Requirements: 1.7
+   */
+  cleanupOldJobs(retentionDays: number): Promise<number>
+
+  /**
+   * Check if the storage is properly initialized and accessible
+   *
+   * Verifies that the storage backend is ready for operations. This may
+   * include checking directory existence, database connectivity, or
+   * authentication status. Returns false without throwing when storage
+   * is unavailable.
+   *
+   * @returns True if the storage is ready for operations
+   *
+   * Requirements: 1.1
+   */
+  isReady(): Promise<boolean>
+}

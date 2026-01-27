@@ -3,8 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 import HistoricalRankChart from '../components/HistoricalRankChart'
-import { BackfillButton } from '../components/BackfillButton'
-import { useBackfillContext } from '../contexts/BackfillContext'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import { useRankHistory } from '../hooks/useRankHistory'
@@ -22,9 +20,6 @@ const LandingPage: React.FC = () => {
     'aggregate' | 'clubs' | 'payments' | 'distinguished'
   >('aggregate')
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
-
-  // Use global backfill context
-  const { addBackfill } = useBackfillContext()
 
   // Use program year context
   const {
@@ -277,7 +272,7 @@ const LandingPage: React.FC = () => {
                   <ul className="space-y-2 text-tm-black">
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">1.</span>
-                      Click "Backfill Data" to fetch current and historical data
+                      Go to the Admin page to start a backfill operation
                     </li>
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">2.</span>
@@ -293,13 +288,12 @@ const LandingPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <BackfillButton
-                    className="px-6 py-3 text-lg"
-                    variant="primary"
-                    onBackfillStart={() => {
-                      // Optionally show a success message or redirect
-                    }}
-                  />
+                  <Link
+                    to="/admin"
+                    className="px-6 py-3 text-lg bg-tm-loyal-blue text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium text-center"
+                  >
+                    Go to Admin Panel
+                  </Link>
                   <button
                     onClick={() => refetch()}
                     className="px-6 py-3 bg-tm-cool-gray text-tm-black rounded-lg hover:bg-opacity-80 transition-colors"
@@ -358,12 +352,6 @@ const LandingPage: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-3">
-              <BackfillButton
-                className="text-sm font-medium"
-                onBackfillStart={id =>
-                  addBackfill({ backfillId: id, type: 'global' })
-                }
-              />
               <Link
                 to="/admin"
                 className="px-4 py-2 bg-tm-cool-gray text-tm-black rounded-sm hover:bg-opacity-80 transition-colors min-h-[44px] flex items-center text-sm font-medium font-tm-body"

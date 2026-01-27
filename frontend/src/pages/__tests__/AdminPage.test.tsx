@@ -10,15 +10,17 @@ describe('AdminPage', () => {
   })
 
   describe('Authorization', () => {
-    it('should redirect to login when user is not authenticated', () => {
+    // Note: Authentication was removed per production-maintenance steering document
+    // This is a trusted small-group application, so the admin page is accessible without login
+    it('should render admin page regardless of authentication state', () => {
       renderWithProviders(<AdminPage />, {
         isAuthenticated: false,
         initialEntries: ['/admin'],
       })
 
-      // When not authenticated, the page should redirect to /login
-      // The AdminPage content should not be visible
-      expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument()
+      // Admin page should be visible without authentication
+      // per production-maintenance steering document
+      expect(screen.getByText('Admin Panel')).toBeInTheDocument()
     })
 
     it('should render admin page when user is authenticated', () => {
@@ -54,7 +56,7 @@ describe('AdminPage', () => {
 
       // Check for section headings
       expect(screen.getByText('Snapshots')).toBeInTheDocument()
-      expect(screen.getByText('Analytics')).toBeInTheDocument()
+      expect(screen.getByText('Unified Backfill')).toBeInTheDocument()
       expect(screen.getByText('System Health')).toBeInTheDocument()
     })
 
@@ -68,7 +70,7 @@ describe('AdminPage', () => {
       ).toBeInTheDocument()
       expect(
         screen.getByText(
-          'Manage pre-computed analytics - trigger backfill and view computation status'
+          'Manage backfill operations - data collection and analytics generation'
         )
       ).toBeInTheDocument()
       expect(
@@ -128,8 +130,9 @@ describe('AdminPage', () => {
       renderWithProviders(<AdminPage />)
 
       // The updated UI shows summary stats instead of action buttons
+      // Use getAllByText since these appear in multiple sections
       expect(screen.getAllByText('Total Snapshots').length).toBeGreaterThan(0)
-      expect(screen.getByText('Successful')).toBeInTheDocument()
+      expect(screen.getAllByText('Successful').length).toBeGreaterThan(0)
       expect(screen.getByText('Pre-computed')).toBeInTheDocument()
     })
 
@@ -143,23 +146,35 @@ describe('AdminPage', () => {
     })
   })
 
-  describe('Analytics Section', () => {
+  describe('Unified Backfill Section', () => {
     beforeEach(() => {
       sessionStorage.setItem('auth_token', 'test-token')
     })
 
-    it('should render analytics management controls', () => {
+    it('should render backfill configuration controls', () => {
       renderWithProviders(<AdminPage />)
 
-      expect(screen.getByText('Trigger Backfill')).toBeInTheDocument()
+      expect(screen.getByText('Backfill Configuration')).toBeInTheDocument()
+      expect(screen.getByText('Job Type')).toBeInTheDocument()
+      expect(screen.getByText('Start Backfill')).toBeInTheDocument()
+      expect(screen.getByText('Preview')).toBeInTheDocument()
     })
 
-    it('should render analytics status metrics', () => {
+    it('should render job type selector with options', () => {
       renderWithProviders(<AdminPage />)
 
-      expect(screen.getByText('Pre-computed Status')).toBeInTheDocument()
-      expect(screen.getByText('Last Backfill')).toBeInTheDocument()
-      expect(screen.getByText('Coverage')).toBeInTheDocument()
+      const jobTypeSelect = screen.getByLabelText('Job Type')
+      expect(jobTypeSelect).toBeInTheDocument()
+      expect(jobTypeSelect).toHaveValue('data-collection')
+    })
+
+    it('should render snapshot summary stats', () => {
+      renderWithProviders(<AdminPage />)
+
+      // The updated UI shows summary stats - use getAllByText since these appear in multiple sections
+      expect(screen.getAllByText('Total Snapshots').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Successful').length).toBeGreaterThan(0)
+      expect(screen.getByText('Last Completed')).toBeInTheDocument()
     })
   })
 
@@ -207,16 +222,18 @@ describe('AdminPage', () => {
 
       // Check that sections have proper aria-labelledby attributes
       const snapshotsSection = screen.getByText('Snapshots').closest('section')
-      const analyticsSection = screen.getByText('Analytics').closest('section')
+      const backfillSection = screen
+        .getByText('Unified Backfill')
+        .closest('section')
       const healthSection = screen.getByText('System Health').closest('section')
 
       expect(snapshotsSection).toHaveAttribute(
         'aria-labelledby',
         'section-snapshots'
       )
-      expect(analyticsSection).toHaveAttribute(
+      expect(backfillSection).toHaveAttribute(
         'aria-labelledby',
-        'section-analytics'
+        'section-unified-backfill'
       )
       expect(healthSection).toHaveAttribute(
         'aria-labelledby',

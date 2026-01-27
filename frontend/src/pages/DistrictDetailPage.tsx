@@ -36,10 +36,8 @@ import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognit
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
-import { DistrictBackfillButton } from '../components/DistrictBackfillButton'
 import { DistrictExportButton } from '../components/DistrictExportButton'
 import { LazyChart } from '../components/LazyChart'
-import { useBackfillContext } from '../contexts/BackfillContext'
 import GlobalRankingsTab from '../components/GlobalRankingsTab'
 
 type TabType =
@@ -55,7 +53,6 @@ const DistrictDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
-  const { addBackfill } = useBackfillContext()
 
   // Use program year context
   const {
@@ -251,17 +248,6 @@ const DistrictDetailPage: React.FC = () => {
   // Format date for display (using utility to avoid UTC timezone shift)
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
 
-  // Handle backfill start
-  const handleBackfillStart = (backfillId: string) => {
-    if (districtId) {
-      addBackfill({
-        backfillId,
-        type: 'district',
-        districtId,
-      })
-    }
-  }
-
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-100" id="main-content">
@@ -354,10 +340,6 @@ const DistrictDetailPage: React.FC = () => {
                       Actions
                     </label>
                     <div className="flex gap-2">
-                      <DistrictBackfillButton
-                        districtId={districtId}
-                        onBackfillStart={handleBackfillStart}
-                      />
                       {hasOverviewData && (
                         <DistrictExportButton
                           districtId={districtId}
@@ -444,23 +426,19 @@ const DistrictDetailPage: React.FC = () => {
               </div>
             )}
 
-          {/* No Data Prompt with Backfill Button */}
+          {/* No Data Prompt - Direct to Admin Panel for Backfill */}
           {!isLoadingOverview &&
             !overviewError &&
             !hasOverviewData &&
             districtId && (
               <EmptyState
                 title="No District Data Available"
-                message="This district doesn't have any cached historical data yet. Start a backfill to collect performance data and unlock powerful analytics."
+                message="This district doesn't have any cached historical data yet. Use the Admin Panel to start a backfill and collect performance data."
                 icon="backfill"
                 action={{
-                  label: 'Start Backfill',
+                  label: 'Go to Admin Panel',
                   onClick: () => {
-                    // This will be handled by the DistrictBackfillButton component
-                    const backfillBtn = document.querySelector(
-                      '[data-district-backfill]'
-                    ) as HTMLButtonElement
-                    if (backfillBtn) backfillBtn.click()
+                    navigate('/admin')
                   },
                 }}
               />
