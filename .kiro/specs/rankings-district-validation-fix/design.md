@@ -50,14 +50,14 @@ The existing interface provides all needed functionality:
 
 ```typescript
 interface IDistrictIdValidator {
-  validate(districtId: string): ValidationResult;
-  filterValid(districts: DistrictStatistics[]): FilterResult;
-  filterValidRecords(records: ScrapedRecord[]): ScrapedRecordFilterResult;
+  validate(districtId: string): ValidationResult
+  filterValid(districts: DistrictStatistics[]): FilterResult
+  filterValidRecords(records: ScrapedRecord[]): ScrapedRecordFilterResult
 }
 
 interface ScrapedRecordFilterResult {
-  valid: ScrapedRecord[];
-  rejected: Array<{ districtId: string; reason: string }>;
+  valid: ScrapedRecord[]
+  rejected: Array<{ districtId: string; reason: string }>
 }
 ```
 
@@ -176,14 +176,16 @@ No changes to data models are required. The fix uses existing types:
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Based on the prework analysis, the core validation properties (3.2, 3.3, 3.4, 3.5) are already comprehensively tested in `DistrictIdValidator.test.ts`. The new code being added is integration/wiring code that connects the existing validator to the rankings calculation paths.
 
 Per the project's `property-testing-guidance.md`:
+
 > "Property tests are a tool, not a default. Unit tests with well-chosen examples are often sufficient and more maintainable."
 
 This fix falls into the category of "integration glue code" where:
+
 - The input space is not genuinely complex
 - 3-5 well-chosen examples provide equivalent confidence
 - The underlying validation logic already has property-based test coverage
@@ -207,6 +209,7 @@ This fix falls into the category of "integration glue code" where:
 ### Logging Strategy
 
 Both services will log:
+
 1. Individual warnings for each rejected record (via `DistrictIdValidator`)
 2. Summary information when records are rejected (total, valid, rejected counts)
 3. Debug-level information about the filtering operation
@@ -218,11 +221,13 @@ Both services will log:
 Unit tests will verify the integration points with specific examples:
 
 **SnapshotBuilder Tests:**
+
 1. Verify `calculateAllDistrictsRankings` filters invalid records before ranking calculation
 2. Verify undefined is returned when all records are invalid (edge case)
 3. Verify valid records are processed correctly after filtering
 
 **BackfillService Tests:**
+
 1. Verify `fetchAndCalculateAllDistrictsRankings` filters invalid records before ranking calculation
 2. Verify error is thrown when all records are invalid (edge case)
 3. Verify valid records are processed correctly after filtering
@@ -230,12 +235,14 @@ Unit tests will verify the integration points with specific examples:
 ### Property-Based Tests
 
 No new property-based tests are needed for this fix because:
+
 1. The `DistrictIdValidator` already has comprehensive test coverage (see `DistrictIdValidator.test.ts`)
 2. The fix is integration-level (wiring the validator into existing code paths)
 3. The validation logic itself is not changing
 4. Unit tests with well-chosen examples provide equivalent confidence
 
 Per the project's `property-testing-guidance.md`:
+
 > "Property tests are a tool, not a default. Unit tests with well-chosen examples are often sufficient and more maintainable."
 
 ### Test Configuration

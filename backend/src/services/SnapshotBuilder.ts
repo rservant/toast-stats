@@ -827,6 +827,8 @@ export class SnapshotBuilder {
   /**
    * Calculate all-districts rankings
    *
+   * Requirements: 1.1, 1.2, 1.3, 1.4 - Filter invalid district IDs before rankings calculation
+   *
    * @param allDistricts - All districts data
    * @param metadata - All districts metadata
    * @returns Rankings data or undefined
@@ -839,8 +841,33 @@ export class SnapshotBuilder {
       return undefined
     }
 
-    // Convert ScrapedRecord to DistrictStatistics for ranking calculation
-    const districtStats = allDistricts.map(record => ({
+    // Filter invalid district IDs before processing (Requirements 1.1, 1.2, 1.3, 1.4)
+    const validationResult =
+      this.districtIdValidator.filterValidRecords(allDistricts)
+    const validRecords = validationResult.valid
+
+    // Log validation summary if records were rejected (Requirement 1.3)
+    if (validationResult.rejected.length > 0) {
+      this.log.info(
+        'Filtered invalid district records during rankings calculation',
+        {
+          totalRecords: allDistricts.length,
+          validRecords: validRecords.length,
+          rejectedRecords: validationResult.rejected.length,
+        }
+      )
+    }
+
+    // Return undefined if no valid records remain (Requirement 1.4)
+    if (validRecords.length === 0) {
+      this.log.warn(
+        'No valid district records for rankings calculation after filtering'
+      )
+      return undefined
+    }
+
+    // Convert filtered ScrapedRecord to DistrictStatistics for ranking calculation
+    const districtStats = validRecords.map(record => ({
       districtId: String(record['DISTRICT'] ?? record['District'] ?? ''),
       asOfDate: metadata.csvDate,
       membership: {
