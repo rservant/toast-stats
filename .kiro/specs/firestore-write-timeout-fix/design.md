@@ -17,7 +17,7 @@ flowchart TD
         D -->|No| E[Throw StorageOperationError]
         D -->|Yes| F[Chunk district documents into batches]
         F --> G[Process batches with controlled concurrency]
-        
+
         subgraph "Batch Processing"
             G --> H[Execute batch with retry]
             H --> I{Batch success?}
@@ -30,7 +30,7 @@ flowchart TD
             M -->|Yes| G
             M -->|No| N[Aggregate results]
         end
-        
+
         N --> O{All batches succeeded?}
         O -->|Yes| P[Log success, return]
         O -->|No| Q[Update manifest with partial status]
@@ -49,25 +49,25 @@ flowchart TD
 interface BatchWriteConfig {
   /** Maximum operations per batch (default: 50) */
   maxOperationsPerBatch: number
-  
+
   /** Maximum concurrent batch operations (default: 3) */
   maxConcurrentBatches: number
-  
+
   /** Timeout per batch operation in ms (default: 30000) */
   batchTimeoutMs: number
-  
+
   /** Total operation timeout in ms (default: 300000) */
   totalTimeoutMs: number
-  
+
   /** Maximum retry attempts per batch (default: 3) */
   maxRetries: number
-  
+
   /** Initial backoff delay in ms (default: 1000) */
   initialBackoffMs: number
-  
+
   /** Maximum backoff delay in ms (default: 30000) */
   maxBackoffMs: number
-  
+
   /** Jitter factor for backoff (default: 0.2 = ±20%) */
   jitterFactor: number
 }
@@ -82,22 +82,22 @@ interface BatchWriteConfig {
 interface BatchWriteResult {
   /** Batch index (0-based) */
   batchIndex: number
-  
+
   /** Number of operations in this batch */
   operationCount: number
-  
+
   /** Whether the batch succeeded */
   success: boolean
-  
+
   /** Number of retry attempts made */
   retryAttempts: number
-  
+
   /** Duration in milliseconds */
   durationMs: number
-  
+
   /** Error message if failed */
   error?: string
-  
+
   /** District IDs in this batch (for district batches) */
   districtIds?: string[]
 }
@@ -112,28 +112,28 @@ interface BatchWriteResult {
 interface SnapshotWriteResult {
   /** Snapshot ID that was written */
   snapshotId: string
-  
+
   /** Whether all operations succeeded */
   complete: boolean
-  
+
   /** Total batches processed */
   totalBatches: number
-  
+
   /** Successful batch count */
   successfulBatches: number
-  
+
   /** Failed batch count */
   failedBatches: number
-  
+
   /** Total districts written */
   districtsWritten: number
-  
+
   /** Districts that failed to write */
   failedDistricts: string[]
-  
+
   /** Total duration in milliseconds */
   totalDurationMs: number
-  
+
   /** Individual batch results */
   batchResults: BatchWriteResult[]
 }
@@ -148,7 +148,7 @@ interface SnapshotWriteResult {
 export interface FirestoreSnapshotStorageConfig {
   projectId: string
   collectionName?: string
-  
+
   /** Batch write configuration (optional, uses defaults if not provided) */
   batchWriteConfig?: Partial<BatchWriteConfig>
 }
@@ -159,7 +159,7 @@ export interface FirestoreSnapshotStorageConfig {
 ```typescript
 class FirestoreSnapshotStorage {
   // Existing methods...
-  
+
   /**
    * Execute a batch write with retry logic
    */
@@ -168,12 +168,12 @@ class FirestoreSnapshotStorage {
     batchIndex: number,
     districtIds?: string[]
   ): Promise<BatchWriteResult>
-  
+
   /**
    * Calculate backoff delay with jitter
    */
   private calculateBackoffDelay(attempt: number): number
-  
+
   /**
    * Chunk district documents into batches
    */
@@ -181,7 +181,7 @@ class FirestoreSnapshotStorage {
     districts: DistrictStatistics[],
     snapshotId: string
   ): Array<{ batch: WriteBatch; districtIds: string[] }>
-  
+
   /**
    * Process batches with controlled concurrency
    */
@@ -189,7 +189,7 @@ class FirestoreSnapshotStorage {
     batches: Array<{ batch: WriteBatch; districtIds: string[] }>,
     startIndex: number
   ): Promise<BatchWriteResult[]>
-  
+
   /**
    * Check if an error is retryable
    */
@@ -223,60 +223,59 @@ Collection: snapshots
 ```typescript
 interface PerDistrictSnapshotMetadata {
   // Existing fields...
-  
+
   /** Districts that failed to write (new field) */
   writeFailedDistricts?: string[]
-  
+
   /** Whether the write completed fully (new field) */
   writeComplete?: boolean
 }
 ```
 
-
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Batch Size Invariant
 
-*For any* snapshot write operation and *for any* batch created during that operation, the batch SHALL contain at most `maxOperationsPerBatch` (default 50) write operations.
+_For any_ snapshot write operation and _for any_ batch created during that operation, the batch SHALL contain at most `maxOperationsPerBatch` (default 50) write operations.
 
 **Validates: Requirements 1.2**
 
 ### Property 2: Batch Splitting Threshold
 
-*For any* snapshot with more than `maxOperationsPerBatch` district documents, the write operation SHALL create multiple batches such that `ceil((districtCount + 1) / maxOperationsPerBatch)` batches are created (the +1 accounts for the root document).
+_For any_ snapshot with more than `maxOperationsPerBatch` district documents, the write operation SHALL create multiple batches such that `ceil((districtCount + 1) / maxOperationsPerBatch)` batches are created (the +1 accounts for the root document).
 
 **Validates: Requirements 1.1**
 
 ### Property 3: Root Document Ordering
 
-*For any* snapshot write operation, the root document SHALL be included in batch index 0, and batch 0 SHALL complete successfully before any batch with index > 0 begins processing.
+_For any_ snapshot write operation, the root document SHALL be included in batch index 0, and batch 0 SHALL complete successfully before any batch with index > 0 begins processing.
 
 **Validates: Requirements 1.3, 3.2**
 
 ### Property 4: Backoff Calculation with Jitter
 
-*For any* retry attempt number `n` (0-indexed), the calculated backoff delay SHALL be `min(initialBackoffMs * 2^n, maxBackoffMs) * (1 ± jitterFactor)`, where the jitter is uniformly distributed within the specified range.
+_For any_ retry attempt number `n` (0-indexed), the calculated backoff delay SHALL be `min(initialBackoffMs * 2^n, maxBackoffMs) * (1 ± jitterFactor)`, where the jitter is uniformly distributed within the specified range.
 
 **Validates: Requirements 2.2, 2.4**
 
 ### Property 5: Retryable Error Handling
 
-*For any* batch write that fails with a retryable error (DEADLINE_EXCEEDED, UNAVAILABLE, INTERNAL, or ABORTED), the operation SHALL be retried up to `maxRetries` times before being marked as failed.
+_For any_ batch write that fails with a retryable error (DEADLINE_EXCEEDED, UNAVAILABLE, INTERNAL, or ABORTED), the operation SHALL be retried up to `maxRetries` times before being marked as failed.
 
 **Validates: Requirements 2.1**
 
 ### Property 6: Partial Failure Resilience
 
-*For any* snapshot write where batch `i` fails after exhausting retries, batches `j` where `j > i` SHALL still be attempted, and the final result SHALL reflect all batch outcomes.
+_For any_ snapshot write where batch `i` fails after exhausting retries, batches `j` where `j > i` SHALL still be attempted, and the final result SHALL reflect all batch outcomes.
 
 **Validates: Requirements 3.4**
 
 ### Property 7: Partial Failure Metadata Consistency
 
-*For any* snapshot write that completes with partial success, the following invariants SHALL hold:
+_For any_ snapshot write that completes with partial success, the following invariants SHALL hold:
+
 - `successfulBatches + failedBatches == totalBatches`
 - `districtsWritten == sum of districtIds in successful batches`
 - `failedDistricts == union of districtIds in failed batches`
@@ -286,13 +285,13 @@ interface PerDistrictSnapshotMetadata {
 
 ### Property 8: Root Failure Fast-Fail
 
-*For any* snapshot write where the root document batch (batch 0) fails after exhausting retries, no district batches SHALL be attempted, and the operation SHALL throw a StorageOperationError.
+_For any_ snapshot write where the root document batch (batch 0) fails after exhausting retries, no district batches SHALL be attempted, and the operation SHALL throw a StorageOperationError.
 
 **Validates: Requirements 5.4**
 
 ### Property 9: Document Structure Equivalence
 
-*For any* valid Snapshot object, when all batches succeed, reading the snapshot back via `getSnapshot()` SHALL return a Snapshot object equivalent to the input (same districts, metadata, and rankings).
+_For any_ valid Snapshot object, when all batches succeed, reading the snapshot back via `getSnapshot()` SHALL return a Snapshot object equivalent to the input (same districts, metadata, and rankings).
 
 **Validates: Requirements 6.2, 6.3**
 
@@ -300,16 +299,16 @@ interface PerDistrictSnapshotMetadata {
 
 ### Error Categories
 
-| Error Type | Retryable | Action |
-|------------|-----------|--------|
-| DEADLINE_EXCEEDED | Yes | Retry with exponential backoff |
-| UNAVAILABLE | Yes | Retry with exponential backoff |
-| INTERNAL | Yes | Retry with exponential backoff |
-| ABORTED | Yes | Retry with exponential backoff |
-| PERMISSION_DENIED | No | Fail immediately |
-| NOT_FOUND | No | Fail immediately |
-| INVALID_ARGUMENT | No | Fail immediately |
-| RESOURCE_EXHAUSTED | Yes | Retry with longer backoff |
+| Error Type         | Retryable | Action                         |
+| ------------------ | --------- | ------------------------------ |
+| DEADLINE_EXCEEDED  | Yes       | Retry with exponential backoff |
+| UNAVAILABLE        | Yes       | Retry with exponential backoff |
+| INTERNAL           | Yes       | Retry with exponential backoff |
+| ABORTED            | Yes       | Retry with exponential backoff |
+| PERMISSION_DENIED  | No        | Fail immediately               |
+| NOT_FOUND          | No        | Fail immediately               |
+| INVALID_ARGUMENT   | No        | Fail immediately               |
+| RESOURCE_EXHAUSTED | Yes       | Retry with longer backoff      |
 
 ### Error Flow
 
@@ -345,7 +344,7 @@ throw new StorageOperationError(
     batchIndex,
     retryAttempts,
     districtIds: failedDistrictIds,
-    lastError: originalError.message
+    lastError: originalError.message,
   }
 )
 ```
@@ -358,16 +357,16 @@ Per the property-testing-guidance steering document, this feature primarily uses
 
 **PBT Decision Framework Applied:**
 
-| Property | PBT Warranted? | Rationale |
-|----------|----------------|-----------|
-| Batch size/count | No | 5 examples (1, 49, 50, 51, 100 districts) provide equivalent confidence |
-| Root ordering | No | Simple scenario, easily covered with examples |
-| Backoff with jitter | **Yes** | Mathematical formula with randomness; PBT verifies jitter bounds across many attempts |
-| Retryable errors | No | Finite set of error types; enumerate all cases |
-| Partial failure | No | Test specific failure patterns with examples |
-| Metadata consistency | No | Sum invariants can be verified with targeted examples |
-| Root fast-fail | No | Single scenario, one test case sufficient |
-| Document equivalence | **Yes** | Round-trip property with complex input space (varying district counts, metadata combinations) |
+| Property             | PBT Warranted? | Rationale                                                                                     |
+| -------------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| Batch size/count     | No             | 5 examples (1, 49, 50, 51, 100 districts) provide equivalent confidence                       |
+| Root ordering        | No             | Simple scenario, easily covered with examples                                                 |
+| Backoff with jitter  | **Yes**        | Mathematical formula with randomness; PBT verifies jitter bounds across many attempts         |
+| Retryable errors     | No             | Finite set of error types; enumerate all cases                                                |
+| Partial failure      | No             | Test specific failure patterns with examples                                                  |
+| Metadata consistency | No             | Sum invariants can be verified with targeted examples                                         |
+| Root fast-fail       | No             | Single scenario, one test case sufficient                                                     |
+| Document equivalence | **Yes**        | Round-trip property with complex input space (varying district counts, metadata combinations) |
 
 ### Unit Tests (Primary Coverage)
 

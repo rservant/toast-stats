@@ -13,40 +13,70 @@ import express from 'express'
 import adminRoutes from '../admin.js'
 import { Snapshot, SnapshotMetadata } from '../../types/snapshots.js'
 
-// Mock the production service factory
-const mockSnapshotStore = {
-  listSnapshots: vi.fn(),
-  getSnapshot: vi.fn(),
-  getLatestSuccessful: vi.fn(),
-  getLatest: vi.fn(),
-  isReady: vi.fn(),
-  validateIntegrity: vi.fn(),
-  getPerformanceMetrics: vi.fn(),
-  resetPerformanceMetrics: vi.fn(),
-}
+// Use vi.hoisted to ensure mocks are available when vi.mock is hoisted
+const {
+  mockSnapshotStore,
+  mockCacheConfigService,
+  mockFactory,
+  mockDistrictConfigService,
+} = vi.hoisted(() => {
+  const mockSnapshotStore = {
+    listSnapshots: vi.fn(),
+    getSnapshot: vi.fn(),
+    getLatestSuccessful: vi.fn(),
+    getLatest: vi.fn(),
+    isReady: vi.fn(),
+    validateIntegrity: vi.fn(),
+    getPerformanceMetrics: vi.fn(),
+    resetPerformanceMetrics: vi.fn(),
+  }
 
-const mockCacheConfigService = {
-  getConfiguration: vi.fn(() => ({
-    baseDirectory: './test-cache',
-    source: 'test',
-    isConfigured: true,
-    validationStatus: {
-      isValid: true,
-      isAccessible: true,
-      isSecure: true,
-    },
-  })),
-}
+  const mockCacheConfigService = {
+    getConfiguration: vi.fn(() => ({
+      baseDirectory: './test-cache',
+      source: 'test',
+      isConfigured: true,
+      validationStatus: {
+        isValid: true,
+        isAccessible: true,
+        isSecure: true,
+      },
+    })),
+    getCacheDirectory: vi.fn(() => './test-cache'),
+    initialize: vi.fn().mockResolvedValue(undefined),
+  }
 
-// Routes now use createSnapshotStorage() which returns ISnapshotStorage
-const mockFactory = {
-  createSnapshotStorage: vi.fn(() => mockSnapshotStore),
-  createSnapshotStore: vi.fn(() => mockSnapshotStore),
-  createCacheConfigService: vi.fn(() => mockCacheConfigService),
-}
+  const mockFactory = {
+    createSnapshotStorage: vi.fn(() => mockSnapshotStore),
+    createSnapshotStore: vi.fn(() => mockSnapshotStore),
+    createCacheConfigService: vi.fn(() => mockCacheConfigService),
+  }
+
+  const mockDistrictConfigService = {
+    getConfiguration: vi.fn(),
+    hasConfiguredDistricts: vi.fn(),
+    addDistrict: vi.fn(),
+    removeDistrict: vi.fn(),
+    setConfiguredDistricts: vi.fn(),
+    validateConfiguration: vi.fn(),
+    getConfiguredDistricts: vi.fn(),
+  }
+
+  return {
+    mockSnapshotStore,
+    mockCacheConfigService,
+    mockFactory,
+    mockDistrictConfigService,
+  }
+})
 
 vi.mock('../../services/ProductionServiceFactory.js', () => ({
   getProductionServiceFactory: () => mockFactory,
+}))
+
+// Mock the main index.js to prevent server initialization side effects
+vi.mock('../../index.js', () => ({
+  getUnifiedBackfillServiceInstance: vi.fn(),
 }))
 
 // Mock logger
@@ -58,17 +88,6 @@ vi.mock('../../utils/logger.js', () => ({
     debug: vi.fn(),
   },
 }))
-
-// Mock DistrictConfigurationService
-const mockDistrictConfigService = {
-  getConfiguration: vi.fn(),
-  hasConfiguredDistricts: vi.fn(),
-  addDistrict: vi.fn(),
-  removeDistrict: vi.fn(),
-  setConfiguredDistricts: vi.fn(),
-  validateConfiguration: vi.fn(),
-  getConfiguredDistricts: vi.fn(),
-}
 
 vi.mock('../../services/DistrictConfigurationService.js', () => ({
   DistrictConfigurationService: class MockDistrictConfigurationService {
@@ -235,7 +254,11 @@ describe('Admin Routes', () => {
       const response = await request(app).get('/api/admin/snapshots')
 
       expect(response.status).toBe(200)
-      expect(response.body.snapshots).toEqual(testMetadata)
+      // Response now includes analytics_available field added by the endpoint
+      expect(response.body.snapshots).toHaveLength(2)
+      expect(response.body.snapshots[0].snapshot_id).toBe('1704067200000')
+      expect(response.body.snapshots[1].snapshot_id).toBe('1704153600000')
+      expect(response.body.snapshots[0]).toHaveProperty('analytics_available')
       expect(response.body.metadata.total_count).toBe(2)
       expect(mockSnapshotStore.listSnapshots).toHaveBeenCalledWith(
         undefined,

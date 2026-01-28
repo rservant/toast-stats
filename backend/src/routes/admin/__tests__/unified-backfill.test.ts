@@ -45,6 +45,11 @@ vi.mock('../../../utils/logger.js', () => ({
   },
 }))
 
+// Mock the main index.js to prevent server initialization side effects
+vi.mock('../../../index.js', () => ({
+  getUnifiedBackfillServiceInstance: vi.fn(),
+}))
+
 // Mock shared utilities
 vi.mock('../shared.js', () => ({
   logAdminAccess: (_req: unknown, _res: unknown, next: () => void) => next(),

@@ -796,8 +796,16 @@ paths:
       summary: Get aggregated analytics summary
       description: |
         Returns combined analytics data including summary metrics, trend data,
-        and year-over-year comparisons in a single request. Uses pre-computed
-        analytics when available for fast response times (<2 seconds).
+        and year-over-year comparisons in a single request.
+        
+        **Pre-computed Analytics Required**: This endpoint requires pre-computed
+        analytics to be available. If analytics have not been generated for the
+        requested district, a 404 error with code ANALYTICS_NOT_AVAILABLE is returned.
+        
+        Use the unified backfill service with job type 'analytics-generation' to
+        generate pre-computed analytics for snapshots that are missing them.
+        
+        Response times are typically under 2 seconds when pre-computed analytics exist.
       operationId: getDistrictAnalyticsSummary
       tags:
         - Analytics
@@ -830,7 +838,18 @@ paths:
         '400':
           description: Bad request - invalid parameters
         '404':
-          description: District not found or no data available
+          description: |
+            Pre-computed analytics not available. Returns error with code
+            ANALYTICS_NOT_AVAILABLE when pre-computed analytics have not been
+            generated for the requested district. Use the unified backfill
+            service with job type 'analytics-generation' to generate analytics.
+            
+            Error response schema:
+            - error.code: "ANALYTICS_NOT_AVAILABLE"
+            - error.message: Description of the issue
+            - error.details.districtId: The requested district ID
+            - error.details.recommendation: How to resolve the issue
+            - error.details.backfillJobType: "analytics-generation"
         '500':
           description: Internal server error
         '503':
@@ -1073,7 +1092,12 @@ paths:
 
   /admin/snapshots:
     get:
-      summary: List snapshots
+      summary: List snapshots with analytics availability
+      description: |
+        List all snapshots with optional filtering and limiting.
+        Each snapshot includes an analytics_available field indicating
+        whether pre-computed analytics (analytics-summary.json) exist.
+        Response metadata includes counts of snapshots with and without analytics.
       operationId: listSnapshots
       tags:
         - Admin
@@ -1130,7 +1154,72 @@ paths:
           required: false
       responses:
         '200':
-          description: Successfully retrieved snapshots list
+          description: Successfully retrieved snapshots list with analytics availability
+          schema:
+            type: object
+            properties:
+              snapshots:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    snapshot_id:
+                      type: string
+                      description: Unique identifier for the snapshot
+                    created_at:
+                      type: string
+                      format: date-time
+                      description: ISO timestamp when snapshot was created
+                    status:
+                      type: string
+                      enum:
+                        - success
+                        - failed
+                        - partial
+                      description: Snapshot creation status
+                    schema_version:
+                      type: string
+                      description: Version of the data structure schema
+                    calculation_version:
+                      type: string
+                      description: Version of the calculation/scoring logic
+                    size_bytes:
+                      type: integer
+                      description: Approximate size of the snapshot in bytes
+                    error_count:
+                      type: integer
+                      description: Number of errors recorded in this snapshot
+                    district_count:
+                      type: integer
+                      description: Number of districts included in this snapshot
+                    analytics_available:
+                      type: boolean
+                      description: Whether pre-computed analytics exist for this snapshot
+              metadata:
+                type: object
+                properties:
+                  total_count:
+                    type: integer
+                    description: Total number of snapshots returned
+                  analytics_available_count:
+                    type: integer
+                    description: Number of snapshots with pre-computed analytics
+                  analytics_missing_count:
+                    type: integer
+                    description: Number of snapshots without pre-computed analytics
+                  filters_applied:
+                    type: object
+                    description: Filters that were applied to the query
+                  limit_applied:
+                    type: integer
+                    description: Limit that was applied to the query (null if none)
+                  query_duration_ms:
+                    type: integer
+                    description: Query execution time in milliseconds
+                  generated_at:
+                    type: string
+                    format: date-time
+                    description: ISO timestamp when response was generated
         '400':
           description: Bad request - invalid query parameters
         '500':

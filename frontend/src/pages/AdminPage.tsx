@@ -1,6 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAdminSnapshots, useSnapshotDetails, SnapshotMetadata } from '../hooks/useAdminSnapshots'
+import {
+  useAdminSnapshots,
+  useSnapshotDetails,
+  SnapshotMetadata,
+} from '../hooks/useAdminSnapshots'
 import { useAdminMonitoring } from '../hooks/useAdminMonitoring'
 import {
   useUnifiedBackfill,
@@ -1150,9 +1154,13 @@ const BackfillSection: React.FC = () => {
   })
 
   // Restore running job on mount - check if there's an active job we should track
+  // Using a ref to track if we've already restored to avoid repeated updates
+  const hasRestoredJobRef = React.useRef(false)
+
   useEffect(() => {
     if (currentJobId) return // Already tracking a job
     if (!jobsList.data?.jobs) return // No job data yet
+    if (hasRestoredJobRef.current) return // Already restored once
 
     // Find any running job (pending, running, or recovering)
     const runningJob = jobsList.data.jobs.find(
@@ -1163,6 +1171,9 @@ const BackfillSection: React.FC = () => {
     )
 
     if (runningJob) {
+      hasRestoredJobRef.current = true
+      // This is intentional - we need to restore tracking of a running job on mount
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentJobId(runningJob.jobId)
     }
   }, [currentJobId, jobsList.data?.jobs])

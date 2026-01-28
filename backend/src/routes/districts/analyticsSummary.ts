@@ -16,7 +16,6 @@ import { requestDeduplicationMiddleware } from '../../middleware/requestDeduplic
 import { generateDistrictCacheKey } from '../../utils/cacheKeys.js'
 import { logger } from '../../utils/logger.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
-import type { PreComputedAnalyticsSummary } from '../../types/precomputedAnalytics.js'
 import {
   getValidDistrictId,
   validateDateFormat,
@@ -225,26 +224,9 @@ analyticsSummaryRouter.get(
               effectiveEndDate ?? new Date().toISOString().split('T')[0] ?? ''
             )
 
-      // Try to get pre-computed analytics first
-      let summary: PreComputedAnalyticsSummary | null = null
-      let dataSource: 'precomputed' | 'computed' = 'precomputed'
-
-      summary = await preComputedAnalyticsService.getLatestSummary(districtId)
-
-      if (!summary) {
-        // Requirement 11.3: Log warning when pre-computed analytics are missing
-        logger.warn(
-          'Pre-computed analytics not available for requested date range',
-          {
-            operation: 'analyticsRequest',
-            districtId,
-            data_source: 'computed',
-            message:
-              'Backfill may be needed to generate pre-computed analytics',
-          }
-        )
-        dataSource = 'computed'
-      }
+      // Try to get pre-computed analytics
+      const summary =
+        await preComputedAnalyticsService.getLatestSummary(districtId)
 
       // Get trend data from time-series index
       let trendData: Array<{ date: string; count: number }> = []
@@ -317,100 +299,74 @@ analyticsSummaryRouter.get(
         // Year-over-year is optional, continue without it
       }
 
-      // Build the response
-      let response: AggregatedAnalyticsResponse
+      // If pre-computed analytics are not available, return 404 error
+      // Requirement 1.1: Return HTTP 404 when pre-computed analytics not available
+      // Requirement 1.4: Do NOT fall back to on-demand analytics computation
+      if (!summary) {
+        const duration = Date.now() - startTime
 
-      if (summary) {
-        // Use pre-computed data
-        response = {
-          districtId,
-          dateRange: {
-            start: effectiveStartDate ?? '',
-            end: effectiveEndDate ?? '',
-          },
-          summary: {
-            totalMembership: summary.totalMembership,
-            membershipChange: summary.membershipChange,
-            clubCounts: {
-              total: summary.clubCounts.total,
-              thriving: summary.clubCounts.thriving,
-              vulnerable: summary.clubCounts.vulnerable,
-              interventionRequired: summary.clubCounts.interventionRequired,
-            },
-            distinguishedClubs: {
-              smedley: summary.distinguishedClubs.smedley,
-              presidents: summary.distinguishedClubs.presidents,
-              select: summary.distinguishedClubs.select,
-              distinguished: summary.distinguishedClubs.distinguished,
-              total: summary.distinguishedClubs.total,
-            },
-            distinguishedProjection: calculateDistinguishedProjection(
-              summary.distinguishedClubs.total,
-              summary.clubCounts.total
-            ),
-          },
-          trends: {
-            membership: trendData,
-            payments: paymentsTrend.length > 0 ? paymentsTrend : undefined,
-          },
-          yearOverYear,
-          dataSource,
-          computedAt: summary.computedAt,
-        }
-      } else {
-        // Fall back to computing from analytics engine
-        // Requirement 4.5: Fall back to on-demand computation with warning log
-        // Requirement 11.3: Log warning indicating backfill may be needed
-        logger.warn('Falling back to on-demand analytics computation', {
+        // Requirement 3.1, 3.2, 3.3, 3.4: Enhanced error logging
+        logger.error('Pre-computed analytics not available', {
           operation: 'analyticsRequest',
+          operationId,
           districtId,
-          data_source: 'computed',
-          message:
-            'Pre-computed analytics not available, backfill may be needed',
+          snapshotId: 'latest', // We checked the latest snapshot
+          analytics_gap: true,
+          recommendation: 'Run analytics backfill job',
+          duration_ms: duration,
         })
 
-        const analyticsEngine = await getAnalyticsEngine()
-        const computedAnalytics =
-          await analyticsEngine.generateDistrictAnalytics(
-            districtId,
-            effectiveStartDate,
-            effectiveEndDate
-          )
+        // Requirement 1.2, 1.3, 1.5: Return 404 with clear error message and details
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_AVAILABLE',
+            message: `Pre-computed analytics are not available for district ${districtId}. Run analytics backfill to generate them.`,
+            details: {
+              districtId,
+              recommendation:
+                "Use the unified backfill service with job type 'analytics-generation' to generate pre-computed analytics for this snapshot.",
+              backfillJobType: 'analytics-generation',
+            },
+          },
+        })
+        return
+      }
 
-        response = {
-          districtId,
-          dateRange: computedAnalytics.dateRange,
-          summary: {
-            totalMembership: computedAnalytics.totalMembership,
-            membershipChange: computedAnalytics.membershipChange,
-            clubCounts: {
-              total:
-                computedAnalytics.thrivingClubs.length +
-                computedAnalytics.vulnerableClubs.length +
-                computedAnalytics.interventionRequiredClubs.length,
-              thriving: computedAnalytics.thrivingClubs.length,
-              vulnerable: computedAnalytics.vulnerableClubs.length,
-              interventionRequired:
-                computedAnalytics.interventionRequiredClubs.length,
-            },
-            distinguishedClubs: {
-              smedley: computedAnalytics.distinguishedClubs.smedley ?? 0,
-              presidents: computedAnalytics.distinguishedClubs.presidents ?? 0,
-              select: computedAnalytics.distinguishedClubs.select ?? 0,
-              distinguished:
-                computedAnalytics.distinguishedClubs.distinguished ?? 0,
-              total: computedAnalytics.distinguishedClubs.total,
-            },
-            distinguishedProjection: computedAnalytics.distinguishedProjection,
+      // Build the response using pre-computed data
+      const response: AggregatedAnalyticsResponse = {
+        districtId,
+        dateRange: {
+          start: effectiveStartDate ?? '',
+          end: effectiveEndDate ?? '',
+        },
+        summary: {
+          totalMembership: summary.totalMembership,
+          membershipChange: summary.membershipChange,
+          clubCounts: {
+            total: summary.clubCounts.total,
+            thriving: summary.clubCounts.thriving,
+            vulnerable: summary.clubCounts.vulnerable,
+            interventionRequired: summary.clubCounts.interventionRequired,
           },
-          trends: {
-            membership: computedAnalytics.membershipTrend,
-            payments: undefined, // Not available from computed analytics
+          distinguishedClubs: {
+            smedley: summary.distinguishedClubs.smedley,
+            presidents: summary.distinguishedClubs.presidents,
+            select: summary.distinguishedClubs.select,
+            distinguished: summary.distinguishedClubs.distinguished,
+            total: summary.distinguishedClubs.total,
           },
-          yearOverYear,
-          dataSource: 'computed',
-          computedAt: new Date().toISOString(),
-        }
+          distinguishedProjection: calculateDistinguishedProjection(
+            summary.distinguishedClubs.total,
+            summary.clubCounts.total
+          ),
+        },
+        trends: {
+          membership: trendData,
+          payments: paymentsTrend.length > 0 ? paymentsTrend : undefined,
+        },
+        yearOverYear,
+        dataSource: 'precomputed',
+        computedAt: summary.computedAt,
       }
 
       const duration = Date.now() - startTime

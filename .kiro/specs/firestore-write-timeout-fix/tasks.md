@@ -28,8 +28,8 @@ This implementation transforms the single-batch snapshot write in `FirestoreSnap
 
 - [ ] 2. Implement backoff calculation utility
   - [ ] 2.1 Add calculateBackoffDelay private method
-    - Implement exponential backoff: min(initialBackoffMs * 2^attempt, maxBackoffMs)
-    - Add jitter: delay * (1 + random(-jitterFactor, +jitterFactor))
+    - Implement exponential backoff: min(initialBackoffMs \* 2^attempt, maxBackoffMs)
+    - Add jitter: delay \* (1 + random(-jitterFactor, +jitterFactor))
     - Accept optional random function for testing
     - _Requirements: 2.2, 2.4_
   - [ ] 2.2 Write unit tests for backoff calculation
@@ -42,7 +42,7 @@ This implementation transforms the single-batch snapshot write in `FirestoreSnap
   - [ ] 2.3 Write property test for backoff jitter bounds
     - **Property 4: Backoff Calculation with Jitter**
     - Generate attempt numbers 0-10
-    - Verify actualDelay within baseDelay * (1 ± jitterFactor)
+    - Verify actualDelay within baseDelay \* (1 ± jitterFactor)
     - **Validates: Requirements 2.2, 2.4**
 
 - [ ] 3. Implement retry logic for batch writes

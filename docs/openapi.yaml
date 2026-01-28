@@ -5362,13 +5362,27 @@ paths:
       tags:
         - Admin
       operationId: listSnapshots
-      summary: List all snapshots
+      summary: List all snapshots with analytics availability
       description: |
         Retrieves a list of all available snapshots with optional filtering.
+        Each snapshot includes an `analytics_available` field indicating whether
+        pre-computed analytics exist for that snapshot.
 
         Snapshots represent complete, normalized views of the source data at specific
         points in time. This endpoint provides administrative access to browse and
         filter the snapshot inventory.
+
+        ## Analytics Availability
+
+        The `analytics_available` field indicates whether pre-computed analytics
+        (analytics-summary.json) exist for each snapshot. This is useful for:
+        - Identifying snapshots that need analytics backfill
+        - Understanding which snapshots can serve fast analytics requests
+        - Planning backfill operations
+
+        The response metadata includes:
+        - `analytics_available_count`: Number of snapshots with analytics
+        - `analytics_missing_count`: Number of snapshots needing backfill
 
         ## Filtering Options
 
@@ -5393,6 +5407,7 @@ paths:
         - Finding snapshots with specific characteristics
         - Monitoring data collection health over time
         - Debugging data quality issues
+        - Identifying snapshots that need analytics backfill
       parameters:
         - name: limit
           in: query
@@ -5476,7 +5491,7 @@ paths:
           example: 100
       responses:
         '200':
-          description: Successfully retrieved list of snapshots
+          description: Successfully retrieved list of snapshots with analytics availability
           content:
             application/json:
               schema:
@@ -5484,50 +5499,72 @@ paths:
                 properties:
                   snapshots:
                     type: array
-                    description: List of snapshots matching the filter criteria
+                    description: List of snapshots matching the filter criteria, each with analytics availability indicator
                     items:
                       $ref: '#/components/schemas/SnapshotMetadata'
-                  total:
-                    type: integer
-                    description: Total number of snapshots matching the filter criteria
-                    example: 150
-                  limit:
-                    type: integer
-                    description: Maximum number of results requested
-                    example: 50
-                  filters_applied:
+                  metadata:
                     type: object
-                    description: Summary of filters that were applied to the query
+                    description: Response metadata including analytics availability counts
                     properties:
-                      status:
-                        type: string
-                        description: Status filter applied, if any
-                        example: success
-                      schema_version:
-                        type: string
-                        description: Schema version filter applied, if any
-                        example: "1.0.0"
-                      calculation_version:
-                        type: string
-                        description: Calculation version filter applied, if any
-                        example: "2.1.0"
-                      created_after:
-                        type: string
-                        format: date
-                        description: Created after filter applied, if any
-                        example: "2026-01-01"
-                      created_before:
-                        type: string
-                        format: date
-                        description: Created before filter applied, if any
-                        example: "2026-01-31"
-                      min_district_count:
+                      total_count:
                         type: integer
-                        description: Minimum district count filter applied, if any
-                        example: 100
+                        description: Total number of snapshots returned
+                        example: 150
+                      analytics_available_count:
+                        type: integer
+                        description: Number of snapshots with pre-computed analytics available
+                        example: 120
+                      analytics_missing_count:
+                        type: integer
+                        description: Number of snapshots without pre-computed analytics
+                        example: 30
+                      filters_applied:
+                        type: object
+                        description: Summary of filters that were applied to the query
+                        properties:
+                          status:
+                            type: string
+                            description: Status filter applied, if any
+                            example: success
+                          schema_version:
+                            type: string
+                            description: Schema version filter applied, if any
+                            example: "1.0.0"
+                          calculation_version:
+                            type: string
+                            description: Calculation version filter applied, if any
+                            example: "2.1.0"
+                          created_after:
+                            type: string
+                            format: date
+                            description: Created after filter applied, if any
+                            example: "2026-01-01"
+                          created_before:
+                            type: string
+                            format: date
+                            description: Created before filter applied, if any
+                            example: "2026-01-31"
+                          min_district_count:
+                            type: integer
+                            description: Minimum district count filter applied, if any
+                            example: 100
+                      limit_applied:
+                        type: integer
+                        nullable: true
+                        description: Limit that was applied to the query (null if none)
+                        example: 50
+                      query_duration_ms:
+                        type: integer
+                        description: Query execution time in milliseconds
+                        example: 45
+                      generated_at:
+                        type: string
+                        format: date-time
+                        description: ISO timestamp when response was generated
+                        example: "2026-01-24T10:30:00Z"
               examples:
                 allSnapshots:
-                  summary: List of all snapshots (no filters)
+                  summary: List of all snapshots with analytics availability
                   value:
                     snapshots:
                       - snapshot_id: "2026-01-24"
@@ -5536,23 +5573,31 @@ paths:
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
+                        analytics_available: true
                       - snapshot_id: "2026-01-23"
                         created_at: "2026-01-23T06:00:00Z"
                         status: success
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
+                        analytics_available: true
                       - snapshot_id: "2026-01-22"
                         created_at: "2026-01-22T06:00:00Z"
                         status: partial
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
-                    total: 150
-                    limit: 100
-                    filters_applied: {}
+                        analytics_available: false
+                    metadata:
+                      total_count: 150
+                      analytics_available_count: 120
+                      analytics_missing_count: 30
+                      filters_applied: {}
+                      limit_applied: null
+                      query_duration_ms: 45
+                      generated_at: "2026-01-24T10:30:00Z"
                 filteredByStatus:
-                  summary: Snapshots filtered by status
+                  summary: Snapshots filtered by status with analytics info
                   value:
                     snapshots:
                       - snapshot_id: "2026-01-24"
@@ -5561,53 +5606,49 @@ paths:
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
+                        analytics_available: true
                       - snapshot_id: "2026-01-23"
                         created_at: "2026-01-23T06:00:00Z"
                         status: success
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
-                    total: 120
-                    limit: 50
-                    filters_applied:
-                      status: success
-                filteredByDateRange:
-                  summary: Snapshots filtered by date range
+                        analytics_available: false
+                    metadata:
+                      total_count: 120
+                      analytics_available_count: 100
+                      analytics_missing_count: 20
+                      filters_applied:
+                        status: success
+                      limit_applied: 50
+                      query_duration_ms: 32
+                      generated_at: "2026-01-24T10:30:00Z"
+                snapshotsNeedingBackfill:
+                  summary: Identifying snapshots that need analytics backfill
                   value:
                     snapshots:
-                      - snapshot_id: "2026-01-15"
-                        created_at: "2026-01-15T06:00:00Z"
+                      - snapshot_id: "2026-01-22"
+                        created_at: "2026-01-22T06:00:00Z"
                         status: success
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
-                      - snapshot_id: "2026-01-10"
-                        created_at: "2026-01-10T06:00:00Z"
+                        analytics_available: false
+                      - snapshot_id: "2026-01-21"
+                        created_at: "2026-01-21T06:00:00Z"
                         status: success
                         is_closing_period: false
                         data_source: scraper
                         from_cache: true
-                    total: 15
-                    limit: 100
-                    filters_applied:
-                      created_after: "2026-01-01"
-                      created_before: "2026-01-20"
-                multipleFilters:
-                  summary: Snapshots with multiple filters applied
-                  value:
-                    snapshots:
-                      - snapshot_id: "2026-01-24"
-                        created_at: "2026-01-24T06:00:00Z"
-                        status: success
-                        is_closing_period: false
-                        data_source: scraper
-                        from_cache: true
-                    total: 45
-                    limit: 50
-                    filters_applied:
-                      status: success
-                      min_district_count: 100
-                      created_after: "2026-01-01"
+                        analytics_available: false
+                    metadata:
+                      total_count: 30
+                      analytics_available_count: 0
+                      analytics_missing_count: 30
+                      filters_applied: {}
+                      limit_applied: null
+                      query_duration_ms: 28
+                      generated_at: "2026-01-24T10:30:00Z"
         '400':
           description: |
             Bad request - invalid query parameters.
@@ -6796,6 +6837,14 @@ components:
             Indicates whether the response was served from cache
             rather than freshly computed.
           example: true
+        analytics_available:
+          type: boolean
+          description: |
+            Indicates whether pre-computed analytics (analytics-summary.json)
+            exist for this snapshot. When false, analytics requests for this
+            snapshot will return a 404 error and require running the analytics
+            backfill job.
+          example: true
       example:
         snapshot_id: "2026-01-24"
         created_at: "2026-01-24T06:00:00Z"
@@ -6804,6 +6853,7 @@ components:
         is_fallback: false
         data_source: scraper
         from_cache: true
+        analytics_available: true
 
     # District Schemas
     District:

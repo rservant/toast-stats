@@ -380,32 +380,10 @@ describe('Analytics Summary Route', () => {
       })
     })
 
-    describe('Fallback to Computed Data', () => {
-      it('should fall back to computed analytics when pre-computed data is unavailable', async () => {
-        const mockComputedAnalytics = {
-          dateRange: { start: '2024-01-01', end: '2024-01-31' },
-          totalMembership: 1500,
-          membershipChange: 50,
-          thrivingClubs: Array(30).fill({ clubId: '1', clubName: 'Test' }),
-          vulnerableClubs: Array(15).fill({ clubId: '2', clubName: 'Test' }),
-          interventionRequiredClubs: Array(5).fill({
-            clubId: '3',
-            clubName: 'Test',
-          }),
-          distinguishedClubs: {
-            smedley: 2,
-            presidents: 5,
-            select: 8,
-            distinguished: 10,
-            total: 25,
-          },
-          distinguishedProjection: 30,
-          membershipTrend: [
-            { date: '2024-01-01', count: 1400 },
-            { date: '2024-01-15', count: 1500 },
-          ],
-        }
-
+    describe('Analytics Not Available (No Fallback)', () => {
+      it('should return 404 with ANALYTICS_NOT_AVAILABLE when pre-computed data is unavailable', async () => {
+        // Requirement 1.1: Return HTTP 404 when pre-computed analytics not available
+        // Requirement 1.4: Do NOT fall back to on-demand analytics computation
         const mockPreComputedService = {
           getLatestSummary: vi.fn().mockResolvedValue(null),
         }
@@ -414,9 +392,6 @@ describe('Analytics Summary Route', () => {
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi
-            .fn()
-            .mockResolvedValue(mockComputedAnalytics),
         }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
@@ -431,14 +406,58 @@ describe('Analytics Summary Route', () => {
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
-          .expect(200)
+          .expect(404)
 
-        expect(response.body.dataSource).toBe('computed')
-        expect(response.body.summary.totalMembership).toBe(1500)
-        expect(response.body.summary.clubCounts.total).toBe(50)
-        expect(response.body.summary.clubCounts.thriving).toBe(30)
-        expect(response.body.summary.clubCounts.vulnerable).toBe(15)
-        expect(response.body.summary.clubCounts.interventionRequired).toBe(5)
+        // Requirement 1.2: Error response includes clear message
+        expect(response.body.error.code).toBe('ANALYTICS_NOT_AVAILABLE')
+        expect(response.body.error.message).toContain(
+          'Pre-computed analytics are not available'
+        )
+        expect(response.body.error.message).toContain('42')
+
+        // Requirement 1.5: Error response includes district ID
+        expect(response.body.error.details.districtId).toBe('42')
+
+        // Requirement 1.3: Error response includes backfill recommendation
+        expect(response.body.error.details.recommendation).toContain(
+          'analytics-generation'
+        )
+        expect(response.body.error.details.backfillJobType).toBe(
+          'analytics-generation'
+        )
+      })
+
+      it('should not call analytics engine for on-demand computation when pre-computed data is unavailable', async () => {
+        // Requirement 1.4: System SHALL NOT fall back to on-demand analytics computation
+        const mockPreComputedService = {
+          getLatestSummary: vi.fn().mockResolvedValue(null),
+        }
+        const mockTimeSeriesService = {
+          getTrendData: vi.fn().mockResolvedValue([]),
+        }
+        const mockAnalyticsEngine = {
+          calculateYearOverYear: vi.fn().mockResolvedValue(null),
+          generateDistrictAnalytics: vi.fn(),
+        }
+
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+        vi.mocked(getAnalyticsEngine).mockResolvedValue(
+          mockAnalyticsEngine as never
+        )
+
+        await request(app)
+          .get('/api/districts/42/analytics-summary')
+          .expect(404)
+
+        // Verify generateDistrictAnalytics was NOT called (no fallback)
+        expect(
+          mockAnalyticsEngine.generateDistrictAnalytics
+        ).not.toHaveBeenCalled()
       })
     })
 
@@ -509,7 +528,8 @@ describe('Analytics Summary Route', () => {
     })
 
     describe('Error Handling', () => {
-      it('should return 404 when no data is available', async () => {
+      it('should return 404 with ANALYTICS_NOT_AVAILABLE when pre-computed analytics are missing', async () => {
+        // This test verifies the primary error case: pre-computed analytics not available
         const mockPreComputedService = {
           getLatestSummary: vi.fn().mockResolvedValue(null),
         }
@@ -518,9 +538,6 @@ describe('Analytics Summary Route', () => {
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi
-            .fn()
-            .mockRejectedValue(new Error('No cached data available')),
         }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
@@ -537,21 +554,25 @@ describe('Analytics Summary Route', () => {
           .get('/api/districts/42/analytics-summary')
           .expect(404)
 
-        expect(response.body.error.code).toBe('NO_DATA_AVAILABLE')
+        expect(response.body.error.code).toBe('ANALYTICS_NOT_AVAILABLE')
+        expect(response.body.error.details.districtId).toBe('42')
+        expect(response.body.error.details.backfillJobType).toBe(
+          'analytics-generation'
+        )
       })
 
-      it('should return 503 when snapshot store is unavailable', async () => {
+      it('should return 503 when pre-computed analytics service throws ENOENT error', async () => {
+        // Test that storage errors are properly handled
         const mockPreComputedService = {
-          getLatestSummary: vi.fn().mockResolvedValue(null),
+          getLatestSummary: vi
+            .fn()
+            .mockRejectedValue(new Error('ENOENT: no such file or directory')),
         }
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue([]),
         }
         const mockAnalyticsEngine = {
           calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi
-            .fn()
-            .mockRejectedValue(new Error('ENOENT: no such file or directory')),
         }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(

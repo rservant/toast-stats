@@ -39,6 +39,7 @@ flowchart TD
 The existing `analyticsSummaryRouter` in `backend/src/routes/districts/analyticsSummary.ts` will be modified to remove the on-demand computation fallback.
 
 **Current Behavior:**
+
 ```typescript
 // When pre-computed analytics not found:
 // 1. Log warning
@@ -47,6 +48,7 @@ The existing `analyticsSummaryRouter` in `backend/src/routes/districts/analytics
 ```
 
 **New Behavior:**
+
 ```typescript
 // When pre-computed analytics not found:
 // 1. Log error with structured gap indicator
@@ -55,6 +57,7 @@ The existing `analyticsSummaryRouter` in `backend/src/routes/districts/analytics
 ```
 
 **Error Response Schema:**
+
 ```typescript
 interface AnalyticsUnavailableError {
   error: {
@@ -74,6 +77,7 @@ interface AnalyticsUnavailableError {
 The existing `snapshotsRouter` in `backend/src/routes/admin/snapshots.ts` will be enhanced to include analytics availability.
 
 **Current Response:**
+
 ```typescript
 interface SnapshotMetadata {
   snapshot_id: string
@@ -88,6 +92,7 @@ interface SnapshotMetadata {
 ```
 
 **Enhanced Response:**
+
 ```typescript
 interface EnhancedSnapshotMetadata extends SnapshotMetadata {
   analytics_available: boolean
@@ -181,48 +186,48 @@ This service will use the existing storage abstraction pattern to check for anal
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Based on the prework analysis and the property-testing-guidance.md steering document, the following correctness properties have been identified. Per the guidance, these will be validated through **unit tests with well-chosen examples** rather than property-based tests, as the behavior is deterministic, easily observable, and does not involve complex input spaces or mathematical invariants.
 
 **Property 1: Analytics unavailable returns 404**
 
-*For any* district ID and snapshot where pre-computed analytics do not exist, requesting the analytics-summary endpoint SHALL return HTTP status code 404.
+_For any_ district ID and snapshot where pre-computed analytics do not exist, requesting the analytics-summary endpoint SHALL return HTTP status code 404.
 
 **Validates: Requirements 1.1**
 **Testing approach:** Unit tests with specific examples
 
 **Property 2: Error response contains required fields**
 
-*For any* 404 error response from the analytics-summary endpoint, the response body SHALL contain: an error code of "ANALYTICS_NOT_AVAILABLE", a message indicating analytics are not available, the requested district ID, and a recommendation to run analytics backfill.
+_For any_ 404 error response from the analytics-summary endpoint, the response body SHALL contain: an error code of "ANALYTICS_NOT_AVAILABLE", a message indicating analytics are not available, the requested district ID, and a recommendation to run analytics backfill.
 
 **Validates: Requirements 1.2, 1.3, 1.5**
 **Testing approach:** Unit tests with specific examples
 
 **Property 3: No on-demand computation fallback**
 
-*For any* request to the analytics-summary endpoint where pre-computed analytics do not exist, the response time SHALL be under 5 seconds (indicating no expensive computation occurred).
+_For any_ request to the analytics-summary endpoint where pre-computed analytics do not exist, the response time SHALL be under 5 seconds (indicating no expensive computation occurred).
 
 **Validates: Requirements 1.4**
 **Testing approach:** Unit tests with timing assertions
 
 **Property 4: Snapshot list includes accurate analytics_available field**
 
-*For any* snapshot in the snapshot list response, the `analytics_available` field SHALL accurately reflect whether an analytics-summary.json file exists for that snapshot.
+_For any_ snapshot in the snapshot list response, the `analytics_available` field SHALL accurately reflect whether an analytics-summary.json file exists for that snapshot.
 
 **Validates: Requirements 2.1, 2.2**
 **Testing approach:** Unit tests with specific examples
 
 **Property 5: Snapshot list backward compatible**
 
-*For any* snapshot list response, all fields from the original SnapshotMetadata interface SHALL be present (snapshot_id, created_at, status, schema_version, calculation_version, size_bytes, error_count, district_count).
+_For any_ snapshot list response, all fields from the original SnapshotMetadata interface SHALL be present (snapshot_id, created_at, status, schema_version, calculation_version, size_bytes, error_count, district_count).
 
 **Validates: Requirements 2.3**
 **Testing approach:** Unit tests with schema validation
 
 **Property 6: Analytics check performance**
 
-*For any* snapshot list request, the additional latency introduced by analytics availability checking SHALL be under 100ms compared to the baseline without the check.
+_For any_ snapshot list request, the additional latency introduced by analytics availability checking SHALL be under 100ms compared to the baseline without the check.
 
 **Validates: Requirements 2.4**
 **Testing approach:** Unit tests with timing assertions
@@ -271,6 +276,7 @@ Per the property-testing-guidance.md steering document, property-based testing i
 ### Unit Tests
 
 **Note:** Unit tests with specific examples are preferred over property-based tests for this feature because:
+
 - The behavior is deterministic and easily observable
 - 3-5 examples fully cover each requirement
 - No complex input spaces or mathematical invariants exist

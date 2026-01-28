@@ -162,10 +162,10 @@ describe('Feature: firestore-index-fix - Index Configuration Validation', () => 
       // Note: Single-field indexes like history.timestamp are automatically
       // managed by Firestore and don't need to be defined in firestore.indexes.json
 
-      it('should have exactly 2 required composite indexes defined', () => {
+      it('should have exactly 3 required composite indexes defined', () => {
         // Only composite indexes need to be explicitly defined
         // Single-field indexes are automatically created by Firestore
-        expect(config.indexes.length).toBe(2)
+        expect(config.indexes.length).toBe(3)
       })
     })
   })

@@ -6,7 +6,7 @@
  * - Snapshot metadata inspection
  * - Snapshot payload retrieval
  *
- * Requirements: 1.1, 1.2, 1.3, 1.5
+ * Requirements: 1.1, 1.2, 1.3, 1.5, 2.1, 2.2, 2.3
  *
  * Storage Abstraction:
  * These routes use the ISnapshotStorage interface from the storage abstraction
@@ -21,9 +21,23 @@ import {
   getServiceFactory,
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
-import { SnapshotFilters } from '../../types/snapshots.js'
+import { SnapshotFilters, SnapshotMetadata } from '../../types/snapshots.js'
+import { createAnalyticsAvailabilityChecker } from '../../services/AnalyticsAvailabilityChecker.js'
 
 export const snapshotsRouter = Router()
+
+/**
+ * Enhanced snapshot metadata with analytics availability indicator
+ *
+ * Extends the base SnapshotMetadata with analytics_available field
+ * to indicate whether pre-computed analytics exist for the snapshot.
+ *
+ * Requirements: 2.1, 2.2, 2.3
+ */
+interface EnhancedSnapshotMetadata extends SnapshotMetadata {
+  /** Whether pre-computed analytics (analytics-summary.json) exist for this snapshot */
+  analytics_available: boolean
+}
 
 /**
  * GET /api/admin/snapshots
@@ -38,7 +52,11 @@ export const snapshotsRouter = Router()
  * - created_before: Filter snapshots created before this date (ISO string)
  * - min_district_count: Filter by minimum district count
  *
- * Requirements: 1.1
+ * Response includes:
+ * - snapshots: Array of EnhancedSnapshotMetadata with analytics_available field
+ * - metadata: Includes analytics_available_count and analytics_missing_count
+ *
+ * Requirements: 1.1, 2.1, 2.2, 2.3, 2.4
  */
 snapshotsRouter.get('/snapshots', logAdminAccess, async (req, res) => {
   const startTime = Date.now()
@@ -86,23 +104,55 @@ snapshotsRouter.get('/snapshots', logAdminAccess, async (req, res) => {
 
     // Get snapshot metadata
     const snapshots = await snapshotStorage.listSnapshots(limit, filters)
+
+    // Check analytics availability for all snapshots
+    // Requirement 2.1: Include boolean field indicating analytics availability
+    // Requirement 2.2: Verify existence of analytics-summary.json file
+    // Requirement 2.4: Use batch checking for performance (under 100ms additional latency)
+    const cacheDir = process.env['CACHE_DIR'] || './cache'
+    const analyticsChecker = createAnalyticsAvailabilityChecker(cacheDir)
+    const snapshotIds = snapshots.map(s => s.snapshot_id)
+    const analyticsAvailabilityMap =
+      await analyticsChecker.checkBatch(snapshotIds)
+
+    // Enhance snapshots with analytics availability
+    // Requirement 2.3: Backward compatible - all existing fields preserved
+    const enhancedSnapshots: EnhancedSnapshotMetadata[] = snapshots.map(
+      snapshot => ({
+        ...snapshot,
+        analytics_available:
+          analyticsAvailabilityMap.get(snapshot.snapshot_id) ?? false,
+      })
+    )
+
+    // Calculate analytics counts for metadata
+    const analyticsAvailableCount = enhancedSnapshots.filter(
+      s => s.analytics_available
+    ).length
+    const analyticsMissingCount =
+      enhancedSnapshots.length - analyticsAvailableCount
+
     const duration = Date.now() - startTime
 
     logger.info('Admin snapshot listing completed', {
       operation: 'listSnapshots',
       operation_id: operationId,
       snapshot_count: snapshots.length,
+      analytics_available_count: analyticsAvailableCount,
+      analytics_missing_count: analyticsMissingCount,
       filters_applied: Object.keys(filters).length,
       limit_applied: limit,
       duration_ms: duration,
     })
 
     res.json({
-      snapshots,
+      snapshots: enhancedSnapshots,
       metadata: {
-        total_count: snapshots.length,
+        total_count: enhancedSnapshots.length,
+        analytics_available_count: analyticsAvailableCount,
+        analytics_missing_count: analyticsMissingCount,
         filters_applied: filters,
-        limit_applied: limit,
+        limit_applied: limit ?? null,
         query_duration_ms: duration,
         generated_at: new Date().toISOString(),
       },

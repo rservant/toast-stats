@@ -21,16 +21,45 @@ import { FileSnapshotStore } from '../../../services/SnapshotStore.js'
 import { Snapshot } from '../../../types/snapshots.js'
 import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 
+// Use vi.hoisted to ensure mock factory is available when vi.mock is hoisted
+const { mockFactory, setTestSnapshotStore } = vi.hoisted(() => {
+  let testSnapshotStore: unknown = null
+  return {
+    mockFactory: {
+      createSnapshotStorage: () => testSnapshotStore,
+      createSnapshotStore: () => testSnapshotStore,
+      createCacheConfigService: () => ({
+        getConfiguration: () => ({
+          baseDirectory: './test-cache',
+          source: 'test',
+          isConfigured: true,
+          validationStatus: {
+            isValid: true,
+            isAccessible: true,
+            isSecure: true,
+          },
+        }),
+        getCacheDirectory: () => './test-cache',
+        initialize: () => Promise.resolve(),
+      }),
+    },
+    setTestSnapshotStore: (store: unknown) => {
+      testSnapshotStore = store
+    },
+  }
+})
+
 // Mock the production service factory to use our test snapshot store
 // Routes now use createSnapshotStorage() which returns ISnapshotStorage
 let testSnapshotStore: FileSnapshotStore
-const mockFactory = {
-  createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
-  createSnapshotStore: () => testSnapshotStore,
-}
 
 vi.mock('../../../services/ProductionServiceFactory.js', () => ({
   getProductionServiceFactory: () => mockFactory,
+}))
+
+// Mock the main index.js to prevent server initialization side effects
+vi.mock('../../../index.js', () => ({
+  getUnifiedBackfillServiceInstance: vi.fn(),
 }))
 
 // Mock logger
@@ -61,6 +90,7 @@ describe('Admin Routes Integration', () => {
       maxAgeDays: 7,
       enableCompression: false,
     })
+    setTestSnapshotStore(testSnapshotStore)
 
     // Create test app using the new admin routes module
     app = express()
