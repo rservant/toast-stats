@@ -16,6 +16,60 @@ import { DistrictConfigurationService } from './services/DistrictConfigurationSe
 const app = express()
 const PORT = process.env['PORT'] || 5001
 
+// ============================================================================
+// Singleton UnifiedBackfillService Instance
+// ============================================================================
+
+/**
+ * Singleton instance of UnifiedBackfillService
+ * Shared between server startup (for recovery) and API routes
+ * This ensures that recovered jobs are visible to API requests
+ */
+let unifiedBackfillServiceInstance: UnifiedBackfillService | null = null
+
+/**
+ * Get the singleton UnifiedBackfillService instance
+ * Creates the instance lazily if not already created
+ */
+export async function getUnifiedBackfillServiceInstance(): Promise<UnifiedBackfillService> {
+  if (unifiedBackfillServiceInstance) {
+    return unifiedBackfillServiceInstance
+  }
+
+  // Create storage providers
+  const storageProviders = StorageProviderFactory.createFromEnvironment()
+
+  // Create required services for UnifiedBackfillService
+  const productionFactory = getProductionServiceFactory()
+  const refreshService = productionFactory.createRefreshService()
+  const configService = new DistrictConfigurationService(
+    storageProviders.districtConfigStorage
+  )
+
+  // Create UnifiedBackfillService with autoRecoverOnInit enabled
+  unifiedBackfillServiceInstance = new UnifiedBackfillService(
+    storageProviders.backfillJobStorage,
+    storageProviders.snapshotStorage,
+    storageProviders.timeSeriesIndexStorage,
+    refreshService,
+    configService,
+    { autoRecoverOnInit: true }
+  )
+
+  return unifiedBackfillServiceInstance
+}
+
+/**
+ * Reset the singleton instance (for testing only)
+ */
+export function resetUnifiedBackfillServiceInstance(): void {
+  unifiedBackfillServiceInstance = null
+}
+
+// ============================================================================
+// Express App Configuration
+// ============================================================================
+
 // CORS configuration
 const corsOptions = {
   origin:
@@ -168,25 +222,8 @@ const server = app.listen(PORT, async () => {
       operation: 'initializeBackfillRecovery',
     })
 
-    // Create storage providers
-    const storageProviders = StorageProviderFactory.createFromEnvironment()
-
-    // Create required services for UnifiedBackfillService
-    const productionFactory = getProductionServiceFactory()
-    const refreshService = productionFactory.createRefreshService()
-    const configService = new DistrictConfigurationService(
-      storageProviders.districtConfigStorage
-    )
-
-    // Create UnifiedBackfillService with autoRecoverOnInit enabled (default)
-    const unifiedBackfillService = new UnifiedBackfillService(
-      storageProviders.backfillJobStorage,
-      storageProviders.snapshotStorage,
-      storageProviders.timeSeriesIndexStorage,
-      refreshService,
-      configService,
-      { autoRecoverOnInit: true }
-    )
+    // Get the singleton instance (creates it if needed)
+    const unifiedBackfillService = await getUnifiedBackfillServiceInstance()
 
     // Initialize the service - this will automatically recover incomplete jobs
     const recoveryResult = await unifiedBackfillService.initialize()

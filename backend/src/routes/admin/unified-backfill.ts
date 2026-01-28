@@ -20,12 +20,10 @@ import { Router, type Request, type Response } from 'express'
 import {
   logAdminAccess,
   generateOperationId,
-  getServiceFactory,
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
-import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'
-import { UnifiedBackfillService } from '../../services/backfill/unified/UnifiedBackfillService.js'
-import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
+import { getUnifiedBackfillServiceInstance } from '../../index.js'
+import type { UnifiedBackfillService } from '../../services/backfill/unified/UnifiedBackfillService.js'
 import type {
   CreateJobRequest,
   CreateJobResponse,
@@ -47,49 +45,32 @@ export const unifiedBackfillRouter = Router()
 // ============================================================================
 
 /**
- * Cached UnifiedBackfillService instance
- * Lazily initialized on first request
+ * Mock service instance for testing
+ * When set, this takes precedence over the singleton from index.ts
  */
-let unifiedBackfillService: UnifiedBackfillService | null = null
+let mockUnifiedBackfillService: UnifiedBackfillService | null = null
 
 /**
- * Get or create the UnifiedBackfillService instance
+ * Get the UnifiedBackfillService instance
+ * Uses the singleton from index.ts (shared with server startup for recovery)
+ * Falls back to mock service if set (for testing)
  */
 async function getUnifiedBackfillService(): Promise<UnifiedBackfillService> {
-  if (unifiedBackfillService) {
-    return unifiedBackfillService
+  // Use mock service if set (for testing)
+  if (mockUnifiedBackfillService) {
+    return mockUnifiedBackfillService
   }
 
-  const storageProviders = StorageProviderFactory.createFromEnvironment()
-  const serviceFactory = getServiceFactory()
-
-  // Create dependencies
-  const snapshotStorage = storageProviders.snapshotStorage
-  const timeSeriesStorage = storageProviders.timeSeriesIndexStorage
-  const backfillJobStorage = storageProviders.backfillJobStorage
-  const refreshService = serviceFactory.createRefreshService()
-  const configService = new DistrictConfigurationService(
-    storageProviders.districtConfigStorage
-  )
-
-  // Create and initialize the service
-  unifiedBackfillService = new UnifiedBackfillService(
-    backfillJobStorage,
-    snapshotStorage,
-    timeSeriesStorage,
-    refreshService,
-    configService,
-    { autoRecoverOnInit: false } // Don't auto-recover on route initialization
-  )
-
-  return unifiedBackfillService
+  // Use the singleton from index.ts
+  return getUnifiedBackfillServiceInstance()
 }
 
 /**
  * Reset the service instance (for testing)
+ * Note: This only resets the mock, not the singleton from index.ts
  */
 export function resetUnifiedBackfillService(): void {
-  unifiedBackfillService = null
+  mockUnifiedBackfillService = null
 }
 
 /**
@@ -99,7 +80,7 @@ export function resetUnifiedBackfillService(): void {
 export function setUnifiedBackfillService(
   service: UnifiedBackfillService | null
 ): void {
-  unifiedBackfillService = service
+  mockUnifiedBackfillService = service
 }
 
 // ============================================================================

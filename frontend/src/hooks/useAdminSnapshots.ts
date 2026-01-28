@@ -16,6 +16,50 @@ export interface SnapshotMetadata {
 }
 
 /**
+ * Detailed snapshot inspection data
+ */
+export interface SnapshotInspection {
+  snapshot_id: string
+  created_at: string
+  status: 'success' | 'partial' | 'failed'
+  schema_version: string
+  calculation_version: string
+  errors: Array<{
+    districtId?: string
+    error: string
+    timestamp?: string
+  }>
+  payload_summary: {
+    district_count: number
+    metadata: Record<string, unknown>
+    districts: Array<{
+      districtId: string
+      name: string
+      club_count: number
+      membership_total: number
+      performance_score: number
+    }>
+  }
+  size_analysis: {
+    total_size_estimate: number
+    payload_size_estimate: number
+    errors_size: number
+  }
+}
+
+/**
+ * Response from the snapshot inspection endpoint
+ */
+interface SnapshotInspectionResponse {
+  inspection: SnapshotInspection
+  metadata: {
+    inspected_at: string
+    inspection_duration_ms: number
+    operation_id: string
+  }
+}
+
+/**
  * Response from the list snapshots endpoint
  */
 interface ListSnapshotsResponse {
@@ -269,4 +313,30 @@ export function useAdminSnapshots(
     deleteSnapshotsRange,
     deleteAllSnapshots,
   }
+}
+
+/**
+ * Hook to fetch detailed snapshot information including errors
+ *
+ * @param snapshotId - The snapshot ID to fetch details for
+ * @param enabled - Whether the query is enabled
+ */
+export function useSnapshotDetails(
+  snapshotId: string | null,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: ['admin-snapshot-details', snapshotId],
+    queryFn: async () => {
+      if (!snapshotId) {
+        throw new Error('Snapshot ID is required')
+      }
+      const response = await apiClient.get<SnapshotInspectionResponse>(
+        `/admin/snapshots/${snapshotId}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!snapshotId,
+    staleTime: 60000, // Consider data stale after 60 seconds
+  })
 }

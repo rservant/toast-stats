@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAdminSnapshots, SnapshotMetadata } from '../hooks/useAdminSnapshots'
+import { useAdminSnapshots, useSnapshotDetails, SnapshotMetadata } from '../hooks/useAdminSnapshots'
 import { useAdminMonitoring } from '../hooks/useAdminMonitoring'
 import {
   useUnifiedBackfill,
@@ -237,6 +237,158 @@ const StatusBadge: React.FC<{ status: 'success' | 'partial' | 'failed' }> = ({
 }
 
 /**
+ * Snapshot Errors Modal Component
+ * Displays detailed error information for a snapshot
+ */
+interface SnapshotErrorsModalProps {
+  snapshotId: string | null
+  onClose: () => void
+}
+
+const SnapshotErrorsModal: React.FC<SnapshotErrorsModalProps> = ({
+  snapshotId,
+  onClose,
+}) => {
+  const { data, isLoading, isError, error } = useSnapshotDetails(
+    snapshotId,
+    !!snapshotId
+  )
+
+  if (!snapshotId) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="snapshot-errors-dialog-title"
+    >
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3
+            id="snapshot-errors-dialog-title"
+            className="text-lg font-semibold text-tm-black font-tm-headline"
+          >
+            Snapshot Errors
+          </h3>
+          <p className="text-sm text-gray-600 font-tm-body mt-1">
+            Snapshot ID: <span className="font-mono">{snapshotId}</span>
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <svg
+                className="animate-spin h-8 w-8 text-tm-loyal-blue"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <span className="ml-2 text-gray-600 font-tm-body">
+                Loading error details...
+              </span>
+            </div>
+          )}
+
+          {isError && (
+            <div className="bg-red-50 border border-red-200 rounded-sm p-4">
+              <p className="text-red-800 font-tm-body">
+                Failed to load error details:{' '}
+                {error instanceof Error ? error.message : 'Unknown error'}
+              </p>
+            </div>
+          )}
+
+          {data && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="bg-gray-50 rounded-sm p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Status:</span>{' '}
+                    <StatusBadge status={data.inspection.status} />
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Created:</span>{' '}
+                    <span className="text-tm-black">
+                      {formatDate(data.inspection.created_at)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Districts:</span>{' '}
+                    <span className="text-tm-black">
+                      {data.inspection.payload_summary.district_count}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Error Count:</span>{' '}
+                    <span className="text-red-600 font-semibold">
+                      {data.inspection.errors.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error List */}
+              {data.inspection.errors.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-tm-black font-tm-headline">
+                    Error Details
+                  </h4>
+                  <div className="border border-gray-200 rounded-sm divide-y divide-gray-200">
+                    {data.inspection.errors.map((err, index) => (
+                      <div key={index} className="p-3">
+                        {err.districtId && (
+                          <p className="text-xs text-gray-500 mb-1">
+                            District: {err.districtId}
+                          </p>
+                        )}
+                        <p className="text-sm text-red-700 font-mono break-all">
+                          {err.error}
+                        </p>
+                        {err.timestamp && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formatDate(err.timestamp)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500 font-tm-body">
+                  No errors recorded for this snapshot.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+          <ActionButton variant="secondary" onClick={onClose}>
+            Close
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
  * Format bytes to human readable string
  */
 function formatBytes(bytes: number): string {
@@ -268,12 +420,14 @@ interface SnapshotListItemProps {
   snapshot: SnapshotMetadata
   isSelected: boolean
   onSelect: (snapshotId: string, selected: boolean) => void
+  onViewErrors: (snapshotId: string) => void
 }
 
 const SnapshotListItem: React.FC<SnapshotListItemProps> = ({
   snapshot,
   isSelected,
   onSelect,
+  onViewErrors,
 }) => {
   return (
     <tr className={`hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}>
@@ -305,7 +459,13 @@ const SnapshotListItem: React.FC<SnapshotListItemProps> = ({
       </td>
       <td className="px-4 py-3 text-sm text-gray-600">
         {snapshot.error_count > 0 ? (
-          <span className="text-red-600">{snapshot.error_count} errors</span>
+          <button
+            onClick={() => onViewErrors(snapshot.snapshot_id)}
+            className="text-red-600 hover:text-red-800 hover:underline focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded"
+            aria-label={`View ${snapshot.error_count} errors for snapshot ${snapshot.snapshot_id}`}
+          >
+            {snapshot.error_count} errors
+          </button>
         ) : (
           <span className="text-green-600">None</span>
         )}
@@ -353,6 +513,10 @@ const SnapshotsSection: React.FC = () => {
       startDate: '',
       endDate: '',
     })
+  // State for viewing snapshot errors
+  const [viewErrorsSnapshotId, setViewErrorsSnapshotId] = useState<
+    string | null
+  >(null)
 
   const handleSelectSnapshot = useCallback(
     (snapshotId: string, selected: boolean) => {
@@ -368,6 +532,10 @@ const SnapshotsSection: React.FC = () => {
     },
     []
   )
+
+  const handleViewErrors = useCallback((snapshotId: string) => {
+    setViewErrorsSnapshotId(snapshotId)
+  }, [])
 
   const handleSelectAll = useCallback(
     (selected: boolean) => {
@@ -622,6 +790,7 @@ const SnapshotsSection: React.FC = () => {
                       snapshot={snapshot}
                       isSelected={selectedSnapshots.has(snapshot.snapshot_id)}
                       onSelect={handleSelectSnapshot}
+                      onViewErrors={handleViewErrors}
                     />
                   ))
                 )}
@@ -734,6 +903,12 @@ const SnapshotsSection: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Snapshot errors modal */}
+      <SnapshotErrorsModal
+        snapshotId={viewErrorsSnapshotId}
+        onClose={() => setViewErrorsSnapshotId(null)}
+      />
     </>
   )
 }
@@ -908,6 +1083,9 @@ const PreviewDialog: React.FC<PreviewDialogProps> = ({
   )
 }
 
+// localStorage key for persisting current backfill job ID
+const BACKFILL_JOB_ID_KEY = 'admin_backfill_current_job_id'
+
 /**
  * Unified Backfill Section Component
  *
@@ -927,17 +1105,37 @@ const BackfillSection: React.FC = () => {
   const [endDate, setEndDate] = useState('')
   const [skipExisting, setSkipExisting] = useState(true)
 
-  // UI state
-  const [currentJobId, setCurrentJobId] = useState<string | null>(null)
+  // UI state - initialize currentJobId from localStorage
+  const [currentJobId, setCurrentJobId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(BACKFILL_JOB_ID_KEY)
+    } catch {
+      return null
+    }
+  })
   const [showPreview, setShowPreview] = useState(false)
   const [previewData, setPreviewData] = useState<JobPreview | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
+
+  // Persist currentJobId to localStorage when it changes
+  useEffect(() => {
+    try {
+      if (currentJobId) {
+        localStorage.setItem(BACKFILL_JOB_ID_KEY, currentJobId)
+      } else {
+        localStorage.removeItem(BACKFILL_JOB_ID_KEY)
+      }
+    } catch {
+      // Ignore localStorage errors (e.g., in private browsing mode)
+    }
+  }, [currentJobId])
 
   // Hooks
   const {
     createJob,
     jobStatus,
     cancelJob,
+    jobsList,
     previewJob,
     rateLimitConfig,
     isJobRunning,
@@ -946,8 +1144,28 @@ const BackfillSection: React.FC = () => {
     jobId: currentJobId,
     statusEnabled: !!currentJobId,
     pollingInterval: 2000,
+    listJobsOptions: { limit: 10 },
+    listJobsEnabled: true,
     rateLimitConfigEnabled: true,
   })
+
+  // Restore running job on mount - check if there's an active job we should track
+  useEffect(() => {
+    if (currentJobId) return // Already tracking a job
+    if (!jobsList.data?.jobs) return // No job data yet
+
+    // Find any running job (pending, running, or recovering)
+    const runningJob = jobsList.data.jobs.find(
+      job =>
+        job.status === 'pending' ||
+        job.status === 'running' ||
+        job.status === 'recovering'
+    )
+
+    if (runningJob) {
+      setCurrentJobId(runningJob.jobId)
+    }
+  }, [currentJobId, jobsList.data?.jobs])
 
   // Get snapshot data for pre-computation status
   const { snapshots, isLoading: isLoadingSnapshots } = useAdminSnapshots(100)
@@ -1007,10 +1225,15 @@ const BackfillSection: React.FC = () => {
     }
   }, [cancelJob, currentJobId])
 
-  // Handle dismiss progress
+  // Handle dismiss progress - also clear localStorage
   const handleDismissProgress = useCallback(() => {
     setCurrentJobId(null)
     setConfirmCancel(false)
+    try {
+      localStorage.removeItem(BACKFILL_JOB_ID_KEY)
+    } catch {
+      // Ignore localStorage errors
+    }
   }, [])
 
   // completedAt is used in the summary stats section
@@ -1062,7 +1285,7 @@ const BackfillSection: React.FC = () => {
               value={jobType}
               onChange={e => setJobType(e.target.value as BackfillJobType)}
               disabled={isJobRunning}
-              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] bg-white text-tm-black disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
             >
               <option value="data-collection">Data Collection</option>
               <option value="analytics-generation">Analytics Generation</option>
@@ -1091,7 +1314,7 @@ const BackfillSection: React.FC = () => {
                   onChange={e => setStartDate(e.target.value)}
                   max={maxDate}
                   disabled={isJobRunning}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] bg-white text-tm-black disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Defaults to program year start
@@ -1111,7 +1334,7 @@ const BackfillSection: React.FC = () => {
                   onChange={e => setEndDate(e.target.value)}
                   max={maxDate}
                   disabled={isJobRunning}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:ring-tm-loyal-blue focus:border-tm-loyal-blue font-tm-body min-h-[44px] bg-white text-tm-black disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Defaults to yesterday (dashboard data is delayed)
