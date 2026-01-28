@@ -2024,3 +2024,43 @@ paths:
           description: Internal server error
         '503':
           description: Service unavailable
+
+  /admin/unified-backfill/{jobId}/force-cancel:
+    post:
+      summary: Force-cancel a stuck backfill job
+      description: |
+        Force-cancels a backfill job that is stuck in 'running' or 'recovering' state.
+        This is a destructive operation that marks the job as cancelled and clears
+        its checkpoint to prevent automatic recovery.
+        
+        Requires explicit confirmation via the 'force' parameter.
+      operationId: forceCancelBackfillJob
+      tags:
+        - Admin
+      x-google-backend:
+        address: https://toast-stats-api-736334703361.us-east1.run.app
+        path_translation: APPEND_PATH_TO_ADDRESS
+      produces:
+        - application/json
+      parameters:
+        - name: jobId
+          in: path
+          type: string
+          required: true
+          description: Unique identifier for the backfill job
+        - name: force
+          in: query
+          type: boolean
+          required: false
+          description: Must be true to confirm the force-cancel operation
+      responses:
+        '200':
+          description: Job successfully force-cancelled
+        '400':
+          description: Bad request - force parameter missing or job in terminal state
+        '404':
+          description: Backfill job not found
+        '500':
+          description: Internal server error
+        '503':
+          description: Service unavailable

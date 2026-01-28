@@ -10,11 +10,13 @@
  * - Error summary for failed jobs
  * - Status filter controls
  * - Pagination controls
+ * - Force-cancel capability for stuck jobs with confirmation dialog
  *
- * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.2, 7.3, 7.4, 7.7
  */
 
 import React, { useState, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BackfillJob,
   BackfillJobStatus,
@@ -334,21 +336,149 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
 }
 
 /**
+ * Force Cancel Confirmation Dialog Component
+ *
+ * Displays a warning dialog before force-cancelling a stuck job.
+ * Requirements: 7.3, 7.4
+ */
+interface ForceCancelConfirmDialogProps {
+  isOpen: boolean
+  jobId: string | null
+  onConfirm: () => void
+  onCancel: () => void
+  isLoading?: boolean
+}
+
+const ForceCancelConfirmDialog: React.FC<ForceCancelConfirmDialogProps> = ({
+  isOpen,
+  jobId,
+  onConfirm,
+  onCancel,
+  isLoading = false,
+}) => {
+  if (!isOpen || !jobId) return null
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="force-cancel-dialog-title"
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl p-6"
+        style={{ width: '100%', maxWidth: '28rem', minWidth: '320px' }}
+      >
+        {/* Warning Icon and Title */}
+        <div className="flex items-start gap-4 mb-4">
+          <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-6 h-6 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3
+              id="force-cancel-dialog-title"
+              className="text-lg font-semibold text-tm-black font-tm-headline"
+            >
+              Force Cancel Job
+            </h3>
+            <p className="text-sm text-gray-500 font-mono mt-1" title={jobId}>
+              {jobId.length > 30 ? `${jobId.substring(0, 30)}...` : jobId}
+            </p>
+          </div>
+        </div>
+
+        {/* Warning Message */}
+        <div className="bg-red-50 border border-red-200 rounded-sm p-4 mb-6">
+          <p className="text-sm text-red-800 font-tm-body">
+            <strong>Warning:</strong> This is a destructive action that will:
+          </p>
+          <ul className="text-sm text-red-700 font-tm-body mt-2 ml-4 list-disc space-y-1">
+            <li>Immediately mark the job as cancelled</li>
+            <li>Clear the job's checkpoint, preventing automatic recovery</li>
+            <li>Allow new backfill jobs to be created</li>
+          </ul>
+          <p className="text-sm text-red-800 font-tm-body mt-3">
+            Use this only if the job is stuck and cannot complete normally.
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-tm-loyal-blue bg-white border-2 border-tm-loyal-blue rounded-sm hover:bg-tm-loyal-blue hover:text-white transition-colors min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-sm hover:bg-red-700 transition-colors min-h-[44px] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading && (
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            )}
+            Force Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+/**
  * Job History Item Component
  */
 interface JobHistoryItemProps {
   job: BackfillJob
   isExpanded: boolean
   onToggleExpand: () => void
+  /** Callback to request force-cancel confirmation (Requirements: 7.2, 7.3, 7.7) */
+  onRequestForceCancelJob?: ((jobId: string) => void) | undefined
 }
 
 const JobHistoryItem: React.FC<JobHistoryItemProps> = ({
   job,
   isExpanded,
   onToggleExpand,
+  onRequestForceCancelJob,
 }) => {
   const outcome = getOutcome(job)
   const hasErrors = job.progress.errors.length > 0 || job.error
+  
+  // Determine if job can be force-cancelled (Requirements: 7.2)
+  const canForceCancelJob = job.status === 'running' || job.status === 'recovering'
 
   return (
     <div className="border border-gray-200 rounded-sm overflow-hidden bg-white">
@@ -559,6 +689,33 @@ const JobHistoryItem: React.FC<JobHistoryItemProps> = ({
               </p>
             </div>
           )}
+
+          {/* Force Cancel button for stuck jobs (Requirements: 7.2, 7.3, 7.7) */}
+          {canForceCancelJob && onRequestForceCancelJob && (
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <button
+                onClick={() => onRequestForceCancelJob(job.jobId)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-sm hover:bg-red-700 transition-colors min-h-[44px] flex items-center gap-2"
+                aria-label={`Force cancel job ${job.jobId}`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                Force Cancel
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -581,8 +738,19 @@ export interface JobHistoryListProps {
   refreshInterval?: number
   /** Callback when a job is selected */
   onJobSelect?: (jobId: string) => void
+  /** Callback to force-cancel a stuck job (Requirements: 7.2, 7.3, 7.4, 7.7) */
+  onForceCancelJob?: (jobId: string) => Promise<void>
   /** Additional CSS classes */
   className?: string
+}
+
+/**
+ * Force cancel confirmation dialog state
+ */
+interface ForceCancelDialogState {
+  isOpen: boolean
+  jobId: string | null
+  isLoading: boolean
 }
 
 /**
@@ -593,8 +761,9 @@ export interface JobHistoryListProps {
  * - Expandable job details
  * - Error summaries
  * - Pagination
+ * - Force-cancel capability with confirmation dialog
  *
- * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.2, 7.3, 7.4, 7.7
  */
 export const JobHistoryList: React.FC<JobHistoryListProps> = ({
   pageSize = DEFAULT_PAGE_SIZE,
@@ -603,12 +772,20 @@ export const JobHistoryList: React.FC<JobHistoryListProps> = ({
   autoRefresh: _autoRefresh = false,
   refreshInterval: _refreshInterval = 30000,
   onJobSelect: _onJobSelect,
+  onForceCancelJob,
   className = '',
 }) => {
   // Filter state
   const [statusFilter, setStatusFilter] = useState<BackfillJobStatus[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
+
+  // Force cancel confirmation dialog state (Requirements: 7.3, 7.4)
+  const [forceCancelDialog, setForceCancelDialog] = useState<ForceCancelDialogState>({
+    isOpen: false,
+    jobId: null,
+    isLoading: false,
+  })
 
   // Build query options
   const queryOptions: ListJobsOptions = useMemo(() => {
@@ -648,6 +825,37 @@ export const JobHistoryList: React.FC<JobHistoryListProps> = ({
   const handleToggleExpand = useCallback((jobId: string) => {
     setExpandedJobId(prev => (prev === jobId ? null : jobId))
   }, [])
+
+  // Handle force cancel request - show confirmation dialog (Requirements: 7.3)
+  const handleRequestForceCancelJob = useCallback((jobId: string) => {
+    setForceCancelDialog({
+      isOpen: true,
+      jobId,
+      isLoading: false,
+    })
+  }, [])
+
+  // Handle force cancel confirmation - call the callback (Requirements: 7.4)
+  const handleConfirmForceCancel = useCallback(async () => {
+    if (!forceCancelDialog.jobId || !onForceCancelJob) return
+
+    setForceCancelDialog(prev => ({ ...prev, isLoading: true }))
+
+    try {
+      await onForceCancelJob(forceCancelDialog.jobId)
+      // Close dialog on success
+      setForceCancelDialog({ isOpen: false, jobId: null, isLoading: false })
+    } catch {
+      // Keep dialog open on error, but stop loading
+      setForceCancelDialog(prev => ({ ...prev, isLoading: false }))
+    }
+  }, [forceCancelDialog.jobId, onForceCancelJob])
+
+  // Handle force cancel dialog cancel
+  const handleCancelForceCancel = useCallback(() => {
+    if (forceCancelDialog.isLoading) return // Don't allow cancel while loading
+    setForceCancelDialog({ isOpen: false, jobId: null, isLoading: false })
+  }, [forceCancelDialog.isLoading])
 
   return (
     <div
@@ -792,6 +1000,7 @@ export const JobHistoryList: React.FC<JobHistoryListProps> = ({
               job={job}
               isExpanded={expandedJobId === job.jobId}
               onToggleExpand={() => handleToggleExpand(job.jobId)}
+              onRequestForceCancelJob={onForceCancelJob ? handleRequestForceCancelJob : undefined}
             />
           ))}
         </div>
@@ -808,6 +1017,15 @@ export const JobHistoryList: React.FC<JobHistoryListProps> = ({
           disabled={isLoading}
         />
       )}
+
+      {/* Force Cancel Confirmation Dialog (Requirements: 7.3, 7.4) */}
+      <ForceCancelConfirmDialog
+        isOpen={forceCancelDialog.isOpen}
+        jobId={forceCancelDialog.jobId}
+        onConfirm={handleConfirmForceCancel}
+        onCancel={handleCancelForceCancel}
+        isLoading={forceCancelDialog.isLoading}
+      />
     </div>
   )
 }

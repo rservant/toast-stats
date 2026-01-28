@@ -363,6 +363,63 @@ export interface CancelJobResponse {
   }
 }
 
+/**
+ * Response body for force-cancel job
+ *
+ * Returned when a stuck job is successfully force-cancelled via the
+ * POST /admin/unified-backfill/{jobId}/force-cancel endpoint.
+ *
+ * Requirements: 6.1
+ */
+export interface ForceCancelResponse {
+  /** Job identifier that was force-cancelled */
+  jobId: string
+  /** Status of the job before force-cancellation */
+  previousStatus: BackfillJobStatus
+  /** New status after force-cancellation (always 'cancelled') */
+  newStatus: 'cancelled'
+  /** Human-readable message about the force-cancellation */
+  message: string
+  /** Response metadata for tracing */
+  metadata: {
+    /** Unique identifier for this API operation */
+    operationId: string
+    /** ISO timestamp when the job was force-cancelled */
+    cancelledAt: string
+    /** Indicates this was a force-cancel operation (always true) */
+    forceCancelled: true
+  }
+}
+
+/**
+ * Error response body for force-cancel job failures
+ *
+ * Returned when a force-cancel request fails due to validation errors,
+ * missing job, or storage errors.
+ *
+ * Requirements: 6.1
+ */
+export interface ForceCancelErrorResponse {
+  /** Error details */
+  error: {
+    /** Error code (e.g., 'FORCE_REQUIRED', 'JOB_NOT_FOUND', 'INVALID_JOB_STATE', 'STORAGE_ERROR') */
+    code: string
+    /** Human-readable error message */
+    message: string
+    /** Additional error details (optional) */
+    details?: string
+    /** Whether the operation can be retried (optional) */
+    retryable?: boolean
+  }
+  /** Response metadata for tracing */
+  metadata: {
+    /** Unique identifier for this API operation */
+    operationId: string
+    /** ISO timestamp when the error occurred */
+    timestamp: string
+  }
+}
+
 // ============================================================================
 // Query Keys
 // ============================================================================
@@ -489,6 +546,52 @@ export function useCancelJob() {
       return response.data
     },
     onSuccess: (_data, jobId) => {
+      // Invalidate the specific job status query
+      queryClient.invalidateQueries({
+        queryKey: UNIFIED_BACKFILL_QUERY_KEYS.jobStatus(jobId),
+      })
+      // Invalidate the jobs list
+      queryClient.invalidateQueries({
+        queryKey: UNIFIED_BACKFILL_QUERY_KEYS.jobs(),
+      })
+    },
+  })
+}
+
+/**
+ * Hook to force-cancel a stuck backfill job
+ *
+ * Force-cancels a job that is stuck in 'running' or 'recovering' state.
+ * This is a destructive operation that marks the job as cancelled and clears
+ * its checkpoint to prevent automatic recovery.
+ *
+ * Requirements: 6.1, 6.2, 6.3
+ *
+ * @example
+ * const forceCancelJob = useForceCancelJob()
+ * await forceCancelJob.mutateAsync({ jobId: 'job_123', force: true })
+ */
+export function useForceCancelJob() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      jobId,
+      force,
+    }: {
+      jobId: string
+      force: boolean
+    }) => {
+      const response = await apiClient.post<ForceCancelResponse>(
+        `/admin/unified-backfill/${jobId}/force-cancel`,
+        undefined,
+        {
+          params: { force },
+        }
+      )
+      return response.data
+    },
+    onSuccess: (_data, { jobId }) => {
       // Invalidate the specific job status query
       queryClient.invalidateQueries({
         queryKey: UNIFIED_BACKFILL_QUERY_KEYS.jobStatus(jobId),

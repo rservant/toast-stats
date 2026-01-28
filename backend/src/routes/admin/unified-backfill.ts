@@ -1271,3 +1271,210 @@ unifiedBackfillRouter.delete(
     }
   }
 )
+
+/**
+ * POST /api/admin/backfill/:jobId/force-cancel
+ * Force-cancel a stuck backfill job
+ *
+ * This endpoint is for administrative intervention when jobs are stuck
+ * in 'running' or 'recovering' states and cannot be cancelled normally.
+ *
+ * Path Parameters:
+ * - jobId: string - The unique job identifier
+ *
+ * Query Parameters:
+ * - force: boolean (required) - Must be 'true' to confirm the action
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 4.1, 4.2, 4.3
+ */
+unifiedBackfillRouter.post(
+  '/:jobId/force-cancel',
+  logAdminAccess,
+  async (req: Request, res: Response): Promise<void> => {
+    const operationId = generateOperationId('force_cancel_backfill_job')
+    const jobId = req.params['jobId']
+    const forceParam = req.query['force']
+
+    // Requirement 4.1: Log request with job ID and operator IP address
+    logger.info('Force-cancel backfill job requested', {
+      operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+      operationId,
+      jobId,
+      forceParam,
+      ip: req.ip,
+    })
+
+    try {
+      // Validate jobId
+      if (!jobId || typeof jobId !== 'string' || jobId.trim().length === 0) {
+        logger.warn('Force-cancel failed: invalid job ID', {
+          operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+          operationId,
+          jobId,
+        })
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              BACKFILL_ERROR_CODES.VALIDATION_ERROR,
+              'Invalid job ID',
+              operationId,
+              'jobId must be a non-empty string'
+            )
+          )
+        return
+      }
+
+      // Requirement 1.2: Return 400 error if force parameter is missing or not 'true'
+      // Requirement 1.3: Proceed with cancellation when force=true
+      if (forceParam !== 'true') {
+        // Requirement 4.3: Log failure reason
+        logger.warn('Force-cancel failed: force parameter not set to true', {
+          operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+          operationId,
+          jobId,
+          forceParam,
+        })
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              BACKFILL_ERROR_CODES.FORCE_REQUIRED,
+              'Force-cancel requires explicit confirmation. Set force=true to proceed.',
+              operationId,
+              'The force query parameter must be set to "true" to confirm this destructive action'
+            )
+          )
+        return
+      }
+
+      const service = await getUnifiedBackfillService()
+
+      // Check if job exists first (for better error messages)
+      const job = await service.getJob(jobId)
+
+      // Requirement 1.4: Return 404 for non-existent job ID
+      if (!job) {
+        // Requirement 4.3: Log failure reason
+        logger.warn('Force-cancel failed: job not found', {
+          operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+          operationId,
+          jobId,
+        })
+        res
+          .status(404)
+          .json(
+            createErrorResponse(
+              BACKFILL_ERROR_CODES.JOB_NOT_FOUND,
+              `Backfill job with ID '${jobId}' not found`,
+              operationId
+            )
+          )
+        return
+      }
+
+      // Requirement 1.5: Return 400 for jobs already in terminal state
+      const terminalStates = ['completed', 'failed', 'cancelled']
+      if (terminalStates.includes(job.status)) {
+        // Requirement 4.3: Log failure reason
+        logger.warn('Force-cancel failed: job is in terminal state', {
+          operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+          operationId,
+          jobId,
+          currentStatus: job.status,
+        })
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              BACKFILL_ERROR_CODES.INVALID_JOB_STATE,
+              `Cannot force-cancel job with status '${job.status}'. Job is already in a terminal state.`,
+              operationId,
+              'Force-cancel is only available for jobs in running, recovering, or pending states'
+            )
+          )
+        return
+      }
+
+      const previousStatus = job.status
+
+      // Requirement 1.1: Mark job as cancelled
+      // Call service.forceCancelJob() with operator context
+      const cancelled = await service.forceCancelJob(jobId, {
+        ip: req.ip,
+        reason: 'Force-cancelled via admin API',
+      })
+
+      if (!cancelled) {
+        // Requirement 4.3: Log failure reason
+        logger.error('Force-cancel failed: service returned false', {
+          operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+          operationId,
+          jobId,
+          previousStatus,
+        })
+        res
+          .status(500)
+          .json(
+            createErrorResponse(
+              BACKFILL_ERROR_CODES.STORAGE_ERROR,
+              'Failed to force-cancel backfill job',
+              operationId,
+              'The force-cancel operation failed unexpectedly',
+              true
+            )
+          )
+        return
+      }
+
+      const cancelledAt = new Date().toISOString()
+
+      // Requirement 4.2: Log successful cancellation with previous status and timestamp
+      logger.info('Backfill job force-cancelled successfully', {
+        operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+        operationId,
+        jobId,
+        previousStatus,
+        newStatus: 'cancelled',
+        cancelledAt,
+        ip: req.ip,
+      })
+
+      // Return success response matching ForceCancelResponse interface from design
+      res.json({
+        jobId,
+        previousStatus,
+        newStatus: 'cancelled',
+        message: 'Backfill job has been force-cancelled',
+        metadata: {
+          operationId,
+          cancelledAt,
+          forceCancelled: true,
+        },
+      })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+
+      // Requirement 4.3: Log failure reason
+      logger.error('Failed to force-cancel backfill job', {
+        operation: 'POST /api/admin/backfill/:jobId/force-cancel',
+        operationId,
+        jobId,
+        error: errorMessage,
+      })
+
+      res
+        .status(500)
+        .json(
+          createErrorResponse(
+            BACKFILL_ERROR_CODES.STORAGE_ERROR,
+            'Failed to force-cancel backfill job',
+            operationId,
+            errorMessage,
+            true
+          )
+        )
+    }
+  }
+)

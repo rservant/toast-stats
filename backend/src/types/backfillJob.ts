@@ -355,6 +355,12 @@ export const BACKFILL_ERROR_CODES = {
 
   /** Request validation failed */
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+
+  /** Force-cancel requires explicit confirmation (force=true) */
+  FORCE_REQUIRED: 'FORCE_REQUIRED',
+
+  /** Job is already in a terminal state and cannot be force-cancelled */
+  INVALID_JOB_STATE: 'INVALID_JOB_STATE',
 } as const
 
 /**

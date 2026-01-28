@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import {
   useAdminSnapshots,
@@ -8,10 +9,12 @@ import {
 import { useAdminMonitoring } from '../hooks/useAdminMonitoring'
 import {
   useUnifiedBackfill,
+  useForceCancelJob,
   BackfillJobType,
   JobPreview,
 } from '../hooks/useUnifiedBackfill'
 import { JobProgressDisplay } from '../components/JobProgressDisplay'
+import { JobHistoryList } from '../components/JobHistoryList'
 
 /**
  * AdminPage Component
@@ -169,14 +172,18 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md min-w-[320px] p-6">
+      <div
+        className="bg-white rounded-lg shadow-xl p-6"
+        style={{ width: '100%', maxWidth: '28rem', minWidth: '320px' }}
+      >
         <h3
           id="confirm-dialog-title"
           className="text-lg font-semibold text-tm-black font-tm-headline mb-2"
@@ -201,7 +208,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </ActionButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -260,14 +268,18 @@ const SnapshotErrorsModal: React.FC<SnapshotErrorsModalProps> = ({
 
   if (!snapshotId) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="snapshot-errors-dialog-title"
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div
+        className="bg-white rounded-lg shadow-xl flex flex-col"
+        style={{ width: '100%', maxWidth: '42rem', maxHeight: '80vh' }}
+      >
         <div className="px-6 py-4 border-b border-gray-200">
           <h3
             id="snapshot-errors-dialog-title"
@@ -388,7 +400,8 @@ const SnapshotErrorsModal: React.FC<SnapshotErrorsModalProps> = ({
           </ActionButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -943,14 +956,18 @@ const PreviewDialog: React.FC<PreviewDialogProps> = ({
     return `${Math.round(ms / 3600000)}h ${Math.round((ms % 3600000) / 60000)}m`
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-dialog-title"
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg min-w-[320px] p-6">
+      <div
+        className="bg-white rounded-lg shadow-xl p-6"
+        style={{ width: '100%', maxWidth: '32rem', minWidth: '320px' }}
+      >
         <h3
           id="preview-dialog-title"
           className="text-lg font-semibold text-tm-black font-tm-headline mb-4"
@@ -1083,7 +1100,8 @@ const PreviewDialog: React.FC<PreviewDialogProps> = ({
           </ActionButton>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1152,6 +1170,9 @@ const BackfillSection: React.FC = () => {
     listJobsEnabled: true,
     rateLimitConfigEnabled: true,
   })
+
+  // Force-cancel hook for stuck jobs (Requirements: 7.4, 7.5, 7.6)
+  const forceCancelJob = useForceCancelJob()
 
   // Restore running job on mount - check if there's an active job we should track
   // Using a ref to track if we've already restored to avoid repeated updates
@@ -1246,6 +1267,21 @@ const BackfillSection: React.FC = () => {
       // Ignore localStorage errors
     }
   }, [])
+
+  /**
+   * Handle force-cancel of a stuck job
+   * Called from JobHistoryList when operator confirms force-cancel action
+   * Requirements: 7.4, 7.5, 7.6
+   */
+  const handleForceCancelJob = useCallback(
+    async (jobId: string): Promise<void> => {
+      // Call force-cancel endpoint with force=true (Requirement 7.4)
+      await forceCancelJob.mutateAsync({ jobId, force: true })
+      // On success, queries are auto-invalidated by the hook (Requirement 7.5)
+      // Errors are thrown and handled by JobHistoryList's confirmation dialog
+    },
+    [forceCancelJob]
+  )
 
   // completedAt is used in the summary stats section
   const completedAt = jobStatus.data?.completedAt
@@ -1453,6 +1489,30 @@ const BackfillSection: React.FC = () => {
               Failed to generate preview:{' '}
               {previewJob.error instanceof Error
                 ? previewJob.error.message
+                : 'Unknown error'}
+            </p>
+          </div>
+        )}
+
+        {/* Job History Section */}
+        <div className="mt-6">
+          <h4 className="text-sm font-semibold text-tm-black font-tm-headline mb-3">
+            Job History
+          </h4>
+          <JobHistoryList
+            pageSize={10}
+            className="border-0 p-0"
+            onForceCancelJob={handleForceCancelJob}
+          />
+        </div>
+
+        {/* Force Cancel Error Display (Requirement 7.6) */}
+        {forceCancelJob.isError && (
+          <div className="bg-red-50 border border-red-200 rounded-sm p-4">
+            <p className="text-red-800 font-tm-body">
+              Failed to force-cancel job:{' '}
+              {forceCancelJob.error instanceof Error
+                ? forceCancelJob.error.message
                 : 'Unknown error'}
             </p>
           </div>

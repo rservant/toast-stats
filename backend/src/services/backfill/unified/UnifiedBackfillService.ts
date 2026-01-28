@@ -347,6 +347,101 @@ export class UnifiedBackfillService {
     return cancelled
   }
 
+  /**
+   * Force-cancel a job regardless of its current execution state
+   *
+   * Unlike regular cancelJob(), this method:
+   * - Does not check if the job is actively running
+   * - Clears the checkpoint to prevent recovery
+   * - Sets a specific error message indicating force-cancellation
+   *
+   * This is intended for administrative intervention when jobs are stuck
+   * in 'running' or 'recovering' states and cannot be cancelled normally.
+   *
+   * @param jobId - The job identifier
+   * @param operatorContext - Context about who initiated the force-cancel
+   * @returns true if cancelled, false if job not found or already terminal
+   *
+   * Requirements: 2.1, 2.2, 2.3, 2.4
+   */
+  async forceCancelJob(
+    jobId: string,
+    operatorContext: { ip?: string; reason?: string }
+  ): Promise<boolean> {
+    logger.info('Force-cancelling job', {
+      jobId,
+      operatorIp: operatorContext.ip ?? 'unknown',
+      reason: operatorContext.reason ?? 'not specified',
+      component: 'UnifiedBackfillService',
+      operation: 'forceCancelJob',
+    })
+
+    // Check if job exists
+    const job = await this.jobStorage.getJob(jobId)
+
+    if (!job) {
+      logger.warn('Cannot force-cancel job: job not found', {
+        jobId,
+        component: 'UnifiedBackfillService',
+        operation: 'forceCancelJob',
+      })
+      return false
+    }
+
+    // Terminal states cannot be force-cancelled
+    const terminalStates: BackfillJobStatus[] = [
+      'completed',
+      'failed',
+      'cancelled',
+    ]
+    if (terminalStates.includes(job.status)) {
+      logger.warn('Cannot force-cancel job: job is already in terminal state', {
+        jobId,
+        currentStatus: job.status,
+        component: 'UnifiedBackfillService',
+        operation: 'forceCancelJob',
+      })
+      return false
+    }
+
+    const now = new Date().toISOString()
+    const previousStatus = job.status
+
+    // Build error message with operator context
+    const reasonText = operatorContext.reason
+      ? ` Reason: ${operatorContext.reason}`
+      : ''
+    const ipText = operatorContext.ip ? ` (IP: ${operatorContext.ip})` : ''
+    const errorMessage = `Force-cancelled by operator at ${now}.${reasonText}${ipText}`
+
+    // Update job with cancelled status, completedAt, error message, and clear checkpoint
+    // Requirements: 2.1 (status), 2.2 (completedAt), 2.3 (error), 2.4 (checkpoint=null)
+    await this.jobStorage.updateJob(jobId, {
+      status: 'cancelled',
+      completedAt: now,
+      error: errorMessage,
+      checkpoint: null,
+    })
+
+    // Signal cancellation to active collectors/generators if this is the active job
+    if (this.activeJobId === jobId) {
+      this.dataCollector.cancel()
+      this.analyticsGenerator.cancel()
+    }
+
+    logger.info('Job force-cancelled successfully', {
+      jobId,
+      previousStatus,
+      completedAt: now,
+      operatorIp: operatorContext.ip ?? 'unknown',
+      reason: operatorContext.reason ?? 'not specified',
+      component: 'UnifiedBackfillService',
+      operation: 'forceCancelJob',
+    })
+
+    return true
+  }
+
   // ============================================================================
   // Preview / Dry Run
   // ============================================================================
