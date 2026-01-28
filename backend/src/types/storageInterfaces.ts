@@ -280,6 +280,31 @@ export interface ISnapshotStorage {
    * @returns True if rankings data exists
    */
   hasAllDistrictsRankings(snapshotId: string): Promise<boolean>
+
+  // ============================================================================
+  // Write Completion Check
+  // ============================================================================
+
+  /**
+   * Check if a snapshot write completed fully
+   *
+   * Determines whether a snapshot was fully written or if some districts
+   * failed during the chunked write process. This is useful for identifying
+   * snapshots that may have partial data due to write failures.
+   *
+   * Return value logic:
+   * - Returns `true` if the write completed fully
+   * - Returns `true` if the snapshot is a legacy snapshot without the writeComplete field (backward compatibility)
+   * - Returns `false` if the write was partial (some districts failed)
+   * - Returns `false` if the snapshot doesn't exist
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if the write completed fully (or for legacy snapshots),
+   *          false if the write was partial or snapshot doesn't exist
+   *
+   * Requirements: 5.5
+   */
+  isSnapshotWriteComplete(snapshotId: string): Promise<boolean>
 }
 
 /**

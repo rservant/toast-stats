@@ -139,6 +139,27 @@ export interface PerDistrictSnapshotMetadata {
   isClosingPeriodData?: boolean
   collectionDate?: string
   logicalDate?: string
+
+  // Chunked write tracking fields (added for Firestore timeout fix)
+  /**
+   * Districts that failed to write during chunked batch processing.
+   * Only populated when writeComplete is false.
+   * Used to identify which districts need to be retried or investigated.
+   *
+   * Requirements: 5.3
+   */
+  writeFailedDistricts?: string[]
+
+  /**
+   * Whether the snapshot write completed fully.
+   * - true or undefined: All districts were written successfully
+   * - false: Some districts failed to write (see writeFailedDistricts)
+   *
+   * For backward compatibility, undefined is treated as true (complete).
+   *
+   * Requirements: 5.5
+   */
+  writeComplete?: boolean
 }
 
 /**
@@ -1209,6 +1230,64 @@ export class FileSnapshotStore
     })
 
     return results
+  }
+
+  /**
+   * Check if a snapshot write completed fully
+   *
+   * Determines whether a snapshot was fully written or if some districts
+   * failed during the write process. For file-based storage, this checks
+   * the writeComplete field in the metadata.
+   *
+   * Return value logic:
+   * - Returns `true` if the write completed fully
+   * - Returns `true` if the snapshot is a legacy snapshot without the writeComplete field (backward compatibility)
+   * - Returns `false` if the write was partial (some districts failed)
+   * - Returns `false` if the snapshot doesn't exist
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if the write completed fully (or for legacy snapshots),
+   *          false if the write was partial or snapshot doesn't exist
+   *
+   * Requirements: 5.5
+   */
+  async isSnapshotWriteComplete(snapshotId: string): Promise<boolean> {
+    try {
+      const metadata = await this.getSnapshotMetadata(snapshotId)
+
+      if (!metadata) {
+        // Snapshot doesn't exist
+        logger.debug('Snapshot not found for write completion check', {
+          operation: 'isSnapshotWriteComplete',
+          snapshot_id: snapshotId,
+        })
+        return false
+      }
+
+      // For backward compatibility, undefined writeComplete is treated as true (complete)
+      // This handles legacy snapshots that don't have the writeComplete field
+      const isComplete = metadata.writeComplete !== false
+
+      logger.debug('Checked snapshot write completion status', {
+        operation: 'isSnapshotWriteComplete',
+        snapshot_id: snapshotId,
+        writeComplete: metadata.writeComplete,
+        isComplete,
+        hasWriteFailedDistricts: !!metadata.writeFailedDistricts?.length,
+      })
+
+      return isComplete
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to check snapshot write completion', {
+        operation: 'isSnapshotWriteComplete',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+      })
+      // On error, return false to be safe
+      return false
+    }
   }
 
   /**

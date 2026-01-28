@@ -24,7 +24,11 @@ export { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
 export type {
   FirestoreSnapshotStorageConfig,
   IndexHealthResult,
+  BatchWriteConfig,
+  BatchWriteResult,
+  SnapshotWriteResult,
 } from './FirestoreSnapshotStorage.js'
+export { DEFAULT_BATCH_WRITE_CONFIG } from './FirestoreSnapshotStorage.js'
 export { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
 export type { FirestoreDistrictConfigStorageConfig } from './FirestoreDistrictConfigStorage.js'
 export { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStorage.js'
