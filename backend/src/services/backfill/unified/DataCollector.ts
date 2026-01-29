@@ -250,7 +250,12 @@ export class DataCollector {
     const allDates = this.generateDateRange(startDate, endDate)
 
     // Filter out completed items (for skip-on-resume)
+    // Only count completed items that are actually in the date range
     const completedSet = new Set(options.completedItems ?? [])
+    const allDatesSet = new Set(allDates)
+    const completedInRange = (options.completedItems ?? []).filter(date =>
+      allDatesSet.has(date)
+    )
     const datesToProcess = allDates.filter(date => !completedSet.has(date))
 
     // Check for existing snapshots if skipExisting is enabled
@@ -260,7 +265,7 @@ export class DataCollector {
       : { datesToCollect: datesToProcess, skippedDates: [] }
 
     const totalItems = allDates.length
-    const initialSkipped = completedSet.size + skippedDates.length
+    const initialSkipped = completedInRange.length + skippedDates.length
 
     logger.info('Starting data collection', {
       startDate,
@@ -647,7 +652,8 @@ export class DataCollector {
     if (total === 0) {
       return 100
     }
-    return Math.round((completed / total) * 100)
+    // Clamp to 0-100 range to handle edge cases
+    return Math.min(100, Math.max(0, Math.round((completed / total) * 100)))
   }
 
   /**
