@@ -368,19 +368,9 @@ const SnapshotErrorsModal: React.FC<SnapshotErrorsModalProps> = ({
                   <div className="border border-gray-200 rounded-sm divide-y divide-gray-200">
                     {data.inspection.errors.map((err, index) => (
                       <div key={index} className="p-3">
-                        {err.districtId && (
-                          <p className="text-xs text-gray-500 mb-1">
-                            District: {err.districtId}
-                          </p>
-                        )}
                         <p className="text-sm text-red-700 font-mono break-all">
-                          {err.error}
+                          {err}
                         </p>
-                        {err.timestamp && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            {formatDate(err.timestamp)}
-                          </p>
-                        )}
                       </div>
                     ))}
                   </div>

@@ -24,11 +24,8 @@ export interface SnapshotInspection {
   status: 'success' | 'partial' | 'failed'
   schema_version: string
   calculation_version: string
-  errors: Array<{
-    districtId?: string
-    error: string
-    timestamp?: string
-  }>
+  // Backend returns string[] but we normalize to objects for display
+  errors: string[]
   payload_summary: {
     district_count: number
     metadata: Record<string, unknown>

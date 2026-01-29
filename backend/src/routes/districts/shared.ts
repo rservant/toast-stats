@@ -104,7 +104,12 @@ async function initializeServices(): Promise<void> {
     snapshotStore,
     rawCSVCacheService,
     districtConfigService,
-    _rankingCalculator
+    _rankingCalculator,
+    undefined, // closingPeriodDetector
+    undefined, // dataNormalizer
+    undefined, // validator
+    _preComputedAnalyticsService,
+    _timeSeriesIndexService
   )
 
   _backfillService = new BackfillService(

@@ -269,14 +269,9 @@ export class DataValidator {
       errors.push('District IDs must be unique across all districts')
     }
 
-    // Validate data freshness (warn if data is older than 7 days)
-    const dataAsOfDate = new Date(data.metadata.dataAsOfDate)
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-    if (dataAsOfDate < sevenDaysAgo) {
-      warnings.push(
-        `Data is older than 7 days (as of ${data.metadata.dataAsOfDate})`
-      )
-    }
+    // Note: Data freshness validation removed - this system stores historical
+    // snapshots going back years, so comparing against current date is inappropriate.
+    // The snapshot date itself indicates when the data was collected.
 
     // Validate processing duration (warn if unusually long)
     if (data.metadata.processingDurationMs > 300000) {
