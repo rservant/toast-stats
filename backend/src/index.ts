@@ -12,6 +12,7 @@ import { getProductionServiceFactory } from './services/ProductionServiceFactory
 import { StorageProviderFactory } from './services/storage/StorageProviderFactory.js'
 import { UnifiedBackfillService } from './services/backfill/unified/UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './services/DistrictConfigurationService.js'
+import { PreComputedAnalyticsService } from './services/PreComputedAnalyticsService.js'
 
 const app = express()
 const PORT = process.env['PORT'] || 5001
@@ -46,6 +47,14 @@ export async function getUnifiedBackfillServiceInstance(): Promise<UnifiedBackfi
     storageProviders.districtConfigStorage
   )
 
+  // Create PreComputedAnalyticsService for analytics generation during backfill
+  // Requirements: 3.1, 3.3 - Configure with correct snapshots directory path
+  const cacheConfig = productionFactory.createCacheConfigService()
+  const cacheDirectory = cacheConfig.getConfiguration().baseDirectory
+  const preComputedAnalyticsService = new PreComputedAnalyticsService({
+    snapshotsDir: `${cacheDirectory}/snapshots`,
+  })
+
   // Create UnifiedBackfillService with autoRecoverOnInit enabled
   unifiedBackfillServiceInstance = new UnifiedBackfillService(
     storageProviders.backfillJobStorage,
@@ -53,6 +62,7 @@ export async function getUnifiedBackfillServiceInstance(): Promise<UnifiedBackfi
     storageProviders.timeSeriesIndexStorage,
     refreshService,
     configService,
+    preComputedAnalyticsService,
     { autoRecoverOnInit: true }
   )
 

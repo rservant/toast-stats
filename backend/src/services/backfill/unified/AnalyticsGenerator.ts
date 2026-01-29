@@ -16,6 +16,8 @@ import type {
   ITimeSeriesIndexStorage,
 } from '../../../types/storageInterfaces.js'
 import type { TimeSeriesDataPoint } from '../../../types/precomputedAnalytics.js'
+import type { DistrictStatistics } from '../../../types/districts.js'
+import type { PreComputedAnalyticsService } from '../../PreComputedAnalyticsService.js'
 import { logger } from '../../../utils/logger.js'
 
 // ============================================================================
@@ -145,6 +147,7 @@ const ESTIMATED_MS_PER_SNAPSHOT = 5000 // 5 seconds per snapshot
 export class AnalyticsGenerator {
   private readonly snapshotStorage: ISnapshotStorage
   private readonly timeSeriesStorage: ITimeSeriesIndexStorage
+  private readonly preComputedAnalyticsService: PreComputedAnalyticsService
 
   /**
    * Flag to track if generation should be cancelled
@@ -156,13 +159,16 @@ export class AnalyticsGenerator {
    *
    * @param snapshotStorage - Storage for snapshot operations
    * @param timeSeriesStorage - Storage for time-series index operations
+   * @param preComputedAnalyticsService - Service for computing and storing pre-computed analytics
    */
   constructor(
     snapshotStorage: ISnapshotStorage,
-    timeSeriesStorage: ITimeSeriesIndexStorage
+    timeSeriesStorage: ITimeSeriesIndexStorage,
+    preComputedAnalyticsService: PreComputedAnalyticsService
   ) {
     this.snapshotStorage = snapshotStorage
     this.timeSeriesStorage = timeSeriesStorage
+    this.preComputedAnalyticsService = preComputedAnalyticsService
 
     logger.debug('AnalyticsGenerator initialized', {
       component: 'AnalyticsGenerator',
@@ -486,6 +492,7 @@ export class AnalyticsGenerator {
 
     let districtsProcessed = 0
     const districtErrors: string[] = []
+    const collectedDistrictData: DistrictStatistics[] = []
 
     // Process each district
     for (const districtId of districtIds) {
@@ -505,6 +512,9 @@ export class AnalyticsGenerator {
           })
           continue
         }
+
+        // Collect district data for pre-computed analytics generation
+        collectedDistrictData.push(districtData)
 
         // Build time-series data point from district data
         const dataPoint = this.buildTimeSeriesDataPoint(
@@ -533,6 +543,10 @@ export class AnalyticsGenerator {
 
     // Consider success if at least one district was processed
     if (districtsProcessed > 0) {
+      // Generate pre-computed analytics for this snapshot
+      // Requirements: 2.1, 2.3 - Generate analytics AFTER successfully reading district data
+      await this.generatePreComputedAnalytics(snapshotId, collectedDistrictData)
+
       return {
         success: true,
         districtsProcessed,
@@ -543,6 +557,42 @@ export class AnalyticsGenerator {
       success: false,
       error: `Failed to process any districts. Errors: ${districtErrors.join('; ')}`,
       isRetryable: true,
+    }
+  }
+
+  /**
+   * Generate pre-computed analytics for a snapshot
+   *
+   * Calls PreComputedAnalyticsService.computeAndStore() to generate the
+   * analytics-summary.json file. Errors are logged but do not fail the
+   * snapshot processing.
+   *
+   * @param snapshotId - The snapshot ID to generate analytics for
+   * @param districtData - Array of district statistics
+   *
+   * Requirements: 2.1, 2.2
+   */
+  private async generatePreComputedAnalytics(
+    snapshotId: string,
+    districtData: DistrictStatistics[]
+  ): Promise<void> {
+    try {
+      await this.preComputedAnalyticsService.computeAndStore(snapshotId, districtData)
+      logger.debug('Generated pre-computed analytics for snapshot', {
+        snapshotId,
+        districtCount: districtData.length,
+        component: 'AnalyticsGenerator',
+        operation: 'generatePreComputedAnalytics',
+      })
+    } catch (error) {
+      // Log error but don't fail the snapshot processing
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.warn('Failed to generate pre-computed analytics for snapshot', {
+        snapshotId,
+        error: errorMessage,
+        component: 'AnalyticsGenerator',
+        operation: 'generatePreComputedAnalytics',
+      })
     }
   }
 

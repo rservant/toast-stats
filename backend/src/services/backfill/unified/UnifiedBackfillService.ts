@@ -31,6 +31,7 @@ import type {
 } from '../../../types/backfillJob.js'
 import type { RefreshService } from '../../RefreshService.js'
 import type { DistrictConfigurationService } from '../../DistrictConfigurationService.js'
+import type { PreComputedAnalyticsService } from '../../PreComputedAnalyticsService.js'
 import { JobManager } from './JobManager.js'
 import { DataCollector, type CollectionProgress } from './DataCollector.js'
 import {
@@ -136,6 +137,7 @@ export class UnifiedBackfillService {
    * @param timeSeriesStorage - Storage for time-series index operations
    * @param refreshService - Service for executing refresh operations
    * @param configService - Service for district configuration
+   * @param preComputedAnalyticsService - Service for computing and storing pre-computed analytics
    * @param config - Optional service configuration
    */
   constructor(
@@ -144,6 +146,7 @@ export class UnifiedBackfillService {
     timeSeriesStorage: ITimeSeriesIndexStorage,
     refreshService: RefreshService,
     configService: DistrictConfigurationService,
+    preComputedAnalyticsService: PreComputedAnalyticsService,
     config?: UnifiedBackfillServiceConfig
   ) {
     this.jobStorage = jobStorage
@@ -162,7 +165,8 @@ export class UnifiedBackfillService {
     )
     this.analyticsGenerator = new AnalyticsGenerator(
       snapshotStorage,
-      timeSeriesStorage
+      timeSeriesStorage,
+      preComputedAnalyticsService
     )
     this.recoveryManager = new RecoveryManager(jobStorage)
 

@@ -35,6 +35,7 @@ import type {
 import type { CreateJobRequest } from '../../../../types/backfillJob.js'
 import type { RefreshService } from '../../../RefreshService.js'
 import type { DistrictConfigurationService } from '../../../DistrictConfigurationService.js'
+import type { PreComputedAnalyticsService } from '../../../PreComputedAnalyticsService.js'
 
 // ============================================================================
 // Mock Setup
@@ -164,6 +165,19 @@ function createMockConfigService(): DistrictConfigurationService & {
 }
 
 /**
+ * Create a mock PreComputedAnalyticsService implementation
+ */
+function createMockPreComputedAnalyticsService(): PreComputedAnalyticsService & {
+  computeAndStore: Mock
+} {
+  return {
+    computeAndStore: vi.fn().mockResolvedValue(undefined),
+  } as unknown as PreComputedAnalyticsService & {
+    computeAndStore: Mock
+  }
+}
+
+/**
  * Create a valid CreateJobRequest for data-collection
  */
 function createDataCollectionRequest(
@@ -226,6 +240,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
   let mockTimeSeriesStorage: ReturnType<typeof createMockTimeSeriesStorage>
   let mockRefreshService: ReturnType<typeof createMockRefreshService>
   let mockConfigService: ReturnType<typeof createMockConfigService>
+  let mockPreComputedAnalyticsService: ReturnType<typeof createMockPreComputedAnalyticsService>
   let service: UnifiedBackfillService
 
   beforeEach(async () => {
@@ -243,6 +258,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
     mockTimeSeriesStorage = createMockTimeSeriesStorage()
     mockRefreshService = createMockRefreshService()
     mockConfigService = createMockConfigService()
+    mockPreComputedAnalyticsService = createMockPreComputedAnalyticsService()
 
     // Create service with real storage and mock dependencies
     service = new UnifiedBackfillService(
@@ -251,6 +267,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
       mockTimeSeriesStorage,
       mockRefreshService,
       mockConfigService,
+      mockPreComputedAnalyticsService,
       { autoRecoverOnInit: false }
     )
   })
@@ -597,6 +614,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
         mockTimeSeriesStorage,
         mockRefreshService,
         mockConfigService,
+        mockPreComputedAnalyticsService,
         { autoRecoverOnInit: true }
       )
 
@@ -672,6 +690,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
         mockTimeSeriesStorage,
         mockRefreshService,
         mockConfigService,
+        mockPreComputedAnalyticsService,
         { autoRecoverOnInit: true }
       )
 
@@ -700,6 +719,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
         mockTimeSeriesStorage,
         mockRefreshService,
         mockConfigService,
+        mockPreComputedAnalyticsService,
         { autoRecoverOnInit: true }
       )
 
@@ -756,6 +776,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
         mockTimeSeriesStorage,
         mockRefreshService,
         mockConfigService,
+        mockPreComputedAnalyticsService,
         { autoRecoverOnInit: true }
       )
 
@@ -991,6 +1012,7 @@ describe('UnifiedBackfillService E2E Tests', () => {
         mockTimeSeriesStorage,
         mockRefreshService,
         mockConfigService,
+        mockPreComputedAnalyticsService,
         { autoRecoverOnInit: false }
       )
 

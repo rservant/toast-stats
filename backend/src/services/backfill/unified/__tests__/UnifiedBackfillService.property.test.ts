@@ -32,6 +32,7 @@ import type {
 } from '../../../../types/storageInterfaces.js'
 import type { RefreshService } from '../../../RefreshService.js'
 import type { DistrictConfigurationService } from '../../../DistrictConfigurationService.js'
+import type { PreComputedAnalyticsService } from '../../../PreComputedAnalyticsService.js'
 
 // ============================================================================
 // Test Configuration
@@ -105,6 +106,15 @@ function createMockConfigService(): DistrictConfigurationService {
   return {
     getConfiguredDistricts: vi.fn().mockResolvedValue(['1', '2', '3']),
   } as unknown as DistrictConfigurationService
+}
+
+/**
+ * Creates a mock PreComputedAnalyticsService for testing
+ */
+function createMockPreComputedAnalyticsService(): PreComputedAnalyticsService {
+  return {
+    computeAndStore: vi.fn().mockResolvedValue(undefined),
+  } as unknown as PreComputedAnalyticsService
 }
 
 // ============================================================================
@@ -346,6 +356,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
   let mockSnapshotStorage: ISnapshotStorage
   let mockTimeSeriesStorage: ITimeSeriesIndexStorage
   let mockConfigService: DistrictConfigurationService
+  let mockPreComputedAnalyticsService: PreComputedAnalyticsService
 
   beforeEach(async () => {
     // Create unique test directory for isolation
@@ -361,6 +372,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
     mockSnapshotStorage = createMockSnapshotStorage()
     mockTimeSeriesStorage = createMockTimeSeriesStorage()
     mockConfigService = createMockConfigService()
+    mockPreComputedAnalyticsService = createMockPreComputedAnalyticsService()
 
     // Create service instance with autoRecoverOnInit disabled to avoid interference
     service = new UnifiedBackfillService(
@@ -369,6 +381,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
       mockTimeSeriesStorage,
       mockRefreshService,
       mockConfigService,
+      mockPreComputedAnalyticsService,
       { autoRecoverOnInit: false }
     )
   })
@@ -424,6 +437,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
               mockTimeSeriesStorage,
               mockRefreshService,
               mockConfigService,
+              mockPreComputedAnalyticsService,
               { autoRecoverOnInit: false }
             )
 
@@ -507,6 +521,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
               mockTimeSeriesStorage,
               mockRefreshService,
               mockConfigService,
+              mockPreComputedAnalyticsService,
               { autoRecoverOnInit: false }
             )
 
@@ -587,6 +602,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
               mockTimeSeriesStorage,
               mockRefreshService,
               mockConfigService,
+              mockPreComputedAnalyticsService,
               { autoRecoverOnInit: false }
             )
 
@@ -707,6 +723,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
               mockTimeSeriesStorage,
               mockRefreshService,
               mockConfigService,
+              mockPreComputedAnalyticsService,
               { autoRecoverOnInit: false }
             )
 
@@ -796,6 +813,7 @@ describe('Feature: unified-backfill-service, Property 4: Job Filtering By Status
               mockTimeSeriesStorage,
               mockRefreshService,
               mockConfigService,
+              mockPreComputedAnalyticsService,
               { autoRecoverOnInit: false }
             )
 

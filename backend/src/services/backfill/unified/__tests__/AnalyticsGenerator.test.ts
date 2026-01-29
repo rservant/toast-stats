@@ -26,6 +26,7 @@ import type {
 } from '../../../../types/storageInterfaces.js'
 import type { Snapshot, SnapshotMetadata } from '../../../../types/snapshots.js'
 import type { TimeSeriesDataPoint } from '../../../../types/precomputedAnalytics.js'
+import type { PreComputedAnalyticsService } from '../../../PreComputedAnalyticsService.js'
 
 // ============================================================================
 // Mock Setup
@@ -92,6 +93,23 @@ function createMockTimeSeriesStorage(): ITimeSeriesIndexStorage & {
     isReady: vi.fn().mockResolvedValue(true),
   } as unknown as ITimeSeriesIndexStorage & {
     appendDataPoint: Mock
+  }
+}
+
+/**
+ * Create a mock PreComputedAnalyticsService implementation
+ *
+ * Requirements: 2.1, 2.2 - Mock for testing computeAndStore integration
+ */
+function createMockPreComputedAnalyticsService(): PreComputedAnalyticsService & {
+  computeAndStore: Mock
+} {
+  return {
+    computeAndStore: vi.fn().mockResolvedValue(undefined),
+    getAnalyticsSummary: vi.fn().mockResolvedValue(null),
+    getLatestSummary: vi.fn().mockResolvedValue(null),
+  } as unknown as PreComputedAnalyticsService & {
+    computeAndStore: Mock
   }
 }
 
@@ -202,15 +220,20 @@ function createMockDistrictData(options: {
 describe('AnalyticsGenerator', () => {
   let mockSnapshotStorage: ReturnType<typeof createMockSnapshotStorage>
   let mockTimeSeriesStorage: ReturnType<typeof createMockTimeSeriesStorage>
+  let mockPreComputedAnalyticsService: ReturnType<
+    typeof createMockPreComputedAnalyticsService
+  >
   let analyticsGenerator: AnalyticsGenerator
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockSnapshotStorage = createMockSnapshotStorage()
     mockTimeSeriesStorage = createMockTimeSeriesStorage()
+    mockPreComputedAnalyticsService = createMockPreComputedAnalyticsService()
     analyticsGenerator = new AnalyticsGenerator(
       mockSnapshotStorage,
-      mockTimeSeriesStorage
+      mockTimeSeriesStorage,
+      mockPreComputedAnalyticsService
     )
   })
 
@@ -685,7 +708,8 @@ describe('AnalyticsGenerator', () => {
       // Act - Create new instance
       const newGenerator = new AnalyticsGenerator(
         mockSnapshotStorage,
-        mockTimeSeriesStorage
+        mockTimeSeriesStorage,
+        mockPreComputedAnalyticsService
       )
 
       // Assert - New instance should not be cancelled
@@ -1078,6 +1102,259 @@ describe('AnalyticsGenerator', () => {
       // Assert - Should have tracked current items
       expect(currentItems).toContain('2024-01-15')
       expect(currentItems).toContain('2024-01-14')
+    })
+  })
+
+  // ============================================================================
+  // PreComputedAnalyticsService Integration Tests (Requirements 2.1, 2.2)
+  // ============================================================================
+
+  describe('PreComputedAnalyticsService Integration', () => {
+    it('should call computeAndStore during snapshot processing', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
+        '42',
+        '61',
+      ])
+      mockSnapshotStorage.readDistrictData.mockResolvedValue(
+        createMockDistrictData({ asOfDate: '2024-01-15' })
+      )
+
+      // Act
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - computeAndStore should be called once per snapshot
+      // Validates: Requirements 2.1
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledTimes(1)
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
+        '2024-01-15',
+        expect.any(Array)
+      )
+    })
+
+    it('should pass collected district data to computeAndStore', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+      const districtData1 = createMockDistrictData({ asOfDate: '2024-01-15' })
+      const districtData2 = createMockDistrictData({ asOfDate: '2024-01-15' })
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
+        '42',
+        '61',
+      ])
+      mockSnapshotStorage.readDistrictData
+        .mockResolvedValueOnce(districtData1)
+        .mockResolvedValueOnce(districtData2)
+
+      // Act
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - computeAndStore should receive array with both district data
+      // Validates: Requirements 2.1
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
+        '2024-01-15',
+        expect.arrayContaining([districtData1, districtData2])
+      )
+      const callArgs = mockPreComputedAnalyticsService.computeAndStore.mock.calls[0]
+      expect(callArgs).toBeDefined()
+      expect(callArgs[1]).toHaveLength(2)
+    })
+
+    it('should call computeAndStore for each snapshot processed', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15', '2024-01-14', '2024-01-13']
+      const progressCallback = createProgressCallback()
+
+      for (const snapshotId of snapshotIds) {
+        mockSnapshotStorage.getSnapshot.mockResolvedValueOnce(
+          createMockSnapshot(snapshotId)
+        )
+      }
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
+      mockSnapshotStorage.readDistrictData.mockResolvedValue(
+        createMockDistrictData({ asOfDate: '2024-01-15' })
+      )
+
+      // Act
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - computeAndStore should be called once per snapshot
+      // Validates: Requirements 2.1
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledTimes(3)
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
+        '2024-01-15',
+        expect.any(Array)
+      )
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
+        '2024-01-14',
+        expect.any(Array)
+      )
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
+        '2024-01-13',
+        expect.any(Array)
+      )
+    })
+
+    it('should continue processing when computeAndStore fails', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
+      mockSnapshotStorage.readDistrictData.mockResolvedValue(
+        createMockDistrictData({ asOfDate: '2024-01-15' })
+      )
+
+      // Make computeAndStore fail
+      mockPreComputedAnalyticsService.computeAndStore.mockRejectedValue(
+        new Error('Failed to write analytics file')
+      )
+
+      // Act
+      const result = await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - Snapshot should still be processed successfully for time-series
+      // Validates: Requirements 2.2
+      expect(result.success).toBe(true)
+      expect(result.processedItems).toBe(1)
+      expect(result.failedItems).toBe(0)
+    })
+
+    it('should still generate time-series data when computeAndStore fails', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
+        '42',
+        '61',
+      ])
+      mockSnapshotStorage.readDistrictData.mockResolvedValue(
+        createMockDistrictData({ asOfDate: '2024-01-15' })
+      )
+
+      // Make computeAndStore fail
+      mockPreComputedAnalyticsService.computeAndStore.mockRejectedValue(
+        new Error('Storage error')
+      )
+
+      // Act
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - Time-series data should still be appended for each district
+      // Validates: Requirements 2.2
+      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledTimes(2)
+      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
+        '42',
+        expect.any(Object)
+      )
+      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
+        '61',
+        expect.any(Object)
+      )
+    })
+
+    it('should process multiple snapshots even when some computeAndStore calls fail', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15', '2024-01-14', '2024-01-13']
+      const progressCallback = createProgressCallback()
+
+      for (const snapshotId of snapshotIds) {
+        mockSnapshotStorage.getSnapshot.mockResolvedValueOnce(
+          createMockSnapshot(snapshotId)
+        )
+      }
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
+      mockSnapshotStorage.readDistrictData.mockResolvedValue(
+        createMockDistrictData({ asOfDate: '2024-01-15' })
+      )
+
+      // Make computeAndStore fail for the second snapshot only
+      mockPreComputedAnalyticsService.computeAndStore
+        .mockResolvedValueOnce(undefined) // First succeeds
+        .mockRejectedValueOnce(new Error('Storage error')) // Second fails
+        .mockResolvedValueOnce(undefined) // Third succeeds
+
+      // Act
+      const result = await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - All snapshots should be processed successfully
+      // Validates: Requirements 2.2
+      expect(result.success).toBe(true)
+      expect(result.processedItems).toBe(3)
+      expect(result.failedItems).toBe(0)
+      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledTimes(3)
+    })
+
+    it('should not call computeAndStore when snapshot has no districts', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([]) // No districts
+
+      // Act
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - computeAndStore should not be called for empty snapshots
+      expect(mockPreComputedAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+    })
+
+    it('should not call computeAndStore when snapshot is not found', async () => {
+      // Arrange
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(null) // Snapshot not found
+
+      // Act
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // Assert - computeAndStore should not be called for missing snapshots
+      expect(mockPreComputedAnalyticsService.computeAndStore).not.toHaveBeenCalled()
     })
   })
 })
