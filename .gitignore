@@ -60,3 +60,4 @@ debug_*.js
 backend/reconciliation-config.json
 logs
 .firebase/
+logs.json
