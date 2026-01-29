@@ -1,148 +1,230 @@
-# Implementation Plan: BackfillService
+# Implementation Plan: Unified Backfill Service
 
 ## Overview
 
-This implementation plan creates a complete rewrite of the historical data backfill system, replacing existing BackfillService and DistrictBackfillService with a modern, unified BackfillService. The new service leverages RefreshService methods as the primary data acquisition mechanism and provides a clean, modern API interface.
-
-The plan includes both backend service implementation and frontend component updates to ensure seamless integration with the new unified API.
+This implementation plan consolidates the two existing backfill mechanisms into a single, resilient Unified Backfill Service with persistent job state, automatic recovery, and a consolidated Admin UI. The implementation follows the existing storage abstraction pattern and TypeScript steering requirements.
 
 ## Tasks
 
-- [x] 1. Create core BackfillService structure
-  - Create new BackfillService class with modern TypeScript patterns
-  - Implement unified job queue and progress tracking
-  - Set up integration with PerDistrictFileSnapshotStore
-  - _Requirements: 1.1, 1.3, 1.4, 1.5_
+- [x] 1. Create IBackfillJobStorage interface and types
+  - [x] 1.1 Define IBackfillJobStorage interface in `backend/src/types/storageInterfaces.ts`
+    - Add BackfillJob, BackfillJobStatus, BackfillJobType, JobConfig, JobProgress, JobCheckpoint, JobResult, JobError types
+    - Add RateLimitConfig type
+    - Add ListJobsOptions interface
+    - Add IBackfillJobStorage interface with all methods
+    - _Requirements: 1.1, 1.2, 1.6_
+  - [x] 1.2 Define API request/response types in `backend/src/types/backfillJob.ts`
+    - Add CreateJobRequest, CreateJobResponse types
+    - Add JobStatusResponse, ListJobsResponse types
+    - Add JobPreview type for dry run
+    - _Requirements: 9.2, 9.3, 9.5, 11.2, 11.3_
 
-- [ ]\* 1.1 Write property test for job queue unification
-  - **Property 1: Job Queue Unification**
-  - **Validates: Requirements 1.4, 4.1, 4.2**
+- [x] 2. Implement LocalBackfillJobStorage
+  - [x] 2.1 Create `backend/src/services/storage/LocalBackfillJobStorage.ts`
+    - Implement file-based storage in `{cacheDir}/backfill-jobs/` directory
+    - Store jobs as individual JSON files: `{jobId}.json`
+    - Store rate limit config in `rate-limit-config.json`
+    - Implement graceful initialization (create directories/defaults if missing)
+    - _Requirements: 1.1, 1.2, 1.5, 12.5_
+  - [x] 2.2 Write property test for job persistence round-trip
+    - **Property 1: Job Persistence Round-Trip**
+    - **Validates: Requirements 1.2**
+  - [x] 2.3 Write property test for job listing order
+    - **Property 2: Job Listing Order Invariant**
+    - **Validates: Requirements 1.6**
+  - [x] 2.4 Write unit tests for LocalBackfillJobStorage
+    - Test graceful initialization with missing directories
+    - Test job CRUD operations
+    - Test cleanup of old jobs
+    - _Requirements: 1.2, 1.6, 1.7_
 
-- [x] 2. Implement RefreshService-based data collection
-  - Create DataSourceSelector that delegates to RefreshService methods
-  - Implement collection strategy selection based on scope and requirements
-  - Add support for system-wide, per-district, and targeted collection via RefreshService
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+- [x] 3. Implement FirestoreBackfillJobStorage
+  - [x] 3.1 Create `backend/src/services/storage/FirestoreBackfillJobStorage.ts`
+    - Implement Firestore-based storage in `backfill-jobs` collection
+    - Store rate limit config in `config/rate-limit` document
+    - Implement graceful initialization
+    - _Requirements: 1.1, 1.5, 12.5_
+  - [x] 3.2 Write unit tests for FirestoreBackfillJobStorage
+    - Test job CRUD operations with mock Firestore
+    - Test graceful initialization
+    - _Requirements: 1.2, 1.5_
 
-- [ ]\* 2.1 Write property test for RefreshService integration
-  - **Property 3: RefreshService Method Delegation**
-  - **Validates: Requirements 3.1, 3.2, 3.5**
+- [x] 4. Checkpoint - Ensure storage implementations pass all tests
+  - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 3. Implement scope management and validation
-  - Create ScopeManager for district targeting and validation
-  - Integrate with DistrictConfigurationService for scope enforcement
-  - Add support for flexible targeting options (single, multi, system-wide)
-  - _Requirements: 2.1, 2.2, 2.3, 7.1, 7.3, 7.4_
+- [x] 5. Implement JobManager
+  - [x] 5.1 Create `backend/src/services/backfill/unified/JobManager.ts`
+    - Implement job lifecycle management (create, update, complete, fail, cancel)
+    - Implement one-job-at-a-time enforcement with stale job detection
+    - Implement checkpoint management for recovery
+    - Implement progress update batching (persist within 5 seconds)
+    - _Requirements: 1.2, 1.3, 3.1, 3.4, 7.2, 7.3_
+  - [x] 5.2 Write unit tests for JobManager
+    - Test one-job-at-a-time enforcement
+    - Test stale job override (10 minute threshold)
+    - Test cancellation behavior
+    - _Requirements: 3.1, 3.4, 7.2, 7.3_
 
-- [ ]\* 3.1 Write property test for targeting scope validation
-  - **Property 2: Targeting Scope Validation**
-  - **Validates: Requirements 2.3, 7.4**
+- [x] 6. Implement DataCollector
+  - [x] 6.1 Create `backend/src/services/backfill/unified/DataCollector.ts`
+    - Extract and refactor data collection logic from existing BackfillService
+    - Implement date range processing with checkpoint support
+    - Implement preview/dry-run functionality
+    - Integrate with existing RefreshService and SnapshotStorage
+    - _Requirements: 2.2, 4.1, 4.3, 4.4, 10.3, 11.2_
+  - [x] 6.2 Write property test for date range validation
+    - **Property 3: Date Range Validation**
+    - **Validates: Requirements 4.3, 4.4**
+  - [x] 6.3 Write unit tests for DataCollector
+    - Test date range generation
+    - Test skip-on-resume logic
+    - Test preview response format
+    - _Requirements: 4.3, 4.4, 10.3, 11.3_
 
-- [ ]\* 3.2 Write property test for configuration scope enforcement
-  - **Property 7: Configuration Scope Enforcement**
-  - **Validates: Requirements 7.3, 7.5**
+- [x] 7. Implement AnalyticsGenerator
+  - [x] 7.1 Create `backend/src/services/backfill/unified/AnalyticsGenerator.ts`
+    - Implement analytics generation for existing snapshots
+    - Implement snapshot selection with optional date range filter
+    - Implement preview/dry-run functionality
+    - Integrate with existing TimeSeriesIndexStorage
+    - _Requirements: 2.3, 4.2, 4.5, 11.2_
+  - [x] 7.2 Write unit tests for AnalyticsGenerator
+    - Test snapshot selection with and without date range
+    - Test preview response format
+    - _Requirements: 4.5, 11.3_
 
-- [x] 4. Remove legacy services and update all consumers
-  - Remove existing BackfillService and DistrictBackfillService files
-  - Update all route handlers to use new BackfillService
-  - Update any other consumers of the legacy services
-  - _Requirements: 1.1, 10.1_
+- [x] 8. Implement RecoveryManager
+  - [x] 8.1 Create `backend/src/services/backfill/unified/RecoveryManager.ts`
+    - Implement detection of incomplete jobs on startup
+    - Implement automatic resume from checkpoint
+    - Implement recovery status tracking
+    - _Requirements: 1.4, 10.1, 10.2, 10.3_
+  - [x] 8.2 Write unit tests for RecoveryManager
+    - Test recovery detection
+    - Test checkpoint restoration
+    - _Requirements: 10.1, 10.3_
 
-- [ ]\* 4.1 Write integration tests for service replacement
-  - Test that new BackfillService handles all previous use cases
-  - Verify all route handlers work with new service
-  - _Requirements: 1.1, 10.1_
+- [x] 9. Checkpoint - Ensure all service components pass tests
+  - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 5. Implement modern API endpoints
-  - Create clean, modern POST endpoint for backfill initiation
-  - Implement comprehensive error handling with clear messages
-  - Add proper HTTP status codes and response headers
-  - _Requirements: 8.1, 8.2, 8.4, 8.5_
+- [x] 10. Implement UnifiedBackfillService
+  - [x] 10.1 Create `backend/src/services/backfill/unified/UnifiedBackfillService.ts`
+    - Orchestrate JobManager, DataCollector, AnalyticsGenerator, RecoveryManager
+    - Implement createJob, getJobStatus, cancelJob, previewJob, listJobs
+    - Implement rate limit configuration management
+    - Wire up recovery on initialization
+    - _Requirements: 2.1, 2.2, 2.3, 3.1, 7.1, 11.2, 12.3_
+  - [x] 10.2 Write property test for job filtering by status
+    - **Property 4: Job Filtering By Status**
+    - **Validates: Requirements 6.3**
+  - [x] 10.3 Write property test for rate limit config round-trip
+    - **Property 5: Rate Limit Config Persistence Round-Trip**
+    - **Validates: Requirements 12.5**
+  - [x] 10.4 Write integration tests for UnifiedBackfillService
+    - Test end-to-end job creation and execution
+    - Test recovery flow
+    - _Requirements: 2.2, 2.3, 10.1_
 
-- [ ]\* 5.1 Write property test for API design
-  - **Property 8: Modern API Response Consistency**
-  - **Validates: Requirements 8.3, 8.4**
+- [x] 11. Update StorageProviderFactory
+  - [x] 11.1 Add backfillJobStorage to StorageProviders interface
+    - Update `backend/src/services/storage/StorageProviderFactory.ts`
+    - Add backfillJobStorage to StorageProviders type
+    - Create LocalBackfillJobStorage in createLocalProviders
+    - Create FirestoreBackfillJobStorage in createGCPProviders
+    - _Requirements: 1.5_
 
-- [x] 6. Implement enhanced error handling and resilience
-  - Add district-level error tracking with detailed context
-  - Implement partial snapshot creation for mixed success/failure scenarios
-  - Add retry logic with exponential backoff for transient failures
-  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+- [x] 12. Implement API routes
+  - [x] 12.1 Create `backend/src/routes/admin/unified-backfill.ts`
+    - POST /api/admin/backfill - Create new job
+    - GET /api/admin/backfill/:jobId - Get job status
+    - DELETE /api/admin/backfill/:jobId - Cancel job
+    - GET /api/admin/backfill/jobs - List job history
+    - POST /api/admin/backfill/preview - Dry run
+    - GET /api/admin/backfill/config/rate-limit - Get rate limit config
+    - PUT /api/admin/backfill/config/rate-limit - Update rate limit config
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 11.2, 12.1, 12.2_
+  - [x] 12.2 Write API integration tests
+    - Test all endpoints with mock service
+    - Test error responses
+    - _Requirements: 9.2, 9.3, 9.4, 9.5_
+  - [x] 12.3 Register routes in admin router
+    - Update `backend/src/routes/admin/index.ts` to include unified-backfill routes
+    - _Requirements: 9.1_
 
-- [ ]\* 6.1 Write property test for error resilience
-  - **Property 6: Error Resilience and Partial Success**
-  - **Validates: Requirements 6.1, 6.2, 6.3, 6.4**
+- [x] 13. Checkpoint - Ensure backend is complete and all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 7. Implement consistent snapshot storage with RefreshService compatibility
-  - Ensure all operations use PerDistrictFileSnapshotStore
-  - Maintain full compatibility with RefreshService snapshot formats
-  - Add proper metadata for collection method and scope
-  - _Requirements: 5.1, 5.2, 5.5, 11.3_
+- [x] 14. Create frontend hooks
+  - [x] 14.1 Create `frontend/src/hooks/useUnifiedBackfill.ts`
+    - Implement useCreateJob, useJobStatus, useCancelJob, useListJobs hooks
+    - Implement usePreviewJob hook for dry run
+    - Implement useRateLimitConfig hook
+    - Replace useAdminBackfill functionality
+    - _Requirements: 5.2, 6.1, 8.4, 11.4, 12.1_
 
-- [ ]\* 7.1 Write property test for RefreshService compatibility
-  - **Property 4: Snapshot Format Consistency**
-  - **Validates: Requirements 5.1, 5.2, 11.3**
+- [x] 15. Update Admin Panel UI
+  - [x] 15.1 Create BackfillSection component in `frontend/src/pages/AdminPage.tsx`
+    - Replace AnalyticsSection with unified BackfillSection
+    - Add job type selector (data-collection / analytics-generation)
+    - Add date range selection controls
+    - Add preview button and confirmation dialog
+    - _Requirements: 8.1, 8.2, 8.3, 11.1, 11.4_
+  - [x] 15.2 Create JobProgressDisplay component
+    - Display progress bar with percentage
+    - Add expandable per-district progress detail
+    - Display rate limiter status
+    - Add cancel button for running jobs
+    - _Requirements: 5.2, 5.3, 5.5, 7.1, 12.4_
+  - [x] 15.3 Create JobHistoryList component
+    - Display list of recent jobs with status, duration, outcome
+    - Add status filter controls
+    - Show job type, date range, error summary
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  - [x] 15.4 Create RateLimitConfigPanel component
+    - Display current rate limit settings
+    - Add controls to modify settings
+    - _Requirements: 12.1, 12.2_
 
-- [x] 8. Implement performance optimizations
-  - Add rate limiting to protect external data sources
-  - Implement configurable concurrency limits for district processing
-  - Add caching for intermediate results to avoid redundant operations
-  - _Requirements: 9.1, 9.2, 9.3_
+- [x] 16. Remove deprecated components
+  - [x] 16.1 Remove BackfillButton from LandingPage
+    - Update `frontend/src/pages/LandingPage.tsx`
+    - Remove BackfillButton import and usage
+    - _Requirements: 8.6_
+  - [x] 16.2 Remove DistrictBackfillButton from DistrictDetailPage
+    - Update `frontend/src/pages/DistrictDetailPage.tsx`
+    - Remove DistrictBackfillButton import and usage
+    - _Requirements: 8.7_
+  - [x] 16.3 Deprecate old backfill routes
+    - Add deprecation warnings to `/api/districts/backfill/*` endpoints
+    - Update `backend/src/routes/districts/backfill.ts` with deprecation notices
+    - _Requirements: 9.6_
 
-- [ ]\* 8.1 Write property test for concurrent processing limits
-  - **Property 9: Concurrent Processing Limits**
-  - **Validates: Requirements 9.2**
+- [x] 17. Checkpoint - Ensure frontend changes work correctly
+  - Ensure all tests pass, ask the user if questions arise.
 
-- [ ]\* 8.2 Write property test for rate limiting protection
-  - **Property 10: Rate Limiting Protection**
-  - **Validates: Requirements 9.1**
+- [x] 18. Wire up recovery on server startup
+  - [x] 18.1 Update server initialization
+    - Call RecoveryManager.recoverIncompleteJobs() on startup
+    - Log recovery status
+    - _Requirements: 1.4, 10.1_
 
-- [ ] 9. Checkpoint - Ensure all core functionality works
-  - Core functionality has critical issues with snapshot creation
-  - Data collection works (CSV download and parsing successful) but snapshots are not being created
-  - Need to debug the data transformation pipeline between CSV parsing and snapshot storage
-  - Performance optimizations are integrated but cannot be fully validated until snapshot creation is fixed
+- [x] 19. Final integration testing
+  - [x] 19.1 Write end-to-end tests
+    - Test complete data-collection job flow
+    - Test complete analytics-generation job flow
+    - Test recovery after simulated restart
+    - Test UI interactions
+    - _Requirements: 2.2, 2.3, 10.1_
 
-- [x] 10. Update frontend components for unified backfill service
-  - Update BackfillButton component to support new API interface
-  - Enhance BackfillContext for improved state management
-  - Update API hooks to use unified endpoints
-  - Add support for enhanced progress tracking and error display
-  - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
-
-- [ ]\* 10.1 Write property test for frontend API compatibility
-  - **Property 11: Frontend API Compatibility**
-  - **Validates: Requirements 12.1, 12.3, 12.4**
-
-- [x] 11. Add comprehensive documentation and examples
-  - Create clear API documentation with examples
-  - Add inline code documentation
-  - Create usage examples for common scenarios
-  - _Requirements: 10.4_
-
-- [ ] 11.1 Write end-to-end integration tests
-  - Test complete workflows from request to snapshot creation
-  - Test error scenarios and recovery mechanisms
-  - Verify RefreshService integration works correctly
-  - **Note: Needs to be re-run after fixing snapshot creation issue in task 12**
-  - _Requirements: 11.1, 11.2, 11.5_
-
-- [x] 12. Debug and fix snapshot creation failure
-  - Investigate why CSV data parsing succeeds but snapshot creation fails
-  - Fix the data transformation pipeline between CSV parsing and snapshot storage
-  - Ensure RefreshService integration properly converts parsed CSV data to DistrictStatistics format
-  - Validate that PerDistrictFileSnapshotStore receives properly formatted data
-  - Test the complete pipeline from CSV download through snapshot creation
-  - _Requirements: 5.1, 5.2, 11.3, 6.1_
-
-- [ ] 13. Final checkpoint - Complete system validation
+- [x] 20. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
 
-- Tasks marked with `*` are optional and can be skipped for faster MVP
+- All tasks are required for comprehensive implementation
 - Each task references specific requirements for traceability
-- Property tests validate universal correctness properties
-- This is a complete rewrite - no backward compatibility concerns
-- The new BackfillService leverages RefreshService methods as the primary data source
-- All legacy services and their consumers will be completely replaced
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties (5 total per PBT guidance)
+- Unit tests validate specific examples and edge cases
+- The implementation reuses existing BackfillService logic where possible
+- Storage abstraction follows the established pattern in StorageProviderFactory

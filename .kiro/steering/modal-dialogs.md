@@ -80,7 +80,7 @@ const MyDialog: React.FC<MyDialogProps> = ({ isOpen, onClose }) => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="my-dialog-title"
-      onClick={(e) => {
+      onClick={e => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
@@ -141,12 +141,12 @@ Use `bg-black/50` instead of `bg-black bg-opacity-50` for consistency.
 
 ## 6. Common Width Values
 
-| Dialog Type | maxWidth |
-|-------------|----------|
+| Dialog Type     | maxWidth        |
+| --------------- | --------------- |
 | Small (confirm) | `28rem` (448px) |
-| Medium (form) | `32rem` (512px) |
+| Medium (form)   | `32rem` (512px) |
 | Large (details) | `42rem` (672px) |
-| Extra Large | `56rem` (896px) |
+| Extra Large     | `56rem` (896px) |
 
 ---
 

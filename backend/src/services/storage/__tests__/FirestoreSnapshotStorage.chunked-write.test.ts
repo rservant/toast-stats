@@ -801,9 +801,9 @@ describe('FirestoreSnapshotStorage - Chunked Write', () => {
     /**
      * Helper to create a mock batch with controlled commit behavior
      */
-    function createMockBatch(
-      commitBehavior: () => Promise<void>
-    ): { commit: () => Promise<void> } {
+    function createMockBatch(commitBehavior: () => Promise<void>): {
+      commit: () => Promise<void>
+    } {
       return {
         commit: commitBehavior,
       }
@@ -1262,7 +1262,6 @@ describe('FirestoreSnapshotStorage - Chunked Write', () => {
   })
 })
 
-
 // ============================================================================
 // Test Suite: Batch Chunking
 // ============================================================================
@@ -1351,7 +1350,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(1)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(1)
         expect(batches[0]?.districtIds.length).toBe(1)
@@ -1371,7 +1373,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(49)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(1)
         expect(batches[0]?.districtIds.length).toBe(49)
@@ -1391,7 +1396,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(50)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(1)
         expect(batches[0]?.districtIds.length).toBe(50)
@@ -1412,7 +1420,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(51)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(2)
         expect(batches[0]?.districtIds.length).toBe(50)
@@ -1434,7 +1445,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(100)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(2)
         expect(batches[0]?.districtIds.length).toBe(50)
@@ -1460,7 +1474,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(132)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(3)
         expect(batches[0]?.districtIds.length).toBe(50)
@@ -1484,7 +1501,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const districts = createMockDistricts(132)
         const expectedIds = districts.map(d => d.districtId)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
         const actualIds = getAllDistrictIds(batches)
 
         expect(actualIds.length).toBe(expectedIds.length)
@@ -1506,7 +1526,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(60)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         // Batch 0: D1 through D50
         expect(batches[0]?.districtIds).toHaveLength(50)
@@ -1530,7 +1553,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(100)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
         const allIds = getAllDistrictIds(batches)
 
         // Verify order is preserved
@@ -1554,7 +1580,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         // With 100 districts, we should get 2 batches of 50 each
         const districts = createMockDistricts(100)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(2)
         expect(batches[0]?.districtIds.length).toBe(50)
@@ -1578,7 +1607,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         // Batch 2: 50 districts
         const districts = createMockDistricts(150)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(3)
         expect(batches[0]?.districtIds.length).toBe(50)
@@ -1600,7 +1632,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts: Array<{ districtId: string; asOfDate: string }> = []
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(0)
         expect(getTotalDistrictCount(batches)).toBe(0)
@@ -1619,7 +1654,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         })
         const districts = createMockDistricts(25)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         // With maxOperationsPerBatch = 10 and no root document slot:
         // Batch 0: 10 districts
@@ -1645,7 +1683,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         })
         const districts = createMockDistricts(5)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         // With maxOperationsPerBatch = 2:
         // Batch 0: 2 districts
@@ -1669,7 +1710,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(500)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         // With maxOperationsPerBatch = 50 and 500 districts:
         // 10 batches of 50 districts each
@@ -1694,7 +1738,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(100)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         expect(batches.length).toBe(2)
         expect(batches[0]?.districtIds.length).toBe(50) // Exactly full
@@ -1715,7 +1762,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(60)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         batches.forEach((batchResult, index) => {
           expect(batchResult).toHaveProperty('batch')
@@ -1743,7 +1793,10 @@ describe('FirestoreSnapshotStorage - Batch Chunking', () => {
         const storage = getTestableStorage()
         const districts = createMockDistricts(100)
 
-        const batches = storage.chunkDistrictDocumentsOnly(districts, '2024-01-15')
+        const batches = storage.chunkDistrictDocumentsOnly(
+          districts,
+          '2024-01-15'
+        )
 
         // Verify we have multiple batches
         expect(batches.length).toBeGreaterThan(1)
@@ -1785,17 +1838,22 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
      */
     interface FirestoreSnapshotStorageConcurrencyTestable {
       processBatchesWithConcurrency: (
-        batches: Array<{ batch: { commit: () => Promise<void> }; districtIds: string[] }>,
+        batches: Array<{
+          batch: { commit: () => Promise<void> }
+          districtIds: string[]
+        }>,
         startIndex: number
-      ) => Promise<Array<{
-        batchIndex: number
-        operationCount: number
-        success: boolean
-        retryAttempts: number
-        durationMs: number
-        error?: string
-        districtIds?: string[]
-      }>>
+      ) => Promise<
+        Array<{
+          batchIndex: number
+          operationCount: number
+          success: boolean
+          retryAttempts: number
+          durationMs: number
+          error?: string
+          districtIds?: string[]
+        }>
+      >
       batchWriteConfig: typeof DEFAULT_BATCH_WRITE_CONFIG
     }
 
@@ -1823,9 +1881,9 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
     /**
      * Helper to create a mock batch with controlled commit behavior
      */
-    function createMockBatch(
-      commitBehavior: () => Promise<void>
-    ): { commit: () => Promise<void> } {
+    function createMockBatch(commitBehavior: () => Promise<void>): {
+      commit: () => Promise<void>
+    } {
       return {
         commit: commitBehavior,
       }
@@ -1846,7 +1904,10 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
     function createMockBatches(
       count: number,
       commitBehaviors: Array<() => Promise<void>>
-    ): Array<{ batch: { commit: () => Promise<void> }; districtIds: string[] }> {
+    ): Array<{
+      batch: { commit: () => Promise<void> }
+      districtIds: string[]
+    }> {
       return Array.from({ length: count }, (_, i) => ({
         batch: createMockBatch(commitBehaviors[i] ?? (() => Promise.resolve())),
         districtIds: [`D${i * 10 + 1}`, `D${i * 10 + 2}`, `D${i * 10 + 3}`],
@@ -1874,7 +1935,10 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
           batch: createMockBatch(async () => {
             currentConcurrency++
             executionOrder.push(i)
-            maxObservedConcurrency = Math.max(maxObservedConcurrency, currentConcurrency)
+            maxObservedConcurrency = Math.max(
+              maxObservedConcurrency,
+              currentConcurrency
+            )
 
             // Simulate some async work
             await new Promise(resolve => setTimeout(resolve, 10))
@@ -1907,7 +1971,10 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
         const batches = Array.from({ length: 5 }, (_, i) => ({
           batch: createMockBatch(async () => {
             currentConcurrency++
-            maxObservedConcurrency = Math.max(maxObservedConcurrency, currentConcurrency)
+            maxObservedConcurrency = Math.max(
+              maxObservedConcurrency,
+              currentConcurrency
+            )
             await new Promise(resolve => setTimeout(resolve, 5))
             currentConcurrency--
           }),
@@ -1935,7 +2002,10 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
         const batches = Array.from({ length: 4 }, (_, i) => ({
           batch: createMockBatch(async () => {
             currentConcurrency++
-            maxObservedConcurrency = Math.max(maxObservedConcurrency, currentConcurrency)
+            maxObservedConcurrency = Math.max(
+              maxObservedConcurrency,
+              currentConcurrency
+            )
             await new Promise(resolve => setTimeout(resolve, 5))
             completionOrder.push(i)
             currentConcurrency--
@@ -2146,7 +2216,10 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
             districtIds: [`D${i + 1}`],
           }))
 
-          const results = await storage.processBatchesWithConcurrency(batches, 0)
+          const results = await storage.processBatchesWithConcurrency(
+            batches,
+            0
+          )
 
           expect(results.length).toBe(count)
         }
@@ -2356,7 +2429,11 @@ describe('FirestoreSnapshotStorage - Concurrent Batch Processing', () => {
         const results = await storage.processBatchesWithConcurrency(batches, 0)
 
         // All results should have durationMs as a non-negative number
-        expect(results.every(r => typeof r.durationMs === 'number' && r.durationMs >= 0)).toBe(true)
+        expect(
+          results.every(
+            r => typeof r.durationMs === 'number' && r.durationMs >= 0
+          )
+        ).toBe(true)
       })
 
       /**
@@ -2462,7 +2539,11 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
           total: number
           change: number
           changePercent: number
-          byClub: Array<{ clubId: string; clubName: string; memberCount: number }>
+          byClub: Array<{
+            clubId: string
+            clubName: string
+            memberCount: number
+          }>
         }
         clubs: {
           total: number
@@ -2731,7 +2812,13 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
       })
 
       // Access the internal firestore to mock batch behavior
-      const firestoreInternal = (storage as unknown as { firestore: { batch: () => { set: () => void; commit: () => Promise<void> } } }).firestore
+      const firestoreInternal = (
+        storage as unknown as {
+          firestore: {
+            batch: () => { set: () => void; commit: () => Promise<void> }
+          }
+        }
+      ).firestore
 
       // Track batch creation and make first batch fail
       let batchCount = 0
@@ -2774,7 +2861,13 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         },
       })
 
-      const firestoreInternal = (storage as unknown as { firestore: { batch: () => { set: () => void; commit: () => Promise<void> } } }).firestore
+      const firestoreInternal = (
+        storage as unknown as {
+          firestore: {
+            batch: () => { set: () => void; commit: () => Promise<void> }
+          }
+        }
+      ).firestore
 
       let batchCount = 0
       const originalBatch = firestoreInternal.batch.bind(firestoreInternal)
@@ -2782,7 +2875,8 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         batchCount++
         const batch = originalBatch()
         if (batchCount === 1) {
-          batch.commit = () => Promise.reject(new Error('Simulated root failure'))
+          batch.commit = () =>
+            Promise.reject(new Error('Simulated root failure'))
         }
         return batch
       }
@@ -2825,7 +2919,13 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         },
       })
 
-      const firestoreInternal = (storage as unknown as { firestore: { batch: () => { set: () => void; commit: () => Promise<void> } } }).firestore
+      const firestoreInternal = (
+        storage as unknown as {
+          firestore: {
+            batch: () => { set: () => void; commit: () => Promise<void> }
+          }
+        }
+      ).firestore
 
       let batchCount = 0
       const originalBatch = firestoreInternal.batch.bind(firestoreInternal)
@@ -2834,7 +2934,8 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         const batch = originalBatch()
         // First batch (root) succeeds, second batch (first district batch) fails
         if (batchCount === 2) {
-          batch.commit = () => Promise.reject(new Error('District batch failed'))
+          batch.commit = () =>
+            Promise.reject(new Error('District batch failed'))
         }
         return batch
       }
@@ -2868,7 +2969,13 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         },
       })
 
-      const firestoreInternal = (storage as unknown as { firestore: { batch: () => { set: () => void; commit: () => Promise<void> } } }).firestore
+      const firestoreInternal = (
+        storage as unknown as {
+          firestore: {
+            batch: () => { set: () => void; commit: () => Promise<void> }
+          }
+        }
+      ).firestore
 
       let batchCount = 0
       const originalBatch = firestoreInternal.batch.bind(firestoreInternal)
@@ -2877,7 +2984,8 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         const batch = originalBatch()
         // Root batch (1) succeeds, district batches 2 and 3 fail
         if (batchCount === 2 || batchCount === 3) {
-          batch.commit = () => Promise.reject(new Error(`District batch ${batchCount - 1} failed`))
+          batch.commit = () =>
+            Promise.reject(new Error(`District batch ${batchCount - 1} failed`))
         }
         return batch
       }
@@ -2983,7 +3091,9 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         rankings: [],
       }
 
-      await expect(storage.writeSnapshot(snapshot, rankings)).resolves.not.toThrow()
+      await expect(
+        storage.writeSnapshot(snapshot, rankings)
+      ).resolves.not.toThrow()
     })
 
     /**
@@ -3010,7 +3120,9 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
       const snapshot = createMockSnapshot(25)
 
       await expect(
-        storage.writeSnapshot(snapshot, undefined, { overrideSnapshotDate: '2024-02-20' })
+        storage.writeSnapshot(snapshot, undefined, {
+          overrideSnapshotDate: '2024-02-20',
+        })
       ).resolves.not.toThrow()
     })
   })
@@ -3040,7 +3152,11 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
       exists: boolean,
       id: string,
       data?: Record<string, unknown>
-    ): { exists: boolean; id: string; data: () => Record<string, unknown> | undefined } {
+    ): {
+      exists: boolean
+      id: string
+      data: () => Record<string, unknown> | undefined
+    } {
       return {
         exists,
         id,
@@ -3063,7 +3179,11 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
       })
 
       // Access the internal firestore mock to set up document retrieval
-      const firestoreMock = (storage as unknown as { firestore: { collection: ReturnType<typeof vi.fn> } }).firestore
+      const firestoreMock = (
+        storage as unknown as {
+          firestore: { collection: ReturnType<typeof vi.fn> }
+        }
+      ).firestore
       const mockDocRef = {
         get: vi.fn().mockResolvedValue(
           createMockDocSnapshot(true, '2024-01-15', {
@@ -3118,7 +3238,11 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         projectId: 'test-project',
       })
 
-      const firestoreMock = (storage as unknown as { firestore: { collection: ReturnType<typeof vi.fn> } }).firestore
+      const firestoreMock = (
+        storage as unknown as {
+          firestore: { collection: ReturnType<typeof vi.fn> }
+        }
+      ).firestore
       const mockDocRef = {
         get: vi.fn().mockResolvedValue(
           createMockDocSnapshot(true, '2024-01-15', {
@@ -3175,7 +3299,11 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         projectId: 'test-project',
       })
 
-      const firestoreMock = (storage as unknown as { firestore: { collection: ReturnType<typeof vi.fn> } }).firestore
+      const firestoreMock = (
+        storage as unknown as {
+          firestore: { collection: ReturnType<typeof vi.fn> }
+        }
+      ).firestore
       const mockDocRef = {
         get: vi.fn().mockResolvedValue(
           createMockDocSnapshot(true, '2024-01-15', {
@@ -3230,7 +3358,11 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         projectId: 'test-project',
       })
 
-      const firestoreMock = (storage as unknown as { firestore: { collection: ReturnType<typeof vi.fn> } }).firestore
+      const firestoreMock = (
+        storage as unknown as {
+          firestore: { collection: ReturnType<typeof vi.fn> }
+        }
+      ).firestore
       const mockDocRef = {
         get: vi.fn().mockResolvedValue(
           createMockDocSnapshot(false, '2024-01-15') // Document does not exist
@@ -3284,9 +3416,9 @@ describe('FirestoreSnapshotStorage - writeSnapshot Integration', () => {
         projectId: 'test-project',
       })
 
-      await expect(
-        storage.isSnapshotWriteComplete('')
-      ).rejects.toThrow('Invalid snapshot ID')
+      await expect(storage.isSnapshotWriteComplete('')).rejects.toThrow(
+        'Invalid snapshot ID'
+      )
     })
   })
 })

@@ -123,6 +123,7 @@ export function useForceCancelJob(): UseMutationResult<
 Location: `frontend/src/components/JobHistoryList.tsx`
 
 The component will be enhanced to:
+
 1. Accept an `onForceCancelJob` callback prop
 2. Display a "Force Cancel" button for jobs with status "running" or "recovering"
 3. Show a confirmation dialog before executing the force-cancel
@@ -143,6 +144,7 @@ export interface JobHistoryListProps {
 Location: `frontend/src/pages/AdminPage.tsx`
 
 The BackfillSection will be enhanced to:
+
 1. Import and render the `JobHistoryList` component
 2. Wire up the `useForceCancelJob` hook
 3. Handle force-cancel confirmation and error display
@@ -193,18 +195,16 @@ interface ForceCancelErrorResponse {
 
 ### Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `FORCE_REQUIRED` | 400 | The `force` parameter was not set to true |
-| `JOB_NOT_FOUND` | 404 | No job exists with the specified ID |
-| `INVALID_JOB_STATE` | 400 | Job is already in a terminal state |
-| `STORAGE_ERROR` | 500 | Failed to update job in storage |
-
-
+| Code                | HTTP Status | Description                               |
+| ------------------- | ----------- | ----------------------------------------- |
+| `FORCE_REQUIRED`    | 400         | The `force` parameter was not set to true |
+| `JOB_NOT_FOUND`     | 404         | No job exists with the specified ID       |
+| `INVALID_JOB_STATE` | 400         | Job is already in a terminal state        |
+| `STORAGE_ERROR`     | 500         | Failed to update job in storage           |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Analysis: Property-Based Testing Applicability
 
@@ -247,21 +247,23 @@ The following behaviors will be verified with unit tests:
 
 ### Backend Error Handling
 
-| Error Condition | HTTP Status | Error Code | User Message |
-|-----------------|-------------|------------|--------------|
-| Missing `force` parameter | 400 | `FORCE_REQUIRED` | "Force-cancel requires explicit confirmation. Set force=true to proceed." |
-| Job not found | 404 | `JOB_NOT_FOUND` | "Backfill job with ID '{jobId}' not found" |
-| Job in terminal state | 400 | `INVALID_JOB_STATE` | "Cannot force-cancel job with status '{status}'. Job is already in a terminal state." |
-| Storage write failure | 500 | `STORAGE_ERROR` | "Failed to update job status. Please try again." |
+| Error Condition           | HTTP Status | Error Code          | User Message                                                                          |
+| ------------------------- | ----------- | ------------------- | ------------------------------------------------------------------------------------- |
+| Missing `force` parameter | 400         | `FORCE_REQUIRED`    | "Force-cancel requires explicit confirmation. Set force=true to proceed."             |
+| Job not found             | 404         | `JOB_NOT_FOUND`     | "Backfill job with ID '{jobId}' not found"                                            |
+| Job in terminal state     | 400         | `INVALID_JOB_STATE` | "Cannot force-cancel job with status '{status}'. Job is already in a terminal state." |
+| Storage write failure     | 500         | `STORAGE_ERROR`     | "Failed to update job status. Please try again."                                      |
 
 ### Frontend Error Handling
 
 The `useForceCancelJob` hook will:
+
 1. Catch API errors and expose them via the mutation's `error` state
 2. Display user-friendly error messages in the UI
 3. Not invalidate queries on failure (job state unchanged)
 
 The JobHistoryList component will:
+
 1. Display error messages in a red alert box below the job item
 2. Keep the "Force Cancel" button enabled for retry
 3. Log errors to console for debugging
@@ -273,6 +275,7 @@ The JobHistoryList component will:
 Unit tests will cover the core functionality with well-chosen examples:
 
 **Backend Route Handler Tests** (`unified-backfill.test.ts`):
+
 - Force-cancel with valid running job and `force=true` → success
 - Force-cancel with valid recovering job and `force=true` → success
 - Force-cancel with valid pending job and `force=true` → success
@@ -284,6 +287,7 @@ Unit tests will cover the core functionality with well-chosen examples:
 - Force-cancel with already cancelled job → 400 INVALID_JOB_STATE
 
 **Service Method Tests** (`UnifiedBackfillService.test.ts`):
+
 - `forceCancelJob` updates status to "cancelled"
 - `forceCancelJob` sets completedAt timestamp
 - `forceCancelJob` sets error message with force-cancel context
@@ -294,12 +298,14 @@ Unit tests will cover the core functionality with well-chosen examples:
 ### Integration Tests
 
 Integration tests will verify end-to-end behavior:
+
 - Force-cancel a running job and verify new jobs can be created
 - Force-cancel via API and verify Firestore document is updated correctly
 
 ### Component Tests
 
 React component tests will cover UI behavior:
+
 - Force Cancel button appears for running/recovering jobs
 - Force Cancel button hidden for terminal state jobs
 - Confirmation dialog appears on button click
@@ -318,7 +324,7 @@ The following endpoint will be added to `backend/openapi.yaml`:
       Force-cancels a backfill job that is stuck in 'running' or 'recovering' state.
       This is a destructive operation that marks the job as cancelled and clears
       its checkpoint to prevent automatic recovery.
-      
+
       Requires explicit confirmation via the 'force' parameter.
     operationId: forceCancelBackfillJob
     tags:

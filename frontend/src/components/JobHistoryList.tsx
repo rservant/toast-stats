@@ -476,9 +476,10 @@ const JobHistoryItem: React.FC<JobHistoryItemProps> = ({
 }) => {
   const outcome = getOutcome(job)
   const hasErrors = job.progress.errors.length > 0 || job.error
-  
+
   // Determine if job can be force-cancelled (Requirements: 7.2)
-  const canForceCancelJob = job.status === 'running' || job.status === 'recovering'
+  const canForceCancelJob =
+    job.status === 'running' || job.status === 'recovering'
 
   return (
     <div className="border border-gray-200 rounded-sm overflow-hidden bg-white">
@@ -781,11 +782,12 @@ export const JobHistoryList: React.FC<JobHistoryListProps> = ({
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
 
   // Force cancel confirmation dialog state (Requirements: 7.3, 7.4)
-  const [forceCancelDialog, setForceCancelDialog] = useState<ForceCancelDialogState>({
-    isOpen: false,
-    jobId: null,
-    isLoading: false,
-  })
+  const [forceCancelDialog, setForceCancelDialog] =
+    useState<ForceCancelDialogState>({
+      isOpen: false,
+      jobId: null,
+      isLoading: false,
+    })
 
   // Build query options
   const queryOptions: ListJobsOptions = useMemo(() => {
@@ -1000,7 +1002,9 @@ export const JobHistoryList: React.FC<JobHistoryListProps> = ({
               job={job}
               isExpanded={expandedJobId === job.jobId}
               onToggleExpand={() => handleToggleExpand(job.jobId)}
-              onRequestForceCancelJob={onForceCancelJob ? handleRequestForceCancelJob : undefined}
+              onRequestForceCancelJob={
+                onForceCancelJob ? handleRequestForceCancelJob : undefined
+              }
             />
           ))}
         </div>

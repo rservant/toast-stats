@@ -29,9 +29,20 @@
  * - All tests pass when run with --run (parallel mode)
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, beforeAll } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  beforeAll,
+} from 'vitest'
 import * as fc from 'fast-check'
-import type { Snapshot, AllDistrictsRankingsData } from '../../../types/snapshots.js'
+import type {
+  Snapshot,
+  AllDistrictsRankingsData,
+} from '../../../types/snapshots.js'
 import type { DistrictStatistics } from '../../../types/districts.js'
 
 // ============================================================================
@@ -335,7 +346,13 @@ describe('FirestoreSnapshotStorage - Chunked Write Property Tests', () => {
           fc.integer({ min: 0, max: 10 }), // attempt
           // Use integer for random percentage (0-100) and convert to decimal
           fc.integer({ min: 0, max: 100 }).map(n => n / 100), // randomValue (0-1)
-          (initialBackoffMs, maxBackoffMs, jitterFactor, attempt, randomValue) => {
+          (
+            initialBackoffMs,
+            maxBackoffMs,
+            jitterFactor,
+            attempt,
+            randomValue
+          ) => {
             const storage = getTestableStorage({
               initialBackoffMs,
               maxBackoffMs,
@@ -414,7 +431,13 @@ describe('FirestoreSnapshotStorage - Chunked Write Property Tests', () => {
           fc.integer({ min: 0, max: 10 }), // attempt
           // Use integer for random percentage (0-100) and convert to decimal
           fc.integer({ min: 0, max: 100 }).map(n => n / 100), // randomValue (0-1)
-          (initialBackoffMs, maxBackoffMs, jitterFactor, attempt, randomValue) => {
+          (
+            initialBackoffMs,
+            maxBackoffMs,
+            jitterFactor,
+            attempt,
+            randomValue
+          ) => {
             const storage = getTestableStorage({
               initialBackoffMs,
               maxBackoffMs,
@@ -434,7 +457,6 @@ describe('FirestoreSnapshotStorage - Chunked Write Property Tests', () => {
     })
   })
 })
-
 
 // ============================================================================
 // Property 9: Document Structure Equivalence (Requires Firestore Emulator)
@@ -483,7 +505,9 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
     total: fc.integer({ min: 0, max: 100000 }),
     change: fc.integer({ min: -10000, max: 10000 }),
     changePercent: fc.integer({ min: -100, max: 100 }), // Use integer to avoid float issues
-    byClub: fc.constant([] as Array<{ clubId: string; clubName: string; memberCount: number }>),
+    byClub: fc.constant(
+      [] as Array<{ clubId: string; clubName: string; memberCount: number }>
+    ),
     new: fc.option(fc.integer({ min: 0, max: 10000 }), { nil: undefined }),
     renewed: fc.option(fc.integer({ min: 0, max: 10000 }), { nil: undefined }),
     dual: fc.option(fc.integer({ min: 0, max: 1000 }), { nil: undefined }),
@@ -508,14 +532,22 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
   const educationStatsArb = fc.record({
     totalAwards: fc.integer({ min: 0, max: 10000 }),
     byType: fc.constant([] as Array<{ type: string; count: number }>),
-    topClubs: fc.constant([] as Array<{ clubId: string; clubName: string; awards: number }>),
-    byMonth: fc.option(fc.constant([] as Array<{ month: string; count: number }>), { nil: undefined }),
+    topClubs: fc.constant(
+      [] as Array<{ clubId: string; clubName: string; awards: number }>
+    ),
+    byMonth: fc.option(
+      fc.constant([] as Array<{ month: string; count: number }>),
+      { nil: undefined }
+    ),
   })
 
   /**
    * Generate a valid DistrictStatistics object with a given index for unique ID
    */
-  const districtStatisticsArb = (asOfDate: string, index: number): fc.Arbitrary<DistrictStatistics> =>
+  const districtStatisticsArb = (
+    asOfDate: string,
+    index: number
+  ): fc.Arbitrary<DistrictStatistics> =>
     fc.record({
       districtId: fc.constant(`D${index.toString().padStart(3, '0')}`),
       asOfDate: fc.constant(asOfDate),
@@ -712,7 +744,9 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
     for (const [districtId, originalDistrict] of originalDistrictsById) {
       const retrievedDistrict = retrievedDistrictsById.get(districtId)
       if (!retrievedDistrict) {
-        differences.push(`district ${districtId}: missing in retrieved snapshot`)
+        differences.push(
+          `district ${districtId}: missing in retrieved snapshot`
+        )
         continue
       }
 
@@ -808,7 +842,9 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
     }
 
     // Compare metadata
-    if (original.metadata.totalDistricts !== retrieved.metadata.totalDistricts) {
+    if (
+      original.metadata.totalDistricts !== retrieved.metadata.totalDistricts
+    ) {
       differences.push(
         `rankings metadata.totalDistricts: expected ${original.metadata.totalDistricts}, got ${retrieved.metadata.totalDistricts}`
       )
@@ -1152,7 +1188,10 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
                 await storage.readAllDistrictsRankings(snapshotId)
 
               // Verify rankings equivalence
-              const comparison = areRankingsEquivalent(rankings, retrievedRankings)
+              const comparison = areRankingsEquivalent(
+                rankings,
+                retrievedRankings
+              )
 
               if (!comparison.equivalent) {
                 console.error('Rankings differences:', comparison.differences)

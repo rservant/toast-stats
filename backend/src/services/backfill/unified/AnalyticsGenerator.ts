@@ -577,7 +577,10 @@ export class AnalyticsGenerator {
     districtData: DistrictStatistics[]
   ): Promise<void> {
     try {
-      await this.preComputedAnalyticsService.computeAndStore(snapshotId, districtData)
+      await this.preComputedAnalyticsService.computeAndStore(
+        snapshotId,
+        districtData
+      )
       logger.debug('Generated pre-computed analytics for snapshot', {
         snapshotId,
         districtCount: districtData.length,
@@ -586,7 +589,8 @@ export class AnalyticsGenerator {
       })
     } catch (error) {
       // Log error but don't fail the snapshot processing
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
       logger.warn('Failed to generate pre-computed analytics for snapshot', {
         snapshotId,
         error: errorMessage,

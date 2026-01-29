@@ -651,7 +651,9 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
     const errorWithCode = error as { code?: unknown }
 
     if (typeof errorWithCode.code === 'number') {
-      return FirestoreSnapshotStorage.RETRYABLE_GRPC_CODES.has(errorWithCode.code)
+      return FirestoreSnapshotStorage.RETRYABLE_GRPC_CODES.has(
+        errorWithCode.code
+      )
     }
 
     // For errors without a numeric code, return false
@@ -1006,7 +1008,9 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
           r => r.status === 'fulfilled' && r.value.success
         ).length,
         failureCount: settledResults.filter(
-          r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+          r =>
+            r.status === 'rejected' ||
+            (r.status === 'fulfilled' && !r.value.success)
         ).length,
       })
     }
@@ -1354,14 +1358,17 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
 
           if (!rootBatchResult.success) {
             // Root batch failed - fail fast without writing any districts
-            logger.error('Root document batch failed - aborting snapshot write', {
-              operation: 'writeSnapshot',
-              snapshot_id: snapshotId,
-              phase: 'root',
-              duration_ms: phase2Duration,
-              retryAttempts: rootBatchResult.retryAttempts,
-              error: rootBatchResult.error,
-            })
+            logger.error(
+              'Root document batch failed - aborting snapshot write',
+              {
+                operation: 'writeSnapshot',
+                snapshot_id: snapshotId,
+                phase: 'root',
+                duration_ms: phase2Duration,
+                retryAttempts: rootBatchResult.retryAttempts,
+                error: rootBatchResult.error,
+              }
+            )
 
             throw new StorageOperationError(
               `Failed to write snapshot ${snapshotId}: Root document batch failed after ${rootBatchResult.retryAttempts} retries (batch 0, phase: root) - ${rootBatchResult.error}`,
@@ -1395,21 +1402,26 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
               snapshotId
             )
 
-            logger.info('Phase 3: Processing district batches with concurrency', {
-              operation: 'writeSnapshot',
-              snapshot_id: snapshotId,
-              phase: 'districts',
-              totalDistricts: snapshot.payload.districts.length,
-              totalBatches: districtBatches.length,
-              maxConcurrentBatches: this.batchWriteConfig.maxConcurrentBatches,
-            })
+            logger.info(
+              'Phase 3: Processing district batches with concurrency',
+              {
+                operation: 'writeSnapshot',
+                snapshot_id: snapshotId,
+                phase: 'districts',
+                totalDistricts: snapshot.payload.districts.length,
+                totalBatches: districtBatches.length,
+                maxConcurrentBatches:
+                  this.batchWriteConfig.maxConcurrentBatches,
+              }
+            )
 
             // Process district batches with controlled concurrency
             // Start index is 1 since batch 0 was the root document
-            const districtBatchResults = await this.processBatchesWithConcurrency(
-              districtBatches,
-              1 // Start at batch index 1
-            )
+            const districtBatchResults =
+              await this.processBatchesWithConcurrency(
+                districtBatches,
+                1 // Start at batch index 1
+              )
 
             allBatchResults.push(...districtBatchResults)
           }
@@ -1422,7 +1434,9 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
           const totalDuration = Date.now() - startTime
 
           // Calculate success/failure counts
-          const successfulBatches = allBatchResults.filter(r => r.success).length
+          const successfulBatches = allBatchResults.filter(
+            r => r.success
+          ).length
           const failedBatches = allBatchResults.filter(r => !r.success).length
 
           // Collect district IDs from successful and failed batches
@@ -1483,7 +1497,8 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
                   return {
                     ...entry,
                     status: 'failed' as const,
-                    errorMessage: 'Failed to write district document after retries',
+                    errorMessage:
+                      'Failed to write district document after retries',
                   }
                 }
                 return entry
@@ -1526,13 +1541,19 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
             } catch (updateError) {
               // Log the update failure but don't throw - the snapshot is still partially written
               // The original manifest/metadata in Firestore may not reflect the actual state
-              logger.error('Failed to update root document with partial success status', {
-                operation: 'writeSnapshot',
-                snapshot_id: snapshotId,
-                phase: 'partial-update',
-                error: updateError instanceof Error ? updateError.message : 'Unknown error',
-                failedDistricts: writeResult.failedDistricts,
-              })
+              logger.error(
+                'Failed to update root document with partial success status',
+                {
+                  operation: 'writeSnapshot',
+                  snapshot_id: snapshotId,
+                  phase: 'partial-update',
+                  error:
+                    updateError instanceof Error
+                      ? updateError.message
+                      : 'Unknown error',
+                  failedDistricts: writeResult.failedDistricts,
+                }
+              )
             }
           } else {
             // All batches succeeded - update metadata to indicate complete write
@@ -1544,11 +1565,17 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
               })
             } catch (updateError) {
               // Log but don't fail - the snapshot is fully written, just metadata flag missing
-              logger.warn('Failed to set writeComplete flag on successful write', {
-                operation: 'writeSnapshot',
-                snapshot_id: snapshotId,
-                error: updateError instanceof Error ? updateError.message : 'Unknown error',
-              })
+              logger.warn(
+                'Failed to set writeComplete flag on successful write',
+                {
+                  operation: 'writeSnapshot',
+                  snapshot_id: snapshotId,
+                  error:
+                    updateError instanceof Error
+                      ? updateError.message
+                      : 'Unknown error',
+                }
+              )
             }
 
             // All batches succeeded
@@ -2709,7 +2736,10 @@ export class FirestoreSnapshotStorage implements ISnapshotStorage {
             snapshot_id: snapshotId,
             writeComplete,
             result: isComplete,
-            reason: writeComplete === undefined ? 'legacy_snapshot' : 'explicit_value',
+            reason:
+              writeComplete === undefined
+                ? 'legacy_snapshot'
+                : 'explicit_value',
             duration_ms: Date.now() - startTime,
           })
 

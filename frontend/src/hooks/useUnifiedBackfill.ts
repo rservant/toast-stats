@@ -575,13 +575,7 @@ export function useForceCancelJob() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({
-      jobId,
-      force,
-    }: {
-      jobId: string
-      force: boolean
-    }) => {
+    mutationFn: async ({ jobId, force }: { jobId: string; force: boolean }) => {
       const response = await apiClient.post<ForceCancelResponse>(
         `/admin/unified-backfill/${jobId}/force-cancel`,
         undefined,

@@ -1134,11 +1134,12 @@ describe('AnalyticsGenerator', () => {
 
       // Assert - computeAndStore should be called once per snapshot
       // Validates: Requirements 2.1
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledTimes(1)
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
-        '2024-01-15',
-        expect.any(Array)
-      )
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledWith('2024-01-15', expect.any(Array))
     })
 
     it('should pass collected district data to computeAndStore', async () => {
@@ -1167,11 +1168,14 @@ describe('AnalyticsGenerator', () => {
 
       // Assert - computeAndStore should receive array with both district data
       // Validates: Requirements 2.1
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledWith(
         '2024-01-15',
         expect.arrayContaining([districtData1, districtData2])
       )
-      const callArgs = mockPreComputedAnalyticsService.computeAndStore.mock.calls[0]
+      const callArgs =
+        mockPreComputedAnalyticsService.computeAndStore.mock.calls[0]
       expect(callArgs).toBeDefined()
       expect(callArgs[1]).toHaveLength(2)
     })
@@ -1199,19 +1203,18 @@ describe('AnalyticsGenerator', () => {
 
       // Assert - computeAndStore should be called once per snapshot
       // Validates: Requirements 2.1
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledTimes(3)
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
-        '2024-01-15',
-        expect.any(Array)
-      )
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
-        '2024-01-14',
-        expect.any(Array)
-      )
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledWith(
-        '2024-01-13',
-        expect.any(Array)
-      )
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledTimes(3)
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledWith('2024-01-15', expect.any(Array))
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledWith('2024-01-14', expect.any(Array))
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledWith('2024-01-13', expect.any(Array))
     })
 
     it('should continue processing when computeAndStore fails', async () => {
@@ -1317,7 +1320,9 @@ describe('AnalyticsGenerator', () => {
       expect(result.success).toBe(true)
       expect(result.processedItems).toBe(3)
       expect(result.failedItems).toBe(0)
-      expect(mockPreComputedAnalyticsService.computeAndStore).toHaveBeenCalledTimes(3)
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).toHaveBeenCalledTimes(3)
     })
 
     it('should not call computeAndStore when snapshot has no districts', async () => {
@@ -1337,7 +1342,9 @@ describe('AnalyticsGenerator', () => {
       )
 
       // Assert - computeAndStore should not be called for empty snapshots
-      expect(mockPreComputedAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).not.toHaveBeenCalled()
     })
 
     it('should not call computeAndStore when snapshot is not found', async () => {
@@ -1354,7 +1361,9 @@ describe('AnalyticsGenerator', () => {
       )
 
       // Assert - computeAndStore should not be called for missing snapshots
-      expect(mockPreComputedAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).not.toHaveBeenCalled()
     })
   })
 })

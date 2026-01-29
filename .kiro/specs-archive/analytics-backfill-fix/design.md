@@ -17,13 +17,13 @@ graph TD
     AG --> SS[ISnapshotStorage]
     AG --> TSS[ITimeSeriesIndexStorage]
     AG -.->|NEW| PCAS
-    
+
     subgraph "Snapshot Processing"
         AG --> |1. Read district data| SS
         AG --> |2. Build time-series point| TSS
         AG -.->|3. NEW: Generate analytics| PCAS
     end
-    
+
     PCAS --> |Writes| ASF[analytics-summary.json]
 ```
 
@@ -107,7 +107,7 @@ constructor(
   config?: UnifiedBackfillServiceConfig
 ) {
   // ... existing initialization ...
-  
+
   this.analyticsGenerator = new AnalyticsGenerator(
     snapshotStorage,
     timeSeriesStorage,
@@ -121,6 +121,7 @@ constructor(
 **File:** `backend/src/services/PreComputedAnalyticsService.ts`
 
 No changes required. The existing `computeAndStore()` method already:
+
 - Accepts `snapshotId` and `districtData` array
 - Computes analytics summaries for each district
 - Writes `analytics-summary.json` to the snapshot directory
@@ -136,23 +137,23 @@ No new data models are required. The existing types are sufficient:
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Analytics File Generation
 
-*For any* snapshot processed by AnalyticsGenerator with valid district data, the `analytics-summary.json` file SHALL exist in the snapshot directory after processing completes successfully.
+_For any_ snapshot processed by AnalyticsGenerator with valid district data, the `analytics-summary.json` file SHALL exist in the snapshot directory after processing completes successfully.
 
 **Validates: Requirements 2.1**
 
 ### Property 2: Time-Series Generation Preserved
 
-*For any* snapshot processed by AnalyticsGenerator, the time-series index data SHALL be generated regardless of whether pre-computed analytics generation succeeds or fails.
+_For any_ snapshot processed by AnalyticsGenerator, the time-series index data SHALL be generated regardless of whether pre-computed analytics generation succeeds or fails.
 
 **Validates: Requirements 2.2**
 
 ### Property 3: Error Isolation
 
-*For any* failure in PreComputedAnalyticsService.computeAndStore(), the AnalyticsGenerator SHALL continue processing and report the snapshot as successfully processed for time-series purposes.
+_For any_ failure in PreComputedAnalyticsService.computeAndStore(), the AnalyticsGenerator SHALL continue processing and report the snapshot as successfully processed for time-series purposes.
 
 **Validates: Requirements 2.2**
 
@@ -172,6 +173,7 @@ This matches the existing pattern in `RefreshService.triggerPreComputedAnalytics
 ### Rationale
 
 Pre-computed analytics are a performance optimization. If they fail to generate:
+
 - The frontend falls back to on-demand computation
 - Time-series data is still valuable for trend analysis
 - The operator can re-run the backfill job if needed
@@ -197,6 +199,7 @@ Integration tests should verify:
 ### Property-Based Testing
 
 Given the straightforward nature of this fix (adding a method call), property-based testing is not warranted per the project's property-testing-guidance.md. The fix:
+
 - Does not involve complex input spaces
 - Does not have mathematical invariants
 - Is easily verified with specific examples

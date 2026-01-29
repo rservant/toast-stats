@@ -2,170 +2,162 @@
 
 ## Introduction
 
-This specification defines a complete rewrite of the historical data backfill system, replacing the existing BackfillService and DistrictBackfillService with a single, unified BackfillService. The new service will:
-
-1. **Leverage RefreshService methods** as the primary data acquisition mechanism for historical data
-2. **Provide intelligent data collection** with automatic scope and detail optimization
-3. **Maintain clean separation** between current data refresh (RefreshService) and historical data backfill (BackfillService)
-4. **Offer a simplified API** with modern, clean interfaces
-
-This rewrite eliminates the complexity of managing multiple backfill services while leveraging proven RefreshService capabilities for reliable historical data acquisition.
+This document specifies requirements for consolidating the two existing backfill mechanisms (Data Backfill for historical snapshot collection and Admin Analytics Backfill for pre-computed analytics generation) into a single, resilient Unified Backfill Service. The unified service will provide persistent job state, server-side deduplication, automatic recovery, and a consolidated Admin UI for all backfill operations.
 
 ## Glossary
 
-- **BackfillService**: The consolidated service that handles all historical data backfilling operations
-- **System_Wide_Backfill**: Operation that fetches the single all-districts CSV containing summary data for all districts
-- **Targeted_Backfill**: Operation that fetches detailed per-district CSV files (3 files per district) for specific districts
-- **All_Districts_CSV**: Single CSV file containing summary performance data for all districts
-- **Per_District_CSVs**: Three detailed CSV files per district (district performance, division performance, club performance)
-- **RefreshService**: Existing service that handles current data collection and snapshot creation
-- **Historical_Backfill**: Collection of data from past dates for analysis and gap-filling purposes
-- **Current_Data_Refresh**: Collection of the most recent available data (handled by RefreshService)
-- **Backfill_Job**: A background operation that fetches historical data for a date range
-- **District_Configuration**: The set of districts currently configured for data collection
+- **Unified_Backfill_Service**: The consolidated backend service that handles both data collection (historical snapshots) and analytics generation (pre-computed analytics) operations
+- **Backfill_Job**: A persistent record representing a backfill operation with its configuration, progress, and status
+- **Job_Storage**: The storage abstraction layer (IBackfillJobStorage interface) for persisting backfill job state across server restarts
+- **Data_Backfill**: The operation of fetching historical Toastmasters dashboard data for specified date ranges
+- **Analytics_Backfill**: The operation of generating pre-computed analytics for existing snapshots
+- **Job_Manager**: The component responsible for job lifecycle management, progress tracking, state persistence, and automatic recovery
+- **Admin_Panel**: The consolidated frontend interface for managing all backfill operations
+- **Dry_Run**: A preview mode that shows what would be processed without actually executing the backfill
 
 ## Requirements
 
-### Requirement 1: Complete Service Replacement
+### Requirement 1: Persistent Job Storage
 
-**User Story:** As a system administrator, I want a single, modern BackfillService that replaces all existing backfill functionality, so that I can manage historical data collection through one clean interface.
-
-#### Acceptance Criteria
-
-1. THE BackfillService SHALL completely replace both existing BackfillService and DistrictBackfillService
-2. THE BackfillService SHALL use RefreshService methods as the primary data acquisition mechanism
-3. THE BackfillService SHALL provide a clean, modern API interface
-4. THE BackfillService SHALL use a single job queue for all backfill operations
-5. THE BackfillService SHALL integrate with the PerDistrictSnapshotStore for consistent data storage
-
-### Requirement 2: Flexible Targeting Options
-
-**User Story:** As a system operator, I want to specify which districts to backfill, so that I can efficiently collect data for specific subsets without processing unnecessary districts.
+**User Story:** As a system operator, I want backfill job state to persist across server restarts, so that I can track job progress and history reliably.
 
 #### Acceptance Criteria
 
-1. WHEN initiating a backfill, THE BackfillService SHALL accept an optional list of target districts
-2. IF no target districts are specified, THEN THE BackfillService SHALL process all configured districts
-3. WHEN target districts are specified, THE BackfillService SHALL validate they are in the current configuration scope
-4. THE BackfillService SHALL support single-district targeting for detailed analysis
-5. THE BackfillService SHALL support multi-district targeting for batch operations
+1. THE Job_Storage SHALL implement the IBackfillJobStorage interface following the existing storage abstraction pattern
+2. WHEN a backfill job is created, THE Job_Storage SHALL persist the job record immediately
+3. WHEN job progress is updated, THE Job_Storage SHALL persist the updated state within 5 seconds
+4. WHEN the server restarts with incomplete jobs, THE Job_Manager SHALL automatically resume processing from the last checkpoint
+5. THE Job_Storage SHALL support both local filesystem and Firestore storage backends via the storage abstraction pattern
+6. WHEN listing jobs, THE Job_Storage SHALL return jobs sorted by creation time (newest first)
+7. THE Job_Storage SHALL retain completed and failed jobs for at least 30 days
 
-### Requirement 3: RefreshService-Based Data Collection
+### Requirement 2: Unified Job Types
 
-**User Story:** As a data analyst, I want the BackfillService to leverage proven RefreshService methods for historical data acquisition, so that I get reliable, consistent data collection using established patterns.
-
-#### Acceptance Criteria
-
-1. THE BackfillService SHALL use RefreshService methods as the primary mechanism for historical data collection
-2. THE BackfillService SHALL support both system-wide and per-district collection through RefreshService capabilities
-3. THE BackfillService SHALL automatically select the most efficient RefreshService method based on scope and requirements
-4. THE BackfillService SHALL extend RefreshService methods when additional historical data sources are needed
-5. THE BackfillService SHALL maintain consistency with RefreshService data formats and processing patterns
-
-### Requirement 4: Unified Job Management
-
-**User Story:** As a system administrator, I want all backfill operations tracked in a single job management system, so that I can monitor and control all data collection activities from one place.
+**User Story:** As a system operator, I want to manage both data collection and analytics generation through a single interface, so that I can simplify backfill operations.
 
 #### Acceptance Criteria
 
-1. THE BackfillService SHALL maintain a single job queue for all backfill types
-2. WHEN a job is created, THE BackfillService SHALL assign a unique identifier across all job types
-3. THE BackfillService SHALL provide unified progress tracking for all operations
-4. THE BackfillService SHALL support cancellation of any job type through the same interface
-5. THE BackfillService SHALL clean up completed jobs using a single cleanup process
+1. THE Unified_Backfill_Service SHALL support two job types: 'data-collection' and 'analytics-generation'
+2. WHEN a data-collection job is created, THE Unified_Backfill_Service SHALL fetch historical dashboard data for the specified date range
+3. WHEN an analytics-generation job is created, THE Unified_Backfill_Service SHALL generate pre-computed analytics for existing snapshots
+4. THE Backfill_Job SHALL include a 'jobType' field distinguishing between data-collection and analytics-generation
+5. WHEN displaying job progress, THE Admin_Panel SHALL show job-type-specific progress information
 
-### Requirement 5: Unified Snapshot Architecture
+### Requirement 3: Server-Side Job Deduplication
 
-**User Story:** As a data consumer, I want all backfilled data stored using the unified snapshot architecture, so that I can access historical data consistently regardless of collection method or scope.
-
-#### Acceptance Criteria
-
-1. THE BackfillService SHALL use PerDistrictFileSnapshotStore as the primary storage mechanism for all operations
-2. THE BackfillService SHALL create directory-based snapshots with individual district JSON files
-3. WHEN processing system-wide operations, THE BackfillService SHALL create snapshots containing all configured districts
-4. WHEN processing targeted operations, THE BackfillService SHALL create snapshots containing only the requested districts
-5. THE BackfillService SHALL maintain snapshot metadata indicating data source, scope, and collection method
-
-### Requirement 6: Enhanced Error Handling
-
-**User Story:** As a system operator, I want comprehensive error handling that continues processing when individual districts fail, so that partial failures don't block the entire backfill operation.
+**User Story:** As a system operator, I want the system to prevent duplicate backfill jobs, so that I don't accidentally run multiple conflicting operations.
 
 #### Acceptance Criteria
 
-1. WHEN a district fails during processing, THE BackfillService SHALL continue with remaining districts
-2. THE BackfillService SHALL track district-specific errors with detailed context
-3. THE BackfillService SHALL create partial snapshots when some districts succeed and others fail
-4. THE BackfillService SHALL provide detailed error reporting in job status responses
-5. THE BackfillService SHALL support retry logic with exponential backoff for transient failures
+1. THE Unified_Backfill_Service SHALL enforce a global one-job-at-a-time policy
+2. WHEN a job is already running, THE Unified_Backfill_Service SHALL reject new job requests with a clear error message
+3. WHEN checking for running jobs, THE Unified_Backfill_Service SHALL query the persistent Job_Storage (not in-memory state)
+4. IF a running job becomes stale (no progress update for 10 minutes), THEN THE Unified_Backfill_Service SHALL allow new jobs to be created
 
-### Requirement 7: Configuration Integration
+### Requirement 4: Date Range Specification
 
-**User Story:** As a system administrator, I want the backfill service to respect district configuration settings, so that data collection stays within the defined operational scope.
-
-#### Acceptance Criteria
-
-1. THE BackfillService SHALL integrate with DistrictConfigurationService for scope validation
-2. WHEN no districts are configured, THE BackfillService SHALL process all available districts
-3. WHEN specific districts are configured, THE BackfillService SHALL restrict operations to that scope
-4. THE BackfillService SHALL validate target districts against the current configuration before processing
-5. THE BackfillService SHALL log scope violations and exclude out-of-scope districts from processing
-
-### Requirement 8: Modern API Design
-
-**User Story:** As an API consumer, I want a clean, modern API interface for backfill operations, so that I can easily integrate historical data collection into my workflows.
+**User Story:** As a system operator, I want to specify date ranges for backfill operations, so that I can target specific time periods.
 
 #### Acceptance Criteria
 
-1. THE BackfillService SHALL provide a single, well-designed POST endpoint for initiating backfills
-2. THE BackfillService SHALL accept flexible targeting and configuration parameters in a clean request format
-3. THE BackfillService SHALL provide consistent, informative response formats across all operations
-4. THE BackfillService SHALL include comprehensive error handling with clear error messages
-5. THE BackfillService SHALL support modern API patterns including proper HTTP status codes and response headers
+1. WHEN creating a data-collection job, THE Admin_Panel SHALL provide date range selection controls
+2. WHEN creating an analytics-generation job, THE Admin_Panel SHALL provide optional date range filters for snapshot selection
+3. THE Unified_Backfill_Service SHALL validate that startDate is before or equal to endDate
+4. THE Unified_Backfill_Service SHALL validate that endDate is before today (dashboard data is delayed)
+5. WHEN no date range is specified for analytics-generation, THE Unified_Backfill_Service SHALL process all existing snapshots
 
-### Requirement 9: Performance Optimization
+### Requirement 5: Job Progress Tracking
 
-**User Story:** As a system operator, I want efficient resource utilization during backfill operations, so that the system can handle large-scale data collection without performance degradation.
-
-#### Acceptance Criteria
-
-1. THE BackfillService SHALL implement rate limiting to avoid overwhelming data sources
-2. THE BackfillService SHALL support concurrent processing of multiple districts with configurable limits
-3. THE BackfillService SHALL cache intermediate results to avoid redundant API calls
-4. THE BackfillService SHALL implement circuit breaker patterns for external service protection
-5. THE BackfillService SHALL provide progress updates without blocking the main processing thread
-
-### Requirement 10: Clean Implementation
-
-**User Story:** As a developer, I want a clean, modern codebase without legacy compatibility concerns, so that the system is maintainable and extensible.
+**User Story:** As a system operator, I want to see detailed progress of backfill operations, so that I can monitor their status.
 
 #### Acceptance Criteria
 
-1. THE BackfillService SHALL be implemented as a complete rewrite without legacy compatibility layers
-2. THE BackfillService SHALL use modern TypeScript patterns and clean architecture principles
-3. THE BackfillService SHALL have comprehensive test coverage from the start
-4. THE BackfillService SHALL include clear documentation and examples
-5. THE BackfillService SHALL be designed for easy extension and modification
+1. THE Backfill_Job SHALL track: total items, processed items, failed items, skipped items, and current item
+2. WHEN a job is running, THE Admin_Panel SHALL display a progress bar with percentage complete
+3. THE Admin_Panel SHALL provide expandable detail showing per-district progress when expanded
+4. WHEN errors occur, THE Backfill_Job SHALL record error details including affected item and error message
+5. THE Admin_Panel SHALL display rate limiting status as read-only information
 
-### Requirement 11: Seamless RefreshService Integration
+### Requirement 6: Job History
 
-**User Story:** As a system operator, I want the BackfillService to seamlessly integrate with RefreshService capabilities, so that historical data collection leverages proven, reliable methods.
-
-#### Acceptance Criteria
-
-1. THE BackfillService SHALL directly use RefreshService methods for data acquisition
-2. THE BackfillService SHALL coordinate with RefreshService to avoid operational conflicts
-3. THE BackfillService SHALL maintain full compatibility with RefreshService snapshot formats
-4. THE BackfillService SHALL provide clear operational separation between current refresh and historical backfill
-5. THE BackfillService SHALL extend RefreshService capabilities when needed for historical data requirements
-
-### Requirement 12: Frontend Integration
-
-**User Story:** As a user, I want the frontend interface to work seamlessly with the new unified BackfillService, so that I can initiate and monitor backfill operations through an improved user interface.
+**User Story:** As a system operator, I want to view history of completed and failed jobs, so that I can debug issues and track operations.
 
 #### Acceptance Criteria
 
-1. THE frontend SHALL update API calls to use the new unified backfill endpoints
-2. THE frontend SHALL support the new BackfillRequest interface with enhanced targeting options
-3. THE frontend SHALL display enhanced progress tracking including district-level status
-4. THE frontend SHALL show performance optimization status (rate limiting, concurrency, caching)
-5. THE frontend SHALL provide improved error handling with detailed district-level error information
+1. THE Admin_Panel SHALL display a list of recent jobs with status, start time, duration, and outcome
+2. WHEN viewing job history, THE Admin_Panel SHALL show job type, date range, items processed, and error summary
+3. THE Admin_Panel SHALL allow filtering job history by status (completed, failed, cancelled)
+4. THE Admin_Panel SHALL display job history in a dedicated section below the job controls
+5. WHEN a job completes or fails, THE Admin_Panel SHALL update the history list automatically
+
+### Requirement 7: Job Cancellation
+
+**User Story:** As a system operator, I want to cancel running backfill jobs, so that I can stop operations that are no longer needed.
+
+#### Acceptance Criteria
+
+1. WHEN a job is running, THE Admin_Panel SHALL display a cancel button
+2. WHEN cancellation is requested, THE Unified_Backfill_Service SHALL stop processing new items gracefully
+3. WHEN a job is cancelled, THE Backfill_Job SHALL record the cancellation time and partial progress
+4. THE Unified_Backfill_Service SHALL complete any in-flight item processing before stopping
+
+### Requirement 8: Consolidated Admin UI
+
+**User Story:** As a system operator, I want all backfill controls in the Admin page, so that I have a single location for backfill management.
+
+#### Acceptance Criteria
+
+1. THE Admin_Panel SHALL provide a unified "Backfill" section replacing the current "Analytics" section
+2. THE Admin_Panel SHALL include job type selection (data-collection or analytics-generation)
+3. THE Admin_Panel SHALL include date range selection controls
+4. THE Admin_Panel SHALL display current job progress when a job is running
+5. THE Admin_Panel SHALL display job history below the controls
+6. THE BackfillButton component SHALL be removed from LandingPage
+7. THE DistrictBackfillButton component SHALL be removed from DistrictDetailPage
+
+### Requirement 9: API Consolidation
+
+**User Story:** As a developer, I want a single set of backfill API endpoints, so that the API is consistent and maintainable.
+
+#### Acceptance Criteria
+
+1. THE Unified_Backfill_Service SHALL expose endpoints under /api/admin/backfill/\*
+2. POST /api/admin/backfill SHALL create a new backfill job with jobType and optional date range
+3. GET /api/admin/backfill/:jobId SHALL return job progress and status
+4. DELETE /api/admin/backfill/:jobId SHALL cancel a running job
+5. GET /api/admin/backfill/jobs SHALL return job history with pagination
+6. THE /api/districts/backfill/\* endpoints SHALL be deprecated and removed
+
+### Requirement 10: Automatic Recovery
+
+**User Story:** As a system operator, I want incomplete jobs to automatically resume after server restarts, so that long-running operations complete reliably.
+
+#### Acceptance Criteria
+
+1. WHEN the server restarts with an incomplete job, THE Job_Manager SHALL automatically resume processing from the last checkpoint
+2. THE Backfill_Job SHALL track checkpoint information including last processed item and timestamp
+3. WHEN resuming, THE Unified_Backfill_Service SHALL skip already-processed items based on checkpoint data
+4. THE Admin_Panel SHALL indicate when a job has been resumed with the original start time and resume time
+
+### Requirement 11: Dry Run Mode
+
+**User Story:** As a system operator, I want to preview what a backfill would process before running it, so that I can verify configuration before large operations.
+
+#### Acceptance Criteria
+
+1. THE Admin_Panel SHALL provide a "Preview" button alongside the "Start Backfill" button
+2. WHEN dry run is requested, THE Unified_Backfill_Service SHALL return a preview of items to be processed without executing
+3. THE preview response SHALL include: total items count, date range, affected districts, and estimated duration
+4. THE Admin_Panel SHALL display the preview results in a confirmation dialog before allowing the actual backfill to start
+
+### Requirement 12: Rate Limiting Configuration
+
+**User Story:** As a system operator, I want to view and configure rate limiting settings, so that I can balance backfill speed with system load.
+
+#### Acceptance Criteria
+
+1. THE Admin_Panel SHALL display current rate limiting settings (requests per minute, concurrency limit, delay between requests)
+2. THE Admin_Panel SHALL allow modifying rate limiting settings before starting a job
+3. WHEN rate limiting settings are changed, THE Unified_Backfill_Service SHALL apply them to the next job
+4. THE Admin_Panel SHALL display current rate limiter status during job execution (requests made, throttle state)
+5. THE Unified_Backfill_Service SHALL persist rate limiting configuration separately from job configuration

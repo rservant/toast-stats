@@ -14,7 +14,6 @@ This implementation adds an admin endpoint and UI to force-cancel stuck backfill
     - Update job with status='cancelled', completedAt, error message, checkpoint=null
     - Return boolean indicating success
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
-  
   - [x] 1.2 Add force-cancel route handler to unified-backfill.ts
     - Add POST route at `/:jobId/force-cancel`
     - Validate `force` query parameter (require force=true)
@@ -22,8 +21,7 @@ This implementation adds an admin endpoint and UI to force-cancel stuck backfill
     - Return appropriate response/error codes
     - Add structured logging for audit trail
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 4.1, 4.2, 4.3_
-  
-  - [ ]* 1.3 Write unit tests for force-cancel endpoint
+  - [ ]\* 1.3 Write unit tests for force-cancel endpoint
     - Test force-cancel with running job → success
     - Test force-cancel with recovering job → success
     - Test force-cancel without force parameter → 400
@@ -51,7 +49,6 @@ This implementation adds an admin endpoint and UI to force-cancel stuck backfill
     - Invalidate job status and jobs list queries on success
     - Export hook from module
     - _Requirements: 6.1, 6.2, 6.3_
-  
   - [x] 4.2 Add ForceCancelResponse type definitions
     - Define response interface matching backend
     - Add to existing type definitions in useUnifiedBackfill.ts
@@ -63,20 +60,17 @@ This implementation adds an admin endpoint and UI to force-cancel stuck backfill
     - Add Job History section below backfill configuration
     - Pass appropriate props (pageSize, className)
     - _Requirements: 7.1_
-  
   - [x] 5.2 Enhance JobHistoryList with force-cancel capability
     - Add `onForceCancelJob` prop to JobHistoryListProps
     - Add "Force Cancel" button to JobHistoryItem for running/recovering jobs
     - Style button with warning/danger appearance (red color)
     - _Requirements: 7.2, 7.7_
-  
   - [x] 5.3 Add force-cancel confirmation dialog
     - Add confirmation state to JobHistoryList
     - Show dialog when Force Cancel button clicked
     - Include warning message about destructive action
     - Call onForceCancelJob callback on confirm
     - _Requirements: 7.3, 7.4_
-  
   - [x] 5.4 Wire up force-cancel in AdminPage
     - Use useForceCancelJob hook in BackfillSection
     - Pass force-cancel handler to JobHistoryList
@@ -87,14 +81,13 @@ This implementation adds an admin endpoint and UI to force-cancel stuck backfill
 - [x] 6. Checkpoint - Frontend implementation complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ]* 7. Write frontend component tests
-  - [ ]* 7.1 Test JobHistoryList force-cancel button visibility
+- [ ]\* 7. Write frontend component tests
+  - [ ]\* 7.1 Test JobHistoryList force-cancel button visibility
     - Verify button appears for running jobs
     - Verify button appears for recovering jobs
     - Verify button hidden for completed/failed/cancelled jobs
     - _Requirements: 7.2_
-  
-  - [ ]* 7.2 Test force-cancel confirmation flow
+  - [ ]\* 7.2 Test force-cancel confirmation flow
     - Verify dialog appears on button click
     - Verify cancel dismisses dialog
     - Verify confirm calls onForceCancelJob

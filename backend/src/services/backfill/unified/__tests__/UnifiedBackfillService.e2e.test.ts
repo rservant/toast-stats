@@ -240,7 +240,9 @@ describe('UnifiedBackfillService E2E Tests', () => {
   let mockTimeSeriesStorage: ReturnType<typeof createMockTimeSeriesStorage>
   let mockRefreshService: ReturnType<typeof createMockRefreshService>
   let mockConfigService: ReturnType<typeof createMockConfigService>
-  let mockPreComputedAnalyticsService: ReturnType<typeof createMockPreComputedAnalyticsService>
+  let mockPreComputedAnalyticsService: ReturnType<
+    typeof createMockPreComputedAnalyticsService
+  >
   let service: UnifiedBackfillService
 
   beforeEach(async () => {
