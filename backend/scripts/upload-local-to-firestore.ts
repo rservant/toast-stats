@@ -117,8 +117,7 @@ async function readJsonFile(filePath: string): Promise<unknown> {
  *       metadata.json
  *       manifest.json
  *       all-districts-rankings.json
- *       districts/
- *         {districtId}.json
+ *       district_{id}.json          # District files are in the snapshot root, not a subdirectory
  *
  * Firestore structure:
  *   snapshots/{YYYY-MM-DD}
@@ -226,33 +225,23 @@ async function uploadSnapshots(
         )
       }
 
-      // Upload district data
-      const districtsDir = path.join(snapshotPath, 'districts')
-      if (await directoryExists(districtsDir)) {
-        const districtFiles = await fs.readdir(districtsDir)
-        const jsonFiles = districtFiles.filter(f => f.endsWith('.json'))
+      // Upload district data - files are in the snapshot root directory, named district_{id}.json
+      const districtFiles = (await fs.readdir(snapshotPath))
+        .filter(f => f.startsWith('district_') && f.endsWith('.json'))
 
-        console.log(`    Queueing ${jsonFiles.length} district files...`)
+      if (districtFiles.length > 0) {
+        console.log(`    Queueing ${districtFiles.length} district files...`)
 
-        for (const districtFile of jsonFiles) {
-          const districtId = districtFile.replace('.json', '')
+        for (const districtFile of districtFiles) {
+          // Extract district ID from filename: district_42.json -> 42
+          const districtId = districtFile.replace('district_', '').replace('.json', '')
 
           try {
-            const districtData = await readJsonFile(
-              path.join(districtsDir, districtFile)
+            // The local file already has the correct structure:
+            // { districtId, districtName, collectedAt, status, data: DistrictStatistics }
+            const districtDoc = await readJsonFile(
+              path.join(snapshotPath, districtFile)
             ) as Record<string, unknown>
-
-            // Build district document matching Firestore schema
-            const districtDoc = {
-              districtId: districtData['districtId'] ?? districtId,
-              districtName: districtData['districtName'] ?? '',
-              collectedAt:
-                districtData['collectedAt'] ??
-                (metadata as Record<string, unknown>)?.['createdAt'] ??
-                new Date().toISOString(),
-              status: 'success' as const,
-              data: districtData,
-            }
 
             if (options.dryRun) {
               stats.districts.uploaded++
@@ -283,7 +272,7 @@ async function uploadSnapshots(
         }
 
         if (options.dryRun) {
-          console.log(`    [DRY RUN] Would upload ${jsonFiles.length} districts`)
+          console.log(`    [DRY RUN] Would upload ${districtFiles.length} districts`)
         }
       }
     } catch (error) {
@@ -384,14 +373,12 @@ async function uploadConfig(
  *
  * Local structure:
  *   time-series/
- *     {documentId}.json
- *   OR
- *   time-series/
- *     {districtId}/
- *       {date}.json
+ *     district_{districtId}/
+ *       {programYear}.json       # e.g., 2023-2024.json
  *
- * Firestore structure:
- *   time-series/{documentId}
+ * Firestore structure (subcollection pattern):
+ *   time-series/{districtId}/program-years/{programYear}
+ *     - districtId, programYear, startDate, endDate, lastUpdated, dataPoints, summary
  */
 async function uploadTimeSeries(
   firestore: Firestore,
@@ -410,17 +397,49 @@ async function uploadTimeSeries(
   const entries = await fs.readdir(timeSeriesDir, { withFileTypes: true })
   const progress = new ProgressTracker()
 
-  // Handle flat JSON files
-  const jsonFiles = entries.filter(e => e.isFile() && e.name.endsWith('.json'))
-  if (jsonFiles.length > 0) {
-    console.log(`  Found ${jsonFiles.length} time-series files`)
+  // Look for district_* subdirectories (the correct local structure)
+  const districtDirs = entries.filter(
+    e => e.isDirectory() && e.name.startsWith('district_')
+  )
 
-    for (const entry of jsonFiles) {
-      const docId = entry.name.replace('.json', '')
+  if (districtDirs.length === 0) {
+    console.log('  No district directories found in time-series, skipping')
+    return
+  }
+
+  console.log(`  Found ${districtDirs.length} district directories`)
+
+  let totalFiles = 0
+  for (const districtDir of districtDirs) {
+    // Extract district ID from folder name: district_42 -> 42
+    const districtId = districtDir.name.replace('district_', '')
+    const districtPath = path.join(timeSeriesDir, districtDir.name)
+
+    const files = await fs.readdir(districtPath)
+    // Program year files are like 2023-2024.json (not index-metadata.json)
+    const programYearFiles = files.filter(
+      f => f.endsWith('.json') && f !== 'index-metadata.json' && /^\d{4}-\d{4}\.json$/.test(f)
+    )
+
+    if (programYearFiles.length === 0) {
+      continue
+    }
+
+    console.log(`    District ${districtId}: ${programYearFiles.length} program year files`)
+    totalFiles += programYearFiles.length
+
+    for (const file of programYearFiles) {
+      // Extract program year from filename: 2023-2024.json -> 2023-2024
+      const programYear = file.replace('.json', '')
 
       try {
+        // Check if already exists in Firestore subcollection
         if (options.skipExisting) {
-          const docRef = firestore.collection('time-series').doc(docId)
+          const docRef = firestore
+            .collection('time-series')
+            .doc(districtId)
+            .collection('program-years')
+            .doc(programYear)
           const doc = await docRef.get()
           if (doc.exists) {
             stats.timeSeries.skipped++
@@ -428,13 +447,19 @@ async function uploadTimeSeries(
           }
         }
 
-        const data = await readJsonFile(path.join(timeSeriesDir, entry.name))
+        // Read the local program year file - it already has the correct structure
+        const data = await readJsonFile(path.join(districtPath, file))
 
         if (options.dryRun) {
-          console.log(`    [DRY RUN] Would upload time-series/${docId}`)
           stats.timeSeries.uploaded++
         } else {
-          const docRef = firestore.collection('time-series').doc(docId)
+          // Upload to subcollection: time-series/{districtId}/program-years/{programYear}
+          const docRef = firestore
+            .collection('time-series')
+            .doc(districtId)
+            .collection('program-years')
+            .doc(programYear)
+
           progress.increment()
           bulkWriter.set(docRef, data as Record<string, unknown>).then(
             () => {
@@ -444,75 +469,22 @@ async function uploadTimeSeries(
             (err) => {
               progress.error()
               stats.timeSeries.errors++
-              console.error(`    Error writing time-series ${docId}:`, err)
+              console.error(`    Error writing time-series ${districtId}/${programYear}:`, err)
             }
           )
         }
       } catch (err) {
-        console.error(`    Error reading time-series ${docId}:`, err)
+        console.error(`    Error reading time-series ${districtId}/${programYear}:`, err)
         stats.timeSeries.errors++
       }
     }
   }
 
-  // Handle nested directory structure (district/date)
-  const subdirs = entries.filter(e => e.isDirectory())
-  if (subdirs.length > 0) {
-    console.log(`  Found ${subdirs.length} time-series subdirectories`)
-
-    let totalFiles = 0
-    for (const subdir of subdirs) {
-      const subdirPath = path.join(timeSeriesDir, subdir.name)
-      const subFiles = await fs.readdir(subdirPath)
-      const subJsonFiles = subFiles.filter(f => f.endsWith('.json'))
-      totalFiles += subJsonFiles.length
-
-      for (const file of subJsonFiles) {
-        const dateId = file.replace('.json', '')
-        const docId = `${subdir.name}_${dateId}`
-
-        try {
-          if (options.skipExisting) {
-            const docRef = firestore.collection('time-series').doc(docId)
-            const doc = await docRef.get()
-            if (doc.exists) {
-              stats.timeSeries.skipped++
-              continue
-            }
-          }
-
-          const data = await readJsonFile(path.join(subdirPath, file))
-
-          if (options.dryRun) {
-            stats.timeSeries.uploaded++
-          } else {
-            const docRef = firestore.collection('time-series').doc(docId)
-            progress.increment()
-            bulkWriter.set(docRef, data as Record<string, unknown>).then(
-              () => {
-                progress.complete()
-                stats.timeSeries.uploaded++
-              },
-              (err) => {
-                progress.error()
-                stats.timeSeries.errors++
-                console.error(`    Error writing time-series ${docId}:`, err)
-              }
-            )
-          }
-        } catch (err) {
-          console.error(`    Error reading time-series ${docId}:`, err)
-          stats.timeSeries.errors++
-        }
-      }
-    }
-
-    if (options.dryRun) {
-      console.log(`    [DRY RUN] Would upload ${totalFiles} time-series documents`)
-    }
+  if (options.dryRun) {
+    console.log(`    [DRY RUN] Would upload ${totalFiles} time-series documents`)
   }
 
-  if (!options.dryRun && (jsonFiles.length > 0 || subdirs.length > 0)) {
+  if (!options.dryRun && totalFiles > 0) {
     console.log('    Flushing time-series writes...')
     await bulkWriter.flush()
     progress.log()
