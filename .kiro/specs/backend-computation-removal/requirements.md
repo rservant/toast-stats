@@ -5,11 +5,13 @@
 This feature removes on-demand computation from the backend to enforce the data-computation-separation steering document. The backend currently violates the architectural mandate that it be a "read-only API server" by performing extensive analytics computation through the `AnalyticsEngine` class and its associated modules.
 
 The violations include:
+
 - **AnalyticsEngine** performing on-demand computation for 8+ API endpoints
 - **Analytics modules** (MembershipAnalyticsModule, DistinguishedClubAnalyticsModule, etc.) computing analytics at request time
 - **TargetCalculatorService** computing recognition level targets on-demand
 
 The solution is to:
+
 1. Extend the scraper-cli pre-computation pipeline to generate all required analytics files
 2. Update backend routes to serve pre-computed files instead of computing on-demand
 3. Deprecate and eventually remove the AnalyticsEngine from the backend
@@ -175,4 +177,3 @@ This spec complements the existing `precomputed-analytics-alignment` spec, which
 1. WHEN pre-computed files are missing, THE Backend SHALL return informative 404 errors with instructions to run scraper-cli
 2. THE error messages SHALL indicate which scraper-cli command needs to be run
 3. THE scraper-cli compute-analytics command SHALL generate all required pre-computed files in a single run
-

@@ -566,13 +566,26 @@ describe('Pipeline Integration Tests', () => {
       expect(manifest.totalSize).toBeGreaterThan(0)
       expect(manifest.files.length).toBe(manifest.totalFiles)
 
+      // Valid file types including new extended analytics types
+      const validFileTypes = [
+        'analytics',
+        'membership',
+        'clubhealth',
+        'rankings',
+        'membership-analytics',
+        'vulnerable-clubs',
+        'leadership-insights',
+        'distinguished-analytics',
+        'year-over-year',
+        'performance-targets',
+        'club-trends-index',
+      ]
+
       // Verify each file entry
       for (const file of manifest.files) {
         expect(file.filename).toBeDefined()
         expect(file.districtId).toBe(districtId)
-        expect(['analytics', 'membership', 'clubhealth', 'rankings']).toContain(
-          file.type
-        )
+        expect(validFileTypes).toContain(file.type)
         expect(file.size).toBeGreaterThan(0)
         expect(file.checksum).toMatch(/^[a-f0-9]{64}$/)
       }

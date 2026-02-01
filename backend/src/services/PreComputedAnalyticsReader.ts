@@ -29,6 +29,14 @@ import {
   type ClubHealthData,
   type PreComputedAnalyticsFile,
   type AnalyticsManifest,
+  type MembershipAnalyticsData,
+  type VulnerableClubsData,
+  type LeadershipInsightsData,
+  type DistinguishedClubAnalyticsData,
+  type YearOverYearData,
+  type PerformanceTargetsData,
+  type ClubTrendsIndex,
+  type ClubTrend,
 } from '@toastmasters/analytics-core'
 import { logger } from '../utils/logger.js'
 
@@ -75,6 +83,13 @@ export class CorruptedFileError extends Error {
  * - 4.1: Read pre-computed analytics from the file system
  * - 4.4: Validate schema version of pre-computed analytics files
  * - 4.5: Return error if schema version is incompatible
+ * - 10.1: Support reading membership-analytics.json files
+ * - 10.2: Support reading vulnerable-clubs.json files
+ * - 10.3: Support reading leadership-insights.json files
+ * - 10.4: Support reading distinguished-club-analytics.json files
+ * - 10.5: Support reading year-over-year.json files
+ * - 10.6: Support reading performance-targets.json files
+ * - 10.7: Validate schema versions for all new file types
  */
 export interface IPreComputedAnalyticsReader {
   /**
@@ -118,6 +133,120 @@ export interface IPreComputedAnalyticsReader {
     snapshotDate: string,
     districtId: string
   ): Promise<ClubHealthData | null>
+
+  /**
+   * Reads membership analytics from a pre-computed file.
+   *
+   * Requirement 10.1: Support reading membership-analytics.json files
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to MembershipAnalyticsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readMembershipAnalytics(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<MembershipAnalyticsData | null>
+
+  /**
+   * Reads vulnerable clubs data from a pre-computed file.
+   *
+   * Requirement 10.2: Support reading vulnerable-clubs.json files
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to VulnerableClubsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readVulnerableClubs(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<VulnerableClubsData | null>
+
+  /**
+   * Reads leadership insights from a pre-computed file.
+   *
+   * Requirement 10.3: Support reading leadership-insights.json files
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to LeadershipInsightsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readLeadershipInsights(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<LeadershipInsightsData | null>
+
+  /**
+   * Reads distinguished club analytics from a pre-computed file.
+   *
+   * Requirement 10.4: Support reading distinguished-club-analytics.json files
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to DistinguishedClubAnalyticsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readDistinguishedClubAnalytics(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<DistinguishedClubAnalyticsData | null>
+
+  /**
+   * Reads year-over-year comparison data from a pre-computed file.
+   *
+   * Requirement 10.5: Support reading year-over-year.json files
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to YearOverYearData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readYearOverYear(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<YearOverYearData | null>
+
+  /**
+   * Reads performance targets from a pre-computed file.
+   *
+   * Requirement 10.6: Support reading performance-targets.json files
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to PerformanceTargetsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readPerformanceTargets(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<PerformanceTargetsData | null>
+
+  /**
+   * Reads club trends for a specific club from the club trends index.
+   *
+   * Requirements 10.1, 2.4: Support reading club trends from index
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @param clubId - The club identifier
+   * @returns Promise resolving to ClubTrend or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  readClubTrends(
+    snapshotDate: string,
+    districtId: string,
+    clubId: string
+  ): Promise<ClubTrend | null>
 
   /**
    * Validates the schema version of a pre-computed analytics file.
@@ -474,6 +603,390 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
     })
 
     return file.data
+  }
+
+  /**
+   * Reads membership analytics from a pre-computed file.
+   *
+   * Requirement 10.1: Support reading membership-analytics.json files
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to MembershipAnalyticsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readMembershipAnalytics(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<MembershipAnalyticsData | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    const filename = `district_${districtId}_membership-analytics.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading membership analytics', {
+      operation: 'readMembershipAnalytics',
+      snapshotDate,
+      districtId,
+      filePath,
+    })
+
+    const file = await this.readAnalyticsFile<MembershipAnalyticsData>(filePath)
+
+    if (file === null) {
+      logger.info('Membership analytics not found', {
+        operation: 'readMembershipAnalytics',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read membership analytics', {
+      operation: 'readMembershipAnalytics',
+      snapshotDate,
+      districtId,
+      computedAt: file.metadata.computedAt,
+    })
+
+    return file.data
+  }
+
+  /**
+   * Reads vulnerable clubs data from a pre-computed file.
+   *
+   * Requirement 10.2: Support reading vulnerable-clubs.json files
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to VulnerableClubsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readVulnerableClubs(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<VulnerableClubsData | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    const filename = `district_${districtId}_vulnerable-clubs.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading vulnerable clubs data', {
+      operation: 'readVulnerableClubs',
+      snapshotDate,
+      districtId,
+      filePath,
+    })
+
+    const file = await this.readAnalyticsFile<VulnerableClubsData>(filePath)
+
+    if (file === null) {
+      logger.info('Vulnerable clubs data not found', {
+        operation: 'readVulnerableClubs',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read vulnerable clubs data', {
+      operation: 'readVulnerableClubs',
+      snapshotDate,
+      districtId,
+      computedAt: file.metadata.computedAt,
+    })
+
+    return file.data
+  }
+
+  /**
+   * Reads leadership insights from a pre-computed file.
+   *
+   * Requirement 10.3: Support reading leadership-insights.json files
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to LeadershipInsightsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readLeadershipInsights(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<LeadershipInsightsData | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    const filename = `district_${districtId}_leadership-insights.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading leadership insights', {
+      operation: 'readLeadershipInsights',
+      snapshotDate,
+      districtId,
+      filePath,
+    })
+
+    const file = await this.readAnalyticsFile<LeadershipInsightsData>(filePath)
+
+    if (file === null) {
+      logger.info('Leadership insights not found', {
+        operation: 'readLeadershipInsights',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read leadership insights', {
+      operation: 'readLeadershipInsights',
+      snapshotDate,
+      districtId,
+      computedAt: file.metadata.computedAt,
+    })
+
+    return file.data
+  }
+
+  /**
+   * Reads distinguished club analytics from a pre-computed file.
+   *
+   * Requirement 10.4: Support reading distinguished-club-analytics.json files
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to DistinguishedClubAnalyticsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readDistinguishedClubAnalytics(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<DistinguishedClubAnalyticsData | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    const filename = `district_${districtId}_distinguished-analytics.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading distinguished club analytics', {
+      operation: 'readDistinguishedClubAnalytics',
+      snapshotDate,
+      districtId,
+      filePath,
+    })
+
+    const file =
+      await this.readAnalyticsFile<DistinguishedClubAnalyticsData>(filePath)
+
+    if (file === null) {
+      logger.info('Distinguished club analytics not found', {
+        operation: 'readDistinguishedClubAnalytics',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read distinguished club analytics', {
+      operation: 'readDistinguishedClubAnalytics',
+      snapshotDate,
+      districtId,
+      computedAt: file.metadata.computedAt,
+    })
+
+    return file.data
+  }
+
+  /**
+   * Reads year-over-year comparison data from a pre-computed file.
+   *
+   * Requirement 10.5: Support reading year-over-year.json files
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to YearOverYearData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readYearOverYear(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<YearOverYearData | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    const filename = `district_${districtId}_year-over-year.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading year-over-year data', {
+      operation: 'readYearOverYear',
+      snapshotDate,
+      districtId,
+      filePath,
+    })
+
+    const file = await this.readAnalyticsFile<YearOverYearData>(filePath)
+
+    if (file === null) {
+      logger.info('Year-over-year data not found', {
+        operation: 'readYearOverYear',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read year-over-year data', {
+      operation: 'readYearOverYear',
+      snapshotDate,
+      districtId,
+      computedAt: file.metadata.computedAt,
+    })
+
+    return file.data
+  }
+
+  /**
+   * Reads performance targets from a pre-computed file.
+   *
+   * Requirement 10.6: Support reading performance-targets.json files
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @returns Promise resolving to PerformanceTargetsData or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readPerformanceTargets(
+    snapshotDate: string,
+    districtId: string
+  ): Promise<PerformanceTargetsData | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    const filename = `district_${districtId}_performance-targets.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading performance targets', {
+      operation: 'readPerformanceTargets',
+      snapshotDate,
+      districtId,
+      filePath,
+    })
+
+    const file = await this.readAnalyticsFile<PerformanceTargetsData>(filePath)
+
+    if (file === null) {
+      logger.info('Performance targets not found', {
+        operation: 'readPerformanceTargets',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read performance targets', {
+      operation: 'readPerformanceTargets',
+      snapshotDate,
+      districtId,
+      computedAt: file.metadata.computedAt,
+    })
+
+    return file.data
+  }
+
+  /**
+   * Reads club trends for a specific club from the club trends index.
+   *
+   * This method reads the club trends index file and looks up the specific
+   * club by ID. The index provides O(1) lookup for individual clubs.
+   *
+   * Requirements 10.1, 2.4: Support reading club trends from index
+   * Requirement 10.7: Validate schema versions for all new file types
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @param clubId - The club identifier
+   * @returns Promise resolving to ClubTrend or null if not found
+   * @throws SchemaVersionError if schema version is incompatible
+   * @throws CorruptedFileError if file is corrupted or invalid JSON
+   */
+  async readClubTrends(
+    snapshotDate: string,
+    districtId: string,
+    clubId: string
+  ): Promise<ClubTrend | null> {
+    this.validateSnapshotDate(snapshotDate)
+    this.validateDistrictId(districtId)
+
+    // Validate club ID format (alphanumeric only)
+    if (typeof clubId !== 'string' || clubId.length === 0) {
+      throw new Error('Invalid club ID: empty or non-string value')
+    }
+    const CLUB_ID_PATTERN = /^[A-Za-z0-9]+$/
+    if (!CLUB_ID_PATTERN.test(clubId)) {
+      logger.warn('Rejected club ID with invalid characters', {
+        operation: 'readClubTrends',
+        clubId,
+      })
+      throw new Error('Invalid club ID format')
+    }
+
+    const filename = `district_${districtId}_club-trends-index.json`
+    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+
+    logger.info('Reading club trends from index', {
+      operation: 'readClubTrends',
+      snapshotDate,
+      districtId,
+      clubId,
+      filePath,
+    })
+
+    const file = await this.readAnalyticsFile<ClubTrendsIndex>(filePath)
+
+    if (file === null) {
+      logger.info('Club trends index not found', {
+        operation: 'readClubTrends',
+        snapshotDate,
+        districtId,
+      })
+      return null
+    }
+
+    // Look up the club in the index
+    const clubTrend = file.data.clubs[clubId]
+
+    if (!clubTrend) {
+      logger.info('Club not found in trends index', {
+        operation: 'readClubTrends',
+        snapshotDate,
+        districtId,
+        clubId,
+      })
+      return null
+    }
+
+    logger.info('Successfully read club trends', {
+      operation: 'readClubTrends',
+      snapshotDate,
+      districtId,
+      clubId,
+      clubName: clubTrend.clubName,
+    })
+
+    return clubTrend
   }
 
   /**

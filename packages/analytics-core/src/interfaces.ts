@@ -5,7 +5,10 @@
  * enabling both scraper-cli and backend to use the same computation logic.
  */
 
-import type { AnalyticsComputationResult, ComputeOptions } from './types.js'
+import type {
+  ComputeOptions,
+  ExtendedAnalyticsComputationResult,
+} from './types.js'
 
 /**
  * Raw CSV data structure from Toastmasters dashboard.
@@ -121,16 +124,21 @@ export interface IAnalyticsComputer {
   /**
    * Computes comprehensive analytics for a district.
    *
+   * Returns an ExtendedAnalyticsComputationResult containing all pre-computed
+   * analytics data types needed for the backend to serve.
+   *
+   * Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1
+   *
    * @param districtId - The district identifier
    * @param snapshots - Array of district statistics snapshots (for trend analysis)
    * @param options - Optional computation options
-   * @returns Promise resolving to the computation result
+   * @returns Promise resolving to the extended computation result
    */
   computeDistrictAnalytics(
     districtId: string,
     snapshots: DistrictStatistics[],
     options?: ComputeOptions
-  ): Promise<AnalyticsComputationResult>
+  ): Promise<ExtendedAnalyticsComputationResult>
 }
 
 /**

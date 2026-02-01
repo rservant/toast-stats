@@ -325,7 +325,18 @@ export interface PreComputedAnalyticsFile<T> {
 export interface AnalyticsManifestEntry {
   filename: string
   districtId: string
-  type: 'analytics' | 'membership' | 'clubhealth' | 'rankings'
+  type:
+    | 'analytics'
+    | 'membership'
+    | 'clubhealth'
+    | 'rankings'
+    | 'membership-analytics'
+    | 'vulnerable-clubs'
+    | 'leadership-insights'
+    | 'distinguished-analytics'
+    | 'year-over-year'
+    | 'performance-targets'
+    | 'club-trends-index'
   size: number
   checksum: string
 }
@@ -384,6 +395,36 @@ export interface MembershipAnalytics {
   }>
   seasonalPatterns: SeasonalPattern[]
   yearOverYearComparison?: MembershipYearOverYearComparison
+}
+
+// ========== Membership Analytics Data Types (for pre-computed files) ==========
+
+/**
+ * Membership analytics data structure for pre-computed files.
+ * Pre-computed by scraper-cli, served by backend.
+ * This is the wrapper type for the pre-computed membership analytics file.
+ *
+ * Requirements: 1.1, 1.2
+ */
+export interface MembershipAnalyticsData {
+  /** District identifier */
+  districtId: string
+  /** Date range covered by the analytics */
+  dateRange: DateRange
+  /** Total membership count at the end of the period */
+  totalMembership: number
+  /** Net membership change over the period */
+  membershipChange: number
+  /** Membership trend over time */
+  membershipTrend: MembershipTrendPoint[]
+  /** Payments trend over time */
+  paymentsTrend: PaymentsTrendPoint[]
+  /** Year-over-year comparison (optional, requires historical data) */
+  yearOverYear?: YearOverYearComparison
+  /** Growth rate as a percentage (positive = growth, negative = decline) */
+  growthRate: number
+  /** Retention rate as a percentage (0-100) */
+  retentionRate: number
 }
 
 // ========== Leadership Insights Types (moved from backend) ==========
@@ -463,6 +504,37 @@ export interface LeadershipInsights {
     averageLeadershipScore: number
     totalBestPracticeDivisions: number
   }
+}
+
+// ========== Leadership Insights Data Types (for pre-computed files) ==========
+
+/**
+ * Leadership insights data structure for pre-computed files.
+ * Pre-computed by scraper-cli, served by backend.
+ * This is the wrapper type for the pre-computed leadership insights file.
+ *
+ * Contains leadership effectiveness metrics and officer performance data
+ * derived from the comprehensive LeadershipInsights analysis.
+ *
+ * Requirements: 4.1, 4.2
+ */
+export interface LeadershipInsightsData {
+  /** District identifier */
+  districtId: string
+  /** Date range covered by the analytics */
+  dateRange: DateRange
+  /** Officer completion rate as a percentage (0-100) */
+  officerCompletionRate: number
+  /** Training completion rate as a percentage (0-100) */
+  trainingCompletionRate: number
+  /** Overall leadership effectiveness score (0-100) */
+  leadershipEffectivenessScore: number
+  /** Top performing divisions ranked by leadership effectiveness */
+  topPerformingDivisions: DivisionRanking[]
+  /** Areas that need support based on performance metrics */
+  areasNeedingSupport: AreaPerformance[]
+  /** Full leadership insights data for detailed analysis */
+  insights: LeadershipInsights
 }
 
 // ========== Extended Year-Over-Year Comparison Types (moved from backend) ==========
@@ -808,7 +880,6 @@ export interface DistrictPerformanceTargets {
   }
 }
 
-
 // ========== Area/Division Recognition Types (moved from backend) ==========
 
 /**
@@ -909,4 +980,193 @@ export interface DivisionRecognition {
 
   // Nested area recognition data
   areas: AreaRecognition[]
+}
+
+// ========== Year-Over-Year Data Types (for pre-computed files) ==========
+
+/**
+ * Metric comparison structure for year-over-year analysis.
+ * Contains current value, previous value, and calculated changes.
+ *
+ * Requirements: 6.2, 6.3
+ */
+export interface MetricComparison {
+  /** Current period value */
+  current: number
+  /** Previous year value */
+  previous: number
+  /** Absolute change (current - previous) */
+  change: number
+  /** Percentage change ((current - previous) / previous * 100) */
+  percentageChange: number
+}
+
+/**
+ * Multi-year trend data point for historical analysis.
+ * Tracks key metrics across multiple years.
+ *
+ * Requirements: 6.2, 6.3
+ */
+export interface MultiYearTrend {
+  /** Year number (e.g., 2024) */
+  year: number
+  /** Date string (YYYY-MM-DD) */
+  date: string
+  /** Total membership count */
+  membership: number
+  /** Total distinguished clubs count */
+  distinguishedClubs: number
+  /** Total DCP goals achieved across all clubs */
+  totalDcpGoals: number
+  /** Total club count */
+  clubCount: number
+}
+
+/**
+ * Year-over-year comparison data structure.
+ * Pre-computed historical comparison metrics for a district.
+ * Pre-computed by scraper-cli, served by backend.
+ *
+ * This type supports both cases:
+ * - dataAvailable=true: Full metrics comparison available
+ * - dataAvailable=false: Insufficient historical data, message explains why
+ *
+ * Requirements: 6.1, 6.2, 6.3
+ */
+export interface YearOverYearData {
+  /** District identifier */
+  districtId: string
+  /** Current date being compared (YYYY-MM-DD) */
+  currentDate: string
+  /** Previous year date for comparison (YYYY-MM-DD) */
+  previousYearDate: string
+  /** Whether year-over-year data is available */
+  dataAvailable: boolean
+  /** Message explaining why data is not available (when dataAvailable=false) */
+  message?: string
+  /** Comparison metrics (only present when dataAvailable=true) */
+  metrics?: {
+    /** Membership comparison */
+    membership: MetricComparison
+    /** Distinguished clubs comparison */
+    distinguishedClubs: MetricComparison
+    /** Club health metrics comparison */
+    clubHealth: {
+      thrivingClubs: MetricComparison
+      vulnerableClubs: MetricComparison
+      interventionRequiredClubs: MetricComparison
+    }
+    /** DCP goals comparison */
+    dcpGoals: {
+      totalGoals: MetricComparison
+      averagePerClub: MetricComparison
+    }
+    /** Club count comparison */
+    clubCount: MetricComparison
+  }
+  /** Multi-year trends for extended historical analysis (optional) */
+  multiYearTrends?: MultiYearTrend[]
+}
+
+// ========== Performance Targets Data Types (for pre-computed files) ==========
+
+/**
+ * Performance targets data structure for pre-computed files.
+ * Pre-computed by scraper-cli, served by backend.
+ *
+ * Contains recognition level targets (DAP, DDP) and progress tracking
+ * for district performance metrics. Uses AreaDivisionRecognitionModule
+ * to compute targets based on paid clubs and distinguished clubs percentages.
+ *
+ * Requirements: 7.1, 7.2
+ */
+export interface PerformanceTargetsData {
+  /** District identifier */
+  districtId: string
+  /** ISO timestamp when the data was computed */
+  computedAt: string
+  /** Target for membership (based on base membership + growth target) */
+  membershipTarget: number
+  /** Target for distinguished clubs count */
+  distinguishedTarget: number
+  /** Target for club growth (net new clubs) */
+  clubGrowthTarget: number
+  /** Current progress toward targets */
+  currentProgress: {
+    /** Current membership count */
+    membership: number
+    /** Current distinguished clubs count */
+    distinguished: number
+    /** Current club growth (net change from base) */
+    clubGrowth: number
+  }
+  /** Whether targets are projected to be achieved */
+  projectedAchievement: {
+    /** Whether membership target is projected to be achieved */
+    membership: boolean
+    /** Whether distinguished target is projected to be achieved */
+    distinguished: boolean
+    /** Whether club growth target is projected to be achieved */
+    clubGrowth: boolean
+  }
+}
+
+// ========== Distinguished Club Analytics Data Types (for pre-computed files) ==========
+
+/**
+ * Distinguished club analytics data structure for pre-computed files.
+ * Pre-computed by scraper-cli, served by backend.
+ *
+ * Contains comprehensive distinguished club progress and projections
+ * derived from the DistinguishedClubAnalytics analysis.
+ *
+ * Requirements: 5.1, 5.2
+ */
+export interface DistinguishedClubAnalyticsData {
+  /** District identifier */
+  districtId: string
+  /** Date range covered by the analytics */
+  dateRange: DateRange
+  /** Summary counts of distinguished clubs by level */
+  distinguishedClubs: DistinguishedClubCounts
+  /** Detailed list of distinguished clubs */
+  distinguishedClubsList: DistinguishedClubSummary[]
+  /** Projection for end-of-year distinguished club counts */
+  distinguishedProjection: DistinguishedProjection
+  /** Progress by recognition level with current, projected, and trend */
+  progressByLevel: {
+    smedley: { current: number; projected: number; trend: string }
+    presidents: { current: number; projected: number; trend: string }
+    select: { current: number; projected: number; trend: string }
+    distinguished: { current: number; projected: number; trend: string }
+  }
+}
+
+// ========== Extended Analytics Computation Result ==========
+
+/**
+ * Extended analytics computation result.
+ * Extends the base AnalyticsComputationResult with all additional
+ * pre-computed analytics data types.
+ *
+ * This is the complete result returned by computeDistrictAnalytics
+ * when all analytics modules are invoked.
+ *
+ * Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1
+ */
+export interface ExtendedAnalyticsComputationResult extends AnalyticsComputationResult {
+  /** Membership analytics data for pre-computed file */
+  membershipAnalytics: MembershipAnalyticsData
+  /** Vulnerable clubs data for pre-computed file */
+  vulnerableClubs: VulnerableClubsData
+  /** Leadership insights data for pre-computed file */
+  leadershipInsights: LeadershipInsightsData
+  /** Distinguished club analytics data for pre-computed file */
+  distinguishedClubAnalytics: DistinguishedClubAnalyticsData
+  /** Year-over-year comparison data for pre-computed file */
+  yearOverYear: YearOverYearData
+  /** Performance targets data for pre-computed file */
+  performanceTargets: PerformanceTargetsData
+  /** Club trends index for efficient O(1) lookup by club ID */
+  clubTrendsIndex: ClubTrendsIndex
 }

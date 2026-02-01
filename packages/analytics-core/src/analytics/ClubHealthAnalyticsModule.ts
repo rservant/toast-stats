@@ -17,10 +17,7 @@
  * Requirements: 2.1, 3.1
  */
 
-import type {
-  DistrictStatistics,
-  ClubStatistics,
-} from '../interfaces.js'
+import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type {
   ClubTrend,
   ClubHealthStatus,

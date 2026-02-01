@@ -72,13 +72,13 @@ All testing decisions MUST follow these principles:
 
 The system SHOULD broadly follow this distribution:
 
-| Layer               | Purpose                     |
-| ------------------- | --------------------------- |
-| Unit Tests          | Core logic and rules        |
-| Integration Tests   | Persistence and contracts   |
+| Layer               | Purpose                             |
+| ------------------- | ----------------------------------- |
+| Unit Tests          | Core logic and rules                |
+| Integration Tests   | Persistence and contracts           |
 | Property Tests      | Invariants and complex input spaces |
-| End-to-End Tests    | Critical workflows only     |
-| Exploratory Testing | Discovery and understanding |
+| End-to-End Tests    | Critical workflows only             |
+| Exploratory Testing | Discovery and understanding         |
 
 This is guidance, not enforcement.  
 Kiro SHOULD reason qualitatively, not mechanically.

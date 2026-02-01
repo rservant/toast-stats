@@ -63,7 +63,9 @@ export class AreaDivisionRecognitionModule {
    * @param snapshot - District statistics snapshot
    * @returns Array of DivisionRecognition objects
    */
-  calculateDivisionRecognition(snapshot: DistrictStatistics): DivisionRecognition[] {
+  calculateDivisionRecognition(
+    snapshot: DistrictStatistics
+  ): DivisionRecognition[] {
     return this.analyzeDivisionRecognition(snapshot)
   }
 
@@ -72,7 +74,9 @@ export class AreaDivisionRecognitionModule {
   /**
    * Analyze area recognition from district statistics
    */
-  private analyzeAreaRecognition(snapshot: DistrictStatistics): AreaRecognition[] {
+  private analyzeAreaRecognition(
+    snapshot: DistrictStatistics
+  ): AreaRecognition[] {
     // Group clubs by area
     const areaMap = new Map<
       string,
@@ -201,7 +205,9 @@ export class AreaDivisionRecognitionModule {
   /**
    * Analyze division recognition from district statistics
    */
-  private analyzeDivisionRecognition(snapshot: DistrictStatistics): DivisionRecognition[] {
+  private analyzeDivisionRecognition(
+    snapshot: DistrictStatistics
+  ): DivisionRecognition[] {
     // First calculate area recognition
     const areaRecognitions = this.analyzeAreaRecognition(snapshot)
 
@@ -270,7 +276,8 @@ export class AreaDivisionRecognitionModule {
 
     // Determine eligibility (club visits not available from dashboard)
     const eligibility: RecognitionEligibility = 'unknown'
-    const eligibilityReason = 'Area club visit data not available from dashboard'
+    const eligibilityReason =
+      'Area club visit data not available from dashboard'
 
     // Determine recognition level based on thresholds
     const recognitionLevel = this.determineDivisionRecognitionLevel(

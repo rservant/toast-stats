@@ -18,10 +18,8 @@ import {
 } from '../types/serviceContainer.js'
 import {
   ICacheConfigService,
-  IAnalyticsEngine,
   ILogger,
   ICircuitBreakerManager,
-  IAnalyticsDataSource,
 } from '../types/serviceInterfaces.js'
 import type {
   ISnapshotStorage,
@@ -34,8 +32,6 @@ import {
   createInterfaceToken,
 } from './ServiceContainer.js'
 import { CacheConfigService } from './CacheConfigService.js'
-import { AnalyticsEngine } from './AnalyticsEngine.js'
-import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import {
   BordaCountRankingCalculator,
@@ -141,18 +137,6 @@ export interface TestServiceFactory {
   ): ICacheConfigService
 
   /**
-   * Create AnalyticsEngine instance with dependency injection
-   */
-  createAnalyticsEngine(dataSource?: IAnalyticsDataSource): IAnalyticsEngine
-
-  /**
-   * Create AnalyticsDataSource instance
-   */
-  createAnalyticsDataSource(
-    cacheConfig?: ICacheConfigService
-  ): IAnalyticsDataSource
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager
@@ -252,33 +236,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     )
     this.services.push(service)
     return service
-  }
-
-  /**
-   * Create AnalyticsEngine instance with dependency injection
-   */
-  createAnalyticsEngine(dataSource?: IAnalyticsDataSource): IAnalyticsEngine {
-    const source = dataSource || this.createAnalyticsDataSource()
-    const service = new AnalyticsEngine(source)
-    this.services.push(service)
-    return service
-  }
-
-  /**
-   * Create AnalyticsDataSource instance
-   */
-  createAnalyticsDataSource(
-    cacheConfig?: ICacheConfigService
-  ): IAnalyticsDataSource {
-    const config = cacheConfig || this.createCacheConfigService()
-    const cacheDir = config.getCacheDirectory()
-    const snapshotStore = new FileSnapshotStore({
-      cacheDir,
-      maxSnapshots: 10, // Lower limit for tests
-      maxAgeDays: 1, // Shorter retention for tests
-    })
-    const districtDataAggregator = createDistrictDataAggregator(snapshotStore)
-    return new AnalyticsDataSourceAdapter(districtDataAggregator, snapshotStore)
   }
 
   /**
@@ -394,34 +351,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
           return new CacheConfigService(config.getConfiguration(), logger)
         },
         async (instance: CacheConfigService) => {
-          await instance.dispose()
-        }
-      )
-    )
-
-    // Register AnalyticsEngine
-    container.register(
-      ServiceTokens.AnalyticsEngine,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const cacheConfig = container.resolve(
-            ServiceTokens.CacheConfigService
-          )
-          const cacheDir = cacheConfig.getCacheDirectory()
-          const snapshotStore = new FileSnapshotStore({
-            cacheDir,
-            maxSnapshots: 10,
-            maxAgeDays: 1,
-          })
-          const districtDataAggregator =
-            createDistrictDataAggregator(snapshotStore)
-          const dataSource = new AnalyticsDataSourceAdapter(
-            districtDataAggregator,
-            snapshotStore
-          )
-          return new AnalyticsEngine(dataSource)
-        },
-        async (instance: AnalyticsEngine) => {
           await instance.dispose()
         }
       )
@@ -575,15 +504,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register IAnalyticsEngine
-    container.registerInterface(
-      'IAnalyticsEngine',
-      createServiceFactory(
-        () => this.createAnalyticsEngine(),
-        async instance => await instance.dispose()
-      )
-    )
-
     // Register ICircuitBreakerManager
     container.registerInterface(
       'ICircuitBreakerManager',
@@ -713,7 +633,6 @@ export const ServiceTokens = {
     'CacheConfigService',
     CacheConfigService
   ),
-  AnalyticsEngine: createServiceToken('AnalyticsEngine', AnalyticsEngine),
   CircuitBreakerManager: createServiceToken(
     'CircuitBreakerManager',
     CircuitBreakerManager
@@ -735,7 +654,6 @@ export const InterfaceTokens = {
   ICacheConfigService: createInterfaceToken<ICacheConfigService>(
     'ICacheConfigService'
   ),
-  IAnalyticsEngine: createInterfaceToken<IAnalyticsEngine>('IAnalyticsEngine'),
   ICircuitBreakerManager: createInterfaceToken<ICircuitBreakerManager>(
     'ICircuitBreakerManager'
   ),

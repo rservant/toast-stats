@@ -2,8 +2,6 @@
  * Type definitions for analytics data structures
  */
 
-import type { DistrictRanking } from './snapshots.js'
-
 // Re-export DistrictRanking for convenience
 export type { DistrictRanking } from './snapshots.js'
 
@@ -443,10 +441,6 @@ export interface DistrictAnalytics {
   performanceTargets?: DistrictPerformanceTargets
 }
 
-/**
- * Interface for AnalyticsEngine service
- * Defines the contract for analytics operations with dependency injection support
- */
 // ========== District Performance Targets Types ==========
 
 /**
@@ -542,158 +536,4 @@ export interface DistrictPerformanceTargets {
     achievedLevel: RecognitionLevel | null
     rankings: MetricRankings
   }
-}
-
-/**
- * Interface for TargetCalculatorService
- * Computes recognition level targets based on base values
- */
-export interface ITargetCalculatorService {
-  /**
-   * Calculate paid clubs targets based on Club_Base
-   * Formula: ceil(base × multiplier)
-   * - Distinguished: base × 1.01
-   * - Select: base × 1.03
-   * - President's: base × 1.05
-   * - Smedley: base × 1.08
-   */
-  calculatePaidClubsTargets(
-    clubBase: number,
-    currentPaidClubs: number
-  ): MetricTargets
-
-  /**
-   * Calculate membership payments targets based on Payment_Base
-   * Formula: ceil(base × multiplier)
-   * - Distinguished: base × 1.01
-   * - Select: base × 1.03
-   * - President's: base × 1.05
-   * - Smedley: base × 1.08
-   */
-  calculatePaymentsTargets(
-    paymentBase: number,
-    currentPayments: number
-  ): MetricTargets
-
-  /**
-   * Calculate distinguished clubs targets based on Club_Base
-   * Formula: ceil(base × percentage)
-   * - Distinguished: base × 0.45
-   * - Select: base × 0.50
-   * - President's: base × 0.55
-   * - Smedley: base × 0.60
-   */
-  calculateDistinguishedTargets(
-    clubBase: number,
-    currentDistinguished: number
-  ): MetricTargets
-}
-
-/**
- * Interface for RegionRankingService
- * Derives region rankings from world rankings
- */
-export interface IRegionRankingService {
-  /**
-   * Calculate region rank by filtering world rankings to same region
-   * Region rank 1 = best in region
-   */
-  calculateRegionRank(
-    districtId: string,
-    metric: 'clubs' | 'payments' | 'distinguished',
-    allDistrictRankings: DistrictRanking[]
-  ): RegionRankData
-
-  /**
-   * Calculate world percentile using formula:
-   * ((totalDistricts - worldRank) / totalDistricts) × 100
-   * Displayed as "Top X%" where X = 100 - percentile
-   */
-  calculateWorldPercentile(worldRank: number, totalDistricts: number): number
-
-  /**
-   * Build complete metric rankings including world rank, percentile, and region rank
-   * Convenience method that combines world ranking data with calculated region rank and world percentile
-   */
-  buildMetricRankings(
-    districtId: string,
-    metric: 'clubs' | 'payments' | 'distinguished',
-    worldRank: number | null,
-    totalDistricts: number,
-    allDistrictRankings: DistrictRanking[]
-  ): MetricRankings
-}
-
-export interface IAnalyticsEngine {
-  /**
-   * Generate comprehensive district analytics
-   */
-  generateDistrictAnalytics(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<DistrictAnalytics>
-
-  /**
-   * Get club-specific trends
-   */
-  getClubTrends(districtId: string, clubId: string): Promise<ClubTrend | null>
-
-  /**
-   * Identify at-risk clubs
-   */
-  identifyAtRiskClubs(districtId: string): Promise<ClubTrend[]>
-
-  /**
-   * Compare divisions
-   */
-  compareDivisions(
-    districtId: string,
-    date: string
-  ): Promise<DivisionAnalytics[]>
-
-  /**
-   * Calculate year-over-year metrics
-   */
-  calculateYearOverYear(
-    districtId: string,
-    currentDate: string
-  ): Promise<YearOverYearComparison | null>
-
-  /**
-   * Generate comprehensive membership analytics
-   */
-  generateMembershipAnalytics(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<MembershipAnalytics>
-
-  /**
-   * Generate comprehensive distinguished club analytics
-   */
-  generateDistinguishedClubAnalytics(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<DistinguishedClubAnalytics>
-
-  /**
-   * Generate comprehensive leadership effectiveness analytics
-   */
-  generateLeadershipInsights(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<LeadershipInsights>
-
-  /**
-   * Clear internal caches (for testing purposes)
-   */
-  clearCaches(): void
-
-  /**
-   * Dispose of resources and cleanup
-   */
-  dispose(): Promise<void>
 }

@@ -483,7 +483,8 @@ describe('AnalyticsComputer Property Tests', () => {
 
               if (club) {
                 // Calculate net growth for membership alternative check
-                const netGrowth = club.membershipCount - (club.membershipBase ?? 0)
+                const netGrowth =
+                  club.membershipCount - (club.membershipBase ?? 0)
 
                 // Smedley requires 10+ goals and 25+ members
                 // President requires 9+ goals and 20+ members
@@ -498,15 +499,15 @@ describe('AnalyticsComputer Property Tests', () => {
                 } else if (distinguished.status === 'select') {
                   expect(club.dcpGoals).toBeGreaterThanOrEqual(7)
                   // Select: 20+ members OR net growth >= 5
-                  expect(
-                    club.membershipCount >= 20 || netGrowth >= 5
-                  ).toBe(true)
+                  expect(club.membershipCount >= 20 || netGrowth >= 5).toBe(
+                    true
+                  )
                 } else if (distinguished.status === 'distinguished') {
                   expect(club.dcpGoals).toBeGreaterThanOrEqual(5)
                   // Distinguished: 20+ members OR net growth >= 3
-                  expect(
-                    club.membershipCount >= 20 || netGrowth >= 3
-                  ).toBe(true)
+                  expect(club.membershipCount >= 20 || netGrowth >= 3).toBe(
+                    true
+                  )
                 }
               }
             }

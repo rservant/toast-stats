@@ -31,12 +31,9 @@ import type {
   IRawCSVStorage,
   ITimeSeriesIndexStorage,
 } from '../types/storageInterfaces.js'
-import { AnalyticsEngine } from './AnalyticsEngine.js'
-import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './SnapshotStore.js'
-import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { RefreshService } from './RefreshService.js'
 import {
   BordaCountRankingCalculator,
@@ -120,11 +117,6 @@ export interface ProductionServiceFactory {
   createCacheConfigService(
     config?: Partial<ServiceConfiguration>
   ): CacheConfigService
-
-  /**
-   * Create AnalyticsEngine instance with dependency injection
-   */
-  createAnalyticsEngine(cacheConfig?: CacheConfigService): AnalyticsEngine
 
   /**
    * Create CircuitBreakerManager instance
@@ -353,30 +345,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
-    // Register AnalyticsEngine
-    container.register(
-      ServiceTokens.AnalyticsEngine,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          // Use ISnapshotStorage from the storage abstraction layer
-          // This enables environment-based selection between local and cloud storage
-          const snapshotStorage =
-            container.resolveInterface<ISnapshotStorage>('ISnapshotStorage')
-          const districtDataAggregator = createDistrictDataAggregator(
-            snapshotStorage as unknown as FileSnapshotStore
-          )
-          const dataSource = new AnalyticsDataSourceAdapter(
-            districtDataAggregator,
-            snapshotStorage as unknown as FileSnapshotStore
-          )
-          return new AnalyticsEngine(dataSource)
-        },
-        async (instance: AnalyticsEngine) => {
-          await instance.dispose()
-        }
-      )
-    )
-
     // Register CircuitBreakerManager
     container.register(
       ServiceTokens.CircuitBreakerManager,
@@ -512,33 +480,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       serviceConfig.getConfiguration(),
       logger
     )
-    this.services.push(service)
-    return service
-  }
-
-  /**
-   * Create AnalyticsEngine instance with dependency injection
-   *
-   * Uses the storage abstraction layer to respect STORAGE_PROVIDER env var:
-   * - STORAGE_PROVIDER=gcp: Uses FirestoreSnapshotStorage
-   * - STORAGE_PROVIDER=local or unset: Uses LocalSnapshotStorage
-   *
-   * Requirements: 1.3, 1.4 (Storage Abstraction)
-   *
-   * @param _cacheConfig - Deprecated parameter, kept for backward compatibility
-   */
-  createAnalyticsEngine(_cacheConfig?: CacheConfigService): AnalyticsEngine {
-    // Use storage abstraction layer to respect STORAGE_PROVIDER env var
-    const storageProviders = StorageProviderFactory.createFromEnvironment()
-    const snapshotStorage = storageProviders.snapshotStorage
-    const districtDataAggregator = createDistrictDataAggregator(
-      snapshotStorage as unknown as FileSnapshotStore
-    )
-    const dataSource = new AnalyticsDataSourceAdapter(
-      districtDataAggregator,
-      snapshotStorage as unknown as FileSnapshotStore
-    )
-    const service = new AnalyticsEngine(dataSource)
     this.services.push(service)
     return service
   }
@@ -771,7 +712,6 @@ export const ServiceTokens = {
     'RawCSVCacheService',
     RawCSVCacheService
   ),
-  AnalyticsEngine: createServiceToken('AnalyticsEngine', AnalyticsEngine),
   CircuitBreakerManager: createServiceToken(
     'CircuitBreakerManager',
     CircuitBreakerManager

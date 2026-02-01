@@ -11,12 +11,10 @@ This plan implements the fix for the type mismatch between analytics-core and fr
     - Define interface with smedley, presidents, select, distinguished, and total fields
     - Add JSDoc comments explaining each field and thresholds
     - _Requirements: 1.1, 1.2_
-  
   - [x] 1.2 Update DistrictAnalytics interface
     - Change `distinguishedClubs` from `DistinguishedClubSummary[]` to `DistinguishedClubCounts`
     - Add new field `distinguishedClubsList: DistinguishedClubSummary[]`
     - _Requirements: 1.1, 1.3_
-  
   - [x] 1.3 Update DistinguishedClubSummary status type
     - Add 'smedley' to the status union type
     - _Requirements: 3.2_
@@ -26,17 +24,14 @@ This plan implements the fix for the type mismatch between analytics-core and fr
     - Implement method to generate DistinguishedClubCounts from snapshots
     - Use existing countDistinguishedClubs logic as foundation
     - _Requirements: 3.1_
-  
   - [x] 2.2 Update determineDistinguishedStatus for Smedley
     - Add Smedley threshold check (10+ goals AND 25+ members)
     - Ensure Smedley is checked before President's (highest level first)
     - _Requirements: 3.2_
-  
   - [x] 2.3 Write unit tests for threshold classification
     - Test boundary cases: 10/25 (smedley), 9/25 (president), 10/24 (president)
     - Test all classification levels with exact threshold values
     - _Requirements: 3.2_
-  
   - [x] 2.4 Write unit tests for no double counting
     - Test club qualifying for smedley appears only in smedley count
     - Test club qualifying for president (not smedley) appears only in president count
@@ -48,12 +43,10 @@ This plan implements the fix for the type mismatch between analytics-core and fr
     - Call generateDistinguishedClubCounts for distinguishedClubs field
     - Call generateDistinguishedClubSummaries for distinguishedClubsList field
     - _Requirements: 2.1, 2.2_
-  
-  - [ ]* 3.2 Write property test for total equals sum (Property 1)
+  - [ ]\* 3.2 Write property test for total equals sum (Property 1)
     - **Property 1: Total Equals Sum of Counts**
     - **Validates: Requirements 2.3**
-  
-  - [ ]* 3.3 Write property test for counts-list consistency (Property 2)
+  - [ ]\* 3.3 Write property test for counts-list consistency (Property 2)
     - **Property 2: Counts-List Consistency**
     - **Validates: Requirements 2.1, 2.2**
 
@@ -68,13 +61,11 @@ This plan implements the fix for the type mismatch between analytics-core and fr
     - Add transformLegacyDistinguishedClubs function
     - Place in backend/src/utils/legacyTransformation.ts
     - _Requirements: 4.1, 4.2_
-  
   - [x] 5.2 Update analytics route to transform legacy data
     - Import transformation utility in analytics.ts route
     - Apply transformation when serving pre-computed analytics
     - Add warning log when transforming legacy data
     - _Requirements: 4.1, 4.3_
-  
   - [x] 5.3 Write unit tests for transformation utility
     - Test empty array → all zeros
     - Test single item with status 'president' → presidents: 1, others: 0

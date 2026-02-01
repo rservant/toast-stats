@@ -139,7 +139,7 @@ All data MUST be served from pre-computed files.
 // Required pattern for all data endpoints
 async function serveData(snapshotId: string, dataType: string) {
   const data = await storage.readPreComputedData(snapshotId, dataType)
-  
+
   if (!data) {
     // Return informative error - do NOT compute on demand
     return {
@@ -150,7 +150,7 @@ async function serveData(snapshotId: string, dataType: string) {
       },
     }
   }
-  
+
   return data
 }
 ```
@@ -188,12 +188,12 @@ if (data && !isCompatibleSchemaVersion(data.schemaVersion)) {
 
 The scraper-cli MUST generate ALL data files required by the backend:
 
-| Data Type | File Location | Generator |
-|-----------|---------------|-----------|
-| District Statistics | `snapshots/{date}/district_{id}.json` | `transform` command |
-| All-Districts Rankings | `snapshots/{date}/all-districts-rankings.json` | `transform` command |
-| District Analytics | `snapshots/{date}/analytics/district_{id}_analytics.json` | `compute-analytics` command |
-| Rank History | `snapshots/{date}/rank-history/{id}.json` | `compute-analytics` command |
+| Data Type              | File Location                                             | Generator                   |
+| ---------------------- | --------------------------------------------------------- | --------------------------- |
+| District Statistics    | `snapshots/{date}/district_{id}.json`                     | `transform` command         |
+| All-Districts Rankings | `snapshots/{date}/all-districts-rankings.json`            | `transform` command         |
+| District Analytics     | `snapshots/{date}/analytics/district_{id}_analytics.json` | `compute-analytics` command |
+| Rank History           | `snapshots/{date}/rank-history/{id}.json`                 | `compute-analytics` command |
 
 ### 6.2 Atomic File Generation
 
@@ -211,10 +211,10 @@ All pre-computed files MUST include metadata:
 
 ```typescript
 interface PreComputedFile<T> {
-  schemaVersion: string      // For compatibility checking
-  computedAt: string         // ISO timestamp
-  checksum?: string          // Optional integrity check
-  data: T                    // The actual data
+  schemaVersion: string // For compatibility checking
+  computedAt: string // ISO timestamp
+  checksum?: string // Optional integrity check
+  data: T // The actual data
 }
 ```
 
@@ -357,4 +357,3 @@ When pre-computed data is missing, use these standard error messages:
 > **Pre-computed files are the contract between scraper-cli and backend.**  
 > **Missing data is an error, not a trigger for computation.**  
 > **Sub-10ms response times are non-negotiable.**
-

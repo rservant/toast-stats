@@ -40,7 +40,9 @@ import type {
 /**
  * Creates a realistic club with all required fields populated.
  */
-function createTestClub(overrides: Partial<ClubStatistics> = {}): ClubStatistics {
+function createTestClub(
+  overrides: Partial<ClubStatistics> = {}
+): ClubStatistics {
   return {
     clubId: '1234567',
     clubName: 'Test Speakers Club',
@@ -663,7 +665,13 @@ describe('AnalyticsComputer Integration Tests', () => {
       }
 
       // Verify status values are valid
-      const validStatuses = ['smedley', 'president', 'select', 'distinguished', 'none']
+      const validStatuses = [
+        'smedley',
+        'president',
+        'select',
+        'distinguished',
+        'none',
+      ]
       for (const summary of analytics.distinguishedClubsList) {
         expect(validStatuses).toContain(summary.status)
       }
@@ -693,15 +701,29 @@ describe('AnalyticsComputer Integration Tests', () => {
 
       // Verify distinguishedProjection exists and has all required fields
       expect(analytics.distinguishedProjection).toBeDefined()
-      expect(isCompleteDistinguishedProjection(analytics.distinguishedProjection)).toBe(true)
+      expect(
+        isCompleteDistinguishedProjection(analytics.distinguishedProjection)
+      ).toBe(true)
 
       // Verify projection values are non-negative
-      expect(analytics.distinguishedProjection.projectedDistinguished).toBeGreaterThanOrEqual(0)
-      expect(analytics.distinguishedProjection.projectedSelect).toBeGreaterThanOrEqual(0)
-      expect(analytics.distinguishedProjection.projectedPresident).toBeGreaterThanOrEqual(0)
-      expect(analytics.distinguishedProjection.currentDistinguished).toBeGreaterThanOrEqual(0)
-      expect(analytics.distinguishedProjection.currentSelect).toBeGreaterThanOrEqual(0)
-      expect(analytics.distinguishedProjection.currentPresident).toBeGreaterThanOrEqual(0)
+      expect(
+        analytics.distinguishedProjection.projectedDistinguished
+      ).toBeGreaterThanOrEqual(0)
+      expect(
+        analytics.distinguishedProjection.projectedSelect
+      ).toBeGreaterThanOrEqual(0)
+      expect(
+        analytics.distinguishedProjection.projectedPresident
+      ).toBeGreaterThanOrEqual(0)
+      expect(
+        analytics.distinguishedProjection.currentDistinguished
+      ).toBeGreaterThanOrEqual(0)
+      expect(
+        analytics.distinguishedProjection.currentSelect
+      ).toBeGreaterThanOrEqual(0)
+      expect(
+        analytics.distinguishedProjection.currentPresident
+      ).toBeGreaterThanOrEqual(0)
 
       // Verify projection date is set
       expect(analytics.distinguishedProjection.projectionDate).toBeTruthy()
@@ -730,7 +752,9 @@ describe('AnalyticsComputer Integration Tests', () => {
       expect(analytics.distinguishedClubs.smedley).toBeGreaterThanOrEqual(0)
       expect(analytics.distinguishedClubs.presidents).toBeGreaterThanOrEqual(0)
       expect(analytics.distinguishedClubs.select).toBeGreaterThanOrEqual(0)
-      expect(analytics.distinguishedClubs.distinguished).toBeGreaterThanOrEqual(0)
+      expect(analytics.distinguishedClubs.distinguished).toBeGreaterThanOrEqual(
+        0
+      )
 
       // Verify total equals sum of individual counts
       const expectedTotal =
@@ -766,9 +790,12 @@ describe('AnalyticsComputer Integration Tests', () => {
 
       // Health assessment
       expect(typeof clubTrend.currentStatus).toBe('string')
-      expect(['thriving', 'stable', 'vulnerable', 'intervention_required']).toContain(
-        clubTrend.currentStatus
-      )
+      expect([
+        'thriving',
+        'stable',
+        'vulnerable',
+        'intervention_required',
+      ]).toContain(clubTrend.currentStatus)
       expect(typeof clubTrend.healthScore).toBe('number')
 
       // Membership data

@@ -446,7 +446,10 @@ describe('DistinguishedClubAnalyticsModule', () => {
       // Total should equal sum of individual counts (no double counting)
       expect(counts.total).toBe(4)
       expect(counts.total).toBe(
-        counts.smedley + counts.presidents + counts.select + counts.distinguished
+        counts.smedley +
+          counts.presidents +
+          counts.select +
+          counts.distinguished
       )
     })
 
@@ -475,7 +478,10 @@ describe('DistinguishedClubAnalyticsModule', () => {
       expect(counts.distinguished).toBe(0)
       expect(counts.total).toBe(4)
       expect(counts.total).toBe(
-        counts.smedley + counts.presidents + counts.select + counts.distinguished
+        counts.smedley +
+          counts.presidents +
+          counts.select +
+          counts.distinguished
       )
     })
   })

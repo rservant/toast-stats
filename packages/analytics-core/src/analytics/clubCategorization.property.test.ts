@@ -23,28 +23,39 @@ import type { ClubHealthData, ClubTrend } from '../types.js'
 /**
  * Generate a valid club ID (numeric string).
  */
-const clubIdArb: fc.Arbitrary<string> = fc.integer({ min: 1000, max: 9999999 }).map(n => n.toString())
+const clubIdArb: fc.Arbitrary<string> = fc
+  .integer({ min: 1000, max: 9999999 })
+  .map(n => n.toString())
 
 /**
  * Generate a valid club name.
  */
-const clubNameArb: fc.Arbitrary<string> = fc.string({ minLength: 3, maxLength: 50 })
+const clubNameArb: fc.Arbitrary<string> = fc
+  .string({ minLength: 3, maxLength: 50 })
   .map(s => s.replace(/[^A-Za-z ]/g, 'X').trim() || 'Test Club')
 
 /**
  * Generate a valid division ID (single letter A-Z).
  */
 const divisionIdArb: fc.Arbitrary<string> = fc.constantFrom(
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'
+  'A',
+  'B',
+  'C',
+  'D',
+  'E',
+  'F',
+  'G',
+  'H',
+  'I',
+  'J'
 )
 
 /**
  * Generate a valid area ID (letter + number).
  */
-const areaIdArb: fc.Arbitrary<string> = fc.tuple(
-  divisionIdArb,
-  fc.integer({ min: 1, max: 9 })
-).map(([div, num]) => `${div}${num}`)
+const areaIdArb: fc.Arbitrary<string> = fc
+  .tuple(divisionIdArb, fc.integer({ min: 1, max: 9 }))
+  .map(([div, num]) => `${div}${num}`)
 
 /**
  * Generate a valid club status.
@@ -91,8 +102,12 @@ const clubStatisticsArb: fc.Arbitrary<ClubStatistics> = fc.record({
  * Generate a unique list of ClubStatistics with distinct club IDs.
  * Uses a counter-based approach to ensure uniqueness.
  */
-const uniqueClubListArb = (minClubs: number, maxClubs: number): fc.Arbitrary<ClubStatistics[]> =>
-  fc.array(clubStatisticsArb, { minLength: minClubs, maxLength: maxClubs })
+const uniqueClubListArb = (
+  minClubs: number,
+  maxClubs: number
+): fc.Arbitrary<ClubStatistics[]> =>
+  fc
+    .array(clubStatisticsArb, { minLength: minClubs, maxLength: maxClubs })
     .map(clubs => {
       // Ensure unique club IDs by appending index
       return clubs.map((club, index) => ({
@@ -105,19 +120,24 @@ const uniqueClubListArb = (minClubs: number, maxClubs: number): fc.Arbitrary<Clu
  * Generate a valid snapshot date (YYYY-MM-DD format).
  * Uses integer-based generation to avoid invalid date issues.
  */
-const snapshotDateArb: fc.Arbitrary<string> = fc.integer({
-  min: 0,
-  max: 364,
-}).map(dayOffset => {
-  const baseDate = new Date('2024-01-01')
-  baseDate.setDate(baseDate.getDate() + dayOffset)
-  return baseDate.toISOString().split('T')[0] ?? '2024-01-15'
-})
+const snapshotDateArb: fc.Arbitrary<string> = fc
+  .integer({
+    min: 0,
+    max: 364,
+  })
+  .map(dayOffset => {
+    const baseDate = new Date('2024-01-01')
+    baseDate.setDate(baseDate.getDate() + dayOffset)
+    return baseDate.toISOString().split('T')[0] ?? '2024-01-15'
+  })
 
 /**
  * Generate a DistrictStatistics snapshot with clubs.
  */
-const districtStatisticsArb = (clubs: ClubStatistics[], date: string): DistrictStatistics => {
+const districtStatisticsArb = (
+  clubs: ClubStatistics[],
+  date: string
+): DistrictStatistics => {
   const totalMembership = clubs.reduce((sum, c) => sum + c.membershipCount, 0)
   const totalPayments = clubs.reduce((sum, c) => sum + c.paymentsCount, 0)
 
@@ -142,36 +162,43 @@ const districtStatisticsArb = (clubs: ClubStatistics[], date: string): DistrictS
  * Generate a sequence of snapshots for the same clubs with varying data.
  * This simulates historical data where membership and goals change over time.
  */
-const snapshotSequenceArb: fc.Arbitrary<DistrictStatistics[]> = fc.tuple(
-  uniqueClubListArb(1, 20),
-  fc.integer({ min: 1, max: 5 })
-).chain(([baseClubs, numSnapshots]) => {
-  // Generate dates for each snapshot
-  const dates: string[] = []
-  const baseDate = new Date('2024-01-01')
-  for (let i = 0; i < numSnapshots; i++) {
-    const date = new Date(baseDate)
-    date.setMonth(date.getMonth() + i)
-    dates.push(date.toISOString().split('T')[0] ?? '2024-01-15')
-  }
+const snapshotSequenceArb: fc.Arbitrary<DistrictStatistics[]> = fc
+  .tuple(uniqueClubListArb(1, 20), fc.integer({ min: 1, max: 5 }))
+  .chain(([baseClubs, numSnapshots]) => {
+    // Generate dates for each snapshot
+    const dates: string[] = []
+    const baseDate = new Date('2024-01-01')
+    for (let i = 0; i < numSnapshots; i++) {
+      const date = new Date(baseDate)
+      date.setMonth(date.getMonth() + i)
+      dates.push(date.toISOString().split('T')[0] ?? '2024-01-15')
+    }
 
-  // Generate membership variations for each snapshot
-  return fc.array(
-    fc.integer({ min: -5, max: 5 }),
-    { minLength: numSnapshots, maxLength: numSnapshots }
-  ).map(membershipDeltas => {
-    return dates.map((date, snapshotIndex) => {
-      const clubs = baseClubs.map(club => ({
-        ...club,
-        // Vary membership slightly across snapshots
-        membershipCount: Math.max(5, club.membershipCount + (membershipDeltas[snapshotIndex] ?? 0)),
-        // Vary DCP goals slightly (can only increase)
-        dcpGoals: Math.min(10, club.dcpGoals + Math.floor(snapshotIndex / 2)),
-      }))
-      return districtStatisticsArb(clubs, date)
-    })
+    // Generate membership variations for each snapshot
+    return fc
+      .array(fc.integer({ min: -5, max: 5 }), {
+        minLength: numSnapshots,
+        maxLength: numSnapshots,
+      })
+      .map(membershipDeltas => {
+        return dates.map((date, snapshotIndex) => {
+          const clubs = baseClubs.map(club => ({
+            ...club,
+            // Vary membership slightly across snapshots
+            membershipCount: Math.max(
+              5,
+              club.membershipCount + (membershipDeltas[snapshotIndex] ?? 0)
+            ),
+            // Vary DCP goals slightly (can only increase)
+            dcpGoals: Math.min(
+              10,
+              club.dcpGoals + Math.floor(snapshotIndex / 2)
+            ),
+          }))
+          return districtStatisticsArb(clubs, date)
+        })
+      })
   })
-})
 
 // ========== Helper Functions ==========
 
@@ -214,7 +241,8 @@ describe('Club Categorization Partition Property Tests', () => {
 
       fc.assert(
         fc.property(snapshotSequenceArb, snapshots => {
-          const result: ClubHealthData = module.generateClubHealthData(snapshots)
+          const result: ClubHealthData =
+            module.generateClubHealthData(snapshots)
 
           // Get all club IDs from allClubs
           const allClubIds = getClubIds(result.allClubs)
@@ -225,7 +253,11 @@ describe('Club Categorization Partition Property Tests', () => {
           const interventionIds = getClubIds(result.interventionRequiredClubs)
 
           // Union of all categories
-          const unionIds = new Set([...thrivingIds, ...vulnerableIds, ...interventionIds])
+          const unionIds = new Set([
+            ...thrivingIds,
+            ...vulnerableIds,
+            ...interventionIds,
+          ])
 
           // Property: Union of categories equals allClubs
           expect(setsEqual(unionIds, allClubIds)).toBe(true)
@@ -240,7 +272,8 @@ describe('Club Categorization Partition Property Tests', () => {
 
       fc.assert(
         fc.property(snapshotSequenceArb, snapshots => {
-          const result: ClubHealthData = module.generateClubHealthData(snapshots)
+          const result: ClubHealthData =
+            module.generateClubHealthData(snapshots)
 
           // Get club IDs from each category
           const thrivingIds = getClubIds(result.thrivingClubs)
@@ -273,7 +306,8 @@ describe('Club Categorization Partition Property Tests', () => {
 
       fc.assert(
         fc.property(snapshotSequenceArb, snapshots => {
-          const result: ClubHealthData = module.generateClubHealthData(snapshots)
+          const result: ClubHealthData =
+            module.generateClubHealthData(snapshots)
 
           // For each club in allClubs, count how many categories it appears in
           for (const club of result.allClubs) {
@@ -285,7 +319,11 @@ describe('Club Categorization Partition Property Tests', () => {
             if (result.vulnerableClubs.some(c => c.clubId === club.clubId)) {
               categoryCount++
             }
-            if (result.interventionRequiredClubs.some(c => c.clubId === club.clubId)) {
+            if (
+              result.interventionRequiredClubs.some(
+                c => c.clubId === club.clubId
+              )
+            ) {
               categoryCount++
             }
 
@@ -303,7 +341,8 @@ describe('Club Categorization Partition Property Tests', () => {
 
       fc.assert(
         fc.property(snapshotSequenceArb, snapshots => {
-          const result: ClubHealthData = module.generateClubHealthData(snapshots)
+          const result: ClubHealthData =
+            module.generateClubHealthData(snapshots)
 
           const totalCategorized =
             result.thrivingClubs.length +
@@ -337,7 +376,9 @@ describe('Club Categorization Partition Property Tests', () => {
       fc.assert(
         fc.property(clubStatisticsArb, snapshotDateArb, (club, date) => {
           const snapshot = districtStatisticsArb([club], date)
-          const result: ClubHealthData = module.generateClubHealthData([snapshot])
+          const result: ClubHealthData = module.generateClubHealthData([
+            snapshot,
+          ])
 
           // Single club should be in exactly one category
           expect(result.allClubs).toHaveLength(1)
@@ -359,7 +400,8 @@ describe('Club Categorization Partition Property Tests', () => {
 
       fc.assert(
         fc.property(snapshotSequenceArb, snapshots => {
-          const result: ClubHealthData = module.generateClubHealthData(snapshots)
+          const result: ClubHealthData =
+            module.generateClubHealthData(snapshots)
 
           // Verify thriving clubs have 'thriving' status
           for (const club of result.thrivingClubs) {

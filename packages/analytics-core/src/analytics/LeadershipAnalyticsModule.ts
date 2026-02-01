@@ -46,7 +46,9 @@ export class LeadershipAnalyticsModule {
    * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
    * @returns LeadershipInsights object
    */
-  generateLeadershipInsights(snapshots: DistrictStatistics[]): LeadershipInsights {
+  generateLeadershipInsights(
+    snapshots: DistrictStatistics[]
+  ): LeadershipInsights {
     if (snapshots.length === 0) {
       return this.createEmptyInsights()
     }
@@ -57,7 +59,8 @@ export class LeadershipAnalyticsModule {
       snapshots
     )
     const leadershipChanges = this.trackLeadershipChanges(snapshots)
-    const areaDirectorCorrelations = this.analyzeAreaDirectorCorrelations(snapshots)
+    const areaDirectorCorrelations =
+      this.analyzeAreaDirectorCorrelations(snapshots)
     const summary = this.generateLeadershipSummary(
       leadershipScores,
       bestPracticeDivisions,
@@ -122,7 +125,9 @@ export class LeadershipAnalyticsModule {
         }
 
         const division = divisionMap.get(divisionId)!
-        let dateEntry = division.historicalData.find(h => h.date === snapshot.snapshotDate)
+        let dateEntry = division.historicalData.find(
+          h => h.date === snapshot.snapshotDate
+        )
         if (!dateEntry) {
           dateEntry = { date: snapshot.snapshotDate, clubs: [] }
           division.historicalData.push(dateEntry)
@@ -139,7 +144,9 @@ export class LeadershipAnalyticsModule {
     const scores: LeadershipEffectivenessScore[] = []
     for (const division of divisionMap.values()) {
       const healthScore = this.calculateDivisionHealthScore(division.clubs)
-      const growthScore = this.calculateDivisionGrowthScore(division.historicalData)
+      const growthScore = this.calculateDivisionGrowthScore(
+        division.historicalData
+      )
       const dcpScore = this.calculateDivisionDCPScore(division.clubs)
       const overallScore = Math.round(
         healthScore * 0.4 + growthScore * 0.3 + dcpScore * 0.3
@@ -182,7 +189,8 @@ export class LeadershipAnalyticsModule {
 
     const averageMembership = totalMembership / clubs.length
     const healthyClubPercentage = (healthyClubs / clubs.length) * 100
-    const strongMembershipPercentage = (clubsWithMinimumMembers / clubs.length) * 100
+    const strongMembershipPercentage =
+      (clubsWithMinimumMembers / clubs.length) * 100
 
     // Weighted: 50% healthy clubs, 30% avg membership (normalized), 20% strong membership
     return (
@@ -207,7 +215,8 @@ export class LeadershipAnalyticsModule {
 
     if (membershipByDate.length === 0) return 50
     const firstMembership = membershipByDate[0]?.membership ?? 0
-    const lastMembership = membershipByDate[membershipByDate.length - 1]?.membership ?? 0
+    const lastMembership =
+      membershipByDate[membershipByDate.length - 1]?.membership ?? 0
     const growthRate =
       firstMembership > 0
         ? ((lastMembership - firstMembership) / firstMembership) * 100
@@ -242,7 +251,10 @@ export class LeadershipAnalyticsModule {
 
       const meetsScoreThreshold = score.overallScore >= threshold
       const isTopPercentile = i < topPercentile
-      const isConsistent = this.isDivisionConsistent(score.divisionId, snapshots)
+      const isConsistent = this.isDivisionConsistent(
+        score.divisionId,
+        snapshots
+      )
 
       if (meetsScoreThreshold && isTopPercentile && isConsistent) {
         score.isBestPractice = true
@@ -325,8 +337,11 @@ export class LeadershipAnalyticsModule {
       }
 
       for (const [divisionId, score] of divisionScores.entries()) {
-        const avgScore = score.totalClubs > 0 ? score.totalDcp / score.totalClubs : 0
-        divisionPerformance.get(divisionId)!.push({ date: snapshot.snapshotDate, score: avgScore })
+        const avgScore =
+          score.totalClubs > 0 ? score.totalDcp / score.totalClubs : 0
+        divisionPerformance
+          .get(divisionId)!
+          .push({ date: snapshot.snapshotDate, score: avgScore })
       }
     }
 
@@ -414,9 +429,12 @@ export class LeadershipAnalyticsModule {
         if (membership >= 12 && dcpGoals > 0) healthyClubs++
       }
 
-      const avgDcpGoals = area.clubs.length > 0 ? totalDcpGoals / area.clubs.length : 0
-      const avgMembership = area.clubs.length > 0 ? totalMembership / area.clubs.length : 0
-      const healthyPercentage = area.clubs.length > 0 ? healthyClubs / area.clubs.length : 0
+      const avgDcpGoals =
+        area.clubs.length > 0 ? totalDcpGoals / area.clubs.length : 0
+      const avgMembership =
+        area.clubs.length > 0 ? totalMembership / area.clubs.length : 0
+      const healthyPercentage =
+        area.clubs.length > 0 ? healthyClubs / area.clubs.length : 0
 
       const performanceScore = Math.round(
         (avgDcpGoals / 10) * 40 +
@@ -430,8 +448,10 @@ export class LeadershipAnalyticsModule {
       else activityIndicator = 'low'
 
       let correlation: 'positive' | 'neutral' | 'negative'
-      if (activityIndicator === 'high' && performanceScore >= 70) correlation = 'positive'
-      else if (activityIndicator === 'low' && performanceScore < 40) correlation = 'negative'
+      if (activityIndicator === 'high' && performanceScore >= 70)
+        correlation = 'positive'
+      else if (activityIndicator === 'low' && performanceScore < 40)
+        correlation = 'negative'
       else correlation = 'neutral'
 
       correlations.push({
@@ -491,7 +511,10 @@ export class LeadershipAnalyticsModule {
       .map(area => ({
         areaId: area.areaId,
         areaName: area.areaName,
-        score: area.totalClubs > 0 ? Math.round((area.totalDcp / area.totalClubs) * 10) : 0,
+        score:
+          area.totalClubs > 0
+            ? Math.round((area.totalDcp / area.totalClubs) * 10)
+            : 0,
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5)
@@ -499,8 +522,10 @@ export class LeadershipAnalyticsModule {
     const averageLeadershipScore =
       leadershipScores.length > 0
         ? Math.round(
-            leadershipScores.reduce((sum, score) => sum + score.overallScore, 0) /
-              leadershipScores.length
+            leadershipScores.reduce(
+              (sum, score) => sum + score.overallScore,
+              0
+            ) / leadershipScores.length
           )
         : 0
 

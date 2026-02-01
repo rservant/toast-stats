@@ -79,8 +79,16 @@ describe('MembershipAnalyticsModule', () => {
     it('should return correct MembershipAnalytics structure with single snapshot', () => {
       const module = new MembershipAnalyticsModule()
       const clubs = [
-        createMockClub({ clubId: '1', clubName: 'Club A', membershipCount: 25 }),
-        createMockClub({ clubId: '2', clubName: 'Club B', membershipCount: 30 }),
+        createMockClub({
+          clubId: '1',
+          clubName: 'Club A',
+          membershipCount: 25,
+        }),
+        createMockClub({
+          clubId: '2',
+          clubName: 'Club B',
+          membershipCount: 30,
+        }),
       ]
       const snapshot = createMockSnapshot('D101', '2024-03-15', clubs)
 
@@ -100,7 +108,10 @@ describe('MembershipAnalyticsModule', () => {
       expect(result.totalMembership).toBe(55) // 25 + 30
       expect(result.membershipChange).toBe(0) // Single snapshot = no change
       expect(result.membershipTrend).toHaveLength(1)
-      expect(result.membershipTrend[0]).toEqual({ date: '2024-03-15', count: 55 })
+      expect(result.membershipTrend[0]).toEqual({
+        date: '2024-03-15',
+        count: 55,
+      })
     })
 
     it('should return empty analytics for empty snapshots array', () => {
@@ -176,20 +187,43 @@ describe('MembershipAnalyticsModule', () => {
     })
   })
 
-
   describe('generateMembershipAnalytics - Top Growth Clubs', () => {
     it('should identify top growth clubs correctly', () => {
       const module = new MembershipAnalyticsModule()
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', [
-          createMockClub({ clubId: '1', clubName: 'Growing Club', membershipCount: 20 }),
-          createMockClub({ clubId: '2', clubName: 'Stable Club', membershipCount: 25 }),
-          createMockClub({ clubId: '3', clubName: 'Fast Growing', membershipCount: 15 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Growing Club',
+            membershipCount: 20,
+          }),
+          createMockClub({
+            clubId: '2',
+            clubName: 'Stable Club',
+            membershipCount: 25,
+          }),
+          createMockClub({
+            clubId: '3',
+            clubName: 'Fast Growing',
+            membershipCount: 15,
+          }),
         ]),
         createMockSnapshot('D101', '2024-03-15', [
-          createMockClub({ clubId: '1', clubName: 'Growing Club', membershipCount: 28 }),
-          createMockClub({ clubId: '2', clubName: 'Stable Club', membershipCount: 25 }),
-          createMockClub({ clubId: '3', clubName: 'Fast Growing', membershipCount: 30 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Growing Club',
+            membershipCount: 28,
+          }),
+          createMockClub({
+            clubId: '2',
+            clubName: 'Stable Club',
+            membershipCount: 25,
+          }),
+          createMockClub({
+            clubId: '3',
+            clubName: 'Fast Growing',
+            membershipCount: 30,
+          }),
         ]),
       ]
 
@@ -225,10 +259,18 @@ describe('MembershipAnalyticsModule', () => {
       const module = new MembershipAnalyticsModule()
       // Create 15 clubs all with growth
       const clubs1 = Array.from({ length: 15 }, (_, i) =>
-        createMockClub({ clubId: `${i + 1}`, clubName: `Club ${i + 1}`, membershipCount: 10 })
+        createMockClub({
+          clubId: `${i + 1}`,
+          clubName: `Club ${i + 1}`,
+          membershipCount: 10,
+        })
       )
       const clubs2 = Array.from({ length: 15 }, (_, i) =>
-        createMockClub({ clubId: `${i + 1}`, clubName: `Club ${i + 1}`, membershipCount: 20 + i })
+        createMockClub({
+          clubId: `${i + 1}`,
+          clubName: `Club ${i + 1}`,
+          membershipCount: 20 + i,
+        })
       )
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', clubs1),
@@ -246,14 +288,38 @@ describe('MembershipAnalyticsModule', () => {
       const module = new MembershipAnalyticsModule()
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', [
-          createMockClub({ clubId: '1', clubName: 'Declining Club', membershipCount: 30 }),
-          createMockClub({ clubId: '2', clubName: 'Stable Club', membershipCount: 25 }),
-          createMockClub({ clubId: '3', clubName: 'Fast Declining', membershipCount: 40 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Declining Club',
+            membershipCount: 30,
+          }),
+          createMockClub({
+            clubId: '2',
+            clubName: 'Stable Club',
+            membershipCount: 25,
+          }),
+          createMockClub({
+            clubId: '3',
+            clubName: 'Fast Declining',
+            membershipCount: 40,
+          }),
         ]),
         createMockSnapshot('D101', '2024-03-15', [
-          createMockClub({ clubId: '1', clubName: 'Declining Club', membershipCount: 25 }),
-          createMockClub({ clubId: '2', clubName: 'Stable Club', membershipCount: 25 }),
-          createMockClub({ clubId: '3', clubName: 'Fast Declining', membershipCount: 25 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Declining Club',
+            membershipCount: 25,
+          }),
+          createMockClub({
+            clubId: '2',
+            clubName: 'Stable Club',
+            membershipCount: 25,
+          }),
+          createMockClub({
+            clubId: '3',
+            clubName: 'Fast Declining',
+            membershipCount: 25,
+          }),
         ]),
       ]
 
@@ -286,7 +352,6 @@ describe('MembershipAnalyticsModule', () => {
     })
   })
 
-
   describe('generateMembershipAnalytics - Seasonal Patterns', () => {
     it('should identify seasonal patterns from monthly data', () => {
       const module = new MembershipAnalyticsModule()
@@ -307,7 +372,7 @@ describe('MembershipAnalyticsModule', () => {
 
       // Should have patterns for January and February
       expect(result.seasonalPatterns.length).toBeGreaterThan(0)
-      
+
       const januaryPattern = result.seasonalPatterns.find(p => p.month === 1)
       expect(januaryPattern).toBeDefined()
       expect(januaryPattern?.monthName).toBe('January')
@@ -387,7 +452,6 @@ describe('MembershipAnalyticsModule', () => {
       }
     })
   })
-
 
   describe('generateMembershipAnalytics - Program Year Change', () => {
     it('should calculate program year change from July 1 start', () => {
@@ -474,7 +538,6 @@ describe('MembershipAnalyticsModule', () => {
     })
   })
 
-
   describe('generateMembershipAnalytics - Year Over Year Comparison', () => {
     it('should calculate year-over-year comparison when previous year data exists', () => {
       const module = new MembershipAnalyticsModule()
@@ -546,16 +609,23 @@ describe('MembershipAnalyticsModule', () => {
     })
   })
 
-
   describe('generateMembershipAnalytics - Edge Cases', () => {
     it('should handle single club correctly', () => {
       const module = new MembershipAnalyticsModule()
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', [
-          createMockClub({ clubId: '1', clubName: 'Only Club', membershipCount: 25 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Only Club',
+            membershipCount: 25,
+          }),
         ]),
         createMockSnapshot('D101', '2024-03-15', [
-          createMockClub({ clubId: '1', clubName: 'Only Club', membershipCount: 30 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Only Club',
+            membershipCount: 30,
+          }),
         ]),
       ]
 
@@ -571,15 +641,35 @@ describe('MembershipAnalyticsModule', () => {
       const module = new MembershipAnalyticsModule()
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', [
-          createMockClub({ clubId: '1', clubName: 'Original Club', membershipCount: 20 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Original Club',
+            membershipCount: 20,
+          }),
         ]),
         createMockSnapshot('D101', '2024-02-15', [
-          createMockClub({ clubId: '1', clubName: 'Original Club', membershipCount: 22 }),
-          createMockClub({ clubId: '2', clubName: 'New Club', membershipCount: 15 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Original Club',
+            membershipCount: 22,
+          }),
+          createMockClub({
+            clubId: '2',
+            clubName: 'New Club',
+            membershipCount: 15,
+          }),
         ]),
         createMockSnapshot('D101', '2024-03-15', [
-          createMockClub({ clubId: '1', clubName: 'Original Club', membershipCount: 25 }),
-          createMockClub({ clubId: '2', clubName: 'New Club', membershipCount: 20 }),
+          createMockClub({
+            clubId: '1',
+            clubName: 'Original Club',
+            membershipCount: 25,
+          }),
+          createMockClub({
+            clubId: '2',
+            clubName: 'New Club',
+            membershipCount: 20,
+          }),
         ]),
       ]
 
@@ -641,20 +731,29 @@ describe('MembershipAnalyticsModule', () => {
 
       const result = module.generateMembershipAnalytics('D101', [snapshot])
 
-      expect(result.totalMembership).toBe(clubs.reduce((sum, c) => sum + c.membershipCount, 0))
+      expect(result.totalMembership).toBe(
+        clubs.reduce((sum, c) => sum + c.membershipCount, 0)
+      )
     })
   })
-
 
   describe('generateMembershipTrends - Backward Compatibility', () => {
     it('should return MembershipTrendData structure', () => {
       const module = new MembershipAnalyticsModule()
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', [
-          createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18 }),
+          createMockClub({
+            clubId: '1',
+            membershipCount: 20,
+            paymentsCount: 18,
+          }),
         ]),
         createMockSnapshot('D101', '2024-03-15', [
-          createMockClub({ clubId: '1', membershipCount: 25, paymentsCount: 22 }),
+          createMockClub({
+            clubId: '1',
+            membershipCount: 25,
+            paymentsCount: 22,
+          }),
         ]),
       ]
 
@@ -691,10 +790,18 @@ describe('MembershipAnalyticsModule', () => {
       const module = new MembershipAnalyticsModule()
       const snapshots = [
         createMockSnapshot('D101', '2023-03-15', [
-          createMockClub({ clubId: '1', membershipCount: 100, paymentsCount: 90 }),
+          createMockClub({
+            clubId: '1',
+            membershipCount: 100,
+            paymentsCount: 90,
+          }),
         ]),
         createMockSnapshot('D101', '2024-03-15', [
-          createMockClub({ clubId: '1', membershipCount: 120, paymentsCount: 110 }),
+          createMockClub({
+            clubId: '1',
+            membershipCount: 120,
+            paymentsCount: 110,
+          }),
         ]),
       ]
 
@@ -767,10 +874,18 @@ describe('MembershipAnalyticsModule', () => {
     it('calculateTopGrowthClubs should respect limit parameter', () => {
       const module = new MembershipAnalyticsModule()
       const clubs1 = Array.from({ length: 10 }, (_, i) =>
-        createMockClub({ clubId: `${i + 1}`, clubName: `Club ${i + 1}`, membershipCount: 10 })
+        createMockClub({
+          clubId: `${i + 1}`,
+          clubName: `Club ${i + 1}`,
+          membershipCount: 10,
+        })
       )
       const clubs2 = Array.from({ length: 10 }, (_, i) =>
-        createMockClub({ clubId: `${i + 1}`, clubName: `Club ${i + 1}`, membershipCount: 20 + i })
+        createMockClub({
+          clubId: `${i + 1}`,
+          clubName: `Club ${i + 1}`,
+          membershipCount: 20 + i,
+        })
       )
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', clubs1),
@@ -785,10 +900,18 @@ describe('MembershipAnalyticsModule', () => {
     it('calculateTopDecliningClubs should respect limit parameter', () => {
       const module = new MembershipAnalyticsModule()
       const clubs1 = Array.from({ length: 10 }, (_, i) =>
-        createMockClub({ clubId: `${i + 1}`, clubName: `Club ${i + 1}`, membershipCount: 30 - i })
+        createMockClub({
+          clubId: `${i + 1}`,
+          clubName: `Club ${i + 1}`,
+          membershipCount: 30 - i,
+        })
       )
       const clubs2 = Array.from({ length: 10 }, (_, i) =>
-        createMockClub({ clubId: `${i + 1}`, clubName: `Club ${i + 1}`, membershipCount: 10 })
+        createMockClub({
+          clubId: `${i + 1}`,
+          clubName: `Club ${i + 1}`,
+          membershipCount: 10,
+        })
       )
       const snapshots = [
         createMockSnapshot('D101', '2024-01-15', clubs1),

@@ -48,7 +48,6 @@ export {
   snapshotStore,
   getBackfillService,
   getRefreshService,
-  getAnalyticsEngine,
   getPreComputedAnalyticsService,
   getTimeSeriesIndexService,
   startBackfillCleanupInterval,

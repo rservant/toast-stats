@@ -7,15 +7,6 @@
 
 import type { DistrictCacheEntry, DistrictStatistics } from './districts.js'
 import type {
-  DistrictAnalytics,
-  ClubTrend,
-  DivisionAnalytics,
-  YearOverYearComparison,
-  MembershipAnalytics,
-  DistinguishedClubAnalytics,
-  LeadershipInsights,
-} from './analytics.js'
-import type {
   Snapshot,
   SnapshotMetadata,
   SnapshotFilters,
@@ -287,44 +278,6 @@ export interface ICacheConfigService {
   initialize(): Promise<void>
   validateCacheDirectory(): Promise<void>
   isReady(): boolean
-  dispose(): Promise<void>
-}
-
-/**
- * Analytics Engine Interface
- */
-export interface IAnalyticsEngine {
-  generateDistrictAnalytics(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<DistrictAnalytics>
-  getClubTrends(districtId: string, clubId: string): Promise<ClubTrend | null>
-  identifyAtRiskClubs(districtId: string): Promise<ClubTrend[]>
-  compareDivisions(
-    districtId: string,
-    date: string
-  ): Promise<DivisionAnalytics[]>
-  calculateYearOverYear(
-    districtId: string,
-    currentDate: string
-  ): Promise<YearOverYearComparison | null>
-  generateMembershipAnalytics(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<MembershipAnalytics>
-  generateDistinguishedClubAnalytics(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<DistinguishedClubAnalytics>
-  generateLeadershipInsights(
-    districtId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<LeadershipInsights>
-  clearCaches(): void
   dispose(): Promise<void>
 }
 
@@ -611,7 +564,7 @@ export interface IAvailableProgramYearsService {
 /**
  * Analytics Data Source Interface
  *
- * Provides an abstraction layer for the AnalyticsEngine to access district data
+ * Provides an abstraction layer for analytics computation to access district data
  * from the new PerDistrictSnapshotStore format. This interface enables dependency
  * injection and supports the migration from DistrictCacheManager to the new
  * snapshot-based data architecture.

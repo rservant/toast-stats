@@ -14,6 +14,7 @@ The backend analytics modules (`backend/src/services/analytics/`) have been hard
 4. **Remove the original backend modules** after migration
 
 This approach ensures:
+
 - All bug fixes are preserved
 - No code is rewritten from scratch
 - The hardened logic becomes the single source of truth in analytics-core
@@ -39,19 +40,19 @@ flowchart TB
         D1 --> E1[On-Demand Computation]
         E1 --> F1[Response]
     end
-    
+
     subgraph "Target Architecture (COMPLIANT)"
         A2[API Request] --> B2[Backend Route]
         B2 --> C2[PreComputedAnalyticsReader]
         C2 --> D2[Pre-Computed JSON Files]
         D2 --> E2[Response]
-        
+
         G2[scraper-cli] --> H2[AnalyticsComputer]
         H2 --> I2[Moved Analytics Modules]
         I2 --> J2[AnalyticsWriter]
         J2 --> D2
     end
-    
+
     subgraph "Code Migration"
         K[Backend Analytics Modules] -->|Move & Adapt| I2
         K -->|Delete After Migration| L[Removed]
@@ -59,6 +60,7 @@ flowchart TB
 ```
 
 The target architecture ensures:
+
 - Backend is a pure read-only API server
 - All computation happens in scraper-cli during the data pipeline
 - Pre-computed files are the contract between scraper-cli and backend
@@ -83,16 +85,19 @@ The backend analytics modules must be moved to analytics-core, not rewritten. Th
 | `AnalyticsUtils` | `analytics-core/analytics/` | Direct copy (no dependencies) |
 
 **Adaptation Pattern:**
+
 ```typescript
 // BEFORE (backend module with async data source)
 export class MembershipAnalyticsModule {
   private readonly dataSource: IAnalyticsDataSource
-  
+
   constructor(dataSource: IAnalyticsDataSource) {
     this.dataSource = dataSource
   }
-  
-  async generateMembershipAnalytics(districtId: string): Promise<MembershipAnalytics> {
+
+  async generateMembershipAnalytics(
+    districtId: string
+  ): Promise<MembershipAnalytics> {
     const dataEntries = await this.loadDistrictData(districtId)
     // ... computation logic (PRESERVE THIS)
   }
@@ -101,7 +106,7 @@ export class MembershipAnalyticsModule {
 // AFTER (analytics-core module with pre-loaded data)
 export class MembershipAnalyticsModule {
   // No constructor - stateless module
-  
+
   generateMembershipAnalytics(
     districtId: string,
     snapshots: DistrictStatistics[]
@@ -277,39 +282,39 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     snapshots: DistrictStatistics[],
     options?: ComputeOptions
   ): Promise<ExtendedAnalyticsComputationResult>
-  
+
   // New methods for extended analytics
   private computeMembershipAnalytics(
     districtId: string,
     snapshots: DistrictStatistics[]
   ): MembershipAnalyticsData
-  
+
   private computeVulnerableClubs(
     districtId: string,
     clubHealth: ClubHealthData
   ): VulnerableClubsData
-  
+
   private computeLeadershipInsights(
     districtId: string,
     snapshots: DistrictStatistics[]
   ): LeadershipInsightsData
-  
+
   private computeDistinguishedClubAnalytics(
     districtId: string,
     snapshots: DistrictStatistics[]
   ): DistinguishedClubAnalyticsData
-  
+
   private computeYearOverYear(
     districtId: string,
     snapshots: DistrictStatistics[],
     currentDate: string
   ): YearOverYearData
-  
+
   private computePerformanceTargets(
     districtId: string,
     snapshots: DistrictStatistics[]
   ): PerformanceTargetsData
-  
+
   private buildClubTrendsIndex(
     districtId: string,
     clubHealth: ClubHealthData
@@ -324,7 +329,7 @@ New methods to write additional analytics files:
 ```typescript
 export class AnalyticsWriter implements IAnalyticsWriter {
   // Existing methods...
-  
+
   // New methods for extended analytics
   async writeMembershipAnalytics(
     snapshotDate: string,
@@ -332,42 +337,42 @@ export class AnalyticsWriter implements IAnalyticsWriter {
     data: MembershipAnalyticsData,
     options?: WriteAnalyticsOptions
   ): Promise<string>
-  
+
   async writeVulnerableClubs(
     snapshotDate: string,
     districtId: string,
     data: VulnerableClubsData,
     options?: WriteAnalyticsOptions
   ): Promise<string>
-  
+
   async writeLeadershipInsights(
     snapshotDate: string,
     districtId: string,
     data: LeadershipInsightsData,
     options?: WriteAnalyticsOptions
   ): Promise<string>
-  
+
   async writeDistinguishedClubAnalytics(
     snapshotDate: string,
     districtId: string,
     data: DistinguishedClubAnalyticsData,
     options?: WriteAnalyticsOptions
   ): Promise<string>
-  
+
   async writeYearOverYear(
     snapshotDate: string,
     districtId: string,
     data: YearOverYearData,
     options?: WriteAnalyticsOptions
   ): Promise<string>
-  
+
   async writePerformanceTargets(
     snapshotDate: string,
     districtId: string,
     data: PerformanceTargetsData,
     options?: WriteAnalyticsOptions
   ): Promise<string>
-  
+
   async writeClubTrendsIndex(
     snapshotDate: string,
     districtId: string,
@@ -384,38 +389,38 @@ New methods to read additional analytics files:
 ```typescript
 export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
   // Existing methods...
-  
+
   // New methods for extended analytics
   async readMembershipAnalytics(
     snapshotDate: string,
     districtId: string
   ): Promise<MembershipAnalyticsData | null>
-  
+
   async readVulnerableClubs(
     snapshotDate: string,
     districtId: string
   ): Promise<VulnerableClubsData | null>
-  
+
   async readLeadershipInsights(
     snapshotDate: string,
     districtId: string
   ): Promise<LeadershipInsightsData | null>
-  
+
   async readDistinguishedClubAnalytics(
     snapshotDate: string,
     districtId: string
   ): Promise<DistinguishedClubAnalyticsData | null>
-  
+
   async readYearOverYear(
     snapshotDate: string,
     districtId: string
   ): Promise<YearOverYearData | null>
-  
+
   async readPerformanceTargets(
     snapshotDate: string,
     districtId: string
   ): Promise<PerformanceTargetsData | null>
-  
+
   async readClubTrends(
     snapshotDate: string,
     districtId: string,
@@ -432,7 +437,8 @@ Each route will be updated to read from pre-computed files:
 // Example: membership-analytics route (BEFORE - VIOLATION)
 analyticsRouter.get('/:districtId/membership-analytics', async (req, res) => {
   const analyticsEngine = await getAnalyticsEngine()
-  const analytics = await analyticsEngine.generateMembershipAnalytics(districtId)
+  const analytics =
+    await analyticsEngine.generateMembershipAnalytics(districtId)
   res.json(analytics)
 })
 
@@ -444,26 +450,26 @@ analyticsRouter.get('/:districtId/membership-analytics', async (req, res) => {
       error: {
         code: 'NO_DATA_AVAILABLE',
         message: 'No snapshot data available',
-        details: 'Run scraper-cli to fetch data'
-      }
+        details: 'Run scraper-cli to fetch data',
+      },
     })
   }
-  
+
   const analytics = await preComputedAnalyticsReader.readMembershipAnalytics(
     latestSnapshot.snapshot_id,
     districtId
   )
-  
+
   if (!analytics) {
     return res.status(404).json({
       error: {
         code: 'ANALYTICS_NOT_FOUND',
         message: 'Pre-computed membership analytics not found',
-        details: 'Run scraper-cli compute-analytics to generate analytics'
-      }
+        details: 'Run scraper-cli compute-analytics to generate analytics',
+      },
     })
   }
-  
+
   res.json(analytics)
 })
 ```
@@ -491,66 +497,66 @@ CACHE_DIR/snapshots/{date}/analytics/
 
 ### Route to File Mapping
 
-| Route | Pre-Computed File | Data Type |
-| ----- | ----------------- | --------- |
-| `GET /api/districts/:id/membership-analytics` | `district_{id}_membership-analytics.json` | MembershipAnalyticsData |
-| `GET /api/districts/:id/clubs/:clubId/trends` | `district_{id}_club-trends-index.json` | ClubTrend (from index) |
-| `GET /api/districts/:id/vulnerable-clubs` | `district_{id}_vulnerable-clubs.json` | VulnerableClubsData |
-| `GET /api/districts/:id/leadership-insights` | `district_{id}_leadership-insights.json` | LeadershipInsightsData |
+| Route                                                 | Pre-Computed File                            | Data Type                      |
+| ----------------------------------------------------- | -------------------------------------------- | ------------------------------ |
+| `GET /api/districts/:id/membership-analytics`         | `district_{id}_membership-analytics.json`    | MembershipAnalyticsData        |
+| `GET /api/districts/:id/clubs/:clubId/trends`         | `district_{id}_club-trends-index.json`       | ClubTrend (from index)         |
+| `GET /api/districts/:id/vulnerable-clubs`             | `district_{id}_vulnerable-clubs.json`        | VulnerableClubsData            |
+| `GET /api/districts/:id/leadership-insights`          | `district_{id}_leadership-insights.json`     | LeadershipInsightsData         |
 | `GET /api/districts/:id/distinguished-club-analytics` | `district_{id}_distinguished-analytics.json` | DistinguishedClubAnalyticsData |
-| `GET /api/districts/:id/year-over-year/:date` | `district_{id}_year-over-year.json` | YearOverYearData |
-| `GET /api/districts/:id/analytics/export` | Multiple files | CSV transformation |
-| `GET /api/districts/:id/analytics-summary` | Multiple files | Aggregated response |
+| `GET /api/districts/:id/year-over-year/:date`         | `district_{id}_year-over-year.json`          | YearOverYearData               |
+| `GET /api/districts/:id/analytics/export`             | Multiple files                               | CSV transformation             |
+| `GET /api/districts/:id/analytics-summary`            | Multiple files                               | Aggregated response            |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Pre-Computed File Completeness
 
-*For any* district with snapshot data, running the compute-analytics command SHALL produce all required pre-computed files (membership-analytics, vulnerable-clubs, leadership-insights, distinguished-analytics, year-over-year, performance-targets, club-trends-index).
+_For any_ district with snapshot data, running the compute-analytics command SHALL produce all required pre-computed files (membership-analytics, vulnerable-clubs, leadership-insights, distinguished-analytics, year-over-year, performance-targets, club-trends-index).
 
 **Validates: Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1**
 
 ### Property 2: Backend Route Compliance
 
-*For any* analytics route in the backend, the route handler SHALL NOT instantiate or call AnalyticsEngine, and SHALL only read from pre-computed files via PreComputedAnalyticsReader.
+_For any_ analytics route in the backend, the route handler SHALL NOT instantiate or call AnalyticsEngine, and SHALL only read from pre-computed files via PreComputedAnalyticsReader.
 
 **Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8**
 
 ### Property 3: Club Trends Index Lookup
 
-*For any* club ID in a district, looking up the club in the club-trends-index SHALL return the same ClubTrend data as would be found in the allClubs array of the district analytics.
+_For any_ club ID in a district, looking up the club in the club-trends-index SHALL return the same ClubTrend data as would be found in the allClubs array of the district analytics.
 
 **Validates: Requirements 2.2, 2.3, 2.4**
 
 ### Property 4: Vulnerable Clubs Partition
 
-*For any* VulnerableClubsData, the union of vulnerableClubs and interventionRequired arrays SHALL equal the set of clubs with currentStatus of 'vulnerable' or 'intervention_required' in the district analytics.
+_For any_ VulnerableClubsData, the union of vulnerableClubs and interventionRequired arrays SHALL equal the set of clubs with currentStatus of 'vulnerable' or 'intervention_required' in the district analytics.
 
 **Validates: Requirements 3.2, 3.3**
 
 ### Property 5: Year-Over-Year Data Availability
 
-*For any* district with at least two years of snapshot data, the year-over-year pre-computed file SHALL have dataAvailable=true and contain valid metrics comparisons.
+_For any_ district with at least two years of snapshot data, the year-over-year pre-computed file SHALL have dataAvailable=true and contain valid metrics comparisons.
 
 **Validates: Requirements 6.2, 6.3**
 
 ### Property 6: Missing Data Error Response
 
-*For any* backend route request where the pre-computed file is missing, the backend SHALL return HTTP 404 with error code indicating which scraper-cli command to run.
+_For any_ backend route request where the pre-computed file is missing, the backend SHALL return HTTP 404 with error code indicating which scraper-cli command to run.
 
 **Validates: Requirements 1.5, 2.5, 3.5, 4.4, 5.4, 6.5, 12.1, 12.2**
 
 ### Property 7: Schema Version Validation
 
-*For any* pre-computed file read by the backend, the schema version SHALL be validated and incompatible versions SHALL result in HTTP 500 with clear error message.
+_For any_ pre-computed file read by the backend, the schema version SHALL be validated and incompatible versions SHALL result in HTTP 500 with clear error message.
 
 **Validates: Requirements 10.7**
 
 ### Property 8: Export Data Consistency
 
-*For any* export request, the CSV output SHALL be derived from pre-computed files and SHALL NOT trigger on-demand computation.
+_For any_ export request, the CSV output SHALL be derived from pre-computed files and SHALL NOT trigger on-demand computation.
 
 **Validates: Requirements 11.1, 11.2, 11.3**
 
@@ -558,22 +564,22 @@ CACHE_DIR/snapshots/{date}/analytics/
 
 ### Pre-Computation Errors
 
-| Scenario | Handling | Recovery |
-| -------- | -------- | -------- |
-| Snapshot not found | Log error, skip district | Continue with other districts |
-| Computation failure | Log error with details | Continue with other districts |
-| Write failure | Log error, fail district | Retry on next run |
-| Invalid snapshot data | Log warning, use defaults | Continue processing |
+| Scenario              | Handling                  | Recovery                      |
+| --------------------- | ------------------------- | ----------------------------- |
+| Snapshot not found    | Log error, skip district  | Continue with other districts |
+| Computation failure   | Log error with details    | Continue with other districts |
+| Write failure         | Log error, fail district  | Retry on next run             |
+| Invalid snapshot data | Log warning, use defaults | Continue processing           |
 
 ### Backend Serving Errors
 
-| Scenario | HTTP Code | Error Code | Message |
-| -------- | --------- | ---------- | ------- |
-| Pre-computed file not found | 404 | ANALYTICS_NOT_FOUND | Run scraper-cli compute-analytics |
-| Schema version mismatch | 500 | SCHEMA_VERSION_MISMATCH | Re-run compute-analytics |
-| Corrupted JSON file | 500 | CORRUPTED_FILE | Re-run compute-analytics |
-| No snapshot available | 404 | NO_DATA_AVAILABLE | Run scraper-cli to fetch data |
-| Invalid district ID | 400 | INVALID_DISTRICT_ID | Check district ID format |
+| Scenario                    | HTTP Code | Error Code              | Message                           |
+| --------------------------- | --------- | ----------------------- | --------------------------------- |
+| Pre-computed file not found | 404       | ANALYTICS_NOT_FOUND     | Run scraper-cli compute-analytics |
+| Schema version mismatch     | 500       | SCHEMA_VERSION_MISMATCH | Re-run compute-analytics          |
+| Corrupted JSON file         | 500       | CORRUPTED_FILE          | Re-run compute-analytics          |
+| No snapshot available       | 404       | NO_DATA_AVAILABLE       | Run scraper-cli to fetch data     |
+| Invalid district ID         | 400       | INVALID_DISTRICT_ID     | Check district ID format          |
 
 ## Testing Strategy
 
@@ -581,16 +587,16 @@ Per the testing steering document, property-based tests are a tool, not a defaul
 
 ### Analysis: Which Properties Warrant PBT?
 
-| Property | PBT Warranted? | Rationale |
-| -------- | -------------- | --------- |
-| P1: File completeness | No | Simple existence check, examples suffice |
-| P2: Route compliance | No | Code inspection, not runtime property |
-| P3: Club trends lookup | **Yes** | Index lookup invariant across all clubs |
-| P4: Vulnerable clubs partition | **Yes** | Mathematical partition property |
-| P5: YoY data availability | No | Conditional check, examples suffice |
-| P6: Missing data errors | No | Error handling, examples suffice |
-| P7: Schema validation | No | Version comparison, examples suffice |
-| P8: Export consistency | No | Data flow check, examples suffice |
+| Property                       | PBT Warranted? | Rationale                                |
+| ------------------------------ | -------------- | ---------------------------------------- |
+| P1: File completeness          | No             | Simple existence check, examples suffice |
+| P2: Route compliance           | No             | Code inspection, not runtime property    |
+| P3: Club trends lookup         | **Yes**        | Index lookup invariant across all clubs  |
+| P4: Vulnerable clubs partition | **Yes**        | Mathematical partition property          |
+| P5: YoY data availability      | No             | Conditional check, examples suffice      |
+| P6: Missing data errors        | No             | Error handling, examples suffice         |
+| P7: Schema validation          | No             | Version comparison, examples suffice     |
+| P8: Export consistency         | No             | Data flow check, examples suffice        |
 
 ### Unit Tests (Preferred Approach)
 
@@ -648,4 +654,3 @@ Integration tests should verify:
 1. **End-to-end pre-computation** - scraper-cli compute-analytics generates all files
 2. **Backend serving** - Routes correctly serve pre-computed data
 3. **Error handling** - Missing files return correct 404 responses
-

@@ -8,6 +8,7 @@
  * - 4.1: Provide a single aggregated endpoint that returns analytics, distinguished
  *        club analytics, and leadership insights in one response
  * - 4.4: Support the same query parameters (startDate, endDate) as individual endpoints
+ * - 8.8: Route SHALL NOT call AnalyticsEngine for year-over-year data
  */
 
 import { Router, type Request, type Response } from 'express'
@@ -21,11 +22,18 @@ import {
   validateDateFormat,
   getPreComputedAnalyticsService,
   getTimeSeriesIndexService,
-  getAnalyticsEngine,
   extractStringParam,
+  snapshotStore,
+  cacheDirectory,
 } from './shared.js'
+import { PreComputedAnalyticsReader } from '../../services/PreComputedAnalyticsReader.js'
 
 export const analyticsSummaryRouter = Router()
+
+// Create PreComputedAnalyticsReader instance for reading year-over-year data
+const preComputedAnalyticsReader = new PreComputedAnalyticsReader({
+  cacheDir: cacheDirectory,
+})
 
 /**
  * Response type for the aggregated analytics endpoint
@@ -266,27 +274,33 @@ analyticsSummaryRouter.get(
         // Continue without trend data - we can still return summary
       }
 
-      // Calculate year-over-year comparison if we have enough data
+      // Calculate year-over-year comparison from pre-computed data
+      // Requirement 8.8: Route SHALL NOT call AnalyticsEngine for year-over-year data
       let yearOverYear: AggregatedAnalyticsResponse['yearOverYear'] | undefined
 
       try {
-        const analyticsEngine = await getAnalyticsEngine()
-        const yoyComparison = await analyticsEngine.calculateYearOverYear(
-          districtId,
-          effectiveEndDate ?? new Date().toISOString().split('T')[0] ?? ''
-        )
+        // Get the latest snapshot date for reading pre-computed year-over-year data
+        const latestSnapshot = await snapshotStore.getLatestSuccessful()
 
-        if (
-          yoyComparison &&
-          yoyComparison.dataAvailable &&
-          yoyComparison.metrics
-        ) {
-          yearOverYear = {
-            membershipChange: yoyComparison.metrics.membership.change,
-            distinguishedChange:
-              yoyComparison.metrics.distinguishedClubs.change,
-            clubHealthChange:
-              yoyComparison.metrics.clubHealth.thrivingClubs.change,
+        if (latestSnapshot) {
+          const yoyComparison =
+            await preComputedAnalyticsReader.readYearOverYear(
+              latestSnapshot.snapshot_id,
+              districtId
+            )
+
+          if (
+            yoyComparison &&
+            yoyComparison.dataAvailable &&
+            yoyComparison.metrics
+          ) {
+            yearOverYear = {
+              membershipChange: yoyComparison.metrics.membership.change,
+              distinguishedChange:
+                yoyComparison.metrics.distinguishedClubs.change,
+              clubHealthChange:
+                yoyComparison.metrics.clubHealth.thrivingClubs.change,
+            }
           }
         }
       } catch (yoyError) {

@@ -97,15 +97,25 @@ export type {
   SeasonalPattern,
   MembershipYearOverYearComparison,
   MembershipAnalytics,
+  MembershipAnalyticsData,
 
   // Leadership Insights types (Requirements 4.2)
   LeadershipEffectivenessScore,
   LeadershipChange,
   AreaDirectorCorrelation,
   LeadershipInsights,
+  LeadershipInsightsData,
 
   // Extended Year-Over-Year Comparison types (Requirements 6.2, 6.3)
   ExtendedYearOverYearComparison,
+
+  // Year-Over-Year Data types (Requirements 6.1, 6.2, 6.3)
+  MetricComparison,
+  MultiYearTrend,
+  YearOverYearData,
+
+  // Performance Targets Data types (Requirements 7.1, 7.2)
+  PerformanceTargetsData,
 
   // District Performance Targets types (Requirements 7.2)
   RecognitionLevel,
@@ -126,6 +136,12 @@ export type {
   RecognitionEligibility,
   AreaRecognition,
   DivisionRecognition,
+
+  // Distinguished Club Analytics Data types (Requirements 5.1, 5.2)
+  DistinguishedClubAnalyticsData,
+
+  // Extended Analytics Computation Result (Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1)
+  ExtendedAnalyticsComputationResult,
 } from './types.js'
 
 // Interfaces

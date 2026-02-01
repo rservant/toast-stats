@@ -24,10 +24,7 @@
  * Requirements: 1.1, 1.2
  */
 
-import type {
-  MembershipAnalytics,
-  SeasonalPattern,
-} from '../types.js'
+import type { MembershipAnalytics, SeasonalPattern } from '../types.js'
 import { parseIntSafe, ensureString } from './AnalyticsUtils.js'
 
 // ========== Backend-specific types (to be removed in task 3.2) ==========

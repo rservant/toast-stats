@@ -627,9 +627,7 @@ export class TransformService {
         const failedDistrictIds = results
           .filter(r => !r.success)
           .map(r => r.districtId)
-        const errorMessages = errors.map(
-          e => `${e.districtId}: ${e.error}`
-        )
+        const errorMessages = errors.map(e => `${e.districtId}: ${e.error}`)
         const processingDuration = Date.now() - startTime
 
         await this.writeMetadata(

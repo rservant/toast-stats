@@ -189,7 +189,11 @@ describe('ClubHealthAnalyticsModule', () => {
         createMockClub({ clubId: '1', membershipCount: 25 }),
       ])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2, snapshot3])
+      const result = module.generateClubHealthData([
+        snapshot1,
+        snapshot2,
+        snapshot3,
+      ])
 
       expect(result.allClubs).toHaveLength(1)
       expect(result.allClubs[0]?.membershipTrend).toHaveLength(3)
@@ -212,7 +216,11 @@ describe('ClubHealthAnalyticsModule', () => {
         createMockClub({ clubId: '1', dcpGoals: 7 }),
       ])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2, snapshot3])
+      const result = module.generateClubHealthData([
+        snapshot1,
+        snapshot2,
+        snapshot3,
+      ])
 
       expect(result.allClubs).toHaveLength(1)
       expect(result.allClubs[0]?.dcpGoalsTrend).toHaveLength(3)
@@ -238,7 +246,11 @@ describe('ClubHealthAnalyticsModule', () => {
         createMockClub({ clubId: '2', membershipCount: 18 }),
       ])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2, snapshot3])
+      const result = module.generateClubHealthData([
+        snapshot1,
+        snapshot2,
+        snapshot3,
+      ])
 
       // Club 1 should have 3 trend entries
       const club1 = result.allClubs.find(c => c.clubId === '1')
@@ -293,20 +305,33 @@ describe('ClubHealthAnalyticsModule', () => {
       const result = module.generateClubHealthData([snapshot])
 
       // Hardened backend uses detailed risk factor messages
-      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('Membership below 12'))).toBe(true)
+      expect(
+        result.allClubs[0]?.riskFactors.some(rf =>
+          rf.includes('Membership below 12')
+        )
+      ).toBe(true)
     })
 
     it('should include membership threshold risk factor when membership decreases below threshold', () => {
       const module = new ClubHealthAnalyticsModule()
       // Club with membership below 20 and no net growth - should be vulnerable
       const snapshot = createMockSnapshot('2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 15, dcpGoals: 0, membershipBase: 15 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 15,
+          dcpGoals: 0,
+          membershipBase: 15,
+        }),
       ])
 
       const result = module.generateClubHealthData([snapshot])
 
       // Hardened backend adds risk factor for membership below threshold
-      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('Membership below threshold'))).toBe(true)
+      expect(
+        result.allClubs[0]?.riskFactors.some(rf =>
+          rf.includes('Membership below threshold')
+        )
+      ).toBe(true)
     })
 
     it('should include DCP checkpoint risk factor when DCP goals are below threshold', () => {
@@ -324,21 +349,39 @@ describe('ClubHealthAnalyticsModule', () => {
       const result = module.generateClubHealthData([snapshot])
 
       // Hardened backend adds risk factor for DCP checkpoint not met
-      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('DCP checkpoint not met'))).toBe(true)
+      expect(
+        result.allClubs[0]?.riskFactors.some(rf =>
+          rf.includes('DCP checkpoint not met')
+        )
+      ).toBe(true)
     })
 
     it('should include multiple risk factors when applicable', () => {
       const module = new ClubHealthAnalyticsModule()
       // Club with membership below threshold and no DCP goals
       const snapshot = createMockSnapshot('2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 15, paymentsCount: 3, dcpGoals: 0, membershipBase: 15 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 15,
+          paymentsCount: 3,
+          dcpGoals: 0,
+          membershipBase: 15,
+        }),
       ])
 
       const result = module.generateClubHealthData([snapshot])
 
       // Should have both membership threshold and DCP checkpoint risk factors
-      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('Membership below threshold'))).toBe(true)
-      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('DCP checkpoint not met'))).toBe(true)
+      expect(
+        result.allClubs[0]?.riskFactors.some(rf =>
+          rf.includes('Membership below threshold')
+        )
+      ).toBe(true)
+      expect(
+        result.allClubs[0]?.riskFactors.some(rf =>
+          rf.includes('DCP checkpoint not met')
+        )
+      ).toBe(true)
     })
   })
 
@@ -818,9 +861,12 @@ describe('ClubHealthAnalyticsModule', () => {
 
       // Verify health assessment fields
       expect(clubTrend.currentStatus).toBeDefined()
-      expect(['thriving', 'stable', 'vulnerable', 'intervention_required']).toContain(
-        clubTrend.currentStatus
-      )
+      expect([
+        'thriving',
+        'stable',
+        'vulnerable',
+        'intervention_required',
+      ]).toContain(clubTrend.currentStatus)
       expect(typeof clubTrend.healthScore).toBe('number')
       expect(clubTrend.healthScore).toBeGreaterThanOrEqual(0)
       expect(clubTrend.healthScore).toBeLessThanOrEqual(1)
@@ -992,16 +1038,29 @@ describe('ClubHealthAnalyticsModule', () => {
         }),
       ])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2, snapshot3])
+      const result = module.generateClubHealthData([
+        snapshot1,
+        snapshot2,
+        snapshot3,
+      ])
 
       expect(result.allClubs).toHaveLength(1)
       const clubTrend = result.allClubs[0]!
 
       // Verify membership trend has entries for all snapshots
       expect(clubTrend.membershipTrend).toHaveLength(3)
-      expect(clubTrend.membershipTrend[0]).toEqual({ date: '2024-01-15', count: 18 })
-      expect(clubTrend.membershipTrend[1]).toEqual({ date: '2024-02-15', count: 22 })
-      expect(clubTrend.membershipTrend[2]).toEqual({ date: '2024-03-15', count: 25 })
+      expect(clubTrend.membershipTrend[0]).toEqual({
+        date: '2024-01-15',
+        count: 18,
+      })
+      expect(clubTrend.membershipTrend[1]).toEqual({
+        date: '2024-02-15',
+        count: 22,
+      })
+      expect(clubTrend.membershipTrend[2]).toEqual({
+        date: '2024-03-15',
+        count: 25,
+      })
 
       // Verify DCP goals trend has entries for all snapshots
       expect(clubTrend.dcpGoalsTrend).toHaveLength(3)
@@ -1086,7 +1145,10 @@ describe('ClubHealthAnalyticsModule', () => {
     /**
      * Helper function to verify a ClubTrend object has all required fields
      */
-    function verifyClubTrendCompleteness(club: ClubTrend, context: string): void {
+    function verifyClubTrendCompleteness(
+      club: ClubTrend,
+      context: string
+    ): void {
       // Core identification fields
       expect(club.clubId, `${context}: clubId should be defined`).toBeDefined()
       expect(
@@ -1349,7 +1411,9 @@ describe('ClubHealthAnalyticsModule', () => {
       // Verify all thriving clubs are complete
       for (const club of result.thrivingClubs) {
         verifyClubTrendCompleteness(club, `thrivingClubs[${club.clubId}]`)
-        const allClubsMatch = result.allClubs.find(c => c.clubId === club.clubId)
+        const allClubsMatch = result.allClubs.find(
+          c => c.clubId === club.clubId
+        )
         expect(allClubsMatch).toBeDefined()
         expect(club).toEqual(allClubsMatch)
       }
@@ -1357,7 +1421,9 @@ describe('ClubHealthAnalyticsModule', () => {
       // Verify all vulnerable clubs are complete
       for (const club of result.vulnerableClubs) {
         verifyClubTrendCompleteness(club, `vulnerableClubs[${club.clubId}]`)
-        const allClubsMatch = result.allClubs.find(c => c.clubId === club.clubId)
+        const allClubsMatch = result.allClubs.find(
+          c => c.clubId === club.clubId
+        )
         expect(allClubsMatch).toBeDefined()
         expect(club).toEqual(allClubsMatch)
       }
@@ -1368,7 +1434,9 @@ describe('ClubHealthAnalyticsModule', () => {
           club,
           `interventionRequiredClubs[${club.clubId}]`
         )
-        const allClubsMatch = result.allClubs.find(c => c.clubId === club.clubId)
+        const allClubsMatch = result.allClubs.find(
+          c => c.clubId === club.clubId
+        )
         expect(allClubsMatch).toBeDefined()
         expect(club).toEqual(allClubsMatch)
       }
@@ -1464,7 +1532,9 @@ describe('ClubHealthAnalyticsModule', () => {
       const allClubsMatch = result.allClubs.find(
         c => c.clubId === categorizedClub.clubId
       )
-      expect(categorizedClub.octoberRenewals).toBe(allClubsMatch?.octoberRenewals)
+      expect(categorizedClub.octoberRenewals).toBe(
+        allClubsMatch?.octoberRenewals
+      )
       expect(categorizedClub.aprilRenewals).toBe(allClubsMatch?.aprilRenewals)
       expect(categorizedClub.newMembers).toBe(allClubsMatch?.newMembers)
     })

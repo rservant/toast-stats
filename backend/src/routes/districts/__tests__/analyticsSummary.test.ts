@@ -8,12 +8,21 @@
  * Requirements:
  * - 4.1: Single aggregated endpoint returning analytics in one response
  * - 4.4: Support startDate and endDate query parameters
+ * - 8.8: Route SHALL NOT call AnalyticsEngine for year-over-year data
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import express, { type Express } from 'express'
 import request from 'supertest'
 import { analyticsSummaryRouter } from '../analyticsSummary.js'
+
+// Use vi.hoisted to define mocks that are used in vi.mock factories
+const { mockSnapshotStore, mockReadYearOverYear } = vi.hoisted(() => ({
+  mockSnapshotStore: {
+    getLatestSuccessful: vi.fn(),
+  },
+  mockReadYearOverYear: vi.fn(),
+}))
 
 // Mock the shared module
 vi.mock('../shared.js', () => ({
@@ -45,12 +54,26 @@ vi.mock('../shared.js', () => ({
   }),
   getPreComputedAnalyticsService: vi.fn(),
   getTimeSeriesIndexService: vi.fn(),
-  getAnalyticsEngine: vi.fn(),
+  cacheDirectory: '/tmp/test-cache',
+  snapshotStore: mockSnapshotStore,
 }))
 
 // Mock the cache middleware
 vi.mock('../../../middleware/cache.js', () => ({
   cacheMiddleware: vi.fn(
+    () =>
+      (
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction
+      ) =>
+        next()
+  ),
+}))
+
+// Mock the request deduplication middleware
+vi.mock('../../../middleware/requestDeduplication.js', () => ({
+  requestDeduplicationMiddleware: vi.fn(
     () =>
       (
         req: express.Request,
@@ -85,11 +108,17 @@ vi.mock('../../../utils/transformers.js', () => ({
   })),
 }))
 
+// Mock the PreComputedAnalyticsReader - year-over-year is now read from pre-computed files
+vi.mock('../../../services/PreComputedAnalyticsReader.js', () => ({
+  PreComputedAnalyticsReader: class MockPreComputedAnalyticsReader {
+    readYearOverYear = mockReadYearOverYear
+  },
+}))
+
 // Import mocked functions
 import {
   getPreComputedAnalyticsService,
   getTimeSeriesIndexService,
-  getAnalyticsEngine,
 } from '../shared.js'
 
 describe('Analytics Summary Route', () => {
@@ -102,6 +131,14 @@ describe('Analytics Summary Route', () => {
 
     // Reset all mocks
     vi.clearAllMocks()
+
+    // Default mock for snapshotStore
+    mockSnapshotStore.getLatestSuccessful.mockResolvedValue({
+      snapshot_id: '2024-01-15',
+    })
+
+    // Default mock for readYearOverYear
+    mockReadYearOverYear.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -119,44 +156,6 @@ describe('Analytics Summary Route', () => {
       })
 
       it('should return 400 for invalid startDate format', async () => {
-        // Mock services to return valid data
-        const mockPreComputedService = {
-          getLatestSummary: vi.fn().mockResolvedValue(null),
-        }
-        const mockTimeSeriesService = {
-          getTrendData: vi.fn().mockResolvedValue([]),
-        }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi.fn().mockResolvedValue({
-            dateRange: { start: '2024-01-01', end: '2024-01-31' },
-            totalMembership: 100,
-            membershipChange: 5,
-            thrivingClubs: [],
-            vulnerableClubs: [],
-            interventionRequiredClubs: [],
-            distinguishedClubs: {
-              total: 0,
-              smedley: 0,
-              presidents: 0,
-              select: 0,
-              distinguished: 0,
-            },
-            distinguishedProjection: 0,
-            membershipTrend: [],
-          }),
-        }
-
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
-          mockPreComputedService as never
-        )
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
-          mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
-        )
-
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
           .query({ startDate: 'invalid-date' })
@@ -252,18 +251,12 @@ describe('Analytics Summary Route', () => {
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue(mockTrendData),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
         )
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
         )
 
         const response = await request(app)
@@ -281,7 +274,7 @@ describe('Analytics Summary Route', () => {
         expect(response.body.trends.payments).toHaveLength(2)
       })
 
-      it('should include year-over-year comparison when available', async () => {
+      it('should include year-over-year comparison when available from pre-computed data', async () => {
         const mockSummary = {
           snapshotId: '2024-01-15',
           districtId: '42',
@@ -309,6 +302,7 @@ describe('Analytics Summary Route', () => {
           },
         }
 
+        // Mock year-over-year data from PreComputedAnalyticsReader
         const mockYoY = {
           currentDate: '2024-01-15',
           previousYearDate: '2023-01-15',
@@ -325,12 +319,6 @@ describe('Analytics Summary Route', () => {
               previous: 20,
               change: 5,
               percentageChange: 25,
-              byLevel: {
-                smedley: { current: 2, previous: 1, change: 1 },
-                presidents: { current: 5, previous: 4, change: 1 },
-                select: { current: 8, previous: 7, change: 1 },
-                distinguished: { current: 10, previous: 8, change: 2 },
-              },
             },
             clubHealth: {
               thrivingClubs: {
@@ -355,9 +343,6 @@ describe('Analytics Summary Route', () => {
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue([]),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(mockYoY),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
@@ -365,9 +350,9 @@ describe('Analytics Summary Route', () => {
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
         )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
-        )
+
+        // Mock the PreComputedAnalyticsReader to return year-over-year data
+        mockReadYearOverYear.mockResolvedValue(mockYoY)
 
         const response = await request(app)
           .get('/api/districts/42/analytics-summary')
@@ -390,18 +375,12 @@ describe('Analytics Summary Route', () => {
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue([]),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
         )
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
         )
 
         const response = await request(app)
@@ -425,39 +404,6 @@ describe('Analytics Summary Route', () => {
         expect(response.body.error.details.backfillJobType).toBe(
           'analytics-generation'
         )
-      })
-
-      it('should not call analytics engine for on-demand computation when pre-computed data is unavailable', async () => {
-        // Requirement 1.4: System SHALL NOT fall back to on-demand analytics computation
-        const mockPreComputedService = {
-          getLatestSummary: vi.fn().mockResolvedValue(null),
-        }
-        const mockTimeSeriesService = {
-          getTrendData: vi.fn().mockResolvedValue([]),
-        }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-          generateDistrictAnalytics: vi.fn(),
-        }
-
-        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
-          mockPreComputedService as never
-        )
-        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
-          mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
-        )
-
-        await request(app)
-          .get('/api/districts/42/analytics-summary')
-          .expect(404)
-
-        // Verify generateDistrictAnalytics was NOT called (no fallback)
-        expect(
-          mockAnalyticsEngine.generateDistrictAnalytics
-        ).not.toHaveBeenCalled()
       })
     })
 
@@ -496,18 +442,12 @@ describe('Analytics Summary Route', () => {
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue([]),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
         )
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
         )
 
         const response = await request(app)
@@ -536,18 +476,12 @@ describe('Analytics Summary Route', () => {
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue([]),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
         )
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
         )
 
         const response = await request(app)
@@ -571,18 +505,12 @@ describe('Analytics Summary Route', () => {
         const mockTimeSeriesService = {
           getTrendData: vi.fn().mockResolvedValue([]),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
         )
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
         )
 
         const response = await request(app)
@@ -628,18 +556,12 @@ describe('Analytics Summary Route', () => {
             .fn()
             .mockRejectedValue(new Error('Index file not found')),
         }
-        const mockAnalyticsEngine = {
-          calculateYearOverYear: vi.fn().mockResolvedValue(null),
-        }
 
         vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
           mockPreComputedService as never
         )
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
           mockTimeSeriesService as never
-        )
-        vi.mocked(getAnalyticsEngine).mockResolvedValue(
-          mockAnalyticsEngine as never
         )
 
         // Should still return 200 with summary data, just without trend data

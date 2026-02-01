@@ -24,6 +24,14 @@ import type {
   ClubHealthData,
   PreComputedAnalyticsFile,
   AnalyticsManifest,
+  MembershipAnalyticsData,
+  VulnerableClubsData,
+  LeadershipInsightsData,
+  DistinguishedClubAnalyticsData,
+  YearOverYearData,
+  PerformanceTargetsData,
+  ClubTrendsIndex,
+  ClubTrend,
 } from '@toastmasters/analytics-core'
 
 describe('PreComputedAnalyticsReader', () => {

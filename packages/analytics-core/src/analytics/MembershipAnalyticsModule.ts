@@ -77,9 +77,7 @@ export class MembershipAnalyticsModule {
     }
 
     // Filter snapshots for the requested district
-    const districtSnapshots = snapshots.filter(
-      s => s.districtId === districtId
-    )
+    const districtSnapshots = snapshots.filter(s => s.districtId === districtId)
 
     if (districtSnapshots.length === 0) {
       return {
@@ -95,10 +93,12 @@ export class MembershipAnalyticsModule {
     }
 
     // Calculate membership trend over time
-    const membershipTrend = this.calculateMembershipTrendInternal(districtSnapshots)
+    const membershipTrend =
+      this.calculateMembershipTrendInternal(districtSnapshots)
     const totalMembership =
       membershipTrend[membershipTrend.length - 1]?.count ?? 0
-    const membershipChange = this.calculateMembershipChangeInternal(membershipTrend)
+    const membershipChange =
+      this.calculateMembershipChangeInternal(membershipTrend)
 
     // Calculate program year change
     const programYearChange = this.calculateProgramYearChange(membershipTrend)
@@ -106,7 +106,8 @@ export class MembershipAnalyticsModule {
     // Analyze club trends to identify top growth and declining clubs
     const clubTrends = this.analyzeClubTrendsInternal(districtSnapshots)
     const topGrowthClubs = this.calculateTopGrowthClubsInternal(clubTrends)
-    const topDecliningClubs = this.calculateTopDecliningClubsInternal(clubTrends)
+    const topDecliningClubs =
+      this.calculateTopDecliningClubsInternal(clubTrends)
 
     // Identify seasonal patterns
     const seasonalPatterns = this.identifySeasonalPatterns(membershipTrend)

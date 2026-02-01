@@ -59,6 +59,20 @@ export interface DistrictComputeResult {
   analyticsPath?: string
   membershipPath?: string
   clubHealthPath?: string
+  /** Path to membership analytics file (NEW - Requirement 1.1) */
+  membershipAnalyticsPath?: string
+  /** Path to vulnerable clubs file (NEW - Requirement 3.1) */
+  vulnerableClubsPath?: string
+  /** Path to leadership insights file (NEW - Requirement 4.1) */
+  leadershipInsightsPath?: string
+  /** Path to distinguished club analytics file (NEW - Requirement 5.1) */
+  distinguishedAnalyticsPath?: string
+  /** Path to year-over-year file (NEW - Requirement 6.1) */
+  yearOverYearPath?: string
+  /** Path to performance targets file (NEW - Requirement 7.1) */
+  performanceTargetsPath?: string
+  /** Path to club trends index file (NEW - Requirement 2.1) */
+  clubTrendsIndexPath?: string
   error?: string
   skipped?: boolean
 }
@@ -470,6 +484,7 @@ export class AnalyticsComputeService {
         : undefined
 
       // Write analytics files using AnalyticsWriter
+      // Base analytics files (existing)
       const analyticsPath = await this.analyticsWriter.writeDistrictAnalytics(
         date,
         districtId,
@@ -491,12 +506,75 @@ export class AnalyticsComputeService {
         writeOptions
       )
 
+      // NEW: Write extended analytics files (Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1)
+      const membershipAnalyticsPath =
+        await this.analyticsWriter.writeMembershipAnalytics(
+          date,
+          districtId,
+          computationResult.membershipAnalytics,
+          writeOptions
+        )
+
+      const vulnerableClubsPath =
+        await this.analyticsWriter.writeVulnerableClubs(
+          date,
+          districtId,
+          computationResult.vulnerableClubs,
+          writeOptions
+        )
+
+      const leadershipInsightsPath =
+        await this.analyticsWriter.writeLeadershipInsights(
+          date,
+          districtId,
+          computationResult.leadershipInsights,
+          writeOptions
+        )
+
+      const distinguishedAnalyticsPath =
+        await this.analyticsWriter.writeDistinguishedClubAnalytics(
+          date,
+          districtId,
+          computationResult.distinguishedClubAnalytics,
+          writeOptions
+        )
+
+      const yearOverYearPath = await this.analyticsWriter.writeYearOverYear(
+        date,
+        districtId,
+        computationResult.yearOverYear,
+        writeOptions
+      )
+
+      const performanceTargetsPath =
+        await this.analyticsWriter.writePerformanceTargets(
+          date,
+          districtId,
+          computationResult.performanceTargets,
+          writeOptions
+        )
+
+      const clubTrendsIndexPath =
+        await this.analyticsWriter.writeClubTrendsIndex(
+          date,
+          districtId,
+          computationResult.clubTrendsIndex,
+          writeOptions
+        )
+
       this.logger.info('Analytics computed and written', {
         date,
         districtId,
         analyticsPath,
         membershipPath,
         clubHealthPath,
+        membershipAnalyticsPath,
+        vulnerableClubsPath,
+        leadershipInsightsPath,
+        distinguishedAnalyticsPath,
+        yearOverYearPath,
+        performanceTargetsPath,
+        clubTrendsIndexPath,
         sourceSnapshotChecksum,
       })
 
@@ -506,6 +584,13 @@ export class AnalyticsComputeService {
         analyticsPath,
         membershipPath,
         clubHealthPath,
+        membershipAnalyticsPath,
+        vulnerableClubsPath,
+        leadershipInsightsPath,
+        distinguishedAnalyticsPath,
+        yearOverYearPath,
+        performanceTargetsPath,
+        clubTrendsIndexPath,
       }
     } catch (error) {
       const errorMessage =
@@ -615,6 +700,7 @@ export class AnalyticsComputeService {
 
       if (result.success && !result.skipped) {
         // Collect analytics file paths
+        // Base analytics files (existing)
         if (result.analyticsPath) {
           analyticsLocations.push(result.analyticsPath)
           const entry = await this.analyticsWriter.createManifestEntry(
@@ -639,6 +725,71 @@ export class AnalyticsComputeService {
             result.clubHealthPath,
             districtId,
             'clubhealth'
+          )
+          manifestEntries.push(entry)
+        }
+
+        // NEW: Extended analytics files (Requirements 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 12.3)
+        if (result.membershipAnalyticsPath) {
+          analyticsLocations.push(result.membershipAnalyticsPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.membershipAnalyticsPath,
+            districtId,
+            'membership-analytics'
+          )
+          manifestEntries.push(entry)
+        }
+        if (result.vulnerableClubsPath) {
+          analyticsLocations.push(result.vulnerableClubsPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.vulnerableClubsPath,
+            districtId,
+            'vulnerable-clubs'
+          )
+          manifestEntries.push(entry)
+        }
+        if (result.leadershipInsightsPath) {
+          analyticsLocations.push(result.leadershipInsightsPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.leadershipInsightsPath,
+            districtId,
+            'leadership-insights'
+          )
+          manifestEntries.push(entry)
+        }
+        if (result.distinguishedAnalyticsPath) {
+          analyticsLocations.push(result.distinguishedAnalyticsPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.distinguishedAnalyticsPath,
+            districtId,
+            'distinguished-analytics'
+          )
+          manifestEntries.push(entry)
+        }
+        if (result.yearOverYearPath) {
+          analyticsLocations.push(result.yearOverYearPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.yearOverYearPath,
+            districtId,
+            'year-over-year'
+          )
+          manifestEntries.push(entry)
+        }
+        if (result.performanceTargetsPath) {
+          analyticsLocations.push(result.performanceTargetsPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.performanceTargetsPath,
+            districtId,
+            'performance-targets'
+          )
+          manifestEntries.push(entry)
+        }
+        if (result.clubTrendsIndexPath) {
+          analyticsLocations.push(result.clubTrendsIndexPath)
+          const entry = await this.analyticsWriter.createManifestEntry(
+            result.clubTrendsIndexPath,
+            districtId,
+            'club-trends-index'
           )
           manifestEntries.push(entry)
         }

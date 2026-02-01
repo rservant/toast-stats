@@ -179,7 +179,10 @@ export class DivisionAreaAnalyticsModule {
 
       // Calculate club health score based on Requirements 3.1-3.4
       const membership = club.membershipCount
-      const clubHealthScore = this.calculateClubHealthScore(membership, dcpGoals)
+      const clubHealthScore = this.calculateClubHealthScore(
+        membership,
+        dcpGoals
+      )
       division.healthScoreSum += clubHealthScore
     }
 
@@ -291,7 +294,10 @@ export class DivisionAreaAnalyticsModule {
    * @param divisionId - Division ID to get goals for
    * @returns Total DCP goals for the division
    */
-  getDivisionDcpGoals(snapshot: DistrictStatistics, divisionId: string): number {
+  getDivisionDcpGoals(
+    snapshot: DistrictStatistics,
+    divisionId: string
+  ): number {
     return snapshot.clubs
       .filter(club => club.divisionId === divisionId)
       .reduce((sum, club) => {
@@ -366,7 +372,10 @@ export class DivisionAreaAnalyticsModule {
 
       // Calculate club health score based on Requirements 3.1-3.4
       const membership = club.membershipCount
-      const clubHealthScore = this.calculateClubHealthScore(membership, dcpGoals)
+      const clubHealthScore = this.calculateClubHealthScore(
+        membership,
+        dcpGoals
+      )
       area.healthScoreSum += clubHealthScore
     }
 

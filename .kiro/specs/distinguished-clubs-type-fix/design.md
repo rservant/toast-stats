@@ -38,12 +38,12 @@ flowchart TB
 
 ### Component Responsibilities
 
-| Component | Responsibility |
-|-----------|---------------|
-| `analytics-core/types.ts` | Define `DistinguishedClubCounts` type and update `DistrictAnalytics` |
-| `DistinguishedClubAnalyticsModule` | Generate counts object and club list from snapshots |
-| `AnalyticsComputer` | Orchestrate computation and populate both fields |
-| `Backend analytics route` | Transform legacy array format to object format |
+| Component                          | Responsibility                                                       |
+| ---------------------------------- | -------------------------------------------------------------------- |
+| `analytics-core/types.ts`          | Define `DistinguishedClubCounts` type and update `DistrictAnalytics` |
+| `DistinguishedClubAnalyticsModule` | Generate counts object and club list from snapshots                  |
+| `AnalyticsComputer`                | Orchestrate computation and populate both fields                     |
+| `Backend analytics route`          | Transform legacy array format to object format                       |
 
 ## Components and Interfaces
 
@@ -72,13 +72,13 @@ export interface DistinguishedClubCounts {
  */
 export interface DistrictAnalytics {
   // ... existing fields ...
-  
+
   /** Summary counts of distinguished clubs by level */
   distinguishedClubs: DistinguishedClubCounts
-  
+
   /** Detailed list of distinguished clubs (new field) */
   distinguishedClubsList: DistinguishedClubSummary[]
-  
+
   // ... remaining fields ...
 }
 ```
@@ -125,44 +125,42 @@ function isLegacyDistinguishedClubsFormat(
 
 ### DistinguishedClubCounts
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `smedley` | `number` | Count of Smedley Distinguished clubs (10+ goals, 25+ members) |
-| `presidents` | `number` | Count of President's Distinguished clubs (9+ goals, 20+ members) |
-| `select` | `number` | Count of Select Distinguished clubs (7+ goals, 20+ members) |
-| `distinguished` | `number` | Count of Distinguished clubs (5+ goals, 20+ members) |
-| `total` | `number` | Sum of all distinguished clubs |
+| Field           | Type     | Description                                                      |
+| --------------- | -------- | ---------------------------------------------------------------- |
+| `smedley`       | `number` | Count of Smedley Distinguished clubs (10+ goals, 25+ members)    |
+| `presidents`    | `number` | Count of President's Distinguished clubs (9+ goals, 20+ members) |
+| `select`        | `number` | Count of Select Distinguished clubs (7+ goals, 20+ members)      |
+| `distinguished` | `number` | Count of Distinguished clubs (5+ goals, 20+ members)             |
+| `total`         | `number` | Sum of all distinguished clubs                                   |
 
 ### DistinguishedClubSummary (Existing - No Changes)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `clubId` | `string` | Unique club identifier |
-| `clubName` | `string` | Display name of the club |
-| `status` | `'smedley' \| 'president' \| 'select' \| 'distinguished' \| 'none'` | Recognition level |
-| `dcpPoints` | `number` | DCP goals achieved |
-| `goalsCompleted` | `number` | Number of goals completed |
+| Field            | Type                                                                | Description               |
+| ---------------- | ------------------------------------------------------------------- | ------------------------- |
+| `clubId`         | `string`                                                            | Unique club identifier    |
+| `clubName`       | `string`                                                            | Display name of the club  |
+| `status`         | `'smedley' \| 'president' \| 'select' \| 'distinguished' \| 'none'` | Recognition level         |
+| `dcpPoints`      | `number`                                                            | DCP goals achieved        |
+| `goalsCompleted` | `number`                                                            | Number of goals completed |
 
 ### Recognition Level Thresholds
 
-| Level | Goals Required | Members Required |
-|-------|---------------|------------------|
-| Smedley | 10+ | 25+ |
-| President's | 9+ | 20+ |
-| Select | 7+ | 20+ |
-| Distinguished | 5+ | 20+ |
-
-
+| Level         | Goals Required | Members Required |
+| ------------- | -------------- | ---------------- |
+| Smedley       | 10+            | 25+              |
+| President's   | 9+             | 20+              |
+| Select        | 7+             | 20+              |
+| Distinguished | 5+             | 20+              |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Per `testing.md` Section 7, property tests are reserved for cases where they genuinely add value. The following properties meet the criteria (mathematical invariants, consistency/roundtrip properties).
 
 ### Property 1: Total Equals Sum of Counts
 
-*For any* `DistinguishedClubCounts` object produced by the system, the `total` field SHALL equal the sum of `smedley + presidents + select + distinguished`.
+_For any_ `DistinguishedClubCounts` object produced by the system, the `total` field SHALL equal the sum of `smedley + presidents + select + distinguished`.
 
 **Rationale**: Mathematical invariant - "Totals must equal sum of parts" (testing.md Section 7.1.1)
 
@@ -170,7 +168,7 @@ Per `testing.md` Section 7, property tests are reserved for cases where they gen
 
 ### Property 2: Counts-List Consistency
 
-*For any* `DistrictAnalytics` object produced by `AnalyticsComputer`, counting the clubs in `distinguishedClubsList` by their status SHALL produce the same counts as the `distinguishedClubs` object.
+_For any_ `DistrictAnalytics` object produced by `AnalyticsComputer`, counting the clubs in `distinguishedClubsList` by their status SHALL produce the same counts as the `distinguishedClubs` object.
 
 **Rationale**: Consistency/roundtrip property across two representations (testing.md Section 7.1.1)
 
@@ -208,12 +206,12 @@ The following requirements are better served by unit tests:
 
 ### Invalid Input Handling
 
-| Scenario | Handling |
-|----------|----------|
-| Empty snapshots array | Return zero counts for all fields |
-| Snapshot with no clubs | Return zero counts for all fields |
-| Club with negative goals/members | Treat as zero (defensive) |
-| Legacy file with malformed array | Log error, return empty counts |
+| Scenario                         | Handling                          |
+| -------------------------------- | --------------------------------- |
+| Empty snapshots array            | Return zero counts for all fields |
+| Snapshot with no clubs           | Return zero counts for all fields |
+| Club with negative goals/members | Treat as zero (defensive)         |
+| Legacy file with malformed array | Log error, return empty counts    |
 
 ### Type Guard Failures
 
@@ -238,12 +236,12 @@ This testing strategy follows:
 
 Per testing.md Section 7.3, before proposing property tests:
 
-| Question | Answer |
-|----------|--------|
-| What universal property would this test verify? | Sum invariants, counts-list consistency |
+| Question                                                    | Answer                                                                                         |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| What universal property would this test verify?             | Sum invariants, counts-list consistency                                                        |
 | Would 5 well-chosen examples provide equivalent confidence? | No for invariants; Yes for threshold classification, no-double-counting, legacy transformation |
-| Is the input space genuinely complex? | No - clubs have bounded goals/members |
-| Does this logic have mathematical/algebraic properties? | Yes for totals and consistency checks |
+| Is the input space genuinely complex?                       | No - clubs have bounded goals/members                                                          |
+| Does this logic have mathematical/algebraic properties?     | Yes for totals and consistency checks                                                          |
 
 **Result**: 2 property tests + comprehensive unit tests
 
@@ -278,10 +276,10 @@ Unit tests will cover:
 
 Property tests use `fast-check` only where they genuinely add value:
 
-| Property | Rationale (per testing.md) | Validates |
-|----------|---------------------------|-----------|
-| Property 1: Total equals sum | Mathematical invariant (7.1.1) | Req 2.3 |
-| Property 2: Counts-list consistency | Consistency/roundtrip (7.1.1) | Req 2.1, 2.2 |
+| Property                            | Rationale (per testing.md)     | Validates    |
+| ----------------------------------- | ------------------------------ | ------------ |
+| Property 1: Total equals sum        | Mathematical invariant (7.1.1) | Req 2.3      |
+| Property 2: Counts-list consistency | Consistency/roundtrip (7.1.1)  | Req 2.1, 2.2 |
 
 Each property test:
 
@@ -292,6 +290,7 @@ Each property test:
 ### Test Isolation Requirements
 
 Per testing.md Section 5 and 6:
+
 - Deterministic (no flaky tests)
 - Unique, isolated resources
 - Clean up in afterEach hooks
@@ -299,11 +298,11 @@ Per testing.md Section 5 and 6:
 
 ### Test File Locations
 
-| Test Type | Location |
-|-----------|----------|
-| Unit tests | `packages/analytics-core/src/__tests__/DistinguishedClubAnalyticsModule.test.ts` |
-| Property tests | `packages/analytics-core/src/__tests__/DistinguishedClubAnalyticsModule.property.test.ts` |
-| Backend transformation tests | `backend/src/services/__tests__/legacyTransformation.test.ts` |
+| Test Type                    | Location                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| Unit tests                   | `packages/analytics-core/src/__tests__/DistinguishedClubAnalyticsModule.test.ts`          |
+| Property tests               | `packages/analytics-core/src/__tests__/DistinguishedClubAnalyticsModule.property.test.ts` |
+| Backend transformation tests | `backend/src/services/__tests__/legacyTransformation.test.ts`                             |
 
 ### Why These Tests Matter
 

@@ -53,7 +53,6 @@ interface IAnalyticsDataSource {
   ): Promise<DistrictStatisticsBackend | null>
 }
 
-
 /**
  * Backend-specific district statistics type.
  * Will be replaced with analytics-core DistrictStatistics in task 4.2.
@@ -104,7 +103,6 @@ const logger = {
     }
   },
 }
-
 
 // ========== Main Module Class ==========
 
@@ -162,7 +160,6 @@ export class ClubHealthAnalyticsModuleBackend {
     }
   }
 
-
   /**
    * Get club-specific trends for a single club
    *
@@ -200,7 +197,6 @@ export class ClubHealthAnalyticsModuleBackend {
       throw error
     }
   }
-
 
   /**
    * Analyze all club trends for a district
@@ -290,7 +286,6 @@ export class ClubHealthAnalyticsModuleBackend {
       })
     }
 
-
     // Build trends for each club
     for (const entry of dataEntries) {
       for (const club of entry.clubPerformance) {
@@ -340,7 +335,6 @@ export class ClubHealthAnalyticsModuleBackend {
 
     return Array.from(clubMap.values())
   }
-
 
   // ========== Club Health Assessment Methods ==========
 
@@ -396,7 +390,6 @@ export class ClubHealthAnalyticsModuleBackend {
     const cspSubmitted = latestClubData
       ? this.getCSPStatus(latestClubData)
       : true
-
 
     // Apply classification rules - mutually exclusive categories
     let status: ClubHealthStatus
@@ -459,7 +452,6 @@ export class ClubHealthAnalyticsModuleBackend {
     )
   }
 
-
   /**
    * Calculate club health score based on membership and DCP goals
    *
@@ -520,7 +512,6 @@ export class ClubHealthAnalyticsModuleBackend {
     }).length
   }
 
-
   /**
    * Count intervention-required clubs
    *
@@ -577,7 +568,6 @@ export class ClubHealthAnalyticsModuleBackend {
       return membershipRequirementMet && dcpCheckpointMet && cspSubmitted
     }).length
   }
-
 
   /**
    * Get CSP (Club Success Plan) submission status from club data
@@ -646,7 +636,6 @@ export class ClubHealthAnalyticsModuleBackend {
     return currentMembers - membershipBase
   }
 
-
   /**
    * Extract club status from a club record
    *
@@ -699,7 +688,6 @@ export class ClubHealthAnalyticsModuleBackend {
       newMembers: parseIntOrUndefined(club['New Members'] ?? club['New']),
     }
   }
-
 
   // ========== Distinguished Level Helper ==========
 
@@ -791,7 +779,6 @@ export class ClubHealthAnalyticsModuleBackend {
       clubTrend.distinguishedLevel = 'NotDistinguished'
     }
   }
-
 
   // ========== Data Loading Methods ==========
 

@@ -27,7 +27,7 @@ flowchart TB
         D -->|serve| E[Backend API]
         E --> F[Frontend]
     end
-    
+
     subgraph "Type Flow (Enhanced)"
         G[ClubStatistics] -->|extract| H[Enhanced ClubTrend]
         H -->|categorize| I[ClubHealthData]
@@ -56,28 +56,28 @@ export interface ClubTrend {
   membershipCount: number
   paymentsCount: number
   healthScore: number
-  
+
   // NEW: Division and Area information
   divisionId: string
   divisionName: string
   areaId: string
   areaName: string
-  
+
   // NEW: Trend arrays (not single values)
   membershipTrend: Array<{ date: string; count: number }>
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
-  
+
   // CHANGED: Risk factors as string array (frontend format)
   riskFactors: string[]
-  
+
   // NEW: Distinguished level
   distinguishedLevel: DistinguishedLevel
-  
+
   // NEW: Payment breakdown fields
   octoberRenewals?: number
   aprilRenewals?: number
   newMembers?: number
-  
+
   // NEW: Club operational status
   clubStatus?: string
 }
@@ -106,19 +106,19 @@ export interface ClubStatistics {
   dcpGoals: number
   status: string
   charterDate?: string
-  
+
   // NEW: Division and Area names
   divisionName: string
   areaName: string
-  
+
   // NEW: Payment breakdown
   octoberRenewals: number
   aprilRenewals: number
   newMembers: number
-  
+
   // NEW: Membership base for net growth calculation
   membershipBase: number
-  
+
   // NEW: Club operational status
   clubStatus?: string
 }
@@ -140,7 +140,7 @@ export class ClubHealthAnalyticsModule {
     // Calculate distinguished level per club
     // Convert risk factors to string array format
   }
-  
+
   /**
    * Build membership trend array for a club across snapshots
    */
@@ -148,7 +148,7 @@ export class ClubHealthAnalyticsModule {
     clubId: string,
     snapshots: DistrictStatistics[]
   ): Array<{ date: string; count: number }>
-  
+
   /**
    * Build DCP goals trend array for a club across snapshots
    */
@@ -156,12 +156,12 @@ export class ClubHealthAnalyticsModule {
     clubId: string,
     snapshots: DistrictStatistics[]
   ): Array<{ date: string; goalsAchieved: number }>
-  
+
   /**
    * Convert ClubRiskFactors object to string array
    */
   private riskFactorsToStringArray(factors: ClubRiskFactors): string[]
-  
+
   /**
    * Determine distinguished level for a club
    */
@@ -178,15 +178,15 @@ The `DataTransformer` in scraper-cli needs to extract additional fields from CSV
 const CLUB_FIELDS = {
   clubId: 'Club Number',
   clubName: 'Club Name',
-  division: 'Division',           // Parse to divisionId + divisionName
-  area: 'Area',                   // Parse to areaId + areaName
+  division: 'Division', // Parse to divisionId + divisionName
+  area: 'Area', // Parse to areaId + areaName
   membership: 'Active Members',
   membershipBase: 'Mem. Base',
   octoberRenewals: 'Oct. Ren.',
   aprilRenewals: 'Apr. Ren.',
   newMembers: 'New Members',
   dcpGoals: 'Goals Met',
-  clubStatus: 'Club Status',      // Active, Suspended, Low, Ineligible
+  clubStatus: 'Club Status', // Active, Suspended, Low, Ineligible
 }
 ```
 
@@ -203,7 +203,7 @@ The `PreComputedAnalyticsService` will be marked as deprecated:
  * @deprecated Use scraper-cli compute-analytics command instead.
  * This service produces simplified summaries that don't match frontend expectations.
  * The analytics-summary.json files are retained for backward compatibility only.
- * 
+ *
  * Migration path:
  * 1. Run scraper-cli compute-analytics to generate full analytics
  * 2. Backend will serve from analytics/ directory (full data)
@@ -218,23 +218,23 @@ export class PreComputedAnalyticsService {
 
 ### ClubTrend Field Mapping
 
-| Frontend Field | Source | Extraction Method |
-|---------------|--------|-------------------|
-| `clubId` | CSV `Club Number` | Direct |
-| `clubName` | CSV `Club Name` | Direct |
-| `divisionId` | CSV `Division` | Parse "A" from "Division A" |
-| `divisionName` | CSV `Division` | Use full value or "Division A" |
-| `areaId` | CSV `Area` | Parse "12" from "Area 12" |
-| `areaName` | CSV `Area` | Use full value or "Area 12" |
-| `membershipTrend` | Multiple snapshots | Build array from history |
-| `dcpGoalsTrend` | Multiple snapshots | Build array from history |
-| `currentStatus` | Calculated | From health assessment |
-| `riskFactors` | Calculated | Convert object to string[] |
-| `distinguishedLevel` | CSV `Goals Met` + membership | Calculate from thresholds |
-| `octoberRenewals` | CSV `Oct. Ren.` | Direct |
-| `aprilRenewals` | CSV `Apr. Ren.` | Direct |
-| `newMembers` | CSV `New Members` | Direct |
-| `clubStatus` | CSV `Club Status` | Direct |
+| Frontend Field       | Source                       | Extraction Method              |
+| -------------------- | ---------------------------- | ------------------------------ |
+| `clubId`             | CSV `Club Number`            | Direct                         |
+| `clubName`           | CSV `Club Name`              | Direct                         |
+| `divisionId`         | CSV `Division`               | Parse "A" from "Division A"    |
+| `divisionName`       | CSV `Division`               | Use full value or "Division A" |
+| `areaId`             | CSV `Area`                   | Parse "12" from "Area 12"      |
+| `areaName`           | CSV `Area`                   | Use full value or "Area 12"    |
+| `membershipTrend`    | Multiple snapshots           | Build array from history       |
+| `dcpGoalsTrend`      | Multiple snapshots           | Build array from history       |
+| `currentStatus`      | Calculated                   | From health assessment         |
+| `riskFactors`        | Calculated                   | Convert object to string[]     |
+| `distinguishedLevel` | CSV `Goals Met` + membership | Calculate from thresholds      |
+| `octoberRenewals`    | CSV `Oct. Ren.`              | Direct                         |
+| `aprilRenewals`      | CSV `Apr. Ren.`              | Direct                         |
+| `newMembers`         | CSV `New Members`            | Direct                         |
+| `clubStatus`         | CSV `Club Status`            | Direct                         |
 
 ### Distinguished Level Calculation
 
@@ -246,16 +246,17 @@ function determineDistinguishedLevel(
 ): DistinguishedLevel {
   // Smedley: 10+ goals AND 25+ members
   if (dcpGoals >= 10 && membership >= 25) return 'Smedley'
-  
+
   // President's: 9+ goals AND 20+ members
   if (dcpGoals >= 9 && membership >= 20) return 'President'
-  
+
   // Select: 7+ goals AND (20+ members OR 5+ net growth)
   if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) return 'Select'
-  
+
   // Distinguished: 5+ goals AND (20+ members OR 3+ net growth)
-  if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) return 'Distinguished'
-  
+  if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3))
+    return 'Distinguished'
+
   return 'NotDistinguished'
 }
 ```
@@ -265,50 +266,49 @@ function determineDistinguishedLevel(
 ```typescript
 function riskFactorsToStringArray(factors: ClubRiskFactors): string[] {
   const result: string[] = []
-  
+
   if (factors.lowMembership) result.push('Low membership')
   if (factors.decliningMembership) result.push('Declining membership')
   if (factors.lowPayments) result.push('Low payments')
   if (factors.inactiveOfficers) result.push('Inactive officers')
   if (factors.noRecentMeetings) result.push('No recent meetings')
-  
+
   return result
 }
 ```
 
-
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Club Data Extraction Preserves Division/Area Info
 
-*For any* club in the input snapshot that has division and area information, the corresponding ClubTrend in the output should contain the same division ID, division name, area ID, and area name.
+_For any_ club in the input snapshot that has division and area information, the corresponding ClubTrend in the output should contain the same division ID, division name, area ID, and area name.
 
 **Validates: Requirements 2.1**
 
 ### Property 2: Trend Arrays Have Correct Length
 
-*For any* sequence of N snapshots provided to the analytics computation, all trend arrays (membershipTrend, paymentsTrend, dcpGoalsTrend per club) should have length equal to or proportional to N (accounting for clubs that may not exist in all snapshots).
+_For any_ sequence of N snapshots provided to the analytics computation, all trend arrays (membershipTrend, paymentsTrend, dcpGoalsTrend per club) should have length equal to or proportional to N (accounting for clubs that may not exist in all snapshots).
 
 **Validates: Requirements 2.2, 2.3, 5.1, 5.2, 5.3, 5.4**
 
 ### Property 3: Payment Fields Are Correctly Extracted
 
-*For any* club in the input snapshot that has payment breakdown data (October renewals, April renewals, new members), the corresponding ClubTrend in the output should contain those same payment values.
+_For any_ club in the input snapshot that has payment breakdown data (October renewals, April renewals, new members), the corresponding ClubTrend in the output should contain those same payment values.
 
 **Validates: Requirements 2.4**
 
 ### Property 4: Risk Factors Conversion Preserves Information
 
-*For any* ClubRiskFactors object, converting to a string array and then checking which risk factors are present should yield the same set of true risk factors as the original object.
+_For any_ ClubRiskFactors object, converting to a string array and then checking which risk factors are present should yield the same set of true risk factors as the original object.
 
 **Validates: Requirements 2.6**
 
 ### Property 5: Distinguished Level Calculation Matches Thresholds
 
-*For any* club with DCP goals and membership values, the calculated distinguished level should match the expected level based on the documented thresholds:
+_For any_ club with DCP goals and membership values, the calculated distinguished level should match the expected level based on the documented thresholds:
+
 - Smedley: goals >= 10 AND membership >= 25
 - President: goals >= 9 AND membership >= 20
 - Select: goals >= 7 AND (membership >= 20 OR netGrowth >= 5)
@@ -318,43 +318,43 @@ function riskFactorsToStringArray(factors: ClubRiskFactors): string[] {
 
 ### Property 6: Club Categorization Partitions AllClubs
 
-*For any* computed DistrictAnalytics, the union of thrivingClubs, vulnerableClubs, and interventionRequiredClubs should equal allClubs (no club is missing, no club is duplicated, every club is in exactly one category).
+_For any_ computed DistrictAnalytics, the union of thrivingClubs, vulnerableClubs, and interventionRequiredClubs should equal allClubs (no club is missing, no club is duplicated, every club is in exactly one category).
 
 **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
 ### Property 7: Division/Area Parsing Extracts Correct IDs
 
-*For any* division field value in format "Division X" or area field value in format "Area Y", the parsing function should extract "X" as division ID and "Y" as area ID respectively.
+_For any_ division field value in format "Division X" or area field value in format "Area Y", the parsing function should extract "X" as division ID and "Y" as area ID respectively.
 
 **Validates: Requirements 4.1, 4.2**
 
 ### Property 8: Rankings Are Correctly Ordered
 
-*For any* division rankings or area performance arrays, items should be sorted by score in descending order, and rank values should be unique and sequential starting from 1.
+_For any_ division rankings or area performance arrays, items should be sorted by score in descending order, and rank values should be unique and sequential starting from 1.
 
 **Validates: Requirements 4.4, 4.5**
 
 ### Property 9: Distinguished Clubs List Entries Are Complete
 
-*For any* entry in the distinguishedClubsList array, all required fields (clubId, clubName, status, dcpPoints, goalsCompleted) should be present and non-null.
+_For any_ entry in the distinguishedClubsList array, all required fields (clubId, clubName, status, dcpPoints, goalsCompleted) should be present and non-null.
 
 **Validates: Requirements 6.2, 6.3**
 
 ### Property 10: Backend Passes Through Data Unchanged
 
-*For any* pre-computed analytics file read by the backend, the data served to the frontend should be identical to the data in the file (no transformation or reduction).
+_For any_ pre-computed analytics file read by the backend, the data served to the frontend should be identical to the data in the file (no transformation or reduction).
 
 **Validates: Requirements 7.3**
 
 ### Property 11: Club Status Extraction and Validation
 
-*For any* club with a status field in the snapshot data, the extracted clubStatus should match the source value and be one of the valid values: 'Active', 'Suspended', 'Low', 'Ineligible', or undefined.
+_For any_ club with a status field in the snapshot data, the extracted clubStatus should match the source value and be one of the valid values: 'Active', 'Suspended', 'Low', 'Ineligible', or undefined.
 
 **Validates: Requirements 9.1, 9.2**
 
 ### Property 12: Paid Clubs Calculation Is Correct
 
-*For any* club, the paid status should be true if and only if (octoberRenewals + aprilRenewals + newMembers) > 0. The paid club counts in area and division recognition should match the sum of clubs meeting this criterion.
+_For any_ club, the paid status should be true if and only if (octoberRenewals + aprilRenewals + newMembers) > 0. The paid club counts in area and division recognition should match the sum of clubs meeting this criterion.
 
 **Validates: Requirements 10.1, 10.2**
 
@@ -362,28 +362,28 @@ function riskFactorsToStringArray(factors: ClubRiskFactors): string[] {
 
 ### Data Extraction Errors
 
-| Scenario | Handling | Recovery |
-|----------|----------|----------|
-| Missing division/area field | Use defaults ('Unknown Division', 'Unknown Area') | Continue processing |
-| Invalid payment values | Default to 0 | Continue processing |
-| Missing club status | Set to undefined | Continue processing |
-| Malformed snapshot data | Log warning, skip club | Continue with other clubs |
+| Scenario                    | Handling                                          | Recovery                  |
+| --------------------------- | ------------------------------------------------- | ------------------------- |
+| Missing division/area field | Use defaults ('Unknown Division', 'Unknown Area') | Continue processing       |
+| Invalid payment values      | Default to 0                                      | Continue processing       |
+| Missing club status         | Set to undefined                                  | Continue processing       |
+| Malformed snapshot data     | Log warning, skip club                            | Continue with other clubs |
 
 ### Computation Errors
 
-| Scenario | Handling | Recovery |
-|----------|----------|----------|
-| Empty snapshots array | Return empty analytics | N/A |
-| No clubs in snapshot | Return analytics with empty arrays | N/A |
-| Division/area parsing failure | Use raw value as both ID and name | Continue processing |
+| Scenario                      | Handling                           | Recovery            |
+| ----------------------------- | ---------------------------------- | ------------------- |
+| Empty snapshots array         | Return empty analytics             | N/A                 |
+| No clubs in snapshot          | Return analytics with empty arrays | N/A                 |
+| Division/area parsing failure | Use raw value as both ID and name  | Continue processing |
 
 ### Backend Serving Errors
 
-| Scenario | Handling | Response |
-|----------|----------|----------|
-| Pre-computed file not found | Return 404 | Suggest running compute-analytics |
-| Schema version mismatch | Return 500 | Suggest re-running compute-analytics |
-| Corrupted JSON file | Return 500 | Suggest re-running compute-analytics |
+| Scenario                    | Handling   | Response                             |
+| --------------------------- | ---------- | ------------------------------------ |
+| Pre-computed file not found | Return 404 | Suggest running compute-analytics    |
+| Schema version mismatch     | Return 500 | Suggest re-running compute-analytics |
+| Corrupted JSON file         | Return 500 | Suggest re-running compute-analytics |
 
 ## Testing Strategy
 
@@ -391,14 +391,14 @@ Per the testing steering document, property-based tests are a tool, not a defaul
 
 ### Analysis: Which Properties Warrant PBT?
 
-| Property | PBT Warranted? | Rationale |
-|----------|----------------|-----------|
-| P2: Trend array length | No | Simple length check, 3-5 examples suffice |
-| P4: Risk factors conversion | **Yes** | Round-trip property with combinatorial input space (2^5 = 32 combinations) |
-| P5: Distinguished level thresholds | No | Boundary conditions, well-chosen examples at thresholds are clearer |
-| P6: Club categorization partition | **Yes** | Mathematical invariant (partition property), complex input space |
-| P8: Rankings ordering | No | Simple ordering check, examples suffice |
-| P12: Paid clubs calculation | No | Simple arithmetic, examples suffice |
+| Property                           | PBT Warranted? | Rationale                                                                  |
+| ---------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| P2: Trend array length             | No             | Simple length check, 3-5 examples suffice                                  |
+| P4: Risk factors conversion        | **Yes**        | Round-trip property with combinatorial input space (2^5 = 32 combinations) |
+| P5: Distinguished level thresholds | No             | Boundary conditions, well-chosen examples at thresholds are clearer        |
+| P6: Club categorization partition  | **Yes**        | Mathematical invariant (partition property), complex input space           |
+| P8: Rankings ordering              | No             | Simple ordering check, examples suffice                                    |
+| P12: Paid clubs calculation        | No             | Simple arithmetic, examples suffice                                        |
 
 ### Unit Tests (Preferred Approach)
 

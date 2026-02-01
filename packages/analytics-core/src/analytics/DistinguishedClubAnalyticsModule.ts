@@ -521,9 +521,7 @@ export class DistinguishedClubAnalyticsModule {
   /**
    * Calculate distinguished club projection based on trends (Requirement 7.2)
    */
-  private calculateDistinguishedProjection(
-    dataEntries: DistrictCacheEntry[]
-  ): {
+  private calculateDistinguishedProjection(dataEntries: DistrictCacheEntry[]): {
     smedley: number
     presidents: number
     select: number

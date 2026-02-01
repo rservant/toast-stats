@@ -245,11 +245,17 @@ describe('LeadershipAnalyticsModule', () => {
 
       const insights = module.generateLeadershipInsights([snapshot])
 
-      const divisionA = insights.leadershipScores.find(s => s.divisionId === 'A')
-      const divisionB = insights.leadershipScores.find(s => s.divisionId === 'B')
+      const divisionA = insights.leadershipScores.find(
+        s => s.divisionId === 'A'
+      )
+      const divisionB = insights.leadershipScores.find(
+        s => s.divisionId === 'B'
+      )
 
       // Division A should have higher score
-      expect(divisionA?.overallScore).toBeGreaterThan(divisionB?.overallScore ?? 0)
+      expect(divisionA?.overallScore).toBeGreaterThan(
+        divisionB?.overallScore ?? 0
+      )
     })
 
     it('should include best practice divisions in bestPracticeDivisions array', () => {
@@ -353,7 +359,9 @@ describe('LeadershipAnalyticsModule', () => {
 
       const insights = module.generateLeadershipInsights([snapshot])
 
-      expect(insights.summary.topPerformingDivisions.length).toBeLessThanOrEqual(5)
+      expect(
+        insights.summary.topPerformingDivisions.length
+      ).toBeLessThanOrEqual(5)
     })
 
     it('should include top 5 performing areas', () => {

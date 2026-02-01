@@ -9,8 +9,6 @@ import { BackfillService } from '../../services/UnifiedBackfillService.js'
 import { RefreshService } from '../../services/RefreshService.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../../services/ProductionServiceFactory.js'
-import { AnalyticsEngine } from '../../services/AnalyticsEngine.js'
-import { AnalyticsDataSourceAdapter } from '../../services/AnalyticsDataSourceAdapter.js'
 import {
   DistrictDataAggregator,
   createDistrictDataAggregator,
@@ -77,7 +75,6 @@ let _rankingCalculator:
   | null = null
 let _refreshService: RefreshService | null = null
 let _backfillService: BackfillService | null = null
-let _analyticsEngine: AnalyticsEngine | null = null
 let _preComputedAnalyticsService: PreComputedAnalyticsService | null = null
 let _timeSeriesIndexService: ITimeSeriesIndexService | null = null
 
@@ -121,14 +118,6 @@ async function initializeServices(): Promise<void> {
     undefined, // circuitBreakerManager
     _rankingCalculator
   )
-
-  _analyticsEngine = new AnalyticsEngine(
-    new AnalyticsDataSourceAdapter(
-      districtDataAggregator,
-      // AnalyticsDataSourceAdapter now accepts ISnapshotStorage, supporting both local and cloud storage
-      snapshotStore
-    )
-  )
 }
 
 // Getters for services (ensure initialization)
@@ -140,11 +129,6 @@ export async function getRefreshService(): Promise<RefreshService> {
 export async function getBackfillService(): Promise<BackfillService> {
   await initializeServices()
   return _backfillService!
-}
-
-export async function getAnalyticsEngine(): Promise<AnalyticsEngine> {
-  await initializeServices()
-  return _analyticsEngine!
 }
 
 export async function getPreComputedAnalyticsService(): Promise<PreComputedAnalyticsService> {
