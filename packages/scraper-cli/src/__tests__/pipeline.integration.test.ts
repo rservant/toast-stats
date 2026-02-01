@@ -284,23 +284,34 @@ describe('Pipeline Integration Tests', () => {
       )
       const metadataContent = await fs.readFile(metadataPath, 'utf-8')
       const metadata = JSON.parse(metadataContent) as {
-        snapshotDate: string
-        districtCount: number
-        version: string
+        snapshotId: string
+        schemaVersion: string
+        calculationVersion: string
+        status: string
         source: string
-        districts: string[]
+        successfulDistricts: string[]
+        failedDistricts: string[]
+        configuredDistricts: string[]
+        dataAsOfDate: string
         createdAt: string
+        processingDuration: number
+        errors: string[]
       }
 
-      expect(metadata.snapshotDate).toBe(date)
-      expect(metadata.districtCount).toBe(2)
-      expect(metadata.version).toBe(ANALYTICS_SCHEMA_VERSION)
+      expect(metadata.snapshotId).toBe(date)
+      expect(metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
+      expect(metadata.calculationVersion).toBe(ANALYTICS_SCHEMA_VERSION)
+      expect(metadata.status).toBe('success')
       expect(metadata.source).toBe('scraper-cli')
-      expect(metadata.districts).toEqual(['1', '2'])
+      expect(metadata.successfulDistricts).toEqual(['1', '2'])
+      expect(metadata.failedDistricts).toEqual([])
+      expect(metadata.configuredDistricts).toEqual(['1', '2'])
+      expect(metadata.dataAsOfDate).toBe(date)
       expect(metadata.createdAt).toBeDefined()
+      expect(metadata.processingDuration).toBeGreaterThanOrEqual(0)
     })
 
-    it('should create manifest.json with file checksums', async () => {
+    it('should create manifest.json with district entries', async () => {
       const date = '2024-01-15'
 
       await writeRawCSVFiles(
@@ -320,29 +331,32 @@ describe('Pipeline Integration Tests', () => {
       )
       const manifestContent = await fs.readFile(manifestPath, 'utf-8')
       const manifest = JSON.parse(manifestContent) as {
-        snapshotDate: string
-        schemaVersion: string
-        files: Array<{
-          filename: string
-          type: string
-          size: number
-          checksum: string
+        snapshotId: string
+        createdAt: string
+        districts: Array<{
+          districtId: string
+          fileName: string
+          status: string
+          fileSize: number
+          lastModified: string
         }>
-        totalFiles: number
-        totalSize: number
+        totalDistricts: number
+        successfulDistricts: number
+        failedDistricts: number
       }
 
-      expect(manifest.snapshotDate).toBe(date)
-      expect(manifest.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(manifest.totalFiles).toBeGreaterThan(0)
-      expect(manifest.totalSize).toBeGreaterThan(0)
+      expect(manifest.snapshotId).toBe(date)
+      expect(manifest.totalDistricts).toBeGreaterThan(0)
+      expect(manifest.successfulDistricts).toBeGreaterThan(0)
+      expect(manifest.failedDistricts).toBe(0)
 
-      // Verify each file entry has required fields
-      for (const file of manifest.files) {
-        expect(file.filename).toBeDefined()
-        expect(file.type).toBeDefined()
-        expect(file.size).toBeGreaterThan(0)
-        expect(file.checksum).toMatch(/^[a-f0-9]{64}$/) // SHA256 hex
+      // Verify each district entry has required fields
+      for (const district of manifest.districts) {
+        expect(district.districtId).toBeDefined()
+        expect(district.fileName).toBeDefined()
+        expect(district.status).toBe('success')
+        expect(district.fileSize).toBeGreaterThan(0)
+        expect(district.lastModified).toBeDefined()
       }
     })
 

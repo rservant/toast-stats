@@ -15,7 +15,6 @@
 
 import * as fs from 'fs/promises'
 import * as path from 'path'
-import * as crypto from 'crypto'
 import { parse } from 'csv-parse/sync'
 import {
   DataTransformer,
@@ -79,38 +78,58 @@ export interface TransformOperationResult {
 }
 
 /**
- * Snapshot manifest entry
+ * District manifest entry - compatible with backend's DistrictManifestEntry
  */
-interface ManifestEntry {
-  filename: string
-  districtId?: string
-  type: 'district' | 'metadata' | 'manifest'
-  size: number
-  checksum: string
+interface DistrictManifestEntry {
+  districtId: string
+  fileName: string
+  status: 'success' | 'failed'
+  fileSize: number
+  lastModified: string
+  errorMessage?: string
 }
 
 /**
- * Snapshot manifest structure
+ * Snapshot manifest structure - compatible with backend's SnapshotManifest
  */
 interface SnapshotManifest {
-  snapshotDate: string
-  generatedAt: string
-  schemaVersion: string
-  files: ManifestEntry[]
-  totalFiles: number
-  totalSize: number
+  snapshotId: string
+  createdAt: string
+  districts: DistrictManifestEntry[]
+  totalDistricts: number
+  successfulDistricts: number
+  failedDistricts: number
 }
 
 /**
  * Snapshot metadata structure
+ * Must be compatible with backend's PerDistrictSnapshotMetadata interface
  */
 interface SnapshotMetadataFile {
-  snapshotDate: string
+  /** Snapshot ID (date in YYYY-MM-DD format) */
+  snapshotId: string
+  /** ISO timestamp when snapshot was created */
   createdAt: string
-  districtCount: number
-  version: string
+  /** Schema version for data structure compatibility */
+  schemaVersion: string
+  /** Calculation version for business logic compatibility */
+  calculationVersion: string
+  /** Status of the snapshot - required for backend compatibility */
+  status: 'success' | 'partial' | 'failed'
+  /** Districts that were configured for processing */
+  configuredDistricts: string[]
+  /** Districts that were successfully processed */
+  successfulDistricts: string[]
+  /** Districts that failed processing */
+  failedDistricts: string[]
+  /** Error messages (empty array for success) */
+  errors: string[]
+  /** Processing duration in milliseconds */
+  processingDuration: number
+  /** Source of the snapshot */
   source: 'scraper-cli'
-  districts: string[]
+  /** Date the data represents (same as snapshotId for scraper-cli) */
+  dataAsOfDate: string
 }
 
 /**
@@ -166,13 +185,6 @@ export class TransformService {
    */
   private getDistrictSnapshotPath(date: string, districtId: string): string {
     return path.join(this.getSnapshotDir(date), `district_${districtId}.json`)
-  }
-
-  /**
-   * Calculate SHA256 checksum of content
-   */
-  private calculateChecksum(content: string): string {
-    return crypto.createHash('sha256').update(content).digest('hex')
   }
 
   /**
@@ -415,18 +427,39 @@ export class TransformService {
    */
   private async writeMetadata(
     date: string,
-    districts: string[]
-  ): Promise<ManifestEntry> {
+    successfulDistricts: string[],
+    failedDistricts: string[],
+    errors: string[],
+    processingDuration: number
+  ): Promise<void> {
     const snapshotDir = this.getSnapshotDir(date)
     const metadataPath = path.join(snapshotDir, 'metadata.json')
 
+    // Determine status based on results
+    let status: 'success' | 'partial' | 'failed'
+    if (failedDistricts.length === 0) {
+      status = 'success'
+    } else if (successfulDistricts.length > 0) {
+      status = 'partial'
+    } else {
+      status = 'failed'
+    }
+
+    const allDistricts = [...successfulDistricts, ...failedDistricts]
+
     const metadata: SnapshotMetadataFile = {
-      snapshotDate: date,
+      snapshotId: date,
       createdAt: new Date().toISOString(),
-      districtCount: districts.length,
-      version: ANALYTICS_SCHEMA_VERSION,
+      schemaVersion: ANALYTICS_SCHEMA_VERSION,
+      calculationVersion: ANALYTICS_SCHEMA_VERSION,
+      status,
+      configuredDistricts: allDistricts,
+      successfulDistricts,
+      failedDistricts,
+      errors,
+      processingDuration,
       source: 'scraper-cli',
-      districts,
+      dataAsOfDate: date,
     }
 
     const content = JSON.stringify(metadata, null, 2)
@@ -435,13 +468,6 @@ export class TransformService {
     await fs.rename(tempPath, metadataPath)
 
     this.logger.info('Metadata file written', { date, path: metadataPath })
-
-    return {
-      filename: 'metadata.json',
-      type: 'metadata',
-      size: Buffer.byteLength(content, 'utf-8'),
-      checksum: this.calculateChecksum(content),
-    }
   }
 
   /**
@@ -449,22 +475,19 @@ export class TransformService {
    */
   private async writeManifest(
     date: string,
-    districtEntries: ManifestEntry[],
-    metadataEntry: ManifestEntry
+    districtEntries: DistrictManifestEntry[],
+    failedDistrictIds: string[]
   ): Promise<void> {
     const snapshotDir = this.getSnapshotDir(date)
     const manifestPath = path.join(snapshotDir, 'manifest.json')
 
-    const allEntries = [...districtEntries, metadataEntry]
-    const totalSize = allEntries.reduce((sum, entry) => sum + entry.size, 0)
-
     const manifest: SnapshotManifest = {
-      snapshotDate: date,
-      generatedAt: new Date().toISOString(),
-      schemaVersion: ANALYTICS_SCHEMA_VERSION,
-      files: allEntries,
-      totalFiles: allEntries.length,
-      totalSize,
+      snapshotId: date,
+      createdAt: new Date().toISOString(),
+      districts: districtEntries,
+      totalDistricts: districtEntries.length + failedDistrictIds.length,
+      successfulDistricts: districtEntries.length,
+      failedDistricts: failedDistrictIds.length,
     }
 
     const content = JSON.stringify(manifest, null, 2)
@@ -475,8 +498,8 @@ export class TransformService {
     this.logger.info('Manifest file written', {
       date,
       path: manifestPath,
-      totalFiles: manifest.totalFiles,
-      totalSize: manifest.totalSize,
+      totalDistricts: manifest.totalDistricts,
+      successfulDistricts: manifest.successfulDistricts,
     })
   }
 
@@ -486,19 +509,18 @@ export class TransformService {
   private async getDistrictManifestEntry(
     date: string,
     districtId: string
-  ): Promise<ManifestEntry | null> {
+  ): Promise<DistrictManifestEntry | null> {
     const snapshotPath = this.getDistrictSnapshotPath(date, districtId)
 
     try {
-      const content = await fs.readFile(snapshotPath, 'utf-8')
       const stat = await fs.stat(snapshotPath)
 
       return {
-        filename: `district_${districtId}.json`,
         districtId,
-        type: 'district',
-        size: stat.size,
-        checksum: this.calculateChecksum(content),
+        fileName: `district_${districtId}.json`,
+        status: 'success',
+        fileSize: stat.size,
+        lastModified: stat.mtime.toISOString(),
       }
     } catch {
       return null
@@ -587,7 +609,7 @@ export class TransformService {
     }
 
     // Collect manifest entries for all district files (including previously existing ones)
-    const districtEntries: ManifestEntry[] = []
+    const districtEntries: DistrictManifestEntry[] = []
     const allSuccessfulDistricts: string[] = []
 
     for (const districtId of districtsToTransform) {
@@ -601,11 +623,23 @@ export class TransformService {
     // Write metadata and manifest if we have any successful districts
     if (allSuccessfulDistricts.length > 0) {
       try {
-        const metadataEntry = await this.writeMetadata(
-          date,
-          allSuccessfulDistricts
+        // Collect failed districts and error messages for metadata
+        const failedDistrictIds = results
+          .filter(r => !r.success)
+          .map(r => r.districtId)
+        const errorMessages = errors.map(
+          e => `${e.districtId}: ${e.error}`
         )
-        await this.writeManifest(date, districtEntries, metadataEntry)
+        const processingDuration = Date.now() - startTime
+
+        await this.writeMetadata(
+          date,
+          allSuccessfulDistricts,
+          failedDistrictIds,
+          errorMessages,
+          processingDuration
+        )
+        await this.writeManifest(date, districtEntries, failedDistrictIds)
 
         // Add metadata and manifest to snapshot locations
         const snapshotDir = this.getSnapshotDir(date)

@@ -334,7 +334,7 @@ describe('TransformService', () => {
 
       await transformService.transform({ date })
 
-      // Verify metadata.json
+      // Verify metadata.json - now uses backend-compatible structure
       const metadataPath = path.join(
         testCache.path,
         'snapshots',
@@ -344,15 +344,20 @@ describe('TransformService', () => {
       const metadataContent = await fs.readFile(metadataPath, 'utf-8')
       const metadata = JSON.parse(metadataContent)
 
-      expect(metadata.snapshotDate).toBe(date)
-      expect(metadata.districtCount).toBe(1)
-      expect(metadata.version).toBe(ANALYTICS_SCHEMA_VERSION)
+      expect(metadata.snapshotId).toBe(date)
+      expect(metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
+      expect(metadata.calculationVersion).toBe(ANALYTICS_SCHEMA_VERSION)
+      expect(metadata.status).toBe('success')
       expect(metadata.source).toBe('scraper-cli')
-      expect(metadata.districts).toEqual(['1'])
+      expect(metadata.successfulDistricts).toEqual(['1'])
+      expect(metadata.failedDistricts).toEqual([])
+      expect(metadata.configuredDistricts).toEqual(['1'])
+      expect(metadata.dataAsOfDate).toBe(date)
       expect(metadata.createdAt).toBeDefined()
+      expect(metadata.processingDuration).toBeGreaterThanOrEqual(0)
     })
 
-    it('should write manifest.json with file checksums', async () => {
+    it('should write manifest.json with district entries', async () => {
       const date = '2024-01-15'
 
       // Create raw CSV files for two districts
@@ -372,7 +377,7 @@ describe('TransformService', () => {
 
       await transformService.transform({ date })
 
-      // Verify manifest.json
+      // Verify manifest.json - now uses backend-compatible structure
       const manifestPath = path.join(
         testCache.path,
         'snapshots',
@@ -382,24 +387,27 @@ describe('TransformService', () => {
       const manifestContent = await fs.readFile(manifestPath, 'utf-8')
       const manifest = JSON.parse(manifestContent)
 
-      expect(manifest.snapshotDate).toBe(date)
-      expect(manifest.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
-      expect(manifest.totalFiles).toBe(3) // 2 districts + metadata
-      expect(manifest.files).toHaveLength(3)
+      expect(manifest.snapshotId).toBe(date)
+      expect(manifest.totalDistricts).toBe(2)
+      expect(manifest.successfulDistricts).toBe(2)
+      expect(manifest.failedDistricts).toBe(0)
+      expect(manifest.districts).toHaveLength(2)
 
-      // Verify file entries have required fields
-      for (const file of manifest.files) {
-        expect(file.filename).toBeDefined()
-        expect(file.type).toBeDefined()
-        expect(file.size).toBeGreaterThan(0)
-        expect(file.checksum).toMatch(/^[a-f0-9]{64}$/) // SHA256 hex
+      // Verify district entries have required fields
+      for (const district of manifest.districts) {
+        expect(district.districtId).toBeDefined()
+        expect(district.fileName).toBeDefined()
+        expect(district.status).toBe('success')
+        expect(district.fileSize).toBeGreaterThan(0)
+        expect(district.lastModified).toBeDefined()
       }
 
       // Verify district files are present
-      const districtFiles = manifest.files.filter(
-        (f: { type: string }) => f.type === 'district'
+      const districtIds = manifest.districts.map(
+        (d: { districtId: string }) => d.districtId
       )
-      expect(districtFiles).toHaveLength(2)
+      expect(districtIds).toContain('1')
+      expect(districtIds).toContain('2')
     })
 
     it('should continue processing when one district fails', async () => {
