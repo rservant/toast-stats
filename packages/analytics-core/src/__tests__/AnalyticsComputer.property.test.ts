@@ -456,7 +456,8 @@ describe('AnalyticsComputer Property Tests', () => {
               snapshots
             )
 
-            const { distinguishedClubs } = result.districtAnalytics
+            // Use distinguishedClubsList for the array of club summaries (Requirements 2.2)
+            const { distinguishedClubsList } = result.districtAnalytics
 
             // Get latest snapshot for verification
             const sortedSnapshots = [...snapshots].sort((a, b) =>
@@ -465,21 +466,25 @@ describe('AnalyticsComputer Property Tests', () => {
             const latestSnapshot = sortedSnapshots[sortedSnapshots.length - 1]
 
             if (!latestSnapshot) {
-              expect(distinguishedClubs).toHaveLength(0)
+              expect(distinguishedClubsList).toHaveLength(0)
               return true
             }
 
             // Verify each distinguished club meets criteria
-            for (const distinguished of distinguishedClubs) {
+            for (const distinguished of distinguishedClubsList) {
               const club = latestSnapshot.clubs.find(
                 c => c.clubId === distinguished.clubId
               )
 
               if (club) {
-                // Distinguished requires 5+ goals and 20+ members
-                // Select requires 7+ goals and 20+ members
+                // Smedley requires 10+ goals and 25+ members
                 // President requires 9+ goals and 20+ members
-                if (distinguished.status === 'president') {
+                // Select requires 7+ goals and 20+ members
+                // Distinguished requires 5+ goals and 20+ members
+                if (distinguished.status === 'smedley') {
+                  expect(club.dcpGoals).toBeGreaterThanOrEqual(10)
+                  expect(club.membershipCount).toBeGreaterThanOrEqual(25)
+                } else if (distinguished.status === 'president') {
                   expect(club.dcpGoals).toBeGreaterThanOrEqual(9)
                   expect(club.membershipCount).toBeGreaterThanOrEqual(20)
                 } else if (distinguished.status === 'select') {

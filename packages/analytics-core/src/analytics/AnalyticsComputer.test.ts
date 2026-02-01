@@ -217,19 +217,27 @@ describe('AnalyticsComputer', () => {
 
       const result = await computer.computeDistrictAnalytics('D101', [snapshot])
 
-      expect(result.districtAnalytics.distinguishedClubs.length).toBe(3)
+      // distinguishedClubs is now a counts object (Requirements 2.1)
+      expect(result.districtAnalytics.distinguishedClubs.total).toBe(3)
+      expect(result.districtAnalytics.distinguishedClubs.presidents).toBe(1)
+      expect(result.districtAnalytics.distinguishedClubs.select).toBe(1)
+      expect(result.districtAnalytics.distinguishedClubs.distinguished).toBe(1)
+      expect(result.districtAnalytics.distinguishedClubs.smedley).toBe(0)
+
+      // distinguishedClubsList is the array of summaries (Requirements 2.2)
+      expect(result.districtAnalytics.distinguishedClubsList.length).toBe(3)
       expect(
-        result.districtAnalytics.distinguishedClubs.some(
+        result.districtAnalytics.distinguishedClubsList.some(
           c => c.status === 'president'
         )
       ).toBe(true)
       expect(
-        result.districtAnalytics.distinguishedClubs.some(
+        result.districtAnalytics.distinguishedClubsList.some(
           c => c.status === 'select'
         )
       ).toBe(true)
       expect(
-        result.districtAnalytics.distinguishedClubs.some(
+        result.districtAnalytics.distinguishedClubsList.some(
           c => c.status === 'distinguished'
         )
       ).toBe(true)

@@ -146,9 +146,26 @@ export interface DistinguishedProjection {
 export interface DistinguishedClubSummary {
   clubId: string
   clubName: string
-  status: 'distinguished' | 'select' | 'president' | 'none'
+  status: 'smedley' | 'president' | 'select' | 'distinguished' | 'none'
   dcpPoints: number
   goalsCompleted: number
+}
+
+/**
+ * Summary counts of distinguished clubs by recognition level.
+ * Used in DistrictAnalytics.distinguishedClubs field.
+ */
+export interface DistinguishedClubCounts {
+  /** Clubs achieving Smedley Distinguished (10+ goals, 25+ members) */
+  smedley: number
+  /** Clubs achieving President's Distinguished (9+ goals, 20+ members) */
+  presidents: number
+  /** Clubs achieving Select Distinguished (7+ goals, 20+ members) */
+  select: number
+  /** Clubs achieving Distinguished (5+ goals, 20+ members) */
+  distinguished: number
+  /** Total count of all distinguished clubs */
+  total: number
 }
 
 /**
@@ -173,7 +190,10 @@ export interface DistrictAnalytics {
   vulnerableClubs: ClubTrend[]
   thrivingClubs: ClubTrend[]
   interventionRequiredClubs: ClubTrend[]
-  distinguishedClubs: DistinguishedClubSummary[]
+  /** Summary counts of distinguished clubs by level */
+  distinguishedClubs: DistinguishedClubCounts
+  /** Detailed list of distinguished clubs */
+  distinguishedClubsList: DistinguishedClubSummary[]
   distinguishedProjection: DistinguishedProjection
   divisionRankings: DivisionRanking[]
   topPerformingAreas: AreaPerformance[]

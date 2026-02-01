@@ -11,12 +11,19 @@ import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type {
   DistinguishedProjection,
   DistinguishedClubSummary,
+  DistinguishedClubCounts,
 } from '../types.js'
 
 /**
  * Distinguished club status type
+ * Includes 'smedley' for Smedley Distinguished (10+ goals, 25+ members)
  */
-type DistinguishedStatus = 'distinguished' | 'select' | 'president' | 'none'
+type DistinguishedStatus =
+  | 'smedley'
+  | 'distinguished'
+  | 'select'
+  | 'president'
+  | 'none'
 
 /**
  * DistinguishedClubAnalyticsModule
@@ -62,8 +69,9 @@ export class DistinguishedClubAnalyticsModule {
       }
     }
 
-    // Sort by status (president > select > distinguished) then by goals
+    // Sort by status (smedley > president > select > distinguished) then by goals
     const statusOrder: Record<DistinguishedStatus, number> = {
+      smedley: 4,
       president: 3,
       select: 2,
       distinguished: 1,
@@ -77,6 +85,74 @@ export class DistinguishedClubAnalyticsModule {
     })
 
     return summaries
+  }
+
+  /**
+   * Generate distinguished club counts from snapshots
+   *
+   * Counts clubs at each distinguished level from the latest snapshot.
+   * Each club is counted in exactly one category (the highest achieved level).
+   *
+   * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
+   * @returns DistinguishedClubCounts object with counts for each level and total
+   *
+   * Requirements: 3.1
+   */
+  generateDistinguishedClubCounts(
+    snapshots: DistrictStatistics[]
+  ): DistinguishedClubCounts {
+    if (snapshots.length === 0) {
+      return {
+        smedley: 0,
+        presidents: 0,
+        select: 0,
+        distinguished: 0,
+        total: 0,
+      }
+    }
+
+    const latestSnapshot = snapshots[snapshots.length - 1]
+    if (!latestSnapshot) {
+      return {
+        smedley: 0,
+        presidents: 0,
+        select: 0,
+        distinguished: 0,
+        total: 0,
+      }
+    }
+
+    let smedley = 0
+    let presidents = 0
+    let select = 0
+    let distinguished = 0
+
+    for (const club of latestSnapshot.clubs) {
+      const status = this.determineDistinguishedStatus(club)
+
+      switch (status) {
+        case 'smedley':
+          smedley++
+          break
+        case 'president':
+          presidents++
+          break
+        case 'select':
+          select++
+          break
+        case 'distinguished':
+          distinguished++
+          break
+      }
+    }
+
+    return {
+      smedley,
+      presidents,
+      select,
+      distinguished,
+      total: smedley + presidents + select + distinguished,
+    }
   }
 
   /**
@@ -175,10 +251,13 @@ export class DistinguishedClubAnalyticsModule {
   /**
    * Determine distinguished status for a club based on DCP goals and membership
    *
-   * Distinguished levels:
+   * Distinguished levels (checked in order from highest to lowest):
+   * - Smedley Distinguished: 10+ goals AND 25+ members
    * - President's Distinguished: 9+ goals AND 20+ members
-   * - Select Distinguished: 7+ goals AND 20+ members (or net growth >= 5)
-   * - Distinguished: 5+ goals AND 20+ members (or net growth >= 3)
+   * - Select Distinguished: 7+ goals AND 20+ members
+   * - Distinguished: 5+ goals AND 20+ members
+   *
+   * Requirements: 3.2
    */
   private determineDistinguishedStatus(
     club: ClubStatistics
@@ -186,8 +265,12 @@ export class DistinguishedClubAnalyticsModule {
     const dcpGoals = club.dcpGoals
     const membership = club.membershipCount
 
+    // Smedley Distinguished: 10 goals + 25 members (highest level, checked first)
+    if (dcpGoals >= 10 && membership >= 25) {
+      return 'smedley'
+    }
     // President's Distinguished: 9 goals + 20 members
-    if (dcpGoals >= 9 && membership >= 20) {
+    else if (dcpGoals >= 9 && membership >= 20) {
       return 'president'
     }
     // Select Distinguished: 7 goals + 20 members

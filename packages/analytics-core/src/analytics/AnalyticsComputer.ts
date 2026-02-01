@@ -68,7 +68,11 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       this.clubHealthModule.generateClubHealthData(sortedSnapshots)
 
     // Compute distinguished club data
+    // distinguishedClubs: counts object for frontend display (Requirements 2.1)
     const distinguishedClubs =
+      this.distinguishedModule.generateDistinguishedClubCounts(sortedSnapshots)
+    // distinguishedClubsList: detailed array for drill-down (Requirements 2.2)
+    const distinguishedClubsList =
       this.distinguishedModule.generateDistinguishedClubSummaries(
         sortedSnapshots
       )
@@ -104,6 +108,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       thrivingClubs: clubHealth.thrivingClubs,
       interventionRequiredClubs: clubHealth.interventionRequiredClubs,
       distinguishedClubs,
+      distinguishedClubsList,
       distinguishedProjection,
       divisionRankings,
       topPerformingAreas,

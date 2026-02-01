@@ -31,6 +31,10 @@ import {
   CorruptedFileError,
 } from '../../services/PreComputedAnalyticsReader.js'
 import { ANALYTICS_SCHEMA_VERSION } from '@toastmasters/analytics-core'
+import {
+  isLegacyDistinguishedClubsFormat,
+  transformLegacyDistinguishedClubs,
+} from '../../utils/legacyTransformation.js'
 
 export const analyticsRouter = Router()
 
@@ -292,6 +296,30 @@ analyticsRouter.get(
           },
         })
         return
+      }
+
+      // Requirement 4.1: Transform legacy distinguishedClubs array format to counts object
+      // Note: Legacy pre-computed files may have distinguishedClubs as an array instead of counts object.
+      // The type guard checks the runtime data format, not the TypeScript type.
+      if (isLegacyDistinguishedClubsFormat(analytics.distinguishedClubs)) {
+        // Requirement 4.3: Log warning when transforming legacy data
+        logger.warn('Transforming legacy distinguishedClubs format', {
+          operation: 'getDistrictAnalytics',
+          districtId,
+          snapshotDate,
+        })
+
+        // Transform the legacy array to counts object
+        // Type assertion needed because runtime data doesn't match declared type for legacy files
+        const legacyData = analytics.distinguishedClubs
+
+        // Use type assertion to mutate the object - the runtime data is in legacy format
+        // but we need to transform it to the new format before serving
+        const mutableAnalytics = analytics as unknown as Record<string, unknown>
+        mutableAnalytics['distinguishedClubs'] =
+          transformLegacyDistinguishedClubs(legacyData)
+        // Preserve the list in the new field
+        mutableAnalytics['distinguishedClubsList'] = legacyData
       }
 
       // Requirement 10.4: Log when serving pre-computed analytics, including file path and schema version

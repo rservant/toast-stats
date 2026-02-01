@@ -158,51 +158,51 @@ function isLegacyDistinguishedClubsFormat(
 
 *A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-Per `docs/property-testing-guidance.md`, property tests are reserved for cases where they genuinely add value. The following properties meet the criteria in Section 3 (mathematical invariants, business rules with universal properties, data transformation pipelines).
+Per `testing.md` Section 7, property tests are reserved for cases where they genuinely add value. The following properties meet the criteria (mathematical invariants, consistency/roundtrip properties).
 
 ### Property 1: Total Equals Sum of Counts
 
 *For any* `DistinguishedClubCounts` object produced by the system, the `total` field SHALL equal the sum of `smedley + presidents + select + distinguished`.
 
-**Rationale**: Mathematical invariant - "Totals must equal sum of parts" (guidance Section 3.3)
+**Rationale**: Mathematical invariant - "Totals must equal sum of parts" (testing.md Section 7.1.1)
 
 **Validates: Requirements 2.3**
 
-### Property 2: No Double Counting
-
-*For any* set of clubs processed by `DistinguishedClubAnalyticsModule`, each club SHALL be counted in exactly one category (the highest achieved level). The sum of `smedley + presidents + select + distinguished` SHALL equal the count of clubs with any distinguished status.
-
-**Rationale**: Business rule with universal property (guidance Section 3.3)
-
-**Validates: Requirements 3.3**
-
-### Property 3: Legacy Transformation Preserves Counts
-
-*For any* array of `DistinguishedClubSummary` objects (legacy format), transforming to `DistinguishedClubCounts` SHALL produce counts that match the actual count of each status in the source array.
-
-**Rationale**: Data transformation pipeline (guidance Section 3.2)
-
-**Validates: Requirements 4.1, 4.2**
-
-### Property 4: Counts-List Consistency
+### Property 2: Counts-List Consistency
 
 *For any* `DistrictAnalytics` object produced by `AnalyticsComputer`, counting the clubs in `distinguishedClubsList` by their status SHALL produce the same counts as the `distinguishedClubs` object.
 
-**Rationale**: Consistency/roundtrip property (guidance Section 3.1)
+**Rationale**: Consistency/roundtrip property across two representations (testing.md Section 7.1.1)
 
 **Validates: Requirements 2.1, 2.2**
 
 ### Unit Test Coverage (Not Properties)
 
-The following requirements are better served by unit tests with well-chosen examples per guidance Section 4.4:
+Per testing.md Section 7.3: "Would 5 well-chosen examples provide equivalent confidence? If yes, prefer the examples."
 
-**Smedley Classification Threshold (Req 3.2)**: Threshold-based classification can be fully covered with 4-5 boundary examples:
+The following requirements are better served by unit tests:
+
+**Threshold Classification (Req 3.2)**: Boundary examples are clearer than properties:
+
 - Club with exactly 10 goals, 25 members → smedley
 - Club with 9 goals, 25 members → president (not smedley)
 - Club with 10 goals, 24 members → president (not smedley)
-- Club with 11 goals, 26 members → smedley
+- Club with 9 goals, 20 members → president
+- Club with 7 goals, 20 members → select
+- Club with 5 goals, 20 members → distinguished
+- Club with 4 goals, 20 members → none
 
-This is clearer than a property test and provides equivalent confidence.
+**No Double Counting (Req 3.3)**: The input space is bounded (clubs with goals/members). 3-4 examples suffice:
+
+- Club qualifying for smedley appears only in smedley count
+- Club qualifying for president (but not smedley) appears only in president count
+- Mixed set of clubs produces correct exclusive counts
+
+**Legacy Transformation (Req 4.1, 4.2)**: Simple data mapping. Examples are clearer:
+
+- Empty array → all zeros
+- Single item with status 'president' → presidents: 1, others: 0
+- Mixed array → counts match status distribution
 
 ## Error Handling
 
@@ -230,50 +230,61 @@ The existing `SchemaVersionError` handling in the backend remains unchanged. Leg
 ## Testing Strategy
 
 This testing strategy follows:
-- `testing.md` Section 8 (Rule-Driven and Derived Logic) for threshold-based classification
-- `docs/property-testing-guidance.md` for deciding when PBT is appropriate
+
+- `testing.md` Section 7 (Property-Based Testing) for deciding when PBT is appropriate
+- `testing.md` Section 9 (Rule-Driven and Derived Logic) for threshold-based classification
 
 ### Decision Framework Applied
 
-Per property-testing-guidance.md Section 5, before proposing property tests:
+Per testing.md Section 7.3, before proposing property tests:
 
 | Question | Answer |
 |----------|--------|
-| What universal property would this test verify? | Sum invariants, no-double-counting, transformation consistency |
-| Would 5 well-chosen examples provide equivalent confidence? | No for invariants; Yes for threshold classification |
-| Is the input space genuinely complex? | Yes for club combinations; No for threshold boundaries |
+| What universal property would this test verify? | Sum invariants, counts-list consistency |
+| Would 5 well-chosen examples provide equivalent confidence? | No for invariants; Yes for threshold classification, no-double-counting, legacy transformation |
+| Is the input space genuinely complex? | No - clubs have bounded goals/members |
 | Does this logic have mathematical/algebraic properties? | Yes for totals and consistency checks |
 
-**Result**: 4 property tests + unit tests for thresholds
+**Result**: 2 property tests + comprehensive unit tests
 
 ### Unit Tests
 
 Unit tests will cover:
 
-1. **Threshold Classification (Req 3.2)** - Per guidance Section 4.4, boundary examples are clearer:
+1. **Threshold Classification (Req 3.2)** - Boundary examples are clearer than properties:
    - Club with exactly 10 goals, 25 members → smedley
-   - Club with 9 goals, 25 members → president (not smedley)  
+   - Club with 9 goals, 25 members → president (not smedley)
    - Club with 10 goals, 24 members → president (not smedley)
    - Club with 9 goals, 20 members → president
    - Club with 7 goals, 20 members → select
    - Club with 5 goals, 20 members → distinguished
    - Club with 4 goals, 20 members → none
 
-2. **Type Guard** - Identifies array vs object format
-3. **Edge Cases** - Empty array, single item, mixed statuses
+2. **No Double Counting (Req 3.3)** - 3-4 examples suffice:
+   - Club qualifying for smedley appears only in smedley count
+   - Club qualifying for president (but not smedley) appears only in president count
+   - Mixed set of clubs produces correct exclusive counts
+
+3. **Legacy Transformation (Req 4.1, 4.2)** - Simple mapping, examples are clearer:
+   - Empty array → all zeros
+   - Single item with status 'president' → presidents: 1, others: 0
+   - Mixed array → counts match status distribution
+
+4. **Type Guard** - Identifies array vs object format
+
+5. **Edge Cases** - Empty snapshots, single club, no distinguished clubs
 
 ### Property-Based Tests
 
-Property tests use `fast-check` for cases where they genuinely add value:
+Property tests use `fast-check` only where they genuinely add value:
 
-| Property | Rationale (per guidance) | Validates |
-|----------|-------------------------|-----------|
-| Property 1: Total equals sum | Mathematical invariant (3.3) | Req 2.3 |
-| Property 2: No double counting | Business rule universal property (3.3) | Req 3.3 |
-| Property 3: Legacy transformation | Data transformation pipeline (3.2) | Req 4.1, 4.2 |
-| Property 4: Counts-list consistency | Consistency/roundtrip (3.1) | Req 2.1, 2.2 |
+| Property | Rationale (per testing.md) | Validates |
+|----------|---------------------------|-----------|
+| Property 1: Total equals sum | Mathematical invariant (7.1.1) | Req 2.3 |
+| Property 2: Counts-list consistency | Consistency/roundtrip (7.1.1) | Req 2.1, 2.2 |
 
 Each property test:
+
 - Runs minimum 100 iterations
 - References design document property
 - Tag format: **Feature: distinguished-clubs-type-fix, Property N: {property_text}**
