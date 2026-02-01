@@ -438,7 +438,12 @@ describe('AnalyticsComputer Property Tests', () => {
 
     /**
      * Property 1.5: Distinguished Club Criteria Consistency
-     * Clubs marked as distinguished should meet the DCP goals and membership criteria.
+     * Clubs marked as distinguished should meet the DCP goals and membership/net growth criteria.
+     * Per Toastmasters rules, clubs can qualify via membership OR net growth:
+     * - Distinguished: 5+ goals AND (20+ members OR net growth >= 3)
+     * - Select: 7+ goals AND (20+ members OR net growth >= 5)
+     * - President: 9+ goals AND 20+ members
+     * - Smedley: 10+ goals AND 25+ members
      *
      * **Validates: Requirements 7.4**
      */
@@ -477,10 +482,13 @@ describe('AnalyticsComputer Property Tests', () => {
               )
 
               if (club) {
+                // Calculate net growth for membership alternative check
+                const netGrowth = club.membershipCount - (club.membershipBase ?? 0)
+
                 // Smedley requires 10+ goals and 25+ members
                 // President requires 9+ goals and 20+ members
-                // Select requires 7+ goals and 20+ members
-                // Distinguished requires 5+ goals and 20+ members
+                // Select requires 7+ goals and (20+ members OR net growth >= 5)
+                // Distinguished requires 5+ goals and (20+ members OR net growth >= 3)
                 if (distinguished.status === 'smedley') {
                   expect(club.dcpGoals).toBeGreaterThanOrEqual(10)
                   expect(club.membershipCount).toBeGreaterThanOrEqual(25)
@@ -489,10 +497,16 @@ describe('AnalyticsComputer Property Tests', () => {
                   expect(club.membershipCount).toBeGreaterThanOrEqual(20)
                 } else if (distinguished.status === 'select') {
                   expect(club.dcpGoals).toBeGreaterThanOrEqual(7)
-                  expect(club.membershipCount).toBeGreaterThanOrEqual(20)
+                  // Select: 20+ members OR net growth >= 5
+                  expect(
+                    club.membershipCount >= 20 || netGrowth >= 5
+                  ).toBe(true)
                 } else if (distinguished.status === 'distinguished') {
                   expect(club.dcpGoals).toBeGreaterThanOrEqual(5)
-                  expect(club.membershipCount).toBeGreaterThanOrEqual(20)
+                  // Distinguished: 20+ members OR net growth >= 3
+                  expect(
+                    club.membershipCount >= 20 || netGrowth >= 3
+                  ).toBe(true)
                 }
               }
             }

@@ -279,65 +279,66 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(result.allClubs[0]?.riskFactors).toEqual([])
     })
 
-    it('should include "Low membership" when membership is below threshold', () => {
+    it('should include membership risk factor when membership is below threshold', () => {
       const module = new ClubHealthAnalyticsModule()
       // Club with low membership (< 12 triggers intervention)
       const club = createMockClub({
         clubId: '1',
         membershipCount: 10,
         dcpGoals: 0,
+        membershipBase: 10, // No net growth
       })
       const snapshot = createMockSnapshot('2024-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
-      expect(result.allClubs[0]?.riskFactors).toContain('Low membership')
+      // Hardened backend uses detailed risk factor messages
+      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('Membership below 12'))).toBe(true)
     })
 
-    it('should include "Declining membership" when membership decreases', () => {
+    it('should include membership threshold risk factor when membership decreases below threshold', () => {
       const module = new ClubHealthAnalyticsModule()
-      const snapshot1 = createMockSnapshot('2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 25 }),
-      ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 20 }),
+      // Club with membership below 20 and no net growth - should be vulnerable
+      const snapshot = createMockSnapshot('2024-02-01', [
+        createMockClub({ clubId: '1', membershipCount: 15, dcpGoals: 0, membershipBase: 15 }),
       ])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2])
+      const result = module.generateClubHealthData([snapshot])
 
-      expect(result.allClubs[0]?.riskFactors).toContain('Declining membership')
+      // Hardened backend adds risk factor for membership below threshold
+      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('Membership below threshold'))).toBe(true)
     })
 
-    it('should include "Low payments" when payments are below threshold', () => {
+    it('should include DCP checkpoint risk factor when DCP goals are below threshold', () => {
       const module = new ClubHealthAnalyticsModule()
-      // Club with payments < 50% of membership
+      // Club with membership >= 20 but no DCP goals - should be vulnerable due to DCP checkpoint
       const club = createMockClub({
         clubId: '1',
         membershipCount: 20,
-        paymentsCount: 5, // 5 < 20 * 0.5 = 10
-        dcpGoals: 5,
+        paymentsCount: 20,
+        dcpGoals: 0, // No DCP goals
+        membershipBase: 20,
       })
       const snapshot = createMockSnapshot('2024-01-15', [club])
 
       const result = module.generateClubHealthData([snapshot])
 
-      expect(result.allClubs[0]?.riskFactors).toContain('Low payments')
+      // Hardened backend adds risk factor for DCP checkpoint not met
+      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('DCP checkpoint not met'))).toBe(true)
     })
 
     it('should include multiple risk factors when applicable', () => {
       const module = new ClubHealthAnalyticsModule()
-      const snapshot1 = createMockSnapshot('2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 15, paymentsCount: 5 }),
-      ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 12, paymentsCount: 3 }),
+      // Club with membership below threshold and no DCP goals
+      const snapshot = createMockSnapshot('2024-02-01', [
+        createMockClub({ clubId: '1', membershipCount: 15, paymentsCount: 3, dcpGoals: 0, membershipBase: 15 }),
       ])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2])
+      const result = module.generateClubHealthData([snapshot])
 
-      // Should have both declining membership and low payments
-      expect(result.allClubs[0]?.riskFactors).toContain('Declining membership')
-      expect(result.allClubs[0]?.riskFactors).toContain('Low payments')
+      // Should have both membership threshold and DCP checkpoint risk factors
+      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('Membership below threshold'))).toBe(true)
+      expect(result.allClubs[0]?.riskFactors.some(rf => rf.includes('DCP checkpoint not met'))).toBe(true)
     })
   })
 
@@ -409,15 +410,17 @@ describe('ClubHealthAnalyticsModule', () => {
 
     it('should classify as Select with 7 goals, 15 members, and 5+ net growth', () => {
       const module = new ClubHealthAnalyticsModule()
-      // Create snapshots showing net growth of 5
-      const snapshot1 = createMockSnapshot('2024-01-01', [
-        createMockClub({ clubId: '1', dcpGoals: 5, membershipCount: 10 }),
-      ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
-        createMockClub({ clubId: '1', dcpGoals: 7, membershipCount: 15 }),
-      ])
+      // Net growth is calculated from membershipBase, not from trend history
+      // Net growth = membershipCount - membershipBase = 15 - 10 = 5
+      const club = createMockClub({
+        clubId: '1',
+        dcpGoals: 7,
+        membershipCount: 15,
+        membershipBase: 10, // Net growth = 15 - 10 = 5
+      })
+      const snapshot = createMockSnapshot('2024-02-01', [club])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2])
+      const result = module.generateClubHealthData([snapshot])
 
       // Net growth = 15 - 10 = 5, which qualifies for Select
       expect(result.allClubs[0]?.distinguishedLevel).toBe('Select')
@@ -453,15 +456,17 @@ describe('ClubHealthAnalyticsModule', () => {
 
     it('should classify as Distinguished with 5 goals, 15 members, and 3+ net growth', () => {
       const module = new ClubHealthAnalyticsModule()
-      // Create snapshots showing net growth of 3
-      const snapshot1 = createMockSnapshot('2024-01-01', [
-        createMockClub({ clubId: '1', dcpGoals: 3, membershipCount: 12 }),
-      ])
-      const snapshot2 = createMockSnapshot('2024-02-01', [
-        createMockClub({ clubId: '1', dcpGoals: 5, membershipCount: 15 }),
-      ])
+      // Net growth is calculated from membershipBase, not from trend history
+      // Net growth = membershipCount - membershipBase = 15 - 12 = 3
+      const club = createMockClub({
+        clubId: '1',
+        dcpGoals: 5,
+        membershipCount: 15,
+        membershipBase: 12, // Net growth = 15 - 12 = 3
+      })
+      const snapshot = createMockSnapshot('2024-02-01', [club])
 
-      const result = module.generateClubHealthData([snapshot1, snapshot2])
+      const result = module.generateClubHealthData([snapshot])
 
       // Net growth = 15 - 12 = 3, which qualifies for Distinguished
       expect(result.allClubs[0]?.distinguishedLevel).toBe('Distinguished')

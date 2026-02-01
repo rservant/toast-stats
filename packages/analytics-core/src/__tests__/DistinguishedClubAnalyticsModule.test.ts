@@ -14,11 +14,14 @@ import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 
 /**
  * Helper to create a mock club with specified goals and membership
+ * By default, membershipBase equals membershipCount (net growth = 0)
+ * to test pure membership thresholds without net growth influence.
  */
 function createMockClub(
   clubId: string,
   dcpGoals: number,
-  membershipCount: number
+  membershipCount: number,
+  membershipBase?: number
 ): ClubStatistics {
   return {
     clubId,
@@ -34,7 +37,8 @@ function createMockClub(
     octoberRenewals: Math.floor(membershipCount * 0.4),
     aprilRenewals: Math.floor(membershipCount * 0.3),
     newMembers: Math.floor(membershipCount * 0.3),
-    membershipBase: Math.floor(membershipCount * 0.8),
+    // Default to membershipCount so net growth = 0 (tests pure membership threshold)
+    membershipBase: membershipBase ?? membershipCount,
   }
 }
 

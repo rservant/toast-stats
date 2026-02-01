@@ -2,101 +2,156 @@
  * Distinguished Club Analytics Module
  *
  * Handles DCP goals analysis, distinguished club projections, and achievement tracking.
- * Extracted from backend AnalyticsEngine for shared use in analytics-core.
+ * This is the hardened version moved from backend/src/services/analytics/DistinguishedClubAnalyticsModule.ts
+ * and adapted to work with DistrictStatistics[] instead of IAnalyticsDataSource.
  *
- * Requirements: 7.4
+ * KEY FEATURES (preserved from backend):
+ * 1. generateDistinguishedClubAnalytics() returning full DistinguishedClubAnalytics type
+ * 2. calculateDistinguishedClubs() for counting clubs at each level
+ * 3. calculateDistinguishedProjection() for trend-based projections
+ * 4. trackDistinguishedAchievements() for tracking when clubs achieve levels
+ * 5. calculateDistinguishedYearOverYear() for year-over-year comparison
+ * 6. analyzeDCPGoals() for identifying most/least commonly achieved goals
+ *
+ * Requirements: 5.1, 5.2
  */
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type {
-  DistinguishedProjection,
-  DistinguishedClubSummary,
+  DistinguishedClubAnalytics,
+  DistinguishedClubAchievement,
+  DCPGoalAnalysis,
   DistinguishedClubCounts,
+  DistinguishedClubSummary,
+  DistinguishedProjection,
 } from '../types.js'
+import { ensureString } from './AnalyticsUtils.js'
 
 /**
- * Distinguished club status type
- * Includes 'smedley' for Smedley Distinguished (10+ goals, 25+ members)
+ * Simple logger interface for compatibility.
  */
-type DistinguishedStatus =
-  | 'smedley'
-  | 'distinguished'
-  | 'select'
-  | 'president'
-  | 'none'
+const logger = {
+  info: (message: string, context?: Record<string, unknown>) => {
+    if (process.env['NODE_ENV'] !== 'test') {
+      console.log(`[INFO] ${message}`, context)
+    }
+  },
+  warn: (message: string, context?: Record<string, unknown>) => {
+    if (process.env['NODE_ENV'] !== 'test') {
+      console.warn(`[WARN] ${message}`, context)
+    }
+  },
+  error: (message: string, context?: Record<string, unknown>) => {
+    if (process.env['NODE_ENV'] !== 'test') {
+      console.error(`[ERROR] ${message}`, context)
+    }
+  },
+  debug: (message: string, _context?: Record<string, unknown>) => {
+    // Debug logging disabled in production
+    if (process.env['NODE_ENV'] === 'development') {
+      console.log(`[DEBUG] ${message}`, _context)
+    }
+  },
+}
+
+/**
+ * Internal structure for tracking club data across snapshots.
+ * Mirrors the backend DistrictCacheEntry structure for computation.
+ */
+interface DistrictCacheEntry {
+  districtId: string
+  date: string
+  clubPerformance: ClubStatistics[]
+  fetchedAt: string
+}
 
 /**
  * DistinguishedClubAnalyticsModule
  *
  * Specialized module for distinguished club analytics calculations.
- * Works directly with DistrictStatistics data without external dependencies.
+ * Works directly with DistrictStatistics[] data without external dependencies.
+ * Stateless module - no constructor required.
  *
- * Requirements: 7.4
+ * Requirements: 5.1, 5.2
  */
 export class DistinguishedClubAnalyticsModule {
   /**
-   * Generate distinguished club summaries from snapshots
+   * Generate comprehensive distinguished club analytics from snapshots
    *
+   * This is the main entry point for distinguished club analytics computation.
+   * Adapted from backend DistinguishedClubAnalyticsModule.generateDistinguishedClubAnalytics()
+   * to work with DistrictStatistics[] instead of IAnalyticsDataSource.
+   *
+   * @param districtId - The district ID to analyze
    * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
-   * @returns Array of DistinguishedClubSummary objects
+   * @returns DistinguishedClubAnalytics object
    */
-  generateDistinguishedClubSummaries(
+  generateDistinguishedClubAnalytics(
+    districtId: string,
     snapshots: DistrictStatistics[]
-  ): DistinguishedClubSummary[] {
-    if (snapshots.length === 0) {
-      return []
+  ): DistinguishedClubAnalytics {
+    // Filter snapshots for the requested district
+    const districtSnapshots = snapshots.filter(s => s.districtId === districtId)
+
+    if (districtSnapshots.length === 0) {
+      return this.createEmptyAnalytics()
     }
 
-    const latestSnapshot = snapshots[snapshots.length - 1]
-    if (!latestSnapshot) {
-      return []
+    // Convert to internal cache entry format for computation
+    const dataEntries = this.convertToDataEntries(districtSnapshots)
+
+    const latestEntry = dataEntries[dataEntries.length - 1]
+    if (!latestEntry) {
+      return this.createEmptyAnalytics()
     }
 
-    const summaries: DistinguishedClubSummary[] = []
+    // Count clubs at each distinguished level (Requirement 7.1)
+    const distinguishedClubs = this.calculateDistinguishedClubs(latestEntry)
 
-    for (const club of latestSnapshot.clubs) {
-      const status = this.determineDistinguishedStatus(club)
+    // Calculate projection for final distinguished club count (Requirement 7.2)
+    const distinguishedProjection =
+      this.calculateDistinguishedProjection(dataEntries)
 
-      // Only include clubs that have achieved some distinguished status
-      if (status !== 'none') {
-        summaries.push({
-          clubId: club.clubId,
-          clubName: club.clubName,
-          status,
-          dcpPoints: club.dcpGoals,
-          goalsCompleted: club.dcpGoals,
-        })
-      }
+    // Track dates when clubs achieve distinguished levels (Requirement 7.3)
+    const achievements = this.trackDistinguishedAchievements(dataEntries)
+
+    // Compare to previous years if data available (Requirement 7.4)
+    const yearOverYearComparison = this.calculateDistinguishedYearOverYear(
+      districtSnapshots,
+      latestEntry.date
+    )
+
+    // Identify most/least commonly achieved DCP goals (Requirement 7.5)
+    const dcpGoalAnalysis = this.analyzeDCPGoals(latestEntry)
+
+    const analytics: DistinguishedClubAnalytics = {
+      distinguishedClubs,
+      distinguishedProjection,
+      achievements,
+      yearOverYearComparison,
+      dcpGoalAnalysis,
     }
 
-    // Sort by status (smedley > president > select > distinguished) then by goals
-    const statusOrder: Record<DistinguishedStatus, number> = {
-      smedley: 4,
-      president: 3,
-      select: 2,
-      distinguished: 1,
-      none: 0,
-    }
-
-    summaries.sort((a, b) => {
-      const statusDiff = statusOrder[b.status] - statusOrder[a.status]
-      if (statusDiff !== 0) return statusDiff
-      return b.goalsCompleted - a.goalsCompleted
+    logger.info('Generated distinguished club analytics', {
+      districtId,
+      totalDistinguished: distinguishedClubs.total,
+      presidents: distinguishedClubs.presidents,
+      select: distinguishedClubs.select,
+      distinguished: distinguishedClubs.distinguished,
+      projectedTotal: distinguishedProjection.total,
     })
 
-    return summaries
+    return analytics
   }
 
   /**
-   * Generate distinguished club counts from snapshots
+   * Generate distinguished club counts for AnalyticsComputer
    *
-   * Counts clubs at each distinguished level from the latest snapshot.
-   * Each club is counted in exactly one category (the highest achieved level).
+   * This method provides the counts object expected by the DistrictAnalytics type.
+   * Used by AnalyticsComputer for the distinguishedClubs field.
    *
-   * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
-   * @returns DistinguishedClubCounts object with counts for each level and total
-   *
-   * Requirements: 3.1
+   * @param snapshots - Array of district statistics snapshots
+   * @returns DistinguishedClubCounts object
    */
   generateDistinguishedClubCounts(
     snapshots: DistrictStatistics[]
@@ -122,28 +177,283 @@ export class DistinguishedClubAnalyticsModule {
       }
     }
 
+    const entry = this.convertSnapshotToEntry(latestSnapshot)
+    return this.calculateDistinguishedClubs(entry)
+  }
+
+  /**
+   * Generate distinguished club summaries for AnalyticsComputer
+   *
+   * This method provides the detailed list of distinguished clubs
+   * expected by the DistrictAnalytics type.
+   * Used by AnalyticsComputer for the distinguishedClubsList field.
+   *
+   * @param snapshots - Array of district statistics snapshots
+   * @returns Array of DistinguishedClubSummary objects
+   */
+  generateDistinguishedClubSummaries(
+    snapshots: DistrictStatistics[]
+  ): DistinguishedClubSummary[] {
+    if (snapshots.length === 0) {
+      return []
+    }
+
+    const latestSnapshot = snapshots[snapshots.length - 1]
+    if (!latestSnapshot) {
+      return []
+    }
+
+    const summaries: DistinguishedClubSummary[] = []
+
+    for (const club of latestSnapshot.clubs) {
+      // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
+      const cspSubmitted = this.getCSPStatus(club)
+      if (!cspSubmitted) {
+        continue
+      }
+
+      const dcpGoals = club.dcpGoals
+      const membership = club.membershipCount
+      const netGrowth = this.calculateNetGrowth(club)
+
+      const level = this.determineDistinguishedLevel(
+        dcpGoals,
+        membership,
+        netGrowth
+      )
+
+      // Only include clubs that have achieved some distinguished level
+      if (level !== 'None') {
+        summaries.push({
+          clubId: club.clubId,
+          clubName: club.clubName,
+          status: this.mapLevelToStatus(level),
+          dcpPoints: dcpGoals, // DCP goals as points
+          goalsCompleted: dcpGoals,
+        })
+      }
+    }
+
+    // Sort by status (highest first) then by goals
+    const statusOrder = {
+      smedley: 4,
+      president: 3,
+      select: 2,
+      distinguished: 1,
+      none: 0,
+    }
+    summaries.sort((a, b) => {
+      const statusDiff = statusOrder[b.status] - statusOrder[a.status]
+      if (statusDiff !== 0) return statusDiff
+      return b.goalsCompleted - a.goalsCompleted
+    })
+
+    return summaries
+  }
+
+  /**
+   * Generate distinguished club projection for AnalyticsComputer
+   *
+   * This method provides the projection object expected by the DistrictAnalytics type.
+   * Used by AnalyticsComputer for the distinguishedProjection field.
+   *
+   * @param snapshots - Array of district statistics snapshots
+   * @returns DistinguishedProjection object
+   */
+  generateDistinguishedProjection(
+    snapshots: DistrictStatistics[]
+  ): DistinguishedProjection {
+    if (snapshots.length === 0) {
+      return {
+        projectedDistinguished: 0,
+        projectedSelect: 0,
+        projectedPresident: 0,
+        currentDistinguished: 0,
+        currentSelect: 0,
+        currentPresident: 0,
+        projectionDate: new Date().toISOString().split('T')[0] || '',
+      }
+    }
+
+    const dataEntries = this.convertToDataEntries(snapshots)
+    const projection = this.calculateDistinguishedProjection(dataEntries)
+
+    const latestSnapshot = snapshots[snapshots.length - 1]
+    const latestEntry = latestSnapshot
+      ? this.convertSnapshotToEntry(latestSnapshot)
+      : null
+    const current = latestEntry
+      ? this.calculateDistinguishedClubs(latestEntry)
+      : { distinguished: 0, select: 0, presidents: 0 }
+
+    return {
+      projectedDistinguished: projection.distinguished,
+      projectedSelect: projection.select,
+      projectedPresident: projection.presidents,
+      currentDistinguished: current.distinguished,
+      currentSelect: current.select,
+      currentPresident: current.presidents,
+      projectionDate: latestSnapshot?.snapshotDate || '',
+    }
+  }
+
+  /**
+   * Calculate year-over-year distinguished club comparison (Requirement 7.4)
+   *
+   * @param snapshots - Array of district statistics snapshots
+   * @param currentDate - Current snapshot date
+   * @returns Year-over-year comparison or undefined if not available
+   */
+  calculateDistinguishedYearOverYear(
+    snapshots: DistrictStatistics[],
+    currentDate: string
+  ):
+    | {
+        currentTotal: number
+        previousTotal: number
+        change: number
+        percentageChange: number
+        currentByLevel: {
+          smedley: number
+          presidents: number
+          select: number
+          distinguished: number
+        }
+        previousByLevel: {
+          smedley: number
+          presidents: number
+          select: number
+          distinguished: number
+        }
+      }
+    | undefined {
+    if (snapshots.length === 0) {
+      return undefined
+    }
+
+    // Calculate previous year date (subtract 1 year)
+    const currentYear = parseInt(currentDate.substring(0, 4))
+    const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
+
+    // Find current and previous year snapshots
+    const currentSnapshot = snapshots.find(s => s.snapshotDate === currentDate)
+    const previousSnapshot = snapshots.find(s => {
+      const snapshotYear = parseInt(s.snapshotDate.substring(0, 4))
+      return snapshotYear === currentYear - 1
+    })
+
+    if (!currentSnapshot || !previousSnapshot) {
+      logger.info(
+        'Insufficient data for year-over-year distinguished comparison',
+        {
+          currentDate,
+          previousYearDate,
+          hasCurrentSnapshot: !!currentSnapshot,
+          hasPreviousSnapshot: !!previousSnapshot,
+        }
+      )
+      return undefined
+    }
+
+    const currentEntry = this.convertSnapshotToEntry(currentSnapshot)
+    const previousEntry = this.convertSnapshotToEntry(previousSnapshot)
+
+    const currentCounts = this.calculateDistinguishedClubs(currentEntry)
+    const previousCounts = this.calculateDistinguishedClubs(previousEntry)
+
+    const change = currentCounts.total - previousCounts.total
+    const percentageChange =
+      previousCounts.total > 0
+        ? Math.round((change / previousCounts.total) * 1000) / 10 // Round to 1 decimal
+        : 0
+
+    return {
+      currentTotal: currentCounts.total,
+      previousTotal: previousCounts.total,
+      change,
+      percentageChange,
+      currentByLevel: {
+        smedley: currentCounts.smedley,
+        presidents: currentCounts.presidents,
+        select: currentCounts.select,
+        distinguished: currentCounts.distinguished,
+      },
+      previousByLevel: {
+        smedley: previousCounts.smedley,
+        presidents: previousCounts.presidents,
+        select: previousCounts.select,
+        distinguished: previousCounts.distinguished,
+      },
+    }
+  }
+
+  // ========== Public Helper Methods ==========
+
+  /**
+   * Calculate distinguished clubs from latest data (Requirements: 4.1, 4.2)
+   * Counts clubs at each distinguished level and calculates total.
+   * Primary: Use 'Club Distinguished Status' field; Fallback: Calculate from DCP goals/membership
+   *
+   * Starting in 2025-2026, CSP submission is required for distinguished recognition.
+   * Clubs without CSP submitted cannot achieve any distinguished level.
+   *
+   * This method is public to allow AnalyticsComputer to delegate
+   * distinguished club calculations to this module.
+   *
+   * @param entry - District cache entry
+   * @returns Distinguished club counts by level and total
+   */
+  calculateDistinguishedClubs(entry: DistrictCacheEntry): {
+    smedley: number
+    presidents: number
+    select: number
+    distinguished: number
+    total: number
+  } {
     let smedley = 0
     let presidents = 0
     let select = 0
     let distinguished = 0
 
-    for (const club of latestSnapshot.clubs) {
-      const status = this.determineDistinguishedStatus(club)
-
-      switch (status) {
-        case 'smedley':
-          smedley++
-          break
-        case 'president':
-          presidents++
-          break
-        case 'select':
-          select++
-          break
-        case 'distinguished':
-          distinguished++
-          break
+    for (const club of entry.clubPerformance) {
+      // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
+      const cspSubmitted = this.getCSPStatus(club)
+      if (!cspSubmitted) {
+        // Club cannot be distinguished without CSP
+        continue
       }
+
+      // Calculate based on DCP goals, membership, and net growth
+      const dcpGoals = club.dcpGoals
+      const membership = club.membershipCount
+      const netGrowth = this.calculateNetGrowth(club)
+
+      // Use the shared distinguished level determination logic
+      const calculatedLevel = this.determineDistinguishedLevel(
+        dcpGoals,
+        membership,
+        netGrowth
+      )
+
+      // Count clubs by distinguished level (Requirements: 4.1, 4.2)
+      if (calculatedLevel === 'Smedley') {
+        smedley++
+      } else if (calculatedLevel === 'Presidents') {
+        presidents++
+      } else if (calculatedLevel === 'Select') {
+        select++
+      } else if (calculatedLevel === 'Distinguished') {
+        distinguished++
+      }
+
+      // Debug logging with club details (only when in development environment)
+      logger.debug('Distinguished status calculation', {
+        clubId: club.clubId,
+        clubName: club.clubName,
+        distinguishedLevel: calculatedLevel,
+        dcpGoals,
+        membership,
+      })
     }
 
     return {
@@ -155,170 +465,100 @@ export class DistinguishedClubAnalyticsModule {
     }
   }
 
-  /**
-   * Generate distinguished club projection based on trends
-   *
-   * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
-   * @returns DistinguishedProjection object
-   */
-  generateDistinguishedProjection(
-    snapshots: DistrictStatistics[]
-  ): DistinguishedProjection {
-    if (snapshots.length === 0) {
-      return this.createEmptyProjection()
-    }
-
-    const latestSnapshot = snapshots[snapshots.length - 1]
-    if (!latestSnapshot) {
-      return this.createEmptyProjection()
-    }
-
-    // Count current distinguished clubs
-    const currentCounts = this.countDistinguishedClubs(latestSnapshot)
-
-    // Calculate projection based on trends
-    const projectedCounts = this.calculateProjection(snapshots)
-
-    return {
-      projectedDistinguished: projectedCounts.distinguished,
-      projectedSelect: projectedCounts.select,
-      projectedPresident: projectedCounts.president,
-      currentDistinguished: currentCounts.distinguished,
-      currentSelect: currentCounts.select,
-      currentPresident: currentCounts.president,
-      projectionDate: latestSnapshot.snapshotDate,
-    }
-  }
-
-  /**
-   * Count clubs at each distinguished level
-   *
-   * @param snapshot - District statistics snapshot
-   * @returns Object with counts for each level
-   */
-  countDistinguishedClubs(snapshot: DistrictStatistics): {
-    distinguished: number
-    select: number
-    president: number
-    total: number
-  } {
-    let distinguished = 0
-    let select = 0
-    let president = 0
-
-    for (const club of snapshot.clubs) {
-      const status = this.determineDistinguishedStatus(club)
-
-      switch (status) {
-        case 'president':
-          president++
-          break
-        case 'select':
-          select++
-          break
-        case 'distinguished':
-          distinguished++
-          break
-      }
-    }
-
-    return {
-      distinguished,
-      select,
-      president,
-      total: distinguished + select + president,
-    }
-  }
-
   // ========== Private Helper Methods ==========
 
   /**
-   * Create empty projection object
+   * Create empty analytics result for when no data is available
    */
-  private createEmptyProjection(): DistinguishedProjection {
-    const today = new Date().toISOString().split('T')[0] || ''
+  private createEmptyAnalytics(): DistinguishedClubAnalytics {
     return {
-      projectedDistinguished: 0,
-      projectedSelect: 0,
-      projectedPresident: 0,
-      currentDistinguished: 0,
-      currentSelect: 0,
-      currentPresident: 0,
-      projectionDate: today,
+      distinguishedClubs: {
+        smedley: 0,
+        presidents: 0,
+        select: 0,
+        distinguished: 0,
+        total: 0,
+      },
+      distinguishedProjection: {
+        smedley: 0,
+        presidents: 0,
+        select: 0,
+        distinguished: 0,
+        total: 0,
+      },
+      achievements: [],
+      yearOverYearComparison: undefined,
+      dcpGoalAnalysis: {
+        mostCommonlyAchieved: [],
+        leastCommonlyAchieved: [],
+      },
     }
   }
 
   /**
-   * Determine distinguished status for a club based on DCP goals and membership
-   *
-   * Distinguished levels (checked in order from highest to lowest):
-   * - Smedley Distinguished: 10+ goals AND 25+ members
-   * - President's Distinguished: 9+ goals AND 20+ members
-   * - Select Distinguished: 7+ goals AND 20+ members
-   * - Distinguished: 5+ goals AND 20+ members
-   *
-   * Requirements: 3.2
+   * Convert DistrictStatistics[] to internal DistrictCacheEntry[] format
    */
-  private determineDistinguishedStatus(
-    club: ClubStatistics
-  ): DistinguishedStatus {
-    const dcpGoals = club.dcpGoals
-    const membership = club.membershipCount
-
-    // Smedley Distinguished: 10 goals + 25 members (highest level, checked first)
-    if (dcpGoals >= 10 && membership >= 25) {
-      return 'smedley'
-    }
-    // President's Distinguished: 9 goals + 20 members
-    else if (dcpGoals >= 9 && membership >= 20) {
-      return 'president'
-    }
-    // Select Distinguished: 7 goals + 20 members
-    else if (dcpGoals >= 7 && membership >= 20) {
-      return 'select'
-    }
-    // Distinguished: 5 goals + 20 members
-    else if (dcpGoals >= 5 && membership >= 20) {
-      return 'distinguished'
-    }
-
-    return 'none'
+  private convertToDataEntries(
+    snapshots: DistrictStatistics[]
+  ): DistrictCacheEntry[] {
+    return snapshots.map(snapshot => this.convertSnapshotToEntry(snapshot))
   }
 
   /**
-   * Calculate projection based on trends
+   * Convert a single DistrictStatistics to DistrictCacheEntry format
    */
-  private calculateProjection(snapshots: DistrictStatistics[]): {
-    distinguished: number
+  private convertSnapshotToEntry(
+    snapshot: DistrictStatistics
+  ): DistrictCacheEntry {
+    return {
+      districtId: snapshot.districtId,
+      date: snapshot.snapshotDate,
+      clubPerformance: snapshot.clubs,
+      fetchedAt: snapshot.snapshotDate,
+    }
+  }
+
+  /**
+   * Calculate distinguished club projection based on trends (Requirement 7.2)
+   */
+  private calculateDistinguishedProjection(
+    dataEntries: DistrictCacheEntry[]
+  ): {
+    smedley: number
+    presidents: number
     select: number
-    president: number
+    distinguished: number
+    total: number
   } {
-    if (snapshots.length < 2) {
+    if (dataEntries.length < 2) {
       // Not enough data for projection, return current counts
-      const latest = snapshots[snapshots.length - 1]
+      const latest = dataEntries[0]
       if (!latest) {
-        return { distinguished: 0, select: 0, president: 0 }
+        return {
+          smedley: 0,
+          presidents: 0,
+          select: 0,
+          distinguished: 0,
+          total: 0,
+        }
       }
-      const counts = this.countDistinguishedClubs(latest)
-      return {
-        distinguished: counts.distinguished,
-        select: counts.select,
-        president: counts.president,
-      }
+      return this.calculateDistinguishedClubs(latest)
     }
 
     // Calculate trend for each level
     const trends = {
-      distinguished: [] as number[],
+      smedley: [] as number[],
+      presidents: [] as number[],
       select: [] as number[],
-      president: [] as number[],
+      distinguished: [] as number[],
     }
 
-    for (const snapshot of snapshots) {
-      const counts = this.countDistinguishedClubs(snapshot)
-      trends.distinguished.push(counts.distinguished)
+    for (const entry of dataEntries) {
+      const counts = this.calculateDistinguishedClubs(entry)
+      trends.smedley.push(counts.smedley)
+      trends.presidents.push(counts.presidents)
       trends.select.push(counts.select)
-      trends.president.push(counts.president)
+      trends.distinguished.push(counts.distinguished)
     }
 
     // Calculate linear trend and project forward
@@ -332,10 +572,7 @@ export class DistinguishedClubAnalyticsModule {
       const sumXY = values.reduce((sum, val, idx) => sum + idx * val, 0)
       const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6 // Sum of squares
 
-      const denominator = n * sumX2 - sumX * sumX
-      if (denominator === 0) return values[values.length - 1] || 0
-
-      const slope = (n * sumXY - sumX * sumY) / denominator
+      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
       const intercept = (sumY - slope * sumX) / n
 
       // Project forward by 2-3 time periods (conservative estimate)
@@ -345,10 +582,249 @@ export class DistinguishedClubAnalyticsModule {
       return Math.max(0, Math.round(projection))
     }
 
+    const smedley = projectLevel(trends.smedley)
+    const presidents = projectLevel(trends.presidents)
+    const select = projectLevel(trends.select)
+    const distinguished = projectLevel(trends.distinguished)
+
     return {
-      distinguished: projectLevel(trends.distinguished),
-      select: projectLevel(trends.select),
-      president: projectLevel(trends.president),
+      smedley,
+      presidents,
+      select,
+      distinguished,
+      total: smedley + presidents + select + distinguished,
+    }
+  }
+
+  /**
+   * Track dates when clubs achieve distinguished levels (Requirement 7.3)
+   */
+  private trackDistinguishedAchievements(
+    dataEntries: DistrictCacheEntry[]
+  ): DistinguishedClubAchievement[] {
+    const achievements: DistinguishedClubAchievement[] = []
+    const clubLevelHistory = new Map<string, { level?: string; date: string }>()
+
+    // Process entries chronologically
+    for (const entry of dataEntries) {
+      for (const club of entry.clubPerformance) {
+        const clubId = ensureString(club.clubId)
+        const clubName = ensureString(club.clubName)
+        const dcpGoals = club.dcpGoals
+        const membership = club.membershipCount
+
+        if (!clubId) continue
+
+        let currentLevel: string | undefined
+        // Check levels from highest to lowest
+        if (dcpGoals >= 10 && membership >= 25) {
+          currentLevel = 'Smedley'
+        } else if (dcpGoals >= 9 && membership >= 20) {
+          currentLevel = 'President'
+        } else if (dcpGoals >= 7 && membership >= 20) {
+          currentLevel = 'Select'
+        } else if (dcpGoals >= 5 && membership >= 20) {
+          currentLevel = 'Distinguished'
+        }
+
+        const previousRecord = clubLevelHistory.get(clubId)
+
+        // Check if club achieved a new level
+        if (currentLevel && (!previousRecord || !previousRecord.level)) {
+          // First time achieving distinguished status
+          achievements.push({
+            clubId,
+            clubName,
+            level: currentLevel as
+              | 'Smedley'
+              | 'President'
+              | 'Select'
+              | 'Distinguished',
+            achievedDate: entry.date,
+            goalsAchieved: dcpGoals,
+          })
+        } else if (
+          currentLevel &&
+          previousRecord &&
+          previousRecord.level &&
+          this.isHigherLevel(currentLevel, previousRecord.level)
+        ) {
+          // Upgraded to a higher level
+          achievements.push({
+            clubId,
+            clubName,
+            level: currentLevel as
+              | 'Smedley'
+              | 'President'
+              | 'Select'
+              | 'Distinguished',
+            achievedDate: entry.date,
+            goalsAchieved: dcpGoals,
+          })
+        }
+
+        // Update history
+        clubLevelHistory.set(clubId, {
+          level: currentLevel,
+          date: entry.date,
+        })
+      }
+    }
+
+    // Sort by date (most recent first)
+    achievements.sort((a, b) => b.achievedDate.localeCompare(a.achievedDate))
+
+    return achievements
+  }
+
+  /**
+   * Analyze DCP goals to identify most/least commonly achieved (Requirement 7.5)
+   */
+  private analyzeDCPGoals(entry: DistrictCacheEntry): {
+    mostCommonlyAchieved: DCPGoalAnalysis[]
+    leastCommonlyAchieved: DCPGoalAnalysis[]
+  } {
+    // DCP has 10 goals (numbered 1-10)
+    // Initialize with explicit values to avoid undefined access issues
+    const goalCounts: Record<number, number> = {
+      0: 0,
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0,
+      7: 0,
+      8: 0,
+      9: 0,
+    }
+    const totalClubs = entry.clubPerformance.length
+
+    // Count how many clubs achieved each goal
+    // Note: In the adapted version, we use simplified goal counting based on dcpGoals
+    // The detailed goal breakdown requires raw CSV data which isn't available in ClubStatistics
+    for (const club of entry.clubPerformance) {
+      const dcpGoals = club.dcpGoals
+
+      // Simplified goal counting: assume goals are achieved sequentially
+      // This is a reasonable approximation when detailed goal data isn't available
+      for (let i = 0; i < Math.min(dcpGoals, 10); i++) {
+        goalCounts[i] = (goalCounts[i] ?? 0) + 1
+      }
+    }
+
+    // Create analysis for each goal
+    const goalAnalysis: DCPGoalAnalysis[] = []
+    for (let i = 0; i < 10; i++) {
+      const count = goalCounts[i] ?? 0
+      goalAnalysis.push({
+        goalNumber: i + 1,
+        achievementCount: count,
+        achievementPercentage:
+          totalClubs > 0
+            ? Math.round((count / totalClubs) * 1000) / 10 // Round to 1 decimal
+            : 0,
+      })
+    }
+
+    // Sort by achievement count
+    const sortedByCount = [...goalAnalysis].sort(
+      (a, b) => b.achievementCount - a.achievementCount
+    )
+
+    // Get top 5 most commonly achieved and bottom 5 least commonly achieved
+    const mostCommonlyAchieved = sortedByCount.slice(0, 5)
+    const leastCommonlyAchieved = sortedByCount.slice(-5).reverse()
+
+    return {
+      mostCommonlyAchieved,
+      leastCommonlyAchieved,
+    }
+  }
+
+  /**
+   * Determine distinguished level based on DCP goals, membership, and net growth
+   */
+  private determineDistinguishedLevel(
+    dcpGoals: number,
+    membership: number,
+    netGrowth: number
+  ): string {
+    // Smedley Distinguished: 10 goals + 25 members
+    if (dcpGoals >= 10 && membership >= 25) {
+      return 'Smedley'
+    }
+    // President's Distinguished: 9 goals + 20 members
+    else if (dcpGoals >= 9 && membership >= 20) {
+      return 'Presidents'
+    }
+    // Select Distinguished: 7 goals + (20 members OR net growth of 5)
+    else if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
+      return 'Select'
+    }
+    // Distinguished: 5 goals + (20 members OR net growth of 3)
+    else if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
+      return 'Distinguished'
+    }
+
+    return 'None'
+  }
+
+  /**
+   * Check if level1 is higher than level2
+   */
+  private isHigherLevel(level1: string, level2: string): boolean {
+    const levels = { Distinguished: 1, Select: 2, President: 3, Smedley: 4 }
+    return (
+      (levels[level1 as keyof typeof levels] || 0) >
+      (levels[level2 as keyof typeof levels] || 0)
+    )
+  }
+
+  /**
+   * Calculate net growth for a club (Active Members - Mem. Base)
+   */
+  private calculateNetGrowth(club: ClubStatistics): number {
+    const currentMembers = club.membershipCount
+    const membershipBase = club.membershipBase ?? 0
+
+    return currentMembers - membershipBase
+  }
+
+  /**
+   * Get CSP (Club Success Plan) submission status from club data
+   *
+   * CSP data availability by program year:
+   * - 2025-2026 and later: CSP field is guaranteed to be present
+   * - Prior to 2025-2026: CSP field did not exist, defaults to true
+   *
+   * @param _club - Club statistics data (CSP field not yet in ClubStatistics)
+   * @returns true if CSP is submitted or field is absent (historical data), false otherwise
+   */
+  private getCSPStatus(_club: ClubStatistics): boolean {
+    // ClubStatistics doesn't have a CSP field currently
+    // For historical data compatibility, default to true
+    // When CSP field is added to ClubStatistics, this method will be updated
+    return true
+  }
+
+  /**
+   * Map distinguished level string to status type
+   */
+  private mapLevelToStatus(
+    level: string
+  ): 'smedley' | 'president' | 'select' | 'distinguished' | 'none' {
+    switch (level) {
+      case 'Smedley':
+        return 'smedley'
+      case 'Presidents':
+        return 'president'
+      case 'Select':
+        return 'select'
+      case 'Distinguished':
+        return 'distinguished'
+      default:
+        return 'none'
     }
   }
 }

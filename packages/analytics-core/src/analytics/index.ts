@@ -14,6 +14,12 @@ export { MembershipAnalyticsModule } from './MembershipAnalyticsModule.js'
 export { ClubHealthAnalyticsModule } from './ClubHealthAnalyticsModule.js'
 export { DistinguishedClubAnalyticsModule } from './DistinguishedClubAnalyticsModule.js'
 export { DivisionAreaAnalyticsModule } from './DivisionAreaAnalyticsModule.js'
+export { LeadershipAnalyticsModule } from './LeadershipAnalyticsModule.js'
+export {
+  AreaDivisionRecognitionModule,
+  DAP_THRESHOLDS,
+  DDP_THRESHOLDS,
+} from './AreaDivisionRecognitionModule.js'
 
 // Utility functions
 export {

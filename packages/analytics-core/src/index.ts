@@ -24,6 +24,10 @@ export {
   ClubHealthAnalyticsModule,
   DistinguishedClubAnalyticsModule,
   DivisionAreaAnalyticsModule,
+  LeadershipAnalyticsModule,
+  AreaDivisionRecognitionModule,
+  DAP_THRESHOLDS,
+  DDP_THRESHOLDS,
   // Utility functions
   parseIntSafe,
   parseIntOrUndefined,
@@ -64,11 +68,19 @@ export type {
   // Division and area
   DivisionRanking,
   AreaPerformance,
+  TrendDirection,
+  DivisionAnalytics,
+  AreaAnalytics,
 
   // Distinguished clubs
   DistinguishedProjection,
   DistinguishedClubSummary,
   DistinguishedClubCounts,
+
+  // Distinguished Club Analytics types (Requirements 5.1, 5.2)
+  DistinguishedClubAchievement,
+  DCPGoalAnalysis,
+  DistinguishedClubAnalytics,
 
   // Core analytics
   DateRange,
@@ -80,6 +92,40 @@ export type {
   PreComputedAnalyticsFile,
   AnalyticsManifestEntry,
   AnalyticsManifest,
+
+  // Membership Analytics types (Requirements 1.2)
+  SeasonalPattern,
+  MembershipYearOverYearComparison,
+  MembershipAnalytics,
+
+  // Leadership Insights types (Requirements 4.2)
+  LeadershipEffectivenessScore,
+  LeadershipChange,
+  AreaDirectorCorrelation,
+  LeadershipInsights,
+
+  // Extended Year-Over-Year Comparison types (Requirements 6.2, 6.3)
+  ExtendedYearOverYearComparison,
+
+  // District Performance Targets types (Requirements 7.2)
+  RecognitionLevel,
+  RecognitionTargets,
+  MetricTargets,
+  RegionRankData,
+  MetricRankings,
+  DistrictPerformanceTargets,
+
+  // Vulnerable Clubs Data types (Requirements 3.2)
+  VulnerableClubsData,
+
+  // Club Trends Index types (Requirements 2.2)
+  ClubTrendsIndex,
+
+  // Area/Division Recognition types (Requirements 7.1)
+  AreaDivisionRecognitionLevel,
+  RecognitionEligibility,
+  AreaRecognition,
+  DivisionRecognition,
 } from './types.js'
 
 // Interfaces
