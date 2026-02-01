@@ -190,7 +190,10 @@ describe('PreComputedAnalyticsReader', () => {
       )
 
       // Act
-      const result = await reader.readDistrictAnalytics(snapshotDate, districtId)
+      const result = await reader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
+      )
 
       // Assert
       expect(result).not.toBeNull()
@@ -206,7 +209,10 @@ describe('PreComputedAnalyticsReader', () => {
       await createAnalyticsDir(snapshotDate)
 
       // Act
-      const result = await reader.readDistrictAnalytics(snapshotDate, districtId)
+      const result = await reader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
+      )
 
       // Assert
       expect(result).toBeNull()
@@ -218,7 +224,10 @@ describe('PreComputedAnalyticsReader', () => {
       const districtId = '42'
 
       // Act
-      const result = await reader.readDistrictAnalytics(snapshotDate, districtId)
+      const result = await reader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
+      )
 
       // Assert
       expect(result).toBeNull()
@@ -229,7 +238,11 @@ describe('PreComputedAnalyticsReader', () => {
       const snapshotDate = '2024-01-15'
       const districtId = '42'
       const analyticsDir = await createAnalyticsDir(snapshotDate)
-      const file = createDistrictAnalyticsFile(districtId, snapshotDate, '2.0.0')
+      const file = createDistrictAnalyticsFile(
+        districtId,
+        snapshotDate,
+        '2.0.0'
+      )
       await writeFile(
         path.join(analyticsDir, `district_${districtId}_analytics.json`),
         file
@@ -549,16 +562,16 @@ describe('PreComputedAnalyticsReader', () => {
       )
 
       // Act & Assert
-      await expect(
-        reader.getAnalyticsManifest(snapshotDate)
-      ).rejects.toThrow(CorruptedFileError)
+      await expect(reader.getAnalyticsManifest(snapshotDate)).rejects.toThrow(
+        CorruptedFileError
+      )
     })
 
     it('should reject invalid snapshot date format', async () => {
       // Act & Assert
-      await expect(
-        reader.getAnalyticsManifest('invalid-date')
-      ).rejects.toThrow('Invalid snapshot date format')
+      await expect(reader.getAnalyticsManifest('invalid-date')).rejects.toThrow(
+        'Invalid snapshot date format'
+      )
     })
   })
 
@@ -570,9 +583,9 @@ describe('PreComputedAnalyticsReader', () => {
     })
 
     it('should reject empty snapshot date', async () => {
-      await expect(
-        reader.readDistrictAnalytics('', '42')
-      ).rejects.toThrow('Invalid snapshot date: empty or non-string value')
+      await expect(reader.readDistrictAnalytics('', '42')).rejects.toThrow(
+        'Invalid snapshot date: empty or non-string value'
+      )
     })
 
     it('should reject district ID with path traversal characters', async () => {
@@ -599,7 +612,10 @@ describe('PreComputedAnalyticsReader', () => {
       )
 
       // Act
-      const result = await reader.readDistrictAnalytics(snapshotDate, districtId)
+      const result = await reader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
+      )
 
       // Assert
       expect(result).not.toBeNull()
@@ -613,7 +629,11 @@ describe('PreComputedAnalyticsReader', () => {
       const snapshotDate = '2024-01-15'
       const districtId = '42'
       const analyticsDir = await createAnalyticsDir(snapshotDate)
-      const file = createDistrictAnalyticsFile(districtId, snapshotDate, '9.0.0')
+      const file = createDistrictAnalyticsFile(
+        districtId,
+        snapshotDate,
+        '9.0.0'
+      )
       await writeFile(
         path.join(analyticsDir, `district_${districtId}_analytics.json`),
         file

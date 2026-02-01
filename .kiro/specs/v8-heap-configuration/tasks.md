@@ -20,7 +20,6 @@ This implementation adds V8 heap memory configuration to prevent OOM crashes in 
     - Compare against container memory (default 512MB, configurable via CONTAINER_MEMORY_MB)
     - Log warning if heap ratio exceeds 85%
     - _Requirements: 2.1, 2.2, 2.3_
-  
   - [ ] 2.2 Write unit tests for HeapValidator
     - Test warning logged when heap > 85% of container (e.g., 440MB/512MB)
     - Test no warning when heap ≤ 85% of container (e.g., 384MB/512MB)
@@ -37,7 +36,6 @@ This implementation adds V8 heap memory configuration to prevent OOM crashes in 
     - Log metrics using existing logger infrastructure
     - Store interval reference for cleanup
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
-  
   - [ ] 3.2 Write unit tests for MemoryMonitor
     - Test metrics logged with correct structure
     - Test bytes to MB conversion (0, 1048576, 402653184)
@@ -51,13 +49,11 @@ This implementation adds V8 heap memory configuration to prevent OOM crashes in 
     - Import validateHeapConfiguration from heapValidator
     - Call validateHeapConfiguration() early in startup (before server.listen)
     - _Requirements: 2.4_
-  
   - [ ] 4.2 Modify `backend/src/index.ts` for memory monitoring
     - Import MemoryMonitor from memoryMonitor
     - Create MemoryMonitor instance after server starts
     - Start monitoring with 60000ms interval
     - _Requirements: 3.1, 3.2_
-  
   - [ ] 4.3 Add graceful shutdown cleanup
     - Stop MemoryMonitor in SIGTERM handler before server.close()
     - Stop MemoryMonitor in SIGINT handler before server.close()

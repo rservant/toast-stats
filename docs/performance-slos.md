@@ -82,12 +82,12 @@ All performance decisions MUST adhere to the following principles:
 
 The application MUST meet the following Core Web Vitals targets:
 
-| Metric | Target | Maximum | Description |
-| ------ | ------ | ------- | ----------- |
-| **LCP** (Largest Contentful Paint) | < 1.5s | < 2.5s | Time until largest content element is rendered |
-| **FID** (First Input Delay) | < 50ms | < 100ms | Time from first interaction to browser response |
-| **CLS** (Cumulative Layout Shift) | < 0.05 | < 0.1 | Visual stability during page load |
-| **INP** (Interaction to Next Paint) | < 100ms | < 200ms | Responsiveness to user interactions |
+| Metric                              | Target  | Maximum | Description                                     |
+| ----------------------------------- | ------- | ------- | ----------------------------------------------- |
+| **LCP** (Largest Contentful Paint)  | < 1.5s  | < 2.5s  | Time until largest content element is rendered  |
+| **FID** (First Input Delay)         | < 50ms  | < 100ms | Time from first interaction to browser response |
+| **CLS** (Cumulative Layout Shift)   | < 0.05  | < 0.1   | Visual stability during page load               |
+| **INP** (Interaction to Next Paint) | < 100ms | < 200ms | Responsiveness to user interactions             |
 
 #### Target Definitions
 
@@ -117,25 +117,25 @@ To achieve LCP < 2 seconds:
 
 The application MUST be interactive within:
 
-| Page Type | TTI Target | Maximum |
-| --------- | ---------- | ------- |
-| Landing/Dashboard | < 2.5s | < 4s |
-| Data-heavy pages | < 3.5s | < 5s |
-| Admin pages | < 4s | < 6s |
+| Page Type         | TTI Target | Maximum |
+| ----------------- | ---------- | ------- |
+| Landing/Dashboard | < 2.5s     | < 4s    |
+| Data-heavy pages  | < 3.5s     | < 5s    |
+| Admin pages       | < 4s       | < 6s    |
 
 ### 5.2 Performance Budget
 
 The application MUST NOT exceed the following asset budgets:
 
-| Asset Type | Budget (Compressed) | Budget (Uncompressed) | Notes |
-| ---------- | ------------------- | --------------------- | ----- |
-| **JavaScript (Total)** | 200 KB | 600 KB | All JS including vendor bundles |
-| **JavaScript (Main Bundle)** | 100 KB | 300 KB | Application code only |
-| **JavaScript (Vendor Bundle)** | 100 KB | 300 KB | Third-party dependencies |
-| **CSS (Total)** | 50 KB | 150 KB | All stylesheets |
-| **Images (Per Page)** | 500 KB | - | Total images loaded on initial view |
-| **Fonts (Total)** | 100 KB | - | All font files |
-| **HTML Document** | 50 KB | - | Initial HTML response |
+| Asset Type                     | Budget (Compressed) | Budget (Uncompressed) | Notes                               |
+| ------------------------------ | ------------------- | --------------------- | ----------------------------------- |
+| **JavaScript (Total)**         | 200 KB              | 600 KB                | All JS including vendor bundles     |
+| **JavaScript (Main Bundle)**   | 100 KB              | 300 KB                | Application code only               |
+| **JavaScript (Vendor Bundle)** | 100 KB              | 300 KB                | Third-party dependencies            |
+| **CSS (Total)**                | 50 KB               | 150 KB                | All stylesheets                     |
+| **Images (Per Page)**          | 500 KB              | -                     | Total images loaded on initial view |
+| **Fonts (Total)**              | 100 KB              | -                     | All font files                      |
+| **HTML Document**              | 50 KB               | -                     | Initial HTML response               |
 
 #### Budget Enforcement
 
@@ -215,13 +215,13 @@ return (
 
 Images MUST be optimized for delivery:
 
-| Requirement | Implementation |
-| ----------- | -------------- |
-| Modern formats | Use WebP or AVIF with fallbacks |
-| Responsive images | Use `srcset` and `sizes` attributes |
-| Lazy loading | Use `loading="lazy"` for below-fold images |
-| Dimensions | Always specify `width` and `height` to prevent CLS |
-| Compression | Compress images to appropriate quality (80-85% for photos) |
+| Requirement       | Implementation                                             |
+| ----------------- | ---------------------------------------------------------- |
+| Modern formats    | Use WebP or AVIF with fallbacks                            |
+| Responsive images | Use `srcset` and `sizes` attributes                        |
+| Lazy loading      | Use `loading="lazy"` for below-fold images                 |
+| Dimensions        | Always specify `width` and `height` to prevent CLS         |
+| Compression       | Compress images to appropriate quality (80-85% for photos) |
 
 ```typescript
 // ✅ CORRECT - Optimized image with responsive sources
@@ -279,12 +279,12 @@ Font requirements:
 
 All text-based assets MUST be served with compression:
 
-| Asset Type | Compression | Minimum Savings |
-| ---------- | ----------- | --------------- |
-| JavaScript | Brotli (preferred) or gzip | 70%+ |
-| CSS | Brotli (preferred) or gzip | 70%+ |
-| HTML | Brotli (preferred) or gzip | 60%+ |
-| JSON API responses | gzip | 60%+ |
+| Asset Type         | Compression                | Minimum Savings |
+| ------------------ | -------------------------- | --------------- |
+| JavaScript         | Brotli (preferred) or gzip | 70%+            |
+| CSS                | Brotli (preferred) or gzip | 70%+            |
+| HTML               | Brotli (preferred) or gzip | 60%+            |
+| JSON API responses | gzip                       | 60%+            |
 
 ### 5.4 Measurement Requirements
 
@@ -294,12 +294,12 @@ Performance MUST be measured using the following methods:
 
 Lighthouse MUST be run in CI for every pull request:
 
-| Audit | Minimum Score | Target Score |
-| ----- | ------------- | ------------ |
-| Performance | 80 | 90+ |
-| Accessibility | 90 | 100 |
-| Best Practices | 90 | 100 |
-| SEO | 80 | 90+ |
+| Audit          | Minimum Score | Target Score |
+| -------------- | ------------- | ------------ |
+| Performance    | 80            | 90+          |
+| Accessibility  | 90            | 100          |
+| Best Practices | 90            | 100          |
+| SEO            | 80            | 90+          |
 
 ```yaml
 # Example Lighthouse CI configuration
@@ -329,13 +329,13 @@ ci:
 
 Production deployments SHOULD implement RUM to track:
 
-| Metric | Collection Method | Alerting Threshold |
-| ------ | ----------------- | ------------------ |
-| LCP | web-vitals library | p75 > 2.5s |
-| FID | web-vitals library | p75 > 100ms |
-| CLS | web-vitals library | p75 > 0.1 |
-| INP | web-vitals library | p75 > 200ms |
-| TTFB | web-vitals library | p75 > 800ms |
+| Metric | Collection Method  | Alerting Threshold |
+| ------ | ------------------ | ------------------ |
+| LCP    | web-vitals library | p75 > 2.5s         |
+| FID    | web-vitals library | p75 > 100ms        |
+| CLS    | web-vitals library | p75 > 0.1          |
+| INP    | web-vitals library | p75 > 200ms        |
+| TTFB   | web-vitals library | p75 > 800ms        |
 
 ```typescript
 // ✅ CORRECT - RUM implementation with web-vitals
@@ -351,7 +351,7 @@ function sendToAnalytics(metric: Metric) {
     id: metric.id,
     navigationType: metric.navigationType,
   })
-  
+
   // Use sendBeacon for reliability
   if (navigator.sendBeacon) {
     navigator.sendBeacon('/api/analytics/vitals', body)
@@ -449,13 +449,13 @@ Bundle size configuration:
 
 CI MUST detect performance regressions:
 
-| Check | Threshold | Action |
-| ----- | --------- | ------ |
-| Bundle size increase | > 5 KB | Warning |
-| Bundle size increase | > 20 KB | Blocking |
-| Lighthouse score decrease | > 5 points | Warning |
-| Lighthouse score decrease | > 10 points | Blocking |
-| New dependency added | Any | Requires justification |
+| Check                     | Threshold   | Action                 |
+| ------------------------- | ----------- | ---------------------- |
+| Bundle size increase      | > 5 KB      | Warning                |
+| Bundle size increase      | > 20 KB     | Blocking               |
+| Lighthouse score decrease | > 5 points  | Warning                |
+| Lighthouse score decrease | > 10 points | Blocking               |
+| New dependency added      | Any         | Requires justification |
 
 ```yaml
 # Example regression detection
@@ -464,7 +464,7 @@ CI MUST detect performance regressions:
     CURRENT_SIZE=$(stat -f%z dist/assets/index-*.js)
     BASELINE_SIZE=$(cat .bundle-baseline)
     DIFF=$((CURRENT_SIZE - BASELINE_SIZE))
-    
+
     if [ $DIFF -gt 20480 ]; then
       echo "ERROR: Bundle size increased by more than 20KB"
       exit 1
@@ -504,7 +504,6 @@ function Component() {
 
 ---
 
-
 ## 6. Backend Performance SLOs
 
 This section defines mandatory performance Service Level Objectives for backend API services. These targets ensure consistent, responsive API behavior and efficient resource utilization.
@@ -513,11 +512,11 @@ This section defines mandatory performance Service Level Objectives for backend 
 
 All backend API endpoints MUST meet the following latency targets:
 
-| Percentile | Target | Maximum | Description |
-| ---------- | ------ | ------- | ----------- |
-| **p50** | < 200ms | < 300ms | Median response time (typical user experience) |
-| **p95** | < 500ms | < 750ms | 95th percentile (most users' worst case) |
-| **p99** | < 1s | < 2s | 99th percentile (rare worst case) |
+| Percentile | Target  | Maximum | Description                                    |
+| ---------- | ------- | ------- | ---------------------------------------------- |
+| **p50**    | < 200ms | < 300ms | Median response time (typical user experience) |
+| **p95**    | < 500ms | < 750ms | 95th percentile (most users' worst case)       |
+| **p99**    | < 1s    | < 2s    | 99th percentile (rare worst case)              |
 
 #### Target Definitions
 
@@ -528,13 +527,13 @@ All backend API endpoints MUST meet the following latency targets:
 
 Different endpoint types have different latency expectations based on their complexity:
 
-| Endpoint Type | p50 Target | p95 Target | p99 Target | Examples |
-| ------------- | ---------- | ---------- | ---------- | -------- |
-| **Health checks** | < 50ms | < 100ms | < 200ms | `/health`, `/health/ready` |
-| **Simple reads** | < 100ms | < 300ms | < 500ms | `/api/districts`, `/api/config` |
-| **Complex reads** | < 200ms | < 500ms | < 1s | `/api/districts/:id/stats`, `/api/rankings` |
-| **Data mutations** | < 300ms | < 750ms | < 1.5s | `/api/snapshots`, `/api/config` (POST/PUT) |
-| **Long-running operations** | < 500ms | < 2s | < 5s | `/api/backfill/start`, `/api/refresh` |
+| Endpoint Type               | p50 Target | p95 Target | p99 Target | Examples                                    |
+| --------------------------- | ---------- | ---------- | ---------- | ------------------------------------------- |
+| **Health checks**           | < 50ms     | < 100ms    | < 200ms    | `/health`, `/health/ready`                  |
+| **Simple reads**            | < 100ms    | < 300ms    | < 500ms    | `/api/districts`, `/api/config`             |
+| **Complex reads**           | < 200ms    | < 500ms    | < 1s       | `/api/districts/:id/stats`, `/api/rankings` |
+| **Data mutations**          | < 300ms    | < 750ms    | < 1.5s     | `/api/snapshots`, `/api/config` (POST/PUT)  |
+| **Long-running operations** | < 500ms    | < 2s       | < 5s       | `/api/backfill/start`, `/api/refresh`       |
 
 #### Latency Measurement Requirements
 
@@ -549,7 +548,7 @@ Latency MUST be measured using the following methods:
 // ✅ CORRECT - Request timing middleware
 app.use((req, res, next) => {
   const startTime = Date.now()
-  
+
   res.on('finish', () => {
     const duration = Date.now() - startTime
     logger.info('HTTP Request', {
@@ -569,7 +568,7 @@ app.use((req, res, next) => {
       },
     })
   })
-  
+
   next()
 })
 ```
@@ -578,24 +577,24 @@ app.use((req, res, next) => {
 
 To achieve latency targets, the following techniques SHOULD be applied:
 
-| Technique | Impact | Implementation |
-| --------- | ------ | -------------- |
-| **Connection pooling** | Reduces connection overhead | Use persistent connections to Firestore/GCS |
-| **Response caching** | Eliminates redundant computation | Use LRU cache with appropriate TTL |
-| **Query optimization** | Reduces database latency | Use indexes, limit result sets |
-| **Async operations** | Prevents blocking | Use non-blocking I/O for all external calls |
-| **Request deduplication** | Reduces redundant work | Deduplicate concurrent identical requests |
+| Technique                 | Impact                           | Implementation                              |
+| ------------------------- | -------------------------------- | ------------------------------------------- |
+| **Connection pooling**    | Reduces connection overhead      | Use persistent connections to Firestore/GCS |
+| **Response caching**      | Eliminates redundant computation | Use LRU cache with appropriate TTL          |
+| **Query optimization**    | Reduces database latency         | Use indexes, limit result sets              |
+| **Async operations**      | Prevents blocking                | Use non-blocking I/O for all external calls |
+| **Request deduplication** | Reduces redundant work           | Deduplicate concurrent identical requests   |
 
 #### Latency Alerting Thresholds
 
 Alerts MUST be configured for latency degradation:
 
-| Condition | Severity | Action |
-| --------- | -------- | ------ |
-| p50 > 300ms for 5 minutes | Warning | Investigate |
-| p95 > 750ms for 5 minutes | High | Notify team |
-| p99 > 2s for 5 minutes | Critical | Page on-call |
-| Any request > 30s | Critical | Investigate timeout |
+| Condition                 | Severity | Action              |
+| ------------------------- | -------- | ------------------- |
+| p50 > 300ms for 5 minutes | Warning  | Investigate         |
+| p95 > 750ms for 5 minutes | High     | Notify team         |
+| p99 > 2s for 5 minutes    | Critical | Page on-call        |
+| Any request > 30s         | Critical | Investigate timeout |
 
 ### 6.2 Memory Budget
 
@@ -603,12 +602,12 @@ Backend services MUST operate within defined memory constraints to ensure stabil
 
 #### Default Memory Configuration
 
-| Configuration | Value | Rationale |
-| ------------- | ----- | --------- |
-| **Container memory limit** | 512Mi | Default Cloud Run allocation |
-| **V8 heap limit** | 384MB | ~75% of container memory |
-| **Native memory budget** | ~100MB | Buffers, streams, native modules |
-| **Overhead budget** | ~28MB | Node.js runtime, container overhead |
+| Configuration              | Value  | Rationale                           |
+| -------------------------- | ------ | ----------------------------------- |
+| **Container memory limit** | 512Mi  | Default Cloud Run allocation        |
+| **V8 heap limit**          | 384MB  | ~75% of container memory            |
+| **Native memory budget**   | ~100MB | Buffers, streams, native modules    |
+| **Overhead budget**        | ~28MB  | Node.js runtime, container overhead |
 
 The memory budget formula:
 
@@ -618,12 +617,12 @@ Container Memory (512Mi) = V8 Heap (384MB) + Native Memory (~100MB) + Overhead (
 
 #### Memory Sizing Guidelines
 
-| Container Memory | V8 Heap (`--max-old-space-size`) | Use Case |
-| ---------------- | -------------------------------- | -------- |
-| 256Mi | 150MB | Lightweight services, simple APIs |
-| 512Mi | 384MB | Standard API services (default) |
-| 1Gi | 768MB | Data processing, analytics |
-| 2Gi | 1536MB | Heavy computation, large datasets |
+| Container Memory | V8 Heap (`--max-old-space-size`) | Use Case                          |
+| ---------------- | -------------------------------- | --------------------------------- |
+| 256Mi            | 150MB                            | Lightweight services, simple APIs |
+| 512Mi            | 384MB                            | Standard API services (default)   |
+| 1Gi              | 768MB                            | Data processing, analytics        |
+| 2Gi              | 1536MB                           | Heavy computation, large datasets |
 
 **Rule**: `--max-old-space-size` SHOULD be set to approximately 75% of container memory to leave room for native memory and overhead.
 
@@ -647,11 +646,11 @@ gcloud run deploy toast-stats-backend \
 
 Memory usage MUST be monitored to prevent OOM (Out of Memory) conditions:
 
-| Metric | Source | Alert Threshold |
-| ------ | ------ | --------------- |
-| Container memory utilization | Cloud Run metrics | > 85% sustained |
-| V8 heap used | Custom metric | > 90% of limit |
-| RSS (Resident Set Size) | Custom metric | > 95% of container limit |
+| Metric                       | Source            | Alert Threshold          |
+| ---------------------------- | ----------------- | ------------------------ |
+| Container memory utilization | Cloud Run metrics | > 85% sustained          |
+| V8 heap used                 | Custom metric     | > 90% of limit           |
+| RSS (Resident Set Size)      | Custom metric     | > 95% of container limit |
 
 ```typescript
 // ✅ CORRECT - Memory monitoring
@@ -659,7 +658,7 @@ import { memoryUsage } from 'process'
 
 function logMemoryMetrics(): void {
   const usage = memoryUsage()
-  
+
   logger.info('Memory metrics', {
     metric: {
       name: 'nodejs_memory_heap_used_bytes',
@@ -668,7 +667,7 @@ function logMemoryMetrics(): void {
       labels: { type: 'heap_used' },
     },
   })
-  
+
   logger.info('Memory metrics', {
     metric: {
       name: 'nodejs_memory_rss_bytes',
@@ -689,23 +688,25 @@ To prevent memory leaks, the following patterns MUST be followed:
 
 ```typescript
 // ❌ FORBIDDEN - Unbounded cache growth
-const cache = new Map<string, Data>()  // Can grow indefinitely!
+const cache = new Map<string, Data>() // Can grow indefinitely!
 
 // ✅ CORRECT - Bounded LRU cache
 import { LRUCache } from 'lru-cache'
 
 const cache = new LRUCache<string, Data>({
-  max: 100,                    // Maximum 100 entries
-  maxSize: 50 * 1024 * 1024,  // 50MB maximum
-  sizeCalculation: (value) => JSON.stringify(value).length,
-  ttl: 5 * 60 * 1000,         // 5 minute TTL
+  max: 100, // Maximum 100 entries
+  maxSize: 50 * 1024 * 1024, // 50MB maximum
+  sizeCalculation: value => JSON.stringify(value).length,
+  ttl: 5 * 60 * 1000, // 5 minute TTL
 })
 
 // ❌ FORBIDDEN - Event listener without cleanup
-eventEmitter.on('data', handler)  // Never removed!
+eventEmitter.on('data', handler) // Never removed!
 
 // ✅ CORRECT - Event listener with cleanup
-const handler = (data: Data) => { /* ... */ }
+const handler = (data: Data) => {
+  /* ... */
+}
 eventEmitter.on('data', handler)
 
 // Cleanup on shutdown
@@ -715,7 +716,7 @@ process.on('SIGTERM', () => {
 
 // ❌ FORBIDDEN - Accumulating data in closures
 function createHandler() {
-  const allData: Data[] = []  // Grows forever!
+  const allData: Data[] = [] // Grows forever!
   return (data: Data) => {
     allData.push(data)
   }
@@ -727,7 +728,7 @@ function createHandler(maxItems: number) {
   return (data: Data) => {
     recentData.push(data)
     if (recentData.length > maxItems) {
-      recentData.shift()  // Remove oldest
+      recentData.shift() // Remove oldest
     }
   }
 }
@@ -739,22 +740,22 @@ Backend services MUST handle expected traffic volumes without degradation.
 
 #### Throughput Targets
 
-| Metric | Target | Maximum | Measurement |
-| ------ | ------ | ------- | ----------- |
-| **Requests per second (per instance)** | 50 RPS | 100 RPS | Cloud Run metrics |
-| **Concurrent requests (per instance)** | 80 | 100 | Cloud Run concurrency setting |
-| **Requests per minute (total)** | 3,000 RPM | 6,000 RPM | Aggregated across instances |
+| Metric                                 | Target    | Maximum   | Measurement                   |
+| -------------------------------------- | --------- | --------- | ----------------------------- |
+| **Requests per second (per instance)** | 50 RPS    | 100 RPS   | Cloud Run metrics             |
+| **Concurrent requests (per instance)** | 80        | 100       | Cloud Run concurrency setting |
+| **Requests per minute (total)**        | 3,000 RPM | 6,000 RPM | Aggregated across instances   |
 
 #### Concurrency Configuration
 
 Cloud Run concurrency MUST be configured based on workload characteristics:
 
-| Workload Type | Concurrency | Rationale |
-| ------------- | ----------- | --------- |
-| CPU-intensive | 10-20 | Limit parallel CPU work |
-| Memory-intensive | 20-40 | Prevent memory exhaustion |
-| I/O-bound (default) | 80 | Maximize throughput for async operations |
-| Mixed workload | 40-60 | Balance CPU and I/O |
+| Workload Type       | Concurrency | Rationale                                |
+| ------------------- | ----------- | ---------------------------------------- |
+| CPU-intensive       | 10-20       | Limit parallel CPU work                  |
+| Memory-intensive    | 20-40       | Prevent memory exhaustion                |
+| I/O-bound (default) | 80          | Maximize throughput for async operations |
+| Mixed workload      | 40-60       | Balance CPU and I/O                      |
 
 ```bash
 # ✅ CORRECT - Set concurrency for I/O-bound service
@@ -770,23 +771,21 @@ gcloud run deploy analytics-service \
 
 To achieve throughput targets, the following techniques SHOULD be applied:
 
-| Technique | Impact | Implementation |
-| --------- | ------ | -------------- |
-| **Request deduplication** | Reduces redundant work | Deduplicate concurrent identical requests |
-| **Response streaming** | Reduces memory pressure | Stream large responses instead of buffering |
-| **Pagination** | Limits response size | Paginate large result sets |
-| **Bounded concurrency** | Prevents overload | Use p-limit for parallel operations |
+| Technique                 | Impact                  | Implementation                              |
+| ------------------------- | ----------------------- | ------------------------------------------- |
+| **Request deduplication** | Reduces redundant work  | Deduplicate concurrent identical requests   |
+| **Response streaming**    | Reduces memory pressure | Stream large responses instead of buffering |
+| **Pagination**            | Limits response size    | Paginate large result sets                  |
+| **Bounded concurrency**   | Prevents overload       | Use p-limit for parallel operations         |
 
 ```typescript
 // ✅ CORRECT - Bounded concurrency with p-limit
 import pLimit from 'p-limit'
 
-const limit = pLimit(5)  // Maximum 5 concurrent operations
+const limit = pLimit(5) // Maximum 5 concurrent operations
 
 async function processItems(items: Item[]): Promise<Result[]> {
-  return Promise.all(
-    items.map(item => limit(() => processItem(item)))
-  )
+  return Promise.all(items.map(item => limit(() => processItem(item))))
 }
 ```
 
@@ -796,12 +795,12 @@ Backend services MUST maintain low error rates to ensure reliability.
 
 #### Error Rate Targets
 
-| Error Type | Target | Maximum | Measurement |
-| ---------- | ------ | ------- | ----------- |
-| **5xx errors (server errors)** | < 0.1% | < 1% | Percentage of total requests |
-| **4xx errors (client errors)** | < 5% | < 10% | Percentage of total requests |
-| **Timeout errors** | < 0.01% | < 0.1% | Requests exceeding timeout |
-| **Availability** | > 99.9% | > 99% | Successful health checks |
+| Error Type                     | Target  | Maximum | Measurement                  |
+| ------------------------------ | ------- | ------- | ---------------------------- |
+| **5xx errors (server errors)** | < 0.1%  | < 1%    | Percentage of total requests |
+| **4xx errors (client errors)** | < 5%    | < 10%   | Percentage of total requests |
+| **Timeout errors**             | < 0.01% | < 0.1%  | Requests exceeding timeout   |
+| **Availability**               | > 99.9% | > 99%   | Successful health checks     |
 
 #### Error Rate Definitions
 
@@ -814,11 +813,11 @@ Backend services MUST maintain low error rates to ensure reliability.
 
 Alerts MUST be configured for error rate thresholds:
 
-| Condition | Severity | Action |
-| --------- | -------- | ------ |
-| 5xx rate > 0.5% for 5 minutes | Warning | Investigate |
-| 5xx rate > 1% for 5 minutes | High | Notify team |
-| 5xx rate > 5% for 5 minutes | Critical | Page on-call |
+| Condition                        | Severity | Action       |
+| -------------------------------- | -------- | ------------ |
+| 5xx rate > 0.5% for 5 minutes    | Warning  | Investigate  |
+| 5xx rate > 1% for 5 minutes      | High     | Notify team  |
+| 5xx rate > 5% for 5 minutes      | Critical | Page on-call |
 | Availability < 99% for 5 minutes | Critical | Page on-call |
 
 #### Error Handling Requirements
@@ -830,7 +829,7 @@ To maintain error rate SLOs, the following patterns MUST be followed:
 router.get('/api/districts/:id', async (req, res) => {
   try {
     const district = await storage.getDistrict(req.params.id)
-    
+
     if (!district) {
       // 404 - Not found (4xx, expected)
       res.status(404).json({
@@ -841,12 +840,12 @@ router.get('/api/districts/:id', async (req, res) => {
       })
       return
     }
-    
+
     res.json(district)
   } catch (error) {
     // Log error for debugging
     logger.error('Failed to fetch district', error)
-    
+
     // 500 - Internal error (5xx, unexpected)
     res.status(500).json({
       error: {
@@ -861,9 +860,9 @@ router.get('/api/districts/:id', async (req, res) => {
 import CircuitBreaker from 'opossum'
 
 const storageBreaker = new CircuitBreaker(storage.getSnapshot, {
-  timeout: 5000,           // 5 second timeout
-  errorThresholdPercentage: 50,  // Open after 50% failures
-  resetTimeout: 30000,     // Try again after 30 seconds
+  timeout: 5000, // 5 second timeout
+  errorThresholdPercentage: 50, // Open after 50% failures
+  resetTimeout: 30000, // Try again after 30 seconds
 })
 
 storageBreaker.on('open', () => {
@@ -883,11 +882,11 @@ storageBreaker.on('close', () => {
 
 The error budget defines how much unreliability is acceptable:
 
-| SLO | Error Budget (monthly) | Calculation |
-| --- | ---------------------- | ----------- |
-| 99.9% availability | 43.8 minutes downtime | 30 days × 24 hours × 60 minutes × 0.1% |
-| 99% availability | 7.3 hours downtime | 30 days × 24 hours × 1% |
-| < 1% error rate | 1% of requests can fail | Total requests × 1% |
+| SLO                | Error Budget (monthly)  | Calculation                            |
+| ------------------ | ----------------------- | -------------------------------------- |
+| 99.9% availability | 43.8 minutes downtime   | 30 days × 24 hours × 60 minutes × 0.1% |
+| 99% availability   | 7.3 hours downtime      | 30 days × 24 hours × 1%                |
+| < 1% error rate    | 1% of requests can fail | Total requests × 1%                    |
 
 Error budget guidelines:
 
@@ -901,38 +900,38 @@ Backend performance MUST be monitored continuously to ensure SLOs are met.
 
 #### Required Metrics
 
-| Metric | Collection Method | Retention |
-| ------ | ----------------- | --------- |
-| Request latency (p50, p95, p99) | Structured logging + Cloud Monitoring | 30 days |
-| Request count by status code | Structured logging + Cloud Monitoring | 30 days |
-| Memory utilization | Cloud Run metrics | 30 days |
-| CPU utilization | Cloud Run metrics | 30 days |
-| Instance count | Cloud Run metrics | 30 days |
-| Error rate | Calculated from status codes | 30 days |
+| Metric                          | Collection Method                     | Retention |
+| ------------------------------- | ------------------------------------- | --------- |
+| Request latency (p50, p95, p99) | Structured logging + Cloud Monitoring | 30 days   |
+| Request count by status code    | Structured logging + Cloud Monitoring | 30 days   |
+| Memory utilization              | Cloud Run metrics                     | 30 days   |
+| CPU utilization                 | Cloud Run metrics                     | 30 days   |
+| Instance count                  | Cloud Run metrics                     | 30 days   |
+| Error rate                      | Calculated from status codes          | 30 days   |
 
 #### Dashboard Requirements
 
 A backend performance dashboard MUST include:
 
-| Widget | Metric | Visualization |
-| ------ | ------ | ------------- |
-| Request rate | Requests per second | Time series |
-| Latency percentiles | p50, p95, p99 | Time series with thresholds |
-| Error rate | 5xx percentage | Time series with threshold |
-| Memory utilization | Container memory % | Gauge with threshold |
-| Instance count | Active instances | Time series |
-| Availability | Health check success % | Single stat |
+| Widget              | Metric                 | Visualization               |
+| ------------------- | ---------------------- | --------------------------- |
+| Request rate        | Requests per second    | Time series                 |
+| Latency percentiles | p50, p95, p99          | Time series with thresholds |
+| Error rate          | 5xx percentage         | Time series with threshold  |
+| Memory utilization  | Container memory %     | Gauge with threshold        |
+| Instance count      | Active instances       | Time series                 |
+| Availability        | Health check success % | Single stat                 |
 
 #### Performance Review Cadence
 
 Backend performance SHOULD be reviewed regularly:
 
-| Review Type | Frequency | Focus |
-| ----------- | --------- | ----- |
-| Real-time monitoring | Continuous | Alerts and anomalies |
-| Daily review | Daily | Error spikes, latency trends |
-| Weekly review | Weekly | SLO compliance, capacity planning |
-| Monthly review | Monthly | Error budget, optimization opportunities |
+| Review Type          | Frequency  | Focus                                    |
+| -------------------- | ---------- | ---------------------------------------- |
+| Real-time monitoring | Continuous | Alerts and anomalies                     |
+| Daily review         | Daily      | Error spikes, latency trends             |
+| Weekly review        | Weekly     | SLO compliance, capacity planning        |
+| Monthly review       | Monthly    | Error budget, optimization opportunities |
 
 ### 6.6 Prohibited Backend Patterns
 
@@ -941,7 +940,7 @@ The following patterns are **FORBIDDEN** as they negatively impact backend perfo
 ```typescript
 // ❌ FORBIDDEN - Synchronous blocking operations
 import { readFileSync } from 'fs'
-const data = readFileSync('/path/to/file')  // Blocks event loop!
+const data = readFileSync('/path/to/file') // Blocks event loop!
 
 // ✅ CORRECT - Asynchronous operations
 import { readFile } from 'fs/promises'
@@ -949,7 +948,7 @@ const data = await readFile('/path/to/file')
 
 // ❌ FORBIDDEN - Unbounded parallel operations
 const results = await Promise.all(
-  items.map(item => processItem(item))  // Could be thousands!
+  items.map(item => processItem(item)) // Could be thousands!
 )
 
 // ✅ CORRECT - Bounded parallel operations
@@ -960,7 +959,7 @@ const results = await Promise.all(
 )
 
 // ❌ FORBIDDEN - No timeout on external calls
-const response = await fetch(externalUrl)  // Could hang forever!
+const response = await fetch(externalUrl) // Could hang forever!
 
 // ✅ CORRECT - Timeout on external calls
 const controller = new AbortController()
@@ -972,7 +971,7 @@ try {
 }
 
 // ❌ FORBIDDEN - Loading entire dataset into memory
-const allRecords = await db.collection('records').get()  // Could be millions!
+const allRecords = await db.collection('records').get() // Could be millions!
 
 // ✅ CORRECT - Paginated data access
 const pageSize = 100
@@ -984,13 +983,13 @@ while (true) {
   if (lastDoc) {
     query = query.startAfter(lastDoc)
   }
-  
+
   const snapshot = await query.get()
   if (snapshot.empty) break
-  
+
   records.push(...snapshot.docs.map(doc => doc.data()))
   lastDoc = snapshot.docs[snapshot.docs.length - 1]
-  
+
   if (snapshot.docs.length < pageSize) break
 }
 
@@ -1013,7 +1012,6 @@ async function computeHash(data: string): Promise<string> {
 ```
 
 ---
-
 
 ## 7. Node.js Memory Management
 
@@ -1080,13 +1078,13 @@ Understanding the V8 memory model is essential for effective memory management i
 
 #### Key Memory Concepts
 
-| Concept | Description | Controlled By |
-| ------- | ----------- | ------------- |
-| **RSS (Resident Set Size)** | Total memory allocated to the Node.js process by the OS | Container memory limit |
-| **V8 Heap Total** | Total heap memory allocated by V8 | `--max-old-space-size` + new space |
-| **V8 Heap Used** | Heap memory currently in use by JavaScript objects | Application code |
-| **External Memory** | Memory used by C++ objects bound to JavaScript | Native modules, Buffers |
-| **Array Buffers** | Memory for ArrayBuffer and TypedArray backing stores | Application code |
+| Concept                     | Description                                             | Controlled By                      |
+| --------------------------- | ------------------------------------------------------- | ---------------------------------- |
+| **RSS (Resident Set Size)** | Total memory allocated to the Node.js process by the OS | Container memory limit             |
+| **V8 Heap Total**           | Total heap memory allocated by V8                       | `--max-old-space-size` + new space |
+| **V8 Heap Used**            | Heap memory currently in use by JavaScript objects      | Application code                   |
+| **External Memory**         | Memory used by C++ objects bound to JavaScript          | Native modules, Buffers            |
+| **Array Buffers**           | Memory for ArrayBuffer and TypedArray backing stores    | Application code                   |
 
 #### Memory Metrics Explained
 
@@ -1123,11 +1121,11 @@ The relationship between RSS and V8 heap is critical for container sizing:
 RSS = V8 Heap Total + External Memory + Native Memory + Runtime Overhead
 ```
 
-| Component | Typical Size | Notes |
-| --------- | ------------ | ----- |
-| V8 Heap | 50-75% of RSS | Controlled by `--max-old-space-size` |
-| External/Native | 10-30% of RSS | Buffers, streams, native modules |
-| Runtime Overhead | 50-100 MB | Node.js, V8, libuv |
+| Component        | Typical Size  | Notes                                |
+| ---------------- | ------------- | ------------------------------------ |
+| V8 Heap          | 50-75% of RSS | Controlled by `--max-old-space-size` |
+| External/Native  | 10-30% of RSS | Buffers, streams, native modules     |
+| Runtime Overhead | 50-100 MB     | Node.js, V8, libuv                   |
 
 **Critical Rule**: The V8 heap limit (`--max-old-space-size`) MUST be set lower than the container memory limit to leave room for native memory and overhead.
 
@@ -1149,13 +1147,13 @@ NODE_OPTIONS="--max-old-space-size=384" node dist/index.js
 
 #### Configuration Guidelines
 
-| Container Memory | Recommended `--max-old-space-size` | Calculation | Use Case |
-| ---------------- | ---------------------------------- | ----------- | -------- |
-| 256Mi | 150 MB | 256 × 0.60 | Lightweight services |
-| 512Mi | 384 MB | 512 × 0.75 | Standard API services |
-| 1Gi | 768 MB | 1024 × 0.75 | Data processing |
-| 2Gi | 1536 MB | 2048 × 0.75 | Heavy computation |
-| 4Gi | 3072 MB | 4096 × 0.75 | Large datasets |
+| Container Memory | Recommended `--max-old-space-size` | Calculation | Use Case              |
+| ---------------- | ---------------------------------- | ----------- | --------------------- |
+| 256Mi            | 150 MB                             | 256 × 0.60  | Lightweight services  |
+| 512Mi            | 384 MB                             | 512 × 0.75  | Standard API services |
+| 1Gi              | 768 MB                             | 1024 × 0.75 | Data processing       |
+| 2Gi              | 1536 MB                            | 2048 × 0.75 | Heavy computation     |
+| 4Gi              | 3072 MB                            | 4096 × 0.75 | Large datasets        |
 
 **Rule**: Set `--max-old-space-size` to approximately **75%** of container memory for standard workloads, or **60%** for buffer-heavy workloads.
 
@@ -1205,20 +1203,23 @@ function validateHeapConfiguration(): void {
   const heapStats = v8.getHeapStatistics()
   const heapSizeLimit = heapStats.heap_size_limit
   const heapSizeLimitMB = Math.round(heapSizeLimit / 1024 / 1024)
-  
+
   // Get container memory limit (if available)
-  const containerMemoryMB = parseInt(process.env.CONTAINER_MEMORY_MB ?? '512', 10)
-  
+  const containerMemoryMB = parseInt(
+    process.env.CONTAINER_MEMORY_MB ?? '512',
+    10
+  )
+
   // Warn if heap limit is too high relative to container
   const heapRatio = heapSizeLimitMB / containerMemoryMB
   if (heapRatio > 0.85) {
     console.warn(
       `WARNING: V8 heap limit (${heapSizeLimitMB}MB) is ${Math.round(heapRatio * 100)}% ` +
-      `of container memory (${containerMemoryMB}MB). Risk of OOM. ` +
-      `Recommended: Set --max-old-space-size to ${Math.round(containerMemoryMB * 0.75)}MB`
+        `of container memory (${containerMemoryMB}MB). Risk of OOM. ` +
+        `Recommended: Set --max-old-space-size to ${Math.round(containerMemoryMB * 0.75)}MB`
     )
   }
-  
+
   console.log(`V8 heap size limit: ${heapSizeLimitMB}MB`)
 }
 
@@ -1230,11 +1231,11 @@ validateHeapConfiguration()
 
 For most applications, default GC settings are appropriate. However, for specific workloads:
 
-| Flag | Purpose | When to Use |
-| ---- | ------- | ----------- |
-| `--expose-gc` | Allows manual GC triggering | Testing, debugging only |
-| `--max-semi-space-size` | Controls new space size | High object churn workloads |
-| `--optimize-for-size` | Reduces memory at cost of speed | Memory-constrained environments |
+| Flag                    | Purpose                         | When to Use                     |
+| ----------------------- | ------------------------------- | ------------------------------- |
+| `--expose-gc`           | Allows manual GC triggering     | Testing, debugging only         |
+| `--max-semi-space-size` | Controls new space size         | High object churn workloads     |
+| `--optimize-for-size`   | Reduces memory at cost of speed | Memory-constrained environments |
 
 **Warning**: Manual GC tuning is rarely needed and can hurt performance. Only tune GC settings with profiling data to justify changes.
 
@@ -1244,14 +1245,14 @@ Unbounded memory growth is the most common cause of OOM crashes in Node.js appli
 
 #### Common Sources of Memory Leaks
 
-| Source | Description | Prevention |
-| ------ | ----------- | ---------- |
-| **Unbounded caches** | Maps/objects that grow without limit | Use LRU cache with max size |
-| **Event listeners** | Listeners added but never removed | Always remove listeners on cleanup |
-| **Closures** | Closures capturing large objects | Avoid capturing unnecessary references |
-| **Global state** | Data accumulated in module scope | Use bounded data structures |
-| **Timers** | setInterval without clearInterval | Always clear timers on shutdown |
-| **Streams** | Streams not properly closed | Always close/destroy streams |
+| Source               | Description                          | Prevention                             |
+| -------------------- | ------------------------------------ | -------------------------------------- |
+| **Unbounded caches** | Maps/objects that grow without limit | Use LRU cache with max size            |
+| **Event listeners**  | Listeners added but never removed    | Always remove listeners on cleanup     |
+| **Closures**         | Closures capturing large objects     | Avoid capturing unnecessary references |
+| **Global state**     | Data accumulated in module scope     | Use bounded data structures            |
+| **Timers**           | setInterval without clearInterval    | Always clear timers on shutdown        |
+| **Streams**          | Streams not properly closed          | Always close/destroy streams           |
 
 #### Mandatory Cache Patterns
 
@@ -1263,7 +1264,7 @@ const cache = new Map<string, Data>()
 
 function getData(key: string): Data {
   if (!cache.has(key)) {
-    cache.set(key, fetchData(key))  // Grows forever!
+    cache.set(key, fetchData(key)) // Grows forever!
   }
   return cache.get(key)!
 }
@@ -1272,15 +1273,15 @@ function getData(key: string): Data {
 import { LRUCache } from 'lru-cache'
 
 const cache = new LRUCache<string, Data>({
-  max: 1000,                      // Maximum 1000 entries
-  maxSize: 50 * 1024 * 1024,     // Maximum 50MB total size
-  sizeCalculation: (value) => {
+  max: 1000, // Maximum 1000 entries
+  maxSize: 50 * 1024 * 1024, // Maximum 50MB total size
+  sizeCalculation: value => {
     // Calculate size of cached value
     return JSON.stringify(value).length
   },
-  ttl: 5 * 60 * 1000,            // 5 minute TTL
-  updateAgeOnGet: true,           // Reset TTL on access
-  allowStale: false,              // Don't serve stale data
+  ttl: 5 * 60 * 1000, // 5 minute TTL
+  updateAgeOnGet: true, // Reset TTL on access
+  allowStale: false, // Don't serve stale data
 })
 
 function getData(key: string): Data | undefined {
@@ -1295,13 +1296,13 @@ function getData(key: string): Data | undefined {
 
 #### LRU Cache Configuration Requirements
 
-| Parameter | Requirement | Rationale |
-| --------- | ----------- | --------- |
-| `max` | MUST be set | Limits entry count |
-| `maxSize` | SHOULD be set | Limits total memory |
-| `sizeCalculation` | MUST be set if using `maxSize` | Accurate size tracking |
-| `ttl` | SHOULD be set | Prevents stale data accumulation |
-| `allowStale` | SHOULD be `false` for most cases | Ensures data freshness |
+| Parameter         | Requirement                      | Rationale                        |
+| ----------------- | -------------------------------- | -------------------------------- |
+| `max`             | MUST be set                      | Limits entry count               |
+| `maxSize`         | SHOULD be set                    | Limits total memory              |
+| `sizeCalculation` | MUST be set if using `maxSize`   | Accurate size tracking           |
+| `ttl`             | SHOULD be set                    | Prevents stale data accumulation |
+| `allowStale`      | SHOULD be `false` for most cases | Ensures data freshness           |
 
 #### Event Listener Management
 
@@ -1314,7 +1315,7 @@ class DataProcessor {
     // Listener is never removed!
     emitter.on('data', this.handleData.bind(this))
   }
-  
+
   handleData(data: Data): void {
     // Process data
   }
@@ -1323,16 +1324,16 @@ class DataProcessor {
 // ✅ CORRECT - Event listener with proper cleanup
 class DataProcessor {
   private boundHandler: (data: Data) => void
-  
+
   constructor(private emitter: EventEmitter) {
     this.boundHandler = this.handleData.bind(this)
     emitter.on('data', this.boundHandler)
   }
-  
+
   handleData(data: Data): void {
     // Process data
   }
-  
+
   // MUST be called when processor is no longer needed
   destroy(): void {
     this.emitter.off('data', this.boundHandler)
@@ -1342,17 +1343,17 @@ class DataProcessor {
 // ✅ CORRECT - Using AbortController for cleanup
 class DataProcessor {
   private abortController = new AbortController()
-  
+
   constructor(private emitter: EventEmitter) {
     const { signal } = this.abortController
-    
+
     emitter.on('data', this.handleData.bind(this), { signal })
   }
-  
+
   handleData(data: Data): void {
     // Process data
   }
-  
+
   destroy(): void {
     this.abortController.abort()
   }
@@ -1376,7 +1377,7 @@ function processLargeDataset(dataset: LargeDataset): () => Summary {
 function processLargeDataset(dataset: LargeDataset): () => Summary {
   // Extract only what's needed
   const itemCount = dataset.items.length
-  
+
   // Closure only captures the primitive value
   return () => {
     return { count: itemCount }
@@ -1385,8 +1386,8 @@ function processLargeDataset(dataset: LargeDataset): () => Summary {
 
 // ❌ FORBIDDEN - Accumulating data in closure scope
 function createAccumulator(): (item: Item) => void {
-  const allItems: Item[] = []  // Grows unbounded!
-  
+  const allItems: Item[] = [] // Grows unbounded!
+
   return (item: Item) => {
     allItems.push(item)
   }
@@ -1395,7 +1396,7 @@ function createAccumulator(): (item: Item) => void {
 // ✅ CORRECT - Bounded accumulation
 function createAccumulator(maxItems: number): (item: Item) => void {
   const recentItems: Item[] = []
-  
+
   return (item: Item) => {
     recentItems.push(item)
     // Keep only recent items
@@ -1417,7 +1418,7 @@ class HealthChecker {
     // This timer runs forever, even after the checker is "destroyed"
     setInterval(() => this.check(), 30000)
   }
-  
+
   check(): void {
     // Perform health check
   }
@@ -1426,16 +1427,16 @@ class HealthChecker {
 // ✅ CORRECT - Timer with proper cleanup
 class HealthChecker {
   private intervalId: NodeJS.Timeout | null = null
-  
+
   start(): void {
-    if (this.intervalId) return  // Prevent duplicate timers
+    if (this.intervalId) return // Prevent duplicate timers
     this.intervalId = setInterval(() => this.check(), 30000)
   }
-  
+
   check(): void {
     // Perform health check
   }
-  
+
   stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId)
@@ -1451,7 +1452,7 @@ function startPeriodicTask(
   signal: AbortSignal
 ): void {
   const intervalId = setInterval(task, intervalMs)
-  
+
   signal.addEventListener('abort', () => {
     clearInterval(intervalId)
   })
@@ -1481,9 +1482,9 @@ interface MemorySample {
 
 class MemoryMonitor {
   private samples: MemorySample[] = []
-  private readonly maxSamples = 60  // Keep 1 hour of samples (1/min)
-  private readonly leakThresholdMB = 50  // Alert if growth > 50MB/hour
-  
+  private readonly maxSamples = 60 // Keep 1 hour of samples (1/min)
+  private readonly leakThresholdMB = 50 // Alert if growth > 50MB/hour
+
   sample(): void {
     const usage = memoryUsage()
     this.samples.push({
@@ -1491,25 +1492,25 @@ class MemoryMonitor {
       heapUsed: usage.heapUsed,
       rss: usage.rss,
     })
-    
+
     // Keep bounded samples
     while (this.samples.length > this.maxSamples) {
       this.samples.shift()
     }
-    
+
     this.checkForLeak()
   }
-  
+
   private checkForLeak(): void {
-    if (this.samples.length < 10) return  // Need enough samples
-    
+    if (this.samples.length < 10) return // Need enough samples
+
     const oldest = this.samples[0]
     const newest = this.samples[this.samples.length - 1]
     const heapGrowthMB = (newest.heapUsed - oldest.heapUsed) / 1024 / 1024
     const timeSpanHours = (newest.timestamp - oldest.timestamp) / 1000 / 60 / 60
-    
+
     const growthRateMBPerHour = heapGrowthMB / timeSpanHours
-    
+
     if (growthRateMBPerHour > this.leakThresholdMB) {
       console.warn(
         `Potential memory leak detected: heap growing at ${growthRateMBPerHour.toFixed(1)}MB/hour`
@@ -1525,12 +1526,12 @@ Streaming MUST be used when processing large datasets to avoid loading entire da
 
 #### When to Use Streaming
 
-| Data Size | Approach | Rationale |
-| --------- | -------- | --------- |
-| < 1 MB | Load into memory | Overhead of streaming not justified |
-| 1-10 MB | Consider streaming | Depends on concurrent requests |
-| > 10 MB | MUST use streaming | Risk of memory exhaustion |
-| Unknown size | MUST use streaming | Cannot predict memory requirements |
+| Data Size    | Approach           | Rationale                           |
+| ------------ | ------------------ | ----------------------------------- |
+| < 1 MB       | Load into memory   | Overhead of streaming not justified |
+| 1-10 MB      | Consider streaming | Depends on concurrent requests      |
+| > 10 MB      | MUST use streaming | Risk of memory exhaustion           |
+| Unknown size | MUST use streaming | Cannot predict memory requirements  |
 
 #### Stream Processing Architecture
 
@@ -1560,7 +1561,7 @@ Streaming MUST be used when processing large datasets to avoid loading entire da
 import { readFile } from 'fs/promises'
 
 async function processLargeFile(path: string): Promise<ProcessedData[]> {
-  const content = await readFile(path, 'utf-8')  // Entire file in memory!
+  const content = await readFile(path, 'utf-8') // Entire file in memory!
   const lines = content.split('\n')
   return lines.map(line => processLine(line))
 }
@@ -1575,9 +1576,9 @@ async function processLargeFile(path: string): Promise<void> {
     input: fileStream,
     crlfDelay: Infinity,
   })
-  
+
   for await (const line of rl) {
-    await processLine(line)  // Process one line at a time
+    await processLine(line) // Process one line at a time
   }
 }
 
@@ -1585,15 +1586,18 @@ async function processLargeFile(path: string): Promise<void> {
 import { Transform } from 'stream'
 import { pipeline } from 'stream/promises'
 
-async function processLargeCSV(inputPath: string, outputPath: string): Promise<void> {
+async function processLargeCSV(
+  inputPath: string,
+  outputPath: string
+): Promise<void> {
   const batchSize = 100
   let batch: Record[] = []
-  
+
   const batchTransform = new Transform({
     objectMode: true,
     async transform(record, encoding, callback) {
       batch.push(record)
-      
+
       if (batch.length >= batchSize) {
         const processed = await processBatch(batch)
         for (const item of processed) {
@@ -1601,7 +1605,7 @@ async function processLargeCSV(inputPath: string, outputPath: string): Promise<v
         }
         batch = []
       }
-      
+
       callback()
     },
     async flush(callback) {
@@ -1615,7 +1619,7 @@ async function processLargeCSV(inputPath: string, outputPath: string): Promise<v
       callback()
     },
   })
-  
+
   await pipeline(
     createReadStream(inputPath),
     csvParser(),
@@ -1633,38 +1637,38 @@ Large API responses SHOULD be streamed to reduce memory usage and improve time-t
 ```typescript
 // ❌ FORBIDDEN - Building entire response in memory
 router.get('/api/export', async (req, res) => {
-  const allRecords = await db.collection('records').get()  // All in memory!
+  const allRecords = await db.collection('records').get() // All in memory!
   const data = allRecords.docs.map(doc => doc.data())
-  res.json(data)  // Serializes entire array
+  res.json(data) // Serializes entire array
 })
 
 // ✅ CORRECT - Stream response as NDJSON
 router.get('/api/export', async (req, res) => {
   res.setHeader('Content-Type', 'application/x-ndjson')
   res.setHeader('Transfer-Encoding', 'chunked')
-  
+
   const pageSize = 100
   let lastDoc: DocumentSnapshot | null = null
-  
+
   while (true) {
     let query = db.collection('records').limit(pageSize)
     if (lastDoc) {
       query = query.startAfter(lastDoc)
     }
-    
+
     const snapshot = await query.get()
     if (snapshot.empty) break
-    
+
     for (const doc of snapshot.docs) {
       // Write each record as a line of JSON
       res.write(JSON.stringify(doc.data()) + '\n')
     }
-    
+
     lastDoc = snapshot.docs[snapshot.docs.length - 1]
-    
+
     if (snapshot.docs.length < pageSize) break
   }
-  
+
   res.end()
 })
 
@@ -1674,35 +1678,35 @@ import { stringify } from 'csv-stringify'
 router.get('/api/export.csv', async (req, res) => {
   res.setHeader('Content-Type', 'text/csv')
   res.setHeader('Content-Disposition', 'attachment; filename="export.csv"')
-  
+
   const stringifier = stringify({
     header: true,
     columns: ['id', 'name', 'value', 'timestamp'],
   })
-  
+
   stringifier.pipe(res)
-  
+
   const pageSize = 100
   let lastDoc: DocumentSnapshot | null = null
-  
+
   while (true) {
     let query = db.collection('records').limit(pageSize)
     if (lastDoc) {
       query = query.startAfter(lastDoc)
     }
-    
+
     const snapshot = await query.get()
     if (snapshot.empty) break
-    
+
     for (const doc of snapshot.docs) {
       stringifier.write(doc.data())
     }
-    
+
     lastDoc = snapshot.docs[snapshot.docs.length - 1]
-    
+
     if (snapshot.docs.length < pageSize) break
   }
-  
+
   stringifier.end()
 })
 ```
@@ -1729,17 +1733,17 @@ async function processStream(input: Readable, output: Writable): Promise<void> {
 function processStreamManual(input: Readable): Promise<Result> {
   return new Promise((resolve, reject) => {
     const results: Data[] = []
-    
-    input.on('data', (chunk) => {
+
+    input.on('data', chunk => {
       results.push(processChunk(chunk))
     })
-    
+
     input.on('end', () => {
       resolve(aggregateResults(results))
     })
-    
-    input.on('error', (error) => {
-      input.destroy()  // Clean up the stream
+
+    input.on('error', error => {
+      input.destroy() // Clean up the stream
       reject(error)
     })
   })
@@ -1754,7 +1758,7 @@ Streams MUST implement backpressure to prevent memory exhaustion when producers 
 // ❌ FORBIDDEN - Ignoring backpressure
 async function copyData(source: Readable, dest: Writable): Promise<void> {
   for await (const chunk of source) {
-    dest.write(chunk)  // Ignores backpressure signal!
+    dest.write(chunk) // Ignores backpressure signal!
   }
   dest.end()
 }
@@ -1763,7 +1767,7 @@ async function copyData(source: Readable, dest: Writable): Promise<void> {
 async function copyData(source: Readable, dest: Writable): Promise<void> {
   for await (const chunk of source) {
     const canContinue = dest.write(chunk)
-    
+
     if (!canContinue) {
       // Wait for drain event before continuing
       await new Promise<void>(resolve => dest.once('drain', resolve))
@@ -1789,14 +1793,14 @@ Configure stream buffers to prevent excessive memory usage:
 import { createReadStream } from 'fs'
 
 const stream = createReadStream(filePath, {
-  highWaterMark: 64 * 1024,  // 64KB buffer (default is 64KB)
+  highWaterMark: 64 * 1024, // 64KB buffer (default is 64KB)
 })
 
 // ✅ CORRECT - Custom transform with controlled buffering
 import { Transform } from 'stream'
 
 const transform = new Transform({
-  highWaterMark: 16 * 1024,  // 16KB buffer
+  highWaterMark: 16 * 1024, // 16KB buffer
   transform(chunk, encoding, callback) {
     // Process chunk
     callback(null, processedChunk)
@@ -1810,20 +1814,20 @@ All API endpoints returning collections MUST implement pagination to prevent unb
 
 #### Pagination Strategy
 
-| Strategy | Use Case | Pros | Cons |
-| -------- | -------- | ---- | ---- |
-| **Offset-based** | Simple lists, UI tables | Easy to implement, random access | Slow for large offsets, inconsistent with changes |
-| **Cursor-based** | Large datasets, real-time data | Consistent, efficient | No random access, more complex |
-| **Keyset-based** | Sorted data, time-series | Very efficient, consistent | Requires sortable unique key |
+| Strategy         | Use Case                       | Pros                             | Cons                                              |
+| ---------------- | ------------------------------ | -------------------------------- | ------------------------------------------------- |
+| **Offset-based** | Simple lists, UI tables        | Easy to implement, random access | Slow for large offsets, inconsistent with changes |
+| **Cursor-based** | Large datasets, real-time data | Consistent, efficient            | No random access, more complex                    |
+| **Keyset-based** | Sorted data, time-series       | Very efficient, consistent       | Requires sortable unique key                      |
 
 **Recommendation**: Use cursor-based pagination for most API endpoints. Use offset-based only for small, static datasets.
 
 #### Pagination Limits
 
-| Parameter | Minimum | Default | Maximum | Rationale |
-| --------- | ------- | ------- | ------- | --------- |
-| `limit` / `pageSize` | 1 | 20 | 100 | Prevents excessive memory usage |
-| `offset` | 0 | 0 | 10,000 | Prevents slow queries |
+| Parameter            | Minimum | Default | Maximum | Rationale                       |
+| -------------------- | ------- | ------- | ------- | ------------------------------- |
+| `limit` / `pageSize` | 1       | 20      | 100     | Prevents excessive memory usage |
+| `offset`             | 0       | 0       | 10,000  | Prevents slow queries           |
 
 #### Cursor-Based Pagination Implementation
 
@@ -1847,32 +1851,34 @@ interface PaginationParams {
 async function getDistricts(
   params: PaginationParams
 ): Promise<PaginatedResponse<District>> {
-  const limit = Math.min(params.limit ?? 20, 100)  // Enforce maximum
+  const limit = Math.min(params.limit ?? 20, 100) // Enforce maximum
   const direction = params.direction ?? 'forward'
-  
-  let query = db.collection('districts')
+
+  let query = db
+    .collection('districts')
     .orderBy('name')
-    .limit(limit + 1)  // Fetch one extra to check hasMore
-  
+    .limit(limit + 1) // Fetch one extra to check hasMore
+
   if (params.cursor) {
     const cursorDoc = await db.collection('districts').doc(params.cursor).get()
     if (cursorDoc.exists) {
-      query = direction === 'forward'
-        ? query.startAfter(cursorDoc)
-        : query.endBefore(cursorDoc)
+      query =
+        direction === 'forward'
+          ? query.startAfter(cursorDoc)
+          : query.endBefore(cursorDoc)
     }
   }
-  
+
   const snapshot = await query.get()
   const docs = snapshot.docs
-  
+
   // Check if there are more results
   const hasMore = docs.length > limit
   const data = docs.slice(0, limit).map(doc => ({
     id: doc.id,
     ...doc.data(),
   })) as District[]
-  
+
   return {
     data,
     pagination: {
@@ -1905,23 +1911,24 @@ async function getDistrictsOffset(
   // Enforce limits
   const safeLimit = Math.min(Math.max(limit, 1), 100)
   const safeOffset = Math.min(Math.max(offset, 0), 10000)
-  
+
   // Get total count (cache this if expensive)
   const countSnapshot = await db.collection('districts').count().get()
   const total = countSnapshot.data().count
-  
+
   // Get page of data
-  const snapshot = await db.collection('districts')
+  const snapshot = await db
+    .collection('districts')
     .orderBy('name')
     .offset(safeOffset)
     .limit(safeLimit)
     .get()
-  
+
   const data = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   })) as District[]
-  
+
   return {
     data,
     pagination: {
@@ -1948,12 +1955,12 @@ interface ApiPaginatedResponse<T> {
       cursor?: string
       nextCursor?: string | null
       prevCursor?: string | null
-      
+
       // Offset-based
       offset?: number
       limit: number
       total?: number
-      
+
       // Common
       hasMore: boolean
       count: number  // Items in current page
@@ -2002,7 +2009,7 @@ const OffsetPaginationSchema = z.object({
 // Usage in route handler
 router.get('/api/districts', async (req, res) => {
   const result = CursorPaginationSchema.safeParse(req.query)
-  
+
   if (!result.success) {
     return res.status(400).json({
       error: {
@@ -2012,7 +2019,7 @@ router.get('/api/districts', async (req, res) => {
       },
     })
   }
-  
+
   const { cursor, limit, direction } = result.data
   const response = await getDistricts({ cursor, limit, direction })
   res.json(response)
@@ -2025,18 +2032,18 @@ router.get('/api/districts', async (req, res) => {
 // ❌ FORBIDDEN - No pagination on collection endpoints
 router.get('/api/districts', async (req, res) => {
   const snapshot = await db.collection('districts').get()
-  res.json(snapshot.docs.map(doc => doc.data()))  // Could be thousands!
+  res.json(snapshot.docs.map(doc => doc.data())) // Could be thousands!
 })
 
 // ❌ FORBIDDEN - Unlimited page size
 router.get('/api/districts', async (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 1000  // No maximum!
+  const limit = parseInt(req.query.limit as string) || 1000 // No maximum!
   // ...
 })
 
 // ❌ FORBIDDEN - Fetching all then slicing in memory
 router.get('/api/districts', async (req, res) => {
-  const allDocs = await db.collection('districts').get()  // All in memory!
+  const allDocs = await db.collection('districts').get() // All in memory!
   const page = allDocs.docs.slice(offset, offset + limit)
   // ...
 })
@@ -2044,22 +2051,22 @@ router.get('/api/districts', async (req, res) => {
 // ✅ CORRECT - Database-level pagination
 router.get('/api/districts', async (req, res) => {
   const { limit, cursor } = validatePagination(req.query)
-  
-  let query = db.collection('districts')
+
+  let query = db
+    .collection('districts')
     .orderBy('name')
     .limit(limit + 1)
-  
+
   if (cursor) {
     query = query.startAfter(cursor)
   }
-  
+
   const snapshot = await query.get()
   // ...
 })
 ```
 
 ---
-
 
 ## 8. Concurrency and Backpressure
 
@@ -2117,14 +2124,14 @@ Cloud Run allows multiple concurrent requests to be processed by a single contai
 
 The `--concurrency` flag controls how many requests a single instance can handle simultaneously:
 
-| Concurrency Setting | Use Case | Memory Impact | CPU Impact |
-| ------------------- | -------- | ------------- | ---------- |
-| **1** | CPU-intensive, stateful operations | Minimal per-request | Maximum per-request |
-| **10-20** | CPU-bound with some I/O | Moderate | High |
-| **40-60** | Mixed CPU and I/O workloads | Moderate-High | Moderate |
-| **80** (default) | I/O-bound operations | High | Low-Moderate |
-| **100-250** | Lightweight, fast I/O operations | Very High | Low |
-| **1000** (max) | Proxy/gateway services | Extreme | Minimal |
+| Concurrency Setting | Use Case                           | Memory Impact       | CPU Impact          |
+| ------------------- | ---------------------------------- | ------------------- | ------------------- |
+| **1**               | CPU-intensive, stateful operations | Minimal per-request | Maximum per-request |
+| **10-20**           | CPU-bound with some I/O            | Moderate            | High                |
+| **40-60**           | Mixed CPU and I/O workloads        | Moderate-High       | Moderate            |
+| **80** (default)    | I/O-bound operations               | High                | Low-Moderate        |
+| **100-250**         | Lightweight, fast I/O operations   | Very High           | Low                 |
+| **1000** (max)      | Proxy/gateway services             | Extreme             | Minimal             |
 
 #### Concurrency Configuration Requirements
 
@@ -2160,10 +2167,10 @@ Optimal Concurrency = Container Memory / (Base Memory + Per-Request Memory)
 
 | Container Memory | Base Memory | Per-Request Memory | Recommended Concurrency |
 | ---------------- | ----------- | ------------------ | ----------------------- |
-| 256Mi | 100MB | 2MB | ~75 |
-| 512Mi | 150MB | 4MB | ~80 |
-| 1Gi | 200MB | 8MB | ~100 |
-| 2Gi | 300MB | 10MB | ~170 |
+| 256Mi            | 100MB       | 2MB                | ~75                     |
+| 512Mi            | 150MB       | 4MB                | ~80                     |
+| 1Gi              | 200MB       | 8MB                | ~100                    |
+| 2Gi              | 300MB       | 10MB               | ~170                    |
 
 **Rule**: Concurrency SHOULD be set such that `Base Memory + (Concurrency × Per-Request Memory) < 85% of Container Memory`.
 
@@ -2207,12 +2214,12 @@ async function runInWorker(data: string): Promise<Result> {
 
 Concurrency utilization MUST be monitored to detect capacity issues:
 
-| Metric | Source | Alert Threshold |
-| ------ | ------ | --------------- |
-| Active request count | Cloud Run metrics | > 90% of concurrency limit |
-| Request queue time | Structured logging | > 100ms average |
-| Instance count at max | Cloud Run metrics | Sustained at max instances |
-| Request timeouts | Cloud Run metrics | > 0.1% of requests |
+| Metric                | Source             | Alert Threshold            |
+| --------------------- | ------------------ | -------------------------- |
+| Active request count  | Cloud Run metrics  | > 90% of concurrency limit |
+| Request queue time    | Structured logging | > 100ms average            |
+| Instance count at max | Cloud Run metrics  | Sustained at max instances |
+| Request timeouts      | Cloud Run metrics  | > 0.1% of requests         |
 
 ### 8.2 Bounded Concurrency Patterns
 
@@ -2226,12 +2233,10 @@ The `p-limit` library MUST be used for bounded concurrency in parallel operation
 import pLimit from 'p-limit'
 
 // ✅ CORRECT - Bounded parallel processing
-const limit = pLimit(5)  // Maximum 5 concurrent operations
+const limit = pLimit(5) // Maximum 5 concurrent operations
 
 async function processItems(items: Item[]): Promise<Result[]> {
-  return Promise.all(
-    items.map(item => limit(() => processItem(item)))
-  )
+  return Promise.all(items.map(item => limit(() => processItem(item))))
 }
 
 // ❌ FORBIDDEN - Unbounded parallel processing
@@ -2245,13 +2250,13 @@ async function processItemsUnbounded(items: Item[]): Promise<Result[]> {
 
 Different operations require different concurrency limits:
 
-| Operation Type | Recommended Limit | Rationale |
-| -------------- | ----------------- | --------- |
-| **Database queries** | 5-10 | Prevent connection pool exhaustion |
-| **External API calls** | 3-5 | Respect rate limits, prevent cascading failures |
-| **File I/O operations** | 10-20 | Balance throughput with file descriptor limits |
-| **CPU-intensive tasks** | 1-2 per CPU core | Prevent CPU saturation |
-| **Memory-intensive tasks** | Based on memory budget | Prevent OOM |
+| Operation Type             | Recommended Limit      | Rationale                                       |
+| -------------------------- | ---------------------- | ----------------------------------------------- |
+| **Database queries**       | 5-10                   | Prevent connection pool exhaustion              |
+| **External API calls**     | 3-5                    | Respect rate limits, prevent cascading failures |
+| **File I/O operations**    | 10-20                  | Balance throughput with file descriptor limits  |
+| **CPU-intensive tasks**    | 1-2 per CPU core       | Prevent CPU saturation                          |
+| **Memory-intensive tasks** | Based on memory budget | Prevent OOM                                     |
 
 #### Advanced p-limit Patterns
 
@@ -2259,33 +2264,31 @@ Different operations require different concurrency limits:
 import pLimit from 'p-limit'
 
 // ✅ CORRECT - Different limits for different resource types
-const dbLimit = pLimit(10)      // Database operations
-const apiLimit = pLimit(5)      // External API calls
-const cpuLimit = pLimit(2)      // CPU-intensive work
+const dbLimit = pLimit(10) // Database operations
+const apiLimit = pLimit(5) // External API calls
+const cpuLimit = pLimit(2) // CPU-intensive work
 
 async function processDistrict(districtId: string): Promise<DistrictData> {
   // Fetch from database with DB concurrency limit
-  const district = await dbLimit(() => 
+  const district = await dbLimit(() =>
     db.collection('districts').doc(districtId).get()
   )
-  
+
   // Call external API with API concurrency limit
-  const externalData = await apiLimit(() => 
-    fetchExternalData(districtId)
-  )
-  
+  const externalData = await apiLimit(() => fetchExternalData(districtId))
+
   // Process with CPU concurrency limit
-  const computed = await cpuLimit(() => 
+  const computed = await cpuLimit(() =>
     computeStatistics(district, externalData)
   )
-  
+
   return computed
 }
 
 // ✅ CORRECT - Nested concurrency control
 async function processAllDistricts(districtIds: string[]): Promise<void> {
-  const outerLimit = pLimit(10)  // Process 10 districts at a time
-  
+  const outerLimit = pLimit(10) // Process 10 districts at a time
+
   await Promise.all(
     districtIds.map(id => outerLimit(() => processDistrict(id)))
   )
@@ -2301,11 +2304,11 @@ For protecting shared resources, use a semaphore pattern:
 class ConnectionPool {
   private semaphore: pLimit.Limit
   private connections: Connection[] = []
-  
+
   constructor(maxConnections: number) {
     this.semaphore = pLimit(maxConnections)
   }
-  
+
   async withConnection<T>(fn: (conn: Connection) => Promise<T>): Promise<T> {
     return this.semaphore(async () => {
       const conn = await this.acquireConnection()
@@ -2316,16 +2319,16 @@ class ConnectionPool {
       }
     })
   }
-  
+
   private async acquireConnection(): Promise<Connection> {
     // Get or create connection
-    return this.connections.pop() ?? await this.createConnection()
+    return this.connections.pop() ?? (await this.createConnection())
   }
-  
+
   private releaseConnection(conn: Connection): void {
     this.connections.push(conn)
   }
-  
+
   private async createConnection(): Promise<Connection> {
     // Create new connection
     return new Connection()
@@ -2336,7 +2339,7 @@ class ConnectionPool {
 const pool = new ConnectionPool(10)
 
 async function queryDatabase(sql: string): Promise<Result> {
-  return pool.withConnection(async (conn) => {
+  return pool.withConnection(async conn => {
     return conn.query(sql)
   })
 }
@@ -2385,23 +2388,23 @@ import { Readable, Writable } from 'stream'
 
 // ❌ FORBIDDEN - Ignoring backpressure
 async function copyIgnoringBackpressure(
-  source: Readable, 
+  source: Readable,
   dest: Writable
 ): Promise<void> {
   for await (const chunk of source) {
-    dest.write(chunk)  // Ignores return value!
+    dest.write(chunk) // Ignores return value!
   }
   dest.end()
 }
 
 // ✅ CORRECT - Respecting backpressure
 async function copyWithBackpressure(
-  source: Readable, 
+  source: Readable,
   dest: Writable
 ): Promise<void> {
   for await (const chunk of source) {
     const canContinue = dest.write(chunk)
-    
+
     if (!canContinue) {
       // Buffer is full, wait for drain
       await new Promise<void>(resolve => dest.once('drain', resolve))
@@ -2414,10 +2417,10 @@ async function copyWithBackpressure(
 import { pipeline } from 'stream/promises'
 
 async function copyWithPipeline(
-  source: Readable, 
+  source: Readable,
   dest: Writable
 ): Promise<void> {
-  await pipeline(source, dest)  // Handles backpressure automatically
+  await pipeline(source, dest) // Handles backpressure automatically
 }
 ```
 
@@ -2431,9 +2434,9 @@ class BoundedQueue<T> {
   private queue: T[] = []
   private waitingConsumers: Array<(item: T) => void> = []
   private waitingProducers: Array<() => void> = []
-  
+
   constructor(private readonly maxSize: number) {}
-  
+
   async enqueue(item: T): Promise<void> {
     if (this.queue.length >= this.maxSize) {
       // Queue full, wait for space
@@ -2441,7 +2444,7 @@ class BoundedQueue<T> {
         this.waitingProducers.push(resolve)
       })
     }
-    
+
     // Check if consumer is waiting
     const consumer = this.waitingConsumers.shift()
     if (consumer) {
@@ -2450,7 +2453,7 @@ class BoundedQueue<T> {
       this.queue.push(item)
     }
   }
-  
+
   async dequeue(): Promise<T> {
     if (this.queue.length === 0) {
       // Queue empty, wait for item
@@ -2458,22 +2461,22 @@ class BoundedQueue<T> {
         this.waitingConsumers.push(resolve)
       })
     }
-    
+
     const item = this.queue.shift()!
-    
+
     // Signal waiting producer
     const producer = this.waitingProducers.shift()
     if (producer) {
       producer()
     }
-    
+
     return item
   }
-  
+
   get size(): number {
     return this.queue.length
   }
-  
+
   get isFull(): boolean {
     return this.queue.length >= this.maxSize
   }
@@ -2486,12 +2489,13 @@ const requestQueue = new BoundedQueue<Request>(100)
 router.post('/api/process', async (req, res) => {
   if (requestQueue.isFull) {
     // Return 503 Service Unavailable with Retry-After
-    res.status(503)
+    res
+      .status(503)
       .set('Retry-After', '5')
       .json({ error: { code: 'SERVICE_BUSY', message: 'Server is busy' } })
     return
   }
-  
+
   await requestQueue.enqueue(req.body)
   res.status(202).json({ status: 'queued' })
 })
@@ -2509,24 +2513,25 @@ async function processQueue(): Promise<void> {
 
 When the service is overloaded, proper HTTP responses MUST be returned:
 
-| Condition | HTTP Status | Headers | Response |
-| --------- | ----------- | ------- | -------- |
-| Queue full | 503 Service Unavailable | `Retry-After: N` | `{ "error": { "code": "SERVICE_BUSY" } }` |
-| Rate limited | 429 Too Many Requests | `Retry-After: N` | `{ "error": { "code": "RATE_LIMITED" } }` |
-| Timeout imminent | 504 Gateway Timeout | - | `{ "error": { "code": "TIMEOUT" } }` |
+| Condition        | HTTP Status             | Headers          | Response                                  |
+| ---------------- | ----------------------- | ---------------- | ----------------------------------------- |
+| Queue full       | 503 Service Unavailable | `Retry-After: N` | `{ "error": { "code": "SERVICE_BUSY" } }` |
+| Rate limited     | 429 Too Many Requests   | `Retry-After: N` | `{ "error": { "code": "RATE_LIMITED" } }` |
+| Timeout imminent | 504 Gateway Timeout     | -                | `{ "error": { "code": "TIMEOUT" } }`      |
 
 ```typescript
 // ✅ CORRECT - Backpressure-aware request handler
 import pLimit from 'p-limit'
 
-const processingLimit = pLimit(50)  // Max 50 concurrent processing operations
+const processingLimit = pLimit(50) // Max 50 concurrent processing operations
 let activeRequests = 0
 const MAX_QUEUE_DEPTH = 100
 
 router.post('/api/heavy-operation', async (req, res) => {
   // Check if we're at capacity
   if (activeRequests >= MAX_QUEUE_DEPTH) {
-    res.status(503)
+    res
+      .status(503)
       .set('Retry-After', '10')
       .json({
         error: {
@@ -2537,9 +2542,9 @@ router.post('/api/heavy-operation', async (req, res) => {
       })
     return
   }
-  
+
   activeRequests++
-  
+
   try {
     const result = await processingLimit(async () => {
       return await heavyOperation(req.body)
@@ -2564,9 +2569,9 @@ The Node.js event loop is single-threaded. Blocking operations prevent ALL concu
 import { readFileSync, writeFileSync } from 'fs'
 
 function processFile(path: string): Data {
-  const content = readFileSync(path, 'utf-8')  // BLOCKS!
+  const content = readFileSync(path, 'utf-8') // BLOCKS!
   const processed = transform(content)
-  writeFileSync(outputPath, processed)  // BLOCKS!
+  writeFileSync(outputPath, processed) // BLOCKS!
   return processed
 }
 
@@ -2574,9 +2579,9 @@ function processFile(path: string): Data {
 import { readFile, writeFile } from 'fs/promises'
 
 async function processFile(path: string): Promise<Data> {
-  const content = await readFile(path, 'utf-8')  // Non-blocking
+  const content = await readFile(path, 'utf-8') // Non-blocking
   const processed = transform(content)
-  await writeFile(outputPath, processed)  // Non-blocking
+  await writeFile(outputPath, processed) // Non-blocking
   return processed
 }
 
@@ -2626,16 +2631,14 @@ import pLimit from 'p-limit'
 const limit = pLimit(10)
 
 async function fetchAllUsers(userIds: string[]): Promise<User[]> {
-  return Promise.all(
-    userIds.map(id => limit(() => fetchUser(id)))
-  )
+  return Promise.all(userIds.map(id => limit(() => fetchUser(id))))
 }
 
 // ✅ CORRECT - Batch processing for very large sets
 async function fetchAllUsersBatched(userIds: string[]): Promise<User[]> {
   const batchSize = 100
   const results: User[] = []
-  
+
   for (let i = 0; i < userIds.length; i += batchSize) {
     const batch = userIds.slice(i, i + batchSize)
     const batchResults = await Promise.all(
@@ -2643,7 +2646,7 @@ async function fetchAllUsersBatched(userIds: string[]): Promise<User[]> {
     )
     results.push(...batchResults)
   }
-  
+
   return results
 }
 ```
@@ -2655,18 +2658,18 @@ Operations without timeouts can hang indefinitely, consuming resources and block
 ```typescript
 // ❌ FORBIDDEN - No timeout on external call
 async function fetchExternalData(url: string): Promise<Data> {
-  const response = await fetch(url)  // Could hang forever!
+  const response = await fetch(url) // Could hang forever!
   return response.json()
 }
 
 // ✅ CORRECT - Timeout with AbortController
 async function fetchExternalData(
-  url: string, 
+  url: string,
   timeoutMs: number = 5000
 ): Promise<Data> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  
+
   try {
     const response = await fetch(url, { signal: controller.signal })
     return await response.json()
@@ -2687,13 +2690,13 @@ async function withTimeout<T>(
   errorMessage: string
 ): Promise<T> {
   let timeoutId: NodeJS.Timeout
-  
+
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error(errorMessage))
     }, timeoutMs)
   })
-  
+
   try {
     return await Promise.race([promise, timeoutPromise])
   } finally {
@@ -2702,11 +2705,7 @@ async function withTimeout<T>(
 }
 
 // Usage
-const result = await withTimeout(
-  fetchData(),
-  5000,
-  'Data fetch timed out'
-)
+const result = await withTimeout(fetchData(), 5000, 'Data fetch timed out')
 ```
 
 #### Pitfall 4: Memory Leaks from Closures and Listeners
@@ -2724,7 +2723,7 @@ function createProcessor(largeDataset: LargeData[]): () => number {
 
 // ✅ CORRECT - Extract only needed data
 function createProcessor(largeDataset: LargeData[]): () => number {
-  const count = largeDataset.length  // Extract primitive
+  const count = largeDataset.length // Extract primitive
   return () => count
 }
 
@@ -2732,9 +2731,9 @@ function createProcessor(largeDataset: LargeData[]): () => number {
 class DataService {
   constructor(private eventBus: EventEmitter) {
     // This listener is never removed!
-    eventBus.on('data', (data) => this.handleData(data))
+    eventBus.on('data', data => this.handleData(data))
   }
-  
+
   handleData(data: Data): void {
     // Process data
   }
@@ -2743,16 +2742,16 @@ class DataService {
 // ✅ CORRECT - Proper cleanup with AbortController
 class DataService {
   private abortController = new AbortController()
-  
+
   constructor(private eventBus: EventEmitter) {
     const { signal } = this.abortController
     eventBus.on('data', this.handleData.bind(this), { signal })
   }
-  
+
   handleData(data: Data): void {
     // Process data
   }
-  
+
   destroy(): void {
     this.abortController.abort()
   }
@@ -2766,7 +2765,7 @@ Unhandled promise rejections can cause memory leaks and unexpected behavior.
 ```typescript
 // ❌ FORBIDDEN - Fire-and-forget async operation
 function triggerBackgroundTask(): void {
-  processInBackground()  // Promise rejection is lost!
+  processInBackground() // Promise rejection is lost!
 }
 
 // ✅ CORRECT - Handle errors in background tasks
@@ -2785,14 +2784,14 @@ process.on('unhandledRejection', (reason, promise) => {
 
 #### Pitfall Summary Table
 
-| Pitfall | Symptom | Prevention |
-| ------- | ------- | ---------- |
-| **Blocking event loop** | High latency, timeouts | Use async APIs, worker threads |
-| **Unbounded Promise.all** | Memory exhaustion, connection errors | Use p-limit for bounded concurrency |
-| **Missing timeouts** | Hanging requests, resource exhaustion | Always set timeouts on external calls |
-| **Closure memory leaks** | Growing memory over time | Extract primitives, avoid capturing large objects |
-| **Listener memory leaks** | Growing memory, duplicate handlers | Use AbortController, implement cleanup |
-| **Unhandled rejections** | Silent failures, memory leaks | Always handle promise rejections |
+| Pitfall                   | Symptom                               | Prevention                                        |
+| ------------------------- | ------------------------------------- | ------------------------------------------------- |
+| **Blocking event loop**   | High latency, timeouts                | Use async APIs, worker threads                    |
+| **Unbounded Promise.all** | Memory exhaustion, connection errors  | Use p-limit for bounded concurrency               |
+| **Missing timeouts**      | Hanging requests, resource exhaustion | Always set timeouts on external calls             |
+| **Closure memory leaks**  | Growing memory over time              | Extract primitives, avoid capturing large objects |
+| **Listener memory leaks** | Growing memory, duplicate handlers    | Use AbortController, implement cleanup            |
+| **Unhandled rejections**  | Silent failures, memory leaks         | Always handle promise rejections                  |
 
 ### 8.5 Diagnostics and Tooling
 
@@ -2802,14 +2801,14 @@ Proper diagnostics and tooling are essential for identifying and resolving perfo
 
 The following metrics MUST be collected for concurrency and performance monitoring:
 
-| Metric | Collection Method | Purpose |
-| ------ | ----------------- | ------- |
-| **Event loop lag** | `perf_hooks` or `event-loop-lag` | Detect blocking operations |
-| **Active handles/requests** | `process._getActiveHandles()` | Detect resource leaks |
-| **Heap usage** | `process.memoryUsage()` | Monitor memory consumption |
-| **GC metrics** | `--expose-gc` + `perf_hooks` | Understand GC impact |
-| **Request concurrency** | Custom counter | Monitor load distribution |
-| **Queue depth** | Custom metric | Detect backpressure needs |
+| Metric                      | Collection Method                | Purpose                    |
+| --------------------------- | -------------------------------- | -------------------------- |
+| **Event loop lag**          | `perf_hooks` or `event-loop-lag` | Detect blocking operations |
+| **Active handles/requests** | `process._getActiveHandles()`    | Detect resource leaks      |
+| **Heap usage**              | `process.memoryUsage()`          | Monitor memory consumption |
+| **GC metrics**              | `--expose-gc` + `perf_hooks`     | Understand GC impact       |
+| **Request concurrency**     | Custom counter                   | Monitor load distribution  |
+| **Queue depth**             | Custom metric                    | Detect backpressure needs  |
 
 #### Event Loop Monitoring
 
@@ -2825,13 +2824,13 @@ histogram.enable()
 // Log event loop metrics periodically
 setInterval(() => {
   const stats = {
-    min: histogram.min / 1e6,      // Convert to ms
+    min: histogram.min / 1e6, // Convert to ms
     max: histogram.max / 1e6,
     mean: histogram.mean / 1e6,
     p50: histogram.percentile(50) / 1e6,
     p99: histogram.percentile(99) / 1e6,
   }
-  
+
   logger.info('Event loop metrics', {
     metric: {
       name: 'nodejs_eventloop_lag_ms',
@@ -2840,14 +2839,14 @@ setInterval(() => {
       labels: { percentile: 'mean' },
     },
   })
-  
+
   // Alert on high event loop lag
   if (stats.p99 > 100) {
     logger.warn('High event loop lag detected', { stats })
   }
-  
+
   histogram.reset()
-}, 60000)  // Every minute
+}, 60000) // Every minute
 ```
 
 #### Memory Diagnostics
@@ -2871,7 +2870,7 @@ interface MemoryMetrics {
 function collectMemoryMetrics(): MemoryMetrics {
   const usage = memoryUsage()
   const heapStats = v8.getHeapStatistics()
-  
+
   return {
     heapUsed: usage.heapUsed,
     heapTotal: usage.heapTotal,
@@ -2885,18 +2884,18 @@ function collectMemoryMetrics(): MemoryMetrics {
 // Log memory metrics periodically
 setInterval(() => {
   const metrics = collectMemoryMetrics()
-  
+
   logger.info('Memory metrics', {
     heapUsedMB: Math.round(metrics.heapUsed / 1024 / 1024),
     heapTotalMB: Math.round(metrics.heapTotal / 1024 / 1024),
     rssMB: Math.round(metrics.rss / 1024 / 1024),
     heapUsedPercent: Math.round(metrics.heapUsedPercent),
   })
-  
+
   // Alert on high memory usage
   if (metrics.heapUsedPercent > 85) {
-    logger.warn('High heap usage', { 
-      heapUsedPercent: metrics.heapUsedPercent 
+    logger.warn('High heap usage', {
+      heapUsedPercent: metrics.heapUsedPercent,
     })
   }
 }, 60000)
@@ -2921,8 +2920,8 @@ interface RequestContext {
 const asyncLocalStorage = new AsyncLocalStorage<RequestContext>()
 
 export function tracingMiddleware(
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction
 ): void {
   const context: RequestContext = {
@@ -2931,10 +2930,10 @@ export function tracingMiddleware(
     spanId: randomUUID().substring(0, 16),
     startTime: Date.now(),
   }
-  
+
   // Set response headers for correlation
   res.set('X-Request-ID', context.requestId)
-  
+
   // Run request with context
   asyncLocalStorage.run(context, () => {
     res.on('finish', () => {
@@ -2948,7 +2947,7 @@ export function tracingMiddleware(
         duration,
       })
     })
-    
+
     next()
   })
 }
@@ -2963,13 +2962,13 @@ export function getRequestContext(): RequestContext | undefined {
 
 The following profiling tools SHOULD be available for debugging:
 
-| Tool | Purpose | When to Use |
-| ---- | ------- | ----------- |
-| **Node.js Inspector** | CPU profiling, heap snapshots | Development, staging |
-| **Clinic.js** | Performance analysis suite | Development |
-| **0x** | Flame graph generation | CPU bottleneck analysis |
-| **heapdump** | Heap snapshot generation | Memory leak investigation |
-| **v8-profiler-next** | Programmatic profiling | Production debugging |
+| Tool                  | Purpose                       | When to Use               |
+| --------------------- | ----------------------------- | ------------------------- |
+| **Node.js Inspector** | CPU profiling, heap snapshots | Development, staging      |
+| **Clinic.js**         | Performance analysis suite    | Development               |
+| **0x**                | Flame graph generation        | CPU bottleneck analysis   |
+| **heapdump**          | Heap snapshot generation      | Memory leak investigation |
+| **v8-profiler-next**  | Programmatic profiling        | Production debugging      |
 
 #### Production Debugging Endpoints
 
@@ -2984,7 +2983,7 @@ import v8 from 'v8'
 router.get('/health/diagnostics', requireAdmin, (req, res) => {
   const memory = memoryUsage()
   const heapStats = v8.getHeapStatistics()
-  
+
   res.json({
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
@@ -3006,10 +3005,10 @@ router.get('/health/diagnostics', requireAdmin, (req, res) => {
 // Heap snapshot endpoint (use with caution)
 router.post('/admin/heap-snapshot', requireAdmin, async (req, res) => {
   const filename = `heap-${Date.now()}.heapsnapshot`
-  
+
   // Write heap snapshot
   v8.writeHeapSnapshot(filename)
-  
+
   logger.warn('Heap snapshot created', { filename })
   res.json({ filename, message: 'Heap snapshot created' })
 })
@@ -3019,17 +3018,16 @@ router.post('/admin/heap-snapshot', requireAdmin, async (req, res) => {
 
 The following alerting thresholds MUST be configured:
 
-| Metric | Warning | Critical | Action |
-| ------ | ------- | -------- | ------ |
-| Event loop lag (p99) | > 50ms | > 100ms | Investigate blocking operations |
-| Heap usage | > 75% | > 90% | Check for memory leaks |
-| Active handles | > 1000 | > 5000 | Check for resource leaks |
-| Request queue depth | > 50 | > 100 | Scale up or implement backpressure |
-| Error rate | > 1% | > 5% | Investigate errors |
-| Request latency (p99) | > 1s | > 2s | Optimize slow endpoints |
+| Metric                | Warning | Critical | Action                             |
+| --------------------- | ------- | -------- | ---------------------------------- |
+| Event loop lag (p99)  | > 50ms  | > 100ms  | Investigate blocking operations    |
+| Heap usage            | > 75%   | > 90%    | Check for memory leaks             |
+| Active handles        | > 1000  | > 5000   | Check for resource leaks           |
+| Request queue depth   | > 50    | > 100    | Scale up or implement backpressure |
+| Error rate            | > 1%    | > 5%     | Investigate errors                 |
+| Request latency (p99) | > 1s    | > 2s     | Optimize slow endpoints            |
 
 ---
-
 
 ## 9. Implementation Patterns and Guardrails
 
@@ -3046,34 +3044,33 @@ import pLimit from 'p-limit'
 
 // ✅ CORRECT - Create bounded concurrency limits by resource type
 const limits = {
-  database: pLimit(10),      // Database operations
-  externalApi: pLimit(5),    // External API calls
-  fileSystem: pLimit(20),    // File I/O operations
-  cpuIntensive: pLimit(2),   // CPU-bound work (per core)
+  database: pLimit(10), // Database operations
+  externalApi: pLimit(5), // External API calls
+  fileSystem: pLimit(20), // File I/O operations
+  cpuIntensive: pLimit(2), // CPU-bound work (per core)
   memoryIntensive: pLimit(5), // Memory-heavy operations
 }
 
 // ✅ CORRECT - Use appropriate limit for each operation type
 async function processDistrictData(districtId: string): Promise<DistrictData> {
   // Database fetch with database limit
-  const rawData = await limits.database(() => 
+  const rawData = await limits.database(() =>
     db.collection('districts').doc(districtId).get()
   )
-  
+
   // External API call with API limit
-  const enrichedData = await limits.externalApi(() => 
+  const enrichedData = await limits.externalApi(() =>
     fetchExternalEnrichment(districtId)
   )
-  
+
   // CPU-intensive computation with CPU limit
-  const computed = await limits.cpuIntensive(() => 
+  const computed = await limits.cpuIntensive(() =>
     computeStatistics(rawData, enrichedData)
   )
-  
+
   return computed
 }
 ```
-
 
 #### Batch Processing with Bounded Concurrency
 
@@ -3085,10 +3082,8 @@ async function processAllItems<T, R>(
   concurrencyLimit: number = 10
 ): Promise<R[]> {
   const limit = pLimit(concurrencyLimit)
-  
-  return Promise.all(
-    items.map(item => limit(() => processor(item)))
-  )
+
+  return Promise.all(items.map(item => limit(() => processor(item))))
 }
 
 // ✅ CORRECT - Batch processing with progress tracking
@@ -3104,7 +3099,7 @@ async function processBatchedWithProgress<T, R>(
   const { concurrency = 10, batchSize = 100, onProgress } = options
   const limit = pLimit(concurrency)
   const results: R[] = []
-  
+
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize)
     const batchResults = await Promise.all(
@@ -3113,7 +3108,7 @@ async function processBatchedWithProgress<T, R>(
     results.push(...batchResults)
     onProgress?.(results.length, items.length)
   }
-  
+
   return results
 }
 
@@ -3131,17 +3126,16 @@ const districts = await processBatchedWithProgress(
 )
 ```
 
-
 #### Concurrency Limit Configuration Table
 
-| Operation Type | Recommended Limit | Maximum Limit | Rationale |
-| -------------- | ----------------- | ------------- | --------- |
-| Database queries | 10 | 20 | Prevent connection pool exhaustion |
-| External API calls | 5 | 10 | Respect rate limits, prevent cascading failures |
-| File I/O operations | 20 | 50 | Balance throughput with file descriptor limits |
-| CPU-intensive tasks | 2 per core | 4 per core | Prevent CPU saturation |
-| Memory-intensive tasks | 5 | 10 | Prevent OOM based on memory budget |
-| Network requests | 10 | 25 | Prevent socket exhaustion |
+| Operation Type         | Recommended Limit | Maximum Limit | Rationale                                       |
+| ---------------------- | ----------------- | ------------- | ----------------------------------------------- |
+| Database queries       | 10                | 20            | Prevent connection pool exhaustion              |
+| External API calls     | 5                 | 10            | Respect rate limits, prevent cascading failures |
+| File I/O operations    | 20                | 50            | Balance throughput with file descriptor limits  |
+| CPU-intensive tasks    | 2 per core        | 4 per core    | Prevent CPU saturation                          |
+| Memory-intensive tasks | 5                 | 10            | Prevent OOM based on memory budget              |
+| Network requests       | 10                | 25            | Prevent socket exhaustion                       |
 
 #### Prohibited Concurrency Patterns
 
@@ -3158,12 +3152,13 @@ async function fetchAllData(urls: string[]): Promise<Data[]> {
 
 // ❌ FORBIDDEN - Nested unbounded concurrency
 async function processNested(groups: Group[]): Promise<void> {
-  await Promise.all(groups.map(async group => {
-    await Promise.all(group.items.map(item => processItem(item)))
-  }))
+  await Promise.all(
+    groups.map(async group => {
+      await Promise.all(group.items.map(item => processItem(item)))
+    })
+  )
 }
 ```
-
 
 ### 9.2 LRU Cache Implementation
 
@@ -3186,43 +3181,45 @@ function createCache<K extends string, V>(config: CacheConfig): LRUCache<K, V> {
   return new LRUCache<K, V>({
     // Maximum number of entries
     max: config.maxEntries,
-    
+
     // Maximum total size in bytes
     maxSize: config.maxSizeBytes,
-    
+
     // Size calculation function (REQUIRED when using maxSize)
     sizeCalculation: (value: V): number => {
       return JSON.stringify(value).length
     },
-    
+
     // Time-to-live in milliseconds
     ttl: config.ttlMs,
-    
+
     // Reset TTL when item is accessed
     updateAgeOnGet: true,
-    
+
     // Don't serve stale data
     allowStale: false,
-    
+
     // Dispose callback for cleanup
     dispose: (value: V, key: K, reason: string) => {
-      logger.debug(`Cache entry disposed: ${key}`, { reason, cacheName: config.name })
+      logger.debug(`Cache entry disposed: ${key}`, {
+        reason,
+        cacheName: config.name,
+      })
     },
   })
 }
 ```
 
-
 #### Cache Configuration by Data Type
 
-| Cache Type | Max Entries | Max Size | TTL | Update on Get |
-| ---------- | ----------- | -------- | --- | ------------- |
-| Snapshot metadata | 100 | 10 MB | 5 minutes | Yes |
-| District data | 200 | 50 MB | 10 minutes | Yes |
-| Rankings | 50 | 20 MB | 5 minutes | Yes |
-| Configuration | 20 | 5 MB | 30 minutes | Yes |
-| API responses | 500 | 100 MB | 2 minutes | No |
-| Computed results | 100 | 25 MB | 15 minutes | Yes |
+| Cache Type        | Max Entries | Max Size | TTL        | Update on Get |
+| ----------------- | ----------- | -------- | ---------- | ------------- |
+| Snapshot metadata | 100         | 10 MB    | 5 minutes  | Yes           |
+| District data     | 200         | 50 MB    | 10 minutes | Yes           |
+| Rankings          | 50          | 20 MB    | 5 minutes  | Yes           |
+| Configuration     | 20          | 5 MB     | 30 minutes | Yes           |
+| API responses     | 500         | 100 MB   | 2 minutes  | No            |
+| Computed results  | 100         | 25 MB    | 15 minutes | Yes           |
 
 #### Cache Factory Pattern
 
@@ -3230,34 +3227,34 @@ function createCache<K extends string, V>(config: CacheConfig): LRUCache<K, V> {
 // ✅ CORRECT - Centralized cache factory
 class CacheFactory {
   private static caches = new Map<string, LRUCache<string, unknown>>()
-  
+
   static getSnapshotCache(): LRUCache<string, Snapshot> {
     return this.getOrCreate('snapshots', {
       maxEntries: 100,
-      maxSizeBytes: 10 * 1024 * 1024,  // 10 MB
-      ttlMs: 5 * 60 * 1000,             // 5 minutes
+      maxSizeBytes: 10 * 1024 * 1024, // 10 MB
+      ttlMs: 5 * 60 * 1000, // 5 minutes
       name: 'snapshots',
     })
   }
-  
+
   static getDistrictCache(): LRUCache<string, District> {
     return this.getOrCreate('districts', {
       maxEntries: 200,
-      maxSizeBytes: 50 * 1024 * 1024,  // 50 MB
-      ttlMs: 10 * 60 * 1000,            // 10 minutes
+      maxSizeBytes: 50 * 1024 * 1024, // 50 MB
+      ttlMs: 10 * 60 * 1000, // 10 minutes
       name: 'districts',
     })
   }
-  
+
   static getRankingsCache(): LRUCache<string, Rankings> {
     return this.getOrCreate('rankings', {
       maxEntries: 50,
-      maxSizeBytes: 20 * 1024 * 1024,  // 20 MB
-      ttlMs: 5 * 60 * 1000,             // 5 minutes
+      maxSizeBytes: 20 * 1024 * 1024, // 20 MB
+      ttlMs: 5 * 60 * 1000, // 5 minutes
       name: 'rankings',
     })
   }
-  
+
   private static getOrCreate<V>(
     name: string,
     config: CacheConfig
@@ -3267,14 +3264,14 @@ class CacheFactory {
     }
     return this.caches.get(name) as LRUCache<string, V>
   }
-  
+
   static clearAll(): void {
     for (const cache of this.caches.values()) {
       cache.clear()
     }
     logger.info('All caches cleared')
   }
-  
+
   static getStats(): Record<string, CacheStats> {
     const stats: Record<string, CacheStats> = {}
     for (const [name, cache] of this.caches) {
@@ -3290,7 +3287,6 @@ class CacheFactory {
 }
 ```
 
-
 #### Cache with Request Deduplication
 
 ```typescript
@@ -3298,24 +3294,24 @@ class CacheFactory {
 class DeduplicatingCache<K extends string, V> {
   private cache: LRUCache<K, V>
   private pending = new Map<K, Promise<V>>()
-  
+
   constructor(config: CacheConfig) {
     this.cache = createCache<K, V>(config)
   }
-  
+
   async get(key: K, fetcher: () => Promise<V>): Promise<V> {
     // Check cache first
     const cached = this.cache.get(key)
     if (cached !== undefined) {
       return cached
     }
-    
+
     // Check for pending request (deduplication)
     const pending = this.pending.get(key)
     if (pending) {
       return pending
     }
-    
+
     // Create new request
     const promise = fetcher()
       .then(result => {
@@ -3327,15 +3323,15 @@ class DeduplicatingCache<K extends string, V> {
         this.pending.delete(key)
         throw error
       })
-    
+
     this.pending.set(key, promise)
     return promise
   }
-  
+
   invalidate(key: K): void {
     this.cache.delete(key)
   }
-  
+
   clear(): void {
     this.cache.clear()
     this.pending.clear()
@@ -3355,7 +3351,6 @@ async function getDistrict(id: string): Promise<District> {
 }
 ```
 
-
 #### Prohibited Cache Patterns
 
 ```typescript
@@ -3366,7 +3361,7 @@ const cache = new Map<string, Data>()
 const cache: Record<string, Data> = {}
 
 // ❌ FORBIDDEN - LRU cache without maxSize when caching variable-size data
-const cache = new LRUCache<string, Data>({ max: 100 })  // Missing maxSize!
+const cache = new LRUCache<string, Data>({ max: 100 }) // Missing maxSize!
 
 // ❌ FORBIDDEN - LRU cache without TTL for time-sensitive data
 const cache = new LRUCache<string, Data>({ max: 100, maxSize: 1000000 })
@@ -3385,15 +3380,14 @@ All external operations MUST have timeouts configured to prevent resource exhaus
 
 #### Standard Timeout Configuration
 
-| Operation Type | Default Timeout | Maximum Timeout | Rationale |
-| -------------- | --------------- | --------------- | --------- |
-| Health checks | 5s | 10s | Quick response required |
-| Database queries | 10s | 30s | Prevent connection hogging |
-| External API calls | 5s | 15s | Respect external service limits |
-| File operations | 30s | 60s | Large files may take time |
-| Background jobs | 300s | 600s | Long-running operations |
-| HTTP requests | 30s | 60s | Standard request timeout |
-
+| Operation Type     | Default Timeout | Maximum Timeout | Rationale                       |
+| ------------------ | --------------- | --------------- | ------------------------------- |
+| Health checks      | 5s              | 10s             | Quick response required         |
+| Database queries   | 10s             | 30s             | Prevent connection hogging      |
+| External API calls | 5s              | 15s             | Respect external service limits |
+| File operations    | 30s             | 60s             | Large files may take time       |
+| Background jobs    | 300s            | 600s            | Long-running operations         |
+| HTTP requests      | 30s             | 60s             | Standard request timeout        |
 
 #### Timeout Wrapper Utility
 
@@ -3405,15 +3399,17 @@ export async function withTimeout<T>(
   operationName: string
 ): Promise<T> {
   let timeoutId: NodeJS.Timeout
-  
+
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new TimeoutError(
-        `Operation '${operationName}' timed out after ${timeoutMs}ms`
-      ))
+      reject(
+        new TimeoutError(
+          `Operation '${operationName}' timed out after ${timeoutMs}ms`
+        )
+      )
     }, timeoutMs)
   })
-  
+
   try {
     return await Promise.race([promise, timeoutPromise])
   } finally {
@@ -3448,7 +3444,7 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -3475,17 +3471,17 @@ export async function fetchWithRetry(
   } = {}
 ): Promise<Response> {
   const { timeoutMs = 5000, maxRetries = 3, retryDelayMs = 1000 } = options
-  
+
   let lastError: Error | undefined
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fetchWithTimeout(url, {}, timeoutMs)
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      
+
       if (attempt < maxRetries) {
-        const delay = retryDelayMs * Math.pow(2, attempt - 1)  // Exponential backoff
+        const delay = retryDelayMs * Math.pow(2, attempt - 1) // Exponential backoff
         logger.warn(`Fetch attempt ${attempt} failed, retrying in ${delay}ms`, {
           url,
           error: lastError.message,
@@ -3494,11 +3490,10 @@ export async function fetchWithRetry(
       }
     }
   }
-  
+
   throw lastError
 }
 ```
-
 
 #### Database Operation Timeouts
 
@@ -3510,47 +3505,45 @@ export async function queryWithTimeout<T>(
   query: FirebaseFirestore.Query<T>,
   timeoutMs: number = 10000
 ): Promise<FirebaseFirestore.QuerySnapshot<T>> {
-  return withTimeout(
-    query.get(),
-    timeoutMs,
-    'Firestore query'
-  )
+  return withTimeout(query.get(), timeoutMs, 'Firestore query')
 }
 
 // ✅ CORRECT - Database operation wrapper with timeout
 class DatabaseService {
   private readonly defaultTimeout = 10000
-  
+
   async getDocument<T>(
     collection: string,
     docId: string,
     timeoutMs: number = this.defaultTimeout
   ): Promise<T | null> {
     const docRef = db.collection(collection).doc(docId)
-    
+
     const snapshot = await withTimeout(
       docRef.get(),
       timeoutMs,
       `getDocument(${collection}/${docId})`
     )
-    
+
     return snapshot.exists ? (snapshot.data() as T) : null
   }
-  
+
   async queryDocuments<T>(
     collection: string,
-    queryFn: (ref: FirebaseFirestore.CollectionReference) => FirebaseFirestore.Query,
+    queryFn: (
+      ref: FirebaseFirestore.CollectionReference
+    ) => FirebaseFirestore.Query,
     timeoutMs: number = this.defaultTimeout
   ): Promise<T[]> {
     const collectionRef = db.collection(collection)
     const query = queryFn(collectionRef)
-    
+
     const snapshot = await withTimeout(
       query.get(),
       timeoutMs,
       `queryDocuments(${collection})`
     )
-    
+
     return snapshot.docs.map(doc => doc.data() as T)
   }
 }
@@ -3566,7 +3559,9 @@ const response = await fetch(externalUrl)
 const snapshot = await db.collection('data').get()
 
 // ❌ FORBIDDEN - Timeout without cleanup
-const timeoutId = setTimeout(() => { /* abort */ }, 5000)
+const timeoutId = setTimeout(() => {
+  /* abort */
+}, 5000)
 await someOperation()
 // Missing clearTimeout!
 
@@ -3578,20 +3573,19 @@ try {
 }
 ```
 
-
 ### 9.4 Deployment Guardrails
 
 This section defines mandatory deployment configuration guardrails for Cloud Run services to ensure performance SLOs are met.
 
 #### Container Sizing Requirements
 
-| Environment | Memory | CPU | V8 Heap | Concurrency | Max Instances |
-| ----------- | ------ | --- | ------- | ----------- | ------------- |
-| Development | N/A | N/A | N/A | N/A | N/A |
-| Staging | 512Mi | 1 | 384MB | 80 | 2 |
-| Production | 512Mi | 1 | 384MB | 80 | 10 |
-| Heavy workload | 1Gi | 2 | 768MB | 40 | 10 |
-| Data processing | 2Gi | 2 | 1536MB | 20 | 5 |
+| Environment     | Memory | CPU | V8 Heap | Concurrency | Max Instances |
+| --------------- | ------ | --- | ------- | ----------- | ------------- |
+| Development     | N/A    | N/A | N/A     | N/A         | N/A           |
+| Staging         | 512Mi  | 1   | 384MB   | 80          | 2             |
+| Production      | 512Mi  | 1   | 384MB   | 80          | 10            |
+| Heavy workload  | 1Gi    | 2   | 768MB   | 40          | 10            |
+| Data processing | 2Gi    | 2   | 1536MB  | 20          | 5             |
 
 #### Cloud Run Deployment Template
 
@@ -3613,7 +3607,6 @@ gcloud run deploy toast-stats-backend \
   --cpu-boost
 ```
 
-
 #### Autoscaling Configuration
 
 ```yaml
@@ -3623,24 +3616,24 @@ spec:
     metadata:
       annotations:
         # Scale to zero for cost optimization
-        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/minScale: '0'
         # Maximum instances to prevent runaway costs
-        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/maxScale: '10'
         # Target concurrency utilization (80% of max)
-        autoscaling.knative.dev/target: "64"
+        autoscaling.knative.dev/target: '64'
         # Scale up aggressively, scale down conservatively
-        autoscaling.knative.dev/scaleDownDelay: "60s"
+        autoscaling.knative.dev/scaleDownDelay: '60s'
 ```
 
 #### Autoscaling Guardrails Table
 
-| Parameter | Development | Staging | Production | Rationale |
-| --------- | ----------- | ------- | ---------- | --------- |
-| `minScale` | N/A | 0 | 0 | Cost optimization |
-| `maxScale` | N/A | 2 | 10 | Prevent runaway costs |
-| `target` | N/A | 64 | 64 | 80% of concurrency |
-| `scaleDownDelay` | N/A | 30s | 60s | Prevent thrashing |
-| `cpu-boost` | N/A | Yes | Yes | Faster cold starts |
+| Parameter        | Development | Staging | Production | Rationale             |
+| ---------------- | ----------- | ------- | ---------- | --------------------- |
+| `minScale`       | N/A         | 0       | 0          | Cost optimization     |
+| `maxScale`       | N/A         | 2       | 10         | Prevent runaway costs |
+| `target`         | N/A         | 64      | 64         | 80% of concurrency    |
+| `scaleDownDelay` | N/A         | 30s     | 60s        | Prevent thrashing     |
+| `cpu-boost`      | N/A         | Yes     | Yes        | Faster cold starts    |
 
 #### Memory and CPU Relationship
 
@@ -3663,16 +3656,15 @@ spec:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-
 #### Request Timeout Configuration
 
-| Endpoint Type | Cloud Run Timeout | Application Timeout | Rationale |
-| ------------- | ----------------- | ------------------- | --------- |
-| Health checks | 10s | 5s | Quick response required |
-| Standard API | 60s | 30s | Buffer for retries |
-| Data refresh | 300s | 240s | Long-running operations |
-| Backfill | 600s | 540s | Batch processing |
-| Export | 300s | 240s | Large data exports |
+| Endpoint Type | Cloud Run Timeout | Application Timeout | Rationale               |
+| ------------- | ----------------- | ------------------- | ----------------------- |
+| Health checks | 10s               | 5s                  | Quick response required |
+| Standard API  | 60s               | 30s                 | Buffer for retries      |
+| Data refresh  | 300s              | 240s                | Long-running operations |
+| Backfill      | 600s              | 540s                | Batch processing        |
+| Export        | 300s              | 240s                | Large data exports      |
 
 #### Prohibited Deployment Patterns
 
@@ -3697,20 +3689,19 @@ gcloud run deploy service \
 gcloud run deploy service --image gcr.io/project/image --memory 512Mi
 ```
 
-
 ### 9.5 Load Testing Requirements
 
 Load testing MUST be performed before deploying significant changes to production. This section defines mandatory load testing requirements and CI gates.
 
 #### Load Testing Scenarios
 
-| Scenario | Description | Target | Pass Criteria |
-| -------- | ----------- | ------ | ------------- |
-| **Baseline** | Normal traffic pattern | 50 RPS | p95 < 500ms, 0% errors |
-| **Peak load** | 2x normal traffic | 100 RPS | p95 < 750ms, < 0.1% errors |
-| **Stress test** | 3x normal traffic | 150 RPS | p95 < 1s, < 1% errors |
-| **Soak test** | Normal traffic, extended | 50 RPS for 1 hour | No memory growth, stable latency |
-| **Spike test** | Sudden traffic burst | 0 → 100 RPS | Recovery < 30s |
+| Scenario        | Description              | Target            | Pass Criteria                    |
+| --------------- | ------------------------ | ----------------- | -------------------------------- |
+| **Baseline**    | Normal traffic pattern   | 50 RPS            | p95 < 500ms, 0% errors           |
+| **Peak load**   | 2x normal traffic        | 100 RPS           | p95 < 750ms, < 0.1% errors       |
+| **Stress test** | 3x normal traffic        | 150 RPS           | p95 < 1s, < 1% errors            |
+| **Soak test**   | Normal traffic, extended | 50 RPS for 1 hour | No memory growth, stable latency |
+| **Spike test**  | Sudden traffic burst     | 0 → 100 RPS       | Recovery < 30s                   |
 
 #### Load Testing Configuration
 
@@ -3775,25 +3766,24 @@ export default function () {
     { url: `${BASE_URL}/api/districts`, name: 'districts' },
     { url: `${BASE_URL}/api/districts/42`, name: 'district_detail' },
   ]
-  
+
   for (const endpoint of endpoints) {
     const response = http.get(endpoint.url, {
       tags: { name: endpoint.name },
     })
-    
+
     const success = check(response, {
-      'status is 200': (r) => r.status === 200,
-      'response time < 500ms': (r) => r.timings.duration < 500,
+      'status is 200': r => r.status === 200,
+      'response time < 500ms': r => r.timings.duration < 500,
     })
-    
+
     errorRate.add(!success)
     latencyP95.add(response.timings.duration)
   }
-  
+
   sleep(1)
 }
 ```
-
 
 #### CI Performance Gates
 
@@ -3814,27 +3804,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup k6
         uses: grafana/setup-k6-action@v1
-      
+
       - name: Deploy to staging
         run: |
           # Deploy to staging environment
           ./scripts/deploy-staging.sh
-      
+
       - name: Run baseline load test
         run: |
           k6 run \
             --out json=results.json \
             --env BASE_URL=${{ secrets.STAGING_URL }} \
             tests/load/baseline.js
-      
+
       - name: Check performance thresholds
         run: |
           # Parse results and check thresholds
           node scripts/check-performance.js results.json
-      
+
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
@@ -3844,15 +3834,14 @@ jobs:
 
 #### Performance Gate Thresholds
 
-| Metric | Warning | Blocking | Measurement |
-| ------ | ------- | -------- | ----------- |
-| p95 latency increase | > 10% | > 25% | vs baseline |
-| p99 latency increase | > 15% | > 30% | vs baseline |
-| Error rate | > 0.1% | > 1% | Absolute |
-| Memory growth | > 10% | > 25% | Over test duration |
-| Bundle size increase | > 5 KB | > 20 KB | vs main branch |
-| Lighthouse score decrease | > 5 points | > 10 points | vs main branch |
-
+| Metric                    | Warning    | Blocking    | Measurement        |
+| ------------------------- | ---------- | ----------- | ------------------ |
+| p95 latency increase      | > 10%      | > 25%       | vs baseline        |
+| p99 latency increase      | > 15%      | > 30%       | vs baseline        |
+| Error rate                | > 0.1%     | > 1%        | Absolute           |
+| Memory growth             | > 10%      | > 25%       | Over test duration |
+| Bundle size increase      | > 5 KB     | > 20 KB     | vs main branch     |
+| Lighthouse score decrease | > 5 points | > 10 points | vs main branch     |
 
 #### Performance Regression Detection Script
 
@@ -3891,7 +3880,7 @@ const THRESHOLDS: Thresholds = {
 
 function checkPerformance(results: K6Results): boolean {
   const { http_req_duration, http_req_failed } = results.metrics
-  
+
   const checks = [
     {
       name: 'p95 latency',
@@ -3912,21 +3901,21 @@ function checkPerformance(results: K6Results): boolean {
       unit: '%',
     },
   ]
-  
+
   let passed = true
-  
+
   for (const check of checks) {
     const status = check.value <= check.threshold ? '✅' : '❌'
     console.log(
       `${status} ${check.name}: ${check.value.toFixed(2)}${check.unit} ` +
-      `(threshold: ${check.threshold}${check.unit})`
+        `(threshold: ${check.threshold}${check.unit})`
     )
-    
+
     if (check.value > check.threshold) {
       passed = false
     }
   }
-  
+
   return passed
 }
 
@@ -3945,16 +3934,15 @@ const passed = checkPerformance(results)
 process.exit(passed ? 0 : 1)
 ```
 
-
 #### Load Testing Requirements Summary
 
-| Requirement | Frequency | Blocking | Owner |
-| ----------- | --------- | -------- | ----- |
-| Baseline test | Every PR | Yes | CI |
-| Peak load test | Weekly | No | Team |
-| Stress test | Before major releases | Yes | Team |
-| Soak test | Monthly | No | Team |
-| Spike test | Before major releases | No | Team |
+| Requirement    | Frequency             | Blocking | Owner |
+| -------------- | --------------------- | -------- | ----- |
+| Baseline test  | Every PR              | Yes      | CI    |
+| Peak load test | Weekly                | No       | Team  |
+| Stress test    | Before major releases | Yes      | Team  |
+| Soak test      | Monthly               | No       | Team  |
+| Spike test     | Before major releases | No       | Team  |
 
 #### Prohibited Load Testing Patterns
 
@@ -3971,7 +3959,7 @@ export const options = {
 
 // ❌ FORBIDDEN - Unrealistic test scenarios
 export const options = {
-  vus: 10000,  // Way beyond expected traffic
+  vus: 10000, // Way beyond expected traffic
   duration: '1h',
 }
 
@@ -3983,7 +3971,6 @@ export default function () {
 ```
 
 ---
-
 
 ## 10. Final Rules
 

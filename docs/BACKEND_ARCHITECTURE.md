@@ -4,7 +4,7 @@
 **Applies to:** Toastmasters Statistics Application Backend  
 **Audience:** Developers, System Architects, Future Maintainers  
 **Owner:** Development Team  
-**Last Updated:** January 12, 2026
+**Last Updated:** February 1, 2026
 
 ---
 
@@ -13,18 +13,19 @@
 1. [Overview](#overview)
 2. [Core Architectural Pattern](#core-architectural-pattern)
 3. [Two-Process Architecture](#two-process-architecture)
-4. [Service Architecture](#service-architecture)
-5. [Data Flow Architecture](#data-flow-architecture)
-6. [Storage Layer](#storage-layer)
-7. [API Layer](#api-layer)
-8. [Data Model](#data-model)
-9. [Dependency Injection System](#dependency-injection-system)
-10. [Performance Optimizations](#performance-optimizations)
-11. [Error Handling & Resilience](#error-handling--resilience)
-12. [Testing Infrastructure](#testing-infrastructure)
-13. [Technology Stack](#technology-stack)
-14. [Directory Structure](#directory-structure)
-15. [Operational Characteristics](#operational-characteristics)
+4. [Data Flow Architecture](#data-flow-architecture)
+5. [Pre-Computed Analytics Pipeline](#pre-computed-analytics-pipeline)
+6. [Service Architecture](#service-architecture)
+7. [Storage Layer](#storage-layer)
+8. [API Layer](#api-layer)
+9. [Data Model](#data-model)
+10. [Dependency Injection System](#dependency-injection-system)
+11. [Performance Optimizations](#performance-optimizations)
+12. [Error Handling & Resilience](#error-handling--resilience)
+13. [Testing Infrastructure](#testing-infrastructure)
+14. [Technology Stack](#technology-stack)
+15. [Directory Structure](#directory-structure)
+16. [Operational Characteristics](#operational-characteristics)
 
 ---
 
@@ -414,6 +415,106 @@ interface DistrictStatistics {
 
 ---
 
+## Pre-Computed Analytics Pipeline
+
+The system implements a **pre-computed analytics pipeline** that transforms the application from "compute on request" to "serve pre-computed files". This architecture provides significant performance improvements and enables offline analytics computation.
+
+### Pipeline Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Pre-Computed Analytics Pipeline                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  scraper-cli (packages/scraper-cli/)                                │
+│  ┌──────────┐    ┌───────────┐    ┌─────────────────┐    ┌────────┐│
+│  │  scrape  │───▶│ transform │───▶│ compute-analytics│───▶│ upload ││
+│  └──────────┘    └───────────┘    └─────────────────┘    └────────┘│
+│       │               │                    │                  │     │
+│       ▼               ▼                    ▼                  ▼     │
+│  Raw CSV Cache   Snapshots          Analytics Files      GCS Bucket │
+│                                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  backend (backend/)                                                  │
+│  ┌─────────────────────────┐    ┌─────────────────────────┐         │
+│  │ PreComputedAnalyticsReader│───▶│   API Response          │         │
+│  └─────────────────────────┘    │ /api/districts/:id/analytics      │
+│                                  └─────────────────────────┘         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Pipeline Commands
+
+| Command                         | Purpose                                       | Output          |
+| ------------------------------- | --------------------------------------------- | --------------- |
+| `scraper-cli scrape`            | Download CSV data from Toastmasters dashboard | Raw CSV Cache   |
+| `scraper-cli transform`         | Convert CSV to JSON snapshots                 | Snapshot files  |
+| `scraper-cli compute-analytics` | Generate analytics from snapshots             | Analytics files |
+| `scraper-cli upload`            | Sync local files to GCS                       | Cloud storage   |
+
+### Shared Analytics Package
+
+The `@toastmasters/analytics-core` package (`packages/analytics-core/`) provides shared analytics computation logic:
+
+- **DataTransformer**: CSV-to-snapshot transformation
+- **AnalyticsComputer**: Analytics computation algorithms
+- **Version Management**: Schema versioning for compatibility
+
+This ensures analytics computed by the CLI are identical to what the backend would compute.
+
+### Analytics File Structure
+
+```
+CACHE_DIR/snapshots/{date}/
+├── metadata.json                    # Snapshot metadata
+├── manifest.json                    # List of district files
+├── district_42.json                 # District 42 snapshot
+├── district_57.json                 # District 57 snapshot
+└── analytics/                       # Pre-computed analytics
+    ├── manifest.json                # Analytics manifest with checksums
+    ├── district_42_analytics.json   # District 42 analytics
+    └── district_57_analytics.json   # District 57 analytics
+```
+
+### Analytics File Format
+
+Each analytics file follows the `PreComputedAnalyticsFile<T>` structure:
+
+```typescript
+interface PreComputedAnalyticsFile<T> {
+  schemaVersion: string // e.g., "1.0.0"
+  computedAt: string // ISO timestamp
+  checksum: string // SHA256 checksum of data
+  data: T // The actual analytics data
+}
+```
+
+### Backend Analytics Serving
+
+**PreComputedAnalyticsReader** (`backend/src/services/PreComputedAnalyticsReader.ts`)
+
+- Reads pre-computed analytics from disk
+- Validates schema version compatibility
+- Returns appropriate HTTP errors
+
+| Scenario                    | HTTP Status | Error Code                |
+| --------------------------- | ----------- | ------------------------- |
+| Analytics file not found    | 404         | `ANALYTICS_NOT_FOUND`     |
+| Invalid JSON                | 500         | `ANALYTICS_CORRUPTED`     |
+| Incompatible schema version | 500         | `SCHEMA_VERSION_MISMATCH` |
+
+### Benefits
+
+1. **Performance**: Sub-10ms response times (file read vs. computation)
+2. **Consistency**: Same algorithms used for pre-computation and validation
+3. **Scalability**: Analytics computed offline, backend only serves files
+4. **Reliability**: Backend remains responsive during analytics computation
+5. **Versioning**: Schema versioning enables safe evolution
+
+---
+
 ## Service Architecture
 
 The backend implements a **modular, dependency-injected service architecture** with clear separation of concerns and proper lifecycle management.
@@ -489,6 +590,27 @@ The backend implements a **modular, dependency-injected service architecture** w
 - **Integration**: Used by both snapshot store implementations
 
 #### Analytics & Caching Services
+
+**PreComputedAnalyticsReader** (Pre-Computed Analytics Serving)
+
+- **Purpose**: Reads and serves pre-computed analytics files generated by scraper-cli
+- **Location**: `backend/src/services/PreComputedAnalyticsReader.ts`
+- **Responsibilities**:
+  - Read pre-computed analytics from `CACHE_DIR/snapshots/{date}/analytics/`
+  - Validate schema version compatibility using `@toastmasters/analytics-core`
+  - Return appropriate HTTP errors (404 for missing, 500 for incompatible)
+  - Log analytics serving operations
+- **Key Methods**: `readDistrictAnalytics()`, `checkAnalyticsAvailability()`
+- **Integration**: Used by analytics API routes to serve pre-computed data
+
+**PreComputedAnalyticsService** (Analytics Coordination)
+
+- **Purpose**: Higher-level service coordinating analytics serving
+- **Location**: `backend/src/services/PreComputedAnalyticsService.ts`
+- **Responsibilities**:
+  - Determine which snapshot date to use for analytics
+  - Coordinate with PreComputedAnalyticsReader
+  - Handle fallback logic when exact date not available
 
 **AnalyticsEngine** (Analytics Orchestration)
 
@@ -1499,6 +1621,8 @@ toast-stats/
 │   │   │   ├── analytics/          # Analytics modules
 │   │   │   ├── RefreshService.ts   # Refresh orchestration (uses SnapshotBuilder)
 │   │   │   ├── SnapshotBuilder.ts  # Creates snapshots from cached data
+│   │   │   ├── PreComputedAnalyticsReader.ts # Reads pre-computed analytics
+│   │   │   ├── PreComputedAnalyticsService.ts # Analytics serving coordination
 │   │   │   ├── ClosingPeriodDetector.ts # Month-end detection
 │   │   │   ├── DataNormalizer.ts   # Raw data normalization
 │   │   │   ├── DataValidator.ts    # Data validation
@@ -1516,12 +1640,28 @@ toast-stats/
 │   └── package.json
 │
 ├── packages/
+│   ├── analytics-core/           # Shared analytics computation package
+│   │   ├── src/
+│   │   │   ├── index.ts          # Package exports
+│   │   │   ├── version.ts        # Schema versioning
+│   │   │   ├── analytics/        # Analytics computation
+│   │   │   │   ├── AnalyticsComputer.ts  # Main computation class
+│   │   │   │   └── AnalyticsUtils.ts     # Shared utilities
+│   │   │   ├── transformation/   # Data transformation
+│   │   │   │   └── DataTransformer.ts    # CSV-to-snapshot transformation
+│   │   │   └── types/            # Type definitions
+│   │   └── package.json
+│   │
 │   └── scraper-cli/              # Standalone scraper CLI
 │       ├── src/
-│       │   ├── cli.ts            # CLI entry point
+│       │   ├── cli.ts            # CLI entry point (scrape, transform, compute-analytics, upload)
 │       │   ├── ScraperOrchestrator.ts # Scraping coordination
 │       │   ├── services/
-│       │   │   └── ToastmastersScraper.ts # Browser automation
+│       │   │   ├── ToastmastersScraper.ts    # Browser automation
+│       │   │   ├── TransformService.ts       # CSV-to-snapshot transformation
+│       │   │   ├── AnalyticsComputeService.ts # Analytics computation
+│       │   │   ├── AnalyticsWriter.ts        # Analytics file writing
+│       │   │   └── UploadService.ts          # GCS upload
 │       │   ├── utils/
 │       │   │   ├── CircuitBreaker.ts # Failure protection
 │       │   │   ├── RetryManager.ts   # Retry logic
@@ -1535,21 +1675,31 @@ toast-stats/
 └── docs/                         # Documentation
 ```
 
-### Key Architectural Change
+### Key Architectural Changes
 
-**Before (scraper in backend)**:
+**Original Architecture (scraper in backend)**:
 
 ```
 backend/src/services/ToastmastersScraper.ts  # Scraper was in backend
 backend/src/services/RefreshService.ts       # RefreshService called scraper directly
 ```
 
-**After (scraper-cli separation)**:
+**Current Architecture (scraper-cli separation + pre-computed analytics)**:
 
 ```
-packages/scraper-cli/src/services/ToastmastersScraper.ts  # Scraper moved to CLI
-backend/src/services/SnapshotBuilder.ts                    # New: reads from cache
-backend/src/services/RefreshService.ts                     # Uses SnapshotBuilder
+packages/analytics-core/                      # Shared analytics computation
+packages/scraper-cli/src/services/
+├── ToastmastersScraper.ts                   # Scraper moved to CLI
+├── TransformService.ts                      # CSV-to-snapshot transformation
+├── AnalyticsComputeService.ts               # Pre-compute analytics
+├── AnalyticsWriter.ts                       # Write analytics files
+└── UploadService.ts                         # Upload to GCS
+
+backend/src/services/
+├── SnapshotBuilder.ts                       # Reads from cache
+├── RefreshService.ts                        # Uses SnapshotBuilder
+├── PreComputedAnalyticsReader.ts            # Serves pre-computed analytics
+└── PreComputedAnalyticsService.ts           # Analytics coordination
 ```
 
 ---
@@ -1573,6 +1723,7 @@ backend/src/services/RefreshService.ts                     # Uses SnapshotBuilde
 - **Selective Data Loading**: Per-district access patterns for improved performance
 - **Performance Monitoring**: Built-in metrics collection and monitoring endpoints
 - **Zero Downtime**: Read operations continue during refresh activities
+- **Pre-Computed Analytics**: Analytics served from files, not computed on request
 
 ### Maintainability Features
 
@@ -1705,6 +1856,8 @@ Key architectural achievements:
 
 - **Complete Process Separation**: Scraping (scraper-cli) and serving (backend) are fully independent processes
 - **Two-Process Architecture**: Scraper CLI writes to cache, backend reads from cache - no direct coupling
+- **Pre-Computed Analytics Pipeline**: Analytics computed offline by scraper-cli, served by backend from files
+- **Shared Analytics Package**: `@toastmasters/analytics-core` ensures computation consistency across CLI and backend
 - **Comprehensive Service Architecture**: Modular design with proper dependency injection and lifecycle management
 - **Advanced Storage Patterns**: Both legacy and modern per-district snapshot storage implementations
 - **Robust Error Handling**: Circuit breakers, retry logic, and automatic recovery ensure system resilience
@@ -1716,4 +1869,4 @@ The architecture successfully balances the needs of a single-user deployment wit
 
 ---
 
-**Document Maintenance**: This document reflects the current implementation as of January 12, 2026. It should be updated when significant architectural changes are made, new services are added, or major refactoring occurs. The document serves as the authoritative reference for understanding the system architecture and should be consulted before making structural changes.
+**Document Maintenance**: This document reflects the current implementation as of February 1, 2026. It should be updated when significant architectural changes are made, new services are added, or major refactoring occurs. The document serves as the authoritative reference for understanding the system architecture and should be consulted before making structural changes.

@@ -333,7 +333,9 @@ export class UploadService implements IUploadService {
       }
 
       const [metadata] = await file.getMetadata()
-      const customMetadata = metadata.metadata as Record<string, string> | undefined
+      const customMetadata = metadata.metadata as
+        | Record<string, string>
+        | undefined
 
       return {
         checksum: customMetadata?.['checksum'],
@@ -569,10 +571,13 @@ export class UploadService implements IUploadService {
 
         // Check if this is a GCS authentication/authorization failure
         if (isGCSAuthError(error)) {
-          this.logger.error('GCS authentication/authorization failure during date processing', {
-            date,
-            error: errorMessage,
-          })
+          this.logger.error(
+            'GCS authentication/authorization failure during date processing',
+            {
+              date,
+              error: errorMessage,
+            }
+          )
           authError = true
           errors.push({
             file: snapshotDir,

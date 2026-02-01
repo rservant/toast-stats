@@ -14,18 +14,18 @@ graph TB
         CM[cacheMiddleware]
         ICM[invalidateCacheMiddleware]
     end
-    
+
     subgraph "CacheService"
         CS[CacheService Class]
         LRU[LRUCache Instance]
         SC[sizeCalculation Function]
     end
-    
+
     subgraph "Configuration"
         CO[CacheOptions]
         DC[Default Config]
     end
-    
+
     CM --> CS
     ICM --> CS
     CS --> LRU
@@ -40,9 +40,9 @@ graph TB
 
 ```typescript
 export interface CacheOptions {
-  ttl?: number           // Time to live in seconds (default: 900 = 15 minutes)
-  max?: number           // Maximum number of entries (default: 1000)
-  maxSize?: number       // Maximum total size in bytes (default: 50MB)
+  ttl?: number // Time to live in seconds (default: 900 = 15 minutes)
+  max?: number // Maximum number of entries (default: 1000)
+  maxSize?: number // Maximum total size in bytes (default: 50MB)
 }
 ```
 
@@ -136,43 +136,43 @@ export const cacheService = new CacheService()
 
 ### Default Configuration Values
 
-| Parameter | Default Value | Rationale |
-|-----------|---------------|-----------|
-| max | 1000 | Reasonable entry limit for API response caching |
-| maxSize | 52,428,800 (50MB) | Per SLO Section 7.3 recommendation |
-| ttl | 900 seconds (15 min) | Matches current node-cache default |
-| updateAgeOnGet | true | Keeps frequently accessed data fresh |
-| allowStale | false | Ensures data freshness per SLO requirements |
+| Parameter      | Default Value        | Rationale                                       |
+| -------------- | -------------------- | ----------------------------------------------- |
+| max            | 1000                 | Reasonable entry limit for API response caching |
+| maxSize        | 52,428,800 (50MB)    | Per SLO Section 7.3 recommendation              |
+| ttl            | 900 seconds (15 min) | Matches current node-cache default              |
+| updateAgeOnGet | true                 | Keeps frequently accessed data fresh            |
+| allowStale     | false                | Ensures data freshness per SLO requirements     |
 
 ## Correctness Properties
 
 ### Property 1: Cache Round-Trip Consistency
 
-*For any* key-value pair where the value is JSON-serializable, setting the value in the cache and then getting it should return an equivalent value.
+_For any_ key-value pair where the value is JSON-serializable, setting the value in the cache and then getting it should return an equivalent value.
 
 **Validates: Requirements 2.1, 2.2**
 
 ### Property 2: Entry Limit Enforcement
 
-*For any* cache configured with max N entries, after inserting N+1 unique entries, the cache should contain exactly N entries.
+_For any_ cache configured with max N entries, after inserting N+1 unique entries, the cache should contain exactly N entries.
 
 **Validates: Requirements 1.2, 3.4, 5.1**
 
 ### Property 3: Size Limit Enforcement
 
-*For any* cache configured with maxSize S bytes, the total calculated size of all entries should never exceed S.
+_For any_ cache configured with maxSize S bytes, the total calculated size of all entries should never exceed S.
 
 **Validates: Requirements 1.3, 3.3, 3.5, 5.2**
 
 ### Property 4: LRU Access Ordering
 
-*For any* cache at its entry limit, accessing an entry via `get` should prevent that entry from being evicted when a new entry is added.
+_For any_ cache at its entry limit, accessing an entry via `get` should prevent that entry from being evicted when a new entry is added.
 
 **Validates: Requirements 5.3**
 
 ### Property 5: Statistics Accuracy
 
-*For any* sequence of cache operations, the statistics returned by `getStats()` should accurately reflect the number of entries, hits, and misses.
+_For any_ sequence of cache operations, the statistics returned by `getStats()` should accurately reflect the number of entries, hits, and misses.
 
 **Validates: Requirements 2.8, 6.1, 6.2, 6.3**
 

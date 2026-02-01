@@ -62,17 +62,17 @@ Lower-precedence sources MUST NOT weaken higher-precedence rules.
 
 ### Document Scope Boundaries
 
-| Document | Authoritative Scope |
-| -------- | ------------------- |
-| platform-engineering.md | Backend architecture, deployment, observability, security, governance |
-| frontend-standards.md | React patterns, Firebase Hosting, frontend build configuration |
-| performance-slos.md | Performance targets, memory management, latency budgets |
-| typescript.md | TypeScript compiler configuration, type safety patterns |
-| testing.md | Testing philosophy, test isolation, coverage expectations |
-| storage-abstraction.md | Data access patterns, storage provider abstraction |
-| api-documentation.md | OpenAPI specification, endpoint documentation |
-| git.md | Commit authorization, version control practices |
-| production-maintenance.md | Operational context, data lifecycle, maintenance posture |
+| Document                  | Authoritative Scope                                                   |
+| ------------------------- | --------------------------------------------------------------------- |
+| platform-engineering.md   | Backend architecture, deployment, observability, security, governance |
+| frontend-standards.md     | React patterns, Firebase Hosting, frontend build configuration        |
+| performance-slos.md       | Performance targets, memory management, latency budgets               |
+| typescript.md             | TypeScript compiler configuration, type safety patterns               |
+| testing.md                | Testing philosophy, test isolation, coverage expectations             |
+| storage-abstraction.md    | Data access patterns, storage provider abstraction                    |
+| api-documentation.md      | OpenAPI specification, endpoint documentation                         |
+| git.md                    | Commit authorization, version control practices                       |
+| production-maintenance.md | Operational context, data lifecycle, maintenance posture              |
 
 When guidance overlaps between documents, the document with the narrower, more specific scope takes precedence.
 
@@ -139,13 +139,13 @@ The Toast-Stats backend is deployed on **Cloud Run** rather than Google Kubernet
 
 #### Why Cloud Run
 
-| Factor | Cloud Run Advantage |
-| ------ | ------------------- |
-| **Operational Simplicity** | Zero cluster management, no node pools, no Kubernetes expertise required |
-| **Cost Efficiency** | Pay-per-request pricing with scale-to-zero capability; no idle cluster costs |
-| **Deployment Speed** | Container deployment in seconds; no cluster provisioning delays |
-| **Autoscaling** | Automatic scaling from 0-10 instances based on request load |
-| **Maintenance Burden** | No Kubernetes version upgrades, no node patching, no control plane management |
+| Factor                     | Cloud Run Advantage                                                           |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| **Operational Simplicity** | Zero cluster management, no node pools, no Kubernetes expertise required      |
+| **Cost Efficiency**        | Pay-per-request pricing with scale-to-zero capability; no idle cluster costs  |
+| **Deployment Speed**       | Container deployment in seconds; no cluster provisioning delays               |
+| **Autoscaling**            | Automatic scaling from 0-10 instances based on request load                   |
+| **Maintenance Burden**     | No Kubernetes version upgrades, no node patching, no control plane management |
 
 #### When GKE Would Be Appropriate
 
@@ -175,13 +175,13 @@ The Toast-Stats application defines three environment tiers with distinct purpos
 
 #### Development Environment
 
-| Attribute | Value |
-| --------- | ----- |
-| **Purpose** | Local development and feature testing |
-| **Storage Provider** | `local` (filesystem-based) |
-| **Data Source** | Local cache directory with sample/test data |
-| **Access** | Developer machine only |
-| **Deployment** | Manual (`npm run dev`) |
+| Attribute            | Value                                       |
+| -------------------- | ------------------------------------------- |
+| **Purpose**          | Local development and feature testing       |
+| **Storage Provider** | `local` (filesystem-based)                  |
+| **Data Source**      | Local cache directory with sample/test data |
+| **Access**           | Developer machine only                      |
+| **Deployment**       | Manual (`npm run dev`)                      |
 
 Development environment characteristics:
 
@@ -192,13 +192,13 @@ Development environment characteristics:
 
 #### Staging Environment
 
-| Attribute | Value |
-| --------- | ----- |
-| **Purpose** | Pre-production validation and integration testing |
-| **Storage Provider** | `gcp` (Firestore + GCS) |
-| **Data Source** | Staging GCP project with isolated resources |
-| **Access** | Authenticated developers and CI/CD pipeline |
-| **Deployment** | Automated via GitHub Actions on `staging` branch |
+| Attribute            | Value                                             |
+| -------------------- | ------------------------------------------------- |
+| **Purpose**          | Pre-production validation and integration testing |
+| **Storage Provider** | `gcp` (Firestore + GCS)                           |
+| **Data Source**      | Staging GCP project with isolated resources       |
+| **Access**           | Authenticated developers and CI/CD pipeline       |
+| **Deployment**       | Automated via GitHub Actions on `staging` branch  |
 
 Staging environment characteristics:
 
@@ -210,13 +210,13 @@ Staging environment characteristics:
 
 #### Production Environment
 
-| Attribute | Value |
-| --------- | ----- |
-| **Purpose** | Live application serving end users |
-| **Storage Provider** | `gcp` (Firestore + GCS) |
-| **Data Source** | Production GCP project |
-| **Access** | Authenticated users via Firebase Hosting |
-| **Deployment** | Automated via GitHub Actions on `main` branch |
+| Attribute            | Value                                         |
+| -------------------- | --------------------------------------------- |
+| **Purpose**          | Live application serving end users            |
+| **Storage Provider** | `gcp` (Firestore + GCS)                       |
+| **Data Source**      | Production GCP project                        |
+| **Access**           | Authenticated users via Firebase Hosting      |
+| **Deployment**       | Automated via GitHub Actions on `main` branch |
 
 Production environment characteristics:
 
@@ -279,15 +279,15 @@ Rollback MUST be achievable within 5 minutes of issue detection.
 
 #### Environment Configuration Matrix
 
-| Configuration | Development | Staging | Production |
-| ------------- | ----------- | ------- | ---------- |
-| `STORAGE_PROVIDER` | `local` | `gcp` | `gcp` |
-| `NODE_ENV` | `development` | `staging` | `production` |
-| `LOG_LEVEL` | `debug` | `info` | `info` |
-| Cloud Run instances | N/A | 0-2 | 0-10 |
-| Memory limit | N/A | 512Mi | 512Mi |
-| Firestore project | Emulator | `toast-stats-staging` | `toast-stats-prod` |
-| GCS bucket | Local cache | `toast-stats-staging-*` | `toast-stats-prod-*` |
+| Configuration       | Development   | Staging                 | Production           |
+| ------------------- | ------------- | ----------------------- | -------------------- |
+| `STORAGE_PROVIDER`  | `local`       | `gcp`                   | `gcp`                |
+| `NODE_ENV`          | `development` | `staging`               | `production`         |
+| `LOG_LEVEL`         | `debug`       | `info`                  | `info`               |
+| Cloud Run instances | N/A           | 0-2                     | 0-10                 |
+| Memory limit        | N/A           | 512Mi                   | 512Mi                |
+| Firestore project   | Emulator      | `toast-stats-staging`   | `toast-stats-prod`   |
+| GCS bucket          | Local cache   | `toast-stats-staging-*` | `toast-stats-prod-*` |
 
 ---
 
@@ -326,15 +326,15 @@ backend/
 
 #### File Organization Rules
 
-| File Type | Location | Naming Convention |
-| --------- | -------- | ----------------- |
-| Route handlers | `src/routes/` | `{domain}.ts` or `{domain}/index.ts` |
-| Services | `src/services/` | `{Name}Service.ts` |
-| Types/Interfaces | `src/types/` | `{domain}.ts` |
-| Utilities | `src/utils/` | `{name}.ts` (camelCase) |
-| Unit tests | Co-located with source | `{name}.test.ts` |
-| Integration tests | `src/__tests__/` | `{name}.integration.test.ts` |
-| Property tests | `src/__tests__/` | `{name}.property.test.ts` |
+| File Type         | Location               | Naming Convention                    |
+| ----------------- | ---------------------- | ------------------------------------ |
+| Route handlers    | `src/routes/`          | `{domain}.ts` or `{domain}/index.ts` |
+| Services          | `src/services/`        | `{Name}Service.ts`                   |
+| Types/Interfaces  | `src/types/`           | `{domain}.ts`                        |
+| Utilities         | `src/utils/`           | `{name}.ts` (camelCase)              |
+| Unit tests        | Co-located with source | `{name}.test.ts`                     |
+| Integration tests | `src/__tests__/`       | `{name}.integration.test.ts`         |
+| Property tests    | `src/__tests__/`       | `{name}.property.test.ts`            |
 
 #### Structural Requirements
 
@@ -363,14 +363,14 @@ Key requirements from that document that apply to backend code:
 
 API endpoints MUST follow RESTful conventions:
 
-| Operation | HTTP Method | URL Pattern | Example |
-| --------- | ----------- | ----------- | ------- |
-| List resources | GET | `/api/{resources}` | `GET /api/districts` |
-| Get single resource | GET | `/api/{resources}/{id}` | `GET /api/districts/42` |
-| Create resource | POST | `/api/{resources}` | `POST /api/snapshots` |
-| Update resource | PUT/PATCH | `/api/{resources}/{id}` | `PUT /api/config/districts` |
-| Delete resource | DELETE | `/api/{resources}/{id}` | `DELETE /api/snapshots/2024-01-15` |
-| Trigger action | POST | `/api/{resources}/{id}/{action}` | `POST /api/backfill/start` |
+| Operation           | HTTP Method | URL Pattern                      | Example                            |
+| ------------------- | ----------- | -------------------------------- | ---------------------------------- |
+| List resources      | GET         | `/api/{resources}`               | `GET /api/districts`               |
+| Get single resource | GET         | `/api/{resources}/{id}`          | `GET /api/districts/42`            |
+| Create resource     | POST        | `/api/{resources}`               | `POST /api/snapshots`              |
+| Update resource     | PUT/PATCH   | `/api/{resources}/{id}`          | `PUT /api/config/districts`        |
+| Delete resource     | DELETE      | `/api/{resources}/{id}`          | `DELETE /api/snapshots/2024-01-15` |
+| Trigger action      | POST        | `/api/{resources}/{id}/{action}` | `POST /api/backfill/start`         |
 
 #### URL Conventions
 
@@ -394,26 +394,26 @@ All error responses MUST follow a consistent JSON structure:
 ```typescript
 interface ErrorResponse {
   error: {
-    code: string           // Machine-readable error code (SCREAMING_SNAKE_CASE)
-    message: string        // Human-readable error description
-    details?: unknown      // Optional additional context
-    parameter?: string     // For validation errors: the invalid parameter
-    retryable?: boolean    // Whether the client should retry
+    code: string // Machine-readable error code (SCREAMING_SNAKE_CASE)
+    message: string // Human-readable error description
+    details?: unknown // Optional additional context
+    parameter?: string // For validation errors: the invalid parameter
+    retryable?: boolean // Whether the client should retry
   }
 }
 ```
 
 #### Standard Error Codes
 
-| HTTP Status | Error Code | Description |
-| ----------- | ---------- | ----------- |
-| 400 | `MISSING_PARAMETER` | Required parameter not provided |
-| 400 | `INVALID_PARAMETER` | Parameter value is invalid |
-| 400 | `VALIDATION_ERROR` | Request body failed validation |
-| 404 | `NOT_FOUND` | Requested resource does not exist |
-| 409 | `CONFLICT` | Resource state conflict (e.g., job already running) |
-| 500 | `INTERNAL_ERROR` | Unexpected server error |
-| 503 | `SERVICE_UNAVAILABLE` | Dependency unavailable (e.g., storage) |
+| HTTP Status | Error Code            | Description                                         |
+| ----------- | --------------------- | --------------------------------------------------- |
+| 400         | `MISSING_PARAMETER`   | Required parameter not provided                     |
+| 400         | `INVALID_PARAMETER`   | Parameter value is invalid                          |
+| 400         | `VALIDATION_ERROR`    | Request body failed validation                      |
+| 404         | `NOT_FOUND`           | Requested resource does not exist                   |
+| 409         | `CONFLICT`            | Resource state conflict (e.g., job already running) |
+| 500         | `INTERNAL_ERROR`      | Unexpected server error                             |
+| 503         | `SERVICE_UNAVAILABLE` | Dependency unavailable (e.g., storage)              |
 
 #### Error Response Examples
 
@@ -475,7 +475,7 @@ import { z, ZodSchema } from 'zod'
 function validateBody<T>(schema: ZodSchema<T>) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body)
-    
+
     if (!result.success) {
       res.status(400).json({
         error: {
@@ -486,7 +486,7 @@ function validateBody<T>(schema: ZodSchema<T>) {
       })
       return
     }
-    
+
     req.body = result.data
     next()
   }
@@ -513,12 +513,12 @@ All backend code MUST use structured JSON logging for production observability.
 
 #### Log Levels
 
-| Level | Usage | Environment |
-| ----- | ----- | ----------- |
-| `error` | Unexpected failures, exceptions | All |
-| `warn` | Recoverable issues, deprecations | All |
-| `info` | Significant events, request completion | All |
-| `debug` | Detailed diagnostic information | Development only |
+| Level   | Usage                                  | Environment      |
+| ------- | -------------------------------------- | ---------------- |
+| `error` | Unexpected failures, exceptions        | All              |
+| `warn`  | Recoverable issues, deprecations       | All              |
+| `info`  | Significant events, request completion | All              |
+| `debug` | Detailed diagnostic information        | Development only |
 
 #### Required Log Fields
 
@@ -526,11 +526,11 @@ Every log entry MUST include:
 
 ```typescript
 interface LogEntry {
-  timestamp: string      // ISO 8601 format
-  level: LogLevel        // 'error' | 'warn' | 'info' | 'debug'
-  message: string        // Human-readable description
-  environment: string    // 'development' | 'staging' | 'production'
-  data?: unknown         // Structured context data
+  timestamp: string // ISO 8601 format
+  level: LogLevel // 'error' | 'warn' | 'info' | 'debug'
+  message: string // Human-readable description
+  environment: string // 'development' | 'staging' | 'production'
+  data?: unknown // Structured context data
 }
 ```
 
@@ -585,11 +585,11 @@ Errors MUST be logged with stack traces:
 
 Errors are classified into three categories:
 
-| Category | Description | HTTP Status | Retryable |
-| -------- | ----------- | ----------- | --------- |
-| **Client Errors** | Invalid input, missing parameters | 4xx | No |
-| **Transient Errors** | Temporary failures, timeouts | 5xx | Yes |
-| **Permanent Errors** | Configuration issues, bugs | 5xx | No |
+| Category             | Description                       | HTTP Status | Retryable |
+| -------------------- | --------------------------------- | ----------- | --------- |
+| **Client Errors**    | Invalid input, missing parameters | 4xx         | No        |
+| **Transient Errors** | Temporary failures, timeouts      | 5xx         | Yes       |
+| **Permanent Errors** | Configuration issues, bugs        | 5xx         | No        |
 
 #### Custom Error Classes
 
@@ -638,7 +638,7 @@ class StorageOperationError extends StorageError {
 try {
   await storage.writeSnapshot(snapshot)
 } catch (error) {
-  console.log('Write failed')  // Lost context!
+  console.log('Write failed') // Lost context!
 }
 
 // ✅ CORRECT - Proper error handling with context
@@ -650,7 +650,7 @@ try {
     // Implement retry logic
   } else {
     logger.error('Permanent storage error', error)
-    throw error  // Propagate to caller
+    throw error // Propagate to caller
   }
 }
 ```
@@ -746,14 +746,14 @@ CMD ["node", "dist/index.js"]
 
 #### Dockerfile Requirements
 
-| Requirement | Rule | Rationale |
-| ----------- | ---- | --------- |
-| Base image | MUST use `node:22-alpine` | Minimal attack surface, small image size |
+| Requirement       | Rule                                          | Rationale                                                 |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------- |
+| Base image        | MUST use `node:22-alpine`                     | Minimal attack surface, small image size                  |
 | Multi-stage build | MUST use separate build and production stages | Excludes devDependencies and build tools from final image |
-| Non-root user | MUST run as non-root user | Security best practice; prevents privilege escalation |
-| Package lock | MUST use `npm ci` with lock file | Ensures reproducible builds |
-| Cache cleaning | MUST clean npm cache after install | Reduces image size |
-| Labels | SHOULD include OCI image labels | Improves image discoverability and traceability |
+| Non-root user     | MUST run as non-root user                     | Security best practice; prevents privilege escalation     |
+| Package lock      | MUST use `npm ci` with lock file              | Ensures reproducible builds                               |
+| Cache cleaning    | MUST clean npm cache after install            | Reduces image size                                        |
+| Labels            | SHOULD include OCI image labels               | Improves image discoverability and traceability           |
 
 #### Image Optimization Guidelines
 
@@ -785,10 +785,10 @@ All backend services MUST implement health check endpoints for container orchest
 
 #### Required Endpoints
 
-| Endpoint | Purpose | Response Time | HTTP Status |
-| -------- | ------- | ------------- | ----------- |
-| `/health` | Liveness probe | < 100ms | 200 OK |
-| `/health/ready` | Readiness probe | < 500ms | 200 OK or 503 |
+| Endpoint        | Purpose         | Response Time | HTTP Status   |
+| --------------- | --------------- | ------------- | ------------- |
+| `/health`       | Liveness probe  | < 100ms       | 200 OK        |
+| `/health/ready` | Readiness probe | < 500ms       | 200 OK or 503 |
 
 #### Liveness Probe (`/health`)
 
@@ -820,7 +820,7 @@ The readiness probe indicates whether the application is ready to receive traffi
 // ✅ CORRECT - Readiness check with dependency verification
 router.get('/health/ready', async (req, res) => {
   const checks: Record<string, boolean> = {}
-  
+
   // Check storage availability
   try {
     const storage = getSnapshotStorage()
@@ -828,9 +828,9 @@ router.get('/health/ready', async (req, res) => {
   } catch {
     checks.storage = false
   }
-  
+
   const allHealthy = Object.values(checks).every(Boolean)
-  
+
   res.status(allHealthy ? 200 : 503).json({
     status: allHealthy ? 'ready' : 'not_ready',
     timestamp: new Date().toISOString(),
@@ -854,12 +854,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/health || exit 1
 ```
 
-| Parameter | Value | Rationale |
-| --------- | ----- | --------- |
-| `--interval` | 30s | Balance between responsiveness and overhead |
-| `--timeout` | 10s | Allow for slow responses under load |
-| `--start-period` | 5s | Grace period for application startup |
-| `--retries` | 3 | Avoid false positives from transient failures |
+| Parameter        | Value | Rationale                                     |
+| ---------------- | ----- | --------------------------------------------- |
+| `--interval`     | 30s   | Balance between responsiveness and overhead   |
+| `--timeout`      | 10s   | Allow for slow responses under load           |
+| `--start-period` | 5s    | Grace period for application startup          |
+| `--retries`      | 3     | Avoid false positives from transient failures |
 
 #### Cloud Run Health Check Configuration
 
@@ -896,14 +896,14 @@ This section defines resource allocation guidelines for Cloud Run services.
 
 #### Default Resource Configuration
 
-| Resource | Default | Minimum | Maximum |
-| -------- | ------- | ------- | ------- |
-| Memory | 512Mi | 256Mi | 2Gi |
-| CPU | 1 vCPU | 0.5 vCPU | 2 vCPU |
-| Concurrency | 80 | 1 | 1000 |
-| Min instances | 0 | 0 | 10 |
-| Max instances | 10 | 1 | 100 |
-| Request timeout | 300s | 1s | 3600s |
+| Resource        | Default | Minimum  | Maximum |
+| --------------- | ------- | -------- | ------- |
+| Memory          | 512Mi   | 256Mi    | 2Gi     |
+| CPU             | 1 vCPU  | 0.5 vCPU | 2 vCPU  |
+| Concurrency     | 80      | 1        | 1000    |
+| Min instances   | 0       | 0        | 10      |
+| Max instances   | 10      | 1        | 100     |
+| Request timeout | 300s    | 1s       | 3600s   |
 
 #### Memory Sizing Guidelines
 
@@ -917,22 +917,22 @@ Memory allocation MUST account for:
 Container Memory = V8 Heap Limit + Native Memory + Overhead
 ```
 
-| Container Memory | Recommended `--max-old-space-size` | Use Case |
-| ---------------- | ---------------------------------- | -------- |
-| 256Mi | 150MB | Lightweight services, simple APIs |
-| 512Mi | 384MB | Standard API services (default) |
-| 1Gi | 768MB | Data processing, analytics |
-| 2Gi | 1536MB | Heavy computation, large datasets |
+| Container Memory | Recommended `--max-old-space-size` | Use Case                          |
+| ---------------- | ---------------------------------- | --------------------------------- |
+| 256Mi            | 150MB                              | Lightweight services, simple APIs |
+| 512Mi            | 384MB                              | Standard API services (default)   |
+| 1Gi              | 768MB                              | Data processing, analytics        |
+| 2Gi              | 1536MB                             | Heavy computation, large datasets |
 
 **Rule**: `--max-old-space-size` SHOULD be set to approximately 75% of container memory to leave room for native memory and overhead.
 
 #### CPU Sizing Guidelines
 
-| CPU Allocation | Use Case | Characteristics |
-| -------------- | -------- | --------------- |
-| 0.5 vCPU | Low-traffic APIs | Cost-optimized, slower cold starts |
-| 1 vCPU | Standard workloads | Balanced performance (default) |
-| 2 vCPU | CPU-intensive tasks | Computation, data processing |
+| CPU Allocation | Use Case            | Characteristics                    |
+| -------------- | ------------------- | ---------------------------------- |
+| 0.5 vCPU       | Low-traffic APIs    | Cost-optimized, slower cold starts |
+| 1 vCPU         | Standard workloads  | Balanced performance (default)     |
+| 2 vCPU         | CPU-intensive tasks | Computation, data processing       |
 
 CPU allocation considerations:
 
@@ -944,12 +944,12 @@ CPU allocation considerations:
 
 Concurrency defines the maximum number of concurrent requests per instance.
 
-| Concurrency | Use Case | Trade-offs |
-| ----------- | -------- | ---------- |
-| 1 | CPU-intensive, stateful | Maximum isolation, higher cost |
-| 10-20 | Memory-intensive operations | Balanced resource sharing |
-| 80 | Standard API services | Default, good for I/O-bound work |
-| 200+ | High-throughput, lightweight | Maximum efficiency, requires careful tuning |
+| Concurrency | Use Case                     | Trade-offs                                  |
+| ----------- | ---------------------------- | ------------------------------------------- |
+| 1           | CPU-intensive, stateful      | Maximum isolation, higher cost              |
+| 10-20       | Memory-intensive operations  | Balanced resource sharing                   |
+| 80          | Standard API services        | Default, good for I/O-bound work            |
+| 200+        | High-throughput, lightweight | Maximum efficiency, requires careful tuning |
 
 Concurrency guidelines:
 
@@ -966,15 +966,15 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/minScale: "0"
-        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/minScale: '0'
+        autoscaling.knative.dev/maxScale: '10'
 ```
 
-| Setting | Development | Staging | Production |
-| ------- | ----------- | ------- | ---------- |
-| Min instances | 0 | 0 | 0 |
-| Max instances | 2 | 2 | 10 |
-| Scale-to-zero | Yes | Yes | Yes |
+| Setting       | Development | Staging | Production |
+| ------------- | ----------- | ------- | ---------- |
+| Min instances | 0           | 0       | 0          |
+| Max instances | 2           | 2       | 10         |
+| Scale-to-zero | Yes         | Yes     | Yes        |
 
 Autoscaling guidelines:
 
@@ -985,12 +985,12 @@ Autoscaling guidelines:
 
 #### Request Timeout Configuration
 
-| Endpoint Type | Timeout | Rationale |
-| ------------- | ------- | --------- |
-| Standard API | 60s | Sufficient for most operations |
-| Data refresh | 300s | Long-running scraping operations |
-| Backfill | 600s | Batch processing operations |
-| Health checks | 10s | Quick response required |
+| Endpoint Type | Timeout | Rationale                        |
+| ------------- | ------- | -------------------------------- |
+| Standard API  | 60s     | Sufficient for most operations   |
+| Data refresh  | 300s    | Long-running scraping operations |
+| Backfill      | 600s    | Batch processing operations      |
+| Health checks | 10s     | Quick response required          |
 
 Timeout guidelines:
 
@@ -1031,25 +1031,25 @@ All in-memory caches MUST implement bounded size and TTL-based eviction.
 import { LRUCache } from 'lru-cache'
 
 interface CacheOptions {
-  maxSize: number      // Maximum number of entries
-  maxAge: number       // TTL in milliseconds
+  maxSize: number // Maximum number of entries
+  maxAge: number // TTL in milliseconds
   updateAgeOnGet?: boolean
 }
 
 const snapshotCache = new LRUCache<string, Snapshot>({
-  max: 100,                    // Maximum 100 entries
-  ttl: 5 * 60 * 1000,         // 5 minute TTL
-  updateAgeOnGet: true,        // Reset TTL on access
-  allowStale: false,           // Don't serve stale data
+  max: 100, // Maximum 100 entries
+  ttl: 5 * 60 * 1000, // 5 minute TTL
+  updateAgeOnGet: true, // Reset TTL on access
+  allowStale: false, // Don't serve stale data
 })
 ```
 
-| Cache Type | Max Size | TTL | Eviction Policy |
-| ---------- | -------- | --- | --------------- |
-| Snapshot metadata | 100 entries | 5 minutes | LRU |
-| District data | 50 entries | 10 minutes | LRU |
-| Rankings | 20 entries | 5 minutes | LRU |
-| Configuration | 10 entries | 30 minutes | LRU |
+| Cache Type        | Max Size    | TTL        | Eviction Policy |
+| ----------------- | ----------- | ---------- | --------------- |
+| Snapshot metadata | 100 entries | 5 minutes  | LRU             |
+| District data     | 50 entries  | 10 minutes | LRU             |
+| Rankings          | 20 entries  | 5 minutes  | LRU             |
+| Configuration     | 10 entries  | 30 minutes | LRU             |
 
 #### Cache Size Limits
 
@@ -1057,13 +1057,13 @@ In-memory cache size MUST be bounded to prevent memory exhaustion:
 
 ```typescript
 // ❌ FORBIDDEN - Unbounded cache
-const cache = new Map<string, Data>()  // Can grow indefinitely!
+const cache = new Map<string, Data>() // Can grow indefinitely!
 
 // ✅ CORRECT - Bounded cache with size calculation
 const cache = new LRUCache<string, Data>({
   max: 100,
-  maxSize: 50 * 1024 * 1024,  // 50MB maximum
-  sizeCalculation: (value) => JSON.stringify(value).length,
+  maxSize: 50 * 1024 * 1024, // 50MB maximum
+  sizeCalculation: value => JSON.stringify(value).length,
 })
 ```
 
@@ -1082,25 +1082,25 @@ API responses MUST include appropriate cache headers:
 const CACHE_HEADERS = {
   // Static data that rarely changes
   immutable: 'public, max-age=31536000, immutable',
-  
+
   // Data that can be cached but should be revalidated
   revalidate: 'public, max-age=300, stale-while-revalidate=60',
-  
+
   // Data that should not be cached
   noCache: 'no-store, no-cache, must-revalidate',
-  
+
   // Private data (user-specific)
   private: 'private, max-age=60',
 }
 ```
 
-| Endpoint Type | Cache-Control | Rationale |
-| ------------- | ------------- | --------- |
-| `/api/districts` | `public, max-age=300` | District list changes infrequently |
-| `/api/districts/:id` | `public, max-age=60` | Individual district data |
-| `/api/snapshots/latest` | `public, max-age=60` | Latest snapshot reference |
-| `/api/admin/*` | `no-store` | Administrative operations |
-| `/api/backfill/*` | `no-store` | Mutation operations |
+| Endpoint Type           | Cache-Control         | Rationale                          |
+| ----------------------- | --------------------- | ---------------------------------- |
+| `/api/districts`        | `public, max-age=300` | District list changes infrequently |
+| `/api/districts/:id`    | `public, max-age=60`  | Individual district data           |
+| `/api/snapshots/latest` | `public, max-age=60`  | Latest snapshot reference          |
+| `/api/admin/*`          | `no-store`            | Administrative operations          |
+| `/api/backfill/*`       | `no-store`            | Mutation operations                |
 
 #### Cache Invalidation Patterns
 
@@ -1110,12 +1110,12 @@ Cache invalidation MUST be explicit and predictable:
 // ✅ CORRECT - Explicit cache invalidation
 class CacheService {
   private cache: LRUCache<string, Data>
-  
+
   invalidate(key: string): void {
     this.cache.delete(key)
     logger.info('Cache invalidated', { key })
   }
-  
+
   invalidatePattern(pattern: RegExp): void {
     for (const key of this.cache.keys()) {
       if (pattern.test(key)) {
@@ -1124,7 +1124,7 @@ class CacheService {
     }
     logger.info('Cache pattern invalidated', { pattern: pattern.source })
   }
-  
+
   invalidateAll(): void {
     this.cache.clear()
     logger.info('Cache cleared')
@@ -1148,30 +1148,32 @@ Concurrent identical requests SHOULD be deduplicated:
 class DeduplicatingCache<T> {
   private cache: LRUCache<string, T>
   private pending: Map<string, Promise<T>> = new Map()
-  
+
   async get(key: string, fetcher: () => Promise<T>): Promise<T> {
     // Check cache first
     const cached = this.cache.get(key)
     if (cached !== undefined) {
       return cached
     }
-    
+
     // Check for pending request
     const pending = this.pending.get(key)
     if (pending) {
       return pending
     }
-    
+
     // Create new request
-    const promise = fetcher().then((result) => {
-      this.cache.set(key, result)
-      this.pending.delete(key)
-      return result
-    }).catch((error) => {
-      this.pending.delete(key)
-      throw error
-    })
-    
+    const promise = fetcher()
+      .then(result => {
+        this.cache.set(key, result)
+        this.pending.delete(key)
+        return result
+      })
+      .catch(error => {
+        this.pending.delete(key)
+        throw error
+      })
+
     this.pending.set(key, promise)
     return promise
   }
@@ -1184,11 +1186,11 @@ This section defines practices for managing npm dependencies securely and consis
 
 #### Version Pinning Requirements
 
-| Dependency Type | Version Strategy | Example |
-| --------------- | ---------------- | ------- |
-| Production | Exact version | `"express": "4.18.2"` |
-| Development | Exact version | `"vitest": "1.2.0"` |
-| Peer dependencies | Range allowed | `"react": "^18.0.0"` |
+| Dependency Type   | Version Strategy | Example               |
+| ----------------- | ---------------- | --------------------- |
+| Production        | Exact version    | `"express": "4.18.2"` |
+| Development       | Exact version    | `"vitest": "1.2.0"`   |
+| Peer dependencies | Range allowed    | `"react": "^18.0.0"`  |
 
 ```json
 // ❌ FORBIDDEN - Unpinned versions
@@ -1262,14 +1264,14 @@ CI pipeline MUST include:
 
 #### Allowed and Prohibited Dependencies
 
-| Category | Policy | Examples |
-| -------- | ------ | -------- |
-| Core runtime | Allowed | express, zod, lru-cache |
-| Testing | Allowed | vitest, fast-check |
-| Type definitions | Allowed | @types/* |
-| Native modules | Review required | sharp, bcrypt |
-| Deprecated packages | Prohibited | request, moment |
-| Unmaintained (>2 years) | Review required | - |
+| Category                | Policy          | Examples                |
+| ----------------------- | --------------- | ----------------------- |
+| Core runtime            | Allowed         | express, zod, lru-cache |
+| Testing                 | Allowed         | vitest, fast-check      |
+| Type definitions        | Allowed         | @types/\*               |
+| Native modules          | Review required | sharp, bcrypt           |
+| Deprecated packages     | Prohibited      | request, moment         |
+| Unmaintained (>2 years) | Review required | -                       |
 
 Dependency evaluation criteria:
 
@@ -1281,11 +1283,11 @@ Dependency evaluation criteria:
 
 #### Node.js Version Management
 
-| Environment | Node.js Version | Management |
-| ----------- | --------------- | ---------- |
-| Development | 22.x LTS | `.nvmrc` file |
-| CI/CD | 22.x LTS | GitHub Actions `node-version` |
-| Production | 22.x Alpine | Dockerfile `FROM node:22-alpine` |
+| Environment | Node.js Version | Management                       |
+| ----------- | --------------- | -------------------------------- |
+| Development | 22.x LTS        | `.nvmrc` file                    |
+| CI/CD       | 22.x LTS        | GitHub Actions `node-version`    |
+| Production  | 22.x Alpine     | Dockerfile `FROM node:22-alpine` |
 
 ```
 # .nvmrc
@@ -1327,10 +1329,10 @@ spec:
     metadata:
       annotations:
         # Autoscaling configuration
-        autoscaling.knative.dev/minScale: "0"
-        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/minScale: '0'
+        autoscaling.knative.dev/maxScale: '10'
         # CPU allocation during startup
-        run.googleapis.com/startup-cpu-boost: "true"
+        run.googleapis.com/startup-cpu-boost: 'true'
         # Execution environment
         run.googleapis.com/execution-environment: gen2
     spec:
@@ -1348,25 +1350,25 @@ spec:
           resources:
             limits:
               memory: 512Mi
-              cpu: "1"
+              cpu: '1'
           env:
             - name: NODE_ENV
               value: production
             - name: PORT
-              value: "5001"
+              value: '5001'
 ```
 
 #### Required Service Configuration
 
-| Parameter | Production Value | Staging Value | Rationale |
-| --------- | ---------------- | ------------- | --------- |
-| `minScale` | 0 | 0 | Cost optimization with scale-to-zero |
-| `maxScale` | 10 | 2 | Prevent runaway costs |
-| `containerConcurrency` | 80 | 80 | Standard for I/O-bound services |
-| `timeoutSeconds` | 300 | 300 | Allow long-running operations |
-| `memory` | 512Mi | 512Mi | Standard API service allocation |
-| `cpu` | 1 | 1 | Balanced performance |
-| `execution-environment` | gen2 | gen2 | Better performance, faster cold starts |
+| Parameter               | Production Value | Staging Value | Rationale                              |
+| ----------------------- | ---------------- | ------------- | -------------------------------------- |
+| `minScale`              | 0                | 0             | Cost optimization with scale-to-zero   |
+| `maxScale`              | 10               | 2             | Prevent runaway costs                  |
+| `containerConcurrency`  | 80               | 80            | Standard for I/O-bound services        |
+| `timeoutSeconds`        | 300              | 300           | Allow long-running operations          |
+| `memory`                | 512Mi            | 512Mi         | Standard API service allocation        |
+| `cpu`                   | 1                | 1             | Balanced performance                   |
+| `execution-environment` | gen2             | gen2          | Better performance, faster cold starts |
 
 #### Service Configuration Requirements
 
@@ -1407,23 +1409,23 @@ Service accounts MUST follow this naming pattern:
 {service-name}@{project-id}.iam.gserviceaccount.com
 ```
 
-| Environment | Service Account | Example |
-| ----------- | --------------- | ------- |
-| Production | `toast-stats-backend@toast-stats-prod.iam.gserviceaccount.com` | Backend API service |
-| Staging | `toast-stats-backend@toast-stats-staging.iam.gserviceaccount.com` | Backend API service |
-| CI/CD | `github-actions@toast-stats-prod.iam.gserviceaccount.com` | Deployment automation |
+| Environment | Service Account                                                   | Example               |
+| ----------- | ----------------------------------------------------------------- | --------------------- |
+| Production  | `toast-stats-backend@toast-stats-prod.iam.gserviceaccount.com`    | Backend API service   |
+| Staging     | `toast-stats-backend@toast-stats-staging.iam.gserviceaccount.com` | Backend API service   |
+| CI/CD       | `github-actions@toast-stats-prod.iam.gserviceaccount.com`         | Deployment automation |
 
 #### Required IAM Roles
 
 The backend service account MUST have the following roles:
 
-| Role | Purpose | Scope |
-| ---- | ------- | ----- |
-| `roles/datastore.user` | Read/write Firestore documents | Project |
-| `roles/storage.objectAdmin` | Read/write GCS objects | Specific buckets |
-| `roles/secretmanager.secretAccessor` | Access secrets | Specific secrets |
-| `roles/logging.logWriter` | Write structured logs | Project |
-| `roles/cloudtrace.agent` | Write trace data | Project |
+| Role                                 | Purpose                        | Scope            |
+| ------------------------------------ | ------------------------------ | ---------------- |
+| `roles/datastore.user`               | Read/write Firestore documents | Project          |
+| `roles/storage.objectAdmin`          | Read/write GCS objects         | Specific buckets |
+| `roles/secretmanager.secretAccessor` | Access secrets                 | Specific secrets |
+| `roles/logging.logWriter`            | Write structured logs          | Project          |
+| `roles/cloudtrace.agent`             | Write trace data               | Project          |
 
 #### IAM Configuration Commands
 
@@ -1461,12 +1463,12 @@ gcloud secrets add-iam-policy-binding SECRET_NAME \
 
 The GitHub Actions deployment service account MUST have:
 
-| Role | Purpose |
-| ---- | ------- |
-| `roles/run.admin` | Deploy Cloud Run services |
+| Role                           | Purpose                            |
+| ------------------------------ | ---------------------------------- |
+| `roles/run.admin`              | Deploy Cloud Run services          |
 | `roles/iam.serviceAccountUser` | Act as the backend service account |
-| `roles/storage.admin` | Push container images to GCR |
-| `roles/firebase.admin` | Deploy Firebase Hosting |
+| `roles/storage.admin`          | Push container images to GCR       |
+| `roles/firebase.admin`         | Deploy Firebase Hosting            |
 
 ### 7.3 Secrets Management
 
@@ -1480,11 +1482,11 @@ Secrets MUST follow this naming pattern:
 {environment}-{service}-{secret-name}
 ```
 
-| Secret | Name Pattern | Example |
-| ------ | ------------ | ------- |
-| API keys | `{env}-backend-api-key` | `prod-backend-toastmasters-api-key` |
-| Database credentials | `{env}-backend-db-{type}` | `prod-backend-db-connection-string` |
-| Service tokens | `{env}-backend-{service}-token` | `prod-backend-firebase-token` |
+| Secret               | Name Pattern                    | Example                             |
+| -------------------- | ------------------------------- | ----------------------------------- |
+| API keys             | `{env}-backend-api-key`         | `prod-backend-toastmasters-api-key` |
+| Database credentials | `{env}-backend-db-{type}`       | `prod-backend-db-connection-string` |
+| Service tokens       | `{env}-backend-{service}-token` | `prod-backend-firebase-token`       |
 
 #### Secret Injection Pattern
 
@@ -1533,12 +1535,12 @@ gcloud run deploy toast-stats-backend \
 - Secrets MUST NOT be logged, even at debug level
 - Secrets MUST be rotated according to the following schedule:
 
-| Secret Type | Rotation Period | Automation |
-| ----------- | --------------- | ---------- |
-| API keys | 90 days | Manual with notification |
-| Service tokens | 30 days | Automated where possible |
-| Database credentials | 90 days | Manual with notification |
-| TLS certificates | Before expiry | Automated via Cloud Certificate Manager |
+| Secret Type          | Rotation Period | Automation                              |
+| -------------------- | --------------- | --------------------------------------- |
+| API keys             | 90 days         | Manual with notification                |
+| Service tokens       | 30 days         | Automated where possible                |
+| Database credentials | 90 days         | Manual with notification                |
+| TLS certificates     | Before expiry   | Automated via Cloud Certificate Manager |
 
 #### Secret Access Patterns
 
@@ -1553,7 +1555,7 @@ if (!apiKey) {
 const apiKey = 'sk-1234567890abcdef'
 
 // ❌ FORBIDDEN - Secrets in configuration files
-import config from './config.json'  // Contains secrets
+import config from './config.json' // Contains secrets
 ```
 
 #### Secret Audit Requirements
@@ -1568,11 +1570,11 @@ Environment configuration MUST distinguish between build-time and runtime config
 
 #### Configuration Categories
 
-| Category | When Applied | Storage Location | Examples |
-| -------- | ------------ | ---------------- | -------- |
-| **Build-time** | During container build | Dockerfile, build args | Node version, build flags |
-| **Deploy-time** | During service deployment | Cloud Run config | Memory, CPU, scaling |
-| **Runtime** | During request processing | Environment variables, Secret Manager | API keys, feature flags |
+| Category        | When Applied              | Storage Location                      | Examples                  |
+| --------------- | ------------------------- | ------------------------------------- | ------------------------- |
+| **Build-time**  | During container build    | Dockerfile, build args                | Node version, build flags |
+| **Deploy-time** | During service deployment | Cloud Run config                      | Memory, CPU, scaling      |
+| **Runtime**     | During request processing | Environment variables, Secret Manager | API keys, feature flags   |
 
 #### Build-Time Configuration
 
@@ -1628,7 +1630,7 @@ interface RuntimeConfig {
   // Required configuration (fail fast if missing)
   storageProvider: 'local' | 'gcp'
   port: number
-  
+
   // Optional configuration with defaults
   logLevel: 'debug' | 'info' | 'warn' | 'error'
   cacheEnabled: boolean
@@ -1639,12 +1641,12 @@ function loadRuntimeConfig(): RuntimeConfig {
   if (storageProvider !== 'local' && storageProvider !== 'gcp') {
     throw new Error('STORAGE_PROVIDER must be "local" or "gcp"')
   }
-  
+
   const port = parseInt(process.env.PORT ?? '5001', 10)
   if (isNaN(port)) {
     throw new Error('PORT must be a valid number')
   }
-  
+
   return {
     storageProvider,
     port,
@@ -1663,17 +1665,17 @@ Runtime configuration requirements:
 
 #### Environment Variable Matrix
 
-| Variable | Build-time | Deploy-time | Runtime | Required |
-| -------- | ---------- | ----------- | ------- | -------- |
-| `NODE_ENV` | ✓ | | | Yes |
-| `PORT` | | | ✓ | Yes |
-| `STORAGE_PROVIDER` | | | ✓ | Yes |
-| `LOG_LEVEL` | | | ✓ | No (default: info) |
-| `CACHE_ENABLED` | | | ✓ | No (default: true) |
-| `TOASTMASTERS_API_KEY` | | | ✓ (secret) | Yes |
-| Memory limit | | ✓ | | Yes |
-| CPU limit | | ✓ | | Yes |
-| Max instances | | ✓ | | Yes |
+| Variable               | Build-time | Deploy-time | Runtime    | Required           |
+| ---------------------- | ---------- | ----------- | ---------- | ------------------ |
+| `NODE_ENV`             | ✓          |             |            | Yes                |
+| `PORT`                 |            |             | ✓          | Yes                |
+| `STORAGE_PROVIDER`     |            |             | ✓          | Yes                |
+| `LOG_LEVEL`            |            |             | ✓          | No (default: info) |
+| `CACHE_ENABLED`        |            |             | ✓          | No (default: true) |
+| `TOASTMASTERS_API_KEY` |            |             | ✓ (secret) | Yes                |
+| Memory limit           |            | ✓           |            | Yes                |
+| CPU limit              |            | ✓           |            | Yes                |
+| Max instances          |            | ✓           |            | Yes                |
 
 #### Configuration Validation
 
@@ -1692,12 +1694,12 @@ const ConfigSchema = z.object({
 
 export function validateConfig(): z.infer<typeof ConfigSchema> {
   const result = ConfigSchema.safeParse(process.env)
-  
+
   if (!result.success) {
     console.error('Configuration validation failed:', result.error.flatten())
     process.exit(1)
   }
-  
+
   return result.data
 }
 
@@ -1741,11 +1743,11 @@ Cross-Origin Resource Sharing (CORS) MUST be configured to allow the frontend ap
 
 ##### Allowed Origins
 
-| Environment | Allowed Origins | Rationale |
-| ----------- | --------------- | --------- |
-| Development | `http://localhost:3000`, `http://localhost:5173` | Local development servers (CRA, Vite) |
-| Staging | `https://staging.toast-stats.web.app`, `https://staging-toast-stats.firebaseapp.com` | Firebase Hosting staging URLs |
-| Production | `https://toast-stats.web.app`, `https://toast-stats.firebaseapp.com` | Firebase Hosting production URLs |
+| Environment | Allowed Origins                                                                      | Rationale                             |
+| ----------- | ------------------------------------------------------------------------------------ | ------------------------------------- |
+| Development | `http://localhost:3000`, `http://localhost:5173`                                     | Local development servers (CRA, Vite) |
+| Staging     | `https://staging.toast-stats.web.app`, `https://staging-toast-stats.firebaseapp.com` | Firebase Hosting staging URLs         |
+| Production  | `https://toast-stats.web.app`, `https://toast-stats.firebaseapp.com`                 | Firebase Hosting production URLs      |
 
 ##### CORS Middleware Configuration
 
@@ -1754,10 +1756,7 @@ import cors from 'cors'
 
 // ✅ CORRECT - Environment-specific CORS configuration
 const ALLOWED_ORIGINS: Record<string, string[]> = {
-  development: [
-    'http://localhost:3000',
-    'http://localhost:5173',
-  ],
+  development: ['http://localhost:3000', 'http://localhost:5173'],
   staging: [
     'https://staging.toast-stats.web.app',
     'https://staging-toast-stats.firebaseapp.com',
@@ -1772,13 +1771,13 @@ const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     const env = process.env.NODE_ENV ?? 'development'
     const allowedOrigins = ALLOWED_ORIGINS[env] ?? ALLOWED_ORIGINS.development
-    
+
     // Allow requests with no origin (e.g., mobile apps, curl)
     if (!origin) {
       callback(null, true)
       return
     }
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
@@ -1822,32 +1821,34 @@ All HTTP responses MUST include security headers:
 import helmet from 'helmet'
 
 // ✅ CORRECT - Security headers configuration
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https:'],
-      connectSrc: ["'self'", 'https://firestore.googleapis.com'],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https://firestore.googleapis.com'],
+      },
     },
-  },
-  hsts: {
-    maxAge: 31536000, // 1 year
-    includeSubDomains: true,
-    preload: true,
-  },
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-}))
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  })
+)
 ```
 
-| Header | Value | Purpose |
-| ------ | ----- | ------- |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Enforce HTTPS |
-| `X-Content-Type-Options` | `nosniff` | Prevent MIME sniffing |
-| `X-Frame-Options` | `DENY` | Prevent clickjacking |
-| `X-XSS-Protection` | `1; mode=block` | XSS filter (legacy browsers) |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Control referrer information |
+| Header                      | Value                                          | Purpose                      |
+| --------------------------- | ---------------------------------------------- | ---------------------------- |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Enforce HTTPS                |
+| `X-Content-Type-Options`    | `nosniff`                                      | Prevent MIME sniffing        |
+| `X-Frame-Options`           | `DENY`                                         | Prevent clickjacking         |
+| `X-XSS-Protection`          | `1; mode=block`                                | XSS filter (legacy browsers) |
+| `Referrer-Policy`           | `strict-origin-when-cross-origin`              | Control referrer information |
 
 #### Firebase Hosting Proxy Configuration
 
@@ -1909,14 +1910,14 @@ This section documents the CI/CD pipeline using GitHub Actions with quality gate
 
 All quality gates MUST pass before deployment proceeds. Failures are **blocking**.
 
-| Gate | Tool | Threshold | Blocking |
-| ---- | ---- | --------- | -------- |
-| TypeScript compilation | `tsc --noEmit` | Zero errors | Yes |
-| Linting | `eslint` | Zero errors | Yes |
-| Formatting | `prettier --check` | All files formatted | Yes |
-| Unit tests | `vitest run` | All tests pass | Yes |
-| Security audit | `npm audit` | No high/critical vulnerabilities | Yes |
-| Build | `npm run build` | Successful build | Yes |
+| Gate                   | Tool               | Threshold                        | Blocking |
+| ---------------------- | ------------------ | -------------------------------- | -------- |
+| TypeScript compilation | `tsc --noEmit`     | Zero errors                      | Yes      |
+| Linting                | `eslint`           | Zero errors                      | Yes      |
+| Formatting             | `prettier --check` | All files formatted              | Yes      |
+| Unit tests             | `vitest run`       | All tests pass                   | Yes      |
+| Security audit         | `npm audit`        | No high/critical vulnerabilities | Yes      |
+| Build                  | `npm run build`    | Successful build                 | Yes      |
 
 #### GitHub Actions Workflow
 
@@ -1942,11 +1943,11 @@ jobs:
   quality-gates:
     name: Quality Gates
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -1955,45 +1956,45 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-      
+
       # Backend quality gates
       - name: Install backend dependencies
         run: npm ci
         working-directory: backend
-      
+
       - name: TypeScript check (backend)
         run: npm run typecheck
         working-directory: backend
-      
+
       - name: Lint (backend)
         run: npm run lint
         working-directory: backend
-      
+
       - name: Format check (backend)
         run: npm run format:check
         working-directory: backend
-      
+
       - name: Unit tests (backend)
         run: npm run test
         working-directory: backend
-      
+
       - name: Security audit (backend)
         run: npm audit --audit-level=high
         working-directory: backend
-      
+
       # Frontend quality gates
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
-      
+
       - name: TypeScript check (frontend)
         run: npm run typecheck
         working-directory: frontend
-      
+
       - name: Lint (frontend)
         run: npm run lint
         working-directory: frontend
-      
+
       - name: Unit tests (frontend)
         run: npm run test
         working-directory: frontend
@@ -2006,31 +2007,31 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality-gates
     if: github.event_name == 'push'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker
-      
+
       - name: Build and push backend image
         run: |
           docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/toast-stats-backend:${{ github.sha }} .
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/toast-stats-backend:${{ github.sha }}
         working-directory: backend
-      
+
       - name: Build frontend
         run: npm run build
         working-directory: frontend
         env:
           VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://api.toast-stats.web.app' || 'https://staging-api.toast-stats.web.app' }}
-      
+
       - name: Upload frontend build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -2046,16 +2047,16 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/staging'
     environment: staging
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Deploy backend to Cloud Run (staging)
         run: |
           gcloud run deploy toast-stats-backend \
@@ -2064,13 +2065,13 @@ jobs:
             --platform managed \
             --tag staging \
             --no-traffic
-      
+
       - name: Download frontend build
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
           path: frontend/dist
-      
+
       - name: Deploy frontend to Firebase (staging)
         run: |
           npm install -g firebase-tools
@@ -2085,29 +2086,29 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'
     environment: production
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Deploy backend to Cloud Run (production)
         run: |
           gcloud run deploy toast-stats-backend \
             --image ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/toast-stats-backend:${{ github.sha }} \
             --region us-central1 \
             --platform managed
-      
+
       - name: Download frontend build
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
           path: frontend/dist
-      
+
       - name: Deploy frontend to Firebase (production)
         run: |
           npm install -g firebase-tools
@@ -2126,11 +2127,11 @@ jobs:
 
 #### Required GitHub Secrets
 
-| Secret | Purpose | Scope |
-| ------ | ------- | ----- |
-| `GCP_PROJECT_ID` | Google Cloud project identifier | All environments |
-| `GCP_SA_KEY` | Service account JSON key for deployment | All environments |
-| `FIREBASE_TOKEN` | Firebase CLI authentication token | All environments |
+| Secret           | Purpose                                 | Scope            |
+| ---------------- | --------------------------------------- | ---------------- |
+| `GCP_PROJECT_ID` | Google Cloud project identifier         | All environments |
+| `GCP_SA_KEY`     | Service account JSON key for deployment | All environments |
+| `FIREBASE_TOKEN` | Firebase CLI authentication token       | All environments |
 
 ### 7.7 Blue/Green Deployment
 
@@ -2229,11 +2230,11 @@ gcloud run services update-traffic toast-stats-backend \
 
 Traffic migration schedule:
 
-| Stage | Traffic to Green | Duration | Monitoring |
-| ----- | ---------------- | -------- | ---------- |
-| Initial | 10% | 5 minutes | Error rate, latency |
-| Canary | 50% | 10 minutes | Error rate, latency, logs |
-| Full | 100% | - | Continuous monitoring |
+| Stage   | Traffic to Green | Duration   | Monitoring                |
+| ------- | ---------------- | ---------- | ------------------------- |
+| Initial | 10%              | 5 minutes  | Error rate, latency       |
+| Canary  | 50%              | 10 minutes | Error rate, latency, logs |
+| Full    | 100%             | -          | Continuous monitoring     |
 
 ##### Phase 4: Cleanup
 
@@ -2293,11 +2294,11 @@ This section defines cost guardrails including min/max instance limits and idle 
 
 #### Instance Limits
 
-| Environment | Min Instances | Max Instances | Rationale |
-| ----------- | ------------- | ------------- | --------- |
-| Development | N/A | N/A | Local development only |
-| Staging | 0 | 2 | Cost optimization, limited testing load |
-| Production | 0 | 10 | Balance cost and capacity |
+| Environment | Min Instances | Max Instances | Rationale                               |
+| ----------- | ------------- | ------------- | --------------------------------------- |
+| Development | N/A           | N/A           | Local development only                  |
+| Staging     | 0             | 2             | Cost optimization, limited testing load |
+| Production  | 0             | 10            | Balance cost and capacity               |
 
 ##### Minimum Instances
 
@@ -2352,10 +2353,10 @@ gcloud run services update toast-stats-backend \
   --no-cpu-throttling
 ```
 
-| Setting | CPU Billing | Use Case | Cost Impact |
-| ------- | ----------- | -------- | ----------- |
-| `--cpu-throttling` (default) | Request time only | Standard APIs | Lower cost |
-| `--no-cpu-throttling` | Instance lifetime | Background tasks | Higher cost |
+| Setting                      | CPU Billing       | Use Case         | Cost Impact |
+| ---------------------------- | ----------------- | ---------------- | ----------- |
+| `--cpu-throttling` (default) | Request time only | Standard APIs    | Lower cost  |
+| `--no-cpu-throttling`        | Instance lifetime | Background tasks | Higher cost |
 
 CPU allocation requirements:
 
@@ -2374,9 +2375,9 @@ gcloud run services update toast-stats-backend \
 
 | Endpoint Type | Timeout | Monthly Cost Impact |
 | ------------- | ------- | ------------------- |
-| Standard API | 60s | Baseline |
-| Data refresh | 300s | ~5x per request |
-| Backfill | 600s | ~10x per request |
+| Standard API  | 60s     | Baseline            |
+| Data refresh  | 300s    | ~5x per request     |
+| Backfill      | 600s    | ~10x per request    |
 
 Timeout requirements:
 
@@ -2401,22 +2402,22 @@ gcloud billing budgets create \
 
 Budget alert thresholds:
 
-| Threshold | Action |
-| --------- | ------ |
-| 50% | Informational notification |
-| 90% | Warning notification, review usage |
-| 100% | Critical alert, investigate immediately |
+| Threshold | Action                                  |
+| --------- | --------------------------------------- |
+| 50%       | Informational notification              |
+| 90%       | Warning notification, review usage      |
+| 100%      | Critical alert, investigate immediately |
 
 ##### Cost Monitoring Dashboard
 
 Key metrics to monitor:
 
-| Metric | Target | Alert Threshold |
-| ------ | ------ | --------------- |
-| Monthly Cloud Run cost | < $50 | > $75 |
-| Instance hours/day | < 24 | > 48 |
-| Request count/day | Baseline | > 2x baseline |
-| Average request duration | < 500ms | > 1s |
+| Metric                   | Target   | Alert Threshold |
+| ------------------------ | -------- | --------------- |
+| Monthly Cloud Run cost   | < $50    | > $75           |
+| Instance hours/day       | < 24     | > 48            |
+| Request count/day        | Baseline | > 2x baseline   |
+| Average request duration | < 500ms  | > 1s            |
 
 ##### Cost Optimization Checklist
 
@@ -2438,14 +2439,14 @@ Key metrics to monitor:
 
 #### Estimated Monthly Costs
 
-| Component | Staging | Production | Notes |
-| --------- | ------- | ---------- | ----- |
-| Cloud Run (backend) | $5-15 | $20-50 | Based on traffic patterns |
-| Firebase Hosting | $0 | $0 | Free tier sufficient |
-| Firestore | $0-5 | $5-20 | Based on read/write volume |
-| Cloud Storage | $0-1 | $1-5 | Based on storage volume |
-| Secret Manager | $0 | $0 | Free tier sufficient |
-| **Total** | **$5-21** | **$26-75** | |
+| Component           | Staging   | Production | Notes                      |
+| ------------------- | --------- | ---------- | -------------------------- |
+| Cloud Run (backend) | $5-15     | $20-50     | Based on traffic patterns  |
+| Firebase Hosting    | $0        | $0         | Free tier sufficient       |
+| Firestore           | $0-5      | $5-20      | Based on read/write volume |
+| Cloud Storage       | $0-1      | $1-5       | Based on storage volume    |
+| Secret Manager      | $0        | $0         | Free tier sufficient       |
+| **Total**           | **$5-21** | **$26-75** |                            |
 
 Cost estimates assume:
 
@@ -2455,7 +2456,6 @@ Cost estimates assume:
 - Moderate Firestore usage (< 50K reads/day)
 
 ---
-
 
 ## 8. Observability and Operations
 
@@ -2469,12 +2469,12 @@ All backend services MUST emit structured metrics for operational visibility usi
 
 #### Required Metrics Categories
 
-| Category | Metrics | Collection Method |
-| -------- | ------- | ----------------- |
-| **Request Metrics** | Request count, latency, status codes | Structured logging + Cloud Monitoring |
-| **Resource Metrics** | Memory usage, CPU utilization | Cloud Run built-in metrics |
-| **Business Metrics** | Snapshot count, refresh success rate | Custom structured logs |
-| **Dependency Metrics** | Storage latency, external API calls | Structured logging |
+| Category               | Metrics                              | Collection Method                     |
+| ---------------------- | ------------------------------------ | ------------------------------------- |
+| **Request Metrics**    | Request count, latency, status codes | Structured logging + Cloud Monitoring |
+| **Resource Metrics**   | Memory usage, CPU utilization        | Cloud Run built-in metrics            |
+| **Business Metrics**   | Snapshot count, refresh success rate | Custom structured logs                |
+| **Dependency Metrics** | Storage latency, external API calls  | Structured logging                    |
 
 #### Structured Log-Based Metrics
 
@@ -2528,19 +2528,19 @@ Every HTTP request MUST log the following metrics:
 
 ```typescript
 interface RequestMetrics {
-  method: string           // HTTP method (GET, POST, etc.)
-  path: string             // Request path (normalized, no IDs)
-  statusCode: number       // HTTP response status code
-  duration: number         // Request duration in milliseconds
-  userAgent?: string       // Client user agent (truncated)
-  requestId: string        // Unique request identifier
+  method: string // HTTP method (GET, POST, etc.)
+  path: string // Request path (normalized, no IDs)
+  statusCode: number // HTTP response status code
+  duration: number // Request duration in milliseconds
+  userAgent?: string // Client user agent (truncated)
+  requestId: string // Unique request identifier
 }
 
 // ✅ CORRECT - Request completion logging
 app.use((req, res, next) => {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()
-  
+
   res.on('finish', () => {
     const duration = Date.now() - startTime
     logger.info('HTTP Request', {
@@ -2552,7 +2552,7 @@ app.use((req, res, next) => {
       userAgent: req.get('user-agent')?.substring(0, 100),
     })
   })
-  
+
   next()
 })
 ```
@@ -2561,30 +2561,30 @@ app.use((req, res, next) => {
 
 Cloud Run provides built-in resource metrics that MUST be monitored:
 
-| Metric | Description | Alert Threshold |
-| ------ | ----------- | --------------- |
-| `container/cpu/utilization` | CPU usage percentage | > 80% sustained |
-| `container/memory/utilization` | Memory usage percentage | > 85% sustained |
-| `container/instance_count` | Number of running instances | > max_instances - 1 |
-| `container/startup_latency` | Cold start duration | > 10 seconds |
+| Metric                         | Description                 | Alert Threshold     |
+| ------------------------------ | --------------------------- | ------------------- |
+| `container/cpu/utilization`    | CPU usage percentage        | > 80% sustained     |
+| `container/memory/utilization` | Memory usage percentage     | > 85% sustained     |
+| `container/instance_count`     | Number of running instances | > max_instances - 1 |
+| `container/startup_latency`    | Cold start duration         | > 10 seconds        |
 
 #### Business Metrics
 
 Application-specific business metrics MUST be logged for operational insight:
 
-| Metric | Description | Labels |
-| ------ | ----------- | ------ |
-| `snapshot_refresh_duration_ms` | Time to complete snapshot refresh | `district_count`, `success` |
-| `snapshot_count` | Total snapshots in storage | `status` (successful/failed) |
-| `storage_operation_duration_ms` | Storage read/write latency | `operation`, `provider` |
-| `cache_hit_rate` | In-memory cache effectiveness | `cache_name` |
+| Metric                          | Description                       | Labels                       |
+| ------------------------------- | --------------------------------- | ---------------------------- |
+| `snapshot_refresh_duration_ms`  | Time to complete snapshot refresh | `district_count`, `success`  |
+| `snapshot_count`                | Total snapshots in storage        | `status` (successful/failed) |
+| `storage_operation_duration_ms` | Storage read/write latency        | `operation`, `provider`      |
+| `cache_hit_rate`                | In-memory cache effectiveness     | `cache_name`                 |
 
 ```typescript
 // ✅ CORRECT - Business metric logging
 async function refreshSnapshot(districtIds: string[]): Promise<void> {
   const startTime = Date.now()
   let success = false
-  
+
   try {
     await performRefresh(districtIds)
     success = true
@@ -2635,7 +2635,7 @@ async function handleRequest(req: Request, res: Response): Promise<void> {
       'http.route': req.route?.path,
     },
   })
-  
+
   try {
     await context.with(trace.setSpan(context.active(), span), async () => {
       // Request handling with active span context
@@ -2672,10 +2672,10 @@ app.use((req: RequestWithId, res, next) => {
   // Use incoming request ID or generate new one
   const requestId = req.get('X-Request-ID') ?? randomUUID()
   req.requestId = requestId
-  
+
   // Include in response headers
   res.set('X-Request-ID', requestId)
-  
+
   // Add to async local storage for logging
   asyncLocalStorage.run({ requestId }, () => next())
 })
@@ -2685,13 +2685,15 @@ function createLogger() {
   return {
     info: (message: string, data?: unknown) => {
       const store = asyncLocalStorage.getStore()
-      console.log(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        message,
-        requestId: store?.requestId,
-        data,
-      }))
+      console.log(
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message,
+          requestId: store?.requestId,
+          data,
+        })
+      )
     },
   }
 }
@@ -2701,12 +2703,12 @@ function createLogger() {
 
 Spans MUST include relevant attributes for debugging:
 
-| Span Type | Required Attributes |
-| --------- | ------------------- |
-| HTTP Request | `http.method`, `http.url`, `http.status_code`, `http.route` |
-| Database Operation | `db.system`, `db.operation`, `db.name` |
-| Storage Operation | `storage.provider`, `storage.operation`, `storage.bucket` |
-| External API Call | `http.url`, `http.method`, `peer.service` |
+| Span Type          | Required Attributes                                         |
+| ------------------ | ----------------------------------------------------------- |
+| HTTP Request       | `http.method`, `http.url`, `http.status_code`, `http.route` |
+| Database Operation | `db.system`, `db.operation`, `db.name`                      |
+| Storage Operation  | `storage.provider`, `storage.operation`, `storage.bucket`   |
+| External API Call  | `http.url`, `http.method`, `peer.service`                   |
 
 #### Cloud Trace Integration
 
@@ -2743,12 +2745,12 @@ Operational dashboards MUST be configured in Cloud Monitoring to provide visibil
 
 #### Required Dashboards
 
-| Dashboard | Purpose | Key Widgets |
-| --------- | ------- | ----------- |
-| **Service Health** | Overall application health | Request rate, error rate, latency percentiles |
-| **Resource Utilization** | Infrastructure capacity | CPU, memory, instance count |
-| **Business Metrics** | Application-specific KPIs | Snapshot freshness, refresh success rate |
-| **Cost Overview** | Resource consumption | Instance hours, request count, estimated cost |
+| Dashboard                | Purpose                    | Key Widgets                                   |
+| ------------------------ | -------------------------- | --------------------------------------------- |
+| **Service Health**       | Overall application health | Request rate, error rate, latency percentiles |
+| **Resource Utilization** | Infrastructure capacity    | CPU, memory, instance count                   |
+| **Business Metrics**     | Application-specific KPIs  | Snapshot freshness, refresh success rate      |
+| **Cost Overview**        | Resource consumption       | Instance hours, request count, estimated cost |
 
 #### Service Health Dashboard
 
@@ -2784,26 +2786,26 @@ The Service Health dashboard MUST include:
 
 #### Dashboard Widget Specifications
 
-| Widget | Metric | Aggregation | Time Range |
-| ------ | ------ | ----------- | ---------- |
-| Request Rate | `request_count` | Sum per minute | Last 1 hour |
-| Error Rate | `5xx_count / total_count` | Percentage | Last 1 hour |
-| p50 Latency | `request_duration_ms` | 50th percentile | Last 1 hour |
-| p95 Latency | `request_duration_ms` | 95th percentile | Last 1 hour |
-| p99 Latency | `request_duration_ms` | 99th percentile | Last 1 hour |
-| Instance Count | `container/instance_count` | Max | Last 1 hour |
-| Memory Usage | `container/memory/utilization` | Mean | Last 1 hour |
+| Widget         | Metric                         | Aggregation     | Time Range  |
+| -------------- | ------------------------------ | --------------- | ----------- |
+| Request Rate   | `request_count`                | Sum per minute  | Last 1 hour |
+| Error Rate     | `5xx_count / total_count`      | Percentage      | Last 1 hour |
+| p50 Latency    | `request_duration_ms`          | 50th percentile | Last 1 hour |
+| p95 Latency    | `request_duration_ms`          | 95th percentile | Last 1 hour |
+| p99 Latency    | `request_duration_ms`          | 99th percentile | Last 1 hour |
+| Instance Count | `container/instance_count`     | Max             | Last 1 hour |
+| Memory Usage   | `container/memory/utilization` | Mean            | Last 1 hour |
 
 #### Business Metrics Dashboard
 
 The Business Metrics dashboard MUST include:
 
-| Widget | Description | Refresh Interval |
-| ------ | ----------- | ---------------- |
-| Snapshot Freshness | Time since last successful snapshot | 1 minute |
-| Refresh Success Rate | Percentage of successful refreshes (24h) | 5 minutes |
-| District Coverage | Number of districts with current data | 5 minutes |
-| Data Staleness Alert | Visual indicator if data > 24h old | 1 minute |
+| Widget               | Description                              | Refresh Interval |
+| -------------------- | ---------------------------------------- | ---------------- |
+| Snapshot Freshness   | Time since last successful snapshot      | 1 minute         |
+| Refresh Success Rate | Percentage of successful refreshes (24h) | 5 minutes        |
+| District Coverage    | Number of districts with current data    | 5 minutes        |
+| Data Staleness Alert | Visual indicator if data > 24h old       | 1 minute         |
 
 #### Dashboard Requirements
 
@@ -2819,33 +2821,33 @@ Alerting policies MUST be configured to notify operators of issues requiring att
 
 #### Alert Severity Levels
 
-| Severity | Response Time | Notification Channel | Examples |
-| -------- | ------------- | -------------------- | -------- |
-| **Critical** | Immediate (< 15 min) | PagerDuty/SMS | Service down, data corruption |
-| **High** | < 1 hour | Email + Slack | Error rate > 5%, latency degradation |
-| **Medium** | < 4 hours | Email | Elevated error rate, resource warnings |
-| **Low** | Next business day | Email digest | Cost anomalies, deprecation warnings |
+| Severity     | Response Time        | Notification Channel | Examples                               |
+| ------------ | -------------------- | -------------------- | -------------------------------------- |
+| **Critical** | Immediate (< 15 min) | PagerDuty/SMS        | Service down, data corruption          |
+| **High**     | < 1 hour             | Email + Slack        | Error rate > 5%, latency degradation   |
+| **Medium**   | < 4 hours            | Email                | Elevated error rate, resource warnings |
+| **Low**      | Next business day    | Email digest         | Cost anomalies, deprecation warnings   |
 
 #### Required Alert Policies
 
-| Alert | Condition | Severity | Action |
-| ----- | --------- | -------- | ------ |
-| Service Unavailable | Health check failures > 3 consecutive | Critical | Page on-call |
-| High Error Rate | 5xx rate > 5% for 5 minutes | High | Notify team |
-| Elevated Error Rate | 5xx rate > 1% for 15 minutes | Medium | Email notification |
-| High Latency | p95 > 2s for 10 minutes | High | Notify team |
-| Memory Pressure | Memory > 90% for 5 minutes | High | Notify team |
-| Instance Scaling | Instances at max for 10 minutes | Medium | Email notification |
-| Snapshot Staleness | No successful refresh > 24 hours | High | Notify team |
-| Cost Anomaly | Daily cost > 2x baseline | Medium | Email notification |
+| Alert               | Condition                             | Severity | Action             |
+| ------------------- | ------------------------------------- | -------- | ------------------ |
+| Service Unavailable | Health check failures > 3 consecutive | Critical | Page on-call       |
+| High Error Rate     | 5xx rate > 5% for 5 minutes           | High     | Notify team        |
+| Elevated Error Rate | 5xx rate > 1% for 15 minutes          | Medium   | Email notification |
+| High Latency        | p95 > 2s for 10 minutes               | High     | Notify team        |
+| Memory Pressure     | Memory > 90% for 5 minutes            | High     | Notify team        |
+| Instance Scaling    | Instances at max for 10 minutes       | Medium   | Email notification |
+| Snapshot Staleness  | No successful refresh > 24 hours      | High     | Notify team        |
+| Cost Anomaly        | Daily cost > 2x baseline              | Medium   | Email notification |
 
 #### Alert Configuration Pattern
 
 ```yaml
 # Cloud Monitoring alert policy example
-displayName: "High Error Rate Alert"
+displayName: 'High Error Rate Alert'
 conditions:
-  - displayName: "5xx Error Rate > 5%"
+  - displayName: '5xx Error Rate > 5%'
     conditionThreshold:
       filter: |
         resource.type = "cloud_run_revision"
@@ -2862,16 +2864,16 @@ combiner: OR
 notificationChannels:
   - projects/PROJECT_ID/notificationChannels/CHANNEL_ID
 alertStrategy:
-  autoClose: 1800s  # Auto-close after 30 minutes if resolved
+  autoClose: 1800s # Auto-close after 30 minutes if resolved
 ```
 
 #### Alert Notification Channels
 
-| Channel | Use Case | Configuration |
-| ------- | -------- | ------------- |
-| Email | All severities | Team distribution list |
-| Slack | High and above | #toast-stats-alerts channel |
-| PagerDuty | Critical only | On-call rotation |
+| Channel   | Use Case       | Configuration               |
+| --------- | -------------- | --------------------------- |
+| Email     | All severities | Team distribution list      |
+| Slack     | High and above | #toast-stats-alerts channel |
+| PagerDuty | Critical only  | On-call rotation            |
 
 #### Alert Best Practices
 
@@ -2895,12 +2897,12 @@ This section defines incident response procedures for handling production issues
 
 #### Incident Severity Classification
 
-| Severity | Definition | Examples | Response |
-| -------- | ---------- | -------- | -------- |
-| **SEV1** | Complete service outage | API unreachable, data corruption | All hands, immediate |
-| **SEV2** | Major functionality impaired | High error rate, severe latency | Primary on-call, < 30 min |
-| **SEV3** | Minor functionality impaired | Elevated errors, degraded performance | On-call, < 2 hours |
-| **SEV4** | Minimal impact | Cosmetic issues, minor bugs | Next business day |
+| Severity | Definition                   | Examples                              | Response                  |
+| -------- | ---------------------------- | ------------------------------------- | ------------------------- |
+| **SEV1** | Complete service outage      | API unreachable, data corruption      | All hands, immediate      |
+| **SEV2** | Major functionality impaired | High error rate, severe latency       | Primary on-call, < 30 min |
+| **SEV3** | Minor functionality impaired | Elevated errors, degraded performance | On-call, < 2 hours        |
+| **SEV4** | Minimal impact               | Cosmetic issues, minor bugs           | Next business day         |
 
 #### Incident Response Workflow
 
@@ -2970,21 +2972,21 @@ curl https://toast-stats-backend-HASH.a.run.app/health
 
 Rollback decision criteria:
 
-| Condition | Action |
-| --------- | ------ |
-| Issue started after deployment | Rollback immediately |
-| Issue is data-related | Investigate before rollback |
-| Issue is external dependency | Do not rollback, implement workaround |
-| Rollback unsuccessful | Escalate to SEV1 |
+| Condition                      | Action                                |
+| ------------------------------ | ------------------------------------- |
+| Issue started after deployment | Rollback immediately                  |
+| Issue is data-related          | Investigate before rollback           |
+| Issue is external dependency   | Do not rollback, implement workaround |
+| Rollback unsuccessful          | Escalate to SEV1                      |
 
 ##### Other Mitigation Actions
 
-| Issue Type | Mitigation Action |
-| ---------- | ----------------- |
-| High error rate | Rollback, increase logging |
-| Memory exhaustion | Restart instances, reduce concurrency |
+| Issue Type                  | Mitigation Action                         |
+| --------------------------- | ----------------------------------------- |
+| High error rate             | Rollback, increase logging                |
+| Memory exhaustion           | Restart instances, reduce concurrency     |
 | External dependency failure | Enable circuit breaker, serve cached data |
-| Data corruption | Stop writes, assess scope |
+| Data corruption             | Stop writes, assess scope                 |
 
 #### Phase 4: Resolution
 
@@ -3009,12 +3011,14 @@ All SEV1-2 incidents MUST have a post-incident review:
 ## Post-Incident Review Template
 
 ### Incident Summary
+
 - **Date/Time**: [When did it occur]
 - **Duration**: [How long did it last]
 - **Severity**: [SEV level]
 - **Impact**: [Users/features affected]
 
 ### Timeline
+
 - [Time] - Issue detected
 - [Time] - Triage completed
 - [Time] - Mitigation applied
@@ -3022,28 +3026,32 @@ All SEV1-2 incidents MUST have a post-incident review:
 - [Time] - Root cause identified
 
 ### Root Cause
+
 [Detailed explanation of what caused the incident]
 
 ### Contributing Factors
+
 - [Factor 1]
 - [Factor 2]
 
 ### Action Items
+
 - [ ] [Action 1] - Owner: [Name] - Due: [Date]
 - [ ] [Action 2] - Owner: [Name] - Due: [Date]
 
 ### Lessons Learned
+
 - [What went well]
 - [What could be improved]
 ```
 
 #### Incident Communication
 
-| Audience | Channel | Frequency | Content |
-| -------- | ------- | --------- | ------- |
-| Technical team | Slack/incident channel | Real-time | Technical details, actions |
-| Stakeholders | Email | Hourly (SEV1-2) | Status, impact, ETA |
-| Users | Status page | As needed | Service status, workarounds |
+| Audience       | Channel                | Frequency       | Content                     |
+| -------------- | ---------------------- | --------------- | --------------------------- |
+| Technical team | Slack/incident channel | Real-time       | Technical details, actions  |
+| Stakeholders   | Email                  | Hourly (SEV1-2) | Status, impact, ETA         |
+| Users          | Status page            | As needed       | Service status, workarounds |
 
 #### Incident Response Requirements
 
@@ -3057,16 +3065,15 @@ All SEV1-2 incidents MUST have a post-incident review:
 
 Detailed runbooks SHOULD be maintained for common incident types:
 
-| Runbook | Trigger | Location |
-| ------- | ------- | -------- |
-| Service Unavailable | Health check failures | `docs/runbooks/service-unavailable.md` |
-| High Error Rate | 5xx rate > 5% | `docs/runbooks/high-error-rate.md` |
-| Memory Exhaustion | Memory > 90% | `docs/runbooks/memory-exhaustion.md` |
-| Snapshot Refresh Failure | Refresh fails > 3 times | `docs/runbooks/refresh-failure.md` |
-| Rollback Procedure | Any deployment issue | `docs/runbooks/rollback.md` |
+| Runbook                  | Trigger                 | Location                               |
+| ------------------------ | ----------------------- | -------------------------------------- |
+| Service Unavailable      | Health check failures   | `docs/runbooks/service-unavailable.md` |
+| High Error Rate          | 5xx rate > 5%           | `docs/runbooks/high-error-rate.md`     |
+| Memory Exhaustion        | Memory > 90%            | `docs/runbooks/memory-exhaustion.md`   |
+| Snapshot Refresh Failure | Refresh fails > 3 times | `docs/runbooks/refresh-failure.md`     |
+| Rollback Procedure       | Any deployment issue    | `docs/runbooks/rollback.md`            |
 
 ---
-
 
 ## 9. Security and Compliance
 
@@ -3080,14 +3087,14 @@ All new features and significant changes MUST undergo threat modeling to identif
 
 Threat modeling MUST be performed for:
 
-| Change Type | Requirement | Rationale |
-| ----------- | ----------- | --------- |
-| New API endpoints | Required | Potential attack surface expansion |
-| Authentication/authorization changes | Required | Direct security impact |
-| Data storage changes | Required | Data exposure risk |
-| External service integrations | Required | Third-party trust boundaries |
-| Infrastructure changes | Required | Network and access control impact |
-| UI changes handling sensitive data | Required | Client-side security concerns |
+| Change Type                          | Requirement | Rationale                          |
+| ------------------------------------ | ----------- | ---------------------------------- |
+| New API endpoints                    | Required    | Potential attack surface expansion |
+| Authentication/authorization changes | Required    | Direct security impact             |
+| Data storage changes                 | Required    | Data exposure risk                 |
+| External service integrations        | Required    | Third-party trust boundaries       |
+| Infrastructure changes               | Required    | Network and access control impact  |
+| UI changes handling sensitive data   | Required    | Client-side security concerns      |
 
 Threat modeling MAY be skipped for:
 
@@ -3100,14 +3107,14 @@ Threat modeling MAY be skipped for:
 
 All threat modeling MUST use the STRIDE framework to identify threats:
 
-| Threat Category | Description | Example Mitigations |
-| --------------- | ----------- | ------------------- |
-| **S**poofing | Impersonating a user or system | Authentication, API keys, service accounts |
-| **T**ampering | Modifying data or code | Input validation, integrity checks, signed requests |
-| **R**epudiation | Denying actions occurred | Audit logging, request tracing, timestamps |
-| **I**nformation Disclosure | Exposing sensitive data | Encryption, access controls, data minimization |
-| **D**enial of Service | Making service unavailable | Rate limiting, resource quotas, circuit breakers |
-| **E**levation of Privilege | Gaining unauthorized access | Least privilege, role-based access, input validation |
+| Threat Category            | Description                    | Example Mitigations                                  |
+| -------------------------- | ------------------------------ | ---------------------------------------------------- |
+| **S**poofing               | Impersonating a user or system | Authentication, API keys, service accounts           |
+| **T**ampering              | Modifying data or code         | Input validation, integrity checks, signed requests  |
+| **R**epudiation            | Denying actions occurred       | Audit logging, request tracing, timestamps           |
+| **I**nformation Disclosure | Exposing sensitive data        | Encryption, access controls, data minimization       |
+| **D**enial of Service      | Making service unavailable     | Rate limiting, resource quotas, circuit breakers     |
+| **E**levation of Privilege | Gaining unauthorized access    | Least privilege, role-based access, input validation |
 
 #### Threat Model Documentation
 
@@ -3117,28 +3124,34 @@ Threat models MUST be documented using this template:
 ## Threat Model: [Feature Name]
 
 ### Overview
+
 - **Feature**: [Brief description]
 - **Author**: [Name]
 - **Date**: [Date]
 - **Status**: [Draft/Reviewed/Approved]
 
 ### Data Flow Diagram
+
 [ASCII diagram showing data flow and trust boundaries]
 
 ### Assets
-| Asset | Sensitivity | Location |
-|-------|-------------|----------|
+
+| Asset        | Sensitivity       | Location                 |
+| ------------ | ----------------- | ------------------------ |
 | [Asset name] | [High/Medium/Low] | [Where stored/processed] |
 
 ### Threats Identified
-| ID | Category | Threat | Likelihood | Impact | Mitigation |
-|----|----------|--------|------------|--------|------------|
-| T1 | [STRIDE] | [Description] | [H/M/L] | [H/M/L] | [How addressed] |
+
+| ID  | Category | Threat        | Likelihood | Impact  | Mitigation      |
+| --- | -------- | ------------- | ---------- | ------- | --------------- |
+| T1  | [STRIDE] | [Description] | [H/M/L]    | [H/M/L] | [How addressed] |
 
 ### Residual Risks
+
 [Any accepted risks and justification]
 
 ### Review Sign-off
+
 - [ ] Security review completed
 - [ ] Mitigations implemented
 - [ ] Tests added for security controls
@@ -3158,11 +3171,11 @@ All dependencies MUST be scanned for known vulnerabilities using automated tools
 
 #### Scanning Tools
 
-| Tool | Purpose | Integration Point |
-| ---- | ------- | ----------------- |
-| **Trivy** | Container image scanning | CI/CD pipeline, pre-deployment |
-| **npm audit** | Node.js dependency scanning | CI/CD pipeline, local development |
-| **Dependabot** | Automated dependency updates | GitHub repository |
+| Tool           | Purpose                      | Integration Point                 |
+| -------------- | ---------------------------- | --------------------------------- |
+| **Trivy**      | Container image scanning     | CI/CD pipeline, pre-deployment    |
+| **npm audit**  | Node.js dependency scanning  | CI/CD pipeline, local development |
+| **Dependabot** | Automated dependency updates | GitHub repository                 |
 
 #### Trivy Configuration
 
@@ -3183,11 +3196,11 @@ Container images MUST be scanned with Trivy before deployment:
 
 #### Trivy Scanning Requirements
 
-| Scan Type | Frequency | Blocking |
-| --------- | --------- | -------- |
-| Container image scan | Every build | Yes (CRITICAL/HIGH) |
-| Filesystem scan | Weekly | No (report only) |
-| IaC scan | On infrastructure changes | Yes (CRITICAL) |
+| Scan Type            | Frequency                 | Blocking            |
+| -------------------- | ------------------------- | ------------------- |
+| Container image scan | Every build               | Yes (CRITICAL/HIGH) |
+| Filesystem scan      | Weekly                    | No (report only)    |
+| IaC scan             | On infrastructure changes | Yes (CRITICAL)      |
 
 #### npm Audit Configuration
 
@@ -3202,12 +3215,12 @@ Node.js dependencies MUST be audited in CI:
 
 #### Vulnerability Response SLAs
 
-| Severity | Response Time | Action Required |
-| -------- | ------------- | --------------- |
-| **Critical** | 24 hours | Immediate patch or mitigation |
-| **High** | 7 days | Patch in next release |
-| **Medium** | 30 days | Patch when convenient |
-| **Low** | 90 days | Evaluate and track |
+| Severity     | Response Time | Action Required               |
+| ------------ | ------------- | ----------------------------- |
+| **Critical** | 24 hours      | Immediate patch or mitigation |
+| **High**     | 7 days        | Patch in next release         |
+| **Medium**   | 30 days       | Patch when convenient         |
+| **Low**      | 90 days       | Evaluate and track            |
 
 #### Dependency Scanning Requirements
 
@@ -3239,15 +3252,15 @@ All HTTP responses MUST include security headers to protect against common web v
 
 #### Required Security Headers
 
-| Header | Value | Purpose |
-| ------ | ----- | ------- |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Enforce HTTPS |
-| `X-Content-Type-Options` | `nosniff` | Prevent MIME sniffing |
-| `X-Frame-Options` | `DENY` | Prevent clickjacking |
-| `X-XSS-Protection` | `1; mode=block` | XSS filter (legacy browsers) |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Control referrer information |
-| `Content-Security-Policy` | See below | Prevent XSS and injection attacks |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` | Disable unnecessary browser features |
+| Header                      | Value                                          | Purpose                              |
+| --------------------------- | ---------------------------------------------- | ------------------------------------ |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | Enforce HTTPS                        |
+| `X-Content-Type-Options`    | `nosniff`                                      | Prevent MIME sniffing                |
+| `X-Frame-Options`           | `DENY`                                         | Prevent clickjacking                 |
+| `X-XSS-Protection`          | `1; mode=block`                                | XSS filter (legacy browsers)         |
+| `Referrer-Policy`           | `strict-origin-when-cross-origin`              | Control referrer information         |
+| `Content-Security-Policy`   | See below                                      | Prevent XSS and injection attacks    |
+| `Permissions-Policy`        | `geolocation=(), microphone=(), camera=()`     | Disable unnecessary browser features |
 
 #### Content Security Policy
 
@@ -3257,44 +3270,46 @@ The Content-Security-Policy header MUST be configured to restrict resource loadi
 // ✅ CORRECT - Helmet configuration with CSP
 import helmet from 'helmet'
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],  // Required for some CSS-in-JS
-      imgSrc: ["'self'", 'data:', 'https:'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      connectSrc: [
-        "'self'",
-        'https://firestore.googleapis.com',
-        'https://storage.googleapis.com',
-      ],
-      frameSrc: ["'none'"],
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-      upgradeInsecureRequests: [],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // Required for some CSS-in-JS
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        connectSrc: [
+          "'self'",
+          'https://firestore.googleapis.com',
+          'https://storage.googleapis.com',
+        ],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        upgradeInsecureRequests: [],
+      },
     },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  referrerPolicy: {
-    policy: 'strict-origin-when-cross-origin',
-  },
-  permissionsPolicy: {
-    features: {
-      geolocation: [],
-      microphone: [],
-      camera: [],
-      payment: [],
-      usb: [],
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
     },
-  },
-}))
+    referrerPolicy: {
+      policy: 'strict-origin-when-cross-origin',
+    },
+    permissionsPolicy: {
+      features: {
+        geolocation: [],
+        microphone: [],
+        camera: [],
+        payment: [],
+        usb: [],
+      },
+    },
+  })
+)
 ```
 
 #### Firebase Hosting Headers
@@ -3351,17 +3366,19 @@ app.use(express.json())
 // No helmet middleware!
 
 // ❌ FORBIDDEN - Overly permissive CSP
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'", '*'],  // Too permissive!
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],  // Dangerous!
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'", '*'], // Too permissive!
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Dangerous!
+      },
     },
-  },
-}))
+  })
+)
 
 // ✅ CORRECT - Restrictive CSP with helmet
-app.use(helmet())  // Uses secure defaults
+app.use(helmet()) // Uses secure defaults
 ```
 
 ### 9.4 PII Handling
@@ -3370,14 +3387,14 @@ Personally Identifiable Information (PII) MUST be handled with appropriate safeg
 
 #### PII Classification
 
-| Data Type | Classification | Handling Requirements |
-| --------- | -------------- | --------------------- |
-| Email addresses | PII | Minimize collection, encrypt at rest |
-| Names | PII | Minimize collection, access controls |
-| IP addresses | PII | Log rotation, anonymization |
-| User IDs | Indirect PII | Access controls |
-| Session tokens | Sensitive | Secure storage, expiration |
-| API keys | Sensitive | Secret Manager, rotation |
+| Data Type       | Classification | Handling Requirements                |
+| --------------- | -------------- | ------------------------------------ |
+| Email addresses | PII            | Minimize collection, encrypt at rest |
+| Names           | PII            | Minimize collection, access controls |
+| IP addresses    | PII            | Log rotation, anonymization          |
+| User IDs        | Indirect PII   | Access controls                      |
+| Session tokens  | Sensitive      | Secure storage, expiration           |
+| API keys        | Sensitive      | Secret Manager, rotation             |
 
 #### Data Minimization Principles
 
@@ -3390,15 +3407,15 @@ All data collection MUST follow data minimization principles:
 
 #### PII Handling Requirements
 
-| Requirement | Implementation |
-| ----------- | -------------- |
-| Collection | MUST document purpose for each PII field collected |
-| Storage | MUST encrypt PII at rest using GCP-managed encryption |
-| Transmission | MUST use TLS 1.2+ for all PII transmission |
-| Access | MUST implement role-based access controls |
-| Logging | MUST NOT log PII in application logs |
-| Retention | MUST define and enforce retention periods |
-| Deletion | MUST support data deletion requests |
+| Requirement  | Implementation                                        |
+| ------------ | ----------------------------------------------------- |
+| Collection   | MUST document purpose for each PII field collected    |
+| Storage      | MUST encrypt PII at rest using GCP-managed encryption |
+| Transmission | MUST use TLS 1.2+ for all PII transmission            |
+| Access       | MUST implement role-based access controls             |
+| Logging      | MUST NOT log PII in application logs                  |
+| Retention    | MUST define and enforce retention periods             |
+| Deletion     | MUST support data deletion requests                   |
 
 #### Secure Storage Patterns
 
@@ -3431,7 +3448,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/profile {
       // Only the user and admins can access PII
-      allow read, write: if request.auth.uid == userId 
+      allow read, write: if request.auth.uid == userId
                          || request.auth.token.admin == true;
     }
   }
@@ -3440,13 +3457,13 @@ service cloud.firestore {
 
 #### Data Retention
 
-| Data Type | Retention Period | Deletion Method |
-| --------- | ---------------- | --------------- |
-| User profiles | Account lifetime + 30 days | Automated deletion |
-| Session data | 24 hours | TTL-based expiration |
-| Audit logs | 90 days | Log rotation |
-| Analytics data | 1 year (anonymized) | Aggregation |
-| Backup data | 30 days | Automated cleanup |
+| Data Type      | Retention Period           | Deletion Method      |
+| -------------- | -------------------------- | -------------------- |
+| User profiles  | Account lifetime + 30 days | Automated deletion   |
+| Session data   | 24 hours                   | TTL-based expiration |
+| Audit logs     | 90 days                    | Log rotation         |
+| Analytics data | 1 year (anonymized)        | Aggregation          |
+| Backup data    | 30 days                    | Automated cleanup    |
 
 #### PII Handling Checklist
 
@@ -3467,12 +3484,12 @@ All protected resources MUST implement appropriate authentication and authorizat
 
 The Toast-Stats application uses the following authentication patterns:
 
-| Context | Authentication Method | Implementation |
-| ------- | --------------------- | -------------- |
-| User access | Firebase Authentication | Frontend SDK |
-| Service-to-service | Service Account | GCP IAM |
-| API access | API Key or Bearer Token | Backend middleware |
-| Admin operations | Firebase Auth + Role claim | Custom claims |
+| Context            | Authentication Method      | Implementation     |
+| ------------------ | -------------------------- | ------------------ |
+| User access        | Firebase Authentication    | Frontend SDK       |
+| Service-to-service | Service Account            | GCP IAM            |
+| API access         | API Key or Bearer Token    | Backend middleware |
+| Admin operations   | Firebase Auth + Role claim | Custom claims      |
 
 #### Firebase Authentication Integration
 
@@ -3494,7 +3511,7 @@ const idToken = await result.user.getIdToken()
 // Include token in API requests
 fetch('/api/protected', {
   headers: {
-    'Authorization': `Bearer ${idToken}`,
+    Authorization: `Bearer ${idToken}`,
   },
 })
 ```
@@ -3509,7 +3526,7 @@ import { getAuth } from 'firebase-admin/auth'
 // ✅ CORRECT - Token verification middleware
 async function verifyToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
-  
+
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({
       error: {
@@ -3519,9 +3536,9 @@ async function verifyToken(req: Request, res: Response, next: NextFunction) {
     })
     return
   }
-  
+
   const idToken = authHeader.split('Bearer ')[1]
-  
+
   try {
     const decodedToken = await getAuth().verifyIdToken(idToken)
     req.user = decodedToken
@@ -3541,11 +3558,11 @@ async function verifyToken(req: Request, res: Response, next: NextFunction) {
 
 Authorization MUST follow the principle of least privilege:
 
-| Role | Permissions | Implementation |
-| ---- | ----------- | -------------- |
-| Anonymous | Read public data | No auth required |
-| Authenticated | Read all data, limited writes | Firebase Auth |
-| Admin | Full access, admin operations | Custom claim `admin: true` |
+| Role          | Permissions                   | Implementation             |
+| ------------- | ----------------------------- | -------------------------- |
+| Anonymous     | Read public data              | No auth required           |
+| Authenticated | Read all data, limited writes | Firebase Auth              |
+| Admin         | Full access, admin operations | Custom claim `admin: true` |
 
 #### Role-Based Access Control
 
@@ -3592,13 +3609,13 @@ const response = await client.request({
 
 For external API access (if implemented):
 
-| Requirement | Implementation |
-| ----------- | -------------- |
-| Storage | Google Secret Manager |
-| Rotation | Every 90 days |
-| Scope | Minimum required permissions |
-| Logging | All API key usage logged |
-| Revocation | Immediate revocation capability |
+| Requirement | Implementation                  |
+| ----------- | ------------------------------- |
+| Storage     | Google Secret Manager           |
+| Rotation    | Every 90 days                   |
+| Scope       | Minimum required permissions    |
+| Logging     | All API key usage logged        |
+| Revocation  | Immediate revocation capability |
 
 #### Authentication Requirements
 
@@ -3627,10 +3644,10 @@ if (user.role === 'admin') {
 }
 
 // ❌ FORBIDDEN - Trusting client-provided role
-const role = req.body.role  // Never trust client input for authorization!
+const role = req.body.role // Never trust client input for authorization!
 
 // ❌ FORBIDDEN - Hardcoded credentials
-const apiKey = 'sk-1234567890'  // Use Secret Manager!
+const apiKey = 'sk-1234567890' // Use Secret Manager!
 
 // ✅ CORRECT - Server-side authorization with verified claims
 if (req.user?.admin === true) {
@@ -3652,7 +3669,6 @@ Before deploying new endpoints:
 
 ---
 
-
 ## 10. Quality Gates
 
 This section defines mandatory quality gates that MUST pass before code can be merged or deployed. Quality gates ensure consistent code quality, prevent regressions, and maintain the reliability of the Toast-Stats application.
@@ -3667,11 +3683,11 @@ All backend code MUST be tested according to the following requirements.
 
 Unit tests MUST be written for:
 
-| Component Type | Test Requirement | Location |
-| -------------- | ---------------- | -------- |
-| Services | All public methods | Co-located `{name}.test.ts` |
-| Utilities | All exported functions | Co-located `{name}.test.ts` |
-| Validators | All validation schemas | Co-located `{name}.test.ts` |
+| Component Type | Test Requirement          | Location                       |
+| -------------- | ------------------------- | ------------------------------ |
+| Services       | All public methods        | Co-located `{name}.test.ts`    |
+| Utilities      | All exported functions    | Co-located `{name}.test.ts`    |
+| Validators     | All validation schemas    | Co-located `{name}.test.ts`    |
 | Route handlers | Request/response behavior | Co-located or `src/__tests__/` |
 
 Unit test standards:
@@ -3709,11 +3725,11 @@ describe('DistrictService', () => {
 
 Integration tests MUST be written for:
 
-| Integration Point | Test Requirement | Location |
-| ----------------- | ---------------- | -------- |
-| Storage operations | Read/write/delete cycles | `src/__tests__/*.integration.test.ts` |
-| API endpoints | Full request/response flow | `src/__tests__/*.integration.test.ts` |
-| External services | Contract verification | `src/__tests__/*.integration.test.ts` |
+| Integration Point  | Test Requirement           | Location                              |
+| ------------------ | -------------------------- | ------------------------------------- |
+| Storage operations | Read/write/delete cycles   | `src/__tests__/*.integration.test.ts` |
+| API endpoints      | Full request/response flow | `src/__tests__/*.integration.test.ts` |
+| External services  | Contract verification      | `src/__tests__/*.integration.test.ts` |
 
 Integration test standards:
 
@@ -3749,11 +3765,11 @@ describe('SnapshotStorage Integration', () => {
 
 Backend tests MUST pass under the following conditions:
 
-| Execution Mode | Command | Requirement |
-| -------------- | ------- | ----------- |
-| Sequential | `npm run test` | All tests MUST pass |
-| Parallel | `npm run test -- --run` | All tests MUST pass |
-| Watch mode | `npm run test:watch` | Tests SHOULD pass on file changes |
+| Execution Mode | Command                 | Requirement                       |
+| -------------- | ----------------------- | --------------------------------- |
+| Sequential     | `npm run test`          | All tests MUST pass               |
+| Parallel       | `npm run test -- --run` | All tests MUST pass               |
+| Watch mode     | `npm run test:watch`    | Tests SHOULD pass on file changes |
 
 CI pipeline MUST run tests in parallel mode to verify test isolation.
 
@@ -3765,12 +3781,12 @@ All frontend code MUST be tested according to the following requirements.
 
 Component tests MUST be written for:
 
-| Component Type | Test Requirement | Location |
-| -------------- | ---------------- | -------- |
-| UI Components | Rendering and interaction | Co-located `{Component}.test.tsx` |
-| Hooks | State management and effects | Co-located `{hook}.test.ts` |
-| Utilities | All exported functions | Co-located `{name}.test.ts` |
-| Context providers | Provider behavior | Co-located `{Provider}.test.tsx` |
+| Component Type    | Test Requirement             | Location                          |
+| ----------------- | ---------------------------- | --------------------------------- |
+| UI Components     | Rendering and interaction    | Co-located `{Component}.test.tsx` |
+| Hooks             | State management and effects | Co-located `{hook}.test.ts`       |
+| Utilities         | All exported functions       | Co-located `{name}.test.ts`       |
+| Context providers | Provider behavior            | Co-located `{Provider}.test.tsx`  |
 
 Component test standards:
 
@@ -3803,12 +3819,12 @@ describe('DistrictCard', () => {
 
 Accessibility testing MUST be performed for:
 
-| Requirement | Test Method | Standard |
-| ----------- | ----------- | -------- |
-| Keyboard navigation | Manual + automated | WCAG 2.1 AA |
-| Screen reader compatibility | Manual testing | WCAG 2.1 AA |
-| Color contrast | Automated (axe-core) | WCAG 2.1 AA |
-| Focus management | Component tests | WCAG 2.1 AA |
+| Requirement                 | Test Method          | Standard    |
+| --------------------------- | -------------------- | ----------- |
+| Keyboard navigation         | Manual + automated   | WCAG 2.1 AA |
+| Screen reader compatibility | Manual testing       | WCAG 2.1 AA |
+| Color contrast              | Automated (axe-core) | WCAG 2.1 AA |
+| Focus management            | Component tests      | WCAG 2.1 AA |
 
 Accessibility test standards:
 
@@ -3838,11 +3854,11 @@ describe('DistrictCard Accessibility', () => {
 
 Frontend tests MUST pass under the following conditions:
 
-| Execution Mode | Command | Requirement |
-| -------------- | ------- | ----------- |
-| Unit/Component | `npm run test` | All tests MUST pass |
-| Accessibility | `npm run test:a11y` | No WCAG AA violations |
-| Type checking | `npm run typecheck` | Zero TypeScript errors |
+| Execution Mode | Command             | Requirement            |
+| -------------- | ------------------- | ---------------------- |
+| Unit/Component | `npm run test`      | All tests MUST pass    |
+| Accessibility  | `npm run test:a11y` | No WCAG AA violations  |
+| Type checking  | `npm run typecheck` | Zero TypeScript errors |
 
 ### 10.3 Code Coverage Expectations
 
@@ -3869,13 +3885,13 @@ Coverage metrics MUST NOT be used to:
 
 #### Coverage Guidance
 
-| Code Category | Coverage Guidance | Rationale |
-| ------------- | ----------------- | --------- |
-| Business logic | High coverage expected | Core functionality must be protected |
-| Utility functions | High coverage expected | Reusable code needs thorough testing |
-| Route handlers | Moderate coverage expected | Integration tests may cover these |
-| Configuration | Low coverage acceptable | Often tested implicitly |
-| Error handling | Coverage of critical paths | Edge cases may be hard to trigger |
+| Code Category     | Coverage Guidance          | Rationale                            |
+| ----------------- | -------------------------- | ------------------------------------ |
+| Business logic    | High coverage expected     | Core functionality must be protected |
+| Utility functions | High coverage expected     | Reusable code needs thorough testing |
+| Route handlers    | Moderate coverage expected | Integration tests may cover these    |
+| Configuration     | Low coverage acceptable    | Often tested implicitly              |
+| Error handling    | Coverage of critical paths | Edge cases may be hard to trigger    |
 
 #### Coverage Reporting
 
@@ -3923,12 +3939,12 @@ All code MUST pass lint and format checks before merging.
 
 ESLint MUST be configured and enforced:
 
-| Requirement | Rule | Enforcement |
-| ----------- | ---- | ----------- |
-| Zero errors | All rules | CI blocking |
-| Zero warnings | Most rules | CI blocking (configurable) |
-| TypeScript integration | `@typescript-eslint/*` | Required |
-| Import ordering | `import/order` | Required |
+| Requirement            | Rule                   | Enforcement                |
+| ---------------------- | ---------------------- | -------------------------- |
+| Zero errors            | All rules              | CI blocking                |
+| Zero warnings          | Most rules             | CI blocking (configurable) |
+| TypeScript integration | `@typescript-eslint/*` | Required                   |
+| Import ordering        | `import/order`         | Required                   |
 
 ESLint configuration requirements:
 
@@ -3948,11 +3964,11 @@ npm run lint
 
 Prettier MUST be configured for consistent formatting:
 
-| Requirement | Configuration | Enforcement |
-| ----------- | ------------- | ----------- |
-| Consistent formatting | `.prettierrc` | CI blocking |
-| Format on save | Editor integration | Recommended |
-| Pre-commit hook | Optional | Recommended |
+| Requirement           | Configuration      | Enforcement |
+| --------------------- | ------------------ | ----------- |
+| Consistent formatting | `.prettierrc`      | CI blocking |
+| Format on save        | Editor integration | Recommended |
+| Pre-commit hook       | Optional           | Recommended |
 
 Prettier configuration requirements:
 
@@ -3974,15 +3990,15 @@ npm run format
 
 The following checks MUST pass in CI before merge:
 
-| Check | Command | Blocking |
-| ----- | ------- | -------- |
-| TypeScript compilation | `npm run typecheck` | Yes |
-| ESLint | `npm run lint` | Yes |
-| Prettier | `npm run format:check` | Yes |
-| Unit tests | `npm run test` | Yes |
-| Integration tests | `npm run test:integration` | Yes |
-| Security audit | `npm audit --audit-level=high` | Yes |
-| Build | `npm run build` | Yes |
+| Check                  | Command                        | Blocking |
+| ---------------------- | ------------------------------ | -------- |
+| TypeScript compilation | `npm run typecheck`            | Yes      |
+| ESLint                 | `npm run lint`                 | Yes      |
+| Prettier               | `npm run format:check`         | Yes      |
+| Unit tests             | `npm run test`                 | Yes      |
+| Integration tests      | `npm run test:integration`     | Yes      |
+| Security audit         | `npm audit --audit-level=high` | Yes      |
+| Build                  | `npm run build`                | Yes      |
 
 #### Quality Gate Workflow
 
@@ -4025,7 +4041,6 @@ Pre-commit hooks MAY be configured to run subset of checks:
 Full test suite SHOULD be run before creating pull requests.
 
 ---
-
 
 ## 11. Standard Templates
 
@@ -4144,12 +4159,12 @@ CMD ["node", "dist/index.js"]
 
 #### Template Customization Points
 
-| Element | Customization | Example |
-| ------- | ------------- | ------- |
-| Image labels | Update for your service | `org.opencontainers.image.title="My Service"` |
-| Port | Change default port | `ENV PORT=8080` |
-| Health endpoint | Match your health route | `http://localhost:${PORT}/api/health` |
-| Entry point | Match your build output | `CMD ["node", "dist/server.js"]` |
+| Element         | Customization           | Example                                       |
+| --------------- | ----------------------- | --------------------------------------------- |
+| Image labels    | Update for your service | `org.opencontainers.image.title="My Service"` |
+| Port            | Change default port     | `ENV PORT=8080`                               |
+| Health endpoint | Match your health route | `http://localhost:${PORT}/api/health`         |
+| Entry point     | Match your build output | `CMD ["node", "dist/server.js"]`              |
 
 ---
 
@@ -4196,7 +4211,7 @@ interface ReadinessResponse {
 
 /**
  * Creates health check router with dependency injection
- * 
+ *
  * @param storage - Storage service for readiness checks
  * @returns Express router with health endpoints
  */
@@ -4276,6 +4291,7 @@ export function createHealthRouter(storage: ISnapshotStorage): Router {
 #### Health Endpoint Response Examples
 
 **Liveness Response (200 OK):**
+
 ```json
 {
   "status": "healthy",
@@ -4286,6 +4302,7 @@ export function createHealthRouter(storage: ISnapshotStorage): Router {
 ```
 
 **Readiness Response (200 OK):**
+
 ```json
 {
   "status": "ready",
@@ -4297,6 +4314,7 @@ export function createHealthRouter(storage: ISnapshotStorage): Router {
 ```
 
 **Readiness Response (503 Service Unavailable):**
+
 ```json
 {
   "status": "not_ready",
@@ -4400,9 +4418,13 @@ function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS[level] >= LOG_LEVELS[minLevel]
 }
 
-function formatLogEntry(level: LogLevel, message: string, data?: unknown): LogEntry {
+function formatLogEntry(
+  level: LogLevel,
+  message: string,
+  data?: unknown
+): LogEntry {
   const context = getContext()
-  
+
   return {
     timestamp: new Date().toISOString(),
     level,
@@ -4416,7 +4438,7 @@ function formatLogEntry(level: LogLevel, message: string, data?: unknown): LogEn
 function writeLog(entry: LogEntry): void {
   // Output as single-line JSON for Cloud Logging parsing
   const output = JSON.stringify(entry)
-  
+
   // Use appropriate console method for log level
   switch (entry.level) {
     case 'error':
@@ -4471,9 +4493,10 @@ export const logger = {
    */
   error(message: string, error?: Error | unknown): void {
     if (shouldLog('error')) {
-      const errorData = error instanceof Error
-        ? { name: error.name, message: error.message, stack: error.stack }
-        : error
+      const errorData =
+        error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : error
       writeLog(formatLogEntry('error', message, errorData))
     }
   },
@@ -4547,27 +4570,77 @@ export function requestLoggingMiddleware(
  */
 function normalizePath(path: string): string {
   // Replace numeric IDs with placeholder
-  return path.replace(/\/\d+/g, '/:id')
-    // Replace UUIDs with placeholder
-    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:uuid')
+  return (
+    path
+      .replace(/\/\d+/g, '/:id')
+      // Replace UUIDs with placeholder
+      .replace(
+        /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        '/:uuid'
+      )
+  )
 }
 ```
 
 #### Log Output Examples
 
 **Info Log:**
+
 ```json
-{"timestamp":"2024-01-15T10:30:00.000Z","level":"info","message":"HTTP Request","environment":"production","requestId":"550e8400-e29b-41d4-a716-446655440000","data":{"method":"GET","path":"/api/districts/42","statusCode":200,"duration":"45ms"}}
+{
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "level": "info",
+  "message": "HTTP Request",
+  "environment": "production",
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "data": {
+    "method": "GET",
+    "path": "/api/districts/42",
+    "statusCode": 200,
+    "duration": "45ms"
+  }
+}
 ```
 
 **Error Log:**
+
 ```json
-{"timestamp":"2024-01-15T10:30:00.000Z","level":"error","message":"Failed to fetch district data","environment":"production","requestId":"550e8400-e29b-41d4-a716-446655440000","data":{"name":"TimeoutError","message":"Connection timeout","stack":"Error: Connection timeout\n    at ..."}}
+{
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "level": "error",
+  "message": "Failed to fetch district data",
+  "environment": "production",
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "data": {
+    "name": "TimeoutError",
+    "message": "Connection timeout",
+    "stack": "Error: Connection timeout\n    at ..."
+  }
+}
 ```
 
 **Metric Log:**
+
 ```json
-{"timestamp":"2024-01-15T10:30:00.000Z","level":"info","message":"Metric: http_request_duration_ms","environment":"production","requestId":"550e8400-e29b-41d4-a716-446655440000","data":{"metric":{"name":"http_request_duration_ms","value":45,"unit":"milliseconds","labels":{"method":"GET","path":"/api/districts/:id","status":"200"}}}}
+{
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "level": "info",
+  "message": "Metric: http_request_duration_ms",
+  "environment": "production",
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "data": {
+    "metric": {
+      "name": "http_request_duration_ms",
+      "value": 45,
+      "unit": "milliseconds",
+      "labels": {
+        "method": "GET",
+        "path": "/api/districts/:id",
+        "status": "200"
+      }
+    }
+  }
+}
 ```
 
 ---
@@ -4580,12 +4653,8 @@ This template implements the Firebase Hosting configuration with security header
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+
     "rewrites": [
       {
         "source": "/api/**",
@@ -4599,7 +4668,7 @@ This template implements the Firebase Hosting configuration with security header
         "destination": "/index.html"
       }
     ],
-    
+
     "headers": [
       {
         "source": "**",
@@ -4686,33 +4755,33 @@ This template implements the Firebase Hosting configuration with security header
 
 #### Header Configuration Reference
 
-| Header | Purpose | Value |
-| ------ | ------- | ----- |
-| `X-Content-Type-Options` | Prevent MIME sniffing | `nosniff` |
-| `X-Frame-Options` | Prevent clickjacking | `DENY` |
-| `X-XSS-Protection` | XSS filter (legacy) | `1; mode=block` |
-| `Referrer-Policy` | Control referrer info | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | Disable browser features | Disable unused APIs |
-| `Strict-Transport-Security` | Enforce HTTPS | 1 year with preload |
+| Header                      | Purpose                  | Value                             |
+| --------------------------- | ------------------------ | --------------------------------- |
+| `X-Content-Type-Options`    | Prevent MIME sniffing    | `nosniff`                         |
+| `X-Frame-Options`           | Prevent clickjacking     | `DENY`                            |
+| `X-XSS-Protection`          | XSS filter (legacy)      | `1; mode=block`                   |
+| `Referrer-Policy`           | Control referrer info    | `strict-origin-when-cross-origin` |
+| `Permissions-Policy`        | Disable browser features | Disable unused APIs               |
+| `Strict-Transport-Security` | Enforce HTTPS            | 1 year with preload               |
 
 #### Cache Control Strategy
 
-| Asset Type | Cache Strategy | Rationale |
-| ---------- | -------------- | --------- |
+| Asset Type      | Cache Strategy    | Rationale                                |
+| --------------- | ----------------- | ---------------------------------------- |
 | JS/CSS (hashed) | Immutable, 1 year | Content-addressed, safe to cache forever |
-| Images | 1 day | May change, moderate caching |
-| Fonts | Immutable, 1 year | Rarely change |
-| index.html | No cache | Must always fetch latest |
-| Service Worker | No cache | Must always fetch latest |
+| Images          | 1 day             | May change, moderate caching             |
+| Fonts           | Immutable, 1 year | Rarely change                            |
+| index.html      | No cache          | Must always fetch latest                 |
+| Service Worker  | No cache          | Must always fetch latest                 |
 
 #### Template Customization Points
 
-| Element | Customization | Example |
-| ------- | ------------- | ------- |
-| `public` | Build output directory | `"public": "build"` |
+| Element     | Customization          | Example                     |
+| ----------- | ---------------------- | --------------------------- |
+| `public`    | Build output directory | `"public": "build"`         |
 | `serviceId` | Cloud Run service name | `"serviceId": "my-backend"` |
-| `region` | Cloud Run region | `"region": "europe-west1"` |
-| API path | API route prefix | `"source": "/v1/api/**"` |
+| `region`    | Cloud Run region       | `"region": "europe-west1"`  |
+| API path    | API route prefix       | `"source": "/v1/api/**"`    |
 
 ---
 
@@ -4768,11 +4837,11 @@ jobs:
   quality-gates:
     name: Quality Gates
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -4781,53 +4850,53 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-      
+
       # ----------------------------------------
       # Backend Quality Gates
       # ----------------------------------------
       - name: Install backend dependencies
         run: npm ci
         working-directory: backend
-      
+
       - name: TypeScript check (backend)
         run: npm run typecheck
         working-directory: backend
-      
+
       - name: Lint (backend)
         run: npm run lint
         working-directory: backend
-      
+
       - name: Format check (backend)
         run: npm run format:check
         working-directory: backend
-      
+
       - name: Unit tests (backend)
         run: npm run test
         working-directory: backend
-      
+
       - name: Security audit (backend)
         run: npm audit --audit-level=high
         working-directory: backend
-      
+
       # ----------------------------------------
       # Frontend Quality Gates
       # ----------------------------------------
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
-      
+
       - name: TypeScript check (frontend)
         run: npm run typecheck
         working-directory: frontend
-      
+
       - name: Lint (frontend)
         run: npm run lint
         working-directory: frontend
-      
+
       - name: Format check (frontend)
         run: npm run format:check
         working-directory: frontend
-      
+
       - name: Unit tests (frontend)
         run: npm run test
         working-directory: frontend
@@ -4843,27 +4912,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: quality-gates
     if: github.event_name == 'push'
-    
+
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker
-      
+
       - name: Extract metadata for Docker
         id: meta
         run: |
           echo "tags=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE }}:${{ github.sha }}" >> $GITHUB_OUTPUT
-      
+
       - name: Build backend Docker image
         run: |
           docker build \
@@ -4872,7 +4941,7 @@ jobs:
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             .
         working-directory: backend
-      
+
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -4882,10 +4951,10 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
-      
+
       - name: Push backend image to GCR
         run: docker push ${{ steps.meta.outputs.tags }}
-      
+
       # ----------------------------------------
       # Build Frontend
       # ----------------------------------------
@@ -4895,17 +4964,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
-      
+
       - name: Build frontend
         run: npm run build
         working-directory: frontend
         env:
           VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://toast-stats.web.app/api' || 'https://staging-toast-stats.web.app/api' }}
-      
+
       - name: Upload frontend build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -4924,16 +4993,16 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/staging'
     environment: staging
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Deploy backend to Cloud Run (staging)
         run: |
           gcloud run deploy ${{ env.BACKEND_SERVICE }} \
@@ -4947,13 +5016,13 @@ jobs:
             --max-instances 2 \
             --set-env-vars NODE_ENV=staging,STORAGE_PROVIDER=gcp \
             --tag staging
-      
+
       - name: Download frontend build
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
           path: frontend/dist
-      
+
       - name: Deploy frontend to Firebase (staging)
         run: |
           npm install -g firebase-tools
@@ -4970,16 +5039,16 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'
     environment: production
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
+
       - name: Deploy backend to Cloud Run (production)
         run: |
           gcloud run deploy ${{ env.BACKEND_SERVICE }} \
@@ -4992,18 +5061,18 @@ jobs:
             --min-instances 0 \
             --max-instances 10 \
             --set-env-vars NODE_ENV=production,STORAGE_PROVIDER=gcp
-      
+
       - name: Download frontend build
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
           path: frontend/dist
-      
+
       - name: Deploy frontend to Firebase (production)
         run: |
           npm install -g firebase-tools
           firebase deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
-      
+
       - name: Verify deployment health
         run: |
           # Wait for deployment to stabilize
@@ -5016,21 +5085,21 @@ jobs:
 
 #### Required GitHub Secrets
 
-| Secret | Description | How to Obtain |
-| ------ | ----------- | ------------- |
-| `GCP_PROJECT_ID` | Google Cloud project ID | GCP Console |
-| `GCP_SA_KEY` | Service account JSON key | `gcloud iam service-accounts keys create` |
-| `FIREBASE_TOKEN` | Firebase CLI token | `firebase login:ci` |
+| Secret           | Description              | How to Obtain                             |
+| ---------------- | ------------------------ | ----------------------------------------- |
+| `GCP_PROJECT_ID` | Google Cloud project ID  | GCP Console                               |
+| `GCP_SA_KEY`     | Service account JSON key | `gcloud iam service-accounts keys create` |
+| `FIREBASE_TOKEN` | Firebase CLI token       | `firebase login:ci`                       |
 
 #### Workflow Customization Points
 
-| Element | Customization | Example |
-| ------- | ------------- | ------- |
-| `NODE_VERSION` | Node.js version | `'20'` |
-| `REGION` | Cloud Run region | `'europe-west1'` |
-| `BACKEND_SERVICE` | Service name | `'my-api-service'` |
-| Branch names | Trigger branches | `[main, develop]` |
-| Max instances | Scaling limits | `--max-instances 20` |
+| Element           | Customization    | Example              |
+| ----------------- | ---------------- | -------------------- |
+| `NODE_VERSION`    | Node.js version  | `'20'`               |
+| `REGION`          | Cloud Run region | `'europe-west1'`     |
+| `BACKEND_SERVICE` | Service name     | `'my-api-service'`   |
+| Branch names      | Trigger branches | `[main, develop]`    |
+| Max instances     | Scaling limits   | `--max-instances 20` |
 
 ---
 
@@ -5061,7 +5130,7 @@ metadata:
     environment: production
   annotations:
     # Service-level annotations
-    run.googleapis.com/description: "Toast-Stats Backend API Service"
+    run.googleapis.com/description: 'Toast-Stats Backend API Service'
     run.googleapis.com/ingress: all
 
 spec:
@@ -5072,18 +5141,18 @@ spec:
         # Autoscaling Configuration
         # ----------------------------------------
         # Scale to zero for cost optimization
-        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/minScale: '0'
         # Maximum instances to prevent runaway costs
-        autoscaling.knative.dev/maxScale: "10"
-        
+        autoscaling.knative.dev/maxScale: '10'
+
         # ----------------------------------------
         # Performance Configuration
         # ----------------------------------------
         # Enable CPU boost during container startup
-        run.googleapis.com/startup-cpu-boost: "true"
+        run.googleapis.com/startup-cpu-boost: 'true'
         # Use second-generation execution environment
         run.googleapis.com/execution-environment: gen2
-        
+
         # ----------------------------------------
         # VPC Configuration (if needed)
         # ----------------------------------------
@@ -5098,13 +5167,13 @@ spec:
       # Maximum time for request processing (seconds)
       # Set higher for long-running operations
       timeoutSeconds: 300
-      
+
       # ----------------------------------------
       # Service Account
       # ----------------------------------------
       # Dedicated service account with least-privilege permissions
       serviceAccountName: toast-stats-backend@PROJECT_ID.iam.gserviceaccount.com
-      
+
       # ----------------------------------------
       # Concurrency
       # ----------------------------------------
@@ -5119,14 +5188,14 @@ spec:
           # ----------------------------------------
           # Use specific SHA for reproducible deployments
           image: gcr.io/PROJECT_ID/toast-stats-backend:IMAGE_SHA
-          
+
           # ----------------------------------------
           # Port Configuration
           # ----------------------------------------
           ports:
             - name: http1
               containerPort: 5001
-          
+
           # ----------------------------------------
           # Resource Limits
           # ----------------------------------------
@@ -5135,8 +5204,8 @@ spec:
               # Memory limit (see Section 6.3 for sizing guide)
               memory: 512Mi
               # CPU limit (1 = 1 vCPU)
-              cpu: "1"
-          
+              cpu: '1'
+
           # ----------------------------------------
           # Environment Variables
           # ----------------------------------------
@@ -5144,23 +5213,23 @@ spec:
             # Runtime environment
             - name: NODE_ENV
               value: production
-            
+
             # Application port
             - name: PORT
-              value: "5001"
-            
+              value: '5001'
+
             # Storage provider selection
             - name: STORAGE_PROVIDER
               value: gcp
-            
+
             # Log level
             - name: LOG_LEVEL
               value: info
-            
+
             # V8 heap size (75% of memory limit)
             - name: NODE_OPTIONS
-              value: "--max-old-space-size=384"
-          
+              value: '--max-old-space-size=384'
+
           # ----------------------------------------
           # Secrets from Secret Manager
           # ----------------------------------------
@@ -5171,7 +5240,7 @@ spec:
           #       secretKeyRef:
           #         name: prod-backend-api-key
           #         key: latest
-          
+
           # ----------------------------------------
           # Startup Probe
           # ----------------------------------------
@@ -5188,7 +5257,7 @@ spec:
             timeoutSeconds: 10
             # Number of failures before container is restarted
             failureThreshold: 15
-          
+
           # ----------------------------------------
           # Liveness Probe
           # ----------------------------------------
@@ -5238,27 +5307,27 @@ gcloud run deploy toast-stats-backend \
 
 #### Configuration Reference
 
-| Parameter | Production | Staging | Development |
-| --------- | ---------- | ------- | ----------- |
-| `minScale` | 0 | 0 | N/A |
-| `maxScale` | 10 | 2 | N/A |
-| `memory` | 512Mi | 512Mi | N/A |
-| `cpu` | 1 | 1 | N/A |
-| `concurrency` | 80 | 80 | N/A |
-| `timeout` | 300s | 300s | N/A |
-| `NODE_ENV` | production | staging | development |
-| `STORAGE_PROVIDER` | gcp | gcp | local |
+| Parameter          | Production | Staging | Development |
+| ------------------ | ---------- | ------- | ----------- |
+| `minScale`         | 0          | 0       | N/A         |
+| `maxScale`         | 10         | 2       | N/A         |
+| `memory`           | 512Mi      | 512Mi   | N/A         |
+| `cpu`              | 1          | 1       | N/A         |
+| `concurrency`      | 80         | 80      | N/A         |
+| `timeout`          | 300s       | 300s    | N/A         |
+| `NODE_ENV`         | production | staging | development |
+| `STORAGE_PROVIDER` | gcp        | gcp     | local       |
 
 #### Template Customization Points
 
-| Element | Customization | Example |
-| ------- | ------------- | ------- |
-| Service name | Your service name | `name: my-api-service` |
-| Project ID | Your GCP project | `PROJECT_ID` placeholder |
-| Region | Deployment region | Set via gcloud `--region` |
-| Memory | Based on workload | `memory: 1Gi` |
-| Max instances | Based on traffic | `maxScale: "20"` |
-| Secrets | Your secret names | Update `secretKeyRef` |
+| Element       | Customization     | Example                   |
+| ------------- | ----------------- | ------------------------- |
+| Service name  | Your service name | `name: my-api-service`    |
+| Project ID    | Your GCP project  | `PROJECT_ID` placeholder  |
+| Region        | Deployment region | Set via gcloud `--region` |
+| Memory        | Based on workload | `memory: 1Gi`             |
+| Max instances | Based on traffic  | `maxScale: "20"`          |
+| Secrets       | Your secret names | Update `secretKeyRef`     |
 
 ---
 
@@ -5268,7 +5337,6 @@ gcloud run deploy toast-stats-backend \
 > **Customize templates to fit specific requirements while maintaining compliance.**  
 > **When in doubt, refer to the detailed guidance in earlier sections.**  
 > **Keep templates synchronized with evolving best practices.**
-
 
 ---
 
@@ -5280,46 +5348,46 @@ This appendix provides reference materials, governance guidance, and supporting 
 
 This glossary defines key terms used across all steering documents in this repository. Terms are listed alphabetically.
 
-| Term | Definition |
-| ---- | ---------- |
-| **Acceptance Criteria** | Specific, testable conditions that a feature or change must satisfy to be considered complete. |
-| **ADR** | Architecture Decision Record - a document capturing an important architectural decision along with its context and consequences. |
-| **Backpressure** | A mechanism to slow down producers when consumers cannot keep up with the rate of data, preventing resource exhaustion. |
-| **Blue/Green Deployment** | A deployment strategy using two identical environments where traffic is switched from the current (blue) to the new (green) version. |
-| **Circuit Breaker** | A design pattern that prevents cascading failures by failing fast when a downstream service is unavailable or unhealthy. |
-| **Cloud Run** | Google Cloud's fully managed serverless platform for running containerized applications with automatic scaling. |
-| **Cold Start** | The latency incurred when a new container instance is started to handle a request, including initialization time. |
-| **Concurrency** | The maximum number of simultaneous requests a single container instance can handle. |
-| **Core Web Vitals** | A set of user-centric metrics (LCP, FID, CLS) that measure real-world user experience on web pages. |
-| **DCP** | Distinguished Club Program - Toastmasters International's recognition program for club achievement. |
-| **Firestore** | Google Cloud's NoSQL document database for storing and syncing data at scale. |
-| **GCS** | Google Cloud Storage - object storage service for storing and accessing data on Google Cloud. |
-| **GKE** | Google Kubernetes Engine - managed Kubernetes service for running containerized applications. |
-| **Health Check** | An endpoint that reports the operational status of a service, used by orchestrators for liveness and readiness probes. |
-| **IAM** | Identity and Access Management - Google Cloud's system for managing access to resources. |
-| **Idempotent** | An operation that produces the same result regardless of how many times it is executed. |
-| **LCP** | Largest Contentful Paint - a Core Web Vital measuring the time until the largest content element is rendered. |
-| **Liveness Probe** | A health check that determines if a container is running; failure triggers container restart. |
-| **LRU Cache** | Least Recently Used cache - a cache eviction policy that removes the least recently accessed items first. |
-| **Normative** | A document or section that defines mandatory requirements (as opposed to informative/advisory content). |
-| **OpenAPI** | A specification for describing RESTful APIs, enabling documentation and code generation. |
-| **PBT** | Property-Based Testing - a testing approach that verifies properties hold across randomly generated inputs. |
-| **PII** | Personally Identifiable Information - data that can identify an individual, requiring special handling. |
-| **Quality Gate** | A checkpoint in the CI/CD pipeline that must pass before code can proceed to the next stage. |
-| **Readiness Probe** | A health check that determines if a container is ready to receive traffic; failure removes it from load balancing. |
-| **RFC 2119** | A standard defining keywords (MUST, SHOULD, MAY) for use in requirement specifications. |
-| **RSS** | Resident Set Size - the total memory allocated to a process, including heap, stack, and code segments. |
-| **Scale-to-Zero** | The ability of a serverless platform to reduce instances to zero when there is no traffic, reducing costs. |
-| **Service Account** | A special type of account used by applications to authenticate and authorize API calls. |
-| **SLO** | Service Level Objective - a target value or range for a service level measured by a service level indicator. |
-| **Snapshot** | An immutable, time-specific representation of normalized application data and its derived results. |
-| **Steering Document** | An authoritative reference document that defines mandatory standards, patterns, and constraints for a specific domain. |
-| **STRIDE** | A threat modeling framework categorizing threats as Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege. |
-| **TTI** | Time to Interactive - a metric measuring when a page becomes fully interactive and responsive to user input. |
-| **TTL** | Time to Live - the duration for which cached data remains valid before expiration. |
-| **V8 Heap** | The memory region managed by V8's garbage collector for JavaScript objects in Node.js. |
-| **WCAG** | Web Content Accessibility Guidelines - standards for making web content accessible to people with disabilities. |
-| **Zod** | A TypeScript-first schema validation library used for runtime type checking and data validation. |
+| Term                      | Definition                                                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Acceptance Criteria**   | Specific, testable conditions that a feature or change must satisfy to be considered complete.                                                               |
+| **ADR**                   | Architecture Decision Record - a document capturing an important architectural decision along with its context and consequences.                             |
+| **Backpressure**          | A mechanism to slow down producers when consumers cannot keep up with the rate of data, preventing resource exhaustion.                                      |
+| **Blue/Green Deployment** | A deployment strategy using two identical environments where traffic is switched from the current (blue) to the new (green) version.                         |
+| **Circuit Breaker**       | A design pattern that prevents cascading failures by failing fast when a downstream service is unavailable or unhealthy.                                     |
+| **Cloud Run**             | Google Cloud's fully managed serverless platform for running containerized applications with automatic scaling.                                              |
+| **Cold Start**            | The latency incurred when a new container instance is started to handle a request, including initialization time.                                            |
+| **Concurrency**           | The maximum number of simultaneous requests a single container instance can handle.                                                                          |
+| **Core Web Vitals**       | A set of user-centric metrics (LCP, FID, CLS) that measure real-world user experience on web pages.                                                          |
+| **DCP**                   | Distinguished Club Program - Toastmasters International's recognition program for club achievement.                                                          |
+| **Firestore**             | Google Cloud's NoSQL document database for storing and syncing data at scale.                                                                                |
+| **GCS**                   | Google Cloud Storage - object storage service for storing and accessing data on Google Cloud.                                                                |
+| **GKE**                   | Google Kubernetes Engine - managed Kubernetes service for running containerized applications.                                                                |
+| **Health Check**          | An endpoint that reports the operational status of a service, used by orchestrators for liveness and readiness probes.                                       |
+| **IAM**                   | Identity and Access Management - Google Cloud's system for managing access to resources.                                                                     |
+| **Idempotent**            | An operation that produces the same result regardless of how many times it is executed.                                                                      |
+| **LCP**                   | Largest Contentful Paint - a Core Web Vital measuring the time until the largest content element is rendered.                                                |
+| **Liveness Probe**        | A health check that determines if a container is running; failure triggers container restart.                                                                |
+| **LRU Cache**             | Least Recently Used cache - a cache eviction policy that removes the least recently accessed items first.                                                    |
+| **Normative**             | A document or section that defines mandatory requirements (as opposed to informative/advisory content).                                                      |
+| **OpenAPI**               | A specification for describing RESTful APIs, enabling documentation and code generation.                                                                     |
+| **PBT**                   | Property-Based Testing - a testing approach that verifies properties hold across randomly generated inputs.                                                  |
+| **PII**                   | Personally Identifiable Information - data that can identify an individual, requiring special handling.                                                      |
+| **Quality Gate**          | A checkpoint in the CI/CD pipeline that must pass before code can proceed to the next stage.                                                                 |
+| **Readiness Probe**       | A health check that determines if a container is ready to receive traffic; failure removes it from load balancing.                                           |
+| **RFC 2119**              | A standard defining keywords (MUST, SHOULD, MAY) for use in requirement specifications.                                                                      |
+| **RSS**                   | Resident Set Size - the total memory allocated to a process, including heap, stack, and code segments.                                                       |
+| **Scale-to-Zero**         | The ability of a serverless platform to reduce instances to zero when there is no traffic, reducing costs.                                                   |
+| **Service Account**       | A special type of account used by applications to authenticate and authorize API calls.                                                                      |
+| **SLO**                   | Service Level Objective - a target value or range for a service level measured by a service level indicator.                                                 |
+| **Snapshot**              | An immutable, time-specific representation of normalized application data and its derived results.                                                           |
+| **Steering Document**     | An authoritative reference document that defines mandatory standards, patterns, and constraints for a specific domain.                                       |
+| **STRIDE**                | A threat modeling framework categorizing threats as Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, and Elevation of Privilege. |
+| **TTI**                   | Time to Interactive - a metric measuring when a page becomes fully interactive and responsive to user input.                                                 |
+| **TTL**                   | Time to Live - the duration for which cached data remains valid before expiration.                                                                           |
+| **V8 Heap**               | The memory region managed by V8's garbage collector for JavaScript objects in Node.js.                                                                       |
+| **WCAG**                  | Web Content Accessibility Guidelines - standards for making web content accessible to people with disabilities.                                              |
+| **Zod**                   | A TypeScript-first schema validation library used for runtime type checking and data validation.                                                             |
 
 ### 13.2 Decision Log Template
 
@@ -5353,10 +5421,12 @@ Architectural decisions SHOULD be recorded using Architecture Decision Records (
 **Description:** [Brief description of the option]
 
 **Pros:**
+
 - [Advantage 1]
 - [Advantage 2]
 
 **Cons:**
+
 - [Disadvantage 1]
 - [Disadvantage 2]
 
@@ -5365,10 +5435,12 @@ Architectural decisions SHOULD be recorded using Architecture Decision Records (
 **Description:** [Brief description of the option]
 
 **Pros:**
+
 - [Advantage 1]
 - [Advantage 2]
 
 **Cons:**
+
 - [Disadvantage 1]
 - [Disadvantage 2]
 
@@ -5439,12 +5511,12 @@ Steering documents define mandatory standards, but legitimate exceptions may ari
 
 #### Deviation Categories
 
-| Category | Description | Approval Required | Documentation |
-| -------- | ----------- | ----------------- | ------------- |
-| **Emergency** | Critical production issue requiring immediate action | Post-hoc review within 48 hours | Incident report |
-| **Temporary** | Short-term deviation with planned remediation | Team lead approval | ADR with timeline |
-| **Permanent** | Long-term exception due to unique constraints | Steering document owner approval | ADR + steering doc update |
-| **Experimental** | Proof-of-concept or research exploration | Team lead approval | Time-boxed with review date |
+| Category         | Description                                          | Approval Required                | Documentation               |
+| ---------------- | ---------------------------------------------------- | -------------------------------- | --------------------------- |
+| **Emergency**    | Critical production issue requiring immediate action | Post-hoc review within 48 hours  | Incident report             |
+| **Temporary**    | Short-term deviation with planned remediation        | Team lead approval               | ADR with timeline           |
+| **Permanent**    | Long-term exception due to unique constraints        | Steering document owner approval | ADR + steering doc update   |
+| **Experimental** | Proof-of-concept or research exploration             | Team lead approval               | Time-boxed with review date |
 
 #### Acceptable Reasons for Deviation
 
@@ -5526,11 +5598,11 @@ All approved deviations MUST include:
 
 #### Deviation Review Schedule
 
-| Category | Review Frequency | Action on Review |
-| -------- | ---------------- | ---------------- |
-| Emergency | Within 48 hours | Convert to Temporary or remediate |
-| Temporary | Monthly | Assess progress toward remediation |
-| Permanent | Quarterly | Confirm still necessary |
+| Category     | Review Frequency       | Action on Review                           |
+| ------------ | ---------------------- | ------------------------------------------ |
+| Emergency    | Within 48 hours        | Convert to Temporary or remediate          |
+| Temporary    | Monthly                | Assess progress toward remediation         |
+| Permanent    | Quarterly              | Confirm still necessary                    |
 | Experimental | At time-box expiration | Convert to Permanent, remediate, or extend |
 
 ### 13.4 Document Relationships and Precedence
@@ -5589,21 +5661,21 @@ When guidance from multiple documents applies to a situation, precedence MUST be
 
 #### Document Scope Matrix
 
-| Document | Authoritative Scope | Defers To |
-| -------- | ------------------- | --------- |
-| **typescript.md** | TypeScript compiler config, type safety, `any` prohibition | None (Tier 1) |
-| **testing.md** | Testing philosophy, isolation, coverage expectations | None (Tier 1) |
-| **storage-abstraction.md** | Data access patterns, storage providers | None (Tier 1) |
-| **git.md** | Commit authorization, version control | None (Tier 1) |
-| **api-documentation.md** | OpenAPI specification, endpoint docs | None (Tier 1) |
-| **platform-engineering.md** | Backend architecture, deployment, observability, security | Tier 1 documents |
-| **performance-slos.md** | Performance targets, memory management | platform-engineering.md |
-| **frontend-standards.md** | React patterns, Firebase Hosting | platform-engineering.md, typescript.md |
-| **modal-dialogs.md** | Modal implementation patterns | frontend-standards.md |
-| **toastmasters-brand-guidelines.md** | Brand colors, typography, accessibility | frontend-standards.md |
-| **property-testing-guidance.md** | When to use PBT | testing.md |
-| **testing.eval.md** | Test evaluation checklist | testing.md |
-| **production-maintenance.md** | Operational context, maintenance posture | platform-engineering.md |
+| Document                             | Authoritative Scope                                        | Defers To                              |
+| ------------------------------------ | ---------------------------------------------------------- | -------------------------------------- |
+| **typescript.md**                    | TypeScript compiler config, type safety, `any` prohibition | None (Tier 1)                          |
+| **testing.md**                       | Testing philosophy, isolation, coverage expectations       | None (Tier 1)                          |
+| **storage-abstraction.md**           | Data access patterns, storage providers                    | None (Tier 1)                          |
+| **git.md**                           | Commit authorization, version control                      | None (Tier 1)                          |
+| **api-documentation.md**             | OpenAPI specification, endpoint docs                       | None (Tier 1)                          |
+| **platform-engineering.md**          | Backend architecture, deployment, observability, security  | Tier 1 documents                       |
+| **performance-slos.md**              | Performance targets, memory management                     | platform-engineering.md                |
+| **frontend-standards.md**            | React patterns, Firebase Hosting                           | platform-engineering.md, typescript.md |
+| **modal-dialogs.md**                 | Modal implementation patterns                              | frontend-standards.md                  |
+| **toastmasters-brand-guidelines.md** | Brand colors, typography, accessibility                    | frontend-standards.md                  |
+| **property-testing-guidance.md**     | When to use PBT                                            | testing.md                             |
+| **testing.eval.md**                  | Test evaluation checklist                                  | testing.md                             |
+| **production-maintenance.md**        | Operational context, maintenance posture                   | platform-engineering.md                |
 
 #### Conflict Resolution Process
 

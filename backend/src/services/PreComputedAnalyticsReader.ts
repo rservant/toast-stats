@@ -230,11 +230,16 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
         logger.error('Failed to parse analytics file as JSON', {
           operation: 'readAnalyticsFile',
           filePath,
-          error: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+          error:
+            parseError instanceof Error
+              ? parseError.message
+              : 'Unknown parse error',
         })
         throw new CorruptedFileError(
           filePath,
-          parseError instanceof Error ? parseError : new Error('JSON parse error')
+          parseError instanceof Error
+            ? parseError
+            : new Error('JSON parse error')
         )
       }
 
@@ -259,7 +264,10 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       return parsed
     } catch (error) {
       // Re-throw our custom errors
-      if (error instanceof SchemaVersionError || error instanceof CorruptedFileError) {
+      if (
+        error instanceof SchemaVersionError ||
+        error instanceof CorruptedFileError
+      ) {
         throw error
       }
 
@@ -273,7 +281,8 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       }
 
       // Handle other file system errors
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
       logger.error('Failed to read analytics file', {
         operation: 'readAnalyticsFile',
         filePath,
@@ -494,11 +503,16 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
           operation: 'getAnalyticsManifest',
           snapshotDate,
           manifestPath,
-          error: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+          error:
+            parseError instanceof Error
+              ? parseError.message
+              : 'Unknown parse error',
         })
         throw new CorruptedFileError(
           manifestPath,
-          parseError instanceof Error ? parseError : new Error('JSON parse error')
+          parseError instanceof Error
+            ? parseError
+            : new Error('JSON parse error')
         )
       }
 
@@ -527,7 +541,8 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       }
 
       // Handle other file system errors
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
       logger.error('Failed to read analytics manifest', {
         operation: 'getAnalyticsManifest',
         snapshotDate,

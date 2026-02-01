@@ -244,9 +244,15 @@ describe('Pipeline Integration Tests', () => {
       const analyticsFiles = await fs.readdir(analyticsDir)
 
       for (const districtId of districts) {
-        expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
-        expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
-        expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_analytics.json`
+        )
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_membership.json`
+        )
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_clubhealth.json`
+        )
       }
     })
   })
@@ -498,7 +504,9 @@ describe('Pipeline Integration Tests', () => {
       expect(clubHealth.data.vulnerableClubs).toBeDefined()
       expect(Array.isArray(clubHealth.data.vulnerableClubs)).toBe(true)
       expect(clubHealth.data.interventionRequiredClubs).toBeDefined()
-      expect(Array.isArray(clubHealth.data.interventionRequiredClubs)).toBe(true)
+      expect(Array.isArray(clubHealth.data.interventionRequiredClubs)).toBe(
+        true
+      )
 
       // Verify club entries have required fields
       if (clubHealth.data.allClubs.length > 0) {
@@ -747,7 +755,9 @@ describe('Pipeline Integration Tests', () => {
 
       // Requirement 5.4: Source snapshot checksum should be stored
       expect(analytics.metadata.sourceSnapshotChecksum).toBeDefined()
-      expect(analytics.metadata.sourceSnapshotChecksum).toMatch(/^[a-f0-9]{64}$/)
+      expect(analytics.metadata.sourceSnapshotChecksum).toMatch(
+        /^[a-f0-9]{64}$/
+      )
     })
 
     it('should maintain data consistency across pipeline stages', async () => {
@@ -790,7 +800,9 @@ describe('Pipeline Integration Tests', () => {
       ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Total membership in analytics should match snapshot
-      expect(analytics.data.totalMembership).toBe(snapshot.totals.totalMembership)
+      expect(analytics.data.totalMembership).toBe(
+        snapshot.totals.totalMembership
+      )
 
       // Number of clubs should match
       expect(analytics.data.allClubs.length).toBe(snapshot.clubs.length)

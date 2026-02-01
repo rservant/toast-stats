@@ -22,10 +22,7 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as os from 'os'
 import * as crypto from 'crypto'
-import {
-  determineUploadExitCode,
-  formatUploadSummary,
-} from '../cli.js'
+import { determineUploadExitCode, formatUploadSummary } from '../cli.js'
 import { ExitCode, type UploadResult } from '../types/index.js'
 
 /**
@@ -45,7 +42,6 @@ function createIsolatedCacheDir(): {
     },
   }
 }
-
 
 /**
  * Create a sample snapshot directory structure for testing
@@ -132,7 +128,6 @@ async function createSampleSnapshotStructure(
   )
 }
 
-
 /**
  * Calculate SHA256 checksum of content
  */
@@ -154,7 +149,10 @@ interface MockFile {
   metadata: MockFileMetadata
   exists: () => Promise<[boolean]>
   getMetadata: () => Promise<[{ metadata?: Record<string, string> }]>
-  save: (content: Buffer, options?: { contentType?: string; metadata?: Record<string, string> }) => Promise<void>
+  save: (
+    content: Buffer,
+    options?: { contentType?: string; metadata?: Record<string, string> }
+  ) => Promise<void>
 }
 
 interface MockBucket {
@@ -179,7 +177,9 @@ function createMockBucket(): MockBucket {
       name,
       content: null,
       metadata: {},
-      exists: async () => [files.has(name) && files.get(name)!.content !== null],
+      exists: async () => [
+        files.has(name) && files.get(name)!.content !== null,
+      ],
       getMetadata: async () => {
         const file = files.get(name)
         if (!file || file.content === null) {
@@ -187,7 +187,10 @@ function createMockBucket(): MockBucket {
         }
         return [{ metadata: file.metadata as Record<string, string> }]
       },
-      save: async (content: Buffer, options?: { contentType?: string; metadata?: Record<string, string> }) => {
+      save: async (
+        content: Buffer,
+        options?: { contentType?: string; metadata?: Record<string, string> }
+      ) => {
         // Check if there's a configured error for this file
         const error = uploadErrors.get(name)
         if (error) {
@@ -216,7 +219,6 @@ function createMockBucket(): MockBucket {
     },
   }
 }
-
 
 /**
  * Mock UploadService that uses mock GCS bucket
@@ -302,15 +304,26 @@ class MockUploadService {
     }
   }
 
-
   /**
    * Recursively collect all files in a directory
    */
   private async collectFiles(
     dir: string,
     baseDir: string
-  ): Promise<Array<{ localPath: string; remotePath: string; size: number; checksum: string }>> {
-    const files: Array<{ localPath: string; remotePath: string; size: number; checksum: string }> = []
+  ): Promise<
+    Array<{
+      localPath: string
+      remotePath: string
+      size: number
+      checksum: string
+    }>
+  > {
+    const files: Array<{
+      localPath: string
+      remotePath: string
+      size: number
+      checksum: string
+    }> = []
 
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true })
@@ -364,7 +377,6 @@ class MockUploadService {
     }
   }
 
-
   /**
    * Upload snapshots and analytics to mock GCS
    */
@@ -387,11 +399,13 @@ class MockUploadService {
         filesUploaded: [],
         filesFailed: [],
         filesSkipped: [],
-        errors: [{
-          file: 'N/A',
-          error: `GCS authentication failure: ${this.authError.message}`,
-          timestamp: new Date().toISOString(),
-        }],
+        errors: [
+          {
+            file: 'N/A',
+            error: `GCS authentication failure: ${this.authError.message}`,
+            timestamp: new Date().toISOString(),
+          },
+        ],
         duration_ms: Date.now() - startTime,
         authError: true,
       }
@@ -412,11 +426,13 @@ class MockUploadService {
           filesUploaded: [],
           filesFailed: [],
           filesSkipped: [],
-          errors: [{
-            file: snapshotDir,
-            error: `Snapshot directory not found for date: ${options.date}`,
-            timestamp: new Date().toISOString(),
-          }],
+          errors: [
+            {
+              file: snapshotDir,
+              error: `Snapshot directory not found for date: ${options.date}`,
+              timestamp: new Date().toISOString(),
+            },
+          ],
           duration_ms: Date.now() - startTime,
         }
       }
@@ -430,11 +446,13 @@ class MockUploadService {
           filesUploaded: [],
           filesFailed: [],
           filesSkipped: [],
-          errors: [{
-            file: this.getSnapshotsDir(),
-            error: 'No snapshot dates found to upload',
-            timestamp: new Date().toISOString(),
-          }],
+          errors: [
+            {
+              file: this.getSnapshotsDir(),
+              error: 'No snapshot dates found to upload',
+              timestamp: new Date().toISOString(),
+            },
+          ],
           duration_ms: Date.now() - startTime,
         }
       }
@@ -445,7 +463,6 @@ class MockUploadService {
     const filesFailed: string[] = []
     const filesSkipped: string[] = []
     const errors: Array<{ file: string; error: string; timestamp: string }> = []
-
 
     // Process each date
     dateLoop: for (const date of datesToUpload) {
@@ -484,10 +501,14 @@ class MockUploadService {
 
             filesUploaded.push(remotePath)
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            const errorMessage =
+              error instanceof Error ? error.message : 'Unknown error'
 
             // Check for auth errors
-            if (errorMessage.includes('authentication') || errorMessage.includes('UNAUTHENTICATED')) {
+            if (
+              errorMessage.includes('authentication') ||
+              errorMessage.includes('UNAUTHENTICATED')
+            ) {
               authErrorOccurred = true
               filesFailed.push(remotePath)
               errors.push({
@@ -508,7 +529,8 @@ class MockUploadService {
           }
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
         errors.push({
           file: snapshotDir,
           error: `Failed to process snapshot date ${date}: ${errorMessage}`,
@@ -521,7 +543,9 @@ class MockUploadService {
     const success =
       !authErrorOccurred &&
       ((filesUploaded.length > 0 && filesFailed.length === 0) ||
-        (filesSkipped.length > 0 && filesUploaded.length === 0 && filesFailed.length === 0))
+        (filesSkipped.length > 0 &&
+          filesUploaded.length === 0 &&
+          filesFailed.length === 0))
 
     return {
       success,
@@ -536,7 +560,6 @@ class MockUploadService {
     }
   }
 }
-
 
 describe('UploadService', () => {
   let testCache: { path: string; cleanup: () => Promise<void> }
@@ -581,7 +604,9 @@ describe('UploadService', () => {
 
       // Create non-date directory
       const snapshotsDir = path.join(testCache.path, 'snapshots')
-      await fs.mkdir(path.join(snapshotsDir, 'invalid-date'), { recursive: true })
+      await fs.mkdir(path.join(snapshotsDir, 'invalid-date'), {
+        recursive: true,
+      })
       await fs.mkdir(path.join(snapshotsDir, 'temp'), { recursive: true })
 
       const dates = await uploadService.getAvailableDates()
@@ -595,16 +620,15 @@ describe('UploadService', () => {
 
       // Create directories with various formats
       await fs.mkdir(path.join(snapshotsDir, '2024-01-15')) // Valid
-      await fs.mkdir(path.join(snapshotsDir, '24-01-15'))   // Invalid - short year
-      await fs.mkdir(path.join(snapshotsDir, '2024-1-15'))  // Invalid - single digit month
-      await fs.mkdir(path.join(snapshotsDir, '2024-01-5'))  // Invalid - single digit day
+      await fs.mkdir(path.join(snapshotsDir, '24-01-15')) // Invalid - short year
+      await fs.mkdir(path.join(snapshotsDir, '2024-1-15')) // Invalid - single digit month
+      await fs.mkdir(path.join(snapshotsDir, '2024-01-5')) // Invalid - single digit day
 
       const dates = await uploadService.getAvailableDates()
 
       expect(dates).toEqual(['2024-01-15'])
     })
   })
-
 
   describe('upload - basic functionality', () => {
     it('should upload all files for a specific date (Requirement 6.2)', async () => {
@@ -627,14 +651,32 @@ describe('UploadService', () => {
       const result = await uploadService.upload({ date })
 
       // Should include snapshot files
-      expect(result.filesUploaded.some(f => f.includes('metadata.json'))).toBe(true)
-      expect(result.filesUploaded.some(f => f.includes('manifest.json'))).toBe(true)
-      expect(result.filesUploaded.some(f => f.includes('district_1.json'))).toBe(true)
+      expect(result.filesUploaded.some(f => f.includes('metadata.json'))).toBe(
+        true
+      )
+      expect(result.filesUploaded.some(f => f.includes('manifest.json'))).toBe(
+        true
+      )
+      expect(
+        result.filesUploaded.some(f => f.includes('district_1.json'))
+      ).toBe(true)
 
       // Should include analytics files
-      expect(result.filesUploaded.some(f => f.includes('analytics/district_1_analytics.json'))).toBe(true)
-      expect(result.filesUploaded.some(f => f.includes('analytics/district_1_membership.json'))).toBe(true)
-      expect(result.filesUploaded.some(f => f.includes('analytics/district_1_clubhealth.json'))).toBe(true)
+      expect(
+        result.filesUploaded.some(f =>
+          f.includes('analytics/district_1_analytics.json')
+        )
+      ).toBe(true)
+      expect(
+        result.filesUploaded.some(f =>
+          f.includes('analytics/district_1_membership.json')
+        )
+      ).toBe(true)
+      expect(
+        result.filesUploaded.some(f =>
+          f.includes('analytics/district_1_clubhealth.json')
+        )
+      ).toBe(true)
     })
 
     it('should upload all available dates when no date specified', async () => {
@@ -658,7 +700,9 @@ describe('UploadService', () => {
 
     it('should return error when no snapshot dates available', async () => {
       // Create empty snapshots directory
-      await fs.mkdir(path.join(testCache.path, 'snapshots'), { recursive: true })
+      await fs.mkdir(path.join(testCache.path, 'snapshots'), {
+        recursive: true,
+      })
 
       const result = await uploadService.upload({})
 
@@ -677,7 +721,6 @@ describe('UploadService', () => {
     })
   })
 
-
   describe('upload - incremental mode (Requirement 6.3)', () => {
     it('should skip unchanged files when incremental is true', async () => {
       const date = '2024-01-15'
@@ -689,10 +732,15 @@ describe('UploadService', () => {
       expect(firstResult.filesUploaded.length).toBeGreaterThan(0)
 
       // Second upload with incremental - should skip all files
-      const secondResult = await uploadService.upload({ date, incremental: true })
+      const secondResult = await uploadService.upload({
+        date,
+        incremental: true,
+      })
 
       expect(secondResult.success).toBe(true)
-      expect(secondResult.filesSkipped.length).toBe(firstResult.filesUploaded.length)
+      expect(secondResult.filesSkipped.length).toBe(
+        firstResult.filesUploaded.length
+      )
       expect(secondResult.filesUploaded).toEqual([])
     })
 
@@ -704,7 +752,12 @@ describe('UploadService', () => {
       await uploadService.upload({ date })
 
       // Modify a file
-      const metadataPath = path.join(testCache.path, 'snapshots', date, 'metadata.json')
+      const metadataPath = path.join(
+        testCache.path,
+        'snapshots',
+        date,
+        'metadata.json'
+      )
       await fs.writeFile(
         metadataPath,
         JSON.stringify({ date, modified: true, timestamp: Date.now() })
@@ -727,10 +780,15 @@ describe('UploadService', () => {
       const firstResult = await uploadService.upload({ date })
 
       // Second upload without incremental - should upload all files again
-      const secondResult = await uploadService.upload({ date, incremental: false })
+      const secondResult = await uploadService.upload({
+        date,
+        incremental: false,
+      })
 
       expect(secondResult.success).toBe(true)
-      expect(secondResult.filesUploaded.length).toBe(firstResult.filesUploaded.length)
+      expect(secondResult.filesUploaded.length).toBe(
+        firstResult.filesUploaded.length
+      )
       expect(secondResult.filesSkipped).toEqual([])
     })
 
@@ -748,7 +806,6 @@ describe('UploadService', () => {
       expect(file.metadata.checksum).toMatch(/^[a-f0-9]{64}$/)
     })
   })
-
 
   describe('upload - dry run mode', () => {
     it('should not actually upload files in dry run mode', async () => {
@@ -785,7 +842,11 @@ describe('UploadService', () => {
       await uploadService.upload({ date })
 
       // Dry run with incremental - should show all as skipped
-      const result = await uploadService.upload({ date, dryRun: true, incremental: true })
+      const result = await uploadService.upload({
+        date,
+        dryRun: true,
+        incremental: true,
+      })
 
       expect(result.success).toBe(true)
       expect(result.filesSkipped.length).toBeGreaterThan(0)
@@ -815,8 +876,14 @@ describe('UploadService', () => {
       await createSampleSnapshotStructure(testCache.path, date, ['1'])
 
       // Set up errors for multiple files
-      mockBucket.setUploadError(`snapshots/${date}/metadata.json`, new Error('Error 1'))
-      mockBucket.setUploadError(`snapshots/${date}/manifest.json`, new Error('Error 2'))
+      mockBucket.setUploadError(
+        `snapshots/${date}/metadata.json`,
+        new Error('Error 1')
+      )
+      mockBucket.setUploadError(
+        `snapshots/${date}/manifest.json`,
+        new Error('Error 2')
+      )
 
       const result = await uploadService.upload({ date })
 
@@ -842,14 +909,15 @@ describe('UploadService', () => {
     })
   })
 
-
   describe('upload - GCS authentication error handling', () => {
     it('should exit immediately on GCS authentication error', async () => {
       const date = '2024-01-15'
       await createSampleSnapshotStructure(testCache.path, date, ['1', '2'])
 
       // Set auth error
-      uploadService.setAuthError(new Error('Could not load the default credentials'))
+      uploadService.setAuthError(
+        new Error('Could not load the default credentials')
+      )
 
       const result = await uploadService.upload({ date })
 
@@ -876,7 +944,10 @@ describe('UploadService', () => {
       await createSampleSnapshotStructure(testCache.path, date, ['1'])
 
       // Set up a non-auth error
-      mockBucket.setUploadError(`snapshots/${date}/metadata.json`, new Error('Network timeout'))
+      mockBucket.setUploadError(
+        `snapshots/${date}/metadata.json`,
+        new Error('Network timeout')
+      )
 
       const result = await uploadService.upload({ date })
 
@@ -908,7 +979,6 @@ describe('UploadService', () => {
     })
   })
 
-
   describe('upload - multiple districts', () => {
     it('should upload files for multiple districts', async () => {
       const date = '2024-01-15'
@@ -918,9 +988,15 @@ describe('UploadService', () => {
 
       expect(result.success).toBe(true)
       // Should have files for all districts
-      expect(result.filesUploaded.some(f => f.includes('district_1'))).toBe(true)
-      expect(result.filesUploaded.some(f => f.includes('district_2'))).toBe(true)
-      expect(result.filesUploaded.some(f => f.includes('district_3'))).toBe(true)
+      expect(result.filesUploaded.some(f => f.includes('district_1'))).toBe(
+        true
+      )
+      expect(result.filesUploaded.some(f => f.includes('district_2'))).toBe(
+        true
+      )
+      expect(result.filesUploaded.some(f => f.includes('district_3'))).toBe(
+        true
+      )
     })
 
     it('should continue with other districts if one fails', async () => {
@@ -928,18 +1004,25 @@ describe('UploadService', () => {
       await createSampleSnapshotStructure(testCache.path, date, ['1', '2'])
 
       // Set up error for district 1 files only
-      mockBucket.setUploadError(`snapshots/${date}/district_1.json`, new Error('Failed'))
-      mockBucket.setUploadError(`snapshots/${date}/analytics/district_1_analytics.json`, new Error('Failed'))
+      mockBucket.setUploadError(
+        `snapshots/${date}/district_1.json`,
+        new Error('Failed')
+      )
+      mockBucket.setUploadError(
+        `snapshots/${date}/analytics/district_1_analytics.json`,
+        new Error('Failed')
+      )
 
       const result = await uploadService.upload({ date })
 
       // District 2 files should still be uploaded
-      expect(result.filesUploaded.some(f => f.includes('district_2'))).toBe(true)
+      expect(result.filesUploaded.some(f => f.includes('district_2'))).toBe(
+        true
+      )
       expect(result.filesFailed.some(f => f.includes('district_1'))).toBe(true)
     })
   })
 })
-
 
 describe('determineUploadExitCode', () => {
   it('should return SUCCESS when all files uploaded successfully', () => {
@@ -1054,7 +1137,6 @@ describe('determineUploadExitCode', () => {
   })
 })
 
-
 describe('formatUploadSummary', () => {
   it('should format successful upload summary correctly', () => {
     const result: UploadResult = {
@@ -1092,7 +1174,13 @@ describe('formatUploadSummary', () => {
       filesUploaded: ['file1.json'],
       filesFailed: ['file2.json'],
       filesSkipped: [],
-      errors: [{ file: 'file2.json', error: 'Network error', timestamp: '2024-01-15T10:00:00Z' }],
+      errors: [
+        {
+          file: 'file2.json',
+          error: 'Network error',
+          timestamp: '2024-01-15T10:00:00Z',
+        },
+      ],
       duration_ms: 200,
     }
 

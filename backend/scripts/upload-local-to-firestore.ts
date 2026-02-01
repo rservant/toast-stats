@@ -79,8 +79,11 @@ class ProgressTracker {
   }
 
   log(): void {
-    const percent = this.total > 0 ? Math.round((this.completed / this.total) * 100) : 0
-    console.log(`    Progress: ${this.completed}/${this.total} (${percent}%) - ${this.errors} errors`)
+    const percent =
+      this.total > 0 ? Math.round((this.completed / this.total) * 100) : 0
+    console.log(
+      `    Progress: ${this.completed}/${this.total} (${percent}%) - ${this.errors} errors`
+    )
   }
 
   getStats(): { total: number; completed: number; errors: number } {
@@ -170,7 +173,10 @@ async function uploadSnapshots(
       // Read local files
       const metadataPath = path.join(snapshotPath, 'metadata.json')
       const manifestPath = path.join(snapshotPath, 'manifest.json')
-      const rankingsPath = path.join(snapshotPath, 'all-districts-rankings.json')
+      const rankingsPath = path.join(
+        snapshotPath,
+        'all-districts-rankings.json'
+      )
 
       let metadata: unknown = null
       let manifest: unknown = null
@@ -217,7 +223,7 @@ async function uploadSnapshots(
             progress.complete()
             stats.snapshots.uploaded++
           },
-          (err) => {
+          err => {
             progress.error()
             stats.snapshots.errors++
             console.error(`    Error writing snapshot ${snapshotId}:`, err)
@@ -226,22 +232,25 @@ async function uploadSnapshots(
       }
 
       // Upload district data - files are in the snapshot root directory, named district_{id}.json
-      const districtFiles = (await fs.readdir(snapshotPath))
-        .filter(f => f.startsWith('district_') && f.endsWith('.json'))
+      const districtFiles = (await fs.readdir(snapshotPath)).filter(
+        f => f.startsWith('district_') && f.endsWith('.json')
+      )
 
       if (districtFiles.length > 0) {
         console.log(`    Queueing ${districtFiles.length} district files...`)
 
         for (const districtFile of districtFiles) {
           // Extract district ID from filename: district_42.json -> 42
-          const districtId = districtFile.replace('district_', '').replace('.json', '')
+          const districtId = districtFile
+            .replace('district_', '')
+            .replace('.json', '')
 
           try {
             // The local file already has the correct structure:
             // { districtId, districtName, collectedAt, status, data: DistrictStatistics }
-            const districtDoc = await readJsonFile(
+            const districtDoc = (await readJsonFile(
               path.join(snapshotPath, districtFile)
-            ) as Record<string, unknown>
+            )) as Record<string, unknown>
 
             if (options.dryRun) {
               stats.districts.uploaded++
@@ -258,10 +267,13 @@ async function uploadSnapshots(
                   progress.complete()
                   stats.districts.uploaded++
                 },
-                (err) => {
+                err => {
                   progress.error()
                   stats.districts.errors++
-                  console.error(`      Error writing district ${districtId}:`, err)
+                  console.error(
+                    `      Error writing district ${districtId}:`,
+                    err
+                  )
                 }
               )
             }
@@ -272,7 +284,9 @@ async function uploadSnapshots(
         }
 
         if (options.dryRun) {
-          console.log(`    [DRY RUN] Would upload ${districtFiles.length} districts`)
+          console.log(
+            `    [DRY RUN] Would upload ${districtFiles.length} districts`
+          )
         }
       }
     } catch (error) {
@@ -348,7 +362,7 @@ async function uploadConfig(
             progress.complete()
             stats.config.uploaded++
           },
-          (err) => {
+          err => {
             progress.error()
             stats.config.errors++
             console.error(`    Error writing config ${docId}:`, err)
@@ -418,14 +432,19 @@ async function uploadTimeSeries(
     const files = await fs.readdir(districtPath)
     // Program year files are like 2023-2024.json (not index-metadata.json)
     const programYearFiles = files.filter(
-      f => f.endsWith('.json') && f !== 'index-metadata.json' && /^\d{4}-\d{4}\.json$/.test(f)
+      f =>
+        f.endsWith('.json') &&
+        f !== 'index-metadata.json' &&
+        /^\d{4}-\d{4}\.json$/.test(f)
     )
 
     if (programYearFiles.length === 0) {
       continue
     }
 
-    console.log(`    District ${districtId}: ${programYearFiles.length} program year files`)
+    console.log(
+      `    District ${districtId}: ${programYearFiles.length} program year files`
+    )
     totalFiles += programYearFiles.length
 
     for (const file of programYearFiles) {
@@ -466,22 +485,30 @@ async function uploadTimeSeries(
               progress.complete()
               stats.timeSeries.uploaded++
             },
-            (err) => {
+            err => {
               progress.error()
               stats.timeSeries.errors++
-              console.error(`    Error writing time-series ${districtId}/${programYear}:`, err)
+              console.error(
+                `    Error writing time-series ${districtId}/${programYear}:`,
+                err
+              )
             }
           )
         }
       } catch (err) {
-        console.error(`    Error reading time-series ${districtId}/${programYear}:`, err)
+        console.error(
+          `    Error reading time-series ${districtId}/${programYear}:`,
+          err
+        )
         stats.timeSeries.errors++
       }
     }
   }
 
   if (options.dryRun) {
-    console.log(`    [DRY RUN] Would upload ${totalFiles} time-series documents`)
+    console.log(
+      `    [DRY RUN] Would upload ${totalFiles} time-series documents`
+    )
   }
 
   if (!options.dryRun && totalFiles > 0) {
@@ -520,12 +547,15 @@ async function uploadToFirestore(
   const bulkWriter = firestore.bulkWriter()
 
   // Configure error handling
-  bulkWriter.onWriteError((error) => {
+  bulkWriter.onWriteError(error => {
     if (error.failedAttempts < 3) {
       // Retry up to 3 times
       return true
     }
-    console.error(`Failed to write after ${error.failedAttempts} attempts:`, error.documentRef.path)
+    console.error(
+      `Failed to write after ${error.failedAttempts} attempts:`,
+      error.documentRef.path
+    )
     return false
   })
 
@@ -568,10 +598,18 @@ async function uploadToFirestore(
   console.log('\n' + '='.repeat(60))
   console.log('Summary')
   console.log('='.repeat(60))
-  console.log(`Snapshots:   ${stats.snapshots.uploaded} uploaded, ${stats.snapshots.skipped} skipped, ${stats.snapshots.errors} errors`)
-  console.log(`Districts:   ${stats.districts.uploaded} uploaded, ${stats.districts.skipped} skipped, ${stats.districts.errors} errors`)
-  console.log(`Config:      ${stats.config.uploaded} uploaded, ${stats.config.skipped} skipped, ${stats.config.errors} errors`)
-  console.log(`Time-Series: ${stats.timeSeries.uploaded} uploaded, ${stats.timeSeries.skipped} skipped, ${stats.timeSeries.errors} errors`)
+  console.log(
+    `Snapshots:   ${stats.snapshots.uploaded} uploaded, ${stats.snapshots.skipped} skipped, ${stats.snapshots.errors} errors`
+  )
+  console.log(
+    `Districts:   ${stats.districts.uploaded} uploaded, ${stats.districts.skipped} skipped, ${stats.districts.errors} errors`
+  )
+  console.log(
+    `Config:      ${stats.config.uploaded} uploaded, ${stats.config.skipped} skipped, ${stats.config.errors} errors`
+  )
+  console.log(
+    `Time-Series: ${stats.timeSeries.uploaded} uploaded, ${stats.timeSeries.skipped} skipped, ${stats.timeSeries.errors} errors`
+  )
   console.log(`Duration:    ${duration}s`)
 
   if (options.dryRun) {
@@ -587,10 +625,14 @@ const args = process.argv.slice(2)
 const cacheDir = args.find(arg => !arg.startsWith('--'))
 
 if (!cacheDir) {
-  console.error('Usage: npx ts-node upload-local-to-firestore.ts <cache-dir> [options]')
+  console.error(
+    'Usage: npx ts-node upload-local-to-firestore.ts <cache-dir> [options]'
+  )
   console.error('')
   console.error('Options:')
-  console.error('  --dry-run       Show what would be uploaded without uploading')
+  console.error(
+    '  --dry-run       Show what would be uploaded without uploading'
+  )
   console.error('  --skip-existing Skip documents that already exist')
   console.error('  --snapshots     Upload only snapshots')
   console.error('  --config        Upload only config')

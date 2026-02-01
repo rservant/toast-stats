@@ -230,7 +230,9 @@ export class AnalyticsComputeService {
 
     try {
       const content = await fs.readFile(analyticsPath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
       return parsed.metadata.sourceSnapshotChecksum ?? null
     } catch {
       return null
@@ -253,7 +255,10 @@ export class AnalyticsComputeService {
 
     if (!exists) {
       // Analytics don't exist, need to compute
-      const currentChecksum = await this.calculateSnapshotChecksum(date, districtId)
+      const currentChecksum = await this.calculateSnapshotChecksum(
+        date,
+        districtId
+      )
       return {
         exists: false,
         needsRecomputation: true,
@@ -262,8 +267,14 @@ export class AnalyticsComputeService {
     }
 
     // Analytics exist, check if snapshot has changed
-    const currentChecksum = await this.calculateSnapshotChecksum(date, districtId)
-    const storedChecksum = await this.getStoredSnapshotChecksum(date, districtId)
+    const currentChecksum = await this.calculateSnapshotChecksum(
+      date,
+      districtId
+    )
+    const storedChecksum = await this.getStoredSnapshotChecksum(
+      date,
+      districtId
+    )
 
     // If we can't calculate current checksum, something is wrong
     if (!currentChecksum) {
@@ -441,20 +452,21 @@ export class AnalyticsComputeService {
       }
 
       // Requirement 5.1: Calculate checksum of source snapshot
-      const sourceSnapshotChecksum = status.currentChecksum ?? 
-        await this.calculateSnapshotChecksum(date, districtId)
+      const sourceSnapshotChecksum =
+        status.currentChecksum ??
+        (await this.calculateSnapshotChecksum(date, districtId))
 
       // Compute analytics using shared AnalyticsComputer
       // Note: AnalyticsComputer expects an array of snapshots for trend analysis
       // For single-date computation, we pass an array with one snapshot
-      const computationResult = await this.analyticsComputer.computeDistrictAnalytics(
-        districtId,
-        [snapshot]
-      )
+      const computationResult =
+        await this.analyticsComputer.computeDistrictAnalytics(districtId, [
+          snapshot,
+        ])
 
       // Requirement 5.4: Pass source snapshot checksum to AnalyticsWriter
-      const writeOptions = sourceSnapshotChecksum 
-        ? { sourceSnapshotChecksum } 
+      const writeOptions = sourceSnapshotChecksum
+        ? { sourceSnapshotChecksum }
         : undefined
 
       // Write analytics files using AnalyticsWriter
@@ -519,7 +531,9 @@ export class AnalyticsComputeService {
    * - 1.3: Generate all analytics types
    * - 1.5: IF analytics computation fails for a district, THEN continue processing
    */
-  async compute(options: ComputeOperationOptions): Promise<ComputeOperationResult> {
+  async compute(
+    options: ComputeOperationOptions
+  ): Promise<ComputeOperationResult> {
     const startTime = Date.now()
     const { date, districts: requestedDistricts, force, verbose } = options
 
@@ -643,7 +657,10 @@ export class AnalyticsComputeService {
     if (successfulResults.length > 0 && manifestEntries.length > 0) {
       try {
         await this.analyticsWriter.writeAnalyticsManifest(date, manifestEntries)
-        const manifestPath = path.join(this.getAnalyticsDir(date), 'manifest.json')
+        const manifestPath = path.join(
+          this.getAnalyticsDir(date),
+          'manifest.json'
+        )
         analyticsLocations.push(manifestPath)
       } catch (error) {
         const errorMessage =

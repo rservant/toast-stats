@@ -1,6 +1,6 @@
 /**
  * Core type definitions for analytics computation.
- * 
+ *
  * These types define the structure of analytics data that flows through
  * the pre-computed analytics pipeline.
  */
@@ -74,7 +74,11 @@ export interface ClubRiskFactors {
 /**
  * Club health status classification.
  */
-export type ClubHealthStatus = 'thriving' | 'stable' | 'vulnerable' | 'intervention_required'
+export type ClubHealthStatus =
+  | 'thriving'
+  | 'stable'
+  | 'vulnerable'
+  | 'intervention_required'
 
 /**
  * Individual club trend data.

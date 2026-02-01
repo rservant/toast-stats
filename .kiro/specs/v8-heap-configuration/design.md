@@ -9,6 +9,7 @@ This design implements V8 heap memory configuration for the backend to prevent O
 3. **Memory Monitor**: Periodic memory metrics logging for operational visibility
 
 The design follows the memory budget formula from the performance SLOs:
+
 ```
 Container Memory (512Mi) = V8 Heap (384MB) + Native Memory (~100MB) + Overhead (~28MB)
 ```
@@ -20,19 +21,19 @@ flowchart TD
     subgraph Docker["Docker Container (512Mi)"]
         subgraph Node["Node.js Process"]
             ENV["NODE_OPTIONS=--max-old-space-size=384"]
-            
+
             subgraph Startup["Application Startup"]
                 HV["HeapValidator"]
                 MM["MemoryMonitor"]
                 Server["Express Server"]
             end
-            
+
             ENV --> HV
             HV --> MM
             MM --> Server
         end
     end
-    
+
     HV -->|"Logs warning if misconfigured"| Logs["Structured Logs"]
     MM -->|"Logs metrics every 60s"| Logs
 ```
@@ -52,6 +53,7 @@ ENV NODE_OPTIONS="--max-old-space-size=384"
 ```
 
 This configuration:
+
 - Sets V8 old space limit to 384MB (~75% of 512Mi container)
 - Leaves ~128MB for native memory, buffers, and runtime overhead
 - Is applied automatically when the container starts
@@ -76,6 +78,7 @@ interface HeapValidator {
 ```
 
 **Validation Logic:**
+
 1. Read V8 heap statistics using `v8.getHeapStatistics()`
 2. Extract `heap_size_limit` and convert to MB
 3. Compare against container memory (default 512MB, configurable via `CONTAINER_MEMORY_MB`)
@@ -103,6 +106,7 @@ interface MemoryMonitor {
 ```
 
 **Metrics Collection:**
+
 - Uses `process.memoryUsage()` to collect all memory metrics
 - Converts bytes to megabytes for readability
 - Logs using existing logger infrastructure with structured format
@@ -110,6 +114,7 @@ interface MemoryMonitor {
 ### Integration with index.ts
 
 The main entry point will be modified to:
+
 1. Import and call `HeapValidator.logValidation()` early in startup
 2. Import and start `MemoryMonitor` after server initialization
 3. Stop `MemoryMonitor` during graceful shutdown
@@ -145,7 +150,7 @@ interface V8HeapStatistics {
   total_physical_size: number
   total_available_size: number
   used_heap_size: number
-  heap_size_limit: number  // This is what --max-old-space-size controls
+  heap_size_limit: number // This is what --max-old-space-size controls
   malloced_memory: number
   peak_malloced_memory: number
   does_zap_garbage: number
@@ -159,23 +164,22 @@ interface V8HeapStatistics {
 ```typescript
 // From process.memoryUsage()
 interface NodeMemoryUsage {
-  rss: number        // Resident Set Size - total memory allocated
-  heapTotal: number  // V8's total allocated heap
-  heapUsed: number   // V8's currently used heap
-  external: number   // Memory used by C++ objects (Buffers)
+  rss: number // Resident Set Size - total memory allocated
+  heapTotal: number // V8's total allocated heap
+  heapUsed: number // V8's currently used heap
+  external: number // Memory used by C++ objects (Buffers)
   arrayBuffers: number // Memory for ArrayBuffer backing stores
 }
 ```
 
-
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property-Based Testing Assessment
 
 Per the `property-testing-guidance.md` steering document, property-based testing SHOULD NOT be used when:
+
 - 3-5 well-chosen examples would provide equivalent confidence
 - The input space is not genuinely complex
 - The "property" would just restate the implementation
@@ -189,6 +193,7 @@ Per the `property-testing-guidance.md` steering document, property-based testing
 ### Conclusion
 
 **No property-based tests are warranted for this specification.** The acceptance criteria involve:
+
 - Simple threshold comparisons (not complex input spaces)
 - Trivial arithmetic conversions (not mathematical invariants requiring PBT)
 - Configuration validation (not business rules with universal properties)
@@ -199,21 +204,21 @@ Unit tests with well-chosen examples will provide equivalent confidence with bet
 
 ### Heap Validation Errors
 
-| Error Condition | Handling | Severity |
-|-----------------|----------|----------|
-| v8 module unavailable | Log error, continue startup | Warning |
-| Invalid CONTAINER_MEMORY_MB env var | Use default 512MB, log warning | Warning |
-| Heap ratio > 85% | Log warning with recommendation | Warning |
+| Error Condition                     | Handling                        | Severity |
+| ----------------------------------- | ------------------------------- | -------- |
+| v8 module unavailable               | Log error, continue startup     | Warning  |
+| Invalid CONTAINER_MEMORY_MB env var | Use default 512MB, log warning  | Warning  |
+| Heap ratio > 85%                    | Log warning with recommendation | Warning  |
 
 The heap validator MUST NOT prevent application startup. All validation errors are logged but do not block the server from starting.
 
 ### Memory Monitor Errors
 
-| Error Condition | Handling | Severity |
-|-----------------|----------|----------|
-| process.memoryUsage() fails | Log error, skip this interval | Warning |
-| Logger unavailable | Fall back to console.log | Warning |
-| Interval already running | No-op, log debug message | Debug |
+| Error Condition             | Handling                      | Severity |
+| --------------------------- | ----------------------------- | -------- |
+| process.memoryUsage() fails | Log error, skip this interval | Warning  |
+| Logger unavailable          | Fall back to console.log      | Warning  |
+| Interval already running    | No-op, log debug message      | Debug    |
 
 The memory monitor MUST be resilient to transient errors and continue operating.
 
@@ -257,8 +262,8 @@ Per the `property-testing-guidance.md` steering document:
 
 Following the project's test organization:
 
-| Test Type | Location | Naming |
-|-----------|----------|--------|
-| HeapValidator unit tests | `backend/src/utils/__tests__/heapValidator.test.ts` | Co-located with source |
-| MemoryMonitor unit tests | `backend/src/utils/__tests__/memoryMonitor.test.ts` | Co-located with source |
-| Integration tests | `backend/src/__tests__/memory-integration.test.ts` | Integration test directory |
+| Test Type                | Location                                            | Naming                     |
+| ------------------------ | --------------------------------------------------- | -------------------------- |
+| HeapValidator unit tests | `backend/src/utils/__tests__/heapValidator.test.ts` | Co-located with source     |
+| MemoryMonitor unit tests | `backend/src/utils/__tests__/memoryMonitor.test.ts` | Co-located with source     |
+| Integration tests        | `backend/src/__tests__/memory-integration.test.ts`  | Integration test directory |

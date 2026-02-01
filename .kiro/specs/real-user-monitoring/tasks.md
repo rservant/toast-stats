@@ -18,19 +18,16 @@ This plan implements Real User Monitoring (RUM) by installing the web-vitals lib
     - Import Metric type from web-vitals
     - Define VitalsPayload interface with all required fields
     - _Requirements: 3.1, 6.1_
-  
   - [ ] 2.2 Implement isProduction helper function
     - Check hostname for localhost and 127.0.0.1
     - Return false for development, true for production
     - _Requirements: 5.1, 5.2, 5.3_
-  
   - [ ] 2.3 Implement sendToAnalytics function
     - Create VitalsPayload from Metric object
     - Serialize payload as JSON
     - Use SendBeacon API with fetch fallback
     - Skip transmission in development
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.2_
-  
   - [ ] 2.4 Implement initWebVitals function
     - Dynamically import web-vitals library
     - Register listeners for LCP, FID, CLS, INP, TTFB
@@ -42,21 +39,18 @@ This plan implements Real User Monitoring (RUM) by installing the web-vitals lib
     - Create `backend/src/routes/analytics.ts`
     - Import Router from express and z from zod
     - _Requirements: 4.1_
-  
   - [ ] 3.2 Implement Zod validation schema
     - Define vitalsPayloadSchema with all required fields
     - Use z.enum for name and rating fields
     - Use z.number for value and delta
     - Use z.string for id and navigationType
     - _Requirements: 4.4, 6.2_
-  
   - [ ] 3.3 Implement POST /vitals handler
     - Validate request body with Zod schema
     - Return 400 for invalid payloads with error details
     - Return 204 for valid payloads
     - Log metric in structured format for Cloud Monitoring
     - _Requirements: 4.2, 4.3, 4.5_
-  
   - [ ] 3.4 Register analytics routes in backend index
     - Import analytics routes in backend/src/index.ts
     - Mount at /api/analytics path
@@ -82,23 +76,20 @@ This plan implements Real User Monitoring (RUM) by installing the web-vitals lib
   - Test endpoint manually with curl
 
 - [ ] 7. Write tests
-  - [ ]* 7.1 Write unit tests for isProduction function
+  - [ ]\* 7.1 Write unit tests for isProduction function
     - Test localhost returns false
     - Test 127.0.0.1 returns false
     - Test production hostname returns true
     - _Requirements: 5.1, 5.2, 5.3_
-  
-  - [ ]* 7.2 Write unit tests for backend validation
+  - [ ]\* 7.2 Write unit tests for backend validation
     - Test valid payload returns 204
     - Test missing fields returns 400
     - Test invalid metric name returns 400
     - _Requirements: 4.2, 4.3, 4.4_
-  
-  - [ ]* 7.3 Write property test for payload round-trip
+  - [ ]\* 7.3 Write property test for payload round-trip
     - **Property 1: Metric Payload Round-Trip**
     - **Validates: Requirements 3.2, 3.3**
-  
-  - [ ]* 7.4 Write property test for production detection
+  - [ ]\* 7.4 Write property test for production detection
     - **Property 2: Production Environment Detection**
     - **Validates: Requirements 5.1, 5.2, 5.3**
 

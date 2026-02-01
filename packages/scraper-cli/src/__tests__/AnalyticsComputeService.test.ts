@@ -36,10 +36,7 @@ function createIsolatedCacheDir(): {
   cleanup: () => Promise<void>
 } {
   const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const cachePath = path.join(
-    os.tmpdir(),
-    `analytics-compute-test-${uniqueId}`
-  )
+  const cachePath = path.join(os.tmpdir(), `analytics-compute-test-${uniqueId}`)
 
   return {
     path: cachePath,
@@ -337,14 +334,8 @@ describe('AnalyticsComputeService', () => {
       )
 
       // Write non-district files
-      await fs.writeFile(
-        path.join(snapshotDir, 'metadata.json'),
-        '{}'
-      )
-      await fs.writeFile(
-        path.join(snapshotDir, 'manifest.json'),
-        '{}'
-      )
+      await fs.writeFile(path.join(snapshotDir, 'metadata.json'), '{}')
+      await fs.writeFile(path.join(snapshotDir, 'manifest.json'), '{}')
 
       const districts =
         await analyticsComputeService.discoverAvailableDistricts(date)
@@ -387,10 +378,7 @@ describe('AnalyticsComputeService', () => {
       )
 
       // Verify analytics file
-      const analyticsContent = await fs.readFile(
-        result.analyticsPath!,
-        'utf-8'
-      )
+      const analyticsContent = await fs.readFile(result.analyticsPath!, 'utf-8')
       const analytics = JSON.parse(
         analyticsContent
       ) as PreComputedAnalyticsFile<DistrictAnalytics>
@@ -439,10 +427,7 @@ describe('AnalyticsComputeService', () => {
         districtId
       )
 
-      const healthContent = await fs.readFile(
-        result.clubHealthPath!,
-        'utf-8'
-      )
+      const healthContent = await fs.readFile(result.clubHealthPath!, 'utf-8')
       const health = JSON.parse(
         healthContent
       ) as PreComputedAnalyticsFile<ClubHealthData>
@@ -872,11 +857,15 @@ describe('AnalyticsComputeService', () => {
         `district_${districtId}_analytics.json`
       )
       const content = await fs.readFile(analyticsPath, 'utf-8')
-      const analytics = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const analytics = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Requirement 5.4: Source snapshot checksum should be stored
       expect(analytics.metadata.sourceSnapshotChecksum).toBeDefined()
-      expect(analytics.metadata.sourceSnapshotChecksum).toMatch(/^[a-f0-9]{64}$/)
+      expect(analytics.metadata.sourceSnapshotChecksum).toMatch(
+        /^[a-f0-9]{64}$/
+      )
     })
 
     it('should skip computation when snapshot checksum is unchanged (Requirement 5.3)', async () => {
@@ -908,10 +897,8 @@ describe('AnalyticsComputeService', () => {
       await writeDistrictSnapshot(testCache.path, date, districtId, stats)
 
       // First computation
-      const firstResult = await analyticsComputeService.computeDistrictAnalytics(
-        date,
-        districtId
-      )
+      const firstResult =
+        await analyticsComputeService.computeDistrictAnalytics(date, districtId)
       expect(firstResult.success).toBe(true)
       expect(firstResult.skipped).toBeUndefined()
 
@@ -924,7 +911,9 @@ describe('AnalyticsComputeService', () => {
         `district_${districtId}_analytics.json`
       )
       const originalContent = await fs.readFile(analyticsPath, 'utf-8')
-      const originalAnalytics = JSON.parse(originalContent) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const originalAnalytics = JSON.parse(
+        originalContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
       const originalChecksum = originalAnalytics.metadata.sourceSnapshotChecksum
 
       // Modify the snapshot (change membership count)
@@ -935,22 +924,32 @@ describe('AnalyticsComputeService', () => {
           totalMembership: 100, // Changed from 48
         },
       }
-      await writeDistrictSnapshot(testCache.path, date, districtId, modifiedStats)
-
-      // Second computation - snapshot changed, should recompute
-      const secondResult = await analyticsComputeService.computeDistrictAnalytics(
+      await writeDistrictSnapshot(
+        testCache.path,
         date,
         districtId,
-        { force: false }
+        modifiedStats
       )
+
+      // Second computation - snapshot changed, should recompute
+      const secondResult =
+        await analyticsComputeService.computeDistrictAnalytics(
+          date,
+          districtId,
+          { force: false }
+        )
 
       expect(secondResult.success).toBe(true)
       expect(secondResult.skipped).toBeUndefined() // Should NOT be skipped
 
       // Verify the checksum was updated
       const newContent = await fs.readFile(analyticsPath, 'utf-8')
-      const newAnalytics = JSON.parse(newContent) as PreComputedAnalyticsFile<DistrictAnalytics>
-      expect(newAnalytics.metadata.sourceSnapshotChecksum).not.toBe(originalChecksum)
+      const newAnalytics = JSON.parse(
+        newContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
+      expect(newAnalytics.metadata.sourceSnapshotChecksum).not.toBe(
+        originalChecksum
+      )
     })
 
     it('should bypass checksum comparison with --force-analytics (Requirement 5.5)', async () => {
@@ -972,7 +971,9 @@ describe('AnalyticsComputeService', () => {
         `district_${districtId}_analytics.json`
       )
       const originalContent = await fs.readFile(analyticsPath, 'utf-8')
-      const originalAnalytics = JSON.parse(originalContent) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const originalAnalytics = JSON.parse(
+        originalContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
       const originalComputedAt = originalAnalytics.metadata.computedAt
 
       // Wait a bit to ensure timestamp difference
@@ -990,7 +991,9 @@ describe('AnalyticsComputeService', () => {
 
       // Verify the file was rewritten (computedAt should be different)
       const newContent = await fs.readFile(analyticsPath, 'utf-8')
-      const newAnalytics = JSON.parse(newContent) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const newAnalytics = JSON.parse(
+        newContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
       expect(newAnalytics.metadata.computedAt).not.toBe(originalComputedAt)
     })
 
@@ -1010,7 +1013,10 @@ describe('AnalyticsComputeService', () => {
       )
       const snapshotContent = await fs.readFile(snapshotPath, 'utf-8')
       const crypto = await import('crypto')
-      const expectedChecksum = crypto.createHash('sha256').update(snapshotContent).digest('hex')
+      const expectedChecksum = crypto
+        .createHash('sha256')
+        .update(snapshotContent)
+        .digest('hex')
 
       // Compute analytics
       await analyticsComputeService.computeDistrictAnalytics(date, districtId)
@@ -1024,7 +1030,9 @@ describe('AnalyticsComputeService', () => {
         `district_${districtId}_analytics.json`
       )
       const analyticsContent = await fs.readFile(analyticsPath, 'utf-8')
-      const analytics = JSON.parse(analyticsContent) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const analytics = JSON.parse(
+        analyticsContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       expect(analytics.metadata.sourceSnapshotChecksum).toBe(expectedChecksum)
     })
@@ -1095,12 +1103,19 @@ describe('AnalyticsComputeService', () => {
       expect(result.skipped).toBeUndefined() // Should NOT be skipped
 
       // Verify the new analytics has sourceSnapshotChecksum
-      const analyticsPath = path.join(analyticsDir, `district_${districtId}_analytics.json`)
+      const analyticsPath = path.join(
+        analyticsDir,
+        `district_${districtId}_analytics.json`
+      )
       const newContent = await fs.readFile(analyticsPath, 'utf-8')
-      const newAnalytics = JSON.parse(newContent) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const newAnalytics = JSON.parse(
+        newContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       expect(newAnalytics.metadata.sourceSnapshotChecksum).toBeDefined()
-      expect(newAnalytics.metadata.sourceSnapshotChecksum).toMatch(/^[a-f0-9]{64}$/)
+      expect(newAnalytics.metadata.sourceSnapshotChecksum).toMatch(
+        /^[a-f0-9]{64}$/
+      )
     })
 
     it('should store same checksum in all analytics files for a district', async () => {
@@ -1133,9 +1148,15 @@ describe('AnalyticsComputeService', () => {
         'utf-8'
       )
 
-      const analytics = JSON.parse(analyticsContent) as PreComputedAnalyticsFile<unknown>
-      const membership = JSON.parse(membershipContent) as PreComputedAnalyticsFile<unknown>
-      const clubHealth = JSON.parse(clubHealthContent) as PreComputedAnalyticsFile<unknown>
+      const analytics = JSON.parse(
+        analyticsContent
+      ) as PreComputedAnalyticsFile<unknown>
+      const membership = JSON.parse(
+        membershipContent
+      ) as PreComputedAnalyticsFile<unknown>
+      const clubHealth = JSON.parse(
+        clubHealthContent
+      ) as PreComputedAnalyticsFile<unknown>
 
       // All should have the same sourceSnapshotChecksum
       expect(analytics.metadata.sourceSnapshotChecksum).toBeDefined()

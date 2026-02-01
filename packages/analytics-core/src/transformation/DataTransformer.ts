@@ -189,7 +189,7 @@ export class DataTransformer implements IDataTransformer {
 
       // Filter out footer rows containing "Month of"
       const hasMonthOf = row.some(
-        (value) => typeof value === 'string' && value.includes('Month of')
+        value => typeof value === 'string' && value.includes('Month of')
       )
       if (hasMonthOf) continue
 
@@ -218,7 +218,12 @@ export class DataTransformer implements IDataTransformer {
 
     for (const record of clubPerformance) {
       const clubId = this.extractString(record, 'Club Number', 'ClubId', 'Club')
-      const clubName = this.extractString(record, 'Club Name', 'ClubName', 'Name')
+      const clubName = this.extractString(
+        record,
+        'Club Name',
+        'ClubName',
+        'Name'
+      )
 
       if (!clubId || !clubName) {
         continue
@@ -245,7 +250,11 @@ export class DataTransformer implements IDataTransformer {
         status: this.extractClubStatus(record),
       }
 
-      const charterDate = this.extractString(record, 'Charter Date', 'Chartered')
+      const charterDate = this.extractString(
+        record,
+        'Charter Date',
+        'Chartered'
+      )
       if (charterDate) {
         club.charterDate = charterDate
       }
@@ -289,7 +298,8 @@ export class DataTransformer implements IDataTransformer {
       } else {
         divisionMap.set(divisionId, {
           divisionId,
-          divisionName: this.extractString(record, 'Division Name', 'Name') ?? divisionId,
+          divisionName:
+            this.extractString(record, 'Division Name', 'Name') ?? divisionId,
           clubCount: this.extractNumber(record, 'Club Count', 'Clubs'),
           membershipTotal: this.extractNumber(
             record,
@@ -297,7 +307,11 @@ export class DataTransformer implements IDataTransformer {
             'Members',
             'Active Members'
           ),
-          paymentsTotal: this.extractNumber(record, 'Total to Date', 'Payments'),
+          paymentsTotal: this.extractNumber(
+            record,
+            'Total to Date',
+            'Payments'
+          ),
         })
       }
     }
@@ -349,7 +363,11 @@ export class DataTransformer implements IDataTransformer {
             'Membership',
             'Members'
           ),
-          paymentsTotal: this.extractNumber(record, 'Total to Date', 'Payments'),
+          paymentsTotal: this.extractNumber(
+            record,
+            'Total to Date',
+            'Payments'
+          ),
         })
       }
     }
@@ -454,7 +472,10 @@ export class DataTransformer implements IDataTransformer {
       'Distinguished Status',
       'Distinguished'
     )
-    if (distinguished && distinguished.toLowerCase().includes('distinguished')) {
+    if (
+      distinguished &&
+      distinguished.toLowerCase().includes('distinguished')
+    ) {
       return distinguished
     }
 

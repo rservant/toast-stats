@@ -15,7 +15,6 @@ import type {
   MembershipTrendData,
 } from '../types.js'
 
-
 /**
  * Internal club trend structure for membership analysis
  */
@@ -40,7 +39,9 @@ export class MembershipAnalyticsModule {
    * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
    * @returns MembershipTrendData object
    */
-  generateMembershipTrends(snapshots: DistrictStatistics[]): MembershipTrendData {
+  generateMembershipTrends(
+    snapshots: DistrictStatistics[]
+  ): MembershipTrendData {
     if (snapshots.length === 0) {
       return {
         membershipTrend: [],
@@ -120,7 +121,8 @@ export class MembershipAnalyticsModule {
         }
 
         const first = club.membershipTrend[0]?.count ?? 0
-        const last = club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0
+        const last =
+          club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0
         const growth = last - first
 
         return { clubId: club.clubId, clubName: club.clubName, growth }
@@ -150,7 +152,8 @@ export class MembershipAnalyticsModule {
         }
 
         const first = club.membershipTrend[0]?.count ?? 0
-        const last = club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0
+        const last =
+          club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0
         const decline = first - last // Positive value means decline
 
         return { clubId: club.clubId, clubName: club.clubName, decline }

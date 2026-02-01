@@ -1,6 +1,6 @@
 /**
  * @toastmasters/analytics-core
- * 
+ *
  * Shared analytics computation logic for Toastmasters statistics.
  * This package provides the core algorithms and types used by both
  * scraper-cli (for pre-computing analytics) and backend (for validation).
@@ -42,33 +42,33 @@ export type { MultiYearTrendDirection } from './analytics/index.js'
 export type {
   // Metadata
   AnalyticsMetadata,
-  
+
   // Membership trends
   MembershipTrendPoint,
   PaymentsTrendPoint,
   YearOverYearComparison,
   MembershipTrendData,
-  
+
   // Club health
   ClubRiskFactors,
   ClubHealthStatus,
   ClubTrend,
   ClubHealthData,
-  
+
   // Division and area
   DivisionRanking,
   AreaPerformance,
-  
+
   // Distinguished clubs
   DistinguishedProjection,
   DistinguishedClubSummary,
-  
+
   // Core analytics
   DateRange,
   DistrictAnalytics,
   AnalyticsComputationResult,
   ComputeOptions,
-  
+
   // File structures
   PreComputedAnalyticsFile,
   AnalyticsManifestEntry,
@@ -79,18 +79,18 @@ export type {
 export type {
   // Raw data
   RawCSVData,
-  
+
   // Statistics
   DistrictStatistics,
   ClubStatistics,
   DivisionStatistics,
   AreaStatistics,
   DistrictTotals,
-  
+
   // Snapshots
   SnapshotMetadata,
   Snapshot,
-  
+
   // Core interfaces
   IAnalyticsComputer,
   IDataTransformer,

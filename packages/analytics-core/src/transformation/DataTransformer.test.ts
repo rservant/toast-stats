@@ -27,7 +27,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.districtId).toBe('D101')
       expect(result.snapshotDate).toBe('2024-01-15')
@@ -41,7 +45,16 @@ describe('DataTransformer', () => {
     it('should transform club performance CSV into club statistics', async () => {
       const csvData: RawCSVData = {
         clubPerformance: [
-          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members', 'Total to Date', 'Goals Met', 'Club Status'],
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Active Members',
+            'Total to Date',
+            'Goals Met',
+            'Club Status',
+          ],
           ['1234', 'Test Club A', 'A', '1', '25', '30', '5', 'Active'],
           ['5678', 'Test Club B', 'A', '2', '18', '22', '3', 'Active'],
         ],
@@ -49,7 +62,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.clubs).toHaveLength(2)
       expect(result.clubs[0]).toEqual({
@@ -77,7 +94,15 @@ describe('DataTransformer', () => {
     it('should calculate correct totals from club data', async () => {
       const csvData: RawCSVData = {
         clubPerformance: [
-          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members', 'Total to Date', 'Goals Met'],
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Active Members',
+            'Total to Date',
+            'Goals Met',
+          ],
           ['1234', 'Club A', 'A', '1', '25', '30', '5'],
           ['5678', 'Club B', 'B', '1', '18', '22', '3'],
           ['9012', 'Club C', 'A', '2', '32', '40', '7'],
@@ -86,7 +111,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.totals.totalClubs).toBe(3)
       expect(result.totals.totalMembership).toBe(75) // 25 + 18 + 32
@@ -97,14 +126,24 @@ describe('DataTransformer', () => {
       const csvData: RawCSVData = {
         clubPerformance: [],
         divisionPerformance: [
-          ['Division', 'Division Name', 'Club Count', 'Membership', 'Total to Date'],
+          [
+            'Division',
+            'Division Name',
+            'Club Count',
+            'Membership',
+            'Total to Date',
+          ],
           ['A', 'Division Alpha', '5', '120', '150'],
           ['B', 'Division Beta', '4', '95', '110'],
         ],
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.divisions).toHaveLength(2)
       expect(result.divisions[0]).toEqual({
@@ -126,7 +165,14 @@ describe('DataTransformer', () => {
     it('should extract area statistics from club performance data', async () => {
       const csvData: RawCSVData = {
         clubPerformance: [
-          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members', 'Total to Date'],
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Active Members',
+            'Total to Date',
+          ],
           ['1234', 'Club A', 'A', '1', '25', '30'],
           ['5678', 'Club B', 'A', '1', '18', '22'],
           ['9012', 'Club C', 'A', '2', '32', '40'],
@@ -135,10 +181,14 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.areas).toHaveLength(2)
-      
+
       const area1 = result.areas.find(a => a.areaId === '1')
       expect(area1).toBeDefined()
       expect(area1?.clubCount).toBe(2)
@@ -163,7 +213,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.clubs).toHaveLength(1)
       expect(result.clubs[0]?.clubId).toBe('1234')
@@ -181,7 +235,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.clubs).toHaveLength(1)
       expect(result.clubs[0]?.clubId).toBe('1234')
@@ -197,7 +255,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.clubs).toHaveLength(1)
       expect(result.clubs[0]?.clubId).toBe('1234')
@@ -209,7 +271,14 @@ describe('DataTransformer', () => {
     it('should count distinguished clubs correctly', async () => {
       const csvData: RawCSVData = {
         clubPerformance: [
-          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members', 'Club Distinguished Status'],
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Active Members',
+            'Club Distinguished Status',
+          ],
           ['1234', 'Club A', 'A', '1', '25', 'Distinguished'],
           ['5678', 'Club B', 'A', '2', '18', 'Select Distinguished'],
           ['9012', 'Club C', 'B', '1', '32', "President's Distinguished"],
@@ -219,7 +288,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.totals.distinguishedClubs).toBe(3)
       expect(result.totals.selectDistinguishedClubs).toBe(1)
@@ -229,14 +302,25 @@ describe('DataTransformer', () => {
     it('should handle numeric values as strings', async () => {
       const csvData: RawCSVData = {
         clubPerformance: [
-          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members', 'Total to Date'],
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Active Members',
+            'Total to Date',
+          ],
           ['1234', 'Test Club', 'A', '1', '25', '30'],
         ],
         divisionPerformance: [],
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.clubs[0]?.membershipCount).toBe(25)
       expect(result.clubs[0]?.paymentsCount).toBe(30)
@@ -252,7 +336,11 @@ describe('DataTransformer', () => {
         districtPerformance: [],
       }
 
-      const result = await transformer.transformRawCSV('2024-01-15', 'D101', csvData)
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
 
       expect(result.clubs).toHaveLength(1)
       expect(result.clubs[0]?.divisionId).toBe('')
@@ -363,8 +451,12 @@ describe('DataTransformer', () => {
 
       await loggedTransformer.transformRawCSV('2024-01-15', 'D101', csvData)
 
-      expect(logs.some(log => log.includes('Transforming raw CSV data'))).toBe(true)
-      expect(logs.some(log => log.includes('CSV transformation complete'))).toBe(true)
+      expect(logs.some(log => log.includes('Transforming raw CSV data'))).toBe(
+        true
+      )
+      expect(
+        logs.some(log => log.includes('CSV transformation complete'))
+      ).toBe(true)
     })
   })
 })

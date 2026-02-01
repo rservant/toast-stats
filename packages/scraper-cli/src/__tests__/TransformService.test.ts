@@ -27,10 +27,7 @@ function createIsolatedCacheDir(): {
   cleanup: () => Promise<void>
 } {
   const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const cachePath = path.join(
-    os.tmpdir(),
-    `transform-service-test-${uniqueId}`
-  )
+  const cachePath = path.join(os.tmpdir(), `transform-service-test-${uniqueId}`)
 
   return {
     path: cachePath,
@@ -80,9 +77,8 @@ describe('TransformService', () => {
 
   describe('discoverAvailableDistricts', () => {
     it('should return empty array when raw-csv directory does not exist', async () => {
-      const districts = await transformService.discoverAvailableDistricts(
-        '2024-01-15'
-      )
+      const districts =
+        await transformService.discoverAvailableDistricts('2024-01-15')
       expect(districts).toEqual([])
     })
 
@@ -137,10 +133,7 @@ describe('TransformService', () => {
 
   describe('transformDistrict', () => {
     it('should return error when raw CSV data not found', async () => {
-      const result = await transformService.transformDistrict(
-        '2024-01-15',
-        '1'
-      )
+      const result = await transformService.transformDistrict('2024-01-15', '1')
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('Raw CSV data not found')
@@ -237,9 +230,13 @@ describe('TransformService', () => {
         SAMPLE_CLUB_CSV
       )
 
-      const result = await transformService.transformDistrict(date, districtId, {
-        force: true,
-      })
+      const result = await transformService.transformDistrict(
+        date,
+        districtId,
+        {
+          force: true,
+        }
+      )
 
       expect(result.success).toBe(true)
       expect(result.skipped).toBeFalsy()

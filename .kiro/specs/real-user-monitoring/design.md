@@ -26,7 +26,7 @@ graph LR
         I -->|Yes| J[SendBeacon/Fetch]
         I -->|No| K[Skip]
     end
-    
+
     subgraph "Backend (API)"
         J --> L[POST /api/analytics/vitals]
         L --> M[Validate Payload]
@@ -63,8 +63,10 @@ export interface VitalsPayload {
 }
 
 function isProduction(): boolean {
-  return !window.location.hostname.includes('localhost') &&
-         !window.location.hostname.includes('127.0.0.1')
+  return (
+    !window.location.hostname.includes('localhost') &&
+    !window.location.hostname.includes('127.0.0.1')
+  )
 }
 
 function sendToAnalytics(metric: Metric): void {
@@ -98,15 +100,17 @@ function sendToAnalytics(metric: Metric): void {
 }
 
 export function initWebVitals(): void {
-  import('web-vitals').then(({ onLCP, onFID, onCLS, onINP, onTTFB }) => {
-    onLCP(sendToAnalytics)
-    onFID(sendToAnalytics)
-    onCLS(sendToAnalytics)
-    onINP(sendToAnalytics)
-    onTTFB(sendToAnalytics)
-  }).catch(() => {
-    // Silently fail if web-vitals fails to load
-  })
+  import('web-vitals')
+    .then(({ onLCP, onFID, onCLS, onINP, onTTFB }) => {
+      onLCP(sendToAnalytics)
+      onFID(sendToAnalytics)
+      onCLS(sendToAnalytics)
+      onINP(sendToAnalytics)
+      onTTFB(sendToAnalytics)
+    })
+    .catch(() => {
+      // Silently fail if web-vitals fails to load
+    })
 }
 ```
 
@@ -173,19 +177,19 @@ export default router
 interface VitalsPayload {
   /** Metric name: LCP, FID, CLS, INP, or TTFB */
   name: 'LCP' | 'FID' | 'CLS' | 'INP' | 'TTFB'
-  
+
   /** Metric value (milliseconds for timing, score for CLS) */
   value: number
-  
+
   /** Performance rating based on thresholds */
   rating: 'good' | 'needs-improvement' | 'poor'
-  
+
   /** Change since last report (for CLS) */
   delta: number
-  
+
   /** Unique identifier for this metric instance */
   id: string
-  
+
   /** Navigation type: navigate, reload, back_forward, prerender */
   navigationType: string
 }
@@ -193,31 +197,31 @@ interface VitalsPayload {
 
 ### SLO Thresholds Reference
 
-| Metric | Good | Needs Improvement | Poor |
-|--------|------|-------------------|------|
-| LCP | ≤ 2500ms | ≤ 4000ms | > 4000ms |
-| FID | ≤ 100ms | ≤ 300ms | > 300ms |
-| CLS | ≤ 0.1 | ≤ 0.25 | > 0.25 |
-| INP | ≤ 200ms | ≤ 500ms | > 500ms |
-| TTFB | ≤ 800ms | ≤ 1800ms | > 1800ms |
+| Metric | Good     | Needs Improvement | Poor     |
+| ------ | -------- | ----------------- | -------- |
+| LCP    | ≤ 2500ms | ≤ 4000ms          | > 4000ms |
+| FID    | ≤ 100ms  | ≤ 300ms           | > 300ms  |
+| CLS    | ≤ 0.1    | ≤ 0.25            | > 0.25   |
+| INP    | ≤ 200ms  | ≤ 500ms           | > 500ms  |
+| TTFB   | ≤ 800ms  | ≤ 1800ms          | > 1800ms |
 
 ## Correctness Properties
 
 ### Property 1: Metric Payload Round-Trip
 
-*For any* valid VitalsPayload object, serializing to JSON and deserializing SHALL produce an equivalent object with all fields preserved.
+_For any_ valid VitalsPayload object, serializing to JSON and deserializing SHALL produce an equivalent object with all fields preserved.
 
 **Validates: Requirements 3.2, 3.3**
 
 ### Property 2: Production Environment Detection
 
-*For any* hostname containing 'localhost' or '127.0.0.1', the isProduction() function SHALL return false, and for all other hostnames SHALL return true.
+_For any_ hostname containing 'localhost' or '127.0.0.1', the isProduction() function SHALL return false, and for all other hostnames SHALL return true.
 
 **Validates: Requirements 5.1, 5.2, 5.3**
 
 ### Property 3: Payload Validation Completeness
 
-*For any* request body missing required fields (name, value, rating, delta, id, navigationType), the Vitals_Endpoint SHALL return HTTP 400.
+_For any_ request body missing required fields (name, value, rating, delta, id, navigationType), the Vitals_Endpoint SHALL return HTTP 400.
 
 **Validates: Requirements 4.3, 4.4**
 

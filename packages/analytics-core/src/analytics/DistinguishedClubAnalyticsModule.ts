@@ -49,7 +49,7 @@ export class DistinguishedClubAnalyticsModule {
 
     for (const club of latestSnapshot.clubs) {
       const status = this.determineDistinguishedStatus(club)
-      
+
       // Only include clubs that have achieved some distinguished status
       if (status !== 'none') {
         summaries.push({
@@ -132,7 +132,7 @@ export class DistinguishedClubAnalyticsModule {
 
     for (const club of snapshot.clubs) {
       const status = this.determineDistinguishedStatus(club)
-      
+
       switch (status) {
         case 'president':
           president++
@@ -180,7 +180,9 @@ export class DistinguishedClubAnalyticsModule {
    * - Select Distinguished: 7+ goals AND 20+ members (or net growth >= 5)
    * - Distinguished: 5+ goals AND 20+ members (or net growth >= 3)
    */
-  private determineDistinguishedStatus(club: ClubStatistics): DistinguishedStatus {
+  private determineDistinguishedStatus(
+    club: ClubStatistics
+  ): DistinguishedStatus {
     const dcpGoals = club.dcpGoals
     const membership = club.membershipCount
 

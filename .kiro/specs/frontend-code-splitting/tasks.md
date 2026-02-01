@@ -34,13 +34,11 @@ This plan implements route-based code splitting by converting static page import
     - Implement React error boundary with getDerivedStateFromError
     - Track error state and provide reset mechanism
     - _Requirements: 5.1, 5.3_
-  
   - [ ] 4.2 Create ChunkLoadError display component
     - Display user-friendly error message
     - Include retry button that reloads the page
     - Style consistently with application design
     - _Requirements: 5.2_
-  
   - [ ] 4.3 Wrap router with ChunkErrorBoundary
     - Add error boundary around RouterProvider or route elements
     - Ensure errors are caught at appropriate level
@@ -52,21 +50,18 @@ This plan implements route-based code splitting by converting static page import
   - Verify routes still navigate correctly
 
 - [ ] 6. Write tests for code splitting
-  - [ ]* 6.1 Write unit tests for PageLoadingFallback
+  - [ ]\* 6.1 Write unit tests for PageLoadingFallback
     - Test that component renders skeleton elements
     - Test accessibility attributes are present
     - _Requirements: 2.3, 2.4_
-  
-  - [ ]* 6.2 Write unit tests for ChunkErrorBoundary
+  - [ ]\* 6.2 Write unit tests for ChunkErrorBoundary
     - Test error catching behavior
     - Test retry functionality
     - _Requirements: 5.1, 5.2_
-  
-  - [ ]* 6.3 Write property test for fallback display
+  - [ ]\* 6.3 Write property test for fallback display
     - **Property 1: Fallback Display During Loading**
     - **Validates: Requirements 2.2**
-  
-  - [ ]* 6.4 Write property test for error containment
+  - [ ]\* 6.4 Write property test for error containment
     - **Property 3: Error Boundary Containment**
     - **Validates: Requirements 5.1, 5.3**
 

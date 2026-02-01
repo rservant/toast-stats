@@ -16,7 +16,7 @@ graph TD
         C --> D[Router]
         D --> E[Suspense Boundary]
     end
-    
+
     subgraph "On-Demand Loading"
         E --> F{Current Route?}
         F -->|/| G[LandingPage Chunk]
@@ -25,7 +25,7 @@ graph TD
         F -->|/admin/dashboard| J[AdminDashboardPage Chunk]
         F -->|/admin| K[AdminPage Chunk]
     end
-    
+
     subgraph "Loading State"
         E --> L[LoadingSkeleton Fallback]
         L --> M[Page Renders]
@@ -55,7 +55,10 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './config/queryClient'
-import { BackfillProvider, useBackfillContext } from './contexts/BackfillContext'
+import {
+  BackfillProvider,
+  useBackfillContext,
+} from './contexts/BackfillContext'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { BackfillProgressBar } from './components/BackfillProgressBar'
 import { LoadingSkeleton } from './components/LoadingSkeleton'
@@ -63,7 +66,9 @@ import { LoadingSkeleton } from './components/LoadingSkeleton'
 // Lazy-loaded page components
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const DistrictDetailPage = lazy(() => import('./pages/DistrictDetailPage'))
-const DistrictConfigurationPage = lazy(() => import('./pages/DistrictConfigurationPage'))
+const DistrictConfigurationPage = lazy(
+  () => import('./pages/DistrictConfigurationPage')
+)
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 ```
@@ -177,7 +182,7 @@ const LazyPage: LazyExoticComponent<ComponentType<PageProps>> = lazy(
 ### Chunk Loading States
 
 ```typescript
-type ChunkLoadingState = 
+type ChunkLoadingState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'success'; component: React.ComponentType }
@@ -186,23 +191,23 @@ type ChunkLoadingState =
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Fallback Display During Loading
 
-*For any* lazy component that is in a loading state, the Suspense boundary SHALL display the LoadingSkeleton fallback component until the lazy component resolves successfully.
+_For any_ lazy component that is in a loading state, the Suspense boundary SHALL display the LoadingSkeleton fallback component until the lazy component resolves successfully.
 
 **Validates: Requirements 2.2**
 
 ### Property 2: On-Demand Chunk Loading
 
-*For any* navigation from one route to another, the Router SHALL trigger loading of only the target route's chunk, and the chunk SHALL be loaded on-demand rather than eagerly.
+_For any_ navigation from one route to another, the Router SHALL trigger loading of only the target route's chunk, and the chunk SHALL be loaded on-demand rather than eagerly.
 
 **Validates: Requirements 3.6, 4.3**
 
 ### Property 3: Error Boundary Containment
 
-*For any* chunk loading failure (network error, missing chunk, or import error), the error boundary SHALL catch the error, display an error message, and the rest of the application SHALL remain functional without crashing.
+_For any_ chunk loading failure (network error, missing chunk, or import error), the error boundary SHALL catch the error, display an error message, and the rest of the application SHALL remain functional without crashing.
 
 **Validates: Requirements 5.1, 5.3**
 
@@ -217,12 +222,12 @@ Network failures or missing chunks are handled by:
 3. **Recovery**: Reload button triggers a fresh attempt to load the chunk
 
 ```typescript
-function ChunkLoadError({ 
-  onRetry, 
-  error 
-}: { 
+function ChunkLoadError({
+  onRetry,
+  error
+}: {
   onRetry: () => void
-  error: Error | null 
+  error: Error | null
 }): React.JSX.Element {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -248,6 +253,7 @@ function ChunkLoadError({
 ### Suspense Timeout Considerations
 
 For slow networks, the fallback may display for extended periods. The LoadingSkeleton component provides appropriate visual feedback with:
+
 - Animated pulse effect
 - Accessible ARIA labels
 - Screen reader announcements

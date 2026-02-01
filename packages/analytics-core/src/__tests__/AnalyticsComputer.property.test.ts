@@ -79,9 +79,9 @@ const divisionIdArb = fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''))
 /**
  * Generate a valid area ID (e.g., A1, B2, C3)
  */
-const areaIdArb = fc.tuple(divisionIdArb, fc.integer({ min: 1, max: 9 })).map(
-  ([div, num]) => `${div}${num}`
-)
+const areaIdArb = fc
+  .tuple(divisionIdArb, fc.integer({ min: 1, max: 9 }))
+  .map(([div, num]) => `${div}${num}`)
 
 /**
  * Generate a valid membership count (realistic range)
@@ -101,7 +101,12 @@ const dcpGoalsArb = fc.integer({ min: 0, max: 10 })
 /**
  * Generate a valid club status
  */
-const clubStatusArb = fc.constantFrom('Active', 'Suspended', 'Ineligible', 'Low')
+const clubStatusArb = fc.constantFrom(
+  'Active',
+  'Suspended',
+  'Ineligible',
+  'Low'
+)
 
 /**
  * Generate a valid snapshot date (YYYY-MM-DD format)
@@ -153,55 +158,59 @@ const districtStatisticsArb = (
   districtId: string,
   snapshotDate: string
 ): fc.Arbitrary<DistrictStatistics> =>
-  fc
-    .array(clubStatisticsArb, { minLength: 1, maxLength: 50 })
-    .map(clubs => {
-      // Ensure unique club IDs
-      const uniqueClubs = clubs.reduce<ClubStatistics[]>((acc, club, idx) => {
-        const uniqueClub = { ...club, clubId: `${club.clubId}-${idx}` }
-        acc.push(uniqueClub)
-        return acc
-      }, [])
+  fc.array(clubStatisticsArb, { minLength: 1, maxLength: 50 }).map(clubs => {
+    // Ensure unique club IDs
+    const uniqueClubs = clubs.reduce<ClubStatistics[]>((acc, club, idx) => {
+      const uniqueClub = { ...club, clubId: `${club.clubId}-${idx}` }
+      acc.push(uniqueClub)
+      return acc
+    }, [])
 
-      const totalMembership = uniqueClubs.reduce(
-        (sum, c) => sum + c.membershipCount,
-        0
-      )
-      const totalPayments = uniqueClubs.reduce(
-        (sum, c) => sum + c.paymentsCount,
-        0
-      )
+    const totalMembership = uniqueClubs.reduce(
+      (sum, c) => sum + c.membershipCount,
+      0
+    )
+    const totalPayments = uniqueClubs.reduce(
+      (sum, c) => sum + c.paymentsCount,
+      0
+    )
 
-      return {
-        districtId,
-        snapshotDate,
-        clubs: uniqueClubs,
-        divisions: [],
-        areas: [],
-        totals: {
-          totalClubs: uniqueClubs.length,
-          totalMembership,
-          totalPayments,
-          distinguishedClubs: uniqueClubs.filter(c => c.dcpGoals >= 5 && c.membershipCount >= 20).length,
-          selectDistinguishedClubs: uniqueClubs.filter(c => c.dcpGoals >= 7 && c.membershipCount >= 20).length,
-          presidentDistinguishedClubs: uniqueClubs.filter(c => c.dcpGoals >= 9 && c.membershipCount >= 20).length,
-        },
-      }
-    })
+    return {
+      districtId,
+      snapshotDate,
+      clubs: uniqueClubs,
+      divisions: [],
+      areas: [],
+      totals: {
+        totalClubs: uniqueClubs.length,
+        totalMembership,
+        totalPayments,
+        distinguishedClubs: uniqueClubs.filter(
+          c => c.dcpGoals >= 5 && c.membershipCount >= 20
+        ).length,
+        selectDistinguishedClubs: uniqueClubs.filter(
+          c => c.dcpGoals >= 7 && c.membershipCount >= 20
+        ).length,
+        presidentDistinguishedClubs: uniqueClubs.filter(
+          c => c.dcpGoals >= 9 && c.membershipCount >= 20
+        ).length,
+      },
+    }
+  })
 
 /**
  * Generate multiple snapshots for trend analysis
  */
-const multipleSnapshotsArb = (districtId: string): fc.Arbitrary<DistrictStatistics[]> =>
-  fc
-    .array(snapshotDateArb, { minLength: 1, maxLength: 5 })
-    .chain(dates => {
-      // Sort dates and ensure uniqueness
-      const uniqueDates = [...new Set(dates)].sort()
-      return fc.tuple(
-        ...uniqueDates.map(date => districtStatisticsArb(districtId, date))
-      )
-    })
+const multipleSnapshotsArb = (
+  districtId: string
+): fc.Arbitrary<DistrictStatistics[]> =>
+  fc.array(snapshotDateArb, { minLength: 1, maxLength: 5 }).chain(dates => {
+    // Sort dates and ensure uniqueness
+    const uniqueDates = [...new Set(dates)].sort()
+    return fc.tuple(
+      ...uniqueDates.map(date => districtStatisticsArb(districtId, date))
+    )
+  })
 
 // ========== Property Tests ==========
 
@@ -235,15 +244,19 @@ describe('AnalyticsComputer Property Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           districtIdArb,
-          fc.array(snapshotDateArb, { minLength: 1, maxLength: 3 }).chain(dates => {
-            const uniqueDates = [...new Set(dates)].sort()
-            return fc.tuple(
-              fc.constant(uniqueDates[0]!),
-              ...uniqueDates.map(date =>
-                districtStatisticsArb('D101', date)
-              )
-            ).map(([_firstDate, ...snapshots]) => snapshots)
-          }),
+          fc
+            .array(snapshotDateArb, { minLength: 1, maxLength: 3 })
+            .chain(dates => {
+              const uniqueDates = [...new Set(dates)].sort()
+              return fc
+                .tuple(
+                  fc.constant(uniqueDates[0]!),
+                  ...uniqueDates.map(date =>
+                    districtStatisticsArb('D101', date)
+                  )
+                )
+                .map(([_firstDate, ...snapshots]) => snapshots)
+            }),
           async (districtId, snapshots) => {
             const computer1 = new AnalyticsComputer()
             const computer2 = new AnalyticsComputer()
@@ -412,7 +425,9 @@ describe('AnalyticsComputer Property Tests', () => {
 
             // Note: Some clubs may be 'stable' status which isn't a separate category
             // The categorized count should be <= allClubs count
-            expect(categorizedCount).toBeLessThanOrEqual(clubHealth.allClubs.length)
+            expect(categorizedCount).toBeLessThanOrEqual(
+              clubHealth.allClubs.length
+            )
 
             return true
           }

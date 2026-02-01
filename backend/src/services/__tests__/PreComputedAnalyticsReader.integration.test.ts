@@ -214,7 +214,10 @@ async function createAnalyticsFile(
   const analyticsDir = path.join(snapshotsDir, snapshotDate, 'analytics')
   await fs.mkdir(analyticsDir, { recursive: true })
 
-  const filePath = path.join(analyticsDir, `district_${districtId}_analytics.json`)
+  const filePath = path.join(
+    analyticsDir,
+    `district_${districtId}_analytics.json`
+  )
   await fs.writeFile(filePath, JSON.stringify(content, null, 2), 'utf-8')
 
   return filePath
@@ -226,7 +229,9 @@ async function createAnalyticsFile(
  */
 function createTestApp(
   cacheDir: string,
-  mockSnapshotStore?: { getLatestSuccessful: () => Promise<{ snapshot_id: string } | null> }
+  mockSnapshotStore?: {
+    getLatestSuccessful: () => Promise<{ snapshot_id: string } | null>
+  }
 ): Express {
   const app = express()
   app.use(cors())
@@ -280,7 +285,10 @@ function createTestApp(
       const snapshotDate = latestSnapshot.snapshot_id
 
       // Read pre-computed analytics from file system
-      const analytics = await reader.readDistrictAnalytics(snapshotDate, districtId)
+      const analytics = await reader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
+      )
 
       // Return 404 if analytics not found
       if (analytics === null) {
@@ -366,7 +374,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
       // Create analytics file
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,
@@ -401,7 +412,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
 
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,
@@ -543,7 +557,9 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
 
       // Assert
       expect(response.body.error.code).toBe('SCHEMA_VERSION_MISMATCH')
-      expect(response.body.error.message).toContain('Incompatible analytics schema version')
+      expect(response.body.error.message).toContain(
+        'Incompatible analytics schema version'
+      )
       expect(response.body.error.details).toContain('9.0.0')
     })
   })
@@ -560,7 +576,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
 
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,
@@ -600,9 +619,15 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
       expect(analytics).toHaveProperty('distinguishedClubs')
       expect(Array.isArray(analytics.distinguishedClubs)).toBe(true)
       expect(analytics).toHaveProperty('distinguishedProjection')
-      expect(analytics.distinguishedProjection).toHaveProperty('projectedDistinguished')
-      expect(analytics.distinguishedProjection).toHaveProperty('projectedSelect')
-      expect(analytics.distinguishedProjection).toHaveProperty('projectedPresident')
+      expect(analytics.distinguishedProjection).toHaveProperty(
+        'projectedDistinguished'
+      )
+      expect(analytics.distinguishedProjection).toHaveProperty(
+        'projectedSelect'
+      )
+      expect(analytics.distinguishedProjection).toHaveProperty(
+        'projectedPresident'
+      )
       expect(analytics).toHaveProperty('divisionRankings')
       expect(Array.isArray(analytics.divisionRankings)).toBe(true)
       expect(analytics).toHaveProperty('topPerformingAreas')
@@ -619,7 +644,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
 
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,
@@ -654,7 +682,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
 
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,
@@ -700,7 +731,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
       // Create analytics in the test cache directory
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,
@@ -736,12 +770,22 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
       // Create analytics for district 42
       const analytics42 = createValidDistrictAnalyticsFile('42', snapshotDate)
       analytics42.data.totalMembership = 500
-      await createAnalyticsFile(testConfig.snapshotsDir, snapshotDate, '42', analytics42)
+      await createAnalyticsFile(
+        testConfig.snapshotsDir,
+        snapshotDate,
+        '42',
+        analytics42
+      )
 
       // Create analytics for district 61
       const analytics61 = createValidDistrictAnalyticsFile('61', snapshotDate)
       analytics61.data.totalMembership = 750
-      await createAnalyticsFile(testConfig.snapshotsDir, snapshotDate, '61', analytics61)
+      await createAnalyticsFile(
+        testConfig.snapshotsDir,
+        snapshotDate,
+        '61',
+        analytics61
+      )
 
       app = createTestApp(testConfig.cacheDir, {
         getLatestSuccessful: async () => ({ snapshot_id: snapshotDate }),
@@ -794,7 +838,10 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
 
       await createSnapshotMetadata(testConfig.snapshotsDir, snapshotDate)
 
-      const analyticsFile = createValidDistrictAnalyticsFile(districtId, snapshotDate)
+      const analyticsFile = createValidDistrictAnalyticsFile(
+        districtId,
+        snapshotDate
+      )
       await createAnalyticsFile(
         testConfig.snapshotsDir,
         snapshotDate,

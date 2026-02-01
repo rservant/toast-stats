@@ -334,7 +334,8 @@ describe('compute-analytics CLI command', () => {
     })
 
     it('preserves error messages in summary', () => {
-      const errorMessage = 'Snapshot file corrupted: unexpected token at position 42'
+      const errorMessage =
+        'Snapshot file corrupted: unexpected token at position 42'
       const result = createComputeResult({
         success: false,
         districtsProcessed: ['1'],

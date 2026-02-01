@@ -1,14 +1,11 @@
 /**
  * Core interfaces for analytics computation and data transformation.
- * 
+ *
  * These interfaces define the contracts that implementations must follow,
  * enabling both scraper-cli and backend to use the same computation logic.
  */
 
-import type {
-  AnalyticsComputationResult,
-  ComputeOptions,
-} from './types.js'
+import type { AnalyticsComputationResult, ComputeOptions } from './types.js'
 
 /**
  * Raw CSV data structure from Toastmasters dashboard.
@@ -108,7 +105,7 @@ export interface Snapshot {
 export interface IAnalyticsComputer {
   /**
    * Computes comprehensive analytics for a district.
-   * 
+   *
    * @param districtId - The district identifier
    * @param snapshots - Array of district statistics snapshots (for trend analysis)
    * @param options - Optional computation options
@@ -128,7 +125,7 @@ export interface IAnalyticsComputer {
 export interface IDataTransformer {
   /**
    * Transforms raw CSV data into district statistics.
-   * 
+   *
    * @param date - The snapshot date (YYYY-MM-DD)
    * @param districtId - The district identifier
    * @param csvData - Raw CSV data from Toastmasters dashboard
@@ -142,7 +139,7 @@ export interface IDataTransformer {
 
   /**
    * Creates a complete snapshot from multiple district statistics.
-   * 
+   *
    * @param date - The snapshot date (YYYY-MM-DD)
    * @param districts - Array of district statistics
    * @returns Promise resolving to the complete snapshot

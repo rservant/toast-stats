@@ -36,10 +36,7 @@ function createIsolatedCacheDir(): {
   cleanup: () => Promise<void>
 } {
   const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const cachePath = path.join(
-    os.tmpdir(),
-    `analytics-writer-test-${uniqueId}`
-  )
+  const cachePath = path.join(os.tmpdir(), `analytics-writer-test-${uniqueId}`)
 
   return {
     path: cachePath,
@@ -318,7 +315,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Verify metadata fields (Requirement 3.2)
       expect(parsed.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
@@ -340,7 +339,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Calculate expected checksum
       const expectedChecksum = calculateChecksum(JSON.stringify(analytics))
@@ -359,7 +360,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       // Verify data matches original
       expect(parsed.data).toEqual(analytics)
@@ -412,7 +415,9 @@ describe('AnalyticsWriter', () => {
       const afterWrite = new Date()
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       const computedAt = new Date(parsed.metadata.computedAt)
       expect(computedAt.getTime()).toBeGreaterThanOrEqual(beforeWrite.getTime())
@@ -459,7 +464,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<MembershipTrendData>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<MembershipTrendData>
 
       expect(parsed.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
       expect(parsed.metadata.computedAt).toBeDefined()
@@ -480,7 +487,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<MembershipTrendData>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<MembershipTrendData>
 
       expect(parsed.data).toEqual(trends)
     })
@@ -525,7 +534,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<ClubHealthData>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<ClubHealthData>
 
       expect(parsed.metadata.schemaVersion).toBe(ANALYTICS_SCHEMA_VERSION)
       expect(parsed.metadata.computedAt).toBeDefined()
@@ -546,7 +557,9 @@ describe('AnalyticsWriter', () => {
       )
 
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<ClubHealthData>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<ClubHealthData>
 
       expect(parsed.data).toEqual(health)
     })
@@ -736,7 +749,9 @@ describe('AnalyticsWriter', () => {
 
       // Read file and verify checksum matches
       const content = await fs.readFile(filePath, 'utf-8')
-      const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+      const parsed = JSON.parse(
+        content
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
       expect(entry.checksum).toBe(parsed.metadata.checksum)
     })
@@ -849,7 +864,9 @@ describe('AnalyticsWriter', () => {
         )
 
         const content = await fs.readFile(filePath, 'utf-8')
-        const parsed = JSON.parse(content) as PreComputedAnalyticsFile<DistrictAnalytics>
+        const parsed = JSON.parse(
+          content
+        ) as PreComputedAnalyticsFile<DistrictAnalytics>
         checksums.push(parsed.metadata.checksum)
       }
 

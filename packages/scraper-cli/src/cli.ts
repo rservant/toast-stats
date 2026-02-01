@@ -299,7 +299,9 @@ export function formatTransformSummary(
  * - Exit 1 on partial failure (some succeeded, some failed)
  * - Exit 2 on complete failure (all failed or fatal error)
  */
-export function determineComputeAnalyticsExitCode(result: ComputeAnalyticsResult): ExitCode {
+export function determineComputeAnalyticsExitCode(
+  result: ComputeAnalyticsResult
+): ExitCode {
   const totalProcessed = result.districtsProcessed.length
   const succeeded = result.districtsSucceeded.length
   const failed = result.districtsFailed.length
@@ -609,7 +611,10 @@ export function createCLI(): Command {
       }
 
       // Format base scrape summary (Requirement 1.9)
-      const summary: ScrapeWithTransformSummary = formatScrapeSummary(result, cacheDir)
+      const summary: ScrapeWithTransformSummary = formatScrapeSummary(
+        result,
+        cacheDir
+      )
 
       // Determine scrape exit code
       let exitCode = determineExitCode(result)
@@ -630,13 +635,25 @@ export function createCLI(): Command {
             logger: options.verbose
               ? {
                   info: (msg: string, data?: unknown) =>
-                    console.error(`[INFO] ${msg}`, data ? JSON.stringify(data) : ''),
+                    console.error(
+                      `[INFO] ${msg}`,
+                      data ? JSON.stringify(data) : ''
+                    ),
                   warn: (msg: string, data?: unknown) =>
-                    console.error(`[WARN] ${msg}`, data ? JSON.stringify(data) : ''),
+                    console.error(
+                      `[WARN] ${msg}`,
+                      data ? JSON.stringify(data) : ''
+                    ),
                   error: (msg: string, err?: unknown) =>
-                    console.error(`[ERROR] ${msg}`, err instanceof Error ? err.message : ''),
+                    console.error(
+                      `[ERROR] ${msg}`,
+                      err instanceof Error ? err.message : ''
+                    ),
                   debug: (msg: string, data?: unknown) =>
-                    console.error(`[DEBUG] ${msg}`, data ? JSON.stringify(data) : ''),
+                    console.error(
+                      `[DEBUG] ${msg}`,
+                      data ? JSON.stringify(data) : ''
+                    ),
                 }
               : undefined,
           })
@@ -688,12 +705,16 @@ export function createCLI(): Command {
           }
 
           if (options.verbose) {
-            console.error(`[INFO] Transform completed with status: ${transformStatus}`)
+            console.error(
+              `[INFO] Transform completed with status: ${transformStatus}`
+            )
           }
         } else {
           // Scrape had no success, skip transformation
           if (options.verbose) {
-            console.error(`[INFO] Skipping transformation - no successful scrapes`)
+            console.error(
+              `[INFO] Skipping transformation - no successful scrapes`
+            )
           }
 
           summary.transform = {
@@ -807,11 +828,7 @@ export function createCLI(): Command {
       'Comma-separated district IDs to transform',
       parseDistrictList
     )
-    .option(
-      '-f, --force',
-      'Force re-transform even if snapshots exist',
-      false
-    )
+    .option('-f, --force', 'Force re-transform even if snapshots exist', false)
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .option('-c, --config <path>', 'Alternative configuration file path')
     .action(async (options: TransformOptions) => {
@@ -849,13 +866,25 @@ export function createCLI(): Command {
         logger: options.verbose
           ? {
               info: (msg: string, data?: unknown) =>
-                console.error(`[INFO] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[INFO] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
               warn: (msg: string, data?: unknown) =>
-                console.error(`[WARN] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[WARN] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
               error: (msg: string, err?: unknown) =>
-                console.error(`[ERROR] ${msg}`, err instanceof Error ? err.message : ''),
+                console.error(
+                  `[ERROR] ${msg}`,
+                  err instanceof Error ? err.message : ''
+                ),
               debug: (msg: string, data?: unknown) =>
-                console.error(`[DEBUG] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[DEBUG] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
             }
           : undefined,
       })
@@ -945,7 +974,9 @@ export function createCLI(): Command {
       const analyticsDir = `${cacheDir}/snapshots/${targetDate}/analytics`
 
       if (options.verbose) {
-        console.error(`[INFO] Starting compute-analytics for date: ${targetDate}`)
+        console.error(
+          `[INFO] Starting compute-analytics for date: ${targetDate}`
+        )
         if (districts) {
           console.error(`[INFO] Districts: ${districts.join(', ')}`)
         } else {
@@ -965,13 +996,25 @@ export function createCLI(): Command {
         logger: options.verbose
           ? {
               info: (msg: string, data?: unknown) =>
-                console.error(`[INFO] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[INFO] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
               warn: (msg: string, data?: unknown) =>
-                console.error(`[WARN] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[WARN] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
               error: (msg: string, err?: unknown) =>
-                console.error(`[ERROR] ${msg}`, err instanceof Error ? err.message : ''),
+                console.error(
+                  `[ERROR] ${msg}`,
+                  err instanceof Error ? err.message : ''
+                ),
               debug: (msg: string, data?: unknown) =>
-                console.error(`[DEBUG] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[DEBUG] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
             }
           : undefined,
       })
@@ -1006,7 +1049,9 @@ export function createCLI(): Command {
       const exitCode = determineComputeAnalyticsExitCode(result)
 
       if (options.verbose) {
-        console.error(`[INFO] Compute-analytics completed with exit code: ${exitCode}`)
+        console.error(
+          `[INFO] Compute-analytics completed with exit code: ${exitCode}`
+        )
       }
 
       process.exit(exitCode)
@@ -1058,7 +1103,9 @@ export function createCLI(): Command {
       const projectId = process.env['GCP_PROJECT_ID']
 
       if (options.verbose) {
-        console.error(`[INFO] Starting upload${targetDate ? ` for date: ${targetDate}` : ' for all available dates'}`)
+        console.error(
+          `[INFO] Starting upload${targetDate ? ` for date: ${targetDate}` : ' for all available dates'}`
+        )
         console.error(`[INFO] Incremental: ${options.incremental}`)
         console.error(`[INFO] Dry run: ${options.dryRun}`)
         console.error(`[INFO] Cache directory: ${cacheDir}`)
@@ -1082,13 +1129,25 @@ export function createCLI(): Command {
         logger: options.verbose
           ? {
               info: (msg: string, data?: unknown) =>
-                console.error(`[INFO] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[INFO] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
               warn: (msg: string, data?: unknown) =>
-                console.error(`[WARN] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[WARN] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
               error: (msg: string, err?: unknown) =>
-                console.error(`[ERROR] ${msg}`, err instanceof Error ? err.message : ''),
+                console.error(
+                  `[ERROR] ${msg}`,
+                  err instanceof Error ? err.message : ''
+                ),
               debug: (msg: string, data?: unknown) =>
-                console.error(`[DEBUG] ${msg}`, data ? JSON.stringify(data) : ''),
+                console.error(
+                  `[DEBUG] ${msg}`,
+                  data ? JSON.stringify(data) : ''
+                ),
             }
           : undefined,
       })
@@ -1104,7 +1163,12 @@ export function createCLI(): Command {
 
       // Format and output JSON summary
       // Requirement 6.5: WHEN upload completes, THE Scraper_CLI SHALL output a summary
-      const summary = formatUploadSummary(result, bucket, prefix, options.dryRun)
+      const summary = formatUploadSummary(
+        result,
+        bucket,
+        prefix,
+        options.dryRun
+      )
       console.log(JSON.stringify(summary, null, 2))
 
       // Determine and use exit code

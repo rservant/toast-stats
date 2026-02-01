@@ -56,14 +56,14 @@ Lower-precedence sources MUST NOT weaken higher-precedence rules.
 
 ### Document Scope Boundaries
 
-| Document | Authoritative Scope |
-| -------- | ------------------- |
-| frontend-standards.md | React patterns, project structure, data fetching, Firebase Hosting |
-| typescript.md | TypeScript compiler configuration, type safety patterns |
-| toastmasters-brand-guidelines.md | Brand colors, typography, accessibility, design tokens |
-| modal-dialogs.md | Modal and overlay component implementation |
-| testing.md | Testing philosophy, test isolation, coverage expectations |
-| performance-slos.md | Performance targets, bundle size limits, Core Web Vitals |
+| Document                         | Authoritative Scope                                                |
+| -------------------------------- | ------------------------------------------------------------------ |
+| frontend-standards.md            | React patterns, project structure, data fetching, Firebase Hosting |
+| typescript.md                    | TypeScript compiler configuration, type safety patterns            |
+| toastmasters-brand-guidelines.md | Brand colors, typography, accessibility, design tokens             |
+| modal-dialogs.md                 | Modal and overlay component implementation                         |
+| testing.md                       | Testing philosophy, test isolation, coverage expectations          |
+| performance-slos.md              | Performance targets, bundle size limits, Core Web Vitals           |
 
 When guidance overlaps between documents, the document with the narrower, more specific scope takes precedence.
 
@@ -115,18 +115,18 @@ frontend/
 
 ### 4.2 File Organization Rules
 
-| File Type | Location | Naming Convention |
-| --------- | -------- | ----------------- |
-| React components | `src/components/` | `PascalCase.tsx` |
-| Page components | `src/pages/` | `PascalCasePage.tsx` |
-| Custom hooks | `src/hooks/` | `useCamelCase.ts` |
-| Context providers | `src/contexts/` | `PascalCaseContext.tsx` |
-| API services | `src/services/` | `camelCase.ts` |
-| Type definitions | `src/types/` | `camelCase.ts` |
-| Utility functions | `src/utils/` | `camelCase.ts` |
-| Unit tests | Co-located with source | `{name}.test.ts(x)` |
-| Integration tests | `src/__tests__/` | `{name}.integration.test.ts(x)` |
-| Property tests | `src/__tests__/` | `{name}.property.test.ts(x)` |
+| File Type         | Location               | Naming Convention               |
+| ----------------- | ---------------------- | ------------------------------- |
+| React components  | `src/components/`      | `PascalCase.tsx`                |
+| Page components   | `src/pages/`           | `PascalCasePage.tsx`            |
+| Custom hooks      | `src/hooks/`           | `useCamelCase.ts`               |
+| Context providers | `src/contexts/`        | `PascalCaseContext.tsx`         |
+| API services      | `src/services/`        | `camelCase.ts`                  |
+| Type definitions  | `src/types/`           | `camelCase.ts`                  |
+| Utility functions | `src/utils/`           | `camelCase.ts`                  |
+| Unit tests        | Co-located with source | `{name}.test.ts(x)`             |
+| Integration tests | `src/__tests__/`       | `{name}.integration.test.ts(x)` |
+| Property tests    | `src/__tests__/`       | `{name}.property.test.ts(x)`    |
 
 ### 4.3 Component Organization Patterns
 
@@ -196,18 +196,18 @@ import './Dashboard.css'
 
 The project uses path aliases for cleaner imports. The following aliases are configured:
 
-| Alias | Target |
-| ----- | ------ |
-| `@/` | `src/` |
+| Alias          | Target            |
+| -------------- | ----------------- |
+| `@/`           | `src/`            |
 | `@/components` | `src/components/` |
-| `@/hooks` | `src/hooks/` |
-| `@/pages` | `src/pages/` |
-| `@/contexts` | `src/contexts/` |
-| `@/services` | `src/services/` |
-| `@/types` | `src/types/` |
-| `@/utils` | `src/utils/` |
-| `@/styles` | `src/styles/` |
-| `@/config` | `src/config/` |
+| `@/hooks`      | `src/hooks/`      |
+| `@/pages`      | `src/pages/`      |
+| `@/contexts`   | `src/contexts/`   |
+| `@/services`   | `src/services/`   |
+| `@/types`      | `src/types/`      |
+| `@/utils`      | `src/utils/`      |
+| `@/styles`     | `src/styles/`     |
+| `@/config`     | `src/config/`     |
 
 Path aliases SHOULD be used for imports from different feature areas. Relative imports SHOULD be used for imports within the same feature area.
 
@@ -240,7 +240,12 @@ interface StatCardProps {
   onClick?: () => void
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ title, value, trend, onClick }) => {
+export const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  trend,
+  onClick,
+}) => {
   // ...
 }
 ```
@@ -280,12 +285,12 @@ Key requirements from that document:
 
 Styles MUST be organized using the following structure:
 
-| Style Type | Location | Usage |
-| ---------- | -------- | ----- |
-| Design tokens | `src/styles/tokens/` | CSS custom properties for colors, spacing, typography |
-| Global styles | `src/styles/` | Base styles, resets, brand styles |
-| Component styles | `src/styles/components/` | Shared component styles |
-| CSS layers | `src/styles/layers/` | CSS cascade layer definitions |
+| Style Type       | Location                 | Usage                                                 |
+| ---------------- | ------------------------ | ----------------------------------------------------- |
+| Design tokens    | `src/styles/tokens/`     | CSS custom properties for colors, spacing, typography |
+| Global styles    | `src/styles/`            | Base styles, resets, brand styles                     |
+| Component styles | `src/styles/components/` | Shared component styles                               |
+| CSS layers       | `src/styles/layers/`     | CSS cascade layer definitions                         |
 
 ### 6.2 Tailwind CSS Usage
 
@@ -357,13 +362,13 @@ export const DistrictCard: React.FC<DistrictCardProps> = ({
 
 #### Component Naming Conventions
 
-| Component Type | Naming Pattern | Example |
-| -------------- | -------------- | ------- |
-| Page components | `{Name}Page` | `DashboardPage`, `DistrictDetailPage` |
-| Layout components | `{Name}Layout` | `MainLayout`, `SidebarLayout` |
-| Container components | `{Name}Container` | `DistrictListContainer` |
-| Presentational components | `{Name}` | `DistrictCard`, `StatBadge` |
-| Higher-order components | `with{Capability}` | `withAuth`, `withErrorBoundary` |
+| Component Type            | Naming Pattern     | Example                               |
+| ------------------------- | ------------------ | ------------------------------------- |
+| Page components           | `{Name}Page`       | `DashboardPage`, `DistrictDetailPage` |
+| Layout components         | `{Name}Layout`     | `MainLayout`, `SidebarLayout`         |
+| Container components      | `{Name}Container`  | `DistrictListContainer`               |
+| Presentational components | `{Name}`           | `DistrictCard`, `StatBadge`           |
+| Higher-order components   | `with{Capability}` | `withAuth`, `withErrorBoundary`       |
 
 #### Props Interface Requirements
 
@@ -442,15 +447,15 @@ Custom hooks MUST follow established patterns for reusability, testability, and 
 
 #### Built-in Hooks Usage
 
-| Hook | When to Use | Requirements |
-| ---- | ----------- | ------------ |
-| `useState` | Local component state | MUST use for simple, independent state values |
-| `useReducer` | Complex state logic | SHOULD use when state has multiple sub-values or complex transitions |
-| `useEffect` | Side effects | MUST specify complete dependency array; MUST clean up subscriptions |
-| `useCallback` | Memoized callbacks | SHOULD use for callbacks passed to child components |
-| `useMemo` | Expensive computations | SHOULD use for computationally expensive derived values |
-| `useRef` | Mutable references | MUST use for DOM refs and values that don't trigger re-renders |
-| `useContext` | Consuming context | MUST use with typed context; SHOULD wrap in custom hook |
+| Hook          | When to Use            | Requirements                                                         |
+| ------------- | ---------------------- | -------------------------------------------------------------------- |
+| `useState`    | Local component state  | MUST use for simple, independent state values                        |
+| `useReducer`  | Complex state logic    | SHOULD use when state has multiple sub-values or complex transitions |
+| `useEffect`   | Side effects           | MUST specify complete dependency array; MUST clean up subscriptions  |
+| `useCallback` | Memoized callbacks     | SHOULD use for callbacks passed to child components                  |
+| `useMemo`     | Expensive computations | SHOULD use for computationally expensive derived values              |
+| `useRef`      | Mutable references     | MUST use for DOM refs and values that don't trigger re-renders       |
+| `useContext`  | Consuming context      | MUST use with typed context; SHOULD wrap in custom hook              |
 
 #### useEffect Requirements
 
@@ -460,7 +465,7 @@ Effects MUST follow these rules:
 // ✅ CORRECT - Effect with cleanup and complete dependencies
 useEffect(() => {
   const controller = new AbortController()
-  
+
   const fetchData = async () => {
     try {
       const response = await fetch(url, { signal: controller.signal })
@@ -472,9 +477,9 @@ useEffect(() => {
       }
     }
   }
-  
+
   fetchData()
-  
+
   // Cleanup function
   return () => {
     controller.abort()
@@ -526,7 +531,7 @@ export function useDistrict(districtId: string): UseDistrictResult {
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const data = await fetchDistrict(districtId)
       setDistrict(data)
@@ -580,13 +585,13 @@ State management MUST follow a layered approach based on state scope and complex
 
 #### State Management Hierarchy
 
-| State Type | Scope | Solution | Example |
-| ---------- | ----- | -------- | ------- |
-| **Local UI State** | Single component | `useState` | Form input values, toggle states |
-| **Complex Local State** | Single component | `useReducer` | Multi-step forms, complex toggles |
-| **Shared UI State** | Component subtree | React Context | Theme, sidebar open/closed |
-| **Server State** | Application-wide | React Query | API data, cached responses |
-| **URL State** | Application-wide | React Router | Current route, query parameters |
+| State Type              | Scope             | Solution      | Example                           |
+| ----------------------- | ----------------- | ------------- | --------------------------------- |
+| **Local UI State**      | Single component  | `useState`    | Form input values, toggle states  |
+| **Complex Local State** | Single component  | `useReducer`  | Multi-step forms, complex toggles |
+| **Shared UI State**     | Component subtree | React Context | Theme, sidebar open/closed        |
+| **Server State**        | Application-wide  | React Query   | API data, cached responses        |
+| **URL State**           | Application-wide  | React Router  | Current route, query parameters   |
 
 #### Local State with useState
 
@@ -615,7 +620,13 @@ interface FilterState {
 type FilterAction =
   | { type: 'SET_PROGRAM_YEAR'; payload: string | null }
   | { type: 'SET_STATUS'; payload: FilterState['districtStatus'] }
-  | { type: 'SET_SORT'; payload: { sortBy: FilterState['sortBy']; sortOrder: FilterState['sortOrder'] } }
+  | {
+      type: 'SET_SORT'
+      payload: {
+        sortBy: FilterState['sortBy']
+        sortOrder: FilterState['sortOrder']
+      }
+    }
   | { type: 'RESET' }
 
 const initialState: FilterState = {
@@ -784,25 +795,23 @@ Query keys MUST follow a hierarchical structure for proper cache invalidation:
 const queryKeys = {
   // All districts queries
   districts: ['districts'] as const,
-  
+
   // Districts list with filters
-  districtList: (filters: DistrictFilters) => 
+  districtList: (filters: DistrictFilters) =>
     [...queryKeys.districts, 'list', filters] as const,
-  
+
   // Single district by ID
-  district: (id: string) => 
-    [...queryKeys.districts, 'detail', id] as const,
-  
+  district: (id: string) => [...queryKeys.districts, 'detail', id] as const,
+
   // District statistics
-  districtStats: (id: string) => 
+  districtStats: (id: string) =>
     [...queryKeys.districts, 'detail', id, 'stats'] as const,
-  
+
   // All snapshots queries
   snapshots: ['snapshots'] as const,
-  
+
   // Snapshot by ID
-  snapshot: (id: string) => 
-    [...queryKeys.snapshots, 'detail', id] as const,
+  snapshot: (id: string) => [...queryKeys.snapshots, 'detail', id] as const,
 }
 
 // Usage
@@ -884,7 +893,7 @@ export function useUpdateDistrict() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateDistrictInput }) =>
       updateDistrict(id, data),
-    
+
     // Optimistic update
     onMutate: async ({ id, data }) => {
       // Cancel outgoing refetches
@@ -955,13 +964,13 @@ function DistrictEditor({ district }: { district: District }) {
 
 #### Caching Strategy
 
-| Data Type | staleTime | gcTime | Refetch Strategy |
-| --------- | --------- | ------ | ---------------- |
-| Static reference data | 30 minutes | 60 minutes | On mount only |
-| District list | 5 minutes | 30 minutes | On window focus |
-| District detail | 5 minutes | 30 minutes | On mount |
-| Snapshot data | 10 minutes | 60 minutes | Manual only |
-| User preferences | 0 (always stale) | 30 minutes | On every render |
+| Data Type             | staleTime        | gcTime     | Refetch Strategy |
+| --------------------- | ---------------- | ---------- | ---------------- |
+| Static reference data | 30 minutes       | 60 minutes | On mount only    |
+| District list         | 5 minutes        | 30 minutes | On window focus  |
+| District detail       | 5 minutes        | 30 minutes | On mount         |
+| Snapshot data         | 10 minutes       | 60 minutes | Manual only      |
+| User preferences      | 0 (always stale) | 30 minutes | On every render  |
 
 #### Error Handling Patterns
 
@@ -1074,12 +1083,12 @@ Error boundaries MUST be used to catch and handle JavaScript errors in the compo
 
 The application MUST implement error boundaries at strategic levels:
 
-| Boundary Level | Scope | Recovery Action |
-| -------------- | ----- | --------------- |
-| **Application Root** | Entire app | Show full-page error with reload option |
-| **Route Level** | Individual pages | Show page-level error with navigation options |
-| **Feature Level** | Complex features | Show feature-specific error with retry option |
-| **Component Level** | Critical components | Show inline error with fallback UI |
+| Boundary Level       | Scope               | Recovery Action                               |
+| -------------------- | ------------------- | --------------------------------------------- |
+| **Application Root** | Entire app          | Show full-page error with reload option       |
+| **Route Level**      | Individual pages    | Show page-level error with navigation options |
+| **Feature Level**    | Complex features    | Show feature-specific error with retry option |
+| **Component Level**  | Critical components | Show inline error with fallback UI            |
 
 #### Standard Error Boundary Component
 
@@ -1256,12 +1265,12 @@ Loading states MUST provide clear feedback to users during asynchronous operatio
 
 #### Loading State Hierarchy
 
-| Loading Type | Duration | Pattern | Example |
-| ------------ | -------- | ------- | ------- |
-| **Instant** | < 100ms | No indicator | Local state updates |
-| **Brief** | 100ms - 300ms | Subtle indicator | Button spinner |
-| **Standard** | 300ms - 1s | Skeleton screen | Page content loading |
-| **Extended** | > 1s | Progress indicator | File uploads, data processing |
+| Loading Type | Duration      | Pattern            | Example                       |
+| ------------ | ------------- | ------------------ | ----------------------------- |
+| **Instant**  | < 100ms       | No indicator       | Local state updates           |
+| **Brief**    | 100ms - 300ms | Subtle indicator   | Button spinner                |
+| **Standard** | 300ms - 1s    | Skeleton screen    | Page content loading          |
+| **Extended** | > 1s          | Progress indicator | File uploads, data processing |
 
 #### Skeleton Screen Implementation
 
@@ -1333,12 +1342,12 @@ export const DistrictPage: React.FC<{ districtId: string }> = ({ districtId }) =
     <div>
       {/* Critical content loads first */}
       <DistrictHeader district={district} />
-      
+
       {/* Secondary content loads progressively */}
       <Suspense fallback={<DistrictDetailsSkeleton />}>
         <DistrictDetails districtId={districtId} />
       </Suspense>
-      
+
       {/* Non-critical content loads last */}
       <Suspense fallback={<AnalyticsSkeleton />}>
         <DistrictAnalytics districtId={districtId} />
@@ -1409,16 +1418,16 @@ All frontend components MUST comply with WCAG 2.1 Level AA standards. Accessibil
 
 #### WCAG AA Compliance Requirements
 
-| Criterion | Requirement | Implementation |
-| --------- | ----------- | -------------- |
-| **1.1.1 Non-text Content** | All images MUST have alt text | Use `alt` attribute on `<img>` |
-| **1.3.1 Info and Relationships** | Structure MUST be programmatically determinable | Use semantic HTML elements |
-| **1.4.3 Contrast (Minimum)** | 4.5:1 for normal text, 3:1 for large text | Use brand-compliant colors |
-| **2.1.1 Keyboard** | All functionality MUST be keyboard accessible | Handle keyboard events |
-| **2.1.2 No Keyboard Trap** | Focus MUST be movable away from any component | Manage focus properly |
-| **2.4.3 Focus Order** | Focus order MUST be logical and meaningful | Use proper DOM order |
-| **2.4.7 Focus Visible** | Focus indicator MUST be visible | Style `:focus-visible` |
-| **4.1.2 Name, Role, Value** | Components MUST have accessible names and roles | Use ARIA attributes |
+| Criterion                        | Requirement                                     | Implementation                 |
+| -------------------------------- | ----------------------------------------------- | ------------------------------ |
+| **1.1.1 Non-text Content**       | All images MUST have alt text                   | Use `alt` attribute on `<img>` |
+| **1.3.1 Info and Relationships** | Structure MUST be programmatically determinable | Use semantic HTML elements     |
+| **1.4.3 Contrast (Minimum)**     | 4.5:1 for normal text, 3:1 for large text       | Use brand-compliant colors     |
+| **2.1.1 Keyboard**               | All functionality MUST be keyboard accessible   | Handle keyboard events         |
+| **2.1.2 No Keyboard Trap**       | Focus MUST be movable away from any component   | Manage focus properly          |
+| **2.4.3 Focus Order**            | Focus order MUST be logical and meaningful      | Use proper DOM order           |
+| **2.4.7 Focus Visible**          | Focus indicator MUST be visible                 | Style `:focus-visible`         |
+| **4.1.2 Name, Role, Value**      | Components MUST have accessible names and roles | Use ARIA attributes            |
 
 #### Keyboard Navigation Requirements
 
@@ -1502,15 +1511,15 @@ export const SearchResults: React.FC<{ results: Result[]; isNewSearch: boolean }
 
 ARIA attributes MUST be used correctly:
 
-| Attribute | Usage | Example |
-| --------- | ----- | ------- |
-| `aria-label` | Provide accessible name when text is not visible | `<button aria-label="Close">×</button>` |
-| `aria-labelledby` | Reference visible text as label | `<div aria-labelledby="section-title">` |
-| `aria-describedby` | Reference additional description | `<input aria-describedby="help-text">` |
-| `aria-expanded` | Indicate expandable state | `<button aria-expanded="true">` |
-| `aria-hidden` | Hide decorative content from AT | `<span aria-hidden="true">★</span>` |
-| `aria-live` | Announce dynamic content changes | `<div aria-live="polite">` |
-| `aria-busy` | Indicate loading state | `<div aria-busy="true">` |
+| Attribute          | Usage                                            | Example                                 |
+| ------------------ | ------------------------------------------------ | --------------------------------------- |
+| `aria-label`       | Provide accessible name when text is not visible | `<button aria-label="Close">×</button>` |
+| `aria-labelledby`  | Reference visible text as label                  | `<div aria-labelledby="section-title">` |
+| `aria-describedby` | Reference additional description                 | `<input aria-describedby="help-text">`  |
+| `aria-expanded`    | Indicate expandable state                        | `<button aria-expanded="true">`         |
+| `aria-hidden`      | Hide decorative content from AT                  | `<span aria-hidden="true">★</span>`     |
+| `aria-live`        | Announce dynamic content changes                 | `<div aria-live="polite">`              |
+| `aria-busy`        | Indicate loading state                           | `<div aria-busy="true">`                |
 
 ```typescript
 // ✅ CORRECT - Proper ARIA usage
@@ -1619,11 +1628,11 @@ Frontend code MUST implement security measures to protect against common web vul
 
 Cross-Site Scripting (XSS) attacks MUST be prevented through proper data handling:
 
-| Attack Vector | Prevention | Implementation |
-| ------------- | ---------- | -------------- |
-| **Reflected XSS** | Sanitize URL parameters | Validate and encode query params |
-| **Stored XSS** | Sanitize user input | Never use `dangerouslySetInnerHTML` with user data |
-| **DOM-based XSS** | Avoid direct DOM manipulation | Use React's virtual DOM |
+| Attack Vector     | Prevention                    | Implementation                                     |
+| ----------------- | ----------------------------- | -------------------------------------------------- |
+| **Reflected XSS** | Sanitize URL parameters       | Validate and encode query params                   |
+| **Stored XSS**    | Sanitize user input           | Never use `dangerouslySetInnerHTML` with user data |
+| **DOM-based XSS** | Avoid direct DOM manipulation | Use React's virtual DOM                            |
 
 ```typescript
 // ❌ FORBIDDEN - Direct HTML injection
@@ -1740,13 +1749,13 @@ export const SecureForm: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    
+
     // Prevent double submission
     if (isSubmitting) return
     setIsSubmitting(true)
 
     const formData = new FormData(event.currentTarget)
-    
+
     // Validate input before submission
     const email = formData.get('email')
     if (!isValidEmail(email)) {
@@ -1878,14 +1887,14 @@ frontend/dist/
 
 #### Asset Organization Requirements
 
-| Asset Type | Location | Naming Convention | Rationale |
-| ---------- | -------- | ----------------- | --------- |
-| JavaScript bundles | `dist/assets/` | `[name]-[hash].js` | Content-hash enables immutable caching |
-| CSS bundles | `dist/assets/` | `[name]-[hash].css` | Content-hash enables immutable caching |
-| Fonts | `dist/fonts/` | Original filename | Fonts rarely change, separate directory |
-| Images | `dist/images/` | Original or hashed | Depends on whether image changes |
-| HTML | `dist/` | `index.html` | Must not be cached |
-| Favicon | `dist/` | `favicon.ico` | Standard location |
+| Asset Type         | Location       | Naming Convention   | Rationale                               |
+| ------------------ | -------------- | ------------------- | --------------------------------------- |
+| JavaScript bundles | `dist/assets/` | `[name]-[hash].js`  | Content-hash enables immutable caching  |
+| CSS bundles        | `dist/assets/` | `[name]-[hash].css` | Content-hash enables immutable caching  |
+| Fonts              | `dist/fonts/`  | Original filename   | Fonts rarely change, separate directory |
+| Images             | `dist/images/` | Original or hashed  | Depends on whether image changes        |
+| HTML               | `dist/`        | `index.html`        | Must not be cached                      |
+| Favicon            | `dist/`        | `favicon.ico`       | Standard location                       |
 
 #### Vite Build Configuration
 
@@ -1957,16 +1966,16 @@ Cache-control headers MUST be configured to optimize performance while ensuring 
 
 The following cache-control headers MUST be configured in `firebase.json`:
 
-| Asset Type | Cache-Control Value | Max-Age | Rationale |
-| ---------- | ------------------- | ------- | --------- |
-| **JS bundles** (hashed) | `public, max-age=31536000, immutable` | 1 year | Content-hash ensures cache busting |
-| **CSS bundles** (hashed) | `public, max-age=31536000, immutable` | 1 year | Content-hash ensures cache busting |
-| **Fonts** | `public, max-age=31536000, immutable` | 1 year | Fonts rarely change |
-| **Images** (hashed) | `public, max-age=31536000, immutable` | 1 year | Hash ensures cache busting |
-| **Images** (non-hashed) | `public, max-age=86400` | 1 day | May change without hash |
-| **index.html** | `no-cache, no-store, must-revalidate` | 0 | Must always fetch latest |
-| **service-worker.js** | `no-cache, no-store, must-revalidate` | 0 | Must always fetch latest |
-| **manifest.json** | `no-cache, no-store, must-revalidate` | 0 | Must always fetch latest |
+| Asset Type               | Cache-Control Value                   | Max-Age | Rationale                          |
+| ------------------------ | ------------------------------------- | ------- | ---------------------------------- |
+| **JS bundles** (hashed)  | `public, max-age=31536000, immutable` | 1 year  | Content-hash ensures cache busting |
+| **CSS bundles** (hashed) | `public, max-age=31536000, immutable` | 1 year  | Content-hash ensures cache busting |
+| **Fonts**                | `public, max-age=31536000, immutable` | 1 year  | Fonts rarely change                |
+| **Images** (hashed)      | `public, max-age=31536000, immutable` | 1 year  | Hash ensures cache busting         |
+| **Images** (non-hashed)  | `public, max-age=86400`               | 1 day   | May change without hash            |
+| **index.html**           | `no-cache, no-store, must-revalidate` | 0       | Must always fetch latest           |
+| **service-worker.js**    | `no-cache, no-store, must-revalidate` | 0       | Must always fetch latest           |
+| **manifest.json**        | `no-cache, no-store, must-revalidate` | 0       | Must always fetch latest           |
 
 #### Firebase.json Headers Configuration
 
@@ -2076,13 +2085,13 @@ Firebase Hosting uses a global CDN to serve content from edge locations close to
 
 #### CDN Behavior Characteristics
 
-| Behavior | Description | Implication |
-| -------- | ----------- | ----------- |
-| **Global Distribution** | Content served from nearest edge location | Low latency for users worldwide |
-| **Automatic SSL** | HTTPS enabled by default | Secure connections without configuration |
-| **HTTP/2 Support** | Multiplexed connections | Faster parallel asset loading |
-| **Compression** | Automatic gzip/brotli compression | Reduced transfer sizes |
-| **Cache Propagation** | Changes propagate to all edges | May take minutes for global consistency |
+| Behavior                | Description                               | Implication                              |
+| ----------------------- | ----------------------------------------- | ---------------------------------------- |
+| **Global Distribution** | Content served from nearest edge location | Low latency for users worldwide          |
+| **Automatic SSL**       | HTTPS enabled by default                  | Secure connections without configuration |
+| **HTTP/2 Support**      | Multiplexed connections                   | Faster parallel asset loading            |
+| **Compression**         | Automatic gzip/brotli compression         | Reduced transfer sizes                   |
+| **Cache Propagation**   | Changes propagate to all edges            | May take minutes for global consistency  |
 
 #### Cache Invalidation on Deployment
 
@@ -2102,12 +2111,12 @@ Firebase Hosting automatically invalidates CDN caches when new content is deploy
 
 #### Handling Cache Invalidation Edge Cases
 
-| Scenario | Behavior | Mitigation |
-| -------- | -------- | ---------- |
-| **Deployment in progress** | Users may see old version | Atomic deployment ensures consistency |
-| **Browser has stale index.html** | May load old JS/CSS | `no-cache` on index.html forces revalidation |
-| **CDN edge not yet updated** | May serve old content | Wait for propagation (< 5 minutes) |
-| **Service worker caching** | May serve cached content | Implement proper SW update strategy |
+| Scenario                         | Behavior                  | Mitigation                                   |
+| -------------------------------- | ------------------------- | -------------------------------------------- |
+| **Deployment in progress**       | Users may see old version | Atomic deployment ensures consistency        |
+| **Browser has stale index.html** | May load old JS/CSS       | `no-cache` on index.html forces revalidation |
+| **CDN edge not yet updated**     | May serve old content     | Wait for propagation (< 5 minutes)           |
+| **Service worker caching**       | May serve cached content  | Implement proper SW update strategy          |
 
 #### Service Worker Cache Considerations
 
@@ -2115,19 +2124,19 @@ If the application uses a service worker:
 
 ```typescript
 // Service worker update strategy
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
   // Skip waiting to activate immediately
   self.skipWaiting()
 })
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   // Clear old caches
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CURRENT_CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .filter(name => name !== CURRENT_CACHE_NAME)
+          .map(name => caches.delete(name))
       )
     })
   )
@@ -2169,14 +2178,14 @@ Frontend builds MUST support environment-specific configuration for different de
 
 Environment configuration MUST use Vite's environment file convention:
 
-| File | Purpose | Git Status |
-| ---- | ------- | ---------- |
-| `.env` | Default values for all environments | Committed |
-| `.env.local` | Local overrides (developer-specific) | Ignored |
-| `.env.development` | Development environment values | Committed |
-| `.env.staging` | Staging environment values | Committed |
-| `.env.production` | Production environment values | Committed |
-| `.env.*.local` | Local overrides for specific environment | Ignored |
+| File               | Purpose                                  | Git Status |
+| ------------------ | ---------------------------------------- | ---------- |
+| `.env`             | Default values for all environments      | Committed  |
+| `.env.local`       | Local overrides (developer-specific)     | Ignored    |
+| `.env.development` | Development environment values           | Committed  |
+| `.env.staging`     | Staging environment values               | Committed  |
+| `.env.production`  | Production environment values            | Committed  |
+| `.env.*.local`     | Local overrides for specific environment | Ignored    |
 
 #### Environment Variable Naming
 
@@ -2227,7 +2236,9 @@ interface EnvironmentConfig {
 
 export const config: EnvironmentConfig = {
   apiUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:5001/api',
-  environment: (import.meta.env.VITE_ENVIRONMENT as EnvironmentConfig['environment']) ?? 'development',
+  environment:
+    (import.meta.env.VITE_ENVIRONMENT as EnvironmentConfig['environment']) ??
+    'development',
   enableAnalytics: import.meta.env.VITE_ENABLE_ANALYTICS === 'true',
   sentryDsn: import.meta.env.VITE_SENTRY_DSN || undefined,
 }
@@ -2285,13 +2296,13 @@ Environment variables for CI/CD builds MUST be set in the build pipeline:
 
 ```typescript
 // ❌ FORBIDDEN - Accessing process.env in frontend code
-const apiUrl = process.env.API_URL  // Not available in browser!
+const apiUrl = process.env.API_URL // Not available in browser!
 
 // ❌ FORBIDDEN - Non-prefixed environment variables
-const apiUrl = import.meta.env.API_URL  // Won't be exposed by Vite
+const apiUrl = import.meta.env.API_URL // Won't be exposed by Vite
 
 // ❌ FORBIDDEN - Sensitive data in frontend environment
-const apiSecret = import.meta.env.VITE_API_SECRET  // Never expose secrets!
+const apiSecret = import.meta.env.VITE_API_SECRET // Never expose secrets!
 
 // ✅ CORRECT - Properly prefixed and accessed
 const apiUrl = import.meta.env.VITE_API_URL
@@ -2344,11 +2355,7 @@ The `firebase.json` file MUST configure rewrites for SPA routing and API proxyin
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "/api/**",
@@ -2368,10 +2375,10 @@ The `firebase.json` file MUST configure rewrites for SPA routing and API proxyin
 
 #### Rewrite Rules Explanation
 
-| Rule | Source Pattern | Destination | Purpose |
-| ---- | -------------- | ----------- | ------- |
-| **API Proxy** | `/api/**` | Cloud Run service | Route API requests to backend |
-| **SPA Fallback** | `**` | `/index.html` | Handle client-side routes |
+| Rule             | Source Pattern | Destination       | Purpose                       |
+| ---------------- | -------------- | ----------------- | ----------------------------- |
+| **API Proxy**    | `/api/**`      | Cloud Run service | Route API requests to backend |
+| **SPA Fallback** | `**`           | `/index.html`     | Handle client-side routes     |
 
 #### Rewrite Rule Order
 
@@ -2395,11 +2402,11 @@ The API proxy rewrite MUST be configured to route requests to Cloud Run:
 }
 ```
 
-| Property | Value | Description |
-| -------- | ----- | ----------- |
-| `source` | `/api/**` | Match all paths starting with `/api/` |
-| `serviceId` | `toast-stats-backend` | Cloud Run service name |
-| `region` | `us-central1` | Cloud Run service region |
+| Property    | Value                 | Description                           |
+| ----------- | --------------------- | ------------------------------------- |
+| `source`    | `/api/**`             | Match all paths starting with `/api/` |
+| `serviceId` | `toast-stats-backend` | Cloud Run service name                |
+| `region`    | `us-central1`         | Cloud Run service region              |
 
 #### SPA Fallback Configuration
 
@@ -2426,11 +2433,7 @@ The complete `firebase.json` configuration combining all requirements:
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "/api/**",

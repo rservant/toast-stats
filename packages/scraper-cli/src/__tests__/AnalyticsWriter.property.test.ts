@@ -49,7 +49,9 @@ const isoTimestampArb = fc
     fc.integer({ min: 0, max: 999 })
   )
   .map(([year, month, day, hour, minute, second, ms]) => {
-    const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second, ms))
+    const date = new Date(
+      Date.UTC(year, month - 1, day, hour, minute, second, ms)
+    )
     return date.toISOString()
   })
 
@@ -234,14 +236,16 @@ const membershipTrendDataArb: fc.Arbitrary<MembershipTrendData> = fc
     }),
   })
   .chain(base =>
-    fc.option(yearOverYearComparisonArb, { nil: undefined }).map(yearOverYear => {
-      // Only include yearOverYear if it has a value
-      // This matches JSON behavior where undefined values are omitted
-      if (yearOverYear !== undefined) {
-        return { ...base, yearOverYear }
-      }
-      return base as MembershipTrendData
-    })
+    fc
+      .option(yearOverYearComparisonArb, { nil: undefined })
+      .map(yearOverYear => {
+        // Only include yearOverYear if it has a value
+        // This matches JSON behavior where undefined values are omitted
+        if (yearOverYear !== undefined) {
+          return { ...base, yearOverYear }
+        }
+        return base as MembershipTrendData
+      })
   )
 
 /**
@@ -252,7 +256,9 @@ const clubHealthDataArb: fc.Arbitrary<ClubHealthData> = fc
   .map(allClubs => {
     // Categorize clubs based on their status
     const thrivingClubs = allClubs.filter(c => c.currentStatus === 'thriving')
-    const vulnerableClubs = allClubs.filter(c => c.currentStatus === 'vulnerable')
+    const vulnerableClubs = allClubs.filter(
+      c => c.currentStatus === 'vulnerable'
+    )
     const interventionRequiredClubs = allClubs.filter(
       c => c.currentStatus === 'intervention_required'
     )
@@ -270,10 +276,12 @@ const clubHealthDataArb: fc.Arbitrary<ClubHealthData> = fc
  */
 const divisionRankingArb: fc.Arbitrary<DivisionRanking> = fc.record({
   divisionId: divisionIdArb,
-  divisionName: fc.array(
-    fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ '.split('')),
-    { minLength: 5, maxLength: 30 }
-  ).map(chars => chars.join('')),
+  divisionName: fc
+    .array(fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ '.split('')), {
+      minLength: 5,
+      maxLength: 30,
+    })
+    .map(chars => chars.join('')),
   rank: fc.integer({ min: 1, max: 26 }),
   score: fc.integer({ min: 0, max: 100 }),
   clubCount: fc.integer({ min: 0, max: 50 }),
@@ -285,10 +293,12 @@ const divisionRankingArb: fc.Arbitrary<DivisionRanking> = fc.record({
  */
 const areaPerformanceArb: fc.Arbitrary<AreaPerformance> = fc.record({
   areaId: areaIdArb,
-  areaName: fc.array(
-    fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '.split('')),
-    { minLength: 3, maxLength: 20 }
-  ).map(chars => chars.join('')),
+  areaName: fc
+    .array(
+      fc.constantFrom(...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '.split('')),
+      { minLength: 3, maxLength: 20 }
+    )
+    .map(chars => chars.join('')),
   divisionId: divisionIdArb,
   score: fc.integer({ min: 0, max: 100 }),
   clubCount: fc.integer({ min: 0, max: 20 }),
@@ -359,7 +369,10 @@ const districtAnalyticsArb: fc.Arbitrary<DistrictAnalytics> = fc.record({
     maxLength: 10,
   }),
   distinguishedProjection: distinguishedProjectionArb,
-  divisionRankings: fc.array(divisionRankingArb, { minLength: 0, maxLength: 10 }),
+  divisionRankings: fc.array(divisionRankingArb, {
+    minLength: 0,
+    maxLength: 10,
+  }),
   topPerformingAreas: fc.array(areaPerformanceArb, {
     minLength: 0,
     maxLength: 10,
@@ -425,10 +438,7 @@ function createIsolatedCacheDir(): {
   cleanup: () => Promise<void>
 } {
   const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const cachePath = path.join(
-    os.tmpdir(),
-    `analytics-writer-pbt-${uniqueId}`
-  )
+  const cachePath = path.join(os.tmpdir(), `analytics-writer-pbt-${uniqueId}`)
 
   return {
     path: cachePath,
@@ -463,7 +473,9 @@ describe('AnalyticsWriter Property Tests', () => {
       fc.assert(
         fc.property(preComputedDistrictAnalyticsFileArb, file => {
           const serialized = JSON.stringify(file)
-          const deserialized = JSON.parse(serialized) as PreComputedAnalyticsFile<DistrictAnalytics>
+          const deserialized = JSON.parse(
+            serialized
+          ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
           expect(deserialized).toEqual(file)
         }),
@@ -476,7 +488,9 @@ describe('AnalyticsWriter Property Tests', () => {
       fc.assert(
         fc.property(preComputedMembershipTrendsFileArb, file => {
           const serialized = JSON.stringify(file)
-          const deserialized = JSON.parse(serialized) as PreComputedAnalyticsFile<MembershipTrendData>
+          const deserialized = JSON.parse(
+            serialized
+          ) as PreComputedAnalyticsFile<MembershipTrendData>
 
           expect(deserialized).toEqual(file)
         }),
@@ -489,7 +503,9 @@ describe('AnalyticsWriter Property Tests', () => {
       fc.assert(
         fc.property(preComputedClubHealthFileArb, file => {
           const serialized = JSON.stringify(file)
-          const deserialized = JSON.parse(serialized) as PreComputedAnalyticsFile<ClubHealthData>
+          const deserialized = JSON.parse(
+            serialized
+          ) as PreComputedAnalyticsFile<ClubHealthData>
 
           expect(deserialized).toEqual(file)
         }),
@@ -552,7 +568,9 @@ describe('AnalyticsWriter Property Tests', () => {
       fc.assert(
         fc.property(preComputedDistrictAnalyticsFileArb, file => {
           const serialized = JSON.stringify(file)
-          const deserialized = JSON.parse(serialized) as PreComputedAnalyticsFile<DistrictAnalytics>
+          const deserialized = JSON.parse(
+            serialized
+          ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
           // Verify array lengths are preserved
           expect(deserialized.data.membershipTrend.length).toBe(
@@ -577,7 +595,9 @@ describe('AnalyticsWriter Property Tests', () => {
       fc.assert(
         fc.property(preComputedDistrictAnalyticsFileArb, file => {
           const serialized = JSON.stringify(file)
-          const deserialized = JSON.parse(serialized) as PreComputedAnalyticsFile<DistrictAnalytics>
+          const deserialized = JSON.parse(
+            serialized
+          ) as PreComputedAnalyticsFile<DistrictAnalytics>
 
           // Verify numeric values are preserved
           expect(deserialized.data.totalMembership).toBe(
@@ -678,7 +698,9 @@ describe('AnalyticsWriter Property Tests', () => {
                   manifestEntry.filename
                 )
                 const fileContent = await fs.readFile(actualFilePath, 'utf-8')
-                const parsed = JSON.parse(fileContent) as PreComputedAnalyticsFile<unknown>
+                const parsed = JSON.parse(
+                  fileContent
+                ) as PreComputedAnalyticsFile<unknown>
 
                 // The manifest checksum should match the checksum stored in the file's metadata
                 expect(manifestEntry.checksum).toBe(parsed.metadata.checksum)
@@ -746,7 +768,9 @@ describe('AnalyticsWriter Property Tests', () => {
                   manifestEntry.filename
                 )
                 const fileContent = await fs.readFile(actualFilePath, 'utf-8')
-                const parsed = JSON.parse(fileContent) as PreComputedAnalyticsFile<unknown>
+                const parsed = JSON.parse(
+                  fileContent
+                ) as PreComputedAnalyticsFile<unknown>
 
                 expect(manifestEntry.checksum).toBe(parsed.metadata.checksum)
 
@@ -812,7 +836,9 @@ describe('AnalyticsWriter Property Tests', () => {
                   manifestEntry.filename
                 )
                 const fileContent = await fs.readFile(actualFilePath, 'utf-8')
-                const parsed = JSON.parse(fileContent) as PreComputedAnalyticsFile<unknown>
+                const parsed = JSON.parse(
+                  fileContent
+                ) as PreComputedAnalyticsFile<unknown>
 
                 expect(manifestEntry.checksum).toBe(parsed.metadata.checksum)
 
@@ -865,9 +891,21 @@ describe('AnalyticsWriter Property Tests', () => {
 
               // Create manifest entries for all files
               const entries = [
-                await writer.createManifestEntry(analyticsPath, districtId, 'analytics'),
-                await writer.createManifestEntry(trendsPath, districtId, 'membership'),
-                await writer.createManifestEntry(healthPath, districtId, 'clubhealth'),
+                await writer.createManifestEntry(
+                  analyticsPath,
+                  districtId,
+                  'analytics'
+                ),
+                await writer.createManifestEntry(
+                  trendsPath,
+                  districtId,
+                  'membership'
+                ),
+                await writer.createManifestEntry(
+                  healthPath,
+                  districtId,
+                  'clubhealth'
+                ),
               ]
 
               // Write manifest with all entries
@@ -894,7 +932,9 @@ describe('AnalyticsWriter Property Tests', () => {
                   manifestEntry.filename
                 )
                 const fileContent = await fs.readFile(actualFilePath, 'utf-8')
-                const parsed = JSON.parse(fileContent) as PreComputedAnalyticsFile<unknown>
+                const parsed = JSON.parse(
+                  fileContent
+                ) as PreComputedAnalyticsFile<unknown>
 
                 // Manifest checksum should match file metadata checksum
                 expect(manifestEntry.checksum).toBe(parsed.metadata.checksum)
@@ -979,7 +1019,11 @@ describe('AnalyticsWriter Property Tests', () => {
               )
               const manifestContent = await fs.readFile(manifestPath, 'utf-8')
               const manifest = JSON.parse(manifestContent) as {
-                files: Array<{ filename: string; checksum: string; districtId: string }>
+                files: Array<{
+                  filename: string
+                  checksum: string
+                  districtId: string
+                }>
                 totalFiles: number
               }
 
@@ -993,7 +1037,9 @@ describe('AnalyticsWriter Property Tests', () => {
                   manifestEntry.filename
                 )
                 const fileContent = await fs.readFile(actualFilePath, 'utf-8')
-                const parsed = JSON.parse(fileContent) as PreComputedAnalyticsFile<unknown>
+                const parsed = JSON.parse(
+                  fileContent
+                ) as PreComputedAnalyticsFile<unknown>
 
                 // Manifest checksum should match file metadata checksum
                 expect(manifestEntry.checksum).toBe(parsed.metadata.checksum)

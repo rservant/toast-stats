@@ -243,7 +243,12 @@ export class AnalyticsWriter implements IAnalyticsWriter {
     const checksum = this.calculateChecksum(dataJson)
 
     // Create the file structure with metadata
-    const metadata = this.createMetadata(snapshotDate, districtId, checksum, sourceSnapshotChecksum)
+    const metadata = this.createMetadata(
+      snapshotDate,
+      districtId,
+      checksum,
+      sourceSnapshotChecksum
+    )
     const fileContent: PreComputedAnalyticsFile<T> = {
       metadata,
       data,

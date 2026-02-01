@@ -13,7 +13,9 @@ import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 /**
  * Helper to create a mock club
  */
-function createMockClub(overrides: Partial<ClubStatistics> = {}): ClubStatistics {
+function createMockClub(
+  overrides: Partial<ClubStatistics> = {}
+): ClubStatistics {
   return {
     clubId: '1234',
     clubName: 'Test Club',
@@ -72,9 +74,24 @@ describe('AnalyticsComputer', () => {
     it('should compute analytics from a single snapshot', async () => {
       const computer = new AnalyticsComputer()
       const clubs = [
-        createMockClub({ clubId: '1', clubName: 'Club A', membershipCount: 25, dcpGoals: 6 }),
-        createMockClub({ clubId: '2', clubName: 'Club B', membershipCount: 15, dcpGoals: 3 }),
-        createMockClub({ clubId: '3', clubName: 'Club C', membershipCount: 10, dcpGoals: 1 }),
+        createMockClub({
+          clubId: '1',
+          clubName: 'Club A',
+          membershipCount: 25,
+          dcpGoals: 6,
+        }),
+        createMockClub({
+          clubId: '2',
+          clubName: 'Club B',
+          membershipCount: 15,
+          dcpGoals: 3,
+        }),
+        createMockClub({
+          clubId: '3',
+          clubName: 'Club C',
+          membershipCount: 10,
+          dcpGoals: 1,
+        }),
       ]
       const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
 
@@ -96,7 +113,10 @@ describe('AnalyticsComputer', () => {
         createMockClub({ clubId: '1', membershipCount: 25 }),
       ])
 
-      const result = await computer.computeDistrictAnalytics('D101', [snapshot1, snapshot2])
+      const result = await computer.computeDistrictAnalytics('D101', [
+        snapshot1,
+        snapshot2,
+      ])
 
       expect(result.districtAnalytics.membershipChange).toBe(5) // 25 - 20
       expect(result.districtAnalytics.totalMembership).toBe(25) // Latest
@@ -113,7 +133,10 @@ describe('AnalyticsComputer', () => {
         createMockClub({ clubId: '1', membershipCount: 20 }),
       ])
 
-      const result = await computer.computeDistrictAnalytics('D101', [snapshot2, snapshot1])
+      const result = await computer.computeDistrictAnalytics('D101', [
+        snapshot2,
+        snapshot1,
+      ])
 
       // Should use sorted order: snapshot1 (Jan) -> snapshot2 (Feb)
       expect(result.districtAnalytics.membershipChange).toBe(10) // 30 - 20
@@ -125,11 +148,26 @@ describe('AnalyticsComputer', () => {
 
       const clubs = [
         // Thriving: membership >= 20 and DCP checkpoint met
-        createMockClub({ clubId: '1', clubName: 'Thriving Club', membershipCount: 25, dcpGoals: 5 }),
+        createMockClub({
+          clubId: '1',
+          clubName: 'Thriving Club',
+          membershipCount: 25,
+          dcpGoals: 5,
+        }),
         // Vulnerable: membership < 20 but >= 12
-        createMockClub({ clubId: '2', clubName: 'Vulnerable Club', membershipCount: 15, dcpGoals: 0 }),
+        createMockClub({
+          clubId: '2',
+          clubName: 'Vulnerable Club',
+          membershipCount: 15,
+          dcpGoals: 0,
+        }),
         // Intervention required: membership < 12
-        createMockClub({ clubId: '3', clubName: 'Critical Club', membershipCount: 8, dcpGoals: 0 }),
+        createMockClub({
+          clubId: '3',
+          clubName: 'Critical Club',
+          membershipCount: 8,
+          dcpGoals: 0,
+        }),
       ]
       const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
 
@@ -137,7 +175,9 @@ describe('AnalyticsComputer', () => {
 
       expect(result.clubHealth.thrivingClubs.length).toBeGreaterThanOrEqual(1)
       expect(result.clubHealth.vulnerableClubs.length).toBeGreaterThanOrEqual(0)
-      expect(result.clubHealth.interventionRequiredClubs.length).toBeGreaterThanOrEqual(1)
+      expect(
+        result.clubHealth.interventionRequiredClubs.length
+      ).toBeGreaterThanOrEqual(1)
     })
 
     it('should generate distinguished club summaries', async () => {
@@ -145,32 +185,84 @@ describe('AnalyticsComputer', () => {
 
       const clubs = [
         // President's Distinguished: 9+ goals, 20+ members
-        createMockClub({ clubId: '1', clubName: 'President Club', membershipCount: 25, dcpGoals: 9 }),
+        createMockClub({
+          clubId: '1',
+          clubName: 'President Club',
+          membershipCount: 25,
+          dcpGoals: 9,
+        }),
         // Select Distinguished: 7+ goals, 20+ members
-        createMockClub({ clubId: '2', clubName: 'Select Club', membershipCount: 22, dcpGoals: 7 }),
+        createMockClub({
+          clubId: '2',
+          clubName: 'Select Club',
+          membershipCount: 22,
+          dcpGoals: 7,
+        }),
         // Distinguished: 5+ goals, 20+ members
-        createMockClub({ clubId: '3', clubName: 'Distinguished Club', membershipCount: 20, dcpGoals: 5 }),
+        createMockClub({
+          clubId: '3',
+          clubName: 'Distinguished Club',
+          membershipCount: 20,
+          dcpGoals: 5,
+        }),
         // Not distinguished
-        createMockClub({ clubId: '4', clubName: 'Regular Club', membershipCount: 15, dcpGoals: 3 }),
+        createMockClub({
+          clubId: '4',
+          clubName: 'Regular Club',
+          membershipCount: 15,
+          dcpGoals: 3,
+        }),
       ]
       const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
 
       const result = await computer.computeDistrictAnalytics('D101', [snapshot])
 
       expect(result.districtAnalytics.distinguishedClubs.length).toBe(3)
-      expect(result.districtAnalytics.distinguishedClubs.some(c => c.status === 'president')).toBe(true)
-      expect(result.districtAnalytics.distinguishedClubs.some(c => c.status === 'select')).toBe(true)
-      expect(result.districtAnalytics.distinguishedClubs.some(c => c.status === 'distinguished')).toBe(true)
+      expect(
+        result.districtAnalytics.distinguishedClubs.some(
+          c => c.status === 'president'
+        )
+      ).toBe(true)
+      expect(
+        result.districtAnalytics.distinguishedClubs.some(
+          c => c.status === 'select'
+        )
+      ).toBe(true)
+      expect(
+        result.districtAnalytics.distinguishedClubs.some(
+          c => c.status === 'distinguished'
+        )
+      ).toBe(true)
     })
 
     it('should generate division rankings', async () => {
       const computer = new AnalyticsComputer()
 
       const clubs = [
-        createMockClub({ clubId: '1', divisionId: 'A', membershipCount: 25, dcpGoals: 8 }),
-        createMockClub({ clubId: '2', divisionId: 'A', membershipCount: 22, dcpGoals: 6 }),
-        createMockClub({ clubId: '3', divisionId: 'B', membershipCount: 18, dcpGoals: 3 }),
-        createMockClub({ clubId: '4', divisionId: 'B', membershipCount: 15, dcpGoals: 2 }),
+        createMockClub({
+          clubId: '1',
+          divisionId: 'A',
+          membershipCount: 25,
+          dcpGoals: 8,
+        }),
+        createMockClub({
+          clubId: '2',
+          divisionId: 'A',
+          membershipCount: 22,
+          dcpGoals: 6,
+        }),
+        createMockClub({
+          clubId: '3',
+          divisionId: 'B',
+          membershipCount: 18,
+          dcpGoals: 3,
+        }),
+        createMockClub({
+          clubId: '4',
+          divisionId: 'B',
+          membershipCount: 15,
+          dcpGoals: 2,
+        }),
       ]
       const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
 
@@ -186,15 +278,35 @@ describe('AnalyticsComputer', () => {
       const computer = new AnalyticsComputer()
 
       const clubs = [
-        createMockClub({ clubId: '1', divisionId: 'A', areaId: 'A1', membershipCount: 25, dcpGoals: 8 }),
-        createMockClub({ clubId: '2', divisionId: 'A', areaId: 'A2', membershipCount: 15, dcpGoals: 2 }),
-        createMockClub({ clubId: '3', divisionId: 'B', areaId: 'B1', membershipCount: 20, dcpGoals: 5 }),
+        createMockClub({
+          clubId: '1',
+          divisionId: 'A',
+          areaId: 'A1',
+          membershipCount: 25,
+          dcpGoals: 8,
+        }),
+        createMockClub({
+          clubId: '2',
+          divisionId: 'A',
+          areaId: 'A2',
+          membershipCount: 15,
+          dcpGoals: 2,
+        }),
+        createMockClub({
+          clubId: '3',
+          divisionId: 'B',
+          areaId: 'B1',
+          membershipCount: 20,
+          dcpGoals: 5,
+        }),
       ]
       const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
 
       const result = await computer.computeDistrictAnalytics('D101', [snapshot])
 
-      expect(result.districtAnalytics.topPerformingAreas.length).toBeGreaterThan(0)
+      expect(
+        result.districtAnalytics.topPerformingAreas.length
+      ).toBeGreaterThan(0)
       // Area A1 should be top (highest score)
       expect(result.districtAnalytics.topPerformingAreas[0]?.areaId).toBe('A1')
     })
@@ -209,7 +321,10 @@ describe('AnalyticsComputer', () => {
         createMockClub({ clubId: '1', membershipCount: 25, paymentsCount: 20 }),
       ])
 
-      const result = await computer.computeDistrictAnalytics('D101', [snapshot1, snapshot2])
+      const result = await computer.computeDistrictAnalytics('D101', [
+        snapshot1,
+        snapshot2,
+      ])
 
       expect(result.membershipTrends.membershipTrend).toHaveLength(2)
       expect(result.membershipTrends.paymentsTrend).toHaveLength(2)
@@ -220,10 +335,17 @@ describe('AnalyticsComputer', () => {
     it('should set correct date range', async () => {
       const computer = new AnalyticsComputer()
 
-      const snapshot1 = createMockSnapshot('D101', '2024-01-01', [createMockClub()])
-      const snapshot2 = createMockSnapshot('D101', '2024-03-15', [createMockClub()])
+      const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
+        createMockClub(),
+      ])
+      const snapshot2 = createMockSnapshot('D101', '2024-03-15', [
+        createMockClub(),
+      ])
 
-      const result = await computer.computeDistrictAnalytics('D101', [snapshot1, snapshot2])
+      const result = await computer.computeDistrictAnalytics('D101', [
+        snapshot1,
+        snapshot2,
+      ])
 
       expect(result.districtAnalytics.dateRange.start).toBe('2024-01-01')
       expect(result.districtAnalytics.dateRange.end).toBe('2024-03-15')

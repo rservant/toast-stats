@@ -117,7 +117,8 @@ export class DivisionAreaAnalyticsModule {
     const divisions: DivisionRanking[] = Array.from(divisionMap.values()).map(
       div => {
         // Calculate score based on DCP goals and health
-        const avgHealth = div.clubCount > 0 ? div.healthScoreSum / div.clubCount : 0
+        const avgHealth =
+          div.clubCount > 0 ? div.healthScoreSum / div.clubCount : 0
         const score = div.totalDcpGoals + avgHealth * 10 // Weight health score
 
         return {

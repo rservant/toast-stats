@@ -14,10 +14,7 @@ import type {
   ClubRiskFactors,
   ClubHealthData,
 } from '../types.js'
-import {
-  getDCPCheckpoint,
-  getCurrentProgramMonth,
-} from './AnalyticsUtils.js'
+import { getDCPCheckpoint, getCurrentProgramMonth } from './AnalyticsUtils.js'
 
 /**
  * ClubHealthAnalyticsModule
@@ -89,7 +86,10 @@ export class ClubHealthAnalyticsModule {
     }
 
     // Build membership history for each club
-    const membershipHistory = new Map<string, Array<{ date: string; count: number }>>()
+    const membershipHistory = new Map<
+      string,
+      Array<{ date: string; count: number }>
+    >()
     const dcpHistory = new Map<string, Array<{ date: string; goals: number }>>()
 
     for (const snapshot of snapshots) {

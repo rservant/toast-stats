@@ -7,10 +7,7 @@
  * Requirements: 7.2, 7.3, 7.4, 7.5
  */
 
-import type {
-  IAnalyticsComputer,
-  DistrictStatistics,
-} from '../interfaces.js'
+import type { IAnalyticsComputer, DistrictStatistics } from '../interfaces.js'
 import type {
   AnalyticsComputationResult,
   ComputeOptions,
@@ -63,18 +60,26 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     )
 
     // Compute membership trends
-    const membershipTrends = this.membershipModule.generateMembershipTrends(sortedSnapshots)
+    const membershipTrends =
+      this.membershipModule.generateMembershipTrends(sortedSnapshots)
 
     // Compute club health data
-    const clubHealth = this.clubHealthModule.generateClubHealthData(sortedSnapshots)
+    const clubHealth =
+      this.clubHealthModule.generateClubHealthData(sortedSnapshots)
 
     // Compute distinguished club data
-    const distinguishedClubs = this.distinguishedModule.generateDistinguishedClubSummaries(sortedSnapshots)
-    const distinguishedProjection = this.distinguishedModule.generateDistinguishedProjection(sortedSnapshots)
+    const distinguishedClubs =
+      this.distinguishedModule.generateDistinguishedClubSummaries(
+        sortedSnapshots
+      )
+    const distinguishedProjection =
+      this.distinguishedModule.generateDistinguishedProjection(sortedSnapshots)
 
     // Compute division and area rankings
-    const divisionRankings = this.divisionAreaModule.generateDivisionRankings(sortedSnapshots)
-    const topPerformingAreas = this.divisionAreaModule.generateTopPerformingAreas(sortedSnapshots)
+    const divisionRankings =
+      this.divisionAreaModule.generateDivisionRankings(sortedSnapshots)
+    const topPerformingAreas =
+      this.divisionAreaModule.generateTopPerformingAreas(sortedSnapshots)
 
     // Calculate date range
     const dateRange = this.calculateDateRange(sortedSnapshots)
@@ -84,7 +89,8 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     const totalMembership = latestSnapshot
       ? this.membershipModule.getTotalMembership(latestSnapshot)
       : 0
-    const membershipChange = this.membershipModule.calculateMembershipChange(sortedSnapshots)
+    const membershipChange =
+      this.membershipModule.calculateMembershipChange(sortedSnapshots)
 
     // Build district analytics
     const districtAnalytics: DistrictAnalytics = {
