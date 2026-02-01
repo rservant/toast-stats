@@ -155,6 +155,11 @@ export interface CLIOptions {
   timeout: number
   /** Path to alternative configuration file */
   config?: string
+  /**
+   * Run transformation after scraping
+   * Requirement 2.5: THE `scrape` command SHALL optionally run transformation automatically with a `--transform` flag
+   */
+  transform?: boolean
 }
 
 /**
@@ -177,4 +182,278 @@ export interface ConfigValidationResult {
   isValid: boolean
   /** List of validation errors */
   errors: string[]
+}
+
+/**
+ * Options for the transform command
+ * Requirement 2.1: Transform command options
+ */
+export interface TransformOptions {
+  /** Target date in YYYY-MM-DD format */
+  date?: string
+  /** Specific districts to transform, defaults to all available */
+  districts?: string[]
+  /** Force re-transform even if snapshots exist */
+  force: boolean
+  /** Enable verbose logging */
+  verbose: boolean
+  /** Path to alternative configuration file */
+  config?: string
+}
+
+/**
+ * Result of a transform operation
+ */
+export interface TransformResult {
+  /** Whether the overall operation succeeded */
+  success: boolean
+  /** The date that was transformed */
+  date: string
+  /** All districts that were processed */
+  districtsProcessed: string[]
+  /** Districts that were successfully transformed */
+  districtsSucceeded: string[]
+  /** Districts that failed to transform */
+  districtsFailed: string[]
+  /** Districts that were skipped (already exist and not forced) */
+  districtsSkipped: string[]
+  /** Paths to created snapshot files */
+  snapshotLocations: string[]
+  /** Detailed error information for failed districts */
+  errors: Array<{
+    districtId: string
+    error: string
+    timestamp: string
+  }>
+  /** Total duration of the transform operation in milliseconds */
+  duration_ms: number
+}
+
+/**
+ * JSON output summary for transform command
+ */
+export interface TransformSummary {
+  /** ISO timestamp when transform completed */
+  timestamp: string
+  /** Date that was transformed */
+  date: string
+  /** Overall status: success, partial, or failed */
+  status: 'success' | 'partial' | 'failed'
+  /** District processing statistics */
+  districts: {
+    total: number
+    succeeded: number
+    failed: number
+    skipped: number
+  }
+  /** Snapshot information */
+  snapshots: {
+    directory: string
+    filesCreated: number
+  }
+  /** Error details for failed districts */
+  errors: Array<{
+    districtId: string
+    error: string
+  }>
+  /** Total duration in milliseconds */
+  duration_ms: number
+}
+
+/**
+ * Combined summary for scrape with --transform flag
+ * Requirement 2.5: THE `scrape` command SHALL optionally run transformation automatically with a `--transform` flag
+ */
+export interface ScrapeWithTransformSummary extends ScrapeSummary {
+  /** Transform results when --transform flag is used */
+  transform?: {
+    /** Overall status of transformation */
+    status: 'success' | 'partial' | 'failed' | 'skipped'
+    /** District processing statistics */
+    districts: {
+      total: number
+      succeeded: number
+      failed: number
+      skipped: number
+    }
+    /** Snapshot information */
+    snapshots: {
+      directory: string
+      filesCreated: number
+    }
+    /** Error details for failed districts */
+    errors: Array<{
+      districtId: string
+      error: string
+    }>
+    /** Duration of transform operation in milliseconds */
+    duration_ms: number
+  }
+}
+
+/**
+ * Options for the compute-analytics command
+ * Requirement 8.1: THE Scraper_CLI SHALL provide a `compute-analytics` command
+ * Requirement 8.2: WHEN the `compute-analytics` command is invoked with a date
+ * Requirement 8.3: THE `compute-analytics` command SHALL support a `--districts` option
+ */
+export interface ComputeAnalyticsOptions {
+  /** Target date in YYYY-MM-DD format */
+  date?: string
+  /** Specific districts to compute analytics for, defaults to all available */
+  districts?: string[]
+  /** Force re-compute even if analytics exist */
+  forceAnalytics: boolean
+  /** Enable verbose logging */
+  verbose: boolean
+  /** Path to alternative configuration file */
+  config?: string
+}
+
+/**
+ * Result of a compute-analytics operation
+ */
+export interface ComputeAnalyticsResult {
+  /** Whether the overall operation succeeded */
+  success: boolean
+  /** The date that was processed */
+  date: string
+  /** All districts that were processed */
+  districtsProcessed: string[]
+  /** Districts that were successfully computed */
+  districtsSucceeded: string[]
+  /** Districts that failed to compute */
+  districtsFailed: string[]
+  /** Districts that were skipped (already exist and not forced) */
+  districtsSkipped: string[]
+  /** Paths to created analytics files */
+  analyticsLocations: string[]
+  /** Detailed error information for failed districts */
+  errors: Array<{
+    districtId: string
+    error: string
+    timestamp: string
+  }>
+  /** Total duration of the compute operation in milliseconds */
+  duration_ms: number
+}
+
+/**
+ * JSON output summary for compute-analytics command
+ * Requirement 8.4: THE `compute-analytics` command SHALL output a JSON summary
+ */
+export interface ComputeAnalyticsSummary {
+  /** ISO timestamp when computation completed */
+  timestamp: string
+  /** Date that was processed */
+  date: string
+  /** Overall status: success, partial, or failed */
+  status: 'success' | 'partial' | 'failed'
+  /** District processing statistics */
+  districts: {
+    total: number
+    succeeded: number
+    failed: number
+    skipped: number
+  }
+  /** Analytics information */
+  analytics: {
+    directory: string
+    filesCreated: number
+  }
+  /** Error details for failed districts */
+  errors: Array<{
+    districtId: string
+    error: string
+  }>
+  /** Total duration in milliseconds */
+  duration_ms: number
+}
+
+/**
+ * Options for the upload command
+ * Requirement 6.1: THE Scraper_CLI SHALL provide an `upload` command to sync local snapshots and analytics to Google Cloud Storage
+ */
+export interface UploadOptions {
+  /** Target date in YYYY-MM-DD format, if not specified uploads all available dates */
+  date?: string
+  /** Only upload files that have changed (compare checksums) */
+  incremental: boolean
+  /** Show what would be uploaded without actually uploading */
+  dryRun: boolean
+  /** Enable verbose logging */
+  verbose: boolean
+  /** Path to alternative configuration file */
+  config?: string
+}
+
+/**
+ * Result of an upload operation
+ */
+export interface UploadResult {
+  /** Whether the overall operation succeeded */
+  success: boolean
+  /** The date(s) that were uploaded */
+  dates: string[]
+  /** All files that were processed */
+  filesProcessed: string[]
+  /** Files that were successfully uploaded */
+  filesUploaded: string[]
+  /** Files that failed to upload */
+  filesFailed: string[]
+  /** Files that were skipped (unchanged in incremental mode) */
+  filesSkipped: string[]
+  /** Detailed error information for failed files */
+  errors: Array<{
+    file: string
+    error: string
+    timestamp: string
+  }>
+  /** Total duration of the upload operation in milliseconds */
+  duration_ms: number
+  /**
+   * Indicates a GCS authentication/authorization failure occurred.
+   * When true, the CLI should exit with code 2 (complete failure).
+   * Requirement 6.4: GCS authentication failure should exit with code 2.
+   */
+  authError?: boolean
+}
+
+/**
+ * JSON output summary for upload command
+ * Requirement 6.5: WHEN upload completes, THE Scraper_CLI SHALL output a summary of uploaded files and any errors
+ */
+export interface UploadSummary {
+  /** ISO timestamp when upload completed */
+  timestamp: string
+  /** Date(s) that were uploaded */
+  dates: string[]
+  /** Overall status: success, partial, or failed */
+  status: 'success' | 'partial' | 'failed'
+  /** Whether this was a dry run */
+  dryRun: boolean
+  /** File processing statistics */
+  files: {
+    total: number
+    uploaded: number
+    failed: number
+    skipped: number
+  }
+  /** Upload destination information */
+  destination: {
+    bucket: string
+    prefix: string
+  }
+  /** Error details for failed files */
+  errors: Array<{
+    file: string
+    error: string
+  }>
+  /** Total duration in milliseconds */
+  duration_ms: number
+  /**
+   * Indicates a GCS authentication/authorization failure occurred.
+   * When true, the status will be 'failed' and exit code will be 2.
+   */
+  authError?: boolean
 }

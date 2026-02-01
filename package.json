@@ -6,7 +6,8 @@
   "workspaces": [
     "frontend",
     "backend",
-    "packages/scraper-cli"
+    "packages/scraper-cli",
+    "packages/analytics-core"
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
@@ -14,10 +15,12 @@
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
     "build:scraper-cli": "npm run build --workspace=@toastmasters/scraper-cli",
+    "build:analytics-core": "npm run build --workspace=@toastmasters/analytics-core",
     "scraper-cli": "npm run start --workspace=@toastmasters/scraper-cli --",
     "test:frontend": "npm run test --workspace=frontend",
     "test:backend": "npm run test --workspace=backend",
     "test:scraper-cli": "npm run test --workspace=@toastmasters/scraper-cli",
+    "test:analytics-core": "npm run test --workspace=@toastmasters/analytics-core",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "lint:yaml": "yamllint -c .yamllint.yml .github/ docs/",

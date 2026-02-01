@@ -1,0 +1,154 @@
+/**
+ * Core interfaces for analytics computation and data transformation.
+ * 
+ * These interfaces define the contracts that implementations must follow,
+ * enabling both scraper-cli and backend to use the same computation logic.
+ */
+
+import type {
+  AnalyticsComputationResult,
+  ComputeOptions,
+} from './types.js'
+
+/**
+ * Raw CSV data structure from Toastmasters dashboard.
+ * This represents the parsed CSV data before transformation.
+ */
+export interface RawCSVData {
+  clubPerformance?: string[][]
+  divisionPerformance?: string[][]
+  districtPerformance?: string[][]
+}
+
+/**
+ * District statistics snapshot data.
+ * This is the transformed data structure used for analytics computation.
+ */
+export interface DistrictStatistics {
+  districtId: string
+  snapshotDate: string
+  clubs: ClubStatistics[]
+  divisions: DivisionStatistics[]
+  areas: AreaStatistics[]
+  totals: DistrictTotals
+}
+
+/**
+ * Individual club statistics.
+ */
+export interface ClubStatistics {
+  clubId: string
+  clubName: string
+  divisionId: string
+  areaId: string
+  membershipCount: number
+  paymentsCount: number
+  dcpGoals: number
+  status: string
+  charterDate?: string
+}
+
+/**
+ * Division-level statistics.
+ */
+export interface DivisionStatistics {
+  divisionId: string
+  divisionName: string
+  clubCount: number
+  membershipTotal: number
+  paymentsTotal: number
+}
+
+/**
+ * Area-level statistics.
+ */
+export interface AreaStatistics {
+  areaId: string
+  areaName: string
+  divisionId: string
+  clubCount: number
+  membershipTotal: number
+  paymentsTotal: number
+}
+
+/**
+ * District-level totals.
+ */
+export interface DistrictTotals {
+  totalClubs: number
+  totalMembership: number
+  totalPayments: number
+  distinguishedClubs: number
+  selectDistinguishedClubs: number
+  presidentDistinguishedClubs: number
+}
+
+/**
+ * Snapshot metadata.
+ */
+export interface SnapshotMetadata {
+  snapshotDate: string
+  createdAt: string
+  districtCount: number
+  version: string
+}
+
+/**
+ * Complete snapshot structure.
+ */
+export interface Snapshot {
+  metadata: SnapshotMetadata
+  districts: DistrictStatistics[]
+}
+
+/**
+ * Interface for analytics computation.
+ * Implementations compute analytics from district statistics.
+ */
+export interface IAnalyticsComputer {
+  /**
+   * Computes comprehensive analytics for a district.
+   * 
+   * @param districtId - The district identifier
+   * @param snapshots - Array of district statistics snapshots (for trend analysis)
+   * @param options - Optional computation options
+   * @returns Promise resolving to the computation result
+   */
+  computeDistrictAnalytics(
+    districtId: string,
+    snapshots: DistrictStatistics[],
+    options?: ComputeOptions
+  ): Promise<AnalyticsComputationResult>
+}
+
+/**
+ * Interface for data transformation.
+ * Implementations transform raw CSV data into snapshot format.
+ */
+export interface IDataTransformer {
+  /**
+   * Transforms raw CSV data into district statistics.
+   * 
+   * @param date - The snapshot date (YYYY-MM-DD)
+   * @param districtId - The district identifier
+   * @param csvData - Raw CSV data from Toastmasters dashboard
+   * @returns Promise resolving to transformed district statistics
+   */
+  transformRawCSV(
+    date: string,
+    districtId: string,
+    csvData: RawCSVData
+  ): Promise<DistrictStatistics>
+
+  /**
+   * Creates a complete snapshot from multiple district statistics.
+   * 
+   * @param date - The snapshot date (YYYY-MM-DD)
+   * @param districts - Array of district statistics
+   * @returns Promise resolving to the complete snapshot
+   */
+  createSnapshot(
+    date: string,
+    districts: DistrictStatistics[]
+  ): Promise<Snapshot>
+}
