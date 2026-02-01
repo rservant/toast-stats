@@ -63,6 +63,9 @@ All testing decisions MUST follow these principles:
 7. **Dependency injection over global state**  
    Use injected dependencies instead of singletons to enable proper test isolation.
 
+8. **Prefer the simplest test that provides confidence**  
+   Property tests are a tool, not a default. Unit tests with well-chosen examples are often sufficient and more maintainable.
+
 ---
 
 ## 4. Test Strategy (Advisory Pyramid)
@@ -73,6 +76,7 @@ The system SHOULD broadly follow this distribution:
 | ------------------- | --------------------------- |
 | Unit Tests          | Core logic and rules        |
 | Integration Tests   | Persistence and contracts   |
+| Property Tests      | Invariants and complex input spaces |
 | End-to-End Tests    | Critical workflows only     |
 | Exploratory Testing | Discovery and understanding |
 
@@ -140,7 +144,93 @@ Integration tests MUST be safe for parallel execution:
 
 ---
 
-## 7. End-to-End Testing
+## 7. Property-Based Testing
+
+Property-based testing (PBT) is a powerful technique, but it is **not the default**.
+
+> **Property tests are a tool, not a default.**
+
+Kiro MUST consult this section before proposing property-based tests.
+
+### 7.1 When Property Tests ARE Warranted
+
+Property-based testing SHOULD be used when:
+
+1. **Mathematical invariants exist**
+   - Sorting algorithms (output is sorted, same elements)
+   - Calculations with known algebraic properties
+   - Encoding/decoding roundtrips
+
+2. **Complex input spaces with non-obvious edge cases**
+   - Parsers and serializers
+   - Data transformation pipelines
+   - Input validation with many boundary conditions
+
+3. **Business rules with universal properties**
+   - "Rankings must be unique and contiguous"
+   - "Totals must equal sum of parts"
+   - "Status transitions must follow state machine"
+
+4. **Existing bugs suggest missed edge cases**
+   - When a bug reveals the input space wasn't adequately explored
+   - When manual enumeration of cases is impractical
+
+### 7.2 When Property Tests Are NOT Warranted
+
+Property-based testing SHOULD NOT be used for:
+
+1. **UI component fixes**
+   - Display formatting
+   - Layout adjustments
+   - Styling changes
+
+2. **Simple CRUD operations**
+   - Basic create/read/update/delete
+   - Straightforward data mapping
+
+3. **Integration glue code**
+   - Wiring between components
+   - Configuration handling
+
+4. **Cases where examples are clearer**
+   - When 3-5 specific examples fully cover the behavior
+   - When the "property" would just restate the implementation
+
+5. **Low-risk, easily-observable changes**
+   - Changes where failures would be immediately obvious
+   - Changes with low blast radius
+
+### 7.3 Decision Framework
+
+Before proposing a property test, answer:
+
+1. **What universal property would this test verify?**
+   - If you can't articulate a clear property, use unit tests
+
+2. **Would 5 well-chosen examples provide equivalent confidence?**
+   - If yes, prefer the examples
+
+3. **Is the input space genuinely complex?**
+   - If inputs are simple or bounded, examples suffice
+
+4. **Does this logic have mathematical or algebraic properties?**
+   - If no, property tests likely add complexity without value
+
+### 7.4 Existing PBT Coverage
+
+This codebase already has substantial PBT coverage for:
+
+- Cache services and integrity validation
+- Snapshot storage and retrieval
+- Ranking calculations
+- Data normalization
+- Service container isolation
+
+New property tests SHOULD NOT duplicate coverage that already exists.
+
+---
+
+## 8. End-to-End Testing
 
 End-to-end tests are expensive.
 
@@ -162,7 +252,7 @@ End-to-end tests MUST:
 
 ---
 
-## 8. Rule-Driven and Derived Logic
+## 9. Rule-Driven and Derived Logic
 
 Any logic that is:
 
@@ -179,7 +269,7 @@ MUST be protected by tests that:
 
 ---
 
-## 9. Legacy and Refactoring Rule
+## 10. Legacy and Refactoring Rule
 
 Refactoring MUST NOT proceed without test protection.
 
@@ -190,7 +280,7 @@ Rule:
 
 ---
 
-## 10. Test Ownership
+## 11. Test Ownership
 
 The author owns all tests.
 
@@ -198,7 +288,7 @@ Broken or unclear tests are a signal to clarify intent, not to delete blindly.
 
 ---
 
-## 11. Architecture Requirements for Testability
+## 12. Architecture Requirements for Testability
 
 Code MUST be designed to support reliable testing:
 
@@ -222,7 +312,7 @@ Code MUST be designed to support reliable testing:
 
 ---
 
-## 12. Test Infrastructure Requirements
+## 13. Test Infrastructure Requirements
 
 The test infrastructure MUST provide:
 
@@ -247,26 +337,17 @@ The test infrastructure MUST provide:
 
 ---
 
-## 11. Final Rule
+## 14. Final Rule
 
 > **If it matters later, it must be tested now.**  
-> **If a test isn’t trusted, fix the test before trusting the code.**  
-> **If future-you would ask “why?”, the test should answer it.**
+> **If a test isn't trusted, fix the test before trusting the code.**  
+> **If future-you would ask "why?", the test should answer it.**  
+> **If tests can't run in parallel, they're not properly isolated.**  
+> **Prefer the simplest test that provides confidence.**  
+> **Property tests are for invariants, not for everything.**  
+> **When in doubt, write unit tests with good examples.**
 
 ---
 
 This document is paired with `testing.eval.md`.  
 Kiro MUST use both when evaluating changes.
-
----
-
-## 13. Final Rule (Updated)
-
-> **If it matters later, it must be tested now.**  
-> **If a test isn't trusted, fix the test before trusting the code.**  
-> **If future-you would ask "why?", the test should answer it.**  
-> **If tests can't run in parallel, they're not properly isolated.**
-
----
-
-**Note**: This document has been updated to include test isolation and concurrency requirements based on analysis of existing test suite issues. The original Final Rule (section 11) should be considered superseded by this updated version.
