@@ -11,8 +11,8 @@ import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
 import type {
   ClubTrend,
   ClubHealthStatus,
-  ClubRiskFactors,
   ClubHealthData,
+  DistinguishedLevel,
 } from '../types.js'
 import { getDCPCheckpoint, getCurrentProgramMonth } from './AnalyticsUtils.js'
 
@@ -77,11 +77,28 @@ export class ClubHealthAnalyticsModule {
       clubMap.set(club.clubId, {
         clubId: club.clubId,
         clubName: club.clubName,
+        // Extract division/area info with defaults for missing values (Requirements 2.1, 4.3)
+        divisionId: club.divisionId || 'Unknown',
+        divisionName: club.divisionName || 'Unknown Division',
+        areaId: club.areaId || 'Unknown',
+        areaName: club.areaName || 'Unknown Area',
         currentStatus: 'thriving',
         riskFactors: this.createEmptyRiskFactors(),
         membershipCount: club.membershipCount,
         paymentsCount: club.paymentsCount,
         healthScore: 0,
+        // Initialize trend arrays (will be populated later in tasks 3.2, 3.3)
+        membershipTrend: [],
+        dcpGoalsTrend: [],
+        // Initialize distinguished level (will be calculated in task 3.5)
+        distinguishedLevel: 'NotDistinguished',
+        // Extract payment fields with defaults (Requirements 2.4)
+        // Default to 0 if not present to ensure consistent numeric values
+        octoberRenewals: club.octoberRenewals ?? 0,
+        aprilRenewals: club.aprilRenewals ?? 0,
+        newMembers: club.newMembers ?? 0,
+        // Extract club status (will be properly handled in task 3.7)
+        clubStatus: club.clubStatus,
       })
     }
 
@@ -109,6 +126,30 @@ export class ClubHealthAnalyticsModule {
           date: snapshot.snapshotDate,
           goals: club.dcpGoals,
         })
+      }
+    }
+
+    // Populate membershipTrend arrays from membershipHistory (Requirements 2.2, 5.3)
+    // Each entry: { date: string, count: number }, sorted by date ascending
+    for (const [clubId, history] of membershipHistory) {
+      const clubTrend = clubMap.get(clubId)
+      if (clubTrend) {
+        clubTrend.membershipTrend = history.map(h => ({
+          date: h.date,
+          count: h.count,
+        }))
+      }
+    }
+
+    // Populate dcpGoalsTrend arrays from dcpHistory (Requirements 2.3, 5.4)
+    // Each entry: { date: string, goalsAchieved: number }, sorted by date ascending
+    for (const [clubId, history] of dcpHistory) {
+      const clubTrend = clubMap.get(clubId)
+      if (clubTrend) {
+        clubTrend.dcpGoalsTrend = history.map(h => ({
+          date: h.date,
+          goalsAchieved: h.goals,
+        }))
       }
     }
 
@@ -152,16 +193,11 @@ export class ClubHealthAnalyticsModule {
   // ========== Private Helper Methods ==========
 
   /**
-   * Create empty risk factors object
+   * Create empty risk factors array
+   * Returns string[] format as required by ClubTrend type (Requirement 1.6)
    */
-  private createEmptyRiskFactors(): ClubRiskFactors {
-    return {
-      lowMembership: false,
-      decliningMembership: false,
-      lowPayments: false,
-      inactiveOfficers: false,
-      noRecentMeetings: false,
-    }
+  private createEmptyRiskFactors(): string[] {
+    return []
   }
 
   /**
@@ -181,7 +217,7 @@ export class ClubHealthAnalyticsModule {
     membershipHistory: Array<{ date: string; count: number }>,
     snapshotDate: string
   ): void {
-    const riskFactors = this.createEmptyRiskFactors()
+    const riskFactors: string[] = []
 
     const currentMembership = club.membershipCount
     const currentDcpGoals = club.dcpGoals
@@ -207,7 +243,7 @@ export class ClubHealthAnalyticsModule {
     // If membership < 12 AND net growth < 3, assign "Intervention Required"
     if (currentMembership < 12 && netGrowth < 3) {
       status = 'intervention_required'
-      riskFactors.lowMembership = true
+      riskFactors.push('Low membership')
     } else {
       // Evaluate each requirement for Thriving status
 
@@ -225,7 +261,7 @@ export class ClubHealthAnalyticsModule {
         status = 'vulnerable'
 
         if (!membershipRequirementMet) {
-          riskFactors.lowMembership = true
+          riskFactors.push('Low membership')
         }
       }
     }
@@ -235,13 +271,13 @@ export class ClubHealthAnalyticsModule {
       const first = membershipHistory[0]?.count ?? 0
       const last = membershipHistory[membershipHistory.length - 1]?.count ?? 0
       if (last < first) {
-        riskFactors.decliningMembership = true
+        riskFactors.push('Declining membership')
       }
     }
 
     // Check for low payments
     if (club.paymentsCount < currentMembership * 0.5) {
-      riskFactors.lowPayments = true
+      riskFactors.push('Low payments')
     }
 
     clubTrend.riskFactors = riskFactors
@@ -250,5 +286,55 @@ export class ClubHealthAnalyticsModule {
       currentMembership,
       currentDcpGoals
     )
+
+    // Calculate distinguished level (Requirements 2.7)
+    clubTrend.distinguishedLevel = this.determineDistinguishedLevel(
+      currentDcpGoals,
+      currentMembership,
+      netGrowth
+    )
+  }
+
+  /**
+   * Determine distinguished level for a club based on DCP goals, membership, and net growth.
+   *
+   * Distinguished Level Thresholds (Requirements 2.7):
+   * - Smedley: 10+ goals AND 25+ members
+   * - President's: 9+ goals AND 20+ members
+   * - Select: 7+ goals AND (20+ members OR 5+ net growth)
+   * - Distinguished: 5+ goals AND (20+ members OR 3+ net growth)
+   * - NotDistinguished: Does not meet any threshold
+   *
+   * @param dcpGoals - Number of DCP goals achieved
+   * @param membership - Current membership count
+   * @param netGrowth - Net membership growth (current - base)
+   * @returns DistinguishedLevel classification
+   */
+  private determineDistinguishedLevel(
+    dcpGoals: number,
+    membership: number,
+    netGrowth: number
+  ): DistinguishedLevel {
+    // Smedley: 10+ goals AND 25+ members
+    if (dcpGoals >= 10 && membership >= 25) {
+      return 'Smedley'
+    }
+
+    // President's: 9+ goals AND 20+ members
+    if (dcpGoals >= 9 && membership >= 20) {
+      return 'President'
+    }
+
+    // Select: 7+ goals AND (20+ members OR 5+ net growth)
+    if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
+      return 'Select'
+    }
+
+    // Distinguished: 5+ goals AND (20+ members OR 3+ net growth)
+    if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
+      return 'Distinguished'
+    }
+
+    return 'NotDistinguished'
   }
 }

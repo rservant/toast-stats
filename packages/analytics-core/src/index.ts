@@ -34,6 +34,10 @@ export {
   findPreviousProgramYearDate,
   calculatePercentageChange,
   determineTrend,
+  // Risk factors conversion utilities (Requirements 2.6)
+  riskFactorsToStringArray,
+  stringArrayToRiskFactors,
+  RISK_FACTOR_LABELS,
 } from './analytics/index.js'
 
 export type { MultiYearTrendDirection } from './analytics/index.js'
@@ -52,6 +56,8 @@ export type {
   // Club health
   ClubRiskFactors,
   ClubHealthStatus,
+  DistinguishedLevel,
+  DcpGoalsTrendPoint,
   ClubTrend,
   ClubHealthData,
 
@@ -62,6 +68,7 @@ export type {
   // Distinguished clubs
   DistinguishedProjection,
   DistinguishedClubSummary,
+  DistinguishedClubCounts,
 
   // Core analytics
   DateRange,

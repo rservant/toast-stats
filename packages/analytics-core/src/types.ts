@@ -81,16 +81,64 @@ export type ClubHealthStatus =
   | 'intervention_required'
 
 /**
+ * Distinguished level classification for clubs.
+ * Based on DCP goals achieved and membership thresholds.
+ */
+export type DistinguishedLevel =
+  | 'NotDistinguished'
+  | 'Smedley'
+  | 'President'
+  | 'Select'
+  | 'Distinguished'
+
+/**
+ * DCP goals trend data point.
+ */
+export interface DcpGoalsTrendPoint {
+  date: string
+  goalsAchieved: number
+}
+
+/**
  * Individual club trend data.
+ * Enhanced to include all fields required by frontend.
  */
 export interface ClubTrend {
+  // Core identification
   clubId: string
   clubName: string
+
+  // Division and Area information (Requirements 1.1, 1.2)
+  divisionId: string
+  divisionName: string
+  areaId: string
+  areaName: string
+
+  // Health assessment
   currentStatus: ClubHealthStatus
-  riskFactors: ClubRiskFactors
+  healthScore: number
+
+  // Membership and payments
   membershipCount: number
   paymentsCount: number
-  healthScore: number
+
+  // Trend arrays (Requirements 1.3, 1.4)
+  membershipTrend: MembershipTrendPoint[]
+  dcpGoalsTrend: DcpGoalsTrendPoint[]
+
+  // Risk factors as string array (Requirement 1.6)
+  riskFactors: string[]
+
+  // Distinguished level (Requirement 1.5)
+  distinguishedLevel: DistinguishedLevel
+
+  // Payment breakdown fields (Requirement 1.7)
+  octoberRenewals?: number
+  aprilRenewals?: number
+  newMembers?: number
+
+  // Club operational status (Requirement 1.8)
+  clubStatus?: string
 }
 
 /**

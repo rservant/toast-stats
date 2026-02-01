@@ -1,10 +1,21 @@
 /**
  * PreComputedAnalyticsService
  *
- * Computes and stores analytics summaries during snapshot creation.
- * This enables fast retrieval of analytics data without on-demand computation.
+ * @deprecated Use scraper-cli `compute-analytics` command instead.
  *
- * Requirements:
+ * This service produces simplified summary counts that don't match frontend expectations.
+ * The analytics-summary.json files are retained for backward compatibility only.
+ *
+ * Migration path:
+ * 1. Run `scraper-cli compute-analytics` to generate full analytics
+ * 2. Backend will serve from analytics/ directory (full DistrictAnalytics data)
+ * 3. analytics-summary.json is no longer the primary data source
+ *
+ * The scraper-cli's AnalyticsComputer (in analytics-core package) produces the
+ * complete DistrictAnalytics structure with all club details, trends, rankings,
+ * and projections that the frontend requires.
+ *
+ * Original Requirements (now superseded):
  * - 1.1: Compute and store analytics summaries for each district in the snapshot
  * - 1.5: Store pre-computed analytics in a dedicated analytics summary file within the snapshot directory
  */
@@ -44,6 +55,10 @@ interface DistrictComputationResult {
 
 /**
  * Service for computing and storing pre-computed analytics summaries.
+ *
+ * @deprecated Use scraper-cli `compute-analytics` command instead.
+ * This service produces simplified summaries that don't match frontend expectations.
+ * See class-level documentation for migration path.
  *
  * This service is called during snapshot creation to generate analytics
  * that can be quickly retrieved without expensive on-demand computation.

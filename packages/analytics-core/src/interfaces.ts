@@ -43,6 +43,21 @@ export interface ClubStatistics {
   dcpGoals: number
   status: string
   charterDate?: string
+
+  // Division and Area names (for display purposes)
+  divisionName: string
+  areaName: string
+
+  // Payment breakdown fields
+  octoberRenewals: number
+  aprilRenewals: number
+  newMembers: number
+
+  // Membership base for net growth calculation
+  membershipBase: number
+
+  // Club operational status (Active, Suspended, Low, Ineligible)
+  clubStatus?: string
 }
 
 /**

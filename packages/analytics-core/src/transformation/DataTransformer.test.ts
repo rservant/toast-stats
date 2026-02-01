@@ -54,9 +54,13 @@ describe('DataTransformer', () => {
             'Total to Date',
             'Goals Met',
             'Club Status',
+            'Oct. Ren.',
+            'Apr. Ren.',
+            'New Members',
+            'Mem. Base',
           ],
-          ['1234', 'Test Club A', 'A', '1', '25', '30', '5', 'Active'],
-          ['5678', 'Test Club B', 'A', '2', '18', '22', '3', 'Active'],
+          ['1234', 'Test Club A', 'A', '1', '25', '30', '5', 'Active', '10', '8', '7', '20'],
+          ['5678', 'Test Club B', 'A', '2', '18', '22', '3', 'Active', '6', '5', '7', '15'],
         ],
         divisionPerformance: [],
         districtPerformance: [],
@@ -74,20 +78,34 @@ describe('DataTransformer', () => {
         clubName: 'Test Club A',
         divisionId: 'A',
         areaId: '1',
+        divisionName: 'Division A',
+        areaName: 'Area 1',
         membershipCount: 25,
         paymentsCount: 30,
         dcpGoals: 5,
         status: 'Active',
+        clubStatus: 'Active',
+        octoberRenewals: 10,
+        aprilRenewals: 8,
+        newMembers: 7,
+        membershipBase: 20,
       })
       expect(result.clubs[1]).toEqual({
         clubId: '5678',
         clubName: 'Test Club B',
         divisionId: 'A',
         areaId: '2',
+        divisionName: 'Division A',
+        areaName: 'Area 2',
         membershipCount: 18,
         paymentsCount: 22,
         dcpGoals: 3,
         status: 'Active',
+        clubStatus: 'Active',
+        octoberRenewals: 6,
+        aprilRenewals: 5,
+        newMembers: 7,
+        membershipBase: 15,
       })
     })
 
@@ -345,8 +363,426 @@ describe('DataTransformer', () => {
       expect(result.clubs).toHaveLength(1)
       expect(result.clubs[0]?.divisionId).toBe('')
       expect(result.clubs[0]?.areaId).toBe('')
+      expect(result.clubs[0]?.divisionName).toBe('Unknown Division')
+      expect(result.clubs[0]?.areaName).toBe('Unknown Area')
       expect(result.clubs[0]?.membershipCount).toBe(0)
       expect(result.clubs[0]?.paymentsCount).toBe(0)
+    })
+
+    /**
+     * Division/Area parsing tests
+     * Requirements: 4.1, 4.2
+     * - Parse 'Division' field to extract divisionId and divisionName
+     * - Parse 'Area' field to extract areaId and areaName
+     */
+    describe('division and area parsing', () => {
+      it('should parse "Division X" format correctly', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Division', 'Area'],
+            ['1234', 'Test Club', 'Division A', 'Area 12'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.divisionId).toBe('A')
+        expect(result.clubs[0]?.divisionName).toBe('Division A')
+        expect(result.clubs[0]?.areaId).toBe('12')
+        expect(result.clubs[0]?.areaName).toBe('Area 12')
+      })
+
+      it('should construct name when only ID is provided', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Division', 'Area'],
+            ['1234', 'Test Club', 'B', '5'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.divisionId).toBe('B')
+        expect(result.clubs[0]?.divisionName).toBe('Division B')
+        expect(result.clubs[0]?.areaId).toBe('5')
+        expect(result.clubs[0]?.areaName).toBe('Area 5')
+      })
+
+      it('should handle case-insensitive "division" and "area" prefixes', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Division', 'Area'],
+            ['1234', 'Test Club', 'DIVISION C', 'AREA 99'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.divisionId).toBe('C')
+        expect(result.clubs[0]?.divisionName).toBe('DIVISION C')
+        expect(result.clubs[0]?.areaId).toBe('99')
+        expect(result.clubs[0]?.areaName).toBe('AREA 99')
+      })
+
+      it('should use defaults when division/area fields are empty', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Division', 'Area'],
+            ['1234', 'Test Club', '', ''],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.divisionId).toBe('')
+        expect(result.clubs[0]?.divisionName).toBe('Unknown Division')
+        expect(result.clubs[0]?.areaId).toBe('')
+        expect(result.clubs[0]?.areaName).toBe('Unknown Area')
+      })
+    })
+
+    /**
+     * Payment field extraction tests
+     * Requirements: 2.4
+     * - Extract octoberRenewals, aprilRenewals, newMembers from CSV
+     */
+    describe('payment field extraction', () => {
+      it('should extract all payment fields when present', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+            ],
+            ['1234', 'Test Club', '15', '12', '8'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.octoberRenewals).toBe(15)
+        expect(result.clubs[0]?.aprilRenewals).toBe(12)
+        expect(result.clubs[0]?.newMembers).toBe(8)
+      })
+
+      it('should default payment fields to 0 when missing', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name'],
+            ['1234', 'Test Club'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.octoberRenewals).toBe(0)
+        expect(result.clubs[0]?.aprilRenewals).toBe(0)
+        expect(result.clubs[0]?.newMembers).toBe(0)
+      })
+
+      it('should handle alternative payment column names', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'October Renewals',
+              'April Renewals',
+              'New',
+            ],
+            ['1234', 'Test Club', '10', '5', '3'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.octoberRenewals).toBe(10)
+        expect(result.clubs[0]?.aprilRenewals).toBe(5)
+        expect(result.clubs[0]?.newMembers).toBe(3)
+      })
+
+      it('should handle non-numeric payment values gracefully', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+            ],
+            ['1234', 'Test Club', 'N/A', '', 'invalid'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.octoberRenewals).toBe(0)
+        expect(result.clubs[0]?.aprilRenewals).toBe(0)
+        expect(result.clubs[0]?.newMembers).toBe(0)
+      })
+    })
+
+    /**
+     * Membership base extraction tests
+     * Requirements: 2.7
+     * - Extract membershipBase for net growth calculation
+     */
+    describe('membership base extraction', () => {
+      it('should extract membership base when present', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Mem. Base'],
+            ['1234', 'Test Club', '22'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.membershipBase).toBe(22)
+      })
+
+      it('should default membership base to 0 when missing', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name'],
+            ['1234', 'Test Club'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.membershipBase).toBe(0)
+      })
+
+      it('should handle alternative membership base column names', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Membership Base'],
+            ['1234', 'Test Club', '18'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.membershipBase).toBe(18)
+      })
+    })
+
+    /**
+     * Club status extraction tests
+     * Requirements: 9.1
+     * - Extract club operational status (Active, Suspended, Low, Ineligible)
+     */
+    describe('club status extraction', () => {
+      it('should extract Active club status', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Club Status'],
+            ['1234', 'Test Club', 'Active'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.clubStatus).toBe('Active')
+      })
+
+      it('should extract Suspended club status', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Club Status'],
+            ['1234', 'Test Club', 'Suspended'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.clubStatus).toBe('Suspended')
+      })
+
+      it('should extract Low club status', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Club Status'],
+            ['1234', 'Test Club', 'Low'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.clubStatus).toBe('Low')
+      })
+
+      it('should extract Ineligible club status', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Club Status'],
+            ['1234', 'Test Club', 'Ineligible'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.clubStatus).toBe('Ineligible')
+      })
+
+      it('should leave clubStatus undefined when not present', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name'],
+            ['1234', 'Test Club'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.clubStatus).toBeUndefined()
+      })
+
+      it('should handle alternative Status column name', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Status'],
+            ['1234', 'Test Club', 'Suspended'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs[0]?.clubStatus).toBe('Suspended')
+      })
+
+      it('should handle multiple clubs with different statuses', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            ['Club Number', 'Club Name', 'Club Status'],
+            ['1234', 'Active Club', 'Active'],
+            ['5678', 'Suspended Club', 'Suspended'],
+            ['9012', 'Low Club', 'Low'],
+            ['3456', 'Ineligible Club', 'Ineligible'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs).toHaveLength(4)
+        expect(result.clubs[0]?.clubStatus).toBe('Active')
+        expect(result.clubs[1]?.clubStatus).toBe('Suspended')
+        expect(result.clubs[2]?.clubStatus).toBe('Low')
+        expect(result.clubs[3]?.clubStatus).toBe('Ineligible')
+      })
     })
   })
 

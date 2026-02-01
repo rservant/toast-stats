@@ -21,10 +21,16 @@ function createMockClub(
     clubName: 'Test Club',
     divisionId: 'A',
     areaId: 'A1',
+    divisionName: 'Division A',
+    areaName: 'Area A1',
     membershipCount: 25,
     paymentsCount: 20,
     dcpGoals: 5,
     status: 'Active',
+    octoberRenewals: 10,
+    aprilRenewals: 5,
+    newMembers: 5,
+    membershipBase: 20,
     ...overrides,
   }
 }

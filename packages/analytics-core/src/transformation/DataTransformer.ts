@@ -229,11 +229,22 @@ export class DataTransformer implements IDataTransformer {
         continue
       }
 
+      // Extract division ID and name
+      const divisionRaw = this.extractString(record, 'Division', 'Div') ?? ''
+      const { id: divisionId, name: divisionName } =
+        this.parseDivision(divisionRaw)
+
+      // Extract area ID and name
+      const areaRaw = this.extractString(record, 'Area') ?? ''
+      const { id: areaId, name: areaName } = this.parseArea(areaRaw)
+
       const club: ClubStatistics = {
         clubId,
         clubName,
-        divisionId: this.extractString(record, 'Division', 'Div') ?? '',
-        areaId: this.extractString(record, 'Area') ?? '',
+        divisionId,
+        areaId,
+        divisionName: divisionName || 'Unknown Division',
+        areaName: areaName || 'Unknown Area',
         membershipCount: this.extractNumber(
           record,
           'Active Members',
@@ -248,6 +259,27 @@ export class DataTransformer implements IDataTransformer {
         ),
         dcpGoals: this.extractNumber(record, 'Goals Met', 'DCP Goals', 'Goals'),
         status: this.extractClubStatus(record),
+        // Payment breakdown fields
+        octoberRenewals: this.extractNumber(
+          record,
+          'Oct. Ren.',
+          'October Renewals',
+          'Oct Ren'
+        ),
+        aprilRenewals: this.extractNumber(
+          record,
+          'Apr. Ren.',
+          'April Renewals',
+          'Apr Ren'
+        ),
+        newMembers: this.extractNumber(record, 'New Members', 'New'),
+        // Membership base for net growth calculation
+        membershipBase: this.extractNumber(
+          record,
+          'Mem. Base',
+          'Membership Base',
+          'Base'
+        ),
       }
 
       const charterDate = this.extractString(
@@ -259,10 +291,60 @@ export class DataTransformer implements IDataTransformer {
         club.charterDate = charterDate
       }
 
+      // Extract club operational status (Active, Suspended, Low, Ineligible)
+      const clubStatus = this.extractString(record, 'Club Status', 'Status')
+      if (clubStatus) {
+        club.clubStatus = clubStatus
+      }
+
       clubs.push(club)
     }
 
     return clubs
+  }
+
+  /**
+   * Parses a division field value to extract ID and name.
+   * Handles formats like "Division A" or just "A".
+   *
+   * @param value - The raw field value
+   * @returns Object with id and name
+   */
+  private parseDivision(value: string): { id: string; name: string } {
+    if (!value) {
+      return { id: '', name: '' }
+    }
+
+    // Check if it's in format "Division X"
+    const divisionMatch = value.match(/^Division\s+(.+)$/i)
+    if (divisionMatch?.[1]) {
+      return { id: divisionMatch[1], name: value }
+    }
+
+    // Otherwise, use the value as ID and construct the name
+    return { id: value, name: `Division ${value}` }
+  }
+
+  /**
+   * Parses an area field value to extract ID and name.
+   * Handles formats like "Area 12" or just "12".
+   *
+   * @param value - The raw field value
+   * @returns Object with id and name
+   */
+  private parseArea(value: string): { id: string; name: string } {
+    if (!value) {
+      return { id: '', name: '' }
+    }
+
+    // Check if it's in format "Area Y"
+    const areaMatch = value.match(/^Area\s+(.+)$/i)
+    if (areaMatch?.[1]) {
+      return { id: areaMatch[1], name: value }
+    }
+
+    // Otherwise, use the value as ID and construct the name
+    return { id: value, name: `Area ${value}` }
   }
 
   /**

@@ -29,3 +29,10 @@ export {
 } from './AnalyticsUtils.js'
 
 export type { MultiYearTrendDirection } from './AnalyticsUtils.js'
+
+// Risk factors conversion utilities (Requirements 2.6)
+export {
+  riskFactorsToStringArray,
+  stringArrayToRiskFactors,
+  RISK_FACTOR_LABELS,
+} from './riskFactors.js'

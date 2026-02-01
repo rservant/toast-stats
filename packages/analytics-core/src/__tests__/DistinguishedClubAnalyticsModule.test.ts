@@ -25,10 +25,16 @@ function createMockClub(
     clubName: `Test Club ${clubId}`,
     divisionId: 'A',
     areaId: 'A1',
+    divisionName: 'Division A',
+    areaName: 'Area A1',
     membershipCount,
     paymentsCount: membershipCount,
     dcpGoals,
     status: 'Active',
+    octoberRenewals: Math.floor(membershipCount * 0.4),
+    aprilRenewals: Math.floor(membershipCount * 0.3),
+    newMembers: Math.floor(membershipCount * 0.3),
+    membershipBase: Math.floor(membershipCount * 0.8),
   }
 }
 
