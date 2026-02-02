@@ -82,6 +82,22 @@ const DistrictDetailPage: React.FC = () => {
     return getAvailableProgramYears(allCachedDates)
   }, [allCachedDates])
 
+  // Auto-select a valid program year if current selection is not in available list
+  React.useEffect(() => {
+    if (availableProgramYears.length > 0) {
+      const isCurrentYearAvailable = availableProgramYears.some(
+        py => py.year === selectedProgramYear.year
+      )
+      if (!isCurrentYearAvailable) {
+        // Select the most recent available program year
+        const mostRecentYear = availableProgramYears[0]
+        if (mostRecentYear) {
+          setSelectedProgramYear(mostRecentYear)
+        }
+      }
+    }
+  }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
+
   // Filter cached dates by selected program year
   const cachedDatesInProgramYear = React.useMemo(() => {
     return filterDatesByProgramYear(allCachedDates, selectedProgramYear)
