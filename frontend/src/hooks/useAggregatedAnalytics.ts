@@ -309,6 +309,10 @@ export function useAggregatedAnalytics(
   startDate?: string,
   endDate?: string
 ): UseAggregatedAnalyticsResult {
+  // Validate date range - don't make request if startDate > endDate
+  const hasValidDateRange =
+    !startDate || !endDate || startDate <= endDate
+
   // Combined query that tries aggregated endpoint first, then falls back to individual
   const query = useQuery({
     queryKey: ['aggregatedAnalytics', districtId, startDate, endDate],
@@ -339,7 +343,7 @@ export function useAggregatedAnalytics(
         return { data, usedFallback: true }
       }
     },
-    enabled: !!districtId,
+    enabled: !!districtId && hasValidDateRange,
     staleTime: 5 * 60 * 1000, // 5 minutes - matches backend cache TTL
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: (failureCount, error: unknown) => {

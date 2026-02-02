@@ -14,6 +14,7 @@ import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
+  isDateInProgramYear,
 } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
@@ -132,6 +133,45 @@ const DistrictDetailPage: React.FC = () => {
     return filterDatesByProgramYear(allCachedDates, selectedProgramYear)
   }, [allCachedDates, selectedProgramYear])
 
+  // Compute effective program year - use selected if available, otherwise most recent available
+  // This prevents API calls with invalid date ranges during the transition period
+  const effectiveProgramYear = React.useMemo(() => {
+    if (availableProgramYears.length === 0) {
+      return null // No data yet, don't make API calls
+    }
+    const isCurrentYearAvailable = availableProgramYears.some(
+      py => py.year === selectedProgramYear.year
+    )
+    if (isCurrentYearAvailable) {
+      return selectedProgramYear
+    }
+    // Fall back to most recent available
+    return availableProgramYears[0] ?? null
+  }, [availableProgramYears, selectedProgramYear])
+
+  // Compute effective end date - must be within the effective program year
+  const effectiveEndDate = React.useMemo(() => {
+    if (!effectiveProgramYear) return null
+    if (selectedDate && isDateInProgramYear(selectedDate, effectiveProgramYear)) {
+      return selectedDate
+    }
+    // Use the most recent date in the effective program year, or the program year end date
+    const mostRecent = getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
+    return mostRecent || effectiveProgramYear.endDate
+  }, [selectedDate, effectiveProgramYear, allCachedDates])
+
+  // Determine if we have valid dates for API calls
+  const hasValidDates = effectiveProgramYear !== null && effectiveEndDate !== null
+
+  // Reset selectedDate when it's outside the selected program year
+  // This prevents invalid date ranges where startDate > endDate
+  React.useEffect(() => {
+    if (selectedDate && !isDateInProgramYear(selectedDate, selectedProgramYear)) {
+      // Clear the date so the next effect can pick a valid one
+      setSelectedDate(undefined)
+    }
+  }, [selectedDate, selectedProgramYear, setSelectedDate])
+
   // Auto-select most recent date in program year when program year changes
   React.useEffect(() => {
     if (cachedDatesInProgramYear.length > 0 && !selectedDate) {
@@ -161,9 +201,9 @@ const DistrictDetailPage: React.FC = () => {
     refetch: refetchAggregated,
     usedFallback: aggregatedUsedFallback,
   } = useAggregatedAnalytics(
-    districtId || null,
-    selectedProgramYear.startDate,
-    selectedDate || selectedProgramYear.endDate
+    hasValidDates ? (districtId || null) : null,
+    effectiveProgramYear?.startDate,
+    effectiveEndDate ?? undefined
   )
 
   // Fetch full analytics for detailed views (clubs, divisions, analytics tabs)
@@ -174,40 +214,40 @@ const DistrictDetailPage: React.FC = () => {
     error: analyticsError,
     refetch: refetchAnalytics,
   } = useDistrictAnalytics(
-    districtId || null,
-    selectedProgramYear.startDate,
-    selectedDate || selectedProgramYear.endDate
+    hasValidDates ? (districtId || null) : null,
+    effectiveProgramYear?.startDate,
+    effectiveEndDate ?? undefined
   )
 
   // Fetch district statistics for division/area performance cards
   const { data: districtStatistics, isLoading: isLoadingStatistics } =
     useDistrictStatistics(
-      districtId || null,
-      selectedDate || selectedProgramYear.endDate
+      hasValidDates ? (districtId || null) : null,
+      effectiveEndDate ?? undefined
     )
 
   // Fetch leadership insights for analytics tab - use program year boundaries
   const { data: leadershipInsights, isLoading: isLoadingLeadership } =
     useLeadershipInsights(
-      districtId || null,
-      selectedProgramYear.startDate,
-      selectedDate || selectedProgramYear.endDate
+      hasValidDates ? (districtId || null) : null,
+      effectiveProgramYear?.startDate,
+      effectiveEndDate ?? undefined
     )
 
   // Fetch distinguished club analytics for analytics tab - use program year boundaries
   const { data: distinguishedAnalytics, isLoading: isLoadingDistinguished } =
     useDistinguishedClubAnalytics(
-      districtId || null,
-      selectedProgramYear.startDate,
-      selectedDate || selectedProgramYear.endDate
+      hasValidDates ? (districtId || null) : null,
+      effectiveProgramYear?.startDate,
+      effectiveEndDate ?? undefined
     )
 
   // Fetch payment trend data for trends tab - fetch 3 years for multi-year comparison
   const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
     usePaymentsTrend(
-      districtId || null,
+      hasValidDates ? (districtId || null) : null,
       undefined, // Let hook fetch 3 years automatically for comparison
-      selectedDate || selectedProgramYear.endDate
+      effectiveEndDate ?? undefined
     )
 
   const districtName = selectedDistrict?.name || 'Unknown District'
@@ -385,11 +425,11 @@ const DistrictDetailPage: React.FC = () => {
                       Actions
                     </label>
                     <div className="flex gap-2">
-                      {hasOverviewData && (
+                      {hasOverviewData && hasValidDates && effectiveProgramYear && effectiveEndDate && (
                         <DistrictExportButton
                           districtId={districtId}
-                          startDate={selectedProgramYear.startDate}
-                          endDate={selectedDate || selectedProgramYear.endDate}
+                          startDate={effectiveProgramYear.startDate}
+                          endDate={effectiveEndDate}
                         />
                       )}
                     </div>
@@ -494,12 +534,14 @@ const DistrictDetailPage: React.FC = () => {
             {activeTab === 'overview' && districtId && hasOverviewData && (
               <>
                 {/* District Overview - Now uses global date selector */}
-                <DistrictOverview
-                  districtId={districtId}
-                  districtName={districtName}
-                  {...(selectedDate && { selectedDate })}
-                  programYearStartDate={selectedProgramYear.startDate}
-                />
+                {hasValidDates && effectiveProgramYear && (
+                  <DistrictOverview
+                    districtId={districtId}
+                    districtName={districtName}
+                    {...(effectiveEndDate && { selectedDate: effectiveEndDate })}
+                    programYearStartDate={effectiveProgramYear.startDate}
+                  />
+                )}
 
                 {/* Intervention Required Clubs Panel - uses full analytics for club details */}
                 {analytics && (

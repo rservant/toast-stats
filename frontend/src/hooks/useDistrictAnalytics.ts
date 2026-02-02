@@ -222,6 +222,10 @@ export const useDistrictAnalytics = (
   startDate?: string,
   endDate?: string
 ) => {
+  // Validate date range - don't make request if startDate > endDate
+  const hasValidDateRange =
+    !startDate || !endDate || startDate <= endDate
+
   return useQuery<DistrictAnalytics, Error>({
     queryKey: ['districtAnalytics', districtId, startDate, endDate],
     queryFn: async () => {
@@ -238,7 +242,7 @@ export const useDistrictAnalytics = (
       )
       return response.data
     },
-    enabled: !!districtId,
+    enabled: !!districtId && hasValidDateRange,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache for common date ranges
     retry: (failureCount, error: unknown) => {
