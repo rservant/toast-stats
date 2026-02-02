@@ -88,10 +88,10 @@ function createMockSnapshotStorage(): ISnapshotStorage {
 
 /**
  * Creates a mock ITimeSeriesIndexStorage for testing
+ * Note: appendDataPoint has been removed per data-computation-separation steering
  */
 function createMockTimeSeriesStorage(): ITimeSeriesIndexStorage {
   return {
-    appendDataPoint: vi.fn().mockResolvedValue(undefined),
     getTrendData: vi.fn().mockResolvedValue([]),
     getProgramYearData: vi.fn().mockResolvedValue(null),
     deleteSnapshotEntries: vi.fn().mockResolvedValue(0),

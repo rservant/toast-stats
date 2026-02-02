@@ -9,6 +9,8 @@
  * - 4.1: Single aggregated endpoint returning analytics in one response
  * - 4.4: Support startDate and endDate query parameters
  * - 8.8: Route SHALL NOT call AnalyticsEngine for year-over-year data
+ * - 17.1: Route SHALL NOT contain the calculateDistinguishedProjection function
+ * - 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -17,11 +19,12 @@ import request from 'supertest'
 import { analyticsSummaryRouter } from '../analyticsSummary.js'
 
 // Use vi.hoisted to define mocks that are used in vi.mock factories
-const { mockSnapshotStore, mockReadYearOverYear } = vi.hoisted(() => ({
+const { mockSnapshotStore, mockReadYearOverYear, mockReadDistrictAnalytics } = vi.hoisted(() => ({
   mockSnapshotStore: {
     getLatestSuccessful: vi.fn(),
   },
   mockReadYearOverYear: vi.fn(),
+  mockReadDistrictAnalytics: vi.fn(),
 }))
 
 // Mock the shared module
@@ -108,10 +111,13 @@ vi.mock('../../../utils/transformers.js', () => ({
   })),
 }))
 
-// Mock the PreComputedAnalyticsReader - year-over-year is now read from pre-computed files
+// Mock the PreComputedAnalyticsReader - year-over-year and distinguishedProjection are now read from pre-computed files
+// Requirement 17.1: Route SHALL NOT contain the calculateDistinguishedProjection function
+// Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
 vi.mock('../../../services/PreComputedAnalyticsReader.js', () => ({
   PreComputedAnalyticsReader: class MockPreComputedAnalyticsReader {
     readYearOverYear = mockReadYearOverYear
+    readDistrictAnalytics = mockReadDistrictAnalytics
   },
 }))
 
@@ -139,6 +145,20 @@ describe('Analytics Summary Route', () => {
 
     // Default mock for readYearOverYear
     mockReadYearOverYear.mockResolvedValue(null)
+
+    // Default mock for readDistrictAnalytics (for distinguishedProjection)
+    // Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
+    mockReadDistrictAnalytics.mockResolvedValue({
+      distinguishedProjection: {
+        projectedDistinguished: 30,
+        projectedSelect: 10,
+        projectedPresident: 5,
+        currentDistinguished: 25,
+        currentSelect: 8,
+        currentPresident: 5,
+        projectionDate: '2024-01-15',
+      },
+    })
   })
 
   afterEach(() => {
@@ -272,6 +292,134 @@ describe('Analytics Summary Route', () => {
         expect(response.body.summary.distinguishedClubs.total).toBe(25)
         expect(response.body.trends.membership).toHaveLength(2)
         expect(response.body.trends.payments).toHaveLength(2)
+      })
+
+      /**
+       * Test that distinguishedProjection is read from pre-computed analytics files
+       * Requirement 17.1: Route SHALL NOT contain the calculateDistinguishedProjection function
+       * Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
+       */
+      it('should read distinguishedProjection from pre-computed analytics files (Req 17.1, 17.2)', async () => {
+        const mockSummary = {
+          snapshotId: '2024-01-15',
+          districtId: '42',
+          computedAt: '2024-01-15T10:00:00Z',
+          totalMembership: 1500,
+          membershipChange: 50,
+          clubCounts: {
+            total: 50,
+            thriving: 30,
+            vulnerable: 15,
+            interventionRequired: 5,
+          },
+          distinguishedClubs: {
+            smedley: 2,
+            presidents: 5,
+            select: 8,
+            distinguished: 10,
+            total: 25,
+          },
+          trendDataPoint: {
+            date: '2024-01-15',
+            membership: 1500,
+            payments: 200,
+            dcpGoals: 150,
+          },
+        }
+
+        const mockPreComputedService = {
+          getLatestSummary: vi.fn().mockResolvedValue(mockSummary),
+        }
+        const mockTimeSeriesService = {
+          getTrendData: vi.fn().mockResolvedValue([]),
+        }
+
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+
+        // Mock the full analytics with distinguishedProjection
+        mockReadDistrictAnalytics.mockResolvedValue({
+          distinguishedProjection: {
+            projectedDistinguished: 35,
+            projectedSelect: 12,
+            projectedPresident: 6,
+            currentDistinguished: 25,
+            currentSelect: 8,
+            currentPresident: 5,
+            projectionDate: '2024-01-15',
+          },
+        })
+
+        const response = await request(app)
+          .get('/api/districts/42/analytics-summary')
+          .expect(200)
+
+        // Verify distinguishedProjection is read from pre-computed data (not computed on-demand)
+        expect(response.body.summary.distinguishedProjection).toBe(35)
+        
+        // Verify readDistrictAnalytics was called to get the projection
+        expect(mockReadDistrictAnalytics).toHaveBeenCalledWith('2024-01-15', '42')
+      })
+
+      /**
+       * Test that distinguishedProjection defaults to 0 when full analytics are not available
+       * Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
+       */
+      it('should default distinguishedProjection to 0 when full analytics not available (Req 17.2)', async () => {
+        const mockSummary = {
+          snapshotId: '2024-01-15',
+          districtId: '42',
+          computedAt: '2024-01-15T10:00:00Z',
+          totalMembership: 1500,
+          membershipChange: 50,
+          clubCounts: {
+            total: 50,
+            thriving: 30,
+            vulnerable: 15,
+            interventionRequired: 5,
+          },
+          distinguishedClubs: {
+            smedley: 2,
+            presidents: 5,
+            select: 8,
+            distinguished: 10,
+            total: 25,
+          },
+          trendDataPoint: {
+            date: '2024-01-15',
+            membership: 1500,
+            payments: 200,
+            dcpGoals: 150,
+          },
+        }
+
+        const mockPreComputedService = {
+          getLatestSummary: vi.fn().mockResolvedValue(mockSummary),
+        }
+        const mockTimeSeriesService = {
+          getTrendData: vi.fn().mockResolvedValue([]),
+        }
+
+        vi.mocked(getPreComputedAnalyticsService).mockResolvedValue(
+          mockPreComputedService as never
+        )
+        vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
+          mockTimeSeriesService as never
+        )
+
+        // Mock full analytics not available
+        mockReadDistrictAnalytics.mockResolvedValue(null)
+
+        const response = await request(app)
+          .get('/api/districts/42/analytics-summary')
+          .expect(200)
+
+        // Verify distinguishedProjection defaults to 0 when not available
+        expect(response.body.summary.distinguishedProjection).toBe(0)
       })
 
       it('should include year-over-year comparison when available from pre-computed data', async () => {

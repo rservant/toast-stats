@@ -73,6 +73,9 @@ export const DistrictRankingSchema = z.object({
 
   /** Aggregate score combining all metrics */
   aggregateScore: z.number(),
+
+  /** Overall rank position based on aggregate score (1 = best, pre-computed) */
+  overallRank: z.number(),
 })
 
 /**

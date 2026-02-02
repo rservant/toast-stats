@@ -89,6 +89,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 8,
             distinguishedRank: 3,
             aggregateScore: 342.5,
+            overallRank: 1,
           },
           {
             districtId: '15',
@@ -109,6 +110,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 18,
             distinguishedRank: 12,
             aggregateScore: 285.3,
+            overallRank: 3,
           },
           {
             districtId: 'F',
@@ -129,6 +131,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 5,
             distinguishedRank: 2,
             aggregateScore: 398.7,
+            overallRank: 2,
           },
         ],
       }
@@ -193,6 +196,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 8,
             distinguishedRank: 3,
             aggregateScore: 342.5,
+            overallRank: 1,
           },
           {
             districtId: '15',
@@ -213,6 +217,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 18,
             distinguishedRank: 12,
             aggregateScore: 285.3,
+            overallRank: 2,
           },
         ],
       }
@@ -262,6 +267,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 8,
             distinguishedRank: 3,
             aggregateScore: 342.5,
+            overallRank: 1,
           },
           {
             districtId: '15',
@@ -282,6 +288,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 18,
             distinguishedRank: 12,
             aggregateScore: 285.3,
+            overallRank: 2,
           },
         ],
       }
@@ -358,6 +365,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 8,
             distinguishedRank: 3,
             aggregateScore: 342.5,
+            overallRank: 1,
           },
           {
             districtId: '15',
@@ -378,6 +386,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 18,
             distinguishedRank: 12,
             aggregateScore: 285.3,
+            overallRank: 2,
           },
         ],
       }
@@ -440,6 +449,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: 8,
             distinguishedRank: 3,
             aggregateScore: 342.5,
+            overallRank: 1,
           },
         ],
       }
@@ -512,6 +522,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
             paymentsRank: i + 1,
             distinguishedRank: i + 1,
             aggregateScore: 300.0 + i * 10,
+            overallRank: i + 1,
           })
         )
 

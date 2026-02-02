@@ -507,7 +507,6 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
             mockDistrictConfig,
             mockSnapshotStore,
             undefined, // validator
-            undefined, // rankingCalculator
             undefined, // closingPeriodDetector
             undefined, // dataNormalizer
             testLogger
@@ -603,7 +602,6 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -656,7 +654,6 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,
@@ -774,7 +771,6 @@ describe('Property 12: Partial Snapshot Creation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -867,7 +863,6 @@ describe('Property 12: Partial Snapshot Creation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -940,7 +935,6 @@ describe('Property 12: Partial Snapshot Creation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,
@@ -1024,7 +1018,6 @@ describe('Property 16: Cache Integrity Validation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,
@@ -1126,7 +1119,6 @@ describe('Property 16: Cache Integrity Validation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -1200,7 +1192,6 @@ describe('Property 16: Cache Integrity Validation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,

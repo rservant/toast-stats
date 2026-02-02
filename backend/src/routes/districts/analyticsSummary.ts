@@ -9,6 +9,8 @@
  *        club analytics, and leadership insights in one response
  * - 4.4: Support the same query parameters (startDate, endDate) as individual endpoints
  * - 8.8: Route SHALL NOT call AnalyticsEngine for year-over-year data
+ * - 17.1: Route SHALL NOT contain the calculateDistinguishedProjection function
+ * - 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
  */
 
 import { Router, type Request, type Response } from 'express'
@@ -236,6 +238,36 @@ analyticsSummaryRouter.get(
       const summary =
         await preComputedAnalyticsService.getLatestSummary(districtId)
 
+      // Try to get full district analytics for distinguishedProjection
+      // Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
+      let distinguishedProjectionValue = 0
+      try {
+        const latestSnapshot = await snapshotStore.getLatestSuccessful()
+        if (latestSnapshot) {
+          const fullAnalytics =
+            await preComputedAnalyticsReader.readDistrictAnalytics(
+              latestSnapshot.snapshot_id,
+              districtId
+            )
+          if (fullAnalytics?.distinguishedProjection) {
+            // Use the projectedDistinguished value from the full analytics
+            distinguishedProjectionValue =
+              fullAnalytics.distinguishedProjection.projectedDistinguished
+          }
+        }
+      } catch (projectionError) {
+        logger.debug('Failed to read distinguishedProjection from full analytics', {
+          operation: 'getAnalyticsSummary',
+          operationId,
+          districtId,
+          error:
+            projectionError instanceof Error
+              ? projectionError.message
+              : 'Unknown error',
+        })
+        // Continue without projection - will use 0 as default
+      }
+
       // Get trend data from time-series index
       let trendData: Array<{ date: string; count: number }> = []
       let paymentsTrend: Array<{ date: string; payments: number }> = []
@@ -347,6 +379,8 @@ analyticsSummaryRouter.get(
       }
 
       // Build the response using pre-computed data
+      // Requirement 17.1: Route SHALL NOT contain the calculateDistinguishedProjection function
+      // Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
       const response: AggregatedAnalyticsResponse = {
         districtId,
         dateRange: {
@@ -369,10 +403,7 @@ analyticsSummaryRouter.get(
             distinguished: summary.distinguishedClubs.distinguished,
             total: summary.distinguishedClubs.total,
           },
-          distinguishedProjection: calculateDistinguishedProjection(
-            summary.distinguishedClubs.total,
-            summary.clubCounts.total
-          ),
+          distinguishedProjection: distinguishedProjectionValue,
         },
         trends: {
           membership: trendData,
@@ -491,55 +522,4 @@ function getProgramYearStartDate(dateStr: string): string {
   } else {
     return `${year - 1}-07-01`
   }
-}
-
-/**
- * Calculate distinguished club projection based on current progress
- *
- * Simple projection based on current distinguished percentage
- * and remaining time in the program year.
- */
-function calculateDistinguishedProjection(
-  currentDistinguished: number,
-  totalClubs: number
-): number {
-  if (totalClubs === 0) {
-    return 0
-  }
-
-  // Get current date and calculate progress through program year
-  const now = new Date()
-  const currentMonth = now.getMonth() + 1 // 1-12
-  const currentYear = now.getFullYear()
-
-  // Determine program year boundaries
-  let programYearStart: Date
-  let programYearEnd: Date
-
-  if (currentMonth >= 7) {
-    programYearStart = new Date(currentYear, 6, 1) // July 1 of current year
-    programYearEnd = new Date(currentYear + 1, 5, 30) // June 30 of next year
-  } else {
-    programYearStart = new Date(currentYear - 1, 6, 1) // July 1 of previous year
-    programYearEnd = new Date(currentYear, 5, 30) // June 30 of current year
-  }
-
-  // Calculate progress through program year (0 to 1)
-  const totalDays =
-    (programYearEnd.getTime() - programYearStart.getTime()) /
-    (1000 * 60 * 60 * 24)
-  const elapsedDays =
-    (now.getTime() - programYearStart.getTime()) / (1000 * 60 * 60 * 24)
-  const progress = Math.min(1, Math.max(0, elapsedDays / totalDays))
-
-  // If we're very early in the year, don't project
-  if (progress < 0.1) {
-    return currentDistinguished
-  }
-
-  // Simple linear projection
-  const projectedDistinguished = Math.round(currentDistinguished / progress)
-
-  // Cap at total clubs
-  return Math.min(projectedDistinguished, totalClubs)
 }

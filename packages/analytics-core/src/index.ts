@@ -164,3 +164,21 @@ export type {
   IAnalyticsComputer,
   IDataTransformer,
 } from './interfaces.js'
+
+// Time-series computation
+export {
+  TimeSeriesDataPointBuilder,
+  type DistrictStatisticsInput,
+  type MembershipStats,
+  type ScrapedRecord,
+} from './timeseries/index.js'
+
+// Rankings computation
+export {
+  BordaCountRankingCalculator,
+  type IRankingCalculator,
+  type RankingLogger,
+  type RankingDistrictStatistics,
+  type DistrictRankingData,
+  type BordaCountRankingCalculatorConfig,
+} from './rankings/index.js'

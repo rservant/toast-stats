@@ -1,22 +1,19 @@
 /**
  * Analytics Generator for Unified Backfill Service
  *
- * Handles analytics generation backfill operations, including:
- * - Generating pre-computed analytics for existing snapshots
- * - Snapshot selection with optional date range filter
- * - Preview/dry-run functionality
- * - Integration with TimeSeriesIndexStorage
- * - Cancellation support
+ * NOTE: This service has been updated to comply with the data-computation-separation
+ * steering document. All computation methods have been removed. Analytics and time-series
+ * data are now pre-computed by scraper-cli during the compute-analytics pipeline.
  *
- * Requirements: 2.3, 4.2, 4.5, 11.2
+ * This service now only:
+ * - Provides preview functionality for backfill operations
+ * - Reads pre-computed data (no computation)
+ * - Supports cancellation
+ *
+ * Requirements: 15.1-15.7
  */
 
-import type {
-  ISnapshotStorage,
-  ITimeSeriesIndexStorage,
-} from '../../../types/storageInterfaces.js'
-import type { TimeSeriesDataPoint } from '../../../types/precomputedAnalytics.js'
-import type { DistrictStatistics } from '../../../types/districts.js'
+import type { ISnapshotStorage } from '../../../types/storageInterfaces.js'
 import type { PreComputedAnalyticsService } from '../../PreComputedAnalyticsService.js'
 import { logger } from '../../../utils/logger.js'
 
@@ -127,17 +124,23 @@ const ESTIMATED_MS_PER_SNAPSHOT = 5000 // 5 seconds per snapshot
 /**
  * Analytics Generator for Unified Backfill Service
  *
- * Handles analytics generation backfill operations by processing existing
- * snapshots and generating time-series index data for each district.
+ * NOTE: Per the data-computation-separation steering document, this service
+ * no longer performs any computation. All analytics and time-series data
+ * are pre-computed by scraper-cli during the compute-analytics pipeline.
+ *
+ * This service now only provides:
+ * - Preview functionality for backfill operations
+ * - Verification that pre-computed data exists
+ * - Cancellation support
  *
  * @example
  * ```typescript
- * const generator = new AnalyticsGenerator(snapshotStorage, timeSeriesStorage)
+ * const generator = new AnalyticsGenerator(snapshotStorage, preComputedAnalyticsService)
  *
- * // Preview what would be generated
+ * // Preview what would be processed
  * const preview = await generator.previewGeneration('2024-01-01', '2024-01-31')
  *
- * // Generate analytics with progress callback
+ * // Process snapshots (reads pre-computed data only)
  * const result = await generator.generateForSnapshots(
  *   ['2024-01-15', '2024-01-16'],
  *   (progress) => console.log(`${progress.percentComplete}% complete`)
@@ -146,8 +149,6 @@ const ESTIMATED_MS_PER_SNAPSHOT = 5000 // 5 seconds per snapshot
  */
 export class AnalyticsGenerator {
   private readonly snapshotStorage: ISnapshotStorage
-  private readonly timeSeriesStorage: ITimeSeriesIndexStorage
-  private readonly preComputedAnalyticsService: PreComputedAnalyticsService
 
   /**
    * Flag to track if generation should be cancelled
@@ -157,20 +158,22 @@ export class AnalyticsGenerator {
   /**
    * Creates a new AnalyticsGenerator instance
    *
+   * NOTE: The timeSeriesStorage and preComputedAnalyticsService parameters
+   * are kept for backward compatibility but are no longer used. Analytics
+   * and time-series data are now pre-computed by scraper-cli.
+   *
    * @param snapshotStorage - Storage for snapshot operations
-   * @param timeSeriesStorage - Storage for time-series index operations
-   * @param preComputedAnalyticsService - Service for computing and storing pre-computed analytics
+   * @param _preComputedAnalyticsService - DEPRECATED: Analytics are now pre-computed by scraper-cli
    */
   constructor(
     snapshotStorage: ISnapshotStorage,
-    timeSeriesStorage: ITimeSeriesIndexStorage,
-    preComputedAnalyticsService: PreComputedAnalyticsService
+    _preComputedAnalyticsService: PreComputedAnalyticsService
   ) {
     this.snapshotStorage = snapshotStorage
-    this.timeSeriesStorage = timeSeriesStorage
-    this.preComputedAnalyticsService = preComputedAnalyticsService
+    // NOTE: preComputedAnalyticsService parameter is kept for backward compatibility
+    // but is no longer used. Analytics are now pre-computed by scraper-cli.
 
-    logger.debug('AnalyticsGenerator initialized', {
+    logger.debug('AnalyticsGenerator initialized (read-only mode)', {
       component: 'AnalyticsGenerator',
     })
   }
@@ -182,14 +185,15 @@ export class AnalyticsGenerator {
   /**
    * Generate analytics for specified snapshots
    *
-   * Processes each snapshot, extracting district data and generating
-   * time-series index entries. Supports cancellation and progress reporting.
+   * NOTE: Per the data-computation-separation steering document, this method
+   * no longer performs any computation. It verifies that snapshots exist and
+   * logs that analytics should be pre-computed by scraper-cli.
    *
    * @param snapshotIds - Array of snapshot IDs to process
    * @param progressCallback - Callback for progress updates
    * @returns Generation result
    *
-   * Requirements: 2.3, 4.2
+   * Requirements: 15.7
    */
   async generateForSnapshots(
     snapshotIds: string[],
@@ -200,7 +204,7 @@ export class AnalyticsGenerator {
 
     const totalItems = snapshotIds.length
 
-    logger.info('Starting analytics generation', {
+    logger.info('Starting analytics verification (read-only mode)', {
       totalSnapshots: totalItems,
       component: 'AnalyticsGenerator',
       operation: 'generateForSnapshots',
@@ -223,11 +227,11 @@ export class AnalyticsGenerator {
       percentComplete: this.calculatePercentComplete(0, totalItems),
     })
 
-    // Process each snapshot
+    // Process each snapshot (verification only, no computation)
     for (const snapshotId of snapshotIds) {
       // Check for cancellation
       if (this.cancelled) {
-        logger.info('Analytics generation cancelled', {
+        logger.info('Analytics verification cancelled', {
           snapshotId,
           processedItems,
           component: 'AnalyticsGenerator',
@@ -250,16 +254,16 @@ export class AnalyticsGenerator {
       })
 
       try {
-        // Process the snapshot
-        const result = await this.processSnapshot(snapshotId)
+        // Verify the snapshot exists (no computation)
+        const result = await this.verifySnapshot(snapshotId)
 
         if (result.success) {
           processedItems++
           processedSnapshotIds.push(snapshotId)
 
-          logger.debug('Successfully generated analytics for snapshot', {
+          logger.debug('Verified snapshot exists', {
             snapshotId,
-            districtsProcessed: result.districtsProcessed,
+            districtsFound: result.districtsFound,
             component: 'AnalyticsGenerator',
             operation: 'generateForSnapshots',
           })
@@ -276,13 +280,12 @@ export class AnalyticsGenerator {
           failedItems++
           errors.push({
             itemId: snapshotId,
-            message:
-              result.error ?? 'Unknown error during analytics generation',
+            message: result.error ?? 'Unknown error during verification',
             occurredAt: new Date().toISOString(),
             isRetryable: result.isRetryable ?? true,
           })
 
-          logger.warn('Failed to generate analytics for snapshot', {
+          logger.warn('Failed to verify snapshot', {
             snapshotId,
             error: result.error,
             component: 'AnalyticsGenerator',
@@ -300,7 +303,7 @@ export class AnalyticsGenerator {
           isRetryable: this.isRetryableError(error),
         })
 
-        logger.error('Error generating analytics for snapshot', {
+        logger.error('Error verifying snapshot', {
           snapshotId,
           error: errorMessage,
           component: 'AnalyticsGenerator',
@@ -324,7 +327,7 @@ export class AnalyticsGenerator {
 
     const duration = Date.now() - startTime
 
-    logger.info('Analytics generation completed', {
+    logger.info('Analytics verification completed (read-only mode)', {
       processedItems,
       failedItems,
       skippedItems,
@@ -332,6 +335,7 @@ export class AnalyticsGenerator {
       cancelled: this.cancelled,
       component: 'AnalyticsGenerator',
       operation: 'generateForSnapshots',
+      note: 'Analytics and time-series data should be pre-computed by scraper-cli',
     })
 
     return {
@@ -436,7 +440,7 @@ export class AnalyticsGenerator {
    */
   cancel(): void {
     this.cancelled = true
-    logger.info('Analytics generation cancellation requested', {
+    logger.info('Analytics verification cancellation requested', {
       component: 'AnalyticsGenerator',
       operation: 'cancel',
     })
@@ -454,18 +458,22 @@ export class AnalyticsGenerator {
   // ============================================================================
 
   /**
-   * Process a single snapshot and generate time-series data
+   * Verify a snapshot exists and has districts
    *
-   * @param snapshotId - The snapshot ID to process
-   * @returns Processing result
+   * NOTE: This method only verifies that the snapshot exists. It does NOT
+   * perform any computation. Analytics and time-series data should be
+   * pre-computed by scraper-cli.
+   *
+   * @param snapshotId - The snapshot ID to verify
+   * @returns Verification result
    */
-  private async processSnapshot(snapshotId: string): Promise<{
+  private async verifySnapshot(snapshotId: string): Promise<{
     success: boolean
     skipped?: boolean
     reason?: string
     error?: string
     isRetryable?: boolean
-    districtsProcessed?: number
+    districtsFound?: number
   }> {
     // Get the snapshot
     const snapshot = await this.snapshotStorage.getSnapshot(snapshotId)
@@ -490,417 +498,22 @@ export class AnalyticsGenerator {
       }
     }
 
-    let districtsProcessed = 0
-    const districtErrors: string[] = []
-    const collectedDistrictData: DistrictStatistics[] = []
+    // NOTE: Per the data-computation-separation steering document, we do NOT
+    // compute analytics or time-series data here. That is done by scraper-cli.
+    // This method only verifies that the snapshot exists and has districts.
 
-    // Process each district
-    for (const districtId of districtIds) {
-      try {
-        // Read district data
-        const districtData = await this.snapshotStorage.readDistrictData(
-          snapshotId,
-          districtId
-        )
-
-        if (districtData === null) {
-          logger.warn('District data not found', {
-            snapshotId,
-            districtId,
-            component: 'AnalyticsGenerator',
-            operation: 'processSnapshot',
-          })
-          continue
-        }
-
-        // Collect district data for pre-computed analytics generation
-        collectedDistrictData.push(districtData)
-
-        // Build time-series data point from district data
-        const dataPoint = this.buildTimeSeriesDataPoint(
-          snapshotId,
-          districtData
-        )
-
-        // Append to time-series index
-        await this.timeSeriesStorage.appendDataPoint(districtId, dataPoint)
-
-        districtsProcessed++
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error'
-        districtErrors.push(`${districtId}: ${errorMessage}`)
-
-        logger.warn('Failed to process district', {
-          snapshotId,
-          districtId,
-          error: errorMessage,
-          component: 'AnalyticsGenerator',
-          operation: 'processSnapshot',
-        })
-      }
-    }
-
-    // Consider success if at least one district was processed
-    if (districtsProcessed > 0) {
-      // Generate pre-computed analytics for this snapshot
-      // Requirements: 2.1, 2.3 - Generate analytics AFTER successfully reading district data
-      await this.generatePreComputedAnalytics(snapshotId, collectedDistrictData)
-
-      return {
-        success: true,
-        districtsProcessed,
-      }
-    }
-
-    return {
-      success: false,
-      error: `Failed to process any districts. Errors: ${districtErrors.join('; ')}`,
-      isRetryable: true,
-    }
-  }
-
-  /**
-   * Generate pre-computed analytics for a snapshot
-   *
-   * Calls PreComputedAnalyticsService.computeAndStore() to generate the
-   * analytics-summary.json file. Errors are logged but do not fail the
-   * snapshot processing.
-   *
-   * @param snapshotId - The snapshot ID to generate analytics for
-   * @param districtData - Array of district statistics
-   *
-   * Requirements: 2.1, 2.2
-   */
-  private async generatePreComputedAnalytics(
-    snapshotId: string,
-    districtData: DistrictStatistics[]
-  ): Promise<void> {
-    try {
-      await this.preComputedAnalyticsService.computeAndStore(
-        snapshotId,
-        districtData
-      )
-      logger.debug('Generated pre-computed analytics for snapshot', {
-        snapshotId,
-        districtCount: districtData.length,
-        component: 'AnalyticsGenerator',
-        operation: 'generatePreComputedAnalytics',
-      })
-    } catch (error) {
-      // Log error but don't fail the snapshot processing
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.warn('Failed to generate pre-computed analytics for snapshot', {
-        snapshotId,
-        error: errorMessage,
-        component: 'AnalyticsGenerator',
-        operation: 'generatePreComputedAnalytics',
-      })
-    }
-  }
-
-  /**
-   * Build a TimeSeriesDataPoint from district statistics
-   *
-   * @param snapshotId - The snapshot ID
-   * @param districtData - The district statistics
-   * @returns Time-series data point
-   */
-  private buildTimeSeriesDataPoint(
-    snapshotId: string,
-    districtData: {
-      asOfDate: string
-      membership?: { total?: number }
-      clubPerformance?: Array<
-        Record<string, string | number | null | undefined>
-      >
-    }
-  ): TimeSeriesDataPoint {
-    // Calculate total membership
-    const totalMembership = this.calculateTotalMembership(districtData)
-
-    // Calculate total payments
-    const payments = this.calculateTotalPayments(districtData)
-
-    // Calculate total DCP goals
-    const dcpGoals = this.calculateTotalDCPGoals(districtData)
-
-    // Calculate club health counts
-    const clubCounts = this.calculateClubHealthCounts(districtData)
-
-    // Calculate distinguished clubs total
-    const distinguishedTotal = this.calculateDistinguishedTotal(districtData)
-
-    return {
-      date: districtData.asOfDate,
+    logger.debug('Snapshot verified (no computation performed)', {
       snapshotId,
-      membership: totalMembership,
-      payments,
-      dcpGoals,
-      distinguishedTotal,
-      clubCounts,
-    }
-  }
-
-  /**
-   * Calculate total membership from district statistics
-   */
-  private calculateTotalMembership(district: {
-    membership?: { total?: number }
-    clubPerformance?: Array<Record<string, string | number | null | undefined>>
-  }): number {
-    // Primary: Use membership.total if available
-    if (district.membership?.total !== undefined) {
-      return district.membership.total
-    }
-
-    // Fallback: Sum from club performance data
-    if (
-      district.clubPerformance !== undefined &&
-      district.clubPerformance.length > 0
-    ) {
-      return district.clubPerformance.reduce((total, club) => {
-        const membership = this.parseIntSafe(
-          club['Active Members'] ??
-            club['Active Membership'] ??
-            club['Membership']
-        )
-        return total + membership
-      }, 0)
-    }
-
-    return 0
-  }
-
-  /**
-   * Calculate total membership payments from district data
-   */
-  private calculateTotalPayments(district: {
-    clubPerformance?: Array<Record<string, string | number | null | undefined>>
-  }): number {
-    const clubs = district.clubPerformance ?? []
-
-    return clubs.reduce((total, club) => {
-      const octRenewals = this.parseIntSafe(
-        club['Oct. Ren.'] ?? club['Oct. Ren']
-      )
-      const aprRenewals = this.parseIntSafe(
-        club['Apr. Ren.'] ?? club['Apr. Ren']
-      )
-      const newMembers = this.parseIntSafe(club['New Members'] ?? club['New'])
-
-      return total + octRenewals + aprRenewals + newMembers
-    }, 0)
-  }
-
-  /**
-   * Calculate total DCP goals achieved across all clubs
-   */
-  private calculateTotalDCPGoals(district: {
-    clubPerformance?: Array<Record<string, string | number | null | undefined>>
-  }): number {
-    const clubs = district.clubPerformance ?? []
-
-    return clubs.reduce((total, club) => {
-      const goals = this.parseIntSafe(club['Goals Met'])
-      return total + goals
-    }, 0)
-  }
-
-  /**
-   * Calculate club health counts
-   */
-  private calculateClubHealthCounts(district: {
-    clubPerformance?: Array<Record<string, string | number | null | undefined>>
-  }): {
-    total: number
-    thriving: number
-    vulnerable: number
-    interventionRequired: number
-  } {
-    const clubs = district.clubPerformance ?? []
-    const total = clubs.length
-
-    let thriving = 0
-    let vulnerable = 0
-    let interventionRequired = 0
-
-    for (const club of clubs) {
-      const membership = this.parseIntSafe(
-        club['Active Members'] ??
-          club['Active Membership'] ??
-          club['Membership']
-      )
-      const dcpGoals = this.parseIntSafe(club['Goals Met'])
-      const memBase = this.parseIntSafe(club['Mem. Base'])
-      const netGrowth = membership - memBase
-
-      // Classification rules:
-      // 1. Intervention Required: membership < 12 AND net growth < 3
-      // 2. Thriving: membership requirement met AND DCP checkpoint met
-      // 3. Vulnerable: any requirement not met (but not intervention)
-
-      if (membership < 12 && netGrowth < 3) {
-        interventionRequired++
-      } else {
-        // Membership requirement: >= 20 OR net growth >= 3
-        const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-
-        // DCP checkpoint: simplified check (dcpGoals > 0)
-        const dcpCheckpointMet = dcpGoals > 0
-
-        if (membershipRequirementMet && dcpCheckpointMet) {
-          thriving++
-        } else {
-          vulnerable++
-        }
-      }
-    }
+      districtsFound: districtIds.length,
+      component: 'AnalyticsGenerator',
+      operation: 'verifySnapshot',
+      note: 'Analytics and time-series data should be pre-computed by scraper-cli',
+    })
 
     return {
-      total,
-      thriving,
-      vulnerable,
-      interventionRequired,
+      success: true,
+      districtsFound: districtIds.length,
     }
-  }
-
-  /**
-   * Calculate total distinguished clubs
-   */
-  private calculateDistinguishedTotal(district: {
-    clubPerformance?: Array<Record<string, string | number | null | undefined>>
-  }): number {
-    const clubs = district.clubPerformance ?? []
-
-    let distinguishedCount = 0
-
-    for (const club of clubs) {
-      if (this.isDistinguished(club)) {
-        distinguishedCount++
-      }
-    }
-
-    return distinguishedCount
-  }
-
-  /**
-   * Check if a club is distinguished
-   */
-  private isDistinguished(
-    club: Record<string, string | number | null | undefined>
-  ): boolean {
-    // Check CSP status first (required for 2025-2026+)
-    const cspSubmitted = this.getCSPStatus(club)
-    if (!cspSubmitted) {
-      return false
-    }
-
-    // Check Club Distinguished Status field
-    const statusField = club['Club Distinguished Status']
-    if (this.hasDistinguishedStatus(statusField)) {
-      return true
-    }
-
-    // Fallback: Calculate based on DCP goals, membership, and net growth
-    const dcpGoals = this.parseIntSafe(club['Goals Met'])
-    const membership = this.parseIntSafe(
-      club['Active Members'] ?? club['Active Membership'] ?? club['Membership']
-    )
-    const memBase = this.parseIntSafe(club['Mem. Base'])
-    const netGrowth = membership - memBase
-
-    // Distinguished: 5+ goals + (20 members OR net growth of 3)
-    return dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)
-  }
-
-  /**
-   * Check if status field indicates distinguished
-   */
-  private hasDistinguishedStatus(
-    statusField: string | number | null | undefined
-  ): boolean {
-    if (statusField === null || statusField === undefined) {
-      return false
-    }
-
-    const status = String(statusField).toLowerCase().trim()
-
-    if (status === '' || status === 'none' || status === 'n/a') {
-      return false
-    }
-
-    return (
-      status.includes('smedley') ||
-      status.includes('president') ||
-      status.includes('select') ||
-      status.includes('distinguished')
-    )
-  }
-
-  /**
-   * Get CSP (Club Success Plan) submission status from club data
-   */
-  private getCSPStatus(
-    club: Record<string, string | number | null | undefined>
-  ): boolean {
-    const cspValue =
-      club['CSP'] ??
-      club['Club Success Plan'] ??
-      club['CSP Submitted'] ??
-      club['Club Success Plan Submitted']
-
-    // Historical data compatibility: if field doesn't exist, assume submitted
-    if (cspValue === undefined || cspValue === null) {
-      return true
-    }
-
-    const cspString = String(cspValue).toLowerCase().trim()
-
-    if (
-      cspString === 'yes' ||
-      cspString === 'true' ||
-      cspString === '1' ||
-      cspString === 'submitted' ||
-      cspString === 'y'
-    ) {
-      return true
-    }
-
-    if (
-      cspString === 'no' ||
-      cspString === 'false' ||
-      cspString === '0' ||
-      cspString === 'not submitted' ||
-      cspString === 'n'
-    ) {
-      return false
-    }
-
-    // Default to true for unknown values
-    return true
-  }
-
-  /**
-   * Parse an integer value safely, returning 0 for invalid values
-   */
-  private parseIntSafe(value: string | number | null | undefined): number {
-    if (value === null || value === undefined || value === '') {
-      return 0
-    }
-    if (typeof value === 'number') {
-      return isNaN(value) ? 0 : Math.floor(value)
-    }
-    if (typeof value === 'string') {
-      const trimmed = value.trim()
-      if (trimmed === '') {
-        return 0
-      }
-      const parsed = parseInt(trimmed, 10)
-      return isNaN(parsed) ? 0 : parsed
-    }
-    return 0
   }
 
   /**

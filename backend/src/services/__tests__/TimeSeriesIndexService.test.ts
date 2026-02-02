@@ -1,14 +1,13 @@
 /**
- * Unit tests for TimeSeriesIndexService
+ * Unit tests for TimeSeriesIndexService (Read-Only)
  *
- * Tests the time-series index service that manages efficient range queries
- * across snapshots, partitioned by program year (July 1 - June 30).
+ * Tests the read-only time-series index service that reads pre-computed
+ * data from index files partitioned by program year (July 1 - June 30).
  *
  * Requirements tested:
- * - 2.1: Maintain time-series index with date-indexed analytics summaries
- * - 2.2: Append analytics summary to time-series index when snapshot is created
- * - 2.4: Support efficient range queries for program year boundaries
- * - 2.5: Partition indexes by program year to limit file sizes
+ * - 8.1: Read time-series data from pre-computed files only
+ * - 8.4: Return null or empty results when data is missing
+ * - 8.5: No computation performed
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -19,7 +18,10 @@ import {
   TimeSeriesIndexService,
   createTimeSeriesIndexService,
 } from '../TimeSeriesIndexService.js'
-import type { TimeSeriesDataPoint } from '../../types/precomputedAnalytics.js'
+import type {
+  TimeSeriesDataPoint,
+  ProgramYearIndexFile,
+} from '../../types/precomputedAnalytics.js'
 
 /**
  * Create a unique test directory for isolation
@@ -66,7 +68,57 @@ function createSampleDataPoint(
   }
 }
 
-describe('TimeSeriesIndexService', () => {
+/**
+ * Create a pre-computed program year index file
+ * This simulates what scraper-cli would generate
+ */
+function createProgramYearIndexFile(
+  districtId: string,
+  programYear: string,
+  dataPoints: TimeSeriesDataPoint[]
+): ProgramYearIndexFile {
+  const startYear = parseInt(programYear.split('-')[0] ?? '0', 10)
+  const endYear = parseInt(programYear.split('-')[1] ?? '0', 10)
+
+  // Calculate summary (this would be pre-computed by scraper-cli)
+  const memberships = dataPoints.map(dp => dp.membership)
+  const summary = {
+    totalDataPoints: dataPoints.length,
+    membershipStart: dataPoints[0]?.membership ?? 0,
+    membershipEnd: dataPoints[dataPoints.length - 1]?.membership ?? 0,
+    membershipPeak: memberships.length > 0 ? Math.max(...memberships) : 0,
+    membershipLow: memberships.length > 0 ? Math.min(...memberships) : 0,
+  }
+
+  return {
+    districtId,
+    programYear,
+    startDate: `${startYear}-07-01`,
+    endDate: `${endYear}-06-30`,
+    lastUpdated: new Date().toISOString(),
+    dataPoints,
+    summary,
+  }
+}
+
+/**
+ * Write a pre-computed index file to disk (simulating scraper-cli output)
+ */
+async function writePreComputedIndexFile(
+  testDir: string,
+  districtId: string,
+  programYear: string,
+  dataPoints: TimeSeriesDataPoint[]
+): Promise<void> {
+  const districtDir = path.join(testDir, 'time-series', `district_${districtId}`)
+  await fs.mkdir(districtDir, { recursive: true })
+
+  const indexFile = createProgramYearIndexFile(districtId, programYear, dataPoints)
+  const filePath = path.join(districtDir, `${programYear}.json`)
+  await fs.writeFile(filePath, JSON.stringify(indexFile, null, 2), 'utf-8')
+}
+
+describe('TimeSeriesIndexService (Read-Only)', () => {
   let testDir: string
   let service: TimeSeriesIndexService
 
@@ -131,209 +183,62 @@ describe('TimeSeriesIndexService', () => {
     })
   })
 
-  describe('appendDataPoint', () => {
-    it('should create index file and append data point', async () => {
-      const dataPoint = createSampleDataPoint(
-        '2024-01-15',
-        'snapshot-2024-01-15'
-      )
-
-      await service.appendDataPoint('42', dataPoint)
-
-      // Verify file was created
-      const indexPath = path.join(
-        testDir,
-        'time-series',
-        'district_42',
-        '2023-2024.json'
-      )
-      const content = await fs.readFile(indexPath, 'utf-8')
-      const indexFile = JSON.parse(content)
-
-      expect(indexFile.districtId).toBe('42')
-      expect(indexFile.programYear).toBe('2023-2024')
-      expect(indexFile.dataPoints).toHaveLength(1)
-      expect(indexFile.dataPoints[0].date).toBe('2024-01-15')
-    })
-
-    it('should append multiple data points in chronological order', async () => {
-      const dataPoint1 = createSampleDataPoint(
-        '2024-01-15',
-        'snapshot-2024-01-15',
-        1000
-      )
-      const dataPoint2 = createSampleDataPoint(
-        '2024-01-10',
-        'snapshot-2024-01-10',
-        950
-      )
-      const dataPoint3 = createSampleDataPoint(
-        '2024-01-20',
-        'snapshot-2024-01-20',
-        1050
-      )
-
-      await service.appendDataPoint('42', dataPoint1)
-      await service.appendDataPoint('42', dataPoint2)
-      await service.appendDataPoint('42', dataPoint3)
-
-      const result = await service.getProgramYearData('42', '2023-2024')
-
-      expect(result).not.toBeNull()
-      expect(result!.dataPoints).toHaveLength(3)
-      // Should be sorted chronologically
-      expect(result!.dataPoints[0]!.date).toBe('2024-01-10')
-      expect(result!.dataPoints[1]!.date).toBe('2024-01-15')
-      expect(result!.dataPoints[2]!.date).toBe('2024-01-20')
-    })
-
-    it('should update existing data point with same date and snapshotId', async () => {
-      const dataPoint1 = createSampleDataPoint(
-        '2024-01-15',
-        'snapshot-2024-01-15',
-        1000
-      )
-      const dataPoint2 = createSampleDataPoint(
-        '2024-01-15',
-        'snapshot-2024-01-15',
-        1100
-      )
-
-      await service.appendDataPoint('42', dataPoint1)
-      await service.appendDataPoint('42', dataPoint2)
-
-      const result = await service.getProgramYearData('42', '2023-2024')
-
-      expect(result).not.toBeNull()
-      expect(result!.dataPoints).toHaveLength(1)
-      expect(result!.dataPoints[0]!.membership).toBe(1100)
-    })
-
-    it('should partition data by program year', async () => {
-      // Data point in 2023-2024 program year
-      const dataPoint1 = createSampleDataPoint(
-        '2024-01-15',
-        'snapshot-2024-01-15'
-      )
-      // Data point in 2024-2025 program year
-      const dataPoint2 = createSampleDataPoint(
-        '2024-08-15',
-        'snapshot-2024-08-15'
-      )
-
-      await service.appendDataPoint('42', dataPoint1)
-      await service.appendDataPoint('42', dataPoint2)
-
-      // Verify separate files were created
-      const result2023 = await service.getProgramYearData('42', '2023-2024')
-      const result2024 = await service.getProgramYearData('42', '2024-2025')
-
-      expect(result2023).not.toBeNull()
-      expect(result2023!.dataPoints).toHaveLength(1)
-      expect(result2023!.dataPoints[0]!.date).toBe('2024-01-15')
-
-      expect(result2024).not.toBeNull()
-      expect(result2024!.dataPoints).toHaveLength(1)
-      expect(result2024!.dataPoints[0]!.date).toBe('2024-08-15')
-    })
-
-    it('should calculate summary statistics correctly', async () => {
-      const dataPoints = [
-        createSampleDataPoint('2024-01-10', 'snapshot-1', 900),
-        createSampleDataPoint('2024-01-15', 'snapshot-2', 1100),
-        createSampleDataPoint('2024-01-20', 'snapshot-3', 1000),
-      ]
-
-      for (const dp of dataPoints) {
-        await service.appendDataPoint('42', dp)
-      }
-
-      const indexPath = path.join(
-        testDir,
-        'time-series',
-        'district_42',
-        '2023-2024.json'
-      )
-      const content = await fs.readFile(indexPath, 'utf-8')
-      const indexFile = JSON.parse(content)
-
-      expect(indexFile.summary.totalDataPoints).toBe(3)
-      expect(indexFile.summary.membershipStart).toBe(900)
-      expect(indexFile.summary.membershipEnd).toBe(1000)
-      expect(indexFile.summary.membershipPeak).toBe(1100)
-      expect(indexFile.summary.membershipLow).toBe(900)
-    })
-
-    it('should reject invalid district ID', async () => {
-      const dataPoint = createSampleDataPoint('2024-01-15', 'snapshot-1')
-
-      await expect(service.appendDataPoint('', dataPoint)).rejects.toThrow(
-        'Invalid district ID'
-      )
-
-      await expect(
-        service.appendDataPoint('district-42', dataPoint)
-      ).rejects.toThrow('Invalid district ID')
-
-      await expect(
-        service.appendDataPoint('../escape', dataPoint)
-      ).rejects.toThrow('Invalid district ID')
-    })
-
-    it('should update index metadata after append', async () => {
-      const dataPoint = createSampleDataPoint('2024-01-15', 'snapshot-1')
-
-      await service.appendDataPoint('42', dataPoint)
-
-      const metadataPath = path.join(
-        testDir,
-        'time-series',
-        'district_42',
-        'index-metadata.json'
-      )
-      const content = await fs.readFile(metadataPath, 'utf-8')
-      const metadata = JSON.parse(content)
-
-      expect(metadata.districtId).toBe('42')
-      expect(metadata.availableProgramYears).toContain('2023-2024')
-      expect(metadata.totalDataPoints).toBe(1)
-    })
-  })
-
   describe('getTrendData', () => {
-    beforeEach(async () => {
-      // Set up test data across multiple program years
-      const dataPoints = [
-        createSampleDataPoint('2023-08-15', 'snapshot-2023-08-15', 900),
+    /**
+     * Requirement 8.4: Return empty array when data is missing
+     */
+    it('should return empty array for non-existent district', async () => {
+      const result = await service.getTrendData('99', '2024-01-01', '2024-12-31')
+      expect(result).toEqual([])
+    })
+
+    /**
+     * Requirement 8.4: Return empty array when data is missing
+     */
+    it('should return empty array for date range with no data', async () => {
+      // Create some data for district 42
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', [
+        createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15'),
+      ])
+
+      // Query a different date range
+      const result = await service.getTrendData('42', '2022-01-01', '2022-12-31')
+      expect(result).toEqual([])
+    })
+
+    /**
+     * Requirement 8.1: Read time-series data from pre-computed files only
+     */
+    it('should return data points within date range from pre-computed files', async () => {
+      // Set up pre-computed test data
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', [
+        createSampleDataPoint('2024-01-10', 'snapshot-2024-01-10', 900),
         createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1000),
         createSampleDataPoint('2024-06-15', 'snapshot-2024-06-15', 1100),
-        createSampleDataPoint('2024-08-15', 'snapshot-2024-08-15', 1200),
-        createSampleDataPoint('2025-01-15', 'snapshot-2025-01-15', 1300),
-      ]
+      ])
 
-      for (const dp of dataPoints) {
-        await service.appendDataPoint('42', dp)
-      }
+      const result = await service.getTrendData('42', '2024-01-01', '2024-06-30')
+
+      expect(result).toHaveLength(3)
+      expect(result[0]!.date).toBe('2024-01-10')
+      expect(result[1]!.date).toBe('2024-01-15')
+      expect(result[2]!.date).toBe('2024-06-15')
     })
 
-    it('should return data points within date range', async () => {
-      const result = await service.getTrendData(
-        '42',
-        '2024-01-01',
-        '2024-06-30'
-      )
-
-      expect(result).toHaveLength(2)
-      expect(result[0]!.date).toBe('2024-01-15')
-      expect(result[1]!.date).toBe('2024-06-15')
-    })
-
+    /**
+     * Requirement 8.1: Read time-series data from pre-computed files only
+     */
     it('should return data points across program year boundaries', async () => {
-      const result = await service.getTrendData(
-        '42',
-        '2024-01-01',
-        '2024-12-31'
-      )
+      // Set up pre-computed test data across two program years
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', [
+        createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1000),
+        createSampleDataPoint('2024-06-15', 'snapshot-2024-06-15', 1100),
+      ])
+      await writePreComputedIndexFile(testDir, '42', '2024-2025', [
+        createSampleDataPoint('2024-08-15', 'snapshot-2024-08-15', 1200),
+      ])
+
+      const result = await service.getTrendData('42', '2024-01-01', '2024-12-31')
 
       expect(result).toHaveLength(3)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -341,32 +246,13 @@ describe('TimeSeriesIndexService', () => {
       expect(result[2]!.date).toBe('2024-08-15')
     })
 
-    it('should return empty array for date range with no data', async () => {
-      const result = await service.getTrendData(
-        '42',
-        '2022-01-01',
-        '2022-12-31'
-      )
-
-      expect(result).toEqual([])
-    })
-
-    it('should return empty array for non-existent district', async () => {
-      const result = await service.getTrendData(
-        '99',
-        '2024-01-01',
-        '2024-12-31'
-      )
-
-      expect(result).toEqual([])
-    })
-
     it('should include boundary dates (inclusive)', async () => {
-      const result = await service.getTrendData(
-        '42',
-        '2024-01-15',
-        '2024-06-15'
-      )
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', [
+        createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1000),
+        createSampleDataPoint('2024-06-15', 'snapshot-2024-06-15', 1100),
+      ])
+
+      const result = await service.getTrendData('42', '2024-01-15', '2024-06-15')
 
       expect(result).toHaveLength(2)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -374,45 +260,72 @@ describe('TimeSeriesIndexService', () => {
     })
 
     it('should return data sorted chronologically', async () => {
-      const result = await service.getTrendData(
-        '42',
-        '2023-07-01',
-        '2025-06-30'
-      )
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', [
+        createSampleDataPoint('2023-08-15', 'snapshot-2023-08-15', 900),
+        createSampleDataPoint('2024-01-15', 'snapshot-2024-01-15', 1000),
+        createSampleDataPoint('2024-06-15', 'snapshot-2024-06-15', 1100),
+      ])
+      await writePreComputedIndexFile(testDir, '42', '2024-2025', [
+        createSampleDataPoint('2024-08-15', 'snapshot-2024-08-15', 1200),
+        createSampleDataPoint('2025-01-15', 'snapshot-2025-01-15', 1300),
+      ])
+
+      const result = await service.getTrendData('42', '2023-07-01', '2025-06-30')
 
       expect(result).toHaveLength(5)
       for (let i = 1; i < result.length; i++) {
         expect(result[i]!.date >= result[i - 1]!.date).toBe(true)
       }
     })
+
+    /**
+     * Requirement 8.4: Return empty array when data is missing (not throw)
+     */
+    it('should return empty array for invalid district ID (not throw)', async () => {
+      // Invalid district IDs should return empty array, not throw
+      const result1 = await service.getTrendData('', '2024-01-01', '2024-12-31')
+      expect(result1).toEqual([])
+
+      const result2 = await service.getTrendData('district-42', '2024-01-01', '2024-12-31')
+      expect(result2).toEqual([])
+
+      const result3 = await service.getTrendData('../escape', '2024-01-01', '2024-12-31')
+      expect(result3).toEqual([])
+    })
   })
 
   describe('getProgramYearData', () => {
+    /**
+     * Requirement 8.4: Return null when data is missing
+     */
     it('should return null for non-existent program year', async () => {
       const result = await service.getProgramYearData('42', '2020-2021')
-
       expect(result).toBeNull()
     })
 
+    /**
+     * Requirement 8.4: Return null when data is missing
+     */
     it('should return null for non-existent district', async () => {
-      const dataPoint = createSampleDataPoint('2024-01-15', 'snapshot-1')
-      await service.appendDataPoint('42', dataPoint)
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', [
+        createSampleDataPoint('2024-01-15', 'snapshot-1'),
+      ])
 
       const result = await service.getProgramYearData('99', '2023-2024')
-
       expect(result).toBeNull()
     })
 
-    it('should return complete program year data', async () => {
+    /**
+     * Requirement 8.1: Read time-series data from pre-computed files only
+     */
+    it('should return complete program year data from pre-computed files', async () => {
       const dataPoints = [
         createSampleDataPoint('2024-01-10', 'snapshot-1', 900),
         createSampleDataPoint('2024-01-15', 'snapshot-2', 1000),
         createSampleDataPoint('2024-01-20', 'snapshot-3', 1100),
       ]
 
-      for (const dp of dataPoints) {
-        await service.appendDataPoint('42', dp)
-      }
+      await writePreComputedIndexFile(testDir, '42', '2023-2024', dataPoints)
 
       const result = await service.getProgramYearData('42', '2023-2024')
 
@@ -424,26 +337,85 @@ describe('TimeSeriesIndexService', () => {
       expect(result!.lastUpdated).toBeDefined()
     })
 
-    it('should reject invalid program year format', async () => {
-      await expect(service.getProgramYearData('42', '2024')).rejects.toThrow(
-        'Invalid program year format'
-      )
+    /**
+     * Requirement 8.4: Return null for invalid input (not throw)
+     */
+    it('should return null for invalid program year format (not throw)', async () => {
+      const result1 = await service.getProgramYearData('42', '2024')
+      expect(result1).toBeNull()
 
-      await expect(
-        service.getProgramYearData('42', '2024-2026')
-      ).rejects.toThrow('Invalid program year')
+      const result2 = await service.getProgramYearData('42', '2024-2026')
+      expect(result2).toBeNull()
+    })
+
+    /**
+     * Requirement 8.4: Return null for invalid district ID (not throw)
+     */
+    it('should return null for invalid district ID (not throw)', async () => {
+      const result = await service.getProgramYearData('', '2023-2024')
+      expect(result).toBeNull()
     })
   })
 
   describe('factory function', () => {
-    it('should create a TimeSeriesIndexService instance', () => {
+    it('should create a TimeSeriesIndexService instance with read-only interface', () => {
       const instance = createTimeSeriesIndexService({ cacheDir: testDir })
 
       expect(instance).toBeDefined()
-      expect(typeof instance.appendDataPoint).toBe('function')
       expect(typeof instance.getTrendData).toBe('function')
       expect(typeof instance.getProgramYearData).toBe('function')
-      expect(typeof instance.rebuildIndex).toBe('function')
+
+      // Verify write methods are NOT present on the interface
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const anyInstance = instance as any
+      expect(anyInstance.appendDataPoint).toBeUndefined()
+      expect(anyInstance.rebuildIndex).toBeUndefined()
+    })
+  })
+
+  describe('read-only compliance', () => {
+    /**
+     * Requirement 8.5: No computation performed
+     * Verify the service only reads pre-computed data
+     */
+    it('should read pre-computed summary from index file (not compute)', async () => {
+      // Create index file with specific pre-computed summary
+      const districtDir = path.join(testDir, 'time-series', 'district_42')
+      await fs.mkdir(districtDir, { recursive: true })
+
+      const indexFile: ProgramYearIndexFile = {
+        districtId: '42',
+        programYear: '2023-2024',
+        startDate: '2023-07-01',
+        endDate: '2024-06-30',
+        lastUpdated: '2024-01-20T00:00:00.000Z',
+        dataPoints: [
+          createSampleDataPoint('2024-01-10', 'snapshot-1', 900),
+          createSampleDataPoint('2024-01-15', 'snapshot-2', 1000),
+          createSampleDataPoint('2024-01-20', 'snapshot-3', 1100),
+        ],
+        // Pre-computed summary (would be computed by scraper-cli)
+        summary: {
+          totalDataPoints: 3,
+          membershipStart: 900,
+          membershipEnd: 1100,
+          membershipPeak: 1100,
+          membershipLow: 900,
+        },
+      }
+
+      await fs.writeFile(
+        path.join(districtDir, '2023-2024.json'),
+        JSON.stringify(indexFile, null, 2),
+        'utf-8'
+      )
+
+      // Read the data - service should return what's in the file
+      const result = await service.getProgramYearData('42', '2023-2024')
+
+      expect(result).not.toBeNull()
+      expect(result!.dataPoints).toHaveLength(3)
+      // The service reads the file as-is, no computation
     })
   })
 })

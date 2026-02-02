@@ -119,16 +119,15 @@ function createMockSnapshotStorage(): ISnapshotStorage & {
 
 /**
  * Create a mock ITimeSeriesIndexStorage implementation
+ * Note: appendDataPoint has been removed per data-computation-separation steering
  */
 function createMockTimeSeriesStorage(): ITimeSeriesIndexStorage & {
-  appendDataPoint: Mock
   getTrendData: Mock
   getProgramYearData: Mock
   deleteSnapshotEntries: Mock
   isReady: Mock
 } {
   return {
-    appendDataPoint: vi.fn().mockResolvedValue(undefined),
     getTrendData: vi.fn().mockResolvedValue([]),
     getProgramYearData: vi.fn().mockResolvedValue(null),
     deleteSnapshotEntries: vi.fn().mockResolvedValue(0),
@@ -504,8 +503,8 @@ describe('UnifiedBackfillService E2E Tests', () => {
       expect(finalJob?.result).not.toBeNull()
       expect(finalJob?.result?.itemsProcessed).toBeGreaterThan(0)
 
-      // Verify time series storage was called
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
+      // Note: Time series data is now pre-computed by scraper-cli, not written via appendDataPoint
+      // The backend storage is read-only per data-computation-separation steering
     })
 
     it('should handle analytics-generation with no snapshots', async () => {
@@ -1082,8 +1081,8 @@ describe('UnifiedBackfillService E2E Tests', () => {
       expect(preview.totalItems).toBe(2)
       expect(preview.itemBreakdown.snapshotIds).toHaveLength(2)
 
-      // Verify no actual execution happened
-      expect(mockTimeSeriesStorage.appendDataPoint).not.toHaveBeenCalled()
+      // Note: Preview should not execute any storage operations
+      // Time series data is now pre-computed by scraper-cli, not written via appendDataPoint
     })
   })
 

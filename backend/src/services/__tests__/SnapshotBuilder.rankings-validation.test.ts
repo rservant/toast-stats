@@ -1,31 +1,23 @@
 /**
- * Unit Tests for SnapshotBuilder Rankings Validation
+ * Unit Tests for SnapshotBuilder Rankings Reading
  *
- * Feature: rankings-district-validation-fix
+ * Feature: refresh-service-computation-removal
  *
- * Tests the integration of DistrictIdValidator into SnapshotBuilder to filter
- * invalid district IDs before ranking calculation. The validation occurs in
- * readCachedData() when parsing the all-districts CSV, and again in
- * calculateAllDistrictsRankings() as a safety check.
+ * Tests that the SnapshotBuilder no longer has computation dependencies
+ * and that the constructor signature has been updated correctly.
  *
- * **Validates: Requirements 1.1, 1.4**
+ * **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
  *
  * Test Coverage:
- * - Invalid records (like "As of MM/DD/YYYY" date patterns) are filtered before ranking calculation
- * - When all records are invalid, the method returns undefined for rankings
- * - Valid records are processed correctly after filtering
+ * - SnapshotBuilder no longer requires RankingCalculator
+ * - SnapshotBuilder can be constructed without computation dependencies
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { SnapshotBuilder } from '../SnapshotBuilder.js'
-import {
-  DistrictIdValidator,
-  type IDistrictIdValidator,
-} from '../DistrictIdValidator.js'
 import type { IRawCSVStorage } from '../../types/storageInterfaces.js'
 import type { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import type { FileSnapshotStore } from '../SnapshotStore.js'
-import type { RankingCalculator } from '../RankingCalculator.js'
 import { CSVType, type RawCSVCacheMetadata } from '../../types/rawCSVCache.js'
 import { TestLogger } from '../TestServiceFactory.js'
 
@@ -60,25 +52,14 @@ function createValidCacheMetadata(date: string): RawCSVCacheMetadata {
 }
 
 /**
- * Create a mock IRawCSVStorage that returns specified CSV content for ALL_DISTRICTS
+ * Create a mock IRawCSVStorage
  */
-function createMockCacheService(csvContent: string): IRawCSVStorage {
+function createMockCacheService(): IRawCSVStorage {
   return {
-    getCachedCSV: vi.fn(
-      async (date: string, type: CSVType, districtId?: string) => {
-        // Only return content for ALL_DISTRICTS type
-        if (type === CSVType.ALL_DISTRICTS) {
-          return csvContent
-        }
-        return null
-      }
-    ),
+    getCachedCSV: vi.fn(async () => null),
     setCachedCSV: vi.fn(async () => {}),
     setCachedCSVWithMetadata: vi.fn(async () => {}),
-    hasCachedCSV: vi.fn(async (date: string, type: CSVType) => {
-      // Only return true for ALL_DISTRICTS to simplify test
-      return type === CSVType.ALL_DISTRICTS
-    }),
+    hasCachedCSV: vi.fn(async () => false),
     getCacheMetadata: vi.fn(async (date: string) =>
       createValidCacheMetadata(date)
     ),
@@ -197,67 +178,7 @@ function createMockSnapshotStore(): FileSnapshotStore {
   } as unknown as FileSnapshotStore
 }
 
-/**
- * Create a mock RankingCalculator that tracks calls and returns rankings
- */
-function createMockRankingCalculator(): RankingCalculator & {
-  calculateRankings: ReturnType<typeof vi.fn>
-} {
-  return {
-    calculateRankings: vi.fn(async districtStats => {
-      // Return rankings for each district
-      return districtStats.map(
-        (stat: { districtId: string; districtPerformance?: unknown[] }) => ({
-          districtId: stat.districtId,
-          ranking: {
-            districtName: `District ${stat.districtId}`,
-            region: 'Test Region',
-            paidClubs: 10,
-            paidClubBase: 10,
-            clubGrowthPercent: 0,
-            totalPayments: 100,
-            paymentBase: 100,
-            paymentGrowthPercent: 0,
-            activeClubs: 10,
-            distinguishedClubs: 5,
-            selectDistinguished: 2,
-            presidentsDistinguished: 1,
-            distinguishedPercent: 50,
-            clubsRank: 1,
-            paymentsRank: 1,
-            distinguishedRank: 1,
-            aggregateScore: 100,
-          },
-        })
-      )
-    }),
-    getRankingVersion: vi.fn(() => '1.0.0'),
-  } as unknown as RankingCalculator & {
-    calculateRankings: ReturnType<typeof vi.fn>
-  }
-}
-
-/**
- * Create a spy wrapper around the real DistrictIdValidator to track calls
- */
-function createSpyDistrictIdValidator(): IDistrictIdValidator & {
-  filterValidRecordsSpy: ReturnType<typeof vi.fn>
-} {
-  const realValidator = new DistrictIdValidator()
-  const filterValidRecordsSpy = vi.fn(
-    realValidator.filterValidRecords.bind(realValidator)
-  )
-
-  return {
-    validate: realValidator.validate.bind(realValidator),
-    filterValid: realValidator.filterValid.bind(realValidator),
-    filterValidRecords:
-      filterValidRecordsSpy as IDistrictIdValidator['filterValidRecords'],
-    filterValidRecordsSpy,
-  }
-}
-
-describe('SnapshotBuilder Rankings Validation', () => {
+describe('SnapshotBuilder Computation Removal', () => {
   let testLogger: TestLogger
 
   beforeEach(() => {
@@ -269,185 +190,121 @@ describe('SnapshotBuilder Rankings Validation', () => {
     vi.clearAllMocks()
   })
 
-  describe('calculateAllDistrictsRankings filtering', () => {
+  describe('Constructor', () => {
     /**
-     * Test: Invalid records are filtered before ranking calculation
-     * **Validates: Requirement 1.1**
+     * Test: SnapshotBuilder can be constructed without RankingCalculator
+     * **Validates: Requirement 3.2**
      *
-     * WHEN the SnapshotBuilder calculates all-districts rankings,
-     * THE SnapshotBuilder SHALL filter the input ScrapedRecord array
-     * using the DistrictIdValidator before converting to DistrictStatistics
+     * THE SnapshotBuilder SHALL NOT have a dependency on RankingCalculator
      */
-    it('filters invalid records before ranking calculation', async () => {
-      // Arrange: CSV with mix of valid and invalid district IDs
-      // The "As of 01/20/2026" entry should be filtered out
-      const csvContent = `DISTRICT,REGION,Paid Clubs,Total Payments
-42,Region 1,10,100
-As of 01/20/2026,Region 2,5,50
-61,Region 3,15,150`
-
-      const mockCacheService = createMockCacheService(csvContent)
+    it('can be constructed without RankingCalculator dependency', () => {
+      const mockCacheService = createMockCacheService()
       const mockDistrictConfig = createMockDistrictConfigService()
       const mockSnapshotStore = createMockSnapshotStore()
-      const mockRankingCalculator = createMockRankingCalculator()
 
-      // Use a spy on the real validator to track calls
-      const spyValidator = createSpyDistrictIdValidator()
-
+      // This should work without passing a RankingCalculator
       const snapshotBuilder = new SnapshotBuilder(
         mockCacheService,
         mockDistrictConfig,
         mockSnapshotStore,
         undefined, // validator
-        mockRankingCalculator,
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
-        testLogger,
-        spyValidator
+        testLogger
       )
 
-      // Act: Build snapshot which triggers rankings calculation
-      await snapshotBuilder.build({ date: '2024-01-15' })
-
-      // Assert: Validator's filterValidRecords was called
-      expect(spyValidator.filterValidRecordsSpy).toHaveBeenCalled()
-
-      // Assert: The validator was called with 3 records (the CSV has 3 data rows)
-      const calls = spyValidator.filterValidRecordsSpy.mock.calls
-      expect(calls.length).toBeGreaterThan(0)
-      const firstCallRecords = calls[0]?.[0] as Array<{ DISTRICT?: string }>
-      expect(firstCallRecords).toBeDefined()
-      expect(firstCallRecords.length).toBe(3)
-
-      // Assert: The validator returned 2 valid records (42 and 61)
-      const firstCallResult = spyValidator.filterValidRecordsSpy.mock
-        .results[0] as {
-        type: string
-        value: { valid: Array<{ DISTRICT?: string }>; rejected: unknown[] }
-      }
-      expect(firstCallResult.value.valid.length).toBe(2)
-      expect(firstCallResult.value.rejected.length).toBe(1)
+      expect(snapshotBuilder).toBeDefined()
+      expect(typeof snapshotBuilder.build).toBe('function')
+      expect(typeof snapshotBuilder.getCacheAvailability).toBe('function')
     })
 
     /**
-     * Test: Returns undefined when all records are invalid
-     * **Validates: Requirement 1.4**
+     * Test: SnapshotBuilder accepts optional cacheDir parameter
+     * **Validates: Requirement 3.3**
      *
-     * IF all records are filtered out as invalid,
-     * THEN THE SnapshotBuilder SHALL return undefined for rankings data
-     * rather than calculating rankings on an empty set
+     * THE SnapshotBuilder SHALL read pre-computed rankings from the transform output
      */
-    it('returns undefined when all records are invalid', async () => {
-      // Arrange: CSV with only invalid district IDs (date patterns)
-      const csvContent = `DISTRICT,REGION,Paid Clubs,Total Payments
-As of 01/20/2026,Region 1,10,100
-As of 12/31/2024,Region 2,5,50`
-
-      const mockCacheService = createMockCacheService(csvContent)
+    it('accepts optional cacheDir parameter for reading pre-computed rankings', () => {
+      const mockCacheService = createMockCacheService()
       const mockDistrictConfig = createMockDistrictConfigService()
       const mockSnapshotStore = createMockSnapshotStore()
-      const mockRankingCalculator = createMockRankingCalculator()
 
-      // Use a spy on the real validator
-      const spyValidator = createSpyDistrictIdValidator()
-
+      // This should work with a cacheDir parameter
       const snapshotBuilder = new SnapshotBuilder(
         mockCacheService,
         mockDistrictConfig,
         mockSnapshotStore,
         undefined, // validator
-        mockRankingCalculator,
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
         testLogger,
-        spyValidator
+        undefined, // districtIdValidator
+        '/tmp/test-cache' // cacheDir
       )
 
-      // Act: Build snapshot
-      await snapshotBuilder.build({ date: '2024-01-15' })
-
-      // Assert: Validator's filterValidRecords was called
-      expect(spyValidator.filterValidRecordsSpy).toHaveBeenCalled()
-
-      // Assert: The validator returned 0 valid records (all were date patterns)
-      const firstCallResult = spyValidator.filterValidRecordsSpy.mock
-        .results[0] as {
-        type: string
-        value: { valid: unknown[]; rejected: unknown[] }
-      }
-      expect(firstCallResult.value.valid.length).toBe(0)
-      expect(firstCallResult.value.rejected.length).toBe(2)
-
-      // Assert: RankingCalculator was NOT called (no valid records to rank)
-      expect(mockRankingCalculator.calculateRankings).not.toHaveBeenCalled()
+      expect(snapshotBuilder).toBeDefined()
     })
+  })
 
+  describe('Method Removal', () => {
     /**
-     * Test: Valid records are processed correctly after filtering
-     * **Validates: Requirements 1.1, 1.4**
+     * Test: SnapshotBuilder does not have calculateAllDistrictsRankings method
+     * **Validates: Requirement 3.1**
      *
-     * WHEN valid records remain after filtering,
-     * THE SnapshotBuilder SHALL process them correctly for ranking calculation
+     * THE SnapshotBuilder SHALL NOT contain the calculateAllDistrictsRankings method
      */
-    it('processes valid records correctly after filtering', async () => {
-      // Arrange: CSV with all valid district IDs
-      const csvContent = `DISTRICT,REGION,Paid Clubs,Total Payments
-42,Region 1,10,100
-61,Region 2,15,150
-F,Region 3,20,200`
-
-      const mockCacheService = createMockCacheService(csvContent)
+    it('does not have calculateAllDistrictsRankings method', () => {
+      const mockCacheService = createMockCacheService()
       const mockDistrictConfig = createMockDistrictConfigService()
       const mockSnapshotStore = createMockSnapshotStore()
-      const mockRankingCalculator = createMockRankingCalculator()
-
-      // Use a spy on the real validator
-      const spyValidator = createSpyDistrictIdValidator()
 
       const snapshotBuilder = new SnapshotBuilder(
         mockCacheService,
         mockDistrictConfig,
         mockSnapshotStore,
-        undefined, // validator
-        mockRankingCalculator,
-        undefined, // closingPeriodDetector
-        undefined, // dataNormalizer
-        testLogger,
-        spyValidator
+        undefined,
+        undefined,
+        undefined,
+        testLogger
       )
 
-      // Act: Build snapshot
-      await snapshotBuilder.build({ date: '2024-01-15' })
+      // The method should not exist on the public interface
+      // Note: It was a private method, so we check that it's not accessible
+      const builderAsAny = snapshotBuilder as Record<string, unknown>
+      
+      // Check that there's no public calculateAllDistrictsRankings method
+      expect(typeof builderAsAny['calculateAllDistrictsRankings']).not.toBe('function')
+    })
+  })
 
-      // Assert: Validator's filterValidRecords was called
-      expect(spyValidator.filterValidRecordsSpy).toHaveBeenCalled()
+  describe('Graceful Handling', () => {
+    /**
+     * Test: SnapshotBuilder handles missing cache data gracefully
+     * **Validates: Requirement 3.4**
+     *
+     * IF rankings are not available, THE SnapshotBuilder SHALL create snapshots without rankings
+     */
+    it('handles missing cache data gracefully', async () => {
+      const mockCacheService = createMockCacheService()
+      const mockDistrictConfig = createMockDistrictConfigService()
+      const mockSnapshotStore = createMockSnapshotStore()
 
-      // Assert: The validator returned all 3 records as valid (no rejections)
-      const firstCallResult = spyValidator.filterValidRecordsSpy.mock
-        .results[0] as {
-        type: string
-        value: { valid: unknown[]; rejected: unknown[] }
-      }
-      expect(firstCallResult.value.valid.length).toBe(3)
-      expect(firstCallResult.value.rejected.length).toBe(0)
+      const snapshotBuilder = new SnapshotBuilder(
+        mockCacheService,
+        mockDistrictConfig,
+        mockSnapshotStore,
+        undefined,
+        undefined,
+        undefined,
+        testLogger
+      )
 
-      // Note: The RankingCalculator may or may not be called depending on
-      // whether the build succeeds through normalization. The key assertion
-      // is that the validator correctly identified all records as valid.
-      // If RankingCalculator was called, verify it received all 3 districts.
-      if (mockRankingCalculator.calculateRankings.mock.calls.length > 0) {
-        const calculateRankingsCalls = mockRankingCalculator.calculateRankings
-          .mock.calls as Array<Array<Array<{ districtId: string }>>>
-        const districtStats = calculateRankingsCalls[0]?.[0]
-        expect(districtStats).toBeDefined()
-        if (districtStats) {
-          expect(districtStats.length).toBe(3)
-          const districtIds = districtStats.map(d => d.districtId)
-          expect(districtIds).toContain('42')
-          expect(districtIds).toContain('61')
-          expect(districtIds).toContain('F')
-        }
-      }
+      // Build should not throw even when no cache data is available
+      const result = await snapshotBuilder.build({ date: '2024-01-15' })
+
+      // Build should complete (may fail due to no data, but should not throw)
+      expect(result).toBeDefined()
+      expect(result.date).toBe('2024-01-15')
     })
   })
 })

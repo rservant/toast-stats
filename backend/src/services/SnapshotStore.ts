@@ -953,6 +953,10 @@ export class FileSnapshotStore
   ): Promise<void> {
     this.validateSnapshotId(snapshotId)
 
+    // Ensure the snapshot directory exists
+    const snapshotDir = this.resolvePathUnderBase(this.snapshotsDir, snapshotId)
+    await fs.mkdir(snapshotDir, { recursive: true })
+
     // Use safe path resolution for write operation
     const rankingsFile = this.resolvePathUnderBase(
       this.snapshotsDir,

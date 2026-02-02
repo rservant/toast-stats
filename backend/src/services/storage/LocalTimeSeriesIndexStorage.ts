@@ -68,23 +68,8 @@ export class LocalTimeSeriesIndexStorage implements ITimeSeriesIndexStorage {
   }
 
   // ============================================================================
-  // Core Time-Series Operations (Delegated to TimeSeriesIndexService)
+  // Core Time-Series Operations (Read-Only - Delegated to TimeSeriesIndexService)
   // ============================================================================
-
-  /**
-   * Append a data point to the time-series index
-   *
-   * Delegates to TimeSeriesIndexService.appendDataPoint
-   *
-   * @param districtId - The district identifier (e.g., "42", "61", "F")
-   * @param dataPoint - The time-series data point to append
-   */
-  async appendDataPoint(
-    districtId: string,
-    dataPoint: TimeSeriesDataPoint
-  ): Promise<void> {
-    return this.service.appendDataPoint(districtId, dataPoint)
-  }
 
   /**
    * Get trend data for a date range
@@ -321,10 +306,10 @@ export class LocalTimeSeriesIndexStorage implements ITimeSeriesIndexStorage {
         // Update the lastUpdated timestamp
         indexFile.lastUpdated = new Date().toISOString()
 
-        // Recalculate summary statistics
-        indexFile.summary = this.calculateProgramYearSummary(
-          indexFile.dataPoints
-        )
+        // Note: Summary is NOT recalculated here per data-computation-separation steering.
+        // The summary will be stale until scraper-cli regenerates the index file.
+        // This is acceptable because deletion is an admin operation and the summary
+        // is informational only.
 
         // Write back the filtered data
         await fs.writeFile(
@@ -362,38 +347,6 @@ export class LocalTimeSeriesIndexStorage implements ITimeSeriesIndexStorage {
       })
       // Continue processing other files
       return 0
-    }
-  }
-
-  /**
-   * Calculate summary statistics for a program year
-   *
-   * @param dataPoints - Array of time-series data points
-   * @returns Program year summary statistics
-   */
-  private calculateProgramYearSummary(
-    dataPoints: TimeSeriesDataPoint[]
-  ): ProgramYearIndexFile['summary'] {
-    if (dataPoints.length === 0) {
-      return {
-        totalDataPoints: 0,
-        membershipStart: 0,
-        membershipEnd: 0,
-        membershipPeak: 0,
-        membershipLow: 0,
-      }
-    }
-
-    const memberships = dataPoints.map(dp => dp.membership)
-    const firstDataPoint = dataPoints[0]
-    const lastDataPoint = dataPoints[dataPoints.length - 1]
-
-    return {
-      totalDataPoints: dataPoints.length,
-      membershipStart: firstDataPoint?.membership ?? 0,
-      membershipEnd: lastDataPoint?.membership ?? 0,
-      membershipPeak: Math.max(...memberships),
-      membershipLow: Math.min(...memberships),
     }
   }
 

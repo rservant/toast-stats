@@ -167,6 +167,7 @@ describe('PerDistrictSnapshotStore Snapshot with Rankings Integration', () => {
           paymentsRank: 8,
           distinguishedRank: 3,
           aggregateScore: 342.5,
+          overallRank: 1,
         },
         {
           districtId: '15',
@@ -187,6 +188,7 @@ describe('PerDistrictSnapshotStore Snapshot with Rankings Integration', () => {
           paymentsRank: 18,
           distinguishedRank: 12,
           aggregateScore: 285.3,
+          overallRank: 2,
         },
         {
           districtId: 'F',
@@ -207,6 +209,7 @@ describe('PerDistrictSnapshotStore Snapshot with Rankings Integration', () => {
           paymentsRank: 5,
           distinguishedRank: 2,
           aggregateScore: 398.7,
+          overallRank: 3,
         },
       ],
     }

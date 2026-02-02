@@ -72,6 +72,8 @@ export interface DistrictRanking {
   distinguishedRank: number
   /** Aggregate score combining all metrics */
   aggregateScore: number
+  /** Overall rank position based on aggregate score (1 = best, pre-computed) */
+  overallRank: number
 }
 
 /**

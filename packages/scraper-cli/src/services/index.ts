@@ -34,5 +34,11 @@ export {
   type UploadOperationOptions,
   type IUploadService,
 } from './UploadService.js'
+export {
+  TimeSeriesIndexWriter,
+  createTimeSeriesIndexWriter,
+  type TimeSeriesIndexWriterConfig,
+  type TimeSeriesIndexWriterLogger,
+} from './TimeSeriesIndexWriter.js'
 // ScraperOrchestrator will be added in Task 3
 // export { ScraperOrchestrator } from './ScraperOrchestrator.js'

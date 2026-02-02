@@ -32,6 +32,15 @@ export type {
   DistrictManifestEntry,
 } from './types/snapshot-manifest.js'
 
+// Time-series types
+export type {
+  TimeSeriesDataPoint,
+  ProgramYearIndexFile,
+  ProgramYearSummary,
+  TimeSeriesIndexMetadata,
+  ClubHealthCounts,
+} from './types/time-series.js'
+
 // Zod schemas
 export { PerDistrictDataSchema } from './schemas/per-district-data.schema.js'
 
@@ -56,11 +65,24 @@ export {
   DistrictManifestEntrySchema,
 } from './schemas/snapshot-manifest.schema.js'
 
+// Time-series Zod schemas
+export {
+  TimeSeriesDataPointSchema,
+  ProgramYearIndexFileSchema,
+  ProgramYearSummarySchema,
+  TimeSeriesIndexMetadataSchema,
+  ClubHealthCountsSchema,
+} from './schemas/time-series.schema.js'
+
 // Validation helpers
 export {
   validatePerDistrictData,
   validateAllDistrictsRankings,
   validateSnapshotMetadata,
   validateSnapshotManifest,
+  validateTimeSeriesDataPoint,
+  validateProgramYearIndexFile,
+  validateTimeSeriesIndexMetadata,
+  validateProgramYearSummary,
   type ValidationResult,
 } from './validation/validators.js'

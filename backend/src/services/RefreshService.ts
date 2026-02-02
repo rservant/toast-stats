@@ -5,6 +5,11 @@
  * It uses SnapshotBuilder to create snapshots without performing any scraping.
  * Scraping is handled separately by the scraper-cli tool.
  *
+ * IMPORTANT: This service is READ-ONLY. All computation (time-series data points,
+ * rankings, analytics) is performed by scraper-cli during the data pipeline.
+ * The backend does NOT perform any computation per the data-computation-separation
+ * steering document.
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 8.1, 8.2
  * Storage Abstraction: Requirements 1.3, 1.4
  * Pre-Computed Analytics: Requirements 1.1, 1.4
@@ -17,14 +22,11 @@ import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
 import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { PreComputedAnalyticsService } from './PreComputedAnalyticsService.js'
-import type { ITimeSeriesIndexService } from './TimeSeriesIndexService.js'
-import type { RankingCalculator } from './RankingCalculator.js'
 import type { SnapshotStore } from '../types/snapshots.js'
 import type {
   ISnapshotStorage,
   IRawCSVStorage,
 } from '../types/storageInterfaces.js'
-import type { TimeSeriesDataPoint } from '../types/precomputedAnalytics.js'
 import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**
@@ -79,44 +81,42 @@ export class RefreshService {
   private readonly snapshotBuilder: SnapshotBuilder
   private readonly districtConfigService: DistrictConfigurationService
   private readonly snapshotStorage: ISnapshotStorage
-  private readonly preComputedAnalyticsService?: PreComputedAnalyticsService
-  private readonly timeSeriesIndexService?: ITimeSeriesIndexService
 
   /**
    * Create a new RefreshService instance
+   *
+   * IMPORTANT: This service is READ-ONLY. All computation (time-series data points,
+   * rankings, analytics) is performed by scraper-cli during the data pipeline.
+   * The backend does NOT perform any computation per the data-computation-separation
+   * steering document.
    *
    * @param snapshotStorage - Storage interface for snapshot operations (ISnapshotStorage)
    *                          Supports both local filesystem and cloud storage backends
    * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
    *                      Supports both local filesystem and cloud storage backends
    * @param districtConfigService - Optional district configuration service
-   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
+   * @param _rankingCalculator - DEPRECATED: Rankings are pre-computed by scraper-cli (kept for backward compatibility)
    * @param closingPeriodDetector - Optional closing period detector
    * @param dataNormalizer - Optional data normalizer
    * @param validator - Optional data validator
-   * @param preComputedAnalyticsService - Optional service for pre-computing analytics during snapshot creation
-   * @param timeSeriesIndexService - Optional service for maintaining time-series indexes during snapshot creation
+   * @param _preComputedAnalyticsService - DEPRECATED: Analytics are now pre-computed by scraper-cli
    */
   constructor(
     snapshotStorage: ISnapshotStorage | SnapshotStore,
     rawCSVCache: IRawCSVStorage,
     districtConfigService?: DistrictConfigurationService,
-    rankingCalculator?: RankingCalculator,
+    _rankingCalculator?: unknown, // DEPRECATED: Rankings are pre-computed by scraper-cli
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
     validator?: DataValidator,
-    preComputedAnalyticsService?: PreComputedAnalyticsService,
-    timeSeriesIndexService?: ITimeSeriesIndexService
+    _preComputedAnalyticsService?: PreComputedAnalyticsService
   ) {
     // Store the snapshot storage - ISnapshotStorage is a superset of SnapshotStore
     // so we can safely cast SnapshotStore to ISnapshotStorage for backward compatibility
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
 
-    // Store the pre-computed analytics service if provided
-    this.preComputedAnalyticsService = preComputedAnalyticsService
-
-    // Store the time-series index service if provided
-    this.timeSeriesIndexService = timeSeriesIndexService
+    // NOTE: preComputedAnalyticsService parameter is kept for backward compatibility
+    // but is no longer used. Analytics are now pre-computed by scraper-cli.
 
     // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
     if (districtConfigService) {
@@ -142,20 +142,18 @@ export class RefreshService {
 
     // Initialize SnapshotBuilder with all dependencies
     // SnapshotBuilder accepts ISnapshotStorage for storage operations
+    // Note: Rankings are now pre-computed by scraper-cli, so no RankingCalculator is needed
     this.snapshotBuilder = new SnapshotBuilder(
       rawCSVCache,
       this.districtConfigService,
       this.snapshotStorage,
       validator ?? new DataValidator(),
-      rankingCalculator,
       detector,
       normalizer
     )
 
     logger.debug('RefreshService initialized with SnapshotBuilder', {
-      hasRankingCalculator: !!rankingCalculator,
-      hasPreComputedAnalyticsService: !!preComputedAnalyticsService,
-      hasTimeSeriesIndexService: !!timeSeriesIndexService,
+      hasPreComputedAnalyticsService: !!_preComputedAnalyticsService,
     })
   }
 
@@ -347,7 +345,9 @@ export class RefreshService {
    * Also triggers pre-computed analytics generation if the service is available.
    * Requirement 1.1: Compute and store analytics summaries for each district in the snapshot
    * Requirement 1.4: Log errors and continue if individual district fails
-   * Requirement 2.2: Append analytics summary to time-series index when snapshot is created
+   *
+   * NOTE: Time-series index updates are now handled by scraper-cli during the
+   * compute-analytics pipeline per the data-computation-separation steering document.
    */
   private async convertBuildResultToRefreshResult(
     buildResult: BuildResult,
@@ -357,29 +357,9 @@ export class RefreshService {
     const completedAt = new Date().toISOString()
     const duration_ms = Date.now() - startTime
 
-    // Trigger pre-computed analytics generation if service is available and build was successful
-    // Requirement 1.1: Compute and store analytics summaries when a new snapshot is created
-    if (
-      this.preComputedAnalyticsService &&
-      buildResult.success &&
-      buildResult.snapshotId
-    ) {
-      await this.triggerPreComputedAnalytics(buildResult.snapshotId)
-    }
-
-    // Trigger time-series index update if service is available and build was successful
-    // Requirement 2.2: Append analytics summary to time-series index when snapshot is created
-    if (
-      this.timeSeriesIndexService &&
-      buildResult.success &&
-      buildResult.snapshotId &&
-      buildResult.districtData
-    ) {
-      await this.triggerTimeSeriesIndexUpdate(
-        buildResult.snapshotId,
-        buildResult.districtData
-      )
-    }
+    // NOTE: Pre-computed analytics and time-series index updates are now handled
+    // by scraper-cli during the compute-analytics pipeline. The backend no longer
+    // performs any computation per the data-computation-separation steering document.
 
     logger.info('Refresh completed', {
       operation: 'executeRefresh',
@@ -405,406 +385,6 @@ export class RefreshService {
         calculationVersion: this.getCurrentCalculationVersion(),
       },
     }
-  }
-
-  /**
-   * Trigger pre-computed analytics generation for a snapshot
-   *
-   * Requirement 1.1: Compute and store analytics summaries for each district in the snapshot
-   * Requirement 1.4: Log errors and continue if individual district fails (handled by PreComputedAnalyticsService)
-   *
-   * @param snapshotId - The snapshot ID to compute analytics for
-   */
-  private async triggerPreComputedAnalytics(snapshotId: string): Promise<void> {
-    if (!this.preComputedAnalyticsService) {
-      return
-    }
-
-    try {
-      logger.info('Triggering pre-computed analytics generation', {
-        operation: 'triggerPreComputedAnalytics',
-        snapshotId,
-      })
-
-      // Load the snapshot to get district data
-      const snapshot = await this.snapshotStorage.getSnapshot(snapshotId)
-
-      if (!snapshot) {
-        logger.warn('Snapshot not found for pre-computed analytics', {
-          operation: 'triggerPreComputedAnalytics',
-          snapshotId,
-        })
-        return
-      }
-
-      const districtData = snapshot.payload.districts
-
-      if (districtData.length === 0) {
-        logger.warn('No district data in snapshot for pre-computed analytics', {
-          operation: 'triggerPreComputedAnalytics',
-          snapshotId,
-        })
-        return
-      }
-
-      // Compute and store analytics
-      // Requirement 1.4: PreComputedAnalyticsService handles errors gracefully internally
-      await this.preComputedAnalyticsService.computeAndStore(
-        snapshotId,
-        districtData
-      )
-
-      logger.info('Pre-computed analytics generation completed', {
-        operation: 'triggerPreComputedAnalytics',
-        snapshotId,
-        districtCount: districtData.length,
-      })
-    } catch (error) {
-      // Requirement 1.4: Log error and continue - don't fail the entire snapshot
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-
-      logger.error('Pre-computed analytics generation failed', {
-        operation: 'triggerPreComputedAnalytics',
-        snapshotId,
-        error: errorMessage,
-      })
-
-      // Don't rethrow - pre-computation failure should not fail the snapshot
-    }
-  }
-
-  /**
-   * Trigger time-series index update for a snapshot
-   *
-   * Requirement 2.2: Append analytics summary to time-series index when snapshot is created
-   *
-   * This method uses the original district data (with clubPerformance) to build
-   * time-series data points and appends them to the time-series index.
-   * Errors are logged but do not fail the snapshot creation.
-   *
-   * @param snapshotId - The snapshot ID to update time-series index for
-   * @param districtData - The original district data with clubPerformance preserved
-   */
-  private async triggerTimeSeriesIndexUpdate(
-    snapshotId: string,
-    districtData: import('../types/districts.js').DistrictStatistics[]
-  ): Promise<void> {
-    if (!this.timeSeriesIndexService) {
-      return
-    }
-
-    try {
-      logger.info('Triggering time-series index update', {
-        operation: 'triggerTimeSeriesIndexUpdate',
-        snapshotId,
-      })
-
-      if (districtData.length === 0) {
-        logger.warn(
-          'No district data provided for time-series index update',
-          {
-            operation: 'triggerTimeSeriesIndexUpdate',
-            snapshotId,
-          }
-        )
-        return
-      }
-
-      // Update time-series index for each district
-      let successCount = 0
-      let errorCount = 0
-
-      for (const district of districtData) {
-        try {
-          // Build time-series data point from district data
-          const dataPoint = this.buildTimeSeriesDataPoint(snapshotId, district)
-
-          // Append to time-series index
-          await this.timeSeriesIndexService.appendDataPoint(
-            district.districtId,
-            dataPoint
-          )
-
-          successCount++
-        } catch (error) {
-          // Log error and continue with other districts
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-
-          logger.warn('Failed to update time-series index for district', {
-            operation: 'triggerTimeSeriesIndexUpdate',
-            snapshotId,
-            districtId: district.districtId,
-            error: errorMessage,
-          })
-
-          errorCount++
-        }
-      }
-
-      logger.info('Time-series index update completed', {
-        operation: 'triggerTimeSeriesIndexUpdate',
-        snapshotId,
-        totalDistricts: districtData.length,
-        successCount,
-        errorCount,
-      })
-    } catch (error) {
-      // Log error and continue - don't fail the entire snapshot
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-
-      logger.error('Time-series index update failed', {
-        operation: 'triggerTimeSeriesIndexUpdate',
-        snapshotId,
-        error: errorMessage,
-      })
-
-      // Don't rethrow - time-series index failure should not fail the snapshot
-    }
-  }
-
-  /**
-   * Build a TimeSeriesDataPoint from district statistics
-   *
-   * This method extracts the relevant metrics from district data to create
-   * a data point for the time-series index.
-   *
-   * @param snapshotId - The snapshot ID
-   * @param district - The district statistics
-   * @returns TimeSeriesDataPoint for the time-series index
-   */
-  private buildTimeSeriesDataPoint(
-    snapshotId: string,
-    district: import('../types/districts.js').DistrictStatistics
-  ): TimeSeriesDataPoint {
-    // Calculate total membership
-    const membership = this.calculateTotalMembership(district)
-
-    // Calculate total payments
-    const payments = this.calculateTotalPayments(district)
-
-    // Calculate total DCP goals
-    const dcpGoals = this.calculateTotalDCPGoals(district)
-
-    // Calculate club health counts
-    const clubCounts = this.calculateClubHealthCounts(district)
-
-    // Calculate distinguished club total
-    const distinguishedTotal = this.calculateDistinguishedTotal(district)
-
-    return {
-      date: district.asOfDate,
-      snapshotId,
-      membership,
-      payments,
-      dcpGoals,
-      distinguishedTotal,
-      clubCounts,
-    }
-  }
-
-  /**
-   * Calculate total membership from district statistics
-   */
-  private calculateTotalMembership(
-    district: import('../types/districts.js').DistrictStatistics
-  ): number {
-    // Primary: Use membership.total if available
-    if (district.membership?.total !== undefined) {
-      return district.membership.total
-    }
-
-    // Fallback: Sum from club performance data
-    if (district.clubPerformance && district.clubPerformance.length > 0) {
-      return district.clubPerformance.reduce((total, club) => {
-        const membership = this.parseIntSafe(
-          club['Active Members'] ??
-            club['Active Membership'] ??
-            club['Membership']
-        )
-        return total + membership
-      }, 0)
-    }
-
-    return 0
-  }
-
-  /**
-   * Calculate total payments from district statistics
-   */
-  private calculateTotalPayments(
-    district: import('../types/districts.js').DistrictStatistics
-  ): number {
-    const clubs = district.clubPerformance ?? []
-
-    return clubs.reduce((total, club) => {
-      const octRenewals = this.parseIntSafe(
-        club['Oct. Ren.'] ?? club['Oct. Ren']
-      )
-      const aprRenewals = this.parseIntSafe(
-        club['Apr. Ren.'] ?? club['Apr. Ren']
-      )
-      const newMembers = this.parseIntSafe(club['New Members'] ?? club['New'])
-
-      return total + octRenewals + aprRenewals + newMembers
-    }, 0)
-  }
-
-  /**
-   * Calculate total DCP goals from district statistics
-   */
-  private calculateTotalDCPGoals(
-    district: import('../types/districts.js').DistrictStatistics
-  ): number {
-    const clubs = district.clubPerformance ?? []
-
-    return clubs.reduce((total, club) => {
-      const goals = this.parseIntSafe(club['Goals Met'])
-      return total + goals
-    }, 0)
-  }
-
-  /**
-   * Calculate club health counts from district statistics
-   */
-  private calculateClubHealthCounts(
-    district: import('../types/districts.js').DistrictStatistics
-  ): TimeSeriesDataPoint['clubCounts'] {
-    const clubs = district.clubPerformance ?? []
-    const total = clubs.length
-
-    let thriving = 0
-    let vulnerable = 0
-    let interventionRequired = 0
-
-    for (const club of clubs) {
-      const membership = this.parseIntSafe(
-        club['Active Members'] ??
-          club['Active Membership'] ??
-          club['Membership']
-      )
-      const dcpGoals = this.parseIntSafe(club['Goals Met'])
-      const memBase = this.parseIntSafe(club['Mem. Base'])
-      const netGrowth = membership - memBase
-
-      // Classification rules from ClubHealthAnalyticsModule
-      if (membership < 12 && netGrowth < 3) {
-        interventionRequired++
-      } else {
-        const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-        const dcpCheckpointMet = dcpGoals > 0
-
-        if (membershipRequirementMet && dcpCheckpointMet) {
-          thriving++
-        } else {
-          vulnerable++
-        }
-      }
-    }
-
-    return {
-      total,
-      thriving,
-      vulnerable,
-      interventionRequired,
-    }
-  }
-
-  /**
-   * Calculate total distinguished clubs from district statistics
-   */
-  private calculateDistinguishedTotal(
-    district: import('../types/districts.js').DistrictStatistics
-  ): number {
-    const clubs = district.clubPerformance ?? []
-    let total = 0
-
-    for (const club of clubs) {
-      if (this.isDistinguished(club)) {
-        total++
-      }
-    }
-
-    return total
-  }
-
-  /**
-   * Check if a club qualifies as distinguished
-   */
-  private isDistinguished(
-    club: import('../types/districts.js').ScrapedRecord
-  ): boolean {
-    // Check CSP status first
-    const cspValue =
-      club['CSP'] ??
-      club['Club Success Plan'] ??
-      club['CSP Submitted'] ??
-      club['Club Success Plan Submitted']
-
-    // Historical data compatibility: if field doesn't exist, assume submitted
-    if (cspValue !== undefined && cspValue !== null) {
-      const cspString = String(cspValue).toLowerCase().trim()
-      if (
-        cspString === 'no' ||
-        cspString === 'false' ||
-        cspString === '0' ||
-        cspString === 'not submitted' ||
-        cspString === 'n'
-      ) {
-        return false
-      }
-    }
-
-    // Check Club Distinguished Status field
-    const statusField = club['Club Distinguished Status']
-    if (statusField !== null && statusField !== undefined) {
-      const status = String(statusField).toLowerCase().trim()
-      if (
-        status !== '' &&
-        status !== 'none' &&
-        status !== 'n/a' &&
-        (status.includes('smedley') ||
-          status.includes('president') ||
-          status.includes('select') ||
-          status.includes('distinguished'))
-      ) {
-        return true
-      }
-    }
-
-    // Fallback: Calculate based on DCP goals, membership, and net growth
-    const dcpGoals = this.parseIntSafe(club['Goals Met'])
-    const membership = this.parseIntSafe(
-      club['Active Members'] ?? club['Active Membership'] ?? club['Membership']
-    )
-    const memBase = this.parseIntSafe(club['Mem. Base'])
-    const netGrowth = membership - memBase
-
-    // Distinguished: 5+ goals + (20 members OR net growth of 3)
-    return dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)
-  }
-
-  /**
-   * Parse an integer value safely, returning 0 for invalid values
-   */
-  private parseIntSafe(value: string | number | null | undefined): number {
-    if (value === null || value === undefined || value === '') {
-      return 0
-    }
-    if (typeof value === 'number') {
-      return isNaN(value) ? 0 : Math.floor(value)
-    }
-    if (typeof value === 'string') {
-      const trimmed = value.trim()
-      if (trimmed === '') {
-        return 0
-      }
-      const parsed = parseInt(trimmed, 10)
-      return isNaN(parsed) ? 0 : parsed
-    }
-    return 0
   }
 
   /**

@@ -1,8 +1,12 @@
 /**
- * TimeSeriesIndexService
+ * TimeSeriesIndexService (Read-Only)
  *
- * Manages time-series index files for efficient range queries across snapshots.
+ * Reads time-series index files for efficient range queries across snapshots.
  * Indexes are partitioned by program year (July 1 - June 30) to limit file sizes.
+ *
+ * IMPORTANT: This service is READ-ONLY. Time-series data is pre-computed by
+ * scraper-cli during the compute-analytics pipeline. The backend does NOT
+ * perform any computation per the data-computation-separation steering document.
  *
  * Storage structure:
  * CACHE_DIR/time-series/
@@ -14,10 +18,9 @@
  *     └── ...
  *
  * Requirements:
- * - 2.1: Maintain a time-series index file with date-indexed analytics summaries
- * - 2.2: Append analytics summary to time-series index when snapshot is created
- * - 2.4: Support efficient range queries for program year boundaries (July 1 to June 30)
- * - 2.5: Partition indexes by program year to limit file sizes
+ * - 8.1: Read time-series data from pre-computed files only
+ * - 8.4: Return null or empty results when data is missing
+ * - 8.5: No computation performed
  */
 
 import fs from 'fs/promises'
@@ -27,8 +30,6 @@ import type {
   TimeSeriesDataPoint,
   ProgramYearIndex,
   ProgramYearIndexFile,
-  ProgramYearSummary,
-  TimeSeriesIndexMetadata,
 } from '../types/precomputedAnalytics.js'
 
 /**
@@ -40,21 +41,16 @@ export interface TimeSeriesIndexServiceConfig {
 }
 
 /**
- * Interface for the Time Series Index Service
+ * Interface for the Time Series Index Service (Read-Only)
+ *
+ * This interface only includes read methods. Write operations are performed
+ * by scraper-cli during the compute-analytics pipeline.
  */
 export interface ITimeSeriesIndexService {
   /**
-   * Append a data point to the time-series index
-   * Called after snapshot creation
-   */
-  appendDataPoint(
-    districtId: string,
-    dataPoint: TimeSeriesDataPoint
-  ): Promise<void>
-
-  /**
    * Get trend data for a date range
    * Returns data points without loading individual snapshots
+   * Returns empty array when data is missing (not an error)
    */
   getTrendData(
     districtId: string,
@@ -64,16 +60,12 @@ export interface ITimeSeriesIndexService {
 
   /**
    * Get all data for a program year
+   * Returns null when data is missing (not an error)
    */
   getProgramYearData(
     districtId: string,
     programYear: string
   ): Promise<ProgramYearIndex | null>
-
-  /**
-   * Rebuild index from snapshots (for backfill)
-   */
-  rebuildIndex(districtId: string, fromDate?: string): Promise<void>
 }
 
 /**
@@ -87,13 +79,15 @@ const VALID_DISTRICT_ID_PATTERN = /^[A-Za-z0-9]+$/
 const VALID_PROGRAM_YEAR_PATTERN = /^\d{4}-\d{4}$/
 
 /**
- * Service for managing time-series indexes for efficient range queries.
+ * Read-only service for accessing time-series indexes.
  *
- * This service maintains per-district, per-program-year index files that
- * enable fast retrieval of trend data without loading individual snapshots.
+ * This service reads pre-computed time-series data from index files.
+ * All computation is performed by scraper-cli during the compute-analytics
+ * pipeline per the data-computation-separation steering document.
  *
- * Requirement 2.1: Maintain time-series index with date-indexed analytics summaries
- * Requirement 2.5: Partition indexes by program year to limit file sizes
+ * Requirement 8.1: Read time-series data from pre-computed files only
+ * Requirement 8.4: Return null or empty results when data is missing
+ * Requirement 8.5: No computation performed
  */
 export class TimeSeriesIndexService implements ITimeSeriesIndexService {
   private readonly cacheDir: string
@@ -105,121 +99,17 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
   }
 
   /**
-   * Append a data point to the time-series index
-   *
-   * Called after snapshot creation to add the analytics summary to the
-   * appropriate program year index file.
-   *
-   * Requirement 2.2: Append analytics summary to time-series index when snapshot is created
-   *
-   * @param districtId - The district ID to append data for
-   * @param dataPoint - The time-series data point to append
-   */
-  async appendDataPoint(
-    districtId: string,
-    dataPoint: TimeSeriesDataPoint
-  ): Promise<void> {
-    const operationId = `append_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-    logger.info('Appending data point to time-series index', {
-      operation: 'appendDataPoint',
-      operationId,
-      districtId,
-      date: dataPoint.date,
-      snapshotId: dataPoint.snapshotId,
-    })
-
-    try {
-      // Validate district ID
-      this.validateDistrictId(districtId)
-
-      // Determine program year for this data point
-      const programYear = this.getProgramYearForDate(dataPoint.date)
-
-      // Ensure district directory exists
-      await this.ensureDistrictDirectory(districtId)
-
-      // Read or create program year index file
-      const indexFile = await this.readOrCreateProgramYearIndex(
-        districtId,
-        programYear
-      )
-
-      // Check if data point already exists (by date and snapshotId)
-      const existingIndex = indexFile.dataPoints.findIndex(
-        dp =>
-          dp.date === dataPoint.date && dp.snapshotId === dataPoint.snapshotId
-      )
-
-      if (existingIndex >= 0) {
-        // Update existing data point
-        indexFile.dataPoints[existingIndex] = dataPoint
-        logger.debug('Updated existing data point in index', {
-          operation: 'appendDataPoint',
-          operationId,
-          districtId,
-          programYear,
-          date: dataPoint.date,
-        })
-      } else {
-        // Append new data point
-        indexFile.dataPoints.push(dataPoint)
-        logger.debug('Appended new data point to index', {
-          operation: 'appendDataPoint',
-          operationId,
-          districtId,
-          programYear,
-          date: dataPoint.date,
-        })
-      }
-
-      // Sort data points by date (chronological order)
-      indexFile.dataPoints.sort((a, b) => a.date.localeCompare(b.date))
-
-      // Update summary statistics
-      indexFile.summary = this.calculateProgramYearSummary(indexFile.dataPoints)
-      indexFile.lastUpdated = new Date().toISOString()
-
-      // Write updated index file
-      await this.writeProgramYearIndex(districtId, programYear, indexFile)
-
-      // Update index metadata
-      await this.updateIndexMetadata(districtId)
-
-      logger.info('Successfully appended data point to time-series index', {
-        operation: 'appendDataPoint',
-        operationId,
-        districtId,
-        programYear,
-        date: dataPoint.date,
-        totalDataPoints: indexFile.dataPoints.length,
-      })
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to append data point to time-series index', {
-        operation: 'appendDataPoint',
-        operationId,
-        districtId,
-        date: dataPoint.date,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to append data point: ${errorMessage}`)
-    }
-  }
-
-  /**
    * Get trend data for a date range
    *
    * Returns data points within the specified date range without loading
    * individual snapshots. Efficiently queries across program year boundaries.
    *
-   * Requirement 2.4: Support efficient range queries for program year boundaries
+   * Requirement 8.4: Return empty array when data is missing (not an error)
    *
    * @param districtId - The district ID to query
    * @param startDate - Start date (inclusive, YYYY-MM-DD format)
    * @param endDate - End date (inclusive, YYYY-MM-DD format)
-   * @returns Array of data points within the date range
+   * @returns Array of data points within the date range (empty if no data)
    */
   async getTrendData(
     districtId: string,
@@ -283,17 +173,37 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
 
       return allDataPoints
     } catch (error) {
+      // For validation errors, log and return empty array
+      // This ensures missing data doesn't cause API errors
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to get trend data', {
-        operation: 'getTrendData',
-        operationId,
-        districtId,
-        startDate,
-        endDate,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to get trend data: ${errorMessage}`)
+
+      // Only log as error for unexpected failures, not missing data
+      if (
+        errorMessage.includes('Invalid district ID') ||
+        errorMessage.includes('ENOENT')
+      ) {
+        logger.debug('No trend data available', {
+          operation: 'getTrendData',
+          operationId,
+          districtId,
+          startDate,
+          endDate,
+          reason: errorMessage,
+        })
+      } else {
+        logger.error('Failed to get trend data', {
+          operation: 'getTrendData',
+          operationId,
+          districtId,
+          startDate,
+          endDate,
+          error: errorMessage,
+        })
+      }
+
+      // Return empty array instead of throwing - data is simply not available
+      return []
     }
   }
 
@@ -301,9 +211,9 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
    * Get all data for a program year
    *
    * Returns the complete program year index including all data points
-   * and summary statistics.
+   * and summary statistics (pre-computed by scraper-cli).
    *
-   * Requirement 2.4: Support efficient range queries for program year boundaries
+   * Requirement 8.4: Return null when data is missing (not an error)
    *
    * @param districtId - The district ID to query
    * @param programYear - The program year (e.g., "2023-2024")
@@ -360,6 +270,22 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
+
+      // For validation errors, return null (data not available)
+      if (
+        errorMessage.includes('Invalid district ID') ||
+        errorMessage.includes('Invalid program year')
+      ) {
+        logger.debug('Program year data not available due to validation', {
+          operation: 'getProgramYearData',
+          operationId,
+          districtId,
+          programYear,
+          reason: errorMessage,
+        })
+        return null
+      }
+
       logger.error('Failed to get program year data', {
         operation: 'getProgramYearData',
         operationId,
@@ -367,39 +293,10 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
         programYear,
         error: errorMessage,
       })
-      throw new Error(`Failed to get program year data: ${errorMessage}`)
+
+      // Return null instead of throwing - data is simply not available
+      return null
     }
-  }
-
-  /**
-   * Rebuild index from snapshots (for backfill)
-   *
-   * This method is a placeholder for the backfill service integration.
-   * The actual implementation will be done in the BackfillService.
-   *
-   * @param districtId - The district ID to rebuild index for
-   * @param fromDate - Optional start date for partial rebuild
-   */
-  async rebuildIndex(districtId: string, fromDate?: string): Promise<void> {
-    logger.info('Rebuild index requested', {
-      operation: 'rebuildIndex',
-      districtId,
-      fromDate,
-    })
-
-    // Validate district ID
-    this.validateDistrictId(districtId)
-
-    // This is a placeholder - actual implementation will be in BackfillService
-    // which will iterate through snapshots and call appendDataPoint for each
-    logger.warn(
-      'rebuildIndex is a placeholder - use BackfillService for actual rebuild',
-      {
-        operation: 'rebuildIndex',
-        districtId,
-        fromDate,
-      }
-    )
   }
 
   // ========== Program Year Calculation Methods ==========
@@ -412,8 +309,6 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
    * - 2023-07-01 to 2024-06-30 is program year "2023-2024"
    * - 2024-01-15 is in program year "2023-2024"
    * - 2024-07-01 is in program year "2024-2025"
-   *
-   * Requirement 2.4: Support program year boundaries (July 1 to June 30)
    *
    * @param dateStr - Date string in YYYY-MM-DD format
    * @returns Program year string (e.g., "2023-2024")
@@ -481,52 +376,12 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
     return programYears
   }
 
-  // ========== File I/O Methods ==========
-
-  /**
-   * Ensure the district directory exists
-   */
-  private async ensureDistrictDirectory(districtId: string): Promise<string> {
-    const districtDir = path.join(this.timeSeriesDir, `district_${districtId}`)
-    await fs.mkdir(districtDir, { recursive: true })
-    return districtDir
-  }
-
-  /**
-   * Read or create a program year index file
-   */
-  private async readOrCreateProgramYearIndex(
-    districtId: string,
-    programYear: string
-  ): Promise<ProgramYearIndexFile> {
-    const existing = await this.readProgramYearIndex(districtId, programYear)
-
-    if (existing) {
-      return existing
-    }
-
-    // Create new index file
-    const newIndex: ProgramYearIndexFile = {
-      districtId,
-      programYear,
-      startDate: this.getProgramYearStartDate(programYear),
-      endDate: this.getProgramYearEndDate(programYear),
-      lastUpdated: new Date().toISOString(),
-      dataPoints: [],
-      summary: {
-        totalDataPoints: 0,
-        membershipStart: 0,
-        membershipEnd: 0,
-        membershipPeak: 0,
-        membershipLow: 0,
-      },
-    }
-
-    return newIndex
-  }
+  // ========== File I/O Methods (Read-Only) ==========
 
   /**
    * Read a program year index file
+   *
+   * Returns null if the file doesn't exist (not an error condition).
    */
   private async readProgramYearIndex(
     districtId: string,
@@ -587,139 +442,8 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
         filePath: resolvedPath,
         error: errorMessage,
       })
-      throw new Error(`Failed to read program year index: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Write a program year index file
-   */
-  private async writeProgramYearIndex(
-    districtId: string,
-    programYear: string,
-    indexFile: ProgramYearIndexFile
-  ): Promise<void> {
-    const filePath = path.join(
-      this.timeSeriesDir,
-      `district_${districtId}`,
-      `${programYear}.json`
-    )
-
-    try {
-      await fs.writeFile(filePath, JSON.stringify(indexFile, null, 2), 'utf-8')
-
-      logger.debug('Wrote program year index file', {
-        operation: 'writeProgramYearIndex',
-        districtId,
-        programYear,
-        filePath,
-        dataPointCount: indexFile.dataPoints.length,
-      })
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to write program year index file', {
-        operation: 'writeProgramYearIndex',
-        districtId,
-        programYear,
-        filePath,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to write program year index: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Update the index metadata file for a district
-   */
-  private async updateIndexMetadata(districtId: string): Promise<void> {
-    const districtDir = path.join(this.timeSeriesDir, `district_${districtId}`)
-    const metadataPath = path.join(districtDir, 'index-metadata.json')
-
-    try {
-      // List all program year files
-      const files = await fs.readdir(districtDir)
-      const programYearFiles = files.filter(
-        f => f.endsWith('.json') && f !== 'index-metadata.json'
-      )
-
-      // Extract program years and sort
-      const programYears = programYearFiles
-        .map(f => f.replace('.json', ''))
-        .filter(py => VALID_PROGRAM_YEAR_PATTERN.test(py))
-        .sort()
-
-      // Count total data points
-      let totalDataPoints = 0
-      for (const programYear of programYears) {
-        const indexFile = await this.readProgramYearIndex(
-          districtId,
-          programYear
-        )
-        if (indexFile) {
-          totalDataPoints += indexFile.dataPoints.length
-        }
-      }
-
-      const metadata: TimeSeriesIndexMetadata = {
-        districtId,
-        lastUpdated: new Date().toISOString(),
-        availableProgramYears: programYears,
-        totalDataPoints,
-      }
-
-      await fs.writeFile(
-        metadataPath,
-        JSON.stringify(metadata, null, 2),
-        'utf-8'
-      )
-
-      logger.debug('Updated index metadata', {
-        operation: 'updateIndexMetadata',
-        districtId,
-        programYearCount: programYears.length,
-        totalDataPoints,
-      })
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.warn('Failed to update index metadata', {
-        operation: 'updateIndexMetadata',
-        districtId,
-        error: errorMessage,
-      })
-      // Don't throw - metadata update is not critical
-    }
-  }
-
-  // ========== Summary Calculation Methods ==========
-
-  /**
-   * Calculate summary statistics for a program year
-   */
-  private calculateProgramYearSummary(
-    dataPoints: TimeSeriesDataPoint[]
-  ): ProgramYearSummary {
-    if (dataPoints.length === 0) {
-      return {
-        totalDataPoints: 0,
-        membershipStart: 0,
-        membershipEnd: 0,
-        membershipPeak: 0,
-        membershipLow: 0,
-      }
-    }
-
-    const memberships = dataPoints.map(dp => dp.membership)
-    const firstDataPoint = dataPoints[0]
-    const lastDataPoint = dataPoints[dataPoints.length - 1]
-
-    return {
-      totalDataPoints: dataPoints.length,
-      membershipStart: firstDataPoint?.membership ?? 0,
-      membershipEnd: lastDataPoint?.membership ?? 0,
-      membershipPeak: Math.max(...memberships),
-      membershipLow: Math.min(...memberships),
+      // Return null instead of throwing - treat as missing data
+      return null
     }
   }
 

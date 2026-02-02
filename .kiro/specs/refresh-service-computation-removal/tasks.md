@@ -8,264 +8,264 @@ This implementation removes all on-demand computation from the backend by **migr
 
 ## Tasks
 
-- [ ] 1. Add time-series types to shared-contracts
-  - [ ] 1.1 Create TimeSeriesDataPoint type in shared-contracts/src/types/time-series.ts
+- [x] 1. Add time-series types to shared-contracts
+  - [x] 1.1 Create TimeSeriesDataPoint type in shared-contracts/src/types/time-series.ts
     - Include date, snapshotId, membership, payments, dcpGoals, distinguishedTotal, clubCounts
     - _Requirements: 13.1_
-  - [ ] 1.2 Create ProgramYearIndexFile type in shared-contracts
+  - [x] 1.2 Create ProgramYearIndexFile type in shared-contracts
     - Include districtId, programYear, startDate, endDate, lastUpdated, dataPoints, summary
     - _Requirements: 13.2_
-  - [ ] 1.3 Create ProgramYearSummary type in shared-contracts
+  - [x] 1.3 Create ProgramYearSummary type in shared-contracts
     - Include totalDataPoints, membershipStart, membershipEnd, membershipPeak, membershipLow
     - _Requirements: 13.2_
-  - [ ] 1.4 Create TimeSeriesIndexMetadata type in shared-contracts
+  - [x] 1.4 Create TimeSeriesIndexMetadata type in shared-contracts
     - Include districtId, lastUpdated, availableProgramYears, totalDataPoints
     - _Requirements: 13.3_
-  - [ ] 1.5 Create Zod schemas for all time-series types
+  - [x] 1.5 Create Zod schemas for all time-series types
     - TimeSeriesDataPointSchema, ProgramYearIndexFileSchema, etc.
     - _Requirements: 13.4_
-  - [ ] 1.6 Create validation helpers for time-series types
+  - [x] 1.6 Create validation helpers for time-series types
     - validateTimeSeriesDataPoint, validateProgramYearIndexFile
     - _Requirements: 13.5_
-  - [ ] 1.7 Export all time-series types and schemas from shared-contracts/src/index.ts
+  - [x] 1.7 Export all time-series types and schemas from shared-contracts/src/index.ts
     - _Requirements: 13.6, 13.7, 13.8_
 
-- [ ] 2. Migrate TimeSeriesDataPointBuilder to analytics-core
-  - [ ] 2.1 Copy computation methods from RefreshService to analytics-core/src/timeseries/TimeSeriesDataPointBuilder.ts
+- [x] 2. Migrate TimeSeriesDataPointBuilder to analytics-core
+  - [x] 2.1 Copy computation methods from RefreshService to analytics-core/src/timeseries/TimeSeriesDataPointBuilder.ts
     - Copy buildTimeSeriesDataPoint, calculateTotalMembership, calculateTotalPayments
     - Copy calculateTotalDCPGoals, calculateClubHealthCounts, calculateDistinguishedTotal
     - Copy isDistinguished, parseIntSafe
     - PRESERVE all logic exactly
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
-  - [ ] 2.2 Update imports to use shared-contracts types
+  - [x] 2.2 Update imports to use shared-contracts types
     - Import TimeSeriesDataPoint from @toastmasters/shared-contracts
     - _Requirements: 6.8_
-  - [ ] 2.3 Export TimeSeriesDataPointBuilder from analytics-core/src/index.ts
+  - [x] 2.3 Export TimeSeriesDataPointBuilder from analytics-core/src/index.ts
     - _Requirements: 6.1_
-  - [ ] 2.4 Write property test for TimeSeriesDataPointBuilder equivalence
+  - [x] 2.4 Write property test for TimeSeriesDataPointBuilder equivalence
     - **Property 3: TimeSeriesDataPointBuilder Equivalence**
     - Compare output with original RefreshService methods
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8**
 
-- [ ] 3. Migrate BordaCountRankingCalculator to analytics-core
-  - [ ] 3.1 Copy RankingCalculator from backend/src/services/RankingCalculator.ts to analytics-core/src/rankings/BordaCountRankingCalculator.ts
+- [x] 3. Migrate BordaCountRankingCalculator to analytics-core
+  - [x] 3.1 Copy RankingCalculator from backend/src/services/RankingCalculator.ts to analytics-core/src/rankings/BordaCountRankingCalculator.ts
     - Copy entire class with all methods
     - PRESERVE all logic exactly
     - _Requirements: 7.1, 7.2, 7.3_
-  - [ ] 3.2 Add buildRankingsData method to create AllDistrictsRankingsData
+  - [x] 3.2 Add buildRankingsData method to create AllDistrictsRankingsData
     - Build rankings data structure from ranked districts
     - _Requirements: 5.2_
-  - [ ] 3.3 Update imports to use shared-contracts types
+  - [x] 3.3 Update imports to use shared-contracts types
     - Import AllDistrictsRankingsData from @toastmasters/shared-contracts
     - _Requirements: 7.4_
-  - [ ] 3.4 Export BordaCountRankingCalculator from analytics-core/src/index.ts
+  - [x] 3.4 Export BordaCountRankingCalculator from analytics-core/src/index.ts
     - _Requirements: 7.1_
-  - [ ] 3.5 Write property test for ranking algorithm equivalence
+  - [x] 3.5 Write property test for ranking algorithm equivalence
     - **Property 2: Ranking Algorithm Equivalence**
     - Compare output with original backend RankingCalculator
     - **Validates: Requirements 5.3, 7.1, 7.2, 7.3, 7.4**
 
-- [ ] 4. Checkpoint - Ensure analytics-core tests pass
+- [x] 4. Checkpoint - Ensure analytics-core tests pass
   - Ensure all tests pass, ask the user if questions arise.
   - Verify migrated modules compile and work correctly
 
-- [ ] 5. Create TimeSeriesIndexWriter in scraper-cli
-  - [ ] 5.1 Create TimeSeriesIndexWriter class in scraper-cli/src/services/TimeSeriesIndexWriter.ts
+- [x] 5. Create TimeSeriesIndexWriter in scraper-cli
+  - [x] 5.1 Create TimeSeriesIndexWriter class in scraper-cli/src/services/TimeSeriesIndexWriter.ts
     - Use TimeSeriesDataPointBuilder from analytics-core
     - _Requirements: 4.1, 4.2_
-  - [ ] 5.2 Implement writeDataPoint method
+  - [x] 5.2 Implement writeDataPoint method
     - Write to program-year-partitioned index files
     - Handle file creation and updates atomically
     - _Requirements: 4.2, 9.3_
-  - [ ] 5.3 Implement updateMetadata method
+  - [x] 5.3 Implement updateMetadata method
     - Update index-metadata.json for each district
     - _Requirements: 4.5_
-  - [ ] 5.4 Migrate program year calculation methods from TimeSeriesIndexService
+  - [x] 5.4 Migrate program year calculation methods from TimeSeriesIndexService
     - getProgramYearForDate, getProgramYearStartDate, getProgramYearEndDate
     - _Requirements: 10.2_
-  - [ ] 5.5 Implement calculateProgramYearSummary method
+  - [x] 5.5 Implement calculateProgramYearSummary method
     - Pre-compute summary statistics when writing index files
     - _Requirements: 16.3_
-  - [ ] 5.6 Write unit tests for TimeSeriesIndexWriter
+  - [x] 5.6 Write unit tests for TimeSeriesIndexWriter
     - Test file creation, updates, metadata
     - _Requirements: 4.1, 4.2, 4.5_
 
-- [ ] 6. Update AnalyticsComputeService to generate time-series indexes
-  - [ ] 6.1 Add TimeSeriesIndexWriter dependency to AnalyticsComputeService
+- [x] 6. Update AnalyticsComputeService to generate time-series indexes
+  - [x] 6.1 Add TimeSeriesIndexWriter dependency to AnalyticsComputeService
     - _Requirements: 9.1_
-  - [ ] 6.2 Update computeDistrictAnalytics to write time-series data points
+  - [x] 6.2 Update computeDistrictAnalytics to write time-series data points
     - Build data point using TimeSeriesDataPointBuilder
     - Write using TimeSeriesIndexWriter
     - _Requirements: 4.1, 9.1, 9.2_
-  - [ ] 6.3 Handle time-series write failures gracefully
+  - [x] 6.3 Handle time-series write failures gracefully
     - Log error and continue with other districts
     - _Requirements: 9.4_
-  - [ ] 6.4 Write integration test for time-series generation
+  - [x] 6.4 Write integration test for time-series generation
     - Verify time-series files generated alongside analytics
     - **Property 1: Time-Series Generation Completeness**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
 
-- [ ] 7. Update TransformService to compute rankings
-  - [ ] 7.1 Add BordaCountRankingCalculator dependency to TransformService
+- [x] 7. Update TransformService to compute rankings
+  - [x] 7.1 Add BordaCountRankingCalculator dependency to TransformService
     - _Requirements: 5.1_
-  - [ ] 7.2 Update transform method to compute rankings when all-districts data available
+  - [x] 7.2 Update transform method to compute rankings when all-districts data available
     - Use BordaCountRankingCalculator from analytics-core
     - _Requirements: 5.1, 5.3_
-  - [ ] 7.3 Write rankings to all-districts-rankings.json
+  - [x] 7.3 Write rankings to all-districts-rankings.json
     - _Requirements: 5.2_
-  - [ ] 7.4 Skip rankings computation gracefully when all-districts data not available
+  - [x] 7.4 Skip rankings computation gracefully when all-districts data not available
     - _Requirements: 5.4_
-  - [ ] 7.5 Write unit tests for rankings generation in transform
+  - [x] 7.5 Write unit tests for rankings generation in transform
     - _Requirements: 5.1, 5.2, 5.3_
 
-- [ ] 8. Checkpoint - Ensure scraper-cli tests pass
+- [x] 8. Checkpoint - Ensure scraper-cli tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Update TimeSeriesIndexService to be read-only
-  - [ ] 9.1 Remove appendDataPoint method from TimeSeriesIndexService
+- [x] 9. Update TimeSeriesIndexService to be read-only
+  - [x] 9.1 Remove appendDataPoint method from TimeSeriesIndexService
     - _Requirements: 8.2_
-  - [ ] 9.2 Remove rebuildIndex method from TimeSeriesIndexService
+  - [x] 9.2 Remove rebuildIndex method from TimeSeriesIndexService
     - _Requirements: 8.3_
-  - [ ] 9.3 Remove calculateProgramYearSummary method from TimeSeriesIndexService
+  - [x] 9.3 Remove calculateProgramYearSummary method from TimeSeriesIndexService
     - Read summary from pre-computed files instead
     - _Requirements: 8.5_
-  - [ ] 9.4 Update ITimeSeriesIndexService interface to remove write methods
+  - [x] 9.4 Update ITimeSeriesIndexService interface to remove write methods
     - _Requirements: 8.1_
-  - [ ] 9.5 Update getTrendData to return empty array when data missing
+  - [x] 9.5 Update getTrendData to return empty array when data missing
     - _Requirements: 8.4, 11.1_
-  - [ ] 9.6 Write unit tests for read-only TimeSeriesIndexService
+  - [x] 9.6 Write unit tests for read-only TimeSeriesIndexService
     - _Requirements: 8.1, 8.4, 8.5_
 
-- [ ] 10. Remove computation from RefreshService
-  - [ ] 10.1 Remove triggerTimeSeriesIndexUpdate method
+- [x] 10. Remove computation from RefreshService
+  - [x] 10.1 Remove triggerTimeSeriesIndexUpdate method
     - _Requirements: 1.1_
-  - [ ] 10.2 Remove buildTimeSeriesDataPoint method
+  - [x] 10.2 Remove buildTimeSeriesDataPoint method
     - _Requirements: 1.2_
-  - [ ] 10.3 Remove calculateTotalMembership method
+  - [x] 10.3 Remove calculateTotalMembership method
     - _Requirements: 1.3_
-  - [ ] 10.4 Remove calculateTotalPayments method
+  - [x] 10.4 Remove calculateTotalPayments method
     - _Requirements: 1.4_
-  - [ ] 10.5 Remove calculateTotalDCPGoals method
+  - [x] 10.5 Remove calculateTotalDCPGoals method
     - _Requirements: 1.5_
-  - [ ] 10.6 Remove calculateClubHealthCounts method
+  - [x] 10.6 Remove calculateClubHealthCounts method
     - _Requirements: 1.6_
-  - [ ] 10.7 Remove calculateDistinguishedTotal method
+  - [x] 10.7 Remove calculateDistinguishedTotal method
     - _Requirements: 1.7_
-  - [ ] 10.8 Remove isDistinguished method
+  - [x] 10.8 Remove isDistinguished method
     - _Requirements: 1.8_
-  - [ ] 10.9 Remove parseIntSafe method
+  - [x] 10.9 Remove parseIntSafe method
     - _Requirements: 1.9_
-  - [ ] 10.10 Remove ITimeSeriesIndexService dependency from constructor
+  - [x] 10.10 Remove ITimeSeriesIndexService dependency from constructor
     - _Requirements: 1.10_
-  - [ ] 10.11 Update RefreshService tests
+  - [x] 10.11 Update RefreshService tests
     - _Requirements: 1.1-1.10_
 
-- [ ] 11. Remove computation from BackfillService
-  - [ ] 11.1 Remove buildTimeSeriesDataPoint method
+- [x] 11. Remove computation from BackfillService
+  - [x] 11.1 Remove buildTimeSeriesDataPoint method
     - _Requirements: 2.1_
-  - [ ] 11.2 Remove isDistinguished method
+  - [x] 11.2 Remove isDistinguished method
     - _Requirements: 2.2_
-  - [ ] 11.3 Remove parseIntSafe method
+  - [x] 11.3 Remove parseIntSafe method
     - _Requirements: 2.3_
-  - [ ] 11.4 Update BackfillService to read pre-computed time-series data
+  - [x] 11.4 Update BackfillService to read pre-computed time-series data
     - _Requirements: 2.4_
-  - [ ] 11.5 Remove ITimeSeriesIndexService write dependency
+  - [x] 11.5 Remove ITimeSeriesIndexService write dependency
     - _Requirements: 2.5_
-  - [ ] 11.6 Update BackfillService tests
+  - [x] 11.6 Update BackfillService tests
     - _Requirements: 2.1-2.5_
 
-- [ ] 12. Remove computation from SnapshotBuilder
-  - [ ] 12.1 Remove calculateAllDistrictsRankings method
+- [x] 12. Remove computation from SnapshotBuilder
+  - [x] 12.1 Remove calculateAllDistrictsRankings method
     - _Requirements: 3.1_
-  - [ ] 12.2 Remove RankingCalculator dependency from constructor
+  - [x] 12.2 Remove RankingCalculator dependency from constructor
     - _Requirements: 3.2_
-  - [ ] 12.3 Update SnapshotBuilder to read pre-computed rankings from file
+  - [x] 12.3 Update SnapshotBuilder to read pre-computed rankings from file
     - _Requirements: 3.3_
-  - [ ] 12.4 Handle missing rankings gracefully
+  - [x] 12.4 Handle missing rankings gracefully
     - _Requirements: 3.4_
-  - [ ] 12.5 Update SnapshotBuilder tests
+  - [x] 12.5 Update SnapshotBuilder tests
     - _Requirements: 3.1-3.4_
 
-- [ ] 13. Checkpoint - Ensure backend core services tests pass
+- [x] 13. Checkpoint - Ensure backend core services tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Remove computation from PreComputedAnalyticsService
-  - [ ] 14.1 Remove computeDistrictAnalytics method
+- [x] 14. Remove computation from PreComputedAnalyticsService
+  - [x] 14.1 Remove computeDistrictAnalytics method
     - _Requirements: 14.1_
-  - [ ] 14.2 Remove calculateTotalMembership method
+  - [x] 14.2 Remove calculateTotalMembership method
     - _Requirements: 14.2_
-  - [ ] 14.3 Remove calculateClubHealthCounts method
+  - [x] 14.3 Remove calculateClubHealthCounts method
     - _Requirements: 14.3_
-  - [ ] 14.4 Remove calculateDistinguishedClubCounts method
+  - [x] 14.4 Remove calculateDistinguishedClubCounts method
     - _Requirements: 14.4_
-  - [ ] 14.5 Remove calculateTotalPayments method
+  - [x] 14.5 Remove calculateTotalPayments method
     - _Requirements: 14.5_
-  - [ ] 14.6 Remove calculateTotalDCPGoals method
+  - [x] 14.6 Remove calculateTotalDCPGoals method
     - _Requirements: 14.6_
-  - [ ] 14.7 Update PreComputedAnalyticsService to read from pre-computed files only
+  - [x] 14.7 Update PreComputedAnalyticsService to read from pre-computed files only
     - _Requirements: 14.7_
-  - [ ] 14.8 Update PreComputedAnalyticsService tests
+  - [x] 14.8 Update PreComputedAnalyticsService tests
     - _Requirements: 14.1-14.7_
 
-- [ ] 15. Remove computation from AnalyticsGenerator (unified backfill)
-  - [ ] 15.1 Remove buildTimeSeriesDataPoint method
+- [x] 15. Remove computation from AnalyticsGenerator (unified backfill)
+  - [x] 15.1 Remove buildTimeSeriesDataPoint method
     - _Requirements: 15.1_
-  - [ ] 15.2 Remove calculateTotalMembership method
+  - [x] 15.2 Remove calculateTotalMembership method
     - _Requirements: 15.2_
-  - [ ] 15.3 Remove calculateTotalPayments method
+  - [x] 15.3 Remove calculateTotalPayments method
     - _Requirements: 15.3_
-  - [ ] 15.4 Remove calculateTotalDCPGoals method
+  - [x] 15.4 Remove calculateTotalDCPGoals method
     - _Requirements: 15.4_
-  - [ ] 15.5 Remove calculateClubHealthCounts method
+  - [x] 15.5 Remove calculateClubHealthCounts method
     - _Requirements: 15.5_
-  - [ ] 15.6 Remove calculateDistinguishedTotal method
+  - [x] 15.6 Remove calculateDistinguishedTotal method
     - _Requirements: 15.6_
-  - [ ] 15.7 Update AnalyticsGenerator to read pre-computed data only
+  - [x] 15.7 Update AnalyticsGenerator to read pre-computed data only
     - _Requirements: 15.7_
-  - [ ] 15.8 Update AnalyticsGenerator tests
+  - [x] 15.8 Update AnalyticsGenerator tests
     - _Requirements: 15.1-15.7_
 
-- [ ] 16. Remove computation from TimeSeriesIndexStorage implementations
-  - [ ] 16.1 Remove calculateProgramYearSummary from LocalTimeSeriesIndexStorage
+- [x] 16. Remove computation from TimeSeriesIndexStorage implementations
+  - [x] 16.1 Remove calculateProgramYearSummary from LocalTimeSeriesIndexStorage
     - _Requirements: 16.1_
-  - [ ] 16.2 Remove calculateProgramYearSummary from FirestoreTimeSeriesIndexStorage
+  - [x] 16.2 Remove calculateProgramYearSummary from FirestoreTimeSeriesIndexStorage
     - _Requirements: 16.2_
-  - [ ] 16.3 Update storage implementations to read pre-computed summaries
+  - [x] 16.3 Update storage implementations to read pre-computed summaries
     - _Requirements: 16.4_
-  - [ ] 16.4 Update TimeSeriesIndexStorage tests
+  - [x] 16.4 Update TimeSeriesIndexStorage tests
     - _Requirements: 16.1-16.4_
 
-- [ ] 17. Remove computation from route handlers
-  - [ ] 17.1 Remove calculateDistinguishedProjection from analyticsSummary.ts
+- [x] 17. Remove computation from route handlers
+  - [x] 17.1 Remove calculateDistinguishedProjection from analyticsSummary.ts
     - _Requirements: 17.1_
-  - [ ] 17.2 Update analyticsSummary route to read pre-computed distinguishedProjection
+  - [x] 17.2 Update analyticsSummary route to read pre-computed distinguishedProjection
     - _Requirements: 17.2_
-  - [ ] 17.3 Remove overallRank sorting computation from core.ts
+  - [x] 17.3 Remove overallRank sorting computation from core.ts
     - _Requirements: 17.3_
-  - [ ] 17.4 Update core.ts route to read pre-computed overallRank
+  - [x] 17.4 Update core.ts route to read pre-computed overallRank
     - _Requirements: 17.4_
-  - [ ] 17.5 Update route handler tests
+  - [x] 17.5 Update route handler tests
     - _Requirements: 17.1-17.5_
 
-- [ ] 18. Remove RankingCalculator from backend
-  - [ ] 18.1 Delete backend/src/services/RankingCalculator.ts
+- [x] 18. Remove RankingCalculator from backend
+  - [x] 18.1 Delete backend/src/services/RankingCalculator.ts
     - _Requirements: 12.1_
-  - [ ] 18.2 Remove RankingCalculator imports from shared.ts
+  - [x] 18.2 Remove RankingCalculator imports from shared.ts
     - _Requirements: 12.2_
-  - [ ] 18.3 Remove RankingCalculator initialization from shared.ts
+  - [x] 18.3 Remove RankingCalculator initialization from shared.ts
     - _Requirements: 12.3_
-  - [ ] 18.4 Clean up any remaining RankingCalculator references
+  - [x] 18.4 Clean up any remaining RankingCalculator references
     - _Requirements: 12.2_
 
-- [ ] 19. Checkpoint - Ensure all backend tests pass
+- [x] 19. Checkpoint - Ensure all backend tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Final validation
-  - [ ] 20.1 Verify TypeScript compilation succeeds with no errors
+- [x] 20. Final validation
+  - [x] 20.1 Verify TypeScript compilation succeeds with no errors
     - _Requirements: All_
-  - [ ] 20.2 Verify no computation methods remain in backend services
+  - [x] 20.2 Verify no computation methods remain in backend services
     - _Requirements: All_
-  - [ ] 20.3 Run full test suite across all packages
+  - [x] 20.3 Run full test suite across all packages
     - _Requirements: All_
 
 ## Notes

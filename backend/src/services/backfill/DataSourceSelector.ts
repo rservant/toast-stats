@@ -3,13 +3,15 @@
  *
  * Manages collection strategy selection and delegates to RefreshService methods
  * for data acquisition during backfill operations.
+ *
+ * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+ * This service no longer performs ranking calculations.
  */
 
 import { logger } from '../../utils/logger.js'
 import { RetryManager } from '../../utils/RetryManager.js'
 import { RateLimiter, RateLimiterManager } from '../../utils/RateLimiter.js'
 import { RefreshService } from '../RefreshService.js'
-import type { RankingCalculator } from '../RankingCalculator.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type { SnapshotStore } from '../../types/snapshots.js'
 import type {
@@ -23,21 +25,17 @@ import type {
 export class DataSourceSelector {
   private snapshotStore: SnapshotStore
   private rateLimiter: RateLimiter
-  private rankingCalculator?: RankingCalculator
 
   constructor(
     private refreshService: RefreshService,
     snapshotStore?: SnapshotStore,
-    rankingCalculator?: RankingCalculator
+    _rankingCalculator?: unknown // DEPRECATED: Rankings are pre-computed by scraper-cli
   ) {
     // Get snapshot store from RefreshService if not provided
     this.snapshotStore =
       snapshotStore ||
       (refreshService as unknown as { snapshotStore: SnapshotStore })
         .snapshotStore
-    if (rankingCalculator !== undefined) {
-      this.rankingCalculator = rankingCalculator
-    }
 
     if (!this.snapshotStore) {
       throw new Error('SnapshotStore is required for DataSourceSelector')
@@ -421,52 +419,9 @@ export class DataSourceSelector {
         operation: 'executePerDistrictCollection',
       })
 
-      // Apply ranking calculation if ranking calculator is available and we have results
-      if (this.rankingCalculator && filteredDistricts.length > 0) {
-        logger.info('Applying ranking calculation to collected districts', {
-          districtCount: filteredDistricts.length,
-          rankingVersion: this.rankingCalculator.getRankingVersion(),
-          operation: 'executePerDistrictCollection',
-        })
-
-        try {
-          const rankedResults =
-            await this.rankingCalculator.calculateRankings(filteredDistricts)
-
-          logger.info('Ranking calculation completed successfully', {
-            districtCount: rankedResults.length,
-            rankedDistrictCount: rankedResults.filter(
-              (d: DistrictStatistics) => d.ranking
-            ).length,
-            rankingVersion: this.rankingCalculator.getRankingVersion(),
-            operation: 'executePerDistrictCollection',
-          })
-
-          return rankedResults
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          logger.error(
-            'Ranking calculation failed, continuing without rankings',
-            {
-              error: errorMessage,
-              districtCount: filteredDistricts.length,
-              operation: 'executePerDistrictCollection',
-            }
-          )
-          // Continue with original results without ranking data
-        }
-      } else {
-        logger.debug(
-          'No ranking calculator provided or no successful districts, skipping ranking calculation',
-          {
-            hasRankingCalculator: !!this.rankingCalculator,
-            rankingCalculatorType: this.rankingCalculator?.constructor?.name,
-            districtCount: filteredDistricts.length,
-            operation: 'executePerDistrictCollection',
-          }
-        )
-      }
+      // NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+      // The backend no longer performs ranking calculations per the data-computation-separation
+      // steering document.
 
       return filteredDistricts
     } catch (error) {

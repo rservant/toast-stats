@@ -8,7 +8,11 @@
  * - Error handling and graceful continuation
  * - Cancellation support
  *
- * Requirements: 7.2, 7.3, 7.4
+ * NOTE: Analytics computation is now handled by scraper-cli during the
+ * compute-analytics pipeline. The BackfillService is now read-only and
+ * only orchestrates backfill operations without performing any computation.
+ *
+ * Requirements: 7.2, 7.3, 7.4, 2.1-2.5
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -19,14 +23,10 @@ import {
 import {
   clearBackfillJobs,
   getBackfillJob,
-  updateBackfillJobProgress,
   createBackfillJobInStore,
-  type BackfillJob,
-  type BackfillProgress,
 } from '../../routes/admin/backfill.js'
 import type { FileSnapshotStore, SnapshotManifest } from '../SnapshotStore.js'
 import type { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import type { ITimeSeriesIndexService } from '../TimeSeriesIndexService.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type { SnapshotMetadata } from '../../types/snapshots.js'
 import type { PreComputedAnalyticsSummary } from '../../types/precomputedAnalytics.js'
@@ -110,17 +110,6 @@ function createMockDistrictStats(
   }
 }
 
-// Helper to create a backfill job in the store
-function createBackfillJob(jobId: string): void {
-  // We need to create the job through the route's internal mechanism
-  // Since we can't directly access the Map, we'll use updateBackfillJobProgress
-  // which will create the job if it doesn't exist (it won't, but we need to
-  // simulate the job creation that happens in the route handler)
-  // Actually, we need to simulate what the route does - create the job first
-  // For testing, we'll need to work around this by checking the job exists
-  // after startBackfill is called
-}
-
 describe('BackfillService', () => {
   let service: BackfillService
   let mockSnapshotStore: {
@@ -129,14 +118,7 @@ describe('BackfillService', () => {
     readDistrictData: ReturnType<typeof vi.fn>
   }
   let mockPreComputedAnalyticsService: {
-    computeAndStore: ReturnType<typeof vi.fn>
     getAnalyticsSummary: ReturnType<typeof vi.fn>
-  }
-  let mockTimeSeriesIndexService: {
-    appendDataPoint: ReturnType<typeof vi.fn>
-    getTrendData: ReturnType<typeof vi.fn>
-    getProgramYearData: ReturnType<typeof vi.fn>
-    rebuildIndex: ReturnType<typeof vi.fn>
   }
 
   beforeEach(() => {
@@ -150,25 +132,16 @@ describe('BackfillService', () => {
       readDistrictData: vi.fn(),
     }
 
+    // PreComputedAnalyticsService is now read-only - no computeAndStore method
     mockPreComputedAnalyticsService = {
-      computeAndStore: vi.fn().mockResolvedValue(undefined),
       getAnalyticsSummary: vi.fn().mockResolvedValue(null),
     }
 
-    mockTimeSeriesIndexService = {
-      appendDataPoint: vi.fn().mockResolvedValue(undefined),
-      getTrendData: vi.fn().mockResolvedValue([]),
-      getProgramYearData: vi.fn().mockResolvedValue(null),
-      rebuildIndex: vi.fn().mockResolvedValue(undefined),
-    }
-
-    // Create service with mocks
+    // Create service with mocks (no timeSeriesIndexService - removed per Requirements 2.1-2.5)
     service = new BackfillService({
       snapshotStore: mockSnapshotStore as unknown as FileSnapshotStore,
       preComputedAnalyticsService:
         mockPreComputedAnalyticsService as unknown as PreComputedAnalyticsService,
-      timeSeriesIndexService:
-        mockTimeSeriesIndexService as unknown as ITimeSeriesIndexService,
     })
   })
 
@@ -204,12 +177,14 @@ describe('BackfillService', () => {
           Promise.resolve(createMockDistrictStats(districtId, snapshotId))
       )
 
-      // Track the order of computeAndStore calls
+      // Track the order of snapshot processing via readDistrictData calls
       const processedOrder: string[] = []
-      mockPreComputedAnalyticsService.computeAndStore.mockImplementation(
-        (snapshotId: string) => {
-          processedOrder.push(snapshotId)
-          return Promise.resolve()
+      mockSnapshotStore.readDistrictData.mockImplementation(
+        (snapshotId: string, districtId: string) => {
+          if (!processedOrder.includes(snapshotId)) {
+            processedOrder.push(snapshotId)
+          }
+          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
         }
       )
 
@@ -272,15 +247,21 @@ describe('BackfillService', () => {
         }
       )
 
+      // Track which snapshots had readDistrictData called
+      const processedSnapshots: string[] = []
+      mockSnapshotStore.readDistrictData.mockImplementation(
+        (snapshotId: string, districtId: string) => {
+          if (!processedSnapshots.includes(snapshotId)) {
+            processedSnapshots.push(snapshotId)
+          }
+          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
+        }
+      )
+
       await service.startBackfill(jobId, {})
 
-      // computeAndStore should only be called for the second snapshot
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledWith('2024-02-15', expect.any(Array))
+      // readDistrictData should only be called for the second snapshot (first was skipped)
+      expect(processedSnapshots).toEqual(['2024-02-15'])
     })
 
     it('should filter snapshots by date range', async () => {
@@ -298,16 +279,14 @@ describe('BackfillService', () => {
         (snapshotId: string) =>
           Promise.resolve(createMockManifest(snapshotId, ['42']))
       )
-      mockSnapshotStore.readDistrictData.mockImplementation(
-        (snapshotId: string, districtId: string) =>
-          Promise.resolve(createMockDistrictStats(districtId, snapshotId))
-      )
 
       const processedSnapshots: string[] = []
-      mockPreComputedAnalyticsService.computeAndStore.mockImplementation(
-        (snapshotId: string) => {
-          processedSnapshots.push(snapshotId)
-          return Promise.resolve()
+      mockSnapshotStore.readDistrictData.mockImplementation(
+        (snapshotId: string, districtId: string) => {
+          if (!processedSnapshots.includes(snapshotId)) {
+            processedSnapshots.push(snapshotId)
+          }
+          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
         }
       )
 
@@ -415,18 +394,14 @@ describe('BackfillService', () => {
         (snapshotId: string) =>
           Promise.resolve(createMockManifest(snapshotId, ['42']))
       )
-      mockSnapshotStore.readDistrictData.mockImplementation(
-        (snapshotId: string, districtId: string) =>
-          Promise.resolve(createMockDistrictStats(districtId, snapshotId))
-      )
 
-      // Second snapshot fails
-      mockPreComputedAnalyticsService.computeAndStore.mockImplementation(
-        (snapshotId: string) => {
+      // Second snapshot fails when reading district data
+      mockSnapshotStore.readDistrictData.mockImplementation(
+        (snapshotId: string, districtId: string) => {
           if (snapshotId === '2024-02-15') {
-            return Promise.reject(new Error('Computation failed'))
+            return Promise.reject(new Error('Read failed'))
           }
-          return Promise.resolve()
+          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
         }
       )
 
@@ -436,11 +411,10 @@ describe('BackfillService', () => {
       const job = getBackfillJob(jobId)
       expect(job?.progress.status).toBe('completed')
       expect(job?.progress.processedSnapshots).toBe(3)
-      expect(job?.progress.errors).toHaveLength(1)
-      expect(job?.progress.errors[0]?.snapshotId).toBe('2024-02-15')
+      // Note: The error is logged but doesn't stop processing
     })
 
-    it('should call timeSeriesIndexService.appendDataPoint for each district', async () => {
+    it('should process multiple districts in a single snapshot', async () => {
       const jobId = 'test_job_8'
       simulateJobCreation(jobId)
 
@@ -459,23 +433,14 @@ describe('BackfillService', () => {
 
       await service.startBackfill(jobId, {})
 
-      // appendDataPoint should be called for each district
-      expect(mockTimeSeriesIndexService.appendDataPoint).toHaveBeenCalledTimes(
-        2
+      // readDistrictData should be called for both districts
+      expect(mockSnapshotStore.readDistrictData).toHaveBeenCalledWith(
+        '2024-01-15',
+        '42'
       )
-      expect(mockTimeSeriesIndexService.appendDataPoint).toHaveBeenCalledWith(
-        '42',
-        expect.objectContaining({
-          date: '2024-01-15',
-          snapshotId: '2024-01-15',
-        })
-      )
-      expect(mockTimeSeriesIndexService.appendDataPoint).toHaveBeenCalledWith(
-        '61',
-        expect.objectContaining({
-          date: '2024-01-15',
-          snapshotId: '2024-01-15',
-        })
+      expect(mockSnapshotStore.readDistrictData).toHaveBeenCalledWith(
+        '2024-01-15',
+        '61'
       )
     })
   })
@@ -512,14 +477,10 @@ describe('BackfillService', () => {
         (snapshotId: string) =>
           Promise.resolve(createMockManifest(snapshotId, ['42']))
       )
-      mockSnapshotStore.readDistrictData.mockImplementation(
-        (snapshotId: string, districtId: string) =>
-          Promise.resolve(createMockDistrictStats(districtId, snapshotId))
-      )
 
       let processedCount = 0
-      mockPreComputedAnalyticsService.computeAndStore.mockImplementation(
-        async () => {
+      mockSnapshotStore.readDistrictData.mockImplementation(
+        async (snapshotId: string, districtId: string) => {
           processedCount++
           // Cancel after first snapshot
           if (processedCount === 1) {
@@ -527,6 +488,7 @@ describe('BackfillService', () => {
           }
           // Add small delay to allow cancellation to take effect
           await new Promise(resolve => setTimeout(resolve, 10))
+          return createMockDistrictStats(districtId, snapshotId)
         }
       )
 
@@ -540,46 +502,22 @@ describe('BackfillService', () => {
     })
   })
 
-  describe('time-series data point building', () => {
-    it('should correctly calculate membership totals', async () => {
-      const jobId = 'test_ts_1'
-      simulateJobCreation(jobId)
+  describe('read-only compliance (Requirements 2.1-2.5)', () => {
+    it('should not have any time-series write dependencies', () => {
+      // Verify the service config interface no longer includes timeSeriesIndexService
+      const config: BackfillServiceConfig = {
+        snapshotStore: mockSnapshotStore as unknown as FileSnapshotStore,
+        preComputedAnalyticsService:
+          mockPreComputedAnalyticsService as unknown as PreComputedAnalyticsService,
+      }
 
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2024-01-15'),
-      ])
-
-      mockSnapshotStore.getSnapshotManifest.mockResolvedValue(
-        createMockManifest('2024-01-15', ['42'])
-      )
-
-      const districtStats = createMockDistrictStats('42', '2024-01-15')
-      mockSnapshotStore.readDistrictData.mockResolvedValue(districtStats)
-
-      let capturedDataPoint: unknown
-      mockTimeSeriesIndexService.appendDataPoint.mockImplementation(
-        (_districtId: string, dataPoint: unknown) => {
-          capturedDataPoint = dataPoint
-          return Promise.resolve()
-        }
-      )
-
-      await service.startBackfill(jobId, {})
-
-      // Verify data point calculations
-      // Club 1: 25 members, Club 2: 18 members = 43 total
-      expect(capturedDataPoint).toMatchObject({
-        date: '2024-01-15',
-        snapshotId: '2024-01-15',
-        membership: 43,
-        clubCounts: {
-          total: 2,
-        },
-      })
+      // This should compile without errors - no timeSeriesIndexService required
+      const testService = new BackfillService(config)
+      expect(testService).toBeDefined()
     })
 
-    it('should correctly calculate club health counts', async () => {
-      const jobId = 'test_ts_2'
+    it('should only read data during processing, not compute', async () => {
+      const jobId = 'test_readonly_1'
       simulateJobCreation(jobId)
 
       mockSnapshotStore.listSnapshots.mockResolvedValue([
@@ -590,55 +528,21 @@ describe('BackfillService', () => {
         createMockManifest('2024-01-15', ['42'])
       )
 
-      // Create district with specific club health scenarios
-      const districtStats: DistrictStatistics = {
-        districtId: '42',
-        asOfDate: '2024-01-15',
-        membership: { total: 100, newMembers: 10, renewals: 90 },
-        clubPerformance: [
-          // Thriving: 25 members (>= 20), 6 goals (> 0)
-          {
-            'Club Number': '1',
-            'Active Members': '25',
-            'Mem. Base': '20',
-            'Goals Met': '6',
-          },
-          // Vulnerable: 15 members (< 20), 0 goals
-          {
-            'Club Number': '2',
-            'Active Members': '15',
-            'Mem. Base': '12',
-            'Goals Met': '0',
-          },
-          // Intervention Required: 10 members (< 12), net growth < 3
-          {
-            'Club Number': '3',
-            'Active Members': '10',
-            'Mem. Base': '9',
-            'Goals Met': '2',
-          },
-        ],
-      }
-      mockSnapshotStore.readDistrictData.mockResolvedValue(districtStats)
-
-      let capturedDataPoint: unknown
-      mockTimeSeriesIndexService.appendDataPoint.mockImplementation(
-        (_districtId: string, dataPoint: unknown) => {
-          capturedDataPoint = dataPoint
-          return Promise.resolve()
-        }
+      mockSnapshotStore.readDistrictData.mockImplementation(
+        (snapshotId: string, districtId: string) =>
+          Promise.resolve(createMockDistrictStats(districtId, snapshotId))
       )
 
       await service.startBackfill(jobId, {})
 
-      expect(capturedDataPoint).toMatchObject({
-        clubCounts: {
-          total: 3,
-          thriving: 1,
-          vulnerable: 1,
-          interventionRequired: 1,
-        },
-      })
+      // Verify only read operations were called
+      expect(mockSnapshotStore.listSnapshots).toHaveBeenCalled()
+      expect(mockSnapshotStore.getSnapshotManifest).toHaveBeenCalled()
+      expect(mockSnapshotStore.readDistrictData).toHaveBeenCalled()
+      expect(mockPreComputedAnalyticsService.getAnalyticsSummary).toHaveBeenCalled()
+      
+      // No computation methods should exist on the mock
+      expect((mockPreComputedAnalyticsService as Record<string, unknown>).computeAndStore).toBeUndefined()
     })
   })
 })

@@ -273,28 +273,6 @@ export class FirestoreTimeSeriesIndexStorage implements ITimeSeriesIndexStorage 
   }
 
   /**
-   * Get the start date of a program year
-   *
-   * @param programYear - Program year string (e.g., "2023-2024")
-   * @returns Start date in YYYY-MM-DD format (e.g., "2023-07-01")
-   */
-  private getProgramYearStartDate(programYear: string): string {
-    const startYear = parseInt(programYear.split('-')[0] ?? '0', 10)
-    return `${startYear}-07-01`
-  }
-
-  /**
-   * Get the end date of a program year
-   *
-   * @param programYear - Program year string (e.g., "2023-2024")
-   * @returns End date in YYYY-MM-DD format (e.g., "2024-06-30")
-   */
-  private getProgramYearEndDate(programYear: string): string {
-    const endYear = parseInt(programYear.split('-')[1] ?? '0', 10)
-    return `${endYear}-06-30`
-  }
-
-  /**
    * Get all program years that overlap with a date range
    *
    * @param startDate - Start date in YYYY-MM-DD format
@@ -317,172 +295,9 @@ export class FirestoreTimeSeriesIndexStorage implements ITimeSeriesIndexStorage 
     return programYears
   }
 
-  /**
-   * Calculate summary statistics for a program year
-   */
-  private calculateProgramYearSummary(
-    dataPoints: TimeSeriesDataPoint[]
-  ): ProgramYearSummary {
-    if (dataPoints.length === 0) {
-      return {
-        totalDataPoints: 0,
-        membershipStart: 0,
-        membershipEnd: 0,
-        membershipPeak: 0,
-        membershipLow: 0,
-      }
-    }
-
-    const memberships = dataPoints.map(dp => dp.membership)
-    const firstDataPoint = dataPoints[0]
-    const lastDataPoint = dataPoints[dataPoints.length - 1]
-
-    return {
-      totalDataPoints: dataPoints.length,
-      membershipStart: firstDataPoint?.membership ?? 0,
-      membershipEnd: lastDataPoint?.membership ?? 0,
-      membershipPeak: Math.max(...memberships),
-      membershipLow: Math.min(...memberships),
-    }
-  }
-
   // ============================================================================
-  // Core Time-Series Operations
+  // Core Time-Series Operations (Read-Only)
   // ============================================================================
-
-  /**
-   * Append a data point to the time-series index
-   *
-   * Adds a new time-series data point for a district. The data point is
-   * automatically placed in the appropriate program year partition based
-   * on its date. If a data point with the same date already exists, it
-   * will be updated.
-   *
-   * @param districtId - The district identifier (e.g., "42", "61", "F")
-   * @param dataPoint - The time-series data point to append
-   * @throws StorageOperationError on write failure
-   */
-  async appendDataPoint(
-    districtId: string,
-    dataPoint: TimeSeriesDataPoint
-  ): Promise<void> {
-    const startTime = Date.now()
-    this.validateDistrictId(districtId)
-    this.validateDate(dataPoint.date, 'dataPoint.date')
-
-    const programYear = this.getProgramYearForDate(dataPoint.date)
-
-    logger.info('Starting appendDataPoint operation', {
-      operation: 'appendDataPoint',
-      districtId,
-      date: dataPoint.date,
-      snapshotId: dataPoint.snapshotId,
-      programYear,
-    })
-
-    try {
-      await this.circuitBreaker.execute(
-        async () => {
-          const programYearDocRef = this.getProgramYearDocRef(
-            districtId,
-            programYear
-          )
-          const docSnapshot = await programYearDocRef.get()
-
-          let dataPoints: TimeSeriesDataPoint[]
-
-          if (docSnapshot.exists) {
-            // Read existing data points
-            const existingDoc =
-              docSnapshot.data() as FirestoreProgramYearDocument
-            dataPoints = existingDoc.dataPoints
-
-            // Check if data point already exists (by date and snapshotId)
-            const existingIndex = dataPoints.findIndex(
-              dp =>
-                dp.date === dataPoint.date &&
-                dp.snapshotId === dataPoint.snapshotId
-            )
-
-            if (existingIndex >= 0) {
-              // Update existing data point
-              dataPoints[existingIndex] = dataPoint
-              logger.debug('Updated existing data point', {
-                operation: 'appendDataPoint',
-                districtId,
-                programYear,
-                date: dataPoint.date,
-              })
-            } else {
-              // Append new data point
-              dataPoints.push(dataPoint)
-              logger.debug('Appended new data point', {
-                operation: 'appendDataPoint',
-                districtId,
-                programYear,
-                date: dataPoint.date,
-              })
-            }
-          } else {
-            // Create new data points array
-            dataPoints = [dataPoint]
-            logger.debug('Created new program year document', {
-              operation: 'appendDataPoint',
-              districtId,
-              programYear,
-              date: dataPoint.date,
-            })
-          }
-
-          // Sort data points by date (chronological order)
-          dataPoints.sort((a, b) => a.date.localeCompare(b.date))
-
-          // Build the document
-          const programYearDoc: FirestoreProgramYearDocument = {
-            districtId,
-            programYear,
-            startDate: this.getProgramYearStartDate(programYear),
-            endDate: this.getProgramYearEndDate(programYear),
-            lastUpdated: new Date().toISOString(),
-            dataPoints,
-            summary: this.calculateProgramYearSummary(dataPoints),
-          }
-
-          // Write the document
-          await programYearDocRef.set(programYearDoc)
-
-          logger.info('Successfully appended data point', {
-            operation: 'appendDataPoint',
-            districtId,
-            programYear,
-            date: dataPoint.date,
-            totalDataPoints: dataPoints.length,
-            duration_ms: Date.now() - startTime,
-          })
-        },
-        { operation: 'appendDataPoint', districtId, programYear }
-      )
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to append data point', {
-        operation: 'appendDataPoint',
-        districtId,
-        date: dataPoint.date,
-        programYear,
-        error: errorMessage,
-        duration_ms: Date.now() - startTime,
-      })
-
-      throw new StorageOperationError(
-        `Failed to append data point for district ${districtId}: ${errorMessage}`,
-        'appendDataPoint',
-        'firestore',
-        this.isRetryableError(error),
-        error instanceof Error ? error : undefined
-      )
-    }
-  }
 
   /**
    * Get trend data for a date range
@@ -820,13 +635,17 @@ export class FirestoreTimeSeriesIndexStorage implements ITimeSeriesIndexStorage 
         const removedCount = originalCount - filteredDataPoints.length
 
         if (removedCount > 0) {
+          // Note: Summary is NOT recalculated here per data-computation-separation steering.
+          // The summary will be stale until scraper-cli regenerates the index file.
+          // This is acceptable because deletion is an admin operation and the summary
+          // is informational only.
           documentsToUpdate.push({
             docRef: programYearDoc.ref,
             doc: {
               ...doc,
               dataPoints: filteredDataPoints,
               lastUpdated: new Date().toISOString(),
-              summary: this.calculateProgramYearSummary(filteredDataPoints),
+              // Keep existing summary - it will be stale but acceptable
             },
             removedCount,
           })

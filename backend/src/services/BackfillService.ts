@@ -1,20 +1,25 @@
 /**
  * BackfillService
  *
- * Processes existing snapshots to generate pre-computed analytics and time-series
- * index entries. This enables historical data to benefit from the performance
+ * Processes existing snapshots to generate pre-computed analytics.
+ * This enables historical data to benefit from the performance
  * improvements of pre-computed analytics.
  *
  * Key features:
- * - Processes snapshots in chronological order to build accurate time-series data
+ * - Processes snapshots in chronological order
  * - Tracks progress and supports resumption from the last processed snapshot
  * - Runs in background without blocking normal operations
  * - Handles errors gracefully, continuing with next snapshot on error
+ *
+ * NOTE: Time-series data is now pre-computed by scraper-cli during the
+ * compute-analytics pipeline. This service no longer computes or writes
+ * time-series data - it only orchestrates backfill operations for analytics.
  *
  * Requirements:
  * - 7.2: Process snapshots in chronological order to build accurate time-series data
  * - 7.3: Resumable, tracking progress and continuing from the last processed snapshot
  * - 7.4: Run in background without blocking normal operations
+ * - 2.1-2.5: No time-series computation (handled by scraper-cli)
  */
 
 import { logger } from '../utils/logger.js'
@@ -27,10 +32,8 @@ import {
   getBackfillJob,
 } from '../routes/admin/backfill.js'
 import type { PreComputedAnalyticsService } from './PreComputedAnalyticsService.js'
-import type { ITimeSeriesIndexService } from './TimeSeriesIndexService.js'
 import type { FileSnapshotStore } from './SnapshotStore.js'
 import type { DistrictStatistics } from '../types/districts.js'
-import type { TimeSeriesDataPoint } from '../types/precomputedAnalytics.js'
 
 /**
  * Configuration for BackfillService
@@ -40,8 +43,6 @@ export interface BackfillServiceConfig {
   snapshotStore: FileSnapshotStore
   /** Pre-computed analytics service for generating analytics */
   preComputedAnalyticsService: PreComputedAnalyticsService
-  /** Time-series index service for building indexes */
-  timeSeriesIndexService: ITimeSeriesIndexService
 }
 
 /**
@@ -55,8 +56,11 @@ interface ActiveBackfillJob {
 /**
  * Service for backfilling pre-computed analytics for existing snapshots.
  *
- * This service processes historical snapshots to generate pre-computed analytics
- * and time-series index entries, enabling fast retrieval of historical data.
+ * This service processes historical snapshots to generate pre-computed analytics,
+ * enabling fast retrieval of historical data.
+ *
+ * NOTE: Time-series index generation is now handled by scraper-cli during the
+ * compute-analytics pipeline. This service focuses only on analytics backfill.
  *
  * Requirement 7.2: Process snapshots in chronological order
  * Requirement 7.3: Support resumption from last processed snapshot
@@ -65,7 +69,6 @@ interface ActiveBackfillJob {
 export class BackfillService implements IBackfillService {
   private readonly snapshotStore: FileSnapshotStore
   private readonly preComputedAnalyticsService: PreComputedAnalyticsService
-  private readonly timeSeriesIndexService: ITimeSeriesIndexService
 
   /** Track active jobs for cancellation support */
   private readonly activeJobs = new Map<string, ActiveBackfillJob>()
@@ -73,7 +76,6 @@ export class BackfillService implements IBackfillService {
   constructor(config: BackfillServiceConfig) {
     this.snapshotStore = config.snapshotStore
     this.preComputedAnalyticsService = config.preComputedAnalyticsService
-    this.timeSeriesIndexService = config.timeSeriesIndexService
   }
 
   /**
@@ -463,8 +465,10 @@ export class BackfillService implements IBackfillService {
   /**
    * Process a single snapshot
    *
-   * Generates pre-computed analytics and time-series index entries for all
-   * districts in the snapshot.
+   * Generates pre-computed analytics for all districts in the snapshot.
+   * 
+   * NOTE: Time-series index generation is now handled by scraper-cli during
+   * the compute-analytics pipeline, not during backfill operations.
    */
   private async processSnapshot(
     snapshotId: string,
@@ -540,33 +544,9 @@ export class BackfillService implements IBackfillService {
       return
     }
 
-    // Compute and store pre-computed analytics
-    await this.preComputedAnalyticsService.computeAndStore(
-      snapshotId,
-      districtData
-    )
-
-    // Update time-series index for each district
-    for (const district of districtData) {
-      try {
-        const dataPoint = this.buildTimeSeriesDataPoint(snapshotId, district)
-        await this.timeSeriesIndexService.appendDataPoint(
-          district.districtId,
-          dataPoint
-        )
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error'
-        logger.warn('Failed to update time-series index for district', {
-          operation: 'processSnapshot',
-          operationId,
-          snapshotId,
-          districtId: district.districtId,
-          error: errorMessage,
-        })
-        // Continue with other districts
-      }
-    }
+    // NOTE: Pre-computed analytics are now generated by scraper-cli during the
+    // compute-analytics pipeline. The backend no longer performs any computation
+    // per the data-computation-separation steering document.
 
     logger.debug('Completed processing snapshot', {
       operation: 'processSnapshot',
@@ -574,138 +554,6 @@ export class BackfillService implements IBackfillService {
       snapshotId,
       districtsProcessed: districtData.length,
     })
-  }
-
-  /**
-   * Build a time-series data point from district statistics
-   */
-  private buildTimeSeriesDataPoint(
-    snapshotId: string,
-    district: DistrictStatistics
-  ): TimeSeriesDataPoint {
-    // Calculate totals from club performance data
-    const clubs = district.clubPerformance ?? []
-
-    let totalMembership = 0
-    let totalPayments = 0
-    let totalDcpGoals = 0
-    let distinguishedTotal = 0
-    let thriving = 0
-    let vulnerable = 0
-    let interventionRequired = 0
-
-    for (const club of clubs) {
-      const membership = this.parseIntSafe(
-        club['Active Members'] ??
-          club['Active Membership'] ??
-          club['Membership']
-      )
-      const memBase = this.parseIntSafe(club['Mem. Base'])
-      const netGrowth = membership - memBase
-      const dcpGoals = this.parseIntSafe(club['Goals Met'])
-
-      totalMembership += membership
-      totalDcpGoals += dcpGoals
-
-      // Calculate payments
-      const octRenewals = this.parseIntSafe(
-        club['Oct. Ren.'] ?? club['Oct. Ren']
-      )
-      const aprRenewals = this.parseIntSafe(
-        club['Apr. Ren.'] ?? club['Apr. Ren']
-      )
-      const newMembers = this.parseIntSafe(club['New Members'] ?? club['New'])
-      totalPayments += octRenewals + aprRenewals + newMembers
-
-      // Calculate distinguished status
-      if (this.isDistinguished(club, membership, netGrowth, dcpGoals)) {
-        distinguishedTotal++
-      }
-
-      // Calculate club health
-      if (membership < 12 && netGrowth < 3) {
-        interventionRequired++
-      } else {
-        const membershipRequirementMet = membership >= 20 || netGrowth >= 3
-        const dcpCheckpointMet = dcpGoals > 0
-
-        if (membershipRequirementMet && dcpCheckpointMet) {
-          thriving++
-        } else {
-          vulnerable++
-        }
-      }
-    }
-
-    return {
-      date: district.asOfDate,
-      snapshotId,
-      membership: totalMembership,
-      payments: totalPayments,
-      dcpGoals: totalDcpGoals,
-      distinguishedTotal,
-      clubCounts: {
-        total: clubs.length,
-        thriving,
-        vulnerable,
-        interventionRequired,
-      },
-    }
-  }
-
-  /**
-   * Check if a club qualifies for distinguished status
-   */
-  private isDistinguished(
-    club: Record<string, string | number | null | undefined>,
-    membership: number,
-    netGrowth: number,
-    dcpGoals: number
-  ): boolean {
-    // Check CSP status first
-    const cspValue =
-      club['CSP'] ??
-      club['Club Success Plan'] ??
-      club['CSP Submitted'] ??
-      club['Club Success Plan Submitted']
-
-    // Historical data compatibility: if field doesn't exist, assume submitted
-    if (cspValue !== undefined && cspValue !== null) {
-      const cspString = String(cspValue).toLowerCase().trim()
-      if (
-        cspString === 'no' ||
-        cspString === 'false' ||
-        cspString === '0' ||
-        cspString === 'not submitted' ||
-        cspString === 'n'
-      ) {
-        return false
-      }
-    }
-
-    // Distinguished: 5 goals + (20 members OR net growth of 3)
-    return dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)
-  }
-
-  /**
-   * Parse an integer value safely
-   */
-  private parseIntSafe(value: string | number | null | undefined): number {
-    if (value === null || value === undefined || value === '') {
-      return 0
-    }
-    if (typeof value === 'number') {
-      return isNaN(value) ? 0 : Math.floor(value)
-    }
-    if (typeof value === 'string') {
-      const trimmed = value.trim()
-      if (trimmed === '') {
-        return 0
-      }
-      const parsed = parseInt(trimmed, 10)
-      return isNaN(parsed) ? 0 : parsed
-    }
-    return 0
   }
 
   /**

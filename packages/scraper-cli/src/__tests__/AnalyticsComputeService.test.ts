@@ -62,33 +62,51 @@ function createSampleDistrictStatistics(
         clubName: 'Test Club One',
         divisionId: 'A',
         areaId: 'A1',
+        divisionName: 'Division Alpha',
+        areaName: 'Area A1',
         membershipCount: 25,
         paymentsCount: 30,
         dcpGoals: 7,
         status: 'Active',
         charterDate: '2020-01-15',
+        octoberRenewals: 10,
+        aprilRenewals: 8,
+        newMembers: 12,
+        membershipBase: 20,
       },
       {
         clubId: '5678',
         clubName: 'Test Club Two',
         divisionId: 'A',
         areaId: 'A2',
+        divisionName: 'Division Alpha',
+        areaName: 'Area A2',
         membershipCount: 15,
         paymentsCount: 18,
         dcpGoals: 4,
         status: 'Active',
         charterDate: '2019-06-01',
+        octoberRenewals: 6,
+        aprilRenewals: 5,
+        newMembers: 7,
+        membershipBase: 12,
       },
       {
         clubId: '9012',
         clubName: 'Test Club Three',
         divisionId: 'B',
         areaId: 'B1',
+        divisionName: 'Division Beta',
+        areaName: 'Area B1',
         membershipCount: 8,
         paymentsCount: 10,
         dcpGoals: 2,
         status: 'Active',
         charterDate: '2021-03-20',
+        octoberRenewals: 3,
+        aprilRenewals: 2,
+        newMembers: 5,
+        membershipBase: 10,
       },
     ],
     divisions: [
@@ -1622,5 +1640,294 @@ describe('AnalyticsComputeService', () => {
         expect(checksum).toBe(firstChecksum)
       }
     })
+  })
+})
+
+describe('Time-series generation integration (Requirements 4.1, 9.1, 9.2, 9.4)', () => {
+  let testCache: { path: string; cleanup: () => Promise<void> }
+  let analyticsComputeService: AnalyticsComputeService
+
+  beforeEach(async () => {
+    testCache = createIsolatedCacheDir()
+    await fs.mkdir(testCache.path, { recursive: true })
+
+    analyticsComputeService = new AnalyticsComputeService({
+      cacheDir: testCache.path,
+    })
+  })
+
+  afterEach(async () => {
+    await testCache.cleanup()
+  })
+
+  it('should generate time-series data point alongside analytics (Requirement 9.1)', async () => {
+    const date = '2024-01-15'
+    const districtId = '1'
+    const stats = createSampleDistrictStatistics(districtId, date)
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+
+    const result = await analyticsComputeService.computeDistrictAnalytics(
+      date,
+      districtId
+    )
+
+    // Verify analytics were computed
+    expect(result.success).toBe(true)
+    expect(result.analyticsPath).toBeDefined()
+
+    // Verify time-series was written
+    expect(result.timeSeriesWritten).toBe(true)
+    expect(result.timeSeriesError).toBeUndefined()
+
+    // Verify time-series files exist
+    const timeSeriesDir = path.join(
+      testCache.path,
+      'time-series',
+      `district_${districtId}`
+    )
+
+    // Check that program year index file exists
+    const programYear = '2023-2024' // January 2024 is in 2023-2024 program year
+    const indexPath = path.join(timeSeriesDir, `${programYear}.json`)
+    const indexExists = await fs
+      .access(indexPath)
+      .then(() => true)
+      .catch(() => false)
+    expect(indexExists).toBe(true)
+
+    // Check that metadata file exists
+    const metadataPath = path.join(timeSeriesDir, 'index-metadata.json')
+    const metadataExists = await fs
+      .access(metadataPath)
+      .then(() => true)
+      .catch(() => false)
+    expect(metadataExists).toBe(true)
+  })
+
+  it('should write time-series data point with correct values (Requirement 4.1)', async () => {
+    const date = '2024-01-15'
+    const districtId = '1'
+    const stats = createSampleDistrictStatistics(districtId, date)
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+
+    await analyticsComputeService.computeDistrictAnalytics(date, districtId)
+
+    // Read the time-series index file
+    const programYear = '2023-2024'
+    const indexPath = path.join(
+      testCache.path,
+      'time-series',
+      `district_${districtId}`,
+      `${programYear}.json`
+    )
+    const indexContent = await fs.readFile(indexPath, 'utf-8')
+    const indexFile = JSON.parse(indexContent) as {
+      districtId: string
+      programYear: string
+      dataPoints: Array<{
+        date: string
+        snapshotId: string
+        membership: number
+        payments: number
+        dcpGoals: number
+        distinguishedTotal: number
+        clubCounts: {
+          total: number
+          thriving: number
+          vulnerable: number
+          interventionRequired: number
+        }
+      }>
+    }
+
+    expect(indexFile.districtId).toBe(districtId)
+    expect(indexFile.programYear).toBe(programYear)
+    expect(indexFile.dataPoints.length).toBe(1)
+
+    const dataPoint = indexFile.dataPoints[0]
+    expect(dataPoint).toBeDefined()
+    expect(dataPoint?.date).toBe(date)
+    expect(dataPoint?.snapshotId).toBe(date)
+
+    // Verify data point contains required fields (Requirement 4.3)
+    expect(typeof dataPoint?.membership).toBe('number')
+    expect(typeof dataPoint?.payments).toBe('number')
+    expect(typeof dataPoint?.dcpGoals).toBe('number')
+    expect(typeof dataPoint?.distinguishedTotal).toBe('number')
+    expect(dataPoint?.clubCounts).toBeDefined()
+    expect(typeof dataPoint?.clubCounts.total).toBe('number')
+    expect(typeof dataPoint?.clubCounts.thriving).toBe('number')
+    expect(typeof dataPoint?.clubCounts.vulnerable).toBe('number')
+    expect(typeof dataPoint?.clubCounts.interventionRequired).toBe('number')
+  })
+
+  it('should use same snapshot data as other analytics (Requirement 9.2)', async () => {
+    const date = '2024-01-15'
+    const districtId = '1'
+    const stats = createSampleDistrictStatistics(districtId, date)
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+
+    await analyticsComputeService.computeDistrictAnalytics(date, districtId)
+
+    // Read the time-series data point
+    const programYear = '2023-2024'
+    const indexPath = path.join(
+      testCache.path,
+      'time-series',
+      `district_${districtId}`,
+      `${programYear}.json`
+    )
+    const indexContent = await fs.readFile(indexPath, 'utf-8')
+    const indexFile = JSON.parse(indexContent) as {
+      dataPoints: Array<{
+        membership: number
+      }>
+    }
+
+    const dataPoint = indexFile.dataPoints[0]
+
+    // The membership should match the totals from the snapshot
+    // (stats.totals.totalMembership = 48 from createSampleDistrictStatistics)
+    expect(dataPoint?.membership).toBe(stats.totals.totalMembership)
+  })
+
+  it('should update index metadata with available program years (Requirement 4.5)', async () => {
+    const date = '2024-01-15'
+    const districtId = '1'
+    const stats = createSampleDistrictStatistics(districtId, date)
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+
+    await analyticsComputeService.computeDistrictAnalytics(date, districtId)
+
+    // Read the metadata file
+    const metadataPath = path.join(
+      testCache.path,
+      'time-series',
+      `district_${districtId}`,
+      'index-metadata.json'
+    )
+    const metadataContent = await fs.readFile(metadataPath, 'utf-8')
+    const metadata = JSON.parse(metadataContent) as {
+      districtId: string
+      lastUpdated: string
+      availableProgramYears: string[]
+      totalDataPoints: number
+    }
+
+    expect(metadata.districtId).toBe(districtId)
+    expect(metadata.availableProgramYears).toContain('2023-2024')
+    expect(metadata.totalDataPoints).toBe(1)
+    expect(metadata.lastUpdated).toBeDefined()
+  })
+
+  it('should continue processing when time-series write fails (Requirement 9.4)', async () => {
+    const date = '2024-01-15'
+    const districtId = '1'
+    const stats = createSampleDistrictStatistics(districtId, date)
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+
+    // Create a file where the time-series directory should be to cause a write failure
+    const timeSeriesDir = path.join(testCache.path, 'time-series')
+    await fs.mkdir(timeSeriesDir, { recursive: true })
+    // Create a file that will block directory creation
+    await fs.writeFile(
+      path.join(timeSeriesDir, `district_${districtId}`),
+      'blocking file'
+    )
+
+    const result = await analyticsComputeService.computeDistrictAnalytics(
+      date,
+      districtId
+    )
+
+    // Analytics should still succeed even if time-series fails
+    expect(result.success).toBe(true)
+    expect(result.analyticsPath).toBeDefined()
+
+    // Time-series should have failed but not blocked the operation
+    expect(result.timeSeriesWritten).toBe(false)
+    expect(result.timeSeriesError).toBeDefined()
+  })
+
+  it('should generate time-series for multiple districts in compute operation', async () => {
+    const date = '2024-01-15'
+
+    // Write multiple district snapshots
+    await writeDistrictSnapshot(
+      testCache.path,
+      date,
+      '1',
+      createSampleDistrictStatistics('1', date)
+    )
+    await writeDistrictSnapshot(
+      testCache.path,
+      date,
+      '2',
+      createSampleDistrictStatistics('2', date)
+    )
+
+    const result = await analyticsComputeService.compute({ date })
+
+    expect(result.success).toBe(true)
+    expect(result.districtsSucceeded).toContain('1')
+    expect(result.districtsSucceeded).toContain('2')
+
+    // Verify time-series files exist for both districts
+    for (const districtId of ['1', '2']) {
+      const metadataPath = path.join(
+        testCache.path,
+        'time-series',
+        `district_${districtId}`,
+        'index-metadata.json'
+      )
+      const metadataExists = await fs
+        .access(metadataPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(metadataExists).toBe(true)
+    }
+  })
+
+  it('should write to correct program year based on date', async () => {
+    const districtId = '1'
+
+    // Test date in first half of program year (July-December)
+    const date1 = '2023-09-15' // Should be in 2023-2024
+    const stats1 = createSampleDistrictStatistics(districtId, date1)
+    await writeDistrictSnapshot(testCache.path, date1, districtId, stats1)
+    await analyticsComputeService.computeDistrictAnalytics(date1, districtId, {
+      force: true,
+    })
+
+    // Test date in second half of program year (January-June)
+    const date2 = '2024-03-15' // Should also be in 2023-2024
+    const stats2 = createSampleDistrictStatistics(districtId, date2)
+    await writeDistrictSnapshot(testCache.path, date2, districtId, stats2)
+    await analyticsComputeService.computeDistrictAnalytics(date2, districtId, {
+      force: true,
+    })
+
+    // Both should be in the same program year file
+    const indexPath = path.join(
+      testCache.path,
+      'time-series',
+      `district_${districtId}`,
+      '2023-2024.json'
+    )
+    const indexContent = await fs.readFile(indexPath, 'utf-8')
+    const indexFile = JSON.parse(indexContent) as {
+      dataPoints: Array<{ date: string }>
+    }
+
+    expect(indexFile.dataPoints.length).toBe(2)
+    expect(indexFile.dataPoints.map(dp => dp.date).sort()).toEqual([
+      '2023-09-15',
+      '2024-03-15',
+    ])
   })
 })

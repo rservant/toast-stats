@@ -143,7 +143,7 @@ export class UnifiedBackfillService {
   constructor(
     jobStorage: IBackfillJobStorage,
     snapshotStorage: ISnapshotStorage,
-    timeSeriesStorage: ITimeSeriesIndexStorage,
+    _timeSeriesStorage: ITimeSeriesIndexStorage, // Unused - time-series data is now pre-computed by scraper-cli
     refreshService: RefreshService,
     configService: DistrictConfigurationService,
     preComputedAnalyticsService: PreComputedAnalyticsService,
@@ -163,9 +163,12 @@ export class UnifiedBackfillService {
       snapshotStorage,
       configService
     )
+    // NOTE: AnalyticsGenerator no longer performs computation per the
+    // data-computation-separation steering document. It only verifies
+    // that snapshots exist. Analytics and time-series data are now
+    // pre-computed by scraper-cli.
     this.analyticsGenerator = new AnalyticsGenerator(
       snapshotStorage,
-      timeSeriesStorage,
       preComputedAnalyticsService
     )
     this.recoveryManager = new RecoveryManager(jobStorage)

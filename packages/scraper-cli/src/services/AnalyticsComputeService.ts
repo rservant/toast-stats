@@ -24,7 +24,9 @@ import {
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
 } from '@toastmasters/analytics-core'
+import type { DistrictStatisticsInput, ScrapedRecord } from '@toastmasters/analytics-core'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
+import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 
 /**
  * Configuration for AnalyticsComputeService
@@ -73,6 +75,10 @@ export interface DistrictComputeResult {
   performanceTargetsPath?: string
   /** Path to club trends index file (NEW - Requirement 2.1) */
   clubTrendsIndexPath?: string
+  /** Whether time-series data point was written (NEW - Requirement 4.1, 9.1) */
+  timeSeriesWritten?: boolean
+  /** Error message if time-series write failed (non-fatal) */
+  timeSeriesError?: string
   error?: string
   skipped?: boolean
 }
@@ -131,18 +137,33 @@ interface AnalyticsCheckResult {
  *   CACHE_DIR/snapshots/{date}/analytics/district_{id}_membership.json
  *   CACHE_DIR/snapshots/{date}/analytics/district_{id}_clubhealth.json
  *   CACHE_DIR/snapshots/{date}/analytics/manifest.json
+ *
+ * And writes time-series data to:
+ *   CACHE_DIR/time-series/district_{id}/{program-year}.json
+ *   CACHE_DIR/time-series/district_{id}/index-metadata.json
+ *
+ * Requirements:
+ * - 4.1: Generate time-series data points for each district
+ * - 9.1: Integrate time-series generation with analytics pipeline
+ * - 9.2: Use same snapshot data as other analytics
+ * - 9.4: If time-series fails for a district, log error and continue
  */
 export class AnalyticsComputeService {
   private readonly cacheDir: string
   private readonly logger: Logger
   private readonly analyticsComputer: AnalyticsComputer
   private readonly analyticsWriter: AnalyticsWriter
+  private readonly timeSeriesWriter: TimeSeriesIndexWriter
 
   constructor(config: AnalyticsComputeServiceConfig) {
     this.cacheDir = config.cacheDir
     this.logger = config.logger ?? noopLogger
     this.analyticsComputer = new AnalyticsComputer()
     this.analyticsWriter = new AnalyticsWriter({
+      cacheDir: config.cacheDir,
+      logger: config.logger,
+    })
+    this.timeSeriesWriter = new TimeSeriesIndexWriter({
       cacheDir: config.cacheDir,
       logger: config.logger,
     })
@@ -167,6 +188,67 @@ export class AnalyticsComputeService {
    */
   getAnalyticsDir(date: string): string {
     return this.analyticsWriter.getAnalyticsDir(date)
+  }
+
+  /**
+   * Convert DistrictStatistics to DistrictStatisticsInput format.
+   *
+   * The TimeSeriesDataPointBuilder expects raw CSV-like data with clubPerformance array.
+   * This method converts the transformed ClubStatistics[] to ScrapedRecord[] format.
+   *
+   * @param snapshot - The district statistics in transformed format
+   * @returns DistrictStatisticsInput for TimeSeriesDataPointBuilder
+   *
+   * @see Requirements 9.2: Use same snapshot data as other analytics
+   */
+  private convertToDistrictStatisticsInput(
+    snapshot: DistrictStatistics
+  ): DistrictStatisticsInput {
+    // Convert ClubStatistics[] to ScrapedRecord[] format
+    // Map the transformed fields back to the raw CSV column names
+    const clubPerformance: ScrapedRecord[] = snapshot.clubs.map(club => ({
+      // Membership fields
+      'Active Members': club.membershipCount,
+      'Active Membership': club.membershipCount,
+      Membership: club.membershipCount,
+      'Mem. Base': club.membershipBase,
+
+      // Payment fields
+      'Oct. Ren.': club.octoberRenewals,
+      'Oct. Ren': club.octoberRenewals,
+      'Apr. Ren.': club.aprilRenewals,
+      'Apr. Ren': club.aprilRenewals,
+      'New Members': club.newMembers,
+      New: club.newMembers,
+
+      // DCP Goals
+      'Goals Met': club.dcpGoals,
+
+      // Club identification
+      'Club Number': club.clubId,
+      'Club ID': club.clubId,
+      ClubID: club.clubId,
+      'Club Name': club.clubName,
+
+      // Status fields - map clubStatus to distinguished status if available
+      'Club Distinguished Status': club.clubStatus ?? '',
+
+      // CSP field - assume submitted if not explicitly marked otherwise
+      // Historical data compatibility: if field doesn't exist, assume submitted
+      CSP: 'Yes',
+    }))
+
+    // Calculate total membership from totals if available
+    const membershipTotal = snapshot.totals?.totalMembership ?? 0
+
+    return {
+      districtId: snapshot.districtId,
+      asOfDate: snapshot.snapshotDate,
+      membership: {
+        total: membershipTotal,
+      },
+      clubPerformance,
+    }
   }
 
   /**
@@ -334,6 +416,10 @@ export class AnalyticsComputeService {
 
   /**
    * Load district snapshot from disk
+   *
+   * Handles both formats:
+   * - PerDistrictData wrapper format (from TransformService): { districtId, data: DistrictStatistics }
+   * - Direct DistrictStatistics format (legacy/test format): { districtId, snapshotDate, clubs, ... }
    */
   async loadDistrictSnapshot(
     date: string,
@@ -343,8 +429,28 @@ export class AnalyticsComputeService {
 
     try {
       const content = await fs.readFile(snapshotPath, 'utf-8')
-      const snapshot = JSON.parse(content) as DistrictStatistics
-      return snapshot
+      const parsed = JSON.parse(content) as Record<string, unknown>
+
+      // Check if this is a PerDistrictData wrapper (has 'data' field with nested structure)
+      // or direct DistrictStatistics format (has 'snapshotDate' at top level)
+      const dataField = parsed['data']
+      if ('data' in parsed && typeof dataField === 'object' && dataField !== null) {
+        // PerDistrictData wrapper format - extract the nested data
+        const wrapper = parsed as { data: DistrictStatistics }
+        return wrapper.data
+      } else if ('snapshotDate' in parsed) {
+        // Direct DistrictStatistics format
+        return parsed as unknown as DistrictStatistics
+      } else {
+        // Unknown format - log warning and try to use as-is
+        this.logger.warn('Unknown snapshot format, attempting to use as DistrictStatistics', {
+          date,
+          districtId,
+          hasData: 'data' in parsed,
+          hasSnapshotDate: 'snapshotDate' in parsed,
+        })
+        return parsed as unknown as DistrictStatistics
+      }
     } catch (error) {
       const err = error as { code?: string }
       if (err.code === 'ENOENT') {
@@ -562,6 +668,51 @@ export class AnalyticsComputeService {
           writeOptions
         )
 
+      // NEW: Write time-series data point (Requirements 4.1, 9.1, 9.2, 9.4)
+      // Build and write time-series data point using the same snapshot data
+      // Errors are handled gracefully - log and continue, don't fail the whole operation
+      let timeSeriesWritten = false
+      let timeSeriesError: string | undefined
+
+      try {
+        // Get the builder from TimeSeriesIndexWriter
+        const builder = this.timeSeriesWriter.getBuilder()
+
+        // Convert the DistrictStatistics to DistrictStatisticsInput format
+        // The builder expects raw CSV-like data with clubPerformance array
+        const districtInput = this.convertToDistrictStatisticsInput(snapshot)
+
+        // Build the time-series data point
+        const dataPoint = builder.build(date, districtInput)
+
+        // Write the data point to the time-series index
+        await this.timeSeriesWriter.writeDataPoint(districtId, dataPoint)
+
+        // Update the index metadata for this district
+        await this.timeSeriesWriter.updateMetadata(districtId)
+
+        timeSeriesWritten = true
+
+        this.logger.info('Time-series data point written', {
+          date,
+          districtId,
+          membership: dataPoint.membership,
+          payments: dataPoint.payments,
+          dcpGoals: dataPoint.dcpGoals,
+          distinguishedTotal: dataPoint.distinguishedTotal,
+        })
+      } catch (error) {
+        // Requirement 9.4: Log error and continue with other districts
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        timeSeriesError = errorMessage
+        this.logger.error('Failed to write time-series data point (continuing)', {
+          date,
+          districtId,
+          error: errorMessage,
+        })
+      }
+
       this.logger.info('Analytics computed and written', {
         date,
         districtId,
@@ -575,6 +726,7 @@ export class AnalyticsComputeService {
         yearOverYearPath,
         performanceTargetsPath,
         clubTrendsIndexPath,
+        timeSeriesWritten,
         sourceSnapshotChecksum,
       })
 
@@ -591,6 +743,8 @@ export class AnalyticsComputeService {
         yearOverYearPath,
         performanceTargetsPath,
         clubTrendsIndexPath,
+        timeSeriesWritten,
+        timeSeriesError,
       }
     } catch (error) {
       const errorMessage =

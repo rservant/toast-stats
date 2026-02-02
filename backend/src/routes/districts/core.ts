@@ -827,8 +827,12 @@ coreRouter.get(
  * Returns RankHistoryResponse format expected by frontend:
  * - districtId: string
  * - districtName: string
- * - history: HistoricalRankPoint[] (date, aggregateScore, clubsRank, paymentsRank, distinguishedRank)
+ * - history: HistoricalRankPoint[] (date, aggregateScore, clubsRank, paymentsRank, distinguishedRank, overallRank)
  * - programYear: ProgramYearInfo (startDate, endDate, year)
+ *
+ * Requirements:
+ * - 17.3: Route SHALL NOT compute overallRank by sorting rankings
+ * - 17.4: overallRank SHALL be pre-computed and stored in rankings files
  */
 coreRouter.get(
   '/:districtId/rank-history',
@@ -956,16 +960,10 @@ coreRouter.get(
             districtName = districtRanking.districtName
           }
 
-          // Calculate overallRank by sorting all districts by aggregateScore descending
-          // and finding the target district's position (1-indexed)
-          const sortedRankings = [...rankings.rankings].sort(
-            (a, b) => b.aggregateScore - a.aggregateScore
-          )
-          const overallRankPosition = sortedRankings.findIndex(
-            r => r.districtId === districtId
-          )
-          const overallRank =
-            overallRankPosition >= 0 ? overallRankPosition + 1 : 0
+          // Read pre-computed overallRank from rankings data
+          // Requirement 17.3: Route SHALL NOT compute overallRank by sorting rankings
+          // Requirement 17.4: overallRank SHALL be pre-computed and stored in rankings files
+          const overallRank = districtRanking.overallRank ?? 0
 
           history.push({
             date,

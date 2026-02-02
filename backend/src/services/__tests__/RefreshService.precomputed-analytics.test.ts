@@ -1,12 +1,16 @@
 /**
  * Unit tests for RefreshService pre-computed analytics integration
  *
- * Tests the integration between RefreshService and PreComputedAnalyticsService
- * to verify that analytics are computed during snapshot creation.
+ * Tests the integration between RefreshService and PreComputedAnalyticsService.
  *
- * Requirements:
- * - 1.1: Compute and store analytics summaries for each district in the snapshot
- * - 1.4: Log errors and continue if individual district fails
+ * NOTE: Per the data-computation-separation steering document, RefreshService
+ * no longer triggers analytics computation. Analytics are now pre-computed by
+ * scraper-cli during the compute-analytics pipeline.
+ *
+ * These tests verify:
+ * - RefreshService accepts preComputedAnalyticsService parameter for backward compatibility
+ * - RefreshService does NOT call computeAndStore (computation removed)
+ * - Snapshot creation works independently of analytics
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -182,12 +186,13 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
     )
   }
 
-  describe('Pre-computed analytics integration', () => {
-    it('should trigger pre-computed analytics when service is provided', async () => {
+  describe('Pre-computed analytics integration (read-only backend)', () => {
+    it('should accept preComputedAnalyticsService parameter for backward compatibility', async () => {
       // Set up cache data
       await setupCacheData(testDate)
 
       // Create RefreshService with PreComputedAnalyticsService
+      // This should not throw - parameter is accepted for backward compatibility
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
@@ -205,30 +210,9 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       // Verify refresh was successful
       expect(result.success).toBe(true)
       expect(result.snapshot_id).toBe(testDate)
-
-      // Verify analytics summary file was created
-      const analyticsSummaryPath = path.join(
-        snapshotsDir,
-        testDate,
-        'analytics-summary.json'
-      )
-      const analyticsExists = await fs
-        .access(analyticsSummaryPath)
-        .then(() => true)
-        .catch(() => false)
-
-      expect(analyticsExists).toBe(true)
-
-      // Verify analytics content
-      const analyticsContent = await fs.readFile(analyticsSummaryPath, 'utf-8')
-      const analytics = JSON.parse(analyticsContent)
-
-      expect(analytics.snapshotId).toBe(testDate)
-      expect(analytics.districts).toBeDefined()
-      expect(Object.keys(analytics.districts).length).toBeGreaterThan(0)
     })
 
-    it('should work without pre-computed analytics service (backward compatibility)', async () => {
+    it('should work without pre-computed analytics service', async () => {
       // Set up cache data
       await setupCacheData(testDate)
 
@@ -245,35 +229,20 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       // Verify refresh was successful
       expect(result.success).toBe(true)
       expect(result.snapshot_id).toBe(testDate)
-
-      // Verify analytics summary file was NOT created
-      const analyticsSummaryPath = path.join(
-        snapshotsDir,
-        testDate,
-        'analytics-summary.json'
-      )
-      const analyticsExists = await fs
-        .access(analyticsSummaryPath)
-        .then(() => true)
-        .catch(() => false)
-
-      expect(analyticsExists).toBe(false)
     })
 
-    it('should continue if pre-computed analytics fails (Requirement 1.4)', async () => {
+    it('should NOT call computeAndStore (computation removed per data-computation-separation)', async () => {
       // Set up cache data
       await setupCacheData(testDate)
 
-      // Create a mock PreComputedAnalyticsService that throws an error
-      const failingAnalyticsService = {
-        computeAndStore: vi
-          .fn()
-          .mockRejectedValue(new Error('Analytics computation failed')),
+      // Create a mock PreComputedAnalyticsService to verify it's NOT called
+      const mockAnalyticsService = {
+        computeAndStore: vi.fn(),
         getAnalyticsSummary: vi.fn(),
         getLatestSummary: vi.fn(),
       } as unknown as PreComputedAnalyticsService
 
-      // Create RefreshService with failing analytics service
+      // Create RefreshService with mock analytics service
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
@@ -282,18 +251,19 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
         undefined, // validator
-        failingAnalyticsService
+        mockAnalyticsService
       )
 
-      // Execute refresh - should succeed despite analytics failure
+      // Execute refresh
       const result = await refreshService.executeRefresh(testDate)
 
-      // Verify refresh was still successful (Requirement 1.4)
+      // Verify refresh was successful
       expect(result.success).toBe(true)
       expect(result.snapshot_id).toBe(testDate)
 
-      // Verify analytics service was called
-      expect(failingAnalyticsService.computeAndStore).toHaveBeenCalled()
+      // Verify computeAndStore was NOT called
+      // Per data-computation-separation steering document, backend does not compute analytics
+      expect(mockAnalyticsService.computeAndStore).not.toHaveBeenCalled()
     })
 
     it('should not trigger analytics for failed builds', async () => {

@@ -1,28 +1,172 @@
 /**
- * RankingCalculator service for computing district rankings using Borda count system
+ * BordaCountRankingCalculator service for computing district rankings using Borda count system
  *
  * This service implements the sophisticated Borda count ranking algorithm that was
  * previously part of the legacy cache system. It calculates rankings across three
  * categories: club growth, payment growth, and distinguished club percentages.
+ *
+ * CRITICAL: This code is migrated from backend/src/services/RankingCalculator.ts,
+ * not rewritten, to preserve bug fixes.
+ *
+ * @module @toastmasters/analytics-core/rankings
  */
 
-import { logger } from '../utils/logger.js'
 import type {
-  DistrictStatistics,
-  AllDistrictsCSVRecord,
-  DistrictRankingData,
-} from '../types/districts.js'
+  AllDistrictsRankingsData,
+  AllDistrictsRankingsMetadata,
+  DistrictRanking,
+} from '@toastmasters/shared-contracts'
 
 /**
- * Data structure for district ranking information
+ * Logger interface for ranking calculator.
+ * Allows injection of custom logging implementation.
  */
-export interface RankingCalculator {
+export interface RankingLogger {
+  info(message: string, context?: Record<string, unknown>): void
+  warn(message: string, context?: Record<string, unknown>): void
+  error(message: string, context?: Record<string, unknown>): void
+  debug(message: string, context?: Record<string, unknown>): void
+}
+
+/**
+ * Default no-op logger for when no logger is provided.
+ */
+const noopLogger: RankingLogger = {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+}
+
+/**
+ * Input district statistics for ranking calculation.
+ * This interface matches the backend DistrictStatistics structure.
+ */
+export interface RankingDistrictStatistics {
+  districtId: string
+  asOfDate: string
+  membership: {
+    total: number
+    change: number
+    changePercent: number
+    byClub: Array<{
+      clubId: string
+      clubName: string
+      memberCount: number
+    }>
+    new?: number
+    renewed?: number
+    dual?: number
+  }
+  clubs: {
+    total: number
+    active: number
+    suspended: number
+    ineligible: number
+    low: number
+    distinguished: number
+    chartered?: number
+  }
+  education: {
+    totalAwards: number
+    byType: Array<{ type: string; count: number }>
+    topClubs: Array<{ clubId: string; clubName: string; awards: number }>
+    byMonth?: Array<{ month: string; count: number }>
+  }
+  goals?: {
+    clubsGoal: number
+    membershipGoal: number
+    distinguishedGoal: number
+  }
+  performance?: {
+    membershipNet: number
+    clubsNet: number
+    distinguishedPercent: number
+  }
+  ranking?: DistrictRankingData
+  districtPerformance?: Array<Record<string, string | number | null>>
+  divisionPerformance?: Array<Record<string, string | number | null>>
+  clubPerformance?: Array<Record<string, string | number | null>>
+}
+
+/**
+ * District ranking data structure.
+ */
+export interface DistrictRankingData {
+  // Individual category ranks (1 = best)
+  clubsRank: number
+  paymentsRank: number
+  distinguishedRank: number
+
+  // Aggregate Borda count score (higher = better)
+  aggregateScore: number
+
+  // Growth metrics used for ranking
+  clubGrowthPercent: number
+  paymentGrowthPercent: number
+  distinguishedPercent: number
+
+  // Base values for growth calculations
+  paidClubBase: number
+  paymentBase: number
+
+  // Absolute values
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+  activeClubs: number
+  selectDistinguished: number
+  presidentsDistinguished: number
+
+  // Regional information
+  region: string
+  districtName: string
+
+  // Algorithm metadata
+  rankingVersion: string
+  calculatedAt: string
+}
+
+/**
+ * Raw CSV data from getAllDistricts API call.
+ */
+export interface AllDistrictsCSVRecord {
+  DISTRICT: string
+  REGION: string
+  'Paid Clubs': string
+  'Paid Club Base': string
+  '% Club Growth': string
+  'Total YTD Payments': string
+  'Payment Base': string
+  '% Payment Growth': string
+  'Active Clubs': string
+  'Total Distinguished Clubs': string
+  'Select Distinguished Clubs': string
+  'Presidents Distinguished Clubs'?: string
+  [key: string]: string | undefined
+}
+
+/**
+ * Interface for ranking calculator.
+ */
+export interface IRankingCalculator {
   /**
    * Calculate rankings for all districts using Borda count system
    */
   calculateRankings(
-    districts: DistrictStatistics[]
-  ): Promise<DistrictStatistics[]>
+    districts: RankingDistrictStatistics[]
+  ): Promise<RankingDistrictStatistics[]>
+
+  /**
+   * Build AllDistrictsRankingsData from ranked districts
+   * @param rankedDistricts - Districts with ranking data (output from calculateRankings)
+   * @param snapshotId - The snapshot ID (date in YYYY-MM-DD format)
+   * @returns AllDistrictsRankingsData structure ready to be written to all-districts-rankings.json
+   */
+  buildRankingsData(
+    rankedDistricts: RankingDistrictStatistics[],
+    snapshotId: string
+  ): AllDistrictsRankingsData
 
   /**
    * Get the current ranking algorithm version
@@ -72,6 +216,13 @@ interface AggregateRanking {
 }
 
 /**
+ * Configuration options for BordaCountRankingCalculator.
+ */
+export interface BordaCountRankingCalculatorConfig {
+  logger?: RankingLogger
+}
+
+/**
  * Borda Count Ranking Calculator implementation
  *
  * Implements the sophisticated ranking system using Borda count scoring:
@@ -80,20 +231,28 @@ interface AggregateRanking {
  * - Calculates Borda points: (total districts - rank + 1)
  * - Sums Borda points across categories for aggregate score
  * - Orders districts by aggregate score (highest first)
+ *
+ * CRITICAL: This code is migrated from backend/src/services/RankingCalculator.ts,
+ * not rewritten, to preserve bug fixes.
  */
-export class BordaCountRankingCalculator implements RankingCalculator {
+export class BordaCountRankingCalculator implements IRankingCalculator {
   private readonly RANKING_VERSION = '2.0'
+  private readonly logger: RankingLogger
+
+  constructor(config?: BordaCountRankingCalculatorConfig) {
+    this.logger = config?.logger ?? noopLogger
+  }
 
   /**
    * Calculate rankings for all districts using Borda count system
    */
   async calculateRankings(
-    districts: DistrictStatistics[]
-  ): Promise<DistrictStatistics[]> {
+    districts: RankingDistrictStatistics[]
+  ): Promise<RankingDistrictStatistics[]> {
     const startTime = Date.now()
     const calculatedAt = new Date().toISOString()
 
-    logger.info('Starting Borda count ranking calculation', {
+    this.logger.info('Starting Borda count ranking calculation', {
       operation: 'calculateRankings',
       districtCount: districts.length,
       rankingVersion: this.RANKING_VERSION,
@@ -102,13 +261,13 @@ export class BordaCountRankingCalculator implements RankingCalculator {
 
     try {
       if (districts.length === 0) {
-        logger.warn('No districts provided for ranking calculation')
+        this.logger.warn('No districts provided for ranking calculation')
         return districts
       }
 
       // Step 1: Extract ranking metrics from district data
       const metrics = this.extractRankingMetrics(districts)
-      logger.debug('Extracted ranking metrics', {
+      this.logger.debug('Extracted ranking metrics', {
         operation: 'calculateRankings',
         metricsCount: metrics.length,
       })
@@ -130,7 +289,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
         'distinguished'
       )
 
-      logger.debug('Calculated category rankings', {
+      this.logger.debug('Calculated category rankings', {
         operation: 'calculateRankings',
         clubRankings: clubRankings.length,
         paymentRankings: paymentRankings.length,
@@ -144,7 +303,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
         distinguishedRankings
       )
 
-      logger.debug('Calculated aggregate rankings', {
+      this.logger.debug('Calculated aggregate rankings', {
         operation: 'calculateRankings',
         aggregateRankings: aggregateRankings.length,
       })
@@ -165,7 +324,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
       })
 
       const duration = Date.now() - startTime
-      logger.info('Completed Borda count ranking calculation', {
+      this.logger.info('Completed Borda count ranking calculation', {
         operation: 'calculateRankings',
         districtCount: sortedDistricts.length,
         rankingVersion: this.RANKING_VERSION,
@@ -179,7 +338,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
         error instanceof Error ? error.message : 'Unknown error'
       const duration = Date.now() - startTime
 
-      logger.error('Ranking calculation failed', {
+      this.logger.error('Ranking calculation failed', {
         operation: 'calculateRankings',
         error: errorMessage,
         districtCount: districts.length,
@@ -199,10 +358,96 @@ export class BordaCountRankingCalculator implements RankingCalculator {
   }
 
   /**
+   * Build AllDistrictsRankingsData from ranked districts.
+   * This method transforms the ranked district statistics into the file format
+   * expected by all-districts-rankings.json.
+   *
+   * @param rankedDistricts - Districts with ranking data (output from calculateRankings)
+   * @param snapshotId - The snapshot ID (date in YYYY-MM-DD format)
+   * @returns AllDistrictsRankingsData structure ready to be written to all-districts-rankings.json
+   */
+  buildRankingsData(
+    rankedDistricts: RankingDistrictStatistics[],
+    snapshotId: string
+  ): AllDistrictsRankingsData {
+    const calculatedAt = new Date().toISOString()
+
+    this.logger.info('Building rankings data structure', {
+      operation: 'buildRankingsData',
+      snapshotId,
+      districtCount: rankedDistricts.length,
+      rankingVersion: this.RANKING_VERSION,
+    })
+
+    // Build metadata
+    const metadata: AllDistrictsRankingsMetadata = {
+      snapshotId,
+      calculatedAt,
+      schemaVersion: '1.0',
+      calculationVersion: '1.0',
+      rankingVersion: this.RANKING_VERSION,
+      sourceCsvDate: snapshotId, // Snapshot ID is the date
+      csvFetchedAt: calculatedAt, // Use calculation time as fetch time
+      totalDistricts: rankedDistricts.length,
+      fromCache: false, // Rankings are freshly computed
+    }
+
+    // Filter districts with ranking data and sort by aggregate score (highest first)
+    const districtsWithRankings = rankedDistricts
+      .filter(district => district.ranking !== undefined)
+      .sort((a, b) => {
+        const scoreA = a.ranking?.aggregateScore ?? 0
+        const scoreB = b.ranking?.aggregateScore ?? 0
+        return scoreB - scoreA
+      })
+
+    // Build rankings array with pre-computed overallRank
+    // overallRank is the position when sorted by aggregateScore (1 = best)
+    const rankings: DistrictRanking[] = districtsWithRankings.map(
+      (district, index) => {
+        const ranking = district.ranking!
+        return {
+          districtId: district.districtId,
+          districtName: ranking.districtName,
+          region: ranking.region,
+          paidClubs: ranking.paidClubs,
+          paidClubBase: ranking.paidClubBase,
+          clubGrowthPercent: ranking.clubGrowthPercent,
+          totalPayments: ranking.totalPayments,
+          paymentBase: ranking.paymentBase,
+          paymentGrowthPercent: ranking.paymentGrowthPercent,
+          activeClubs: ranking.activeClubs,
+          distinguishedClubs: ranking.distinguishedClubs,
+          selectDistinguished: ranking.selectDistinguished,
+          presidentsDistinguished: ranking.presidentsDistinguished,
+          distinguishedPercent: ranking.distinguishedPercent,
+          clubsRank: ranking.clubsRank,
+          paymentsRank: ranking.paymentsRank,
+          distinguishedRank: ranking.distinguishedRank,
+          aggregateScore: ranking.aggregateScore,
+          overallRank: index + 1, // 1-indexed position based on aggregateScore
+        }
+      }
+    )
+
+    this.logger.info('Built rankings data structure', {
+      operation: 'buildRankingsData',
+      snapshotId,
+      totalDistricts: rankings.length,
+      rankingVersion: this.RANKING_VERSION,
+    })
+
+    return {
+      metadata,
+      rankings,
+    }
+  }
+
+  /**
    * Extract ranking metrics from district statistics
    */
   private extractRankingMetrics(
-    districts: DistrictStatistics[]
+    districts: RankingDistrictStatistics[]
   ): RankingMetrics[] {
     const metrics: RankingMetrics[] = []
 
@@ -210,10 +455,10 @@ export class BordaCountRankingCalculator implements RankingCalculator {
       try {
         // Extract metrics from the raw district performance data
         const districtPerformance = district
-          .districtPerformance?.[0] as AllDistrictsCSVRecord
+          .districtPerformance?.[0] as AllDistrictsCSVRecord | undefined
 
         if (!districtPerformance) {
-          logger.warn('No district performance data found', {
+          this.logger.warn('No district performance data found', {
             districtId: district.districtId,
             operation: 'extractRankingMetrics',
           })
@@ -252,7 +497,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
 
         metrics.push(metric)
       } catch (error) {
-        logger.warn('Failed to extract metrics for district', {
+        this.logger.warn('Failed to extract metrics for district', {
           districtId: district.districtId,
           error: error instanceof Error ? error.message : 'Unknown error',
           operation: 'extractRankingMetrics',
@@ -327,7 +572,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
       })
     }
 
-    logger.debug('Calculated category ranking', {
+    this.logger.debug('Calculated category ranking', {
       category,
       totalDistricts: metrics.length,
       uniqueRanks: new Set(rankings.map(r => r.rank)).size,
@@ -381,7 +626,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
       (a, b) => b.aggregateScore - a.aggregateScore
     )
 
-    logger.debug('Calculated aggregate rankings', {
+    this.logger.debug('Calculated aggregate rankings', {
       totalDistricts: sortedAggregates.length,
       highestScore: sortedAggregates[0]?.aggregateScore || 0,
       lowestScore:
@@ -396,11 +641,11 @@ export class BordaCountRankingCalculator implements RankingCalculator {
    * Apply calculated rankings to district statistics
    */
   private applyRankingsToDistricts(
-    districts: DistrictStatistics[],
+    districts: RankingDistrictStatistics[],
     metrics: RankingMetrics[],
     aggregateRankings: AggregateRanking[],
     calculatedAt: string
-  ): DistrictStatistics[] {
+  ): RankingDistrictStatistics[] {
     const metricsMap = new Map(metrics.map(m => [m.districtId, m]))
     const rankingsMap = new Map(aggregateRankings.map(r => [r.districtId, r]))
 
@@ -410,7 +655,7 @@ export class BordaCountRankingCalculator implements RankingCalculator {
 
       if (!metric || !ranking) {
         // Return district without ranking data if metrics/rankings are missing
-        logger.warn('Missing metrics or rankings for district', {
+        this.logger.warn('Missing metrics or rankings for district', {
           districtId: district.districtId,
           hasMetric: !!metric,
           hasRanking: !!ranking,

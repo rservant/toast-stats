@@ -67,12 +67,7 @@ export const districtConfigService = new DistrictConfigurationService(
   storageProviders.districtConfigStorage
 )
 
-// Initialize ranking calculator and services (async initialization)
-let _rankingCalculator:
-  | Awaited<
-      typeof import('../../services/RankingCalculator.js')
-    >['BordaCountRankingCalculator']['prototype']
-  | null = null
+// Initialize services (async initialization)
 let _refreshService: RefreshService | null = null
 let _backfillService: BackfillService | null = null
 let _preComputedAnalyticsService: PreComputedAnalyticsService | null = null
@@ -80,11 +75,7 @@ let _timeSeriesIndexService: ITimeSeriesIndexService | null = null
 
 // Async initialization function
 async function initializeServices(): Promise<void> {
-  if (_rankingCalculator) return // Already initialized
-
-  const { BordaCountRankingCalculator } =
-    await import('../../services/RankingCalculator.js')
-  _rankingCalculator = new BordaCountRankingCalculator()
+  if (_refreshService) return // Already initialized
 
   // Initialize PreComputedAnalyticsService
   const snapshotsDir = `${cacheDirectory}/snapshots`
@@ -92,21 +83,22 @@ async function initializeServices(): Promise<void> {
     snapshotsDir,
   })
 
-  // Initialize TimeSeriesIndexService
+  // Initialize TimeSeriesIndexService (read-only, for serving pre-computed data)
   _timeSeriesIndexService = new TimeSeriesIndexService({
     cacheDir: cacheDirectory,
   })
 
+  // RefreshService no longer takes timeSeriesIndexService or rankingCalculator
+  // Time-series data and rankings are now pre-computed by scraper-cli
   _refreshService = new RefreshService(
     snapshotStore,
     rawCSVCacheService,
     districtConfigService,
-    _rankingCalculator,
+    undefined, // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     undefined, // closingPeriodDetector
     undefined, // dataNormalizer
     undefined, // validator
-    _preComputedAnalyticsService,
-    _timeSeriesIndexService
+    _preComputedAnalyticsService
   )
 
   _backfillService = new BackfillService(
@@ -116,7 +108,7 @@ async function initializeServices(): Promise<void> {
     districtConfigService,
     undefined, // alertManager
     undefined, // circuitBreakerManager
-    _rankingCalculator
+    undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
   )
 }
 

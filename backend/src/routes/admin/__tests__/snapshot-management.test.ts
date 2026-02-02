@@ -175,6 +175,128 @@ describe('Snapshot Management Routes', () => {
   }
 
   /**
+   * Helper to write time-series data directly to files
+   * (TimeSeriesIndexService is now read-only, so we write files directly for tests)
+   */
+  const writeTimeSeriesDataPoint = async (
+    districtId: string,
+    dataPoint: {
+      date: string
+      snapshotId: string
+      membership: number
+      payments: number
+      dcpGoals: number
+      distinguishedTotal: number
+      clubCounts: {
+        total: number
+        thriving: number
+        vulnerable: number
+        interventionRequired: number
+      }
+    }
+  ): Promise<void> => {
+    // Determine program year from date
+    const date = new Date(dataPoint.date)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1 // 1-indexed
+    const programYear =
+      month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
+
+    const districtDir = path.join(tempDir, 'time-series', `district_${districtId}`)
+    await fs.mkdir(districtDir, { recursive: true })
+
+    const indexFilePath = path.join(districtDir, `${programYear}.json`)
+
+    // Read existing index or create new one
+    let indexFile: {
+      districtId: string
+      programYear: string
+      startDate: string
+      endDate: string
+      lastUpdated: string
+      dataPoints: typeof dataPoint[]
+      summary: {
+        totalDataPoints: number
+        membershipStart: number
+        membershipEnd: number
+        membershipPeak: number
+        membershipLow: number
+      }
+    }
+
+    try {
+      const content = await fs.readFile(indexFilePath, 'utf-8')
+      indexFile = JSON.parse(content)
+    } catch {
+      // Create new index file
+      const startYear = parseInt(programYear.split('-')[0]!)
+      indexFile = {
+        districtId,
+        programYear,
+        startDate: `${startYear}-07-01`,
+        endDate: `${startYear + 1}-06-30`,
+        lastUpdated: new Date().toISOString(),
+        dataPoints: [],
+        summary: {
+          totalDataPoints: 0,
+          membershipStart: 0,
+          membershipEnd: 0,
+          membershipPeak: 0,
+          membershipLow: 0,
+        },
+      }
+    }
+
+    // Add data point
+    indexFile.dataPoints.push(dataPoint)
+    indexFile.lastUpdated = new Date().toISOString()
+    indexFile.summary.totalDataPoints = indexFile.dataPoints.length
+
+    await fs.writeFile(indexFilePath, JSON.stringify(indexFile, null, 2))
+  }
+
+  /**
+   * Helper to write analytics summary file directly
+   * (PreComputedAnalyticsService is now read-only, so we write files directly for tests)
+   */
+  const writeAnalyticsSummary = async (
+    dateStr: string,
+    districtIds: string[]
+  ): Promise<void> => {
+    const snapshotDir = path.join(tempDir, 'snapshots', dateStr)
+    await fs.mkdir(snapshotDir, { recursive: true })
+
+    const analyticsSummary = {
+      snapshotId: dateStr,
+      computedAt: new Date().toISOString(),
+      schemaVersion: '1.0.0',
+      districts: Object.fromEntries(
+        districtIds.map(id => [
+          id,
+          {
+            districtId: id,
+            totalMembership: 100,
+            totalPayments: 1000,
+            totalDCPGoals: 50,
+            clubCounts: {
+              total: 10,
+              thriving: 5,
+              vulnerable: 3,
+              interventionRequired: 2,
+            },
+            distinguishedTotal: 3,
+          },
+        ])
+      ),
+    }
+
+    await fs.writeFile(
+      path.join(snapshotDir, 'analytics-summary.json'),
+      JSON.stringify(analyticsSummary, null, 2)
+    )
+  }
+
+  /**
    * Helper to create a snapshot with pre-computed analytics and time-series entries
    */
   const createSnapshotWithAnalytics = async (
@@ -186,15 +308,13 @@ describe('Snapshot Management Routes', () => {
     // Write snapshot
     await testSnapshotStore.writeSnapshot(snapshot)
 
-    // Compute and store analytics
-    await testPreComputedAnalyticsService.computeAndStore(
-      dateStr,
-      snapshot.payload.districts
-    )
+    // Write analytics summary file directly
+    // (PreComputedAnalyticsService is now read-only per data-computation-separation steering)
+    await writeAnalyticsSummary(dateStr, districtIds)
 
-    // Add time-series entries for each district
+    // Add time-series entries for each district (write directly to files)
     for (const district of snapshot.payload.districts) {
-      await testTimeSeriesIndexService.appendDataPoint(district.districtId, {
+      await writeTimeSeriesDataPoint(district.districtId, {
         date: dateStr,
         snapshotId: dateStr,
         membership: district.membership?.total ?? 0,

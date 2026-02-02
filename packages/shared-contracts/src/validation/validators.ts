@@ -8,17 +8,29 @@
  * that indicates success or failure with the validated data or error message.
  *
  * @module validation/validators
- * @see Requirements 6.4, 6.5
+ * @see Requirements 6.4, 6.5, 13.5
  */
 
 import { PerDistrictDataSchema } from '../schemas/per-district-data.schema.js'
 import { AllDistrictsRankingsDataSchema } from '../schemas/all-districts-rankings.schema.js'
 import { SnapshotMetadataFileSchema } from '../schemas/snapshot-metadata.schema.js'
 import { SnapshotManifestSchema } from '../schemas/snapshot-manifest.schema.js'
+import {
+  TimeSeriesDataPointSchema,
+  ProgramYearIndexFileSchema,
+  TimeSeriesIndexMetadataSchema,
+  ProgramYearSummarySchema,
+} from '../schemas/time-series.schema.js'
 import type { PerDistrictData } from '../types/per-district-data.js'
 import type { AllDistrictsRankingsData } from '../types/all-districts-rankings.js'
 import type { SnapshotMetadataFile } from '../types/snapshot-metadata.js'
 import type { SnapshotManifest } from '../types/snapshot-manifest.js'
+import type {
+  TimeSeriesDataPoint,
+  ProgramYearIndexFile,
+  TimeSeriesIndexMetadata,
+  ProgramYearSummary,
+} from '../types/time-series.js'
 
 /**
  * Result of a validation operation.
@@ -193,5 +205,153 @@ export function validateSnapshotManifest(
   return {
     success: false,
     error: `SnapshotManifest validation failed: ${result.error.message}`,
+  }
+}
+
+
+/**
+ * Validates a time-series data point against the TimeSeriesDataPoint schema.
+ *
+ * Use this function to validate individual time-series data points
+ * read from disk or generated during computation.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed TimeSeriesDataPoint on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateTimeSeriesDataPoint(jsonData)
+ * if (result.success) {
+ *   const dataPoint = result.data
+ *   console.log(`Date: ${dataPoint.date}, Membership: ${dataPoint.membership}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 13.5
+ */
+export function validateTimeSeriesDataPoint(
+  data: unknown
+): ValidationResult<TimeSeriesDataPoint> {
+  const result = TimeSeriesDataPointSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `TimeSeriesDataPoint validation failed: ${result.error.message}`,
+  }
+}
+
+/**
+ * Validates a program year index file against the ProgramYearIndexFile schema.
+ *
+ * Use this function to validate program year index JSON files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed ProgramYearIndexFile on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateProgramYearIndexFile(jsonData)
+ * if (result.success) {
+ *   const indexFile = result.data
+ *   console.log(`District: ${indexFile.districtId}, Year: ${indexFile.programYear}`)
+ *   console.log(`Data points: ${indexFile.dataPoints.length}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 13.5
+ */
+export function validateProgramYearIndexFile(
+  data: unknown
+): ValidationResult<ProgramYearIndexFile> {
+  const result = ProgramYearIndexFileSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `ProgramYearIndexFile validation failed: ${result.error.message}`,
+  }
+}
+
+/**
+ * Validates time-series index metadata against the TimeSeriesIndexMetadata schema.
+ *
+ * Use this function to validate index-metadata.json files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed TimeSeriesIndexMetadata on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateTimeSeriesIndexMetadata(jsonData)
+ * if (result.success) {
+ *   const metadata = result.data
+ *   console.log(`District: ${metadata.districtId}`)
+ *   console.log(`Available years: ${metadata.availableProgramYears.join(', ')}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 13.5
+ */
+export function validateTimeSeriesIndexMetadata(
+  data: unknown
+): ValidationResult<TimeSeriesIndexMetadata> {
+  const result = TimeSeriesIndexMetadataSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `TimeSeriesIndexMetadata validation failed: ${result.error.message}`,
+  }
+}
+
+/**
+ * Validates a program year summary against the ProgramYearSummary schema.
+ *
+ * Use this function to validate program year summary data
+ * read from disk or generated during computation.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed ProgramYearSummary on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateProgramYearSummary(jsonData)
+ * if (result.success) {
+ *   const summary = result.data
+ *   console.log(`Total data points: ${summary.totalDataPoints}`)
+ *   console.log(`Membership peak: ${summary.membershipPeak}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 13.5
+ */
+export function validateProgramYearSummary(
+  data: unknown
+): ValidationResult<ProgramYearSummary> {
+  const result = ProgramYearSummarySchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `ProgramYearSummary validation failed: ${result.error.message}`,
   }
 }

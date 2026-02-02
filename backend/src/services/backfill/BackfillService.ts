@@ -6,9 +6,12 @@
  *
  * Storage Abstraction: Uses ISnapshotStorage interface to support both
  * local filesystem and cloud storage backends (Requirements 1.3, 1.4).
+ *
+ * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+ * This service no longer performs ranking calculations per the data-computation-separation
+ * steering document.
  */
 
-import { parse } from 'csv-parse/sync'
 import { logger } from '../../utils/logger.js'
 import {
   CircuitBreaker,
@@ -27,25 +30,16 @@ import {
 } from '../../utils/IntermediateCache.js'
 import { RefreshService } from '../RefreshService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
-import { StorageProviderFactory } from '../storage/StorageProviderFactory.js'
-import type { RankingCalculator } from '../RankingCalculator.js'
 import type {
   DistrictStatistics,
-  ScrapedRecord,
 } from '../../types/districts.js'
 import type {
   Snapshot,
   SnapshotStore,
   NormalizedData,
   AllDistrictsRankingsData,
-  DistrictRanking,
 } from '../../types/snapshots.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
-import { CSVType } from '../../types/rawCSVCache.js'
-import {
-  DistrictIdValidator,
-  type IDistrictIdValidator,
-} from '../DistrictIdValidator.js'
 
 import { JobManager } from './JobManager.js'
 import { DataSourceSelector } from './DataSourceSelector.js'
@@ -75,8 +69,6 @@ export class BackfillService {
   private _dashboardCircuitBreaker: CircuitBreaker
   // @ts-expect-error - These will be used in future implementations
   private _cacheCircuitBreaker: CircuitBreaker
-  private rankingCalculator?: RankingCalculator
-  private readonly districtIdValidator: IDistrictIdValidator
 
   // Performance optimization components (Requirement 9.1, 9.2, 9.3)
   private rateLimiter: RateLimiter
@@ -86,13 +78,17 @@ export class BackfillService {
   /**
    * Create a new BackfillService instance
    *
+   * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+   * This service no longer performs ranking calculations per the data-computation-separation
+   * steering document.
+   *
    * @param refreshService - Service for executing refresh operations
    * @param snapshotStore - Storage interface for snapshot operations (ISnapshotStorage)
    *                        Supports both local filesystem and cloud storage backends
    * @param configService - District configuration service
    * @param alertManager - Optional alert manager for notifications
    * @param circuitBreakerManager - Optional circuit breaker manager
-   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
+   * @param _rankingCalculator - DEPRECATED: Rankings are pre-computed by scraper-cli (kept for backward compatibility)
    */
   constructor(
     refreshService: RefreshService,
@@ -100,26 +96,20 @@ export class BackfillService {
     configService: DistrictConfigurationService,
     alertManager?: AlertManager,
     circuitBreakerManager?: ICircuitBreakerManager,
-    rankingCalculator?: RankingCalculator
+    _rankingCalculator?: unknown // DEPRECATED: Rankings are pre-computed by scraper-cli
   ) {
     this._refreshService = refreshService
     // ISnapshotStorage is a superset of SnapshotStore, so we can safely cast
     this.snapshotStore = snapshotStore as ISnapshotStorage
     this.configService = configService
     this._alertManager = alertManager || new AlertManager()
-    if (rankingCalculator !== undefined) {
-      this.rankingCalculator = rankingCalculator
-    }
-
-    // Initialize district ID validator for filtering invalid records
-    this.districtIdValidator = new DistrictIdValidator()
 
     // Initialize managers
     this.jobManager = new JobManager()
     this.dataSourceSelector = new DataSourceSelector(
       refreshService,
       snapshotStore,
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     this.scopeManager = new ScopeManager(configService)
 
@@ -172,11 +162,9 @@ export class BackfillService {
     )
 
     logger.info(
-      'Unified BackfillService initialized with performance optimizations and ranking calculator',
+      'Unified BackfillService initialized with performance optimizations',
       {
         operation: 'constructor',
-        hasRankingCalculator: !!this.rankingCalculator,
-        rankingVersion: this.rankingCalculator?.getRankingVersion(),
         circuitBreakers: [
           'unified-backfill-dashboard',
           'unified-backfill-cache',
@@ -983,22 +971,26 @@ export class BackfillService {
     })
 
     try {
-      // Step 1: Fetch All Districts CSV data for ranking calculation
+      // NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+      // The backend no longer performs ranking calculations per the data-computation-separation
+      // steering document. Pre-computed rankings are read from all-districts-rankings.json.
       let allDistrictsRankings: AllDistrictsRankingsData | undefined
       let effectiveSnapshotDate = date
 
-      if (this.rankingCalculator) {
+      // Try to read pre-computed rankings from the snapshot
+      if ('readAllDistrictsRankings' in this.snapshotStore) {
         try {
+          const perDistrictStore = this.snapshotStore as {
+            readAllDistrictsRankings: (
+              snapshotId: string
+            ) => Promise<AllDistrictsRankingsData | null>
+          }
           allDistrictsRankings =
-            await this.fetchAndCalculateAllDistrictsRankings(
-              backfillId,
-              date,
-              `${Date.parse(date)}-partial-${Date.now()}`
-            )
+            (await perDistrictStore.readAllDistrictsRankings(date)) ?? undefined
           if (allDistrictsRankings?.metadata?.snapshotId) {
             effectiveSnapshotDate = allDistrictsRankings.metadata.snapshotId
             logger.info(
-              'Using closing period-aware snapshot date from rankings',
+              'Using closing period-aware snapshot date from pre-computed rankings',
               {
                 backfillId,
                 requestedDate: date,
@@ -1010,8 +1002,8 @@ export class BackfillService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
-          logger.error(
-            'Failed to calculate all-districts rankings, continuing without rankings',
+          logger.warn(
+            'Failed to read pre-computed rankings, continuing without rankings',
             {
               backfillId,
               date,
@@ -1132,8 +1124,7 @@ export class BackfillService {
         snapshot_id: snapshotId,
         created_at: new Date().toISOString(),
         schema_version: '2.0.0',
-        calculation_version:
-          this.rankingCalculator?.getRankingVersion() || '1.0.0',
+        calculation_version: '2.0', // Rankings are pre-computed by scraper-cli
         status: failedDistricts.length > 0 ? 'partial' : 'success',
         errors: errors.map(e => e.error),
         payload: normalizedData,
@@ -1234,237 +1225,6 @@ export class BackfillService {
   }
 
   /**
-   * Fetch All Districts CSV from cache and calculate rankings for ALL districts
-   *
-   * Note: This method now reads from cached data only. If data is not in the cache,
-   * the scraper-cli tool must be run first to populate the cache.
-   *
-   * Storage Abstraction: Uses IRawCSVStorage interface to support both
-   * local filesystem and GCS storage backends (Requirements 1.3, 1.4).
-   */
-  private async fetchAndCalculateAllDistrictsRankings(
-    backfillId: string,
-    date: string,
-    snapshotId: string
-  ): Promise<AllDistrictsRankingsData> {
-    logger.info(
-      'Reading All Districts CSV from cache for rankings calculation',
-      {
-        backfillId,
-        date,
-        snapshotId,
-        operation: 'fetchAndCalculateAllDistrictsRankings',
-      }
-    )
-
-    // Use storage abstraction layer to respect STORAGE_PROVIDER env var
-    // - STORAGE_PROVIDER=gcp: Uses GCSRawCSVStorage (reads from GCS bucket)
-    // - STORAGE_PROVIDER=local or unset: Uses LocalRawCSVStorage (reads from local filesystem)
-    const storageProviders = StorageProviderFactory.createFromEnvironment()
-    const rawCSVStorage = storageProviders.rawCSVStorage
-
-    try {
-      // Read raw CSV content from cache
-      const csvContent = await rawCSVStorage.getCachedCSV(
-        date,
-        CSVType.ALL_DISTRICTS
-      )
-
-      if (!csvContent) {
-        throw new Error(
-          `No cached All Districts CSV available for date ${date}. Please run scraper-cli to collect data first: npx scraper-cli scrape --date ${date}`
-        )
-      }
-
-      // Parse CSV content into records
-      const allDistrictsData = this.parseCSVContent(csvContent)
-
-      if (allDistrictsData.length === 0) {
-        throw new Error(
-          `No valid records found in All Districts CSV for date ${date}. Please run scraper-cli to collect data first: npx scraper-cli scrape --date ${date}`
-        )
-      }
-
-      // Filter invalid district IDs before processing (Requirements 2.1, 2.2, 2.3, 2.4)
-      const validationResult =
-        this.districtIdValidator.filterValidRecords(allDistrictsData)
-      const validRecords = validationResult.valid
-
-      // Log validation summary if records were rejected
-      if (validationResult.rejected.length > 0) {
-        logger.info(
-          'Filtered invalid district records during backfill rankings calculation',
-          {
-            backfillId,
-            date,
-            totalRecords: allDistrictsData.length,
-            validRecords: validRecords.length,
-            rejectedRecords: validationResult.rejected.length,
-            operation: 'fetchAndCalculateAllDistrictsRankings',
-          }
-        )
-      }
-
-      // Throw error if no valid records remain after filtering
-      if (validRecords.length === 0) {
-        throw new Error(
-          `No valid district records found in All Districts CSV for date ${date} after filtering invalid IDs.`
-        )
-      }
-
-      const cacheMetadata = await rawCSVStorage.getCacheMetadata(date)
-      const actualCsvDate = cacheMetadata?.date || date
-
-      const closingPeriodInfo = this.detectClosingPeriodFromMetadata(
-        date,
-        actualCsvDate,
-        cacheMetadata?.dataMonth,
-        cacheMetadata?.isClosingPeriod
-      )
-
-      logger.info('All Districts CSV read from cache successfully', {
-        backfillId,
-        requestedDate: date,
-        actualCsvDate,
-        recordCount: validRecords.length,
-        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
-        snapshotDate: closingPeriodInfo.snapshotDate,
-        dataMonth: closingPeriodInfo.dataMonth,
-        operation: 'fetchAndCalculateAllDistrictsRankings',
-      })
-
-      // Convert filtered CSV records to DistrictStatistics format for ranking calculation
-      const districtStats: DistrictStatistics[] = validRecords.map(record => {
-        const districtId = String(
-          record['DISTRICT'] || record['District'] || ''
-        )
-          .replace(/^District\s+/i, '')
-          .trim()
-
-        return {
-          districtId,
-          asOfDate: actualCsvDate,
-          membership: {
-            total: 0,
-            change: 0,
-            changePercent: 0,
-            byClub: [],
-          },
-          clubs: {
-            total: 0,
-            active: 0,
-            suspended: 0,
-            ineligible: 0,
-            low: 0,
-            distinguished: 0,
-          },
-          education: {
-            totalAwards: 0,
-            byType: [],
-            topClubs: [],
-          },
-          districtPerformance: [record],
-          divisionPerformance: [],
-          clubPerformance: [],
-        }
-      })
-
-      logger.debug('Converted All Districts CSV to DistrictStatistics', {
-        backfillId,
-        date,
-        inputCount: validRecords.length,
-        outputCount: districtStats.length,
-        operation: 'fetchAndCalculateAllDistrictsRankings',
-      })
-
-      if (!this.rankingCalculator) {
-        throw new Error('Ranking calculator not available')
-      }
-
-      const rankedDistricts =
-        await this.rankingCalculator.calculateRankings(districtStats)
-
-      logger.info('Rankings calculated for all districts', {
-        backfillId,
-        date,
-        rankedCount: rankedDistricts.length,
-        rankedWithData: rankedDistricts.filter(d => d.ranking).length,
-        rankingVersion: this.rankingCalculator.getRankingVersion(),
-        operation: 'fetchAndCalculateAllDistrictsRankings',
-      })
-
-      // Build AllDistrictsRankingsData structure
-      const rankings: DistrictRanking[] = rankedDistricts
-        .filter(d => d.ranking)
-        .map(d => {
-          const ranking = d.ranking!
-          return {
-            districtId: d.districtId,
-            districtName: ranking.districtName,
-            region: ranking.region,
-            paidClubs: ranking.paidClubs,
-            paidClubBase: ranking.paidClubBase,
-            clubGrowthPercent: ranking.clubGrowthPercent,
-            totalPayments: ranking.totalPayments,
-            paymentBase: ranking.paymentBase,
-            paymentGrowthPercent: ranking.paymentGrowthPercent,
-            activeClubs: ranking.activeClubs,
-            distinguishedClubs: ranking.distinguishedClubs,
-            selectDistinguished: ranking.selectDistinguished,
-            presidentsDistinguished: ranking.presidentsDistinguished,
-            distinguishedPercent: ranking.distinguishedPercent,
-            clubsRank: ranking.clubsRank,
-            paymentsRank: ranking.paymentsRank,
-            distinguishedRank: ranking.distinguishedRank,
-            aggregateScore: ranking.aggregateScore,
-          }
-        })
-
-      const allDistrictsRankings: AllDistrictsRankingsData = {
-        metadata: {
-          snapshotId: closingPeriodInfo.snapshotDate,
-          calculatedAt: new Date().toISOString(),
-          schemaVersion: '2.0.0',
-          calculationVersion: this.rankingCalculator.getRankingVersion(),
-          rankingVersion: this.rankingCalculator.getRankingVersion(),
-          sourceCsvDate: closingPeriodInfo.collectionDate,
-          csvFetchedAt: new Date().toISOString(),
-          totalDistricts: rankings.length,
-          fromCache: false,
-        },
-        rankings,
-      }
-
-      logger.info('All-districts rankings generated successfully', {
-        backfillId,
-        date,
-        snapshotId,
-        snapshotDate: closingPeriodInfo.snapshotDate,
-        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
-        totalDistricts: rankings.length,
-        rankingVersion: this.rankingCalculator.getRankingVersion(),
-        operation: 'fetchAndCalculateAllDistrictsRankings',
-      })
-
-      return allDistrictsRankings
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error(
-        'Failed to fetch and calculate all districts rankings from cache',
-        {
-          backfillId,
-          date,
-          snapshotId,
-          error: errorMessage,
-          operation: 'fetchAndCalculateAllDistrictsRankings',
-        }
-      )
-      throw error
-    }
-  }
-
-  /**
    * Check if a date is the last day of its month
    */
   private isLastDayOfMonth(dateString: string): boolean {
@@ -1472,146 +1232,6 @@ export class BackfillService {
     const nextDay = new Date(date)
     nextDay.setUTCDate(date.getUTCDate() + 1)
     return nextDay.getUTCMonth() !== date.getUTCMonth()
-  }
-
-  /**
-   * Detect closing period from cache metadata and determine the correct snapshot date
-   */
-  private detectClosingPeriodFromMetadata(
-    requestedDate: string,
-    actualCsvDate: string,
-    dataMonth?: string,
-    isClosingPeriod?: boolean
-  ): {
-    isClosingPeriod: boolean
-    dataMonth: string
-    snapshotDate: string
-    collectionDate: string
-  } {
-    try {
-      const csvDateObj = new Date(actualCsvDate + 'T00:00:00')
-      const csvYear = csvDateObj.getUTCFullYear()
-      const csvMonth = csvDateObj.getUTCMonth() + 1
-
-      // If we have explicit closing period info from cache metadata, use it
-      if (isClosingPeriod && dataMonth) {
-        const [yearStr, monthStr] = dataMonth.split('-')
-        const dataYear = parseInt(yearStr!, 10)
-        const dataMonthNum = parseInt(monthStr!, 10)
-
-        const lastDay = new Date(
-          Date.UTC(dataYear, dataMonthNum, 0)
-        ).getUTCDate()
-        const snapshotDate = `${dataYear}-${dataMonthNum.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
-
-        logger.info('Closing period detected from cache metadata', {
-          requestedDate,
-          actualCsvDate,
-          dataMonth,
-          snapshotDate,
-          operation: 'detectClosingPeriodFromMetadata',
-        })
-
-        return {
-          isClosingPeriod: true,
-          dataMonth,
-          snapshotDate,
-          collectionDate: actualCsvDate,
-        }
-      }
-
-      // Fallback: derive data month from the actual CSV date
-      const requestedDateObj = new Date(requestedDate + 'T00:00:00')
-      const requestedYear = requestedDateObj.getUTCFullYear()
-      const requestedMonth = requestedDateObj.getUTCMonth() + 1
-
-      const isImplicitClosingPeriod =
-        csvYear > requestedYear ||
-        (csvYear === requestedYear && csvMonth > requestedMonth)
-
-      if (isImplicitClosingPeriod) {
-        const lastDay = new Date(
-          Date.UTC(requestedYear, requestedMonth, 0)
-        ).getUTCDate()
-        const snapshotDate = `${requestedYear}-${requestedMonth.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
-        const derivedDataMonth = `${requestedYear}-${requestedMonth.toString().padStart(2, '0')}`
-
-        logger.info('Closing period detected from date comparison', {
-          requestedDate,
-          actualCsvDate,
-          derivedDataMonth,
-          snapshotDate,
-          operation: 'detectClosingPeriodFromMetadata',
-        })
-
-        return {
-          isClosingPeriod: true,
-          dataMonth: derivedDataMonth,
-          snapshotDate,
-          collectionDate: actualCsvDate,
-        }
-      }
-
-      const derivedDataMonth = `${csvYear}-${csvMonth.toString().padStart(2, '0')}`
-
-      return {
-        isClosingPeriod: false,
-        dataMonth: derivedDataMonth,
-        snapshotDate: actualCsvDate,
-        collectionDate: actualCsvDate,
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error(
-        'Error detecting closing period, using actual CSV date as snapshot date',
-        {
-          requestedDate,
-          actualCsvDate,
-          dataMonth,
-          error: errorMessage,
-          operation: 'detectClosingPeriodFromMetadata',
-        }
-      )
-
-      return {
-        isClosingPeriod: false,
-        dataMonth: dataMonth || actualCsvDate.substring(0, 7),
-        snapshotDate: actualCsvDate,
-        collectionDate: actualCsvDate,
-      }
-    }
-  }
-
-  /**
-   * Parse CSV content into ScrapedRecord array
-   *
-   * Uses csv-parse/sync for robust CSV parsing with proper handling of
-   * quoted values, escaped characters, and various CSV formats.
-   *
-   * @param csvContent - Raw CSV content as a string
-   * @returns Array of parsed records
-   */
-  private parseCSVContent(csvContent: string): ScrapedRecord[] {
-    try {
-      const records = parse(csvContent, {
-        columns: true,
-        skip_empty_lines: true,
-        trim: true,
-        relax_column_count: true,
-        skip_records_with_error: true,
-      }) as ScrapedRecord[]
-
-      return records
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to parse CSV content', {
-        error: errorMessage,
-        operation: 'parseCSVContent',
-      })
-      return []
-    }
   }
 
   /**

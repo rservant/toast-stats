@@ -380,17 +380,21 @@ describe('Pipeline Integration Tests', () => {
         `district_${districtId}.json`
       )
       const snapshotContent = await fs.readFile(snapshotPath, 'utf-8')
-      const snapshot = JSON.parse(snapshotContent) as {
+      // TransformService writes PerDistrictData wrapper format
+      const wrapper = JSON.parse(snapshotContent) as {
         districtId: string
-        snapshotDate: string
-        clubs: Array<{ clubId: string; clubName: string }>
-        divisions: Array<{ divisionId: string }>
+        data: {
+          districtId: string
+          snapshotDate: string
+          clubs: Array<{ clubId: string; clubName: string }>
+          divisions: Array<{ divisionId: string }>
+        }
       }
 
-      expect(snapshot.districtId).toBe(districtId)
-      expect(snapshot.snapshotDate).toBe(date)
-      expect(snapshot.clubs).toHaveLength(4) // 4 clubs in SAMPLE_CLUB_CSV_DISTRICT_1
-      expect(snapshot.divisions).toHaveLength(2) // 2 divisions
+      expect(wrapper.districtId).toBe(districtId)
+      expect(wrapper.data.snapshotDate).toBe(date)
+      expect(wrapper.data.clubs).toHaveLength(4) // 4 clubs in SAMPLE_CLUB_CSV_DISTRICT_1
+      expect(wrapper.data.divisions).toHaveLength(2) // 2 divisions
     })
   })
 
@@ -800,7 +804,7 @@ describe('Pipeline Integration Tests', () => {
       await transformService.transform({ date })
       await analyticsComputeService.compute({ date })
 
-      // Read snapshot
+      // Read snapshot (PerDistrictData wrapper format)
       const snapshotPath = path.join(
         testCache.path,
         'snapshots',
@@ -808,10 +812,13 @@ describe('Pipeline Integration Tests', () => {
         `district_${districtId}.json`
       )
       const snapshotContent = await fs.readFile(snapshotPath, 'utf-8')
-      const snapshot = JSON.parse(snapshotContent) as {
-        clubs: Array<{ membershipCount: number }>
-        totals: { totalMembership: number }
+      const wrapper = JSON.parse(snapshotContent) as {
+        data: {
+          clubs: Array<{ membershipCount: number }>
+          totals: { totalMembership: number }
+        }
       }
+      const snapshot = wrapper.data
 
       // Read analytics
       const analyticsPath = path.join(

@@ -2,13 +2,15 @@
  * RefreshService Tests
  *
  * Tests for RefreshService functionality using SnapshotBuilder
- * The rankings calculation is now handled by SnapshotBuilder
+ * 
+ * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+ * The backend no longer performs ranking calculations per the data-computation-separation
+ * steering document.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { RefreshService } from '../RefreshService.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
-import { BordaCountRankingCalculator } from '../RankingCalculator.js'
 import {
   FileSnapshotStore,
   PerDistrictFileSnapshotStore,
@@ -22,7 +24,6 @@ describe('RefreshService', () => {
   let refreshService: RefreshService
   let mockSnapshotStore: PerDistrictFileSnapshotStore
   let mockRawCSVCache: RawCSVCacheService
-  let rankingCalculator: BordaCountRankingCalculator
   let testCleanup: { cleanup: TestSelfCleanup; afterEach: () => Promise<void> }
 
   beforeEach(async () => {
@@ -46,13 +47,12 @@ describe('RefreshService', () => {
       getCacheMetadata: vi.fn().mockResolvedValue(null),
     } as unknown as RawCSVCacheService
 
-    rankingCalculator = new BordaCountRankingCalculator()
-
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     refreshService = new RefreshService(
       mockSnapshotStore,
       mockRawCSVCache,
       undefined, // districtConfigService
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
   })
 

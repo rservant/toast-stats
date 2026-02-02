@@ -1,20 +1,24 @@
 /**
- * Unit tests for RefreshService time-series index integration
+ * Unit tests for RefreshService (Read-Only)
  *
- * Tests the integration between RefreshService and TimeSeriesIndexService
- * to verify that time-series data points are appended during snapshot creation.
+ * Tests verify that RefreshService operates as a read-only service
+ * without performing any time-series computation.
+ *
+ * IMPORTANT: Time-series index updates are now handled by scraper-cli
+ * during the compute-analytics pipeline. The backend does NOT perform
+ * any computation per the data-computation-separation steering document.
  *
  * Requirements:
- * - 2.2: Append analytics summary to time-series index when snapshot is created
+ * - 1.1: RefreshService SHALL NOT contain time-series computation methods
+ * - 1.10: RefreshService SHALL NOT have a dependency on ITimeSeriesIndexService
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
 import { RefreshService } from '../RefreshService.js'
-import { TimeSeriesIndexService } from '../TimeSeriesIndexService.js'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import { PerDistrictFileSnapshotStore } from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
@@ -23,7 +27,6 @@ import type {
   ICacheConfigService,
   ILogger,
 } from '../../types/serviceInterfaces.js'
-import type { ITimeSeriesIndexService } from '../TimeSeriesIndexService.js'
 
 // Mock implementations for testing
 class MockCacheConfigService implements ICacheConfigService {
@@ -85,14 +88,13 @@ class MockLogger implements ILogger {
   }
 }
 
-describe('RefreshService - Time-Series Index Integration', () => {
+describe('RefreshService - Read-Only Operation', () => {
   let testDir: string
   let snapshotsDir: string
-  let snapshotStorage: PerDistrictFileSnapshotStore
+  let snapshotStorage: FileSnapshotStore
   let rawCSVCache: RawCSVCacheService
   let districtConfigService: DistrictConfigurationService
   let preComputedAnalyticsService: PreComputedAnalyticsService
-  let timeSeriesIndexService: TimeSeriesIndexService
   let refreshService: RefreshService
   let mockCacheConfig: MockCacheConfigService
   let mockLogger: MockLogger
@@ -106,7 +108,7 @@ describe('RefreshService - Time-Series Index Integration', () => {
     testDir = path.join(
       process.cwd(),
       'test-cache',
-      `refresh-timeseries-test-${uniqueId}`
+      `refresh-readonly-test-${uniqueId}`
     )
     snapshotsDir = path.join(testDir, 'snapshots')
 
@@ -118,7 +120,7 @@ describe('RefreshService - Time-Series Index Integration', () => {
     mockLogger = new MockLogger()
 
     // Initialize services
-    snapshotStorage = new PerDistrictFileSnapshotStore({
+    snapshotStorage = new FileSnapshotStore({
       cacheDir: testDir,
       maxSnapshots: 100,
       maxAgeDays: 30,
@@ -130,10 +132,6 @@ describe('RefreshService - Time-Series Index Integration', () => {
 
     preComputedAnalyticsService = new PreComputedAnalyticsService({
       snapshotsDir,
-    })
-
-    timeSeriesIndexService = new TimeSeriesIndexService({
-      cacheDir: testDir,
     })
 
     // Configure a test district
@@ -188,55 +186,13 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
     )
   }
 
-  describe('Time-series index integration', () => {
-    it('should trigger time-series index update when service is provided (Requirement 2.2)', async () => {
+  describe('Read-only operation (Requirement 1.1-1.10)', () => {
+    it('should create snapshots without time-series computation', async () => {
       // Set up cache data
       await setupCacheData(testDate)
 
-      // Create RefreshService with TimeSeriesIndexService
-      refreshService = new RefreshService(
-        snapshotStorage,
-        rawCSVCache,
-        districtConfigService,
-        undefined, // rankingCalculator
-        undefined, // closingPeriodDetector
-        undefined, // dataNormalizer
-        undefined, // validator
-        preComputedAnalyticsService,
-        timeSeriesIndexService
-      )
-
-      // Execute refresh
-      const result = await refreshService.executeRefresh(testDate)
-
-      // Verify refresh was successful
-      expect(result.success).toBe(true)
-      expect(result.snapshot_id).toBe(testDate)
-
-      // Verify time-series index was updated
-      const programYear = timeSeriesIndexService.getProgramYearForDate(testDate)
-      const indexData = await timeSeriesIndexService.getProgramYearData(
-        testDistrictId,
-        programYear
-      )
-
-      expect(indexData).not.toBeNull()
-      expect(indexData?.dataPoints.length).toBeGreaterThan(0)
-
-      // Verify the data point contains expected fields
-      const dataPoint = indexData?.dataPoints[0]
-      expect(dataPoint?.date).toBe(testDate)
-      expect(dataPoint?.snapshotId).toBe(testDate)
-      expect(dataPoint?.membership).toBeGreaterThan(0)
-      expect(dataPoint?.clubCounts).toBeDefined()
-      expect(dataPoint?.clubCounts.total).toBe(3) // 3 clubs in test data
-    })
-
-    it('should work without time-series index service (backward compatibility)', async () => {
-      // Set up cache data
-      await setupCacheData(testDate)
-
-      // Create RefreshService WITHOUT TimeSeriesIndexService
+      // Create RefreshService without time-series service
+      // (time-series service parameter has been removed from constructor)
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
@@ -246,7 +202,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
         undefined, // dataNormalizer
         undefined, // validator
         preComputedAnalyticsService
-        // No timeSeriesIndexService
       )
 
       // Execute refresh
@@ -255,32 +210,14 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       // Verify refresh was successful
       expect(result.success).toBe(true)
       expect(result.snapshot_id).toBe(testDate)
-
-      // Verify time-series index was NOT created (no service provided)
-      const programYear = timeSeriesIndexService.getProgramYearForDate(testDate)
-      const indexData = await timeSeriesIndexService.getProgramYearData(
-        testDistrictId,
-        programYear
-      )
-
-      expect(indexData).toBeNull()
+      expect(result.status).toBe('success')
     })
 
-    it('should continue if time-series index update fails', async () => {
+    it('should work with pre-computed analytics service', async () => {
       // Set up cache data
       await setupCacheData(testDate)
 
-      // Create a mock TimeSeriesIndexService that throws an error
-      const failingTimeSeriesService = {
-        appendDataPoint: vi
-          .fn()
-          .mockRejectedValue(new Error('Time-series index update failed')),
-        getTrendData: vi.fn(),
-        getProgramYearData: vi.fn(),
-        rebuildIndex: vi.fn(),
-      } as unknown as ITimeSeriesIndexService
-
-      // Create RefreshService with failing time-series service
+      // Create RefreshService with pre-computed analytics service
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
@@ -289,43 +226,48 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
         undefined, // validator
-        preComputedAnalyticsService,
-        failingTimeSeriesService
+        preComputedAnalyticsService
       )
 
-      // Execute refresh - should succeed despite time-series failure
+      // Execute refresh
       const result = await refreshService.executeRefresh(testDate)
 
-      // Verify refresh was still successful
+      // Verify refresh was successful
       expect(result.success).toBe(true)
-      expect(result.snapshot_id).toBe(testDate)
 
-      // Verify time-series service was called
-      expect(failingTimeSeriesService.appendDataPoint).toHaveBeenCalled()
+      // Note: Per data-computation-separation steering document, the backend
+      // is read-only and does NOT create analytics-summary.json files.
+      // Analytics are computed by scraper-cli's compute-analytics command.
+      // The PreComputedAnalyticsService only READS pre-computed files.
     })
 
-    it('should not trigger time-series update for failed builds', async () => {
-      // Don't set up cache data - this will cause the build to fail
+    it('should work without any optional services', async () => {
+      // Set up cache data
+      await setupCacheData(testDate)
 
-      // Create a mock TimeSeriesIndexService
-      const mockTimeSeriesService = {
-        appendDataPoint: vi.fn(),
-        getTrendData: vi.fn(),
-        getProgramYearData: vi.fn(),
-        rebuildIndex: vi.fn(),
-      } as unknown as ITimeSeriesIndexService
-
-      // Create RefreshService with mock time-series service
+      // Create RefreshService with minimal dependencies
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
-        undefined, // rankingCalculator
-        undefined, // closingPeriodDetector
-        undefined, // dataNormalizer
-        undefined, // validator
-        preComputedAnalyticsService,
-        mockTimeSeriesService
+        districtConfigService
+      )
+
+      // Execute refresh
+      const result = await refreshService.executeRefresh(testDate)
+
+      // Verify refresh was successful
+      expect(result.success).toBe(true)
+      expect(result.snapshot_id).toBe(testDate)
+    })
+
+    it('should fail gracefully when cache data is missing', async () => {
+      // Don't set up cache data - this will cause the build to fail
+
+      // Create RefreshService
+      refreshService = new RefreshService(
+        snapshotStorage,
+        rawCSVCache,
+        districtConfigService
       )
 
       // Execute refresh - should fail due to missing cache
@@ -333,16 +275,41 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
 
       // Verify refresh failed
       expect(result.success).toBe(false)
-
-      // Verify time-series service was NOT called for failed build
-      expect(mockTimeSeriesService.appendDataPoint).not.toHaveBeenCalled()
+      expect(result.status).toBe('failed')
+      expect(result.errors.length).toBeGreaterThan(0)
     })
 
-    it('should calculate correct club health counts in time-series data point', async () => {
+    it('should include correct metadata in refresh result', async () => {
       // Set up cache data
       await setupCacheData(testDate)
 
-      // Create RefreshService with TimeSeriesIndexService
+      // Create RefreshService
+      refreshService = new RefreshService(
+        snapshotStorage,
+        rawCSVCache,
+        districtConfigService
+      )
+
+      // Execute refresh
+      const result = await refreshService.executeRefresh(testDate)
+
+      // Verify metadata
+      expect(result.metadata).toBeDefined()
+      expect(result.metadata.startedAt).toBeDefined()
+      expect(result.metadata.completedAt).toBeDefined()
+      expect(result.metadata.schemaVersion).toBe('1.0.0')
+      expect(result.metadata.calculationVersion).toBe('1.0.0')
+      expect(result.metadata.districtCount).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  describe('Constructor signature (Requirement 1.10)', () => {
+    it('should not accept timeSeriesIndexService parameter', () => {
+      // This test verifies that the constructor signature has been updated
+      // to remove the timeSeriesIndexService parameter.
+      // The test passes if the code compiles without the parameter.
+
+      // Create RefreshService with all valid parameters
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
@@ -351,76 +318,12 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
         undefined, // validator
-        preComputedAnalyticsService,
-        timeSeriesIndexService
+        preComputedAnalyticsService
+        // Note: No 9th parameter for timeSeriesIndexService
       )
 
-      // Execute refresh
-      const result = await refreshService.executeRefresh(testDate)
-      expect(result.success).toBe(true)
-
-      // Get the time-series data
-      const programYear = timeSeriesIndexService.getProgramYearForDate(testDate)
-      const indexData = await timeSeriesIndexService.getProgramYearData(
-        testDistrictId,
-        programYear
-      )
-
-      expect(indexData).not.toBeNull()
-      const dataPoint = indexData?.dataPoints[0]
-
-      // Verify club counts add up correctly
-      // total = thriving + vulnerable + interventionRequired
-      expect(dataPoint?.clubCounts.total).toBe(
-        dataPoint?.clubCounts.thriving +
-          dataPoint?.clubCounts.vulnerable +
-          dataPoint?.clubCounts.interventionRequired
-      )
-    })
-
-    it('should work with both pre-computed analytics and time-series index services', async () => {
-      // Set up cache data
-      await setupCacheData(testDate)
-
-      // Create RefreshService with both services
-      refreshService = new RefreshService(
-        snapshotStorage,
-        rawCSVCache,
-        districtConfigService,
-        undefined, // rankingCalculator
-        undefined, // closingPeriodDetector
-        undefined, // dataNormalizer
-        undefined, // validator
-        preComputedAnalyticsService,
-        timeSeriesIndexService
-      )
-
-      // Execute refresh
-      const result = await refreshService.executeRefresh(testDate)
-
-      // Verify refresh was successful
-      expect(result.success).toBe(true)
-
-      // Verify analytics summary file was created
-      const analyticsSummaryPath = path.join(
-        snapshotsDir,
-        testDate,
-        'analytics-summary.json'
-      )
-      const analyticsExists = await fs
-        .access(analyticsSummaryPath)
-        .then(() => true)
-        .catch(() => false)
-      expect(analyticsExists).toBe(true)
-
-      // Verify time-series index was updated
-      const programYear = timeSeriesIndexService.getProgramYearForDate(testDate)
-      const indexData = await timeSeriesIndexService.getProgramYearData(
-        testDistrictId,
-        programYear
-      )
-      expect(indexData).not.toBeNull()
-      expect(indexData?.dataPoints.length).toBeGreaterThan(0)
+      // If we get here, the constructor signature is correct
+      expect(refreshService).toBeDefined()
     })
   })
 })

@@ -416,6 +416,7 @@ describe('LocalSnapshotStorage', () => {
           paymentsRank: 1,
           distinguishedRank: 1,
           aggregateScore: 100,
+          overallRank: 1,
         },
         {
           districtId: '43',
@@ -436,6 +437,7 @@ describe('LocalSnapshotStorage', () => {
           paymentsRank: 2,
           distinguishedRank: 2,
           aggregateScore: 90,
+          overallRank: 2,
         },
       ],
     })
@@ -669,6 +671,7 @@ describe('LocalSnapshotStorage', () => {
             paymentsRank: 1,
             distinguishedRank: 1,
             aggregateScore: 100,
+            overallRank: 1,
           },
         ],
       }

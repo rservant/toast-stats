@@ -1,14 +1,17 @@
 /**
  * Unit tests for PreComputedAnalyticsService
  *
- * Tests the pre-computation of analytics summaries during snapshot creation.
+ * Tests the read-only behavior of the PreComputedAnalyticsService.
+ * This service only reads pre-computed analytics files - all computation
+ * is performed by scraper-cli's compute-analytics command.
+ *
+ * Per the data-computation-separation steering document:
+ * - The backend MUST NOT perform any on-demand data computation
+ * - All computation happens in scraper-cli
+ * - This service only reads pre-computed files
  *
  * Requirements tested:
- * - 1.1: Compute and store analytics summaries for each district
- * - 1.2: Include membership totals, club health counts, and distinguished club counts
- * - 1.3: Include membership trend data points for the snapshot date
- * - 1.4: Log errors and continue if individual district fails
- * - 1.5: Store in analytics-summary.json within snapshot directory
+ * - 14.7: THE PreComputedAnalyticsService SHALL read analytics from pre-computed files only
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -16,11 +19,8 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import type {
-  DistrictStatistics,
-  ScrapedRecord,
-} from '../../types/districts.js'
-import type { AnalyticsSummaryFile } from '../../types/precomputedAnalytics.js'
+import type { AnalyticsSummaryFile, PreComputedAnalyticsSummary } from '../../types/precomputedAnalytics.js'
+import { ANALYTICS_SUMMARY_SCHEMA_VERSION } from '../../types/precomputedAnalytics.js'
 
 describe('PreComputedAnalyticsService', () => {
   let service: PreComputedAnalyticsService
@@ -35,65 +35,82 @@ describe('PreComputedAnalyticsService', () => {
     return dir
   }
 
-  // Helper to create a club performance record
-  const createClubRecord = (options: {
-    clubNumber?: string
-    clubName?: string
-    activeMembers?: number
-    goalsMet?: number
-    memBase?: number
-    distinguishedStatus?: string
-    octRen?: number
-    aprRen?: number
-    newMembers?: number
-  }): ScrapedRecord => ({
-    'Club Number': options.clubNumber ?? '1234',
-    'Club Name': options.clubName ?? 'Test Club',
-    'Active Members': options.activeMembers ?? 20,
-    'Goals Met': options.goalsMet ?? 5,
-    'Mem. Base': options.memBase ?? 18,
-    'Club Distinguished Status': options.distinguishedStatus ?? '',
-    'Oct. Ren.': options.octRen ?? 10,
-    'Apr. Ren.': options.aprRen ?? 5,
-    'New Members': options.newMembers ?? 3,
-    Division: 'A',
-    Area: '1',
+  // Helper to create a pre-computed analytics summary
+  const createPreComputedSummary = (options: {
+    districtId?: string
+    snapshotId?: string
+    totalMembership?: number
+    membershipChange?: number
+    clubCounts?: {
+      total: number
+      thriving: number
+      vulnerable: number
+      interventionRequired: number
+    }
+    distinguishedClubs?: {
+      smedley: number
+      presidents: number
+      select: number
+      distinguished: number
+      total: number
+    }
+    trendDataPoint?: {
+      date: string
+      membership: number
+      payments: number
+      dcpGoals: number
+    }
+  }): PreComputedAnalyticsSummary => ({
+    snapshotId: options.snapshotId ?? '2024-01-15',
+    districtId: options.districtId ?? '42',
+    computedAt: new Date().toISOString(),
+    totalMembership: options.totalMembership ?? 500,
+    membershipChange: options.membershipChange ?? 0,
+    clubCounts: options.clubCounts ?? {
+      total: 25,
+      thriving: 15,
+      vulnerable: 8,
+      interventionRequired: 2,
+    },
+    distinguishedClubs: options.distinguishedClubs ?? {
+      smedley: 2,
+      presidents: 3,
+      select: 5,
+      distinguished: 8,
+      total: 18,
+    },
+    trendDataPoint: options.trendDataPoint ?? {
+      date: '2024-01-15',
+      membership: 500,
+      payments: 450,
+      dcpGoals: 125,
+    },
   })
 
-  // Helper to create district statistics
-  const createDistrictStatistics = (options: {
-    districtId?: string
-    asOfDate?: string
-    clubs?: ScrapedRecord[]
-    membershipTotal?: number
-  }): DistrictStatistics => ({
-    districtId: options.districtId ?? '42',
-    asOfDate: options.asOfDate ?? '2024-01-15',
-    membership: {
-      total: options.membershipTotal ?? 500,
-      change: 10,
-      changePercent: 2,
-      byClub: [],
-    },
-    clubs: {
-      total: options.clubs?.length ?? 25,
-      active: options.clubs?.length ?? 25,
-      suspended: 0,
-      ineligible: 0,
-      low: 0,
-      distinguished: 5,
-    },
-    education: {
-      totalAwards: 100,
-      byType: [],
-      topClubs: [],
-    },
-    clubPerformance: options.clubs ?? [
-      createClubRecord({ clubNumber: '1001', activeMembers: 25, goalsMet: 7 }),
-      createClubRecord({ clubNumber: '1002', activeMembers: 18, goalsMet: 3 }),
-      createClubRecord({ clubNumber: '1003', activeMembers: 10, goalsMet: 1 }),
-    ],
-  })
+  // Helper to create and write an analytics summary file
+  const writeAnalyticsSummaryFile = async (
+    snapshotId: string,
+    districts: Record<string, PreComputedAnalyticsSummary>
+  ): Promise<void> => {
+    const snapshotDir = path.join(snapshotsDir, snapshotId)
+    await fs.mkdir(snapshotDir, { recursive: true })
+
+    const summaryFile: AnalyticsSummaryFile = {
+      snapshotId,
+      computedAt: new Date().toISOString(),
+      schemaVersion: ANALYTICS_SUMMARY_SCHEMA_VERSION,
+      districts,
+      validation: {
+        totalRecords: Object.keys(districts).length,
+        validRecords: Object.keys(districts).length,
+        rejectedRecords: 0,
+        rejectionReasons: [],
+      },
+    }
+
+    const filePath = path.join(snapshotDir, 'analytics-summary.json')
+    await fs.writeFile(filePath, JSON.stringify(summaryFile, null, 2), 'utf-8')
+  }
 
   beforeEach(async () => {
     testDir = await createTestDir()
@@ -114,309 +131,25 @@ describe('PreComputedAnalyticsService', () => {
     }
   })
 
-  describe('computeAndStore', () => {
-    it('should compute and store analytics for a snapshot with districts', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const districtData = [
-        createDistrictStatistics({ districtId: '42' }),
-        createDistrictStatistics({ districtId: '61' }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      expect(summaryFile.snapshotId).toBe(snapshotId)
-      expect(summaryFile.schemaVersion).toBe('1.0.0')
-      expect(Object.keys(summaryFile.districts)).toHaveLength(2)
-      expect(summaryFile.districts['42']).toBeDefined()
-      expect(summaryFile.districts['61']).toBeDefined()
-      expect(summaryFile.validation.totalRecords).toBe(2)
-      expect(summaryFile.validation.validRecords).toBe(2)
-      expect(summaryFile.validation.rejectedRecords).toBe(0)
-    })
-
-    it('should calculate correct membership totals from district statistics', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const districtData = [
-        createDistrictStatistics({
-          districtId: '42',
-          membershipTotal: 750,
-        }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      expect(summaryFile.districts['42']?.totalMembership).toBe(750)
-    })
-
-    it('should calculate membership from club performance when membership.total is not available', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        createClubRecord({ clubNumber: '1001', activeMembers: 25 }),
-        createClubRecord({ clubNumber: '1002', activeMembers: 30 }),
-        createClubRecord({ clubNumber: '1003', activeMembers: 15 }),
-      ]
-
-      const districtData: DistrictStatistics[] = [
-        {
-          districtId: '42',
-          asOfDate: '2024-01-15',
-          membership: {
-            total: undefined as unknown as number, // Simulate missing total
-            change: 0,
-            changePercent: 0,
-            byClub: [],
-          },
-          clubs: {
-            total: 3,
-            active: 3,
-            suspended: 0,
-            ineligible: 0,
-            low: 0,
-            distinguished: 0,
-          },
-          education: {
-            totalAwards: 0,
-            byType: [],
-            topClubs: [],
-          },
-          clubPerformance: clubs,
-        },
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      // Should sum from club performance: 25 + 30 + 15 = 70
-      expect(summaryFile.districts['42']?.totalMembership).toBe(70)
-    })
-
-    it('should calculate correct club health counts', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        // Thriving: membership >= 20 AND dcpGoals > 0
-        createClubRecord({
-          clubNumber: '1001',
-          activeMembers: 25,
-          goalsMet: 5,
-          memBase: 20,
-        }),
-        // Thriving: net growth >= 3 AND dcpGoals > 0
-        createClubRecord({
-          clubNumber: '1002',
-          activeMembers: 18,
-          goalsMet: 3,
-          memBase: 15,
-        }),
-        // Vulnerable: membership < 20 AND net growth < 3 AND dcpGoals > 0
-        createClubRecord({
-          clubNumber: '1003',
-          activeMembers: 15,
-          goalsMet: 2,
-          memBase: 14,
-        }),
-        // Intervention Required: membership < 12 AND net growth < 3
-        createClubRecord({
-          clubNumber: '1004',
-          activeMembers: 10,
-          goalsMet: 1,
-          memBase: 9,
-        }),
-      ]
-
-      const districtData = [
-        createDistrictStatistics({
-          districtId: '42',
-          clubs,
-        }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const clubCounts = summaryFile.districts['42']?.clubCounts
-      expect(clubCounts?.total).toBe(4)
-      expect(clubCounts?.thriving).toBe(2)
-      expect(clubCounts?.vulnerable).toBe(1)
-      expect(clubCounts?.interventionRequired).toBe(1)
-    })
-
-    it('should calculate correct distinguished club counts from status field', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        createClubRecord({
-          clubNumber: '1001',
-          distinguishedStatus: 'Smedley Distinguished',
-        }),
-        createClubRecord({
-          clubNumber: '1002',
-          distinguishedStatus: 'Presidents Distinguished',
-        }),
-        createClubRecord({
-          clubNumber: '1003',
-          distinguishedStatus: 'Select Distinguished',
-        }),
-        createClubRecord({
-          clubNumber: '1004',
-          distinguishedStatus: 'Distinguished',
-        }),
-        // Club with no status and not enough goals to qualify via fallback
-        createClubRecord({
-          clubNumber: '1005',
-          distinguishedStatus: '',
-          goalsMet: 2, // Not enough for Distinguished (needs 5)
-          activeMembers: 15,
-        }),
-      ]
-
-      const districtData = [
-        createDistrictStatistics({
-          districtId: '42',
-          clubs,
-        }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const distinguishedClubs = summaryFile.districts['42']?.distinguishedClubs
-      expect(distinguishedClubs?.smedley).toBe(1)
-      expect(distinguishedClubs?.presidents).toBe(1)
-      expect(distinguishedClubs?.select).toBe(1)
-      expect(distinguishedClubs?.distinguished).toBe(1)
-      expect(distinguishedClubs?.total).toBe(4)
-    })
-
-    it('should include trend data point with correct date and values', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        createClubRecord({
-          clubNumber: '1001',
-          activeMembers: 25,
-          goalsMet: 5,
-          octRen: 10,
-          aprRen: 5,
-          newMembers: 3,
-        }),
-        createClubRecord({
-          clubNumber: '1002',
-          activeMembers: 20,
-          goalsMet: 3,
-          octRen: 8,
-          aprRen: 4,
-          newMembers: 2,
-        }),
-      ]
-
-      const districtData = [
-        createDistrictStatistics({
-          districtId: '42',
-          asOfDate: '2024-01-15',
-          clubs,
-          membershipTotal: 45,
-        }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const trendDataPoint = summaryFile.districts['42']?.trendDataPoint
-      expect(trendDataPoint?.date).toBe('2024-01-15')
-      expect(trendDataPoint?.membership).toBe(45)
-      // Payments: (10+5+3) + (8+4+2) = 18 + 14 = 32
-      expect(trendDataPoint?.payments).toBe(32)
-      // DCP Goals: 5 + 3 = 8
-      expect(trendDataPoint?.dcpGoals).toBe(8)
-    })
-
-    it('should handle empty district data gracefully', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      // Act
-      await service.computeAndStore(snapshotId, [])
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      expect(Object.keys(summaryFile.districts)).toHaveLength(0)
-      expect(summaryFile.validation.totalRecords).toBe(0)
-      expect(summaryFile.validation.validRecords).toBe(0)
-    })
-  })
-
   describe('getAnalyticsSummary', () => {
-    it('should retrieve analytics summary for a specific district', async () => {
-      // Arrange
+    it('should retrieve pre-computed analytics summary for a specific district', async () => {
+      // Arrange - Write pre-computed analytics file
       const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
+      const district42Summary = createPreComputedSummary({
+        districtId: '42',
+        snapshotId,
+        totalMembership: 500,
+      })
+      const district61Summary = createPreComputedSummary({
+        districtId: '61',
+        snapshotId,
+        totalMembership: 750,
+      })
 
-      const districtData = [
-        createDistrictStatistics({ districtId: '42', membershipTotal: 500 }),
-        createDistrictStatistics({ districtId: '61', membershipTotal: 750 }),
-      ]
-
-      await service.computeAndStore(snapshotId, districtData)
+      await writeAnalyticsSummaryFile(snapshotId, {
+        '42': district42Summary,
+        '61': district61Summary,
+      })
 
       // Act
       const summary = await service.getAnalyticsSummary('42', snapshotId)
@@ -428,14 +161,16 @@ describe('PreComputedAnalyticsService', () => {
     })
 
     it('should return null for non-existent district', async () => {
-      // Arrange
+      // Arrange - Write pre-computed analytics file without district 99
       const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
+      const district42Summary = createPreComputedSummary({
+        districtId: '42',
+        snapshotId,
+      })
 
-      const districtData = [createDistrictStatistics({ districtId: '42' })]
-
-      await service.computeAndStore(snapshotId, districtData)
+      await writeAnalyticsSummaryFile(snapshotId, {
+        '42': district42Summary,
+      })
 
       // Act
       const summary = await service.getAnalyticsSummary('99', snapshotId)
@@ -445,42 +180,123 @@ describe('PreComputedAnalyticsService', () => {
     })
 
     it('should return null for non-existent snapshot', async () => {
-      // Act
+      // Act - No pre-computed file exists
       const summary = await service.getAnalyticsSummary('42', '2024-99-99')
 
       // Assert
+      expect(summary).toBeNull()
+    })
+
+    it('should read all fields from pre-computed analytics file', async () => {
+      // Arrange - Write pre-computed analytics with specific values
+      const snapshotId = '2024-01-15'
+      const expectedSummary = createPreComputedSummary({
+        districtId: '42',
+        snapshotId,
+        totalMembership: 750,
+        membershipChange: 25,
+        clubCounts: {
+          total: 30,
+          thriving: 20,
+          vulnerable: 7,
+          interventionRequired: 3,
+        },
+        distinguishedClubs: {
+          smedley: 3,
+          presidents: 5,
+          select: 8,
+          distinguished: 10,
+          total: 26,
+        },
+        trendDataPoint: {
+          date: '2024-01-15',
+          membership: 750,
+          payments: 680,
+          dcpGoals: 200,
+        },
+      })
+
+      await writeAnalyticsSummaryFile(snapshotId, {
+        '42': expectedSummary,
+      })
+
+      // Act
+      const summary = await service.getAnalyticsSummary('42', snapshotId)
+
+      // Assert
+      expect(summary).not.toBeNull()
+      expect(summary?.totalMembership).toBe(750)
+      expect(summary?.membershipChange).toBe(25)
+      expect(summary?.clubCounts).toEqual({
+        total: 30,
+        thriving: 20,
+        vulnerable: 7,
+        interventionRequired: 3,
+      })
+      expect(summary?.distinguishedClubs).toEqual({
+        smedley: 3,
+        presidents: 5,
+        select: 8,
+        distinguished: 10,
+        total: 26,
+      })
+      expect(summary?.trendDataPoint).toEqual({
+        date: '2024-01-15',
+        membership: 750,
+        payments: 680,
+        dcpGoals: 200,
+      })
+    })
+
+    it('should handle corrupted JSON file gracefully', async () => {
+      // Arrange - Write invalid JSON
+      const snapshotId = '2024-01-15'
+      const snapshotDir = path.join(snapshotsDir, snapshotId)
+      await fs.mkdir(snapshotDir, { recursive: true })
+      const filePath = path.join(snapshotDir, 'analytics-summary.json')
+      await fs.writeFile(filePath, 'not valid json {{{', 'utf-8')
+
+      // Act
+      const summary = await service.getAnalyticsSummary('42', snapshotId)
+
+      // Assert - Should return null on error
       expect(summary).toBeNull()
     })
   })
 
   describe('getLatestSummary', () => {
     it('should retrieve analytics from the latest snapshot', async () => {
-      // Arrange - Create multiple snapshots
+      // Arrange - Create multiple snapshots with pre-computed analytics
       const snapshot1 = '2024-01-10'
       const snapshot2 = '2024-01-15'
 
-      await fs.mkdir(path.join(snapshotsDir, snapshot1), { recursive: true })
-      await fs.mkdir(path.join(snapshotsDir, snapshot2), { recursive: true })
+      await writeAnalyticsSummaryFile(snapshot1, {
+        '42': createPreComputedSummary({
+          districtId: '42',
+          snapshotId: snapshot1,
+          totalMembership: 400,
+        }),
+      })
 
-      await service.computeAndStore(snapshot1, [
-        createDistrictStatistics({ districtId: '42', membershipTotal: 400 }),
-      ])
-
-      await service.computeAndStore(snapshot2, [
-        createDistrictStatistics({ districtId: '42', membershipTotal: 500 }),
-      ])
+      await writeAnalyticsSummaryFile(snapshot2, {
+        '42': createPreComputedSummary({
+          districtId: '42',
+          snapshotId: snapshot2,
+          totalMembership: 500,
+        }),
+      })
 
       // Act
       const summary = await service.getLatestSummary('42')
 
-      // Assert
+      // Assert - Should return from latest snapshot (2024-01-15)
       expect(summary).not.toBeNull()
       expect(summary?.snapshotId).toBe(snapshot2)
       expect(summary?.totalMembership).toBe(500)
     })
 
     it('should return null when no snapshots exist', async () => {
-      // Act
+      // Act - No snapshots directory content
       const summary = await service.getLatestSummary('42')
 
       // Assert
@@ -488,13 +304,14 @@ describe('PreComputedAnalyticsService', () => {
     })
 
     it('should return null when district not found in latest snapshot', async () => {
-      // Arrange
+      // Arrange - Create snapshot without district 99
       const snapshotId = '2024-01-15'
-      await fs.mkdir(path.join(snapshotsDir, snapshotId), { recursive: true })
-
-      await service.computeAndStore(snapshotId, [
-        createDistrictStatistics({ districtId: '42' }),
-      ])
+      await writeAnalyticsSummaryFile(snapshotId, {
+        '42': createPreComputedSummary({
+          districtId: '42',
+          snapshotId,
+        }),
+      })
 
       // Act
       const summary = await service.getLatestSummary('99')
@@ -502,185 +319,114 @@ describe('PreComputedAnalyticsService', () => {
       // Assert
       expect(summary).toBeNull()
     })
-  })
 
-  describe('club health classification edge cases', () => {
-    it('should classify club with exactly 12 members and net growth < 3 as vulnerable (not intervention)', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
+    it('should skip snapshots without analytics-summary.json', async () => {
+      // Arrange - Create snapshots, only one with analytics
+      const snapshot1 = '2024-01-10'
+      const snapshot2 = '2024-01-15' // Latest but no analytics
+      const snapshot3 = '2024-01-12' // Has analytics
 
-      const clubs = [
-        // Exactly 12 members, net growth = 2 (< 3)
-        // Should be vulnerable, not intervention-required
-        createClubRecord({
-          clubNumber: '1001',
-          activeMembers: 12,
-          goalsMet: 2,
-          memBase: 10,
+      // Create snapshot1 with analytics
+      await writeAnalyticsSummaryFile(snapshot1, {
+        '42': createPreComputedSummary({
+          districtId: '42',
+          snapshotId: snapshot1,
+          totalMembership: 400,
         }),
-      ]
+      })
 
-      const districtData = [
-        createDistrictStatistics({ districtId: '42', clubs }),
-      ]
+      // Create snapshot2 directory without analytics file
+      await fs.mkdir(path.join(snapshotsDir, snapshot2), { recursive: true })
+
+      // Create snapshot3 with analytics
+      await writeAnalyticsSummaryFile(snapshot3, {
+        '42': createPreComputedSummary({
+          districtId: '42',
+          snapshotId: snapshot3,
+          totalMembership: 450,
+        }),
+      })
 
       // Act
-      await service.computeAndStore(snapshotId, districtData)
+      const summary = await service.getLatestSummary('42')
 
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const clubCounts = summaryFile.districts['42']?.clubCounts
-      expect(clubCounts?.interventionRequired).toBe(0)
-      expect(clubCounts?.vulnerable).toBe(1)
-    })
-
-    it('should classify club with 11 members but net growth >= 3 as not intervention-required', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        // 11 members (< 12), but net growth = 3 (>= 3)
-        // Should NOT be intervention-required
-        createClubRecord({
-          clubNumber: '1001',
-          activeMembers: 11,
-          goalsMet: 2,
-          memBase: 8,
-        }),
-      ]
-
-      const districtData = [
-        createDistrictStatistics({ districtId: '42', clubs }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const clubCounts = summaryFile.districts['42']?.clubCounts
-      expect(clubCounts?.interventionRequired).toBe(0)
-      // Should be thriving (net growth >= 3 AND dcpGoals > 0)
-      expect(clubCounts?.thriving).toBe(1)
+      // Assert - Should return from snapshot3 (latest with analytics)
+      expect(summary).not.toBeNull()
+      expect(summary?.snapshotId).toBe(snapshot3)
+      expect(summary?.totalMembership).toBe(450)
     })
   })
 
-  describe('distinguished club calculation edge cases', () => {
-    it('should calculate distinguished level from DCP goals when status field is empty', async () => {
-      // Arrange
-      const snapshotId = '2024-01-15'
-      const snapshotDir = path.join(snapshotsDir, snapshotId)
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        // Smedley: 10 goals + 25 members
-        createClubRecord({
-          clubNumber: '1001',
-          activeMembers: 25,
-          goalsMet: 10,
-          distinguishedStatus: '',
-        }),
-        // Presidents: 9 goals + 20 members
-        createClubRecord({
-          clubNumber: '1002',
-          activeMembers: 20,
-          goalsMet: 9,
-          distinguishedStatus: '',
-        }),
-        // Select: 7 goals + 20 members
-        createClubRecord({
-          clubNumber: '1003',
-          activeMembers: 20,
-          goalsMet: 7,
-          distinguishedStatus: '',
-        }),
-        // Distinguished: 5 goals + 20 members
-        createClubRecord({
-          clubNumber: '1004',
-          activeMembers: 20,
-          goalsMet: 5,
-          distinguishedStatus: '',
-        }),
-        // Not distinguished: 4 goals
-        createClubRecord({
-          clubNumber: '1005',
-          activeMembers: 20,
-          goalsMet: 4,
-          distinguishedStatus: '',
-        }),
-      ]
-
-      const districtData = [
-        createDistrictStatistics({ districtId: '42', clubs }),
-      ]
-
-      // Act
-      await service.computeAndStore(snapshotId, districtData)
-
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const distinguishedClubs = summaryFile.districts['42']?.distinguishedClubs
-      expect(distinguishedClubs?.smedley).toBe(1)
-      expect(distinguishedClubs?.presidents).toBe(1)
-      expect(distinguishedClubs?.select).toBe(1)
-      expect(distinguishedClubs?.distinguished).toBe(1)
-      expect(distinguishedClubs?.total).toBe(4)
+  describe('read-only behavior verification', () => {
+    it('should not have computeAndStore method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['computeAndStore']).toBeUndefined()
     })
 
-    it('should use net growth for Select/Distinguished when membership < 20', async () => {
-      // Arrange
+    it('should not have computeDistrictAnalytics method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['computeDistrictAnalytics']).toBeUndefined()
+    })
+
+    it('should not have calculateTotalMembership method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['calculateTotalMembership']).toBeUndefined()
+    })
+
+    it('should not have calculateClubHealthCounts method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['calculateClubHealthCounts']).toBeUndefined()
+    })
+
+    it('should not have calculateDistinguishedClubCounts method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['calculateDistinguishedClubCounts']).toBeUndefined()
+    })
+
+    it('should not have calculateTotalPayments method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['calculateTotalPayments']).toBeUndefined()
+    })
+
+    it('should not have calculateTotalDCPGoals method', () => {
+      // Assert - Service should not have computation methods
+      expect((service as Record<string, unknown>)['calculateTotalDCPGoals']).toBeUndefined()
+    })
+
+    it('should only expose read methods', () => {
+      // Assert - Service should only have read methods
+      expect(typeof service.getAnalyticsSummary).toBe('function')
+      expect(typeof service.getLatestSummary).toBe('function')
+    })
+  })
+
+  describe('error handling', () => {
+    it('should return null when snapshots directory does not exist', async () => {
+      // Arrange - Create service with non-existent directory
+      const nonExistentService = new PreComputedAnalyticsService({
+        snapshotsDir: '/non/existent/path',
+      })
+
+      // Act
+      const summary = await nonExistentService.getLatestSummary('42')
+
+      // Assert
+      expect(summary).toBeNull()
+    })
+
+    it('should handle empty analytics file gracefully', async () => {
+      // Arrange - Write empty JSON object
       const snapshotId = '2024-01-15'
       const snapshotDir = path.join(snapshotsDir, snapshotId)
       await fs.mkdir(snapshotDir, { recursive: true })
-
-      const clubs = [
-        // Select via net growth: 7 goals + 18 members + net growth 5
-        createClubRecord({
-          clubNumber: '1001',
-          activeMembers: 18,
-          goalsMet: 7,
-          memBase: 13, // net growth = 5
-          distinguishedStatus: '',
-        }),
-        // Distinguished via net growth: 5 goals + 15 members + net growth 3
-        createClubRecord({
-          clubNumber: '1002',
-          activeMembers: 15,
-          goalsMet: 5,
-          memBase: 12, // net growth = 3
-          distinguishedStatus: '',
-        }),
-      ]
-
-      const districtData = [
-        createDistrictStatistics({ districtId: '42', clubs }),
-      ]
+      const filePath = path.join(snapshotDir, 'analytics-summary.json')
+      await fs.writeFile(filePath, '{}', 'utf-8')
 
       // Act
-      await service.computeAndStore(snapshotId, districtData)
+      const summary = await service.getAnalyticsSummary('42', snapshotId)
 
-      // Assert
-      const analyticsPath = path.join(snapshotDir, 'analytics-summary.json')
-      const content = await fs.readFile(analyticsPath, 'utf-8')
-      const summaryFile: AnalyticsSummaryFile = JSON.parse(content)
-
-      const distinguishedClubs = summaryFile.districts['42']?.distinguishedClubs
-      expect(distinguishedClubs?.select).toBe(1)
-      expect(distinguishedClubs?.distinguished).toBe(1)
-      expect(distinguishedClubs?.total).toBe(2)
+      // Assert - Should return null when district not found
+      expect(summary).toBeNull()
     })
   })
 })

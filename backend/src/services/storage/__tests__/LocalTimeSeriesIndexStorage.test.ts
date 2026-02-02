@@ -294,14 +294,15 @@ describe('LocalTimeSeriesIndexStorage', () => {
     })
 
     /**
-     * Test: deleteSnapshotEntries updates summary statistics after removal
+     * Test: deleteSnapshotEntries does NOT update summary statistics after removal
      *
-     * **Validates: Requirements 4.2**
+     * **Validates: Requirements 16.1, 16.4**
      *
      * This test verifies that after removing entries, the summary statistics
-     * in the program year index file are recalculated correctly.
+     * in the program year index file are NOT recalculated (per data-computation-separation).
+     * The summary will be stale until scraper-cli regenerates the index file.
      */
-    it('should update summary statistics after removal', async () => {
+    it('should NOT update summary statistics after removal (summary remains stale)', async () => {
       // Arrange: Create data with known membership values
       const dataPoints = [
         createTestDataPoint('2024-01-15', '2024-01-15', 100),
@@ -313,14 +314,15 @@ describe('LocalTimeSeriesIndexStorage', () => {
       // Act: Delete the entry with peak membership
       await storage.deleteSnapshotEntries('2024-01-16')
 
-      // Assert: Summary should be recalculated
+      // Assert: Summary should NOT be recalculated (remains stale)
       const indexFile = await readProgramYearIndexFile('42', '2023-2024')
       expect(indexFile).not.toBeNull()
-      expect(indexFile!.summary.totalDataPoints).toBe(2)
-      expect(indexFile!.summary.membershipStart).toBe(100)
-      expect(indexFile!.summary.membershipEnd).toBe(120)
-      expect(indexFile!.summary.membershipPeak).toBe(120) // New peak after removal
-      expect(indexFile!.summary.membershipLow).toBe(100)
+      // Data points should be filtered
+      expect(indexFile!.dataPoints).toHaveLength(2)
+      // Summary should still reflect the original values (stale)
+      // The original summary had peak of 150, which is now stale
+      expect(indexFile!.summary.totalDataPoints).toBe(3) // Stale - was 3, now 2 data points
+      expect(indexFile!.summary.membershipPeak).toBe(150) // Stale - peak was 150, now should be 120
     })
 
     /**

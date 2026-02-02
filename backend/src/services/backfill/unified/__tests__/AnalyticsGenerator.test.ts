@@ -2,13 +2,17 @@
  * AnalyticsGenerator Unit Tests
  *
  * Tests the AnalyticsGenerator component for the Unified Backfill Service.
- * Validates Requirements 4.5, 11.3 from the spec.
+ * Validates Requirements 15.1-15.7 from the spec.
+ *
+ * NOTE: Per the data-computation-separation steering document, the AnalyticsGenerator
+ * no longer performs any computation. All analytics and time-series data are now
+ * pre-computed by scraper-cli. These tests verify the read-only behavior.
  *
  * Test Coverage:
  * 1. Preview functionality - snapshot selection with and without date range
- * 2. Generation execution - processing snapshots with progress reporting
+ * 2. Verification execution - verifying snapshots exist (no computation)
  * 3. Cancellation - stopping processing gracefully
- * 4. Analytics calculation - verifying metric calculations
+ * 4. Read-only compliance - verifying no computation methods exist
  *
  * Test Isolation Requirements (per testing steering document):
  * - Each test uses mocked dependencies
@@ -20,12 +24,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { AnalyticsGenerator } from '../AnalyticsGenerator.js'
-import type {
-  ISnapshotStorage,
-  ITimeSeriesIndexStorage,
-} from '../../../../types/storageInterfaces.js'
+import type { ISnapshotStorage } from '../../../../types/storageInterfaces.js'
 import type { Snapshot, SnapshotMetadata } from '../../../../types/snapshots.js'
-import type { TimeSeriesDataPoint } from '../../../../types/precomputedAnalytics.js'
 import type { PreComputedAnalyticsService } from '../../../PreComputedAnalyticsService.js'
 
 // ============================================================================
@@ -80,26 +80,10 @@ function createMockSnapshotStorage(): ISnapshotStorage & {
 }
 
 /**
- * Create a mock ITimeSeriesIndexStorage implementation
- */
-function createMockTimeSeriesStorage(): ITimeSeriesIndexStorage & {
-  appendDataPoint: Mock
-} {
-  return {
-    appendDataPoint: vi.fn().mockResolvedValue(undefined),
-    getTrendData: vi.fn().mockResolvedValue([]),
-    getProgramYearData: vi.fn().mockResolvedValue(null),
-    deleteSnapshotEntries: vi.fn().mockResolvedValue(0),
-    isReady: vi.fn().mockResolvedValue(true),
-  } as unknown as ITimeSeriesIndexStorage & {
-    appendDataPoint: Mock
-  }
-}
-
-/**
  * Create a mock PreComputedAnalyticsService implementation
  *
- * Requirements: 2.1, 2.2 - Mock for testing computeAndStore integration
+ * NOTE: This service is no longer used by AnalyticsGenerator but is kept
+ * for backward compatibility in the constructor signature.
  */
 function createMockPreComputedAnalyticsService(): PreComputedAnalyticsService & {
   computeAndStore: Mock
@@ -163,63 +147,12 @@ function createMockSnapshot(snapshotId: string): Snapshot {
   }
 }
 
-/**
- * Create mock district data with club performance
- */
-function createMockDistrictData(options: {
-  asOfDate: string
-  totalMembership?: number
-  clubs?: Array<{
-    'Active Members'?: number
-    'Oct. Ren.'?: number
-    'Apr. Ren.'?: number
-    'New Members'?: number
-    'Goals Met'?: number
-    'Mem. Base'?: number
-    'Club Distinguished Status'?: string
-    CSP?: string
-  }>
-}) {
-  const defaultClubs = [
-    {
-      'Active Members': 25,
-      'Oct. Ren.': 10,
-      'Apr. Ren.': 8,
-      'New Members': 5,
-      'Goals Met': 6,
-      'Mem. Base': 20,
-      'Club Distinguished Status': 'Distinguished',
-      CSP: 'yes',
-    },
-    {
-      'Active Members': 15,
-      'Oct. Ren.': 5,
-      'Apr. Ren.': 4,
-      'New Members': 3,
-      'Goals Met': 3,
-      'Mem. Base': 12,
-      'Club Distinguished Status': '',
-      CSP: 'yes',
-    },
-  ]
-
-  return {
-    asOfDate: options.asOfDate,
-    membership:
-      options.totalMembership !== undefined
-        ? { total: options.totalMembership }
-        : undefined,
-    clubPerformance: options.clubs ?? defaultClubs,
-  }
-}
-
 // ============================================================================
 // Test Suite
 // ============================================================================
 
 describe('AnalyticsGenerator', () => {
   let mockSnapshotStorage: ReturnType<typeof createMockSnapshotStorage>
-  let mockTimeSeriesStorage: ReturnType<typeof createMockTimeSeriesStorage>
   let mockPreComputedAnalyticsService: ReturnType<
     typeof createMockPreComputedAnalyticsService
   >
@@ -228,11 +161,9 @@ describe('AnalyticsGenerator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSnapshotStorage = createMockSnapshotStorage()
-    mockTimeSeriesStorage = createMockTimeSeriesStorage()
     mockPreComputedAnalyticsService = createMockPreComputedAnalyticsService()
     analyticsGenerator = new AnalyticsGenerator(
       mockSnapshotStorage,
-      mockTimeSeriesStorage,
       mockPreComputedAnalyticsService
     )
   })
@@ -242,7 +173,107 @@ describe('AnalyticsGenerator', () => {
   })
 
   // ============================================================================
-  // Preview Functionality Tests (Requirements 4.5, 11.3)
+  // Read-Only Compliance Tests (Requirements 15.1-15.7)
+  // ============================================================================
+
+  describe('Read-Only Compliance', () => {
+    it('should not have buildTimeSeriesDataPoint method', () => {
+      // Validates: Requirement 15.1
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['buildTimeSeriesDataPoint']
+      ).toBeUndefined()
+    })
+
+    it('should not have calculateTotalMembership method', () => {
+      // Validates: Requirement 15.2
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['calculateTotalMembership']
+      ).toBeUndefined()
+    })
+
+    it('should not have calculateTotalPayments method', () => {
+      // Validates: Requirement 15.3
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['calculateTotalPayments']
+      ).toBeUndefined()
+    })
+
+    it('should not have calculateTotalDCPGoals method', () => {
+      // Validates: Requirement 15.4
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['calculateTotalDCPGoals']
+      ).toBeUndefined()
+    })
+
+    it('should not have calculateClubHealthCounts method', () => {
+      // Validates: Requirement 15.5
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['calculateClubHealthCounts']
+      ).toBeUndefined()
+    })
+
+    it('should not have calculateDistinguishedTotal method', () => {
+      // Validates: Requirement 15.6
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['calculateDistinguishedTotal']
+      ).toBeUndefined()
+    })
+
+    it('should not have isDistinguished method', () => {
+      // Validates: Requirement 15.1-15.6 (helper method removed)
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['isDistinguished']
+      ).toBeUndefined()
+    })
+
+    it('should not have parseIntSafe method', () => {
+      // Validates: Requirement 15.1-15.6 (helper method removed)
+      expect(
+        (analyticsGenerator as unknown as Record<string, unknown>)['parseIntSafe']
+      ).toBeUndefined()
+    })
+
+    it('should not call computeAndStore on PreComputedAnalyticsService', async () => {
+      // Validates: Requirement 15.7 - read pre-computed data only
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42', '61'])
+
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // computeAndStore should NOT be called - analytics are pre-computed by scraper-cli
+      expect(mockPreComputedAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+    })
+
+    it('should not read district data for computation', async () => {
+      // Validates: Requirement 15.7 - no computation, only verification
+      const snapshotIds = ['2024-01-15']
+      const progressCallback = createProgressCallback()
+
+      mockSnapshotStorage.getSnapshot.mockResolvedValue(
+        createMockSnapshot('2024-01-15')
+      )
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42', '61'])
+
+      await analyticsGenerator.generateForSnapshots(
+        snapshotIds,
+        progressCallback
+      )
+
+      // readDistrictData should NOT be called - we only verify snapshot exists
+      expect(mockSnapshotStorage.readDistrictData).not.toHaveBeenCalled()
+    })
+  })
+
+  // ============================================================================
+  // Preview Functionality Tests (Requirements 4.5, 11.2)
   // ============================================================================
 
   describe('Preview Functionality', () => {
@@ -410,11 +441,11 @@ describe('AnalyticsGenerator', () => {
   })
 
   // ============================================================================
-  // Generation Execution Tests (Requirements 4.5, 11.3)
+  // Verification Execution Tests (Requirements 15.7)
   // ============================================================================
 
-  describe('Generation Execution', () => {
-    it('should process all specified snapshots', async () => {
+  describe('Verification Execution', () => {
+    it('should verify all specified snapshots exist', async () => {
       // Arrange
       const snapshotIds = ['2024-01-15', '2024-01-14', '2024-01-13']
       const progressCallback = createProgressCallback()
@@ -429,9 +460,6 @@ describe('AnalyticsGenerator', () => {
         '42',
         '61',
       ])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -454,9 +482,6 @@ describe('AnalyticsGenerator', () => {
         createMockSnapshot('2024-01-15')
       )
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       await analyticsGenerator.generateForSnapshots(
@@ -487,9 +512,6 @@ describe('AnalyticsGenerator', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(createMockSnapshot('2024-01-14'))
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-14' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -535,9 +557,6 @@ describe('AnalyticsGenerator', () => {
         .mockResolvedValueOnce(createMockSnapshot('2024-01-13')) // Third succeeds
 
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -584,9 +603,6 @@ describe('AnalyticsGenerator', () => {
         createMockSnapshot('2024-01-15')
       )
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -609,9 +625,6 @@ describe('AnalyticsGenerator', () => {
         .mockRejectedValueOnce(new Error('Failed'))
 
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -633,9 +646,6 @@ describe('AnalyticsGenerator', () => {
         createMockSnapshot('2024-01-15')
       )
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -674,9 +684,6 @@ describe('AnalyticsGenerator', () => {
         return createMockSnapshot('2024-01-15')
       })
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       const result = await analyticsGenerator.generateForSnapshots(
@@ -708,316 +715,11 @@ describe('AnalyticsGenerator', () => {
       // Act - Create new instance
       const newGenerator = new AnalyticsGenerator(
         mockSnapshotStorage,
-        mockTimeSeriesStorage,
         mockPreComputedAnalyticsService
       )
 
       // Assert - New instance should not be cancelled
       expect(newGenerator.isCancelled()).toBe(false)
-    })
-  })
-
-  // ============================================================================
-  // Analytics Calculation Tests
-  // ============================================================================
-
-  describe('Analytics Calculation', () => {
-    it('should calculate total membership correctly from membership.total', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15', totalMembership: 500 })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Verify appendDataPoint was called with correct membership
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-      const appendCall = mockTimeSeriesStorage.appendDataPoint.mock.calls[0]
-      expect(appendCall).toBeDefined()
-      const dataPoint = appendCall[1] as TimeSeriesDataPoint
-      expect(dataPoint.membership).toBe(500)
-    })
-
-    it('should calculate total membership from club performance when membership.total is undefined', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({
-          asOfDate: '2024-01-15',
-          clubs: [
-            { 'Active Members': 25 },
-            { 'Active Members': 30 },
-            { 'Active Members': 20 },
-          ],
-        })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Verify appendDataPoint was called with summed membership
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-      const appendCall = mockTimeSeriesStorage.appendDataPoint.mock.calls[0]
-      expect(appendCall).toBeDefined()
-      const dataPoint = appendCall[1] as TimeSeriesDataPoint
-      expect(dataPoint.membership).toBe(75) // 25 + 30 + 20
-    })
-
-    it('should calculate total payments correctly', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({
-          asOfDate: '2024-01-15',
-          clubs: [
-            { 'Oct. Ren.': 10, 'Apr. Ren.': 8, 'New Members': 5 },
-            { 'Oct. Ren.': 15, 'Apr. Ren.': 12, 'New Members': 3 },
-          ],
-        })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Verify payments calculation
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-      const appendCall = mockTimeSeriesStorage.appendDataPoint.mock.calls[0]
-      expect(appendCall).toBeDefined()
-      const dataPoint = appendCall[1] as TimeSeriesDataPoint
-      // (10 + 8 + 5) + (15 + 12 + 3) = 23 + 30 = 53
-      expect(dataPoint.payments).toBe(53)
-    })
-
-    it('should calculate DCP goals correctly', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({
-          asOfDate: '2024-01-15',
-          clubs: [{ 'Goals Met': 7 }, { 'Goals Met': 5 }, { 'Goals Met': 3 }],
-        })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Verify DCP goals calculation
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-      const appendCall = mockTimeSeriesStorage.appendDataPoint.mock.calls[0]
-      expect(appendCall).toBeDefined()
-      const dataPoint = appendCall[1] as TimeSeriesDataPoint
-      expect(dataPoint.dcpGoals).toBe(15) // 7 + 5 + 3
-    })
-
-    it('should calculate club health counts correctly', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({
-          asOfDate: '2024-01-15',
-          clubs: [
-            // Thriving: membership >= 20 AND DCP > 0
-            { 'Active Members': 25, 'Goals Met': 5, 'Mem. Base': 20 },
-            // Vulnerable: membership < 20 AND net growth < 3 AND DCP = 0 (but not intervention)
-            { 'Active Members': 15, 'Goals Met': 0, 'Mem. Base': 14 },
-            // Intervention Required: membership < 12 AND net growth < 3
-            { 'Active Members': 10, 'Goals Met': 0, 'Mem. Base': 10 },
-          ],
-        })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Verify club health counts
-      // Club 1: membership=25, netGrowth=5, dcpGoals=5 -> Thriving (membership>=20 AND dcpGoals>0)
-      // Club 2: membership=15, netGrowth=1, dcpGoals=0 -> Vulnerable (not intervention, but dcpGoals=0)
-      // Club 3: membership=10, netGrowth=0, dcpGoals=0 -> Intervention (membership<12 AND netGrowth<3)
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-      const appendCall = mockTimeSeriesStorage.appendDataPoint.mock.calls[0]
-      expect(appendCall).toBeDefined()
-      const dataPoint = appendCall[1] as TimeSeriesDataPoint
-      expect(dataPoint.clubCounts.total).toBe(3)
-      expect(dataPoint.clubCounts.thriving).toBe(1)
-      expect(dataPoint.clubCounts.vulnerable).toBe(1)
-      expect(dataPoint.clubCounts.interventionRequired).toBe(1)
-    })
-
-    it('should calculate distinguished total correctly', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({
-          asOfDate: '2024-01-15',
-          clubs: [
-            // Distinguished: CSP submitted + status field
-            {
-              'Active Members': 25,
-              'Goals Met': 5,
-              'Mem. Base': 20,
-              'Club Distinguished Status': 'Distinguished',
-              CSP: 'yes',
-            },
-            // Distinguished: CSP submitted + 5+ goals + membership requirement
-            {
-              'Active Members': 22,
-              'Goals Met': 6,
-              'Mem. Base': 18,
-              'Club Distinguished Status': '',
-              CSP: 'yes',
-            },
-            // Not distinguished: CSP not submitted
-            {
-              'Active Members': 25,
-              'Goals Met': 7,
-              'Mem. Base': 20,
-              'Club Distinguished Status': 'Distinguished',
-              CSP: 'no',
-            },
-            // Not distinguished: insufficient goals
-            {
-              'Active Members': 25,
-              'Goals Met': 3,
-              'Mem. Base': 20,
-              'Club Distinguished Status': '',
-              CSP: 'yes',
-            },
-          ],
-        })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Verify distinguished total
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-      const appendCall = mockTimeSeriesStorage.appendDataPoint.mock.calls[0]
-      expect(appendCall).toBeDefined()
-      const dataPoint = appendCall[1] as TimeSeriesDataPoint
-      expect(dataPoint.distinguishedTotal).toBe(2) // First two clubs are distinguished
-    })
-
-    it('should handle missing or null values gracefully', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue({
-        asOfDate: '2024-01-15',
-        clubPerformance: [
-          { 'Active Members': null, 'Goals Met': undefined, 'Oct. Ren.': '' },
-          { 'Active Members': 20, 'Goals Met': 5 },
-        ],
-      })
-
-      // Act
-      const result = await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Should not throw and should process successfully
-      expect(result.success).toBe(true)
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalled()
-    })
-
-    it('should append data point for each district in snapshot', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
-        '42',
-        '61',
-        '101',
-      ])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Should call appendDataPoint for each district
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledTimes(3)
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
-        '42',
-        expect.any(Object)
-      )
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
-        '61',
-        expect.any(Object)
-      )
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
-        '101',
-        expect.any(Object)
-      )
     })
   })
 
@@ -1040,9 +742,6 @@ describe('AnalyticsGenerator', () => {
         createMockSnapshot('2024-01-15')
       )
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       await analyticsGenerator.generateForSnapshots(
@@ -1089,9 +788,6 @@ describe('AnalyticsGenerator', () => {
         createMockSnapshot('2024-01-15')
       )
       mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
 
       // Act
       await analyticsGenerator.generateForSnapshots(
@@ -1106,264 +802,20 @@ describe('AnalyticsGenerator', () => {
   })
 
   // ============================================================================
-  // PreComputedAnalyticsService Integration Tests (Requirements 2.1, 2.2)
+  // Constructor Backward Compatibility Tests
   // ============================================================================
 
-  describe('PreComputedAnalyticsService Integration', () => {
-    it('should call computeAndStore during snapshot processing', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
-        '42',
-        '61',
-      ])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
+  describe('Constructor Backward Compatibility', () => {
+    it('should accept PreComputedAnalyticsService parameter for backward compatibility', () => {
+      // The constructor should accept the parameter without error
+      // even though it's no longer used
+      const generator = new AnalyticsGenerator(
+        mockSnapshotStorage,
+        mockPreComputedAnalyticsService
       )
 
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - computeAndStore should be called once per snapshot
-      // Validates: Requirements 2.1
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledWith('2024-01-15', expect.any(Array))
-    })
-
-    it('should pass collected district data to computeAndStore', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-      const districtData1 = createMockDistrictData({ asOfDate: '2024-01-15' })
-      const districtData2 = createMockDistrictData({ asOfDate: '2024-01-15' })
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
-        '42',
-        '61',
-      ])
-      mockSnapshotStorage.readDistrictData
-        .mockResolvedValueOnce(districtData1)
-        .mockResolvedValueOnce(districtData2)
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - computeAndStore should receive array with both district data
-      // Validates: Requirements 2.1
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledWith(
-        '2024-01-15',
-        expect.arrayContaining([districtData1, districtData2])
-      )
-      const callArgs =
-        mockPreComputedAnalyticsService.computeAndStore.mock.calls[0]
-      expect(callArgs).toBeDefined()
-      expect(callArgs[1]).toHaveLength(2)
-    })
-
-    it('should call computeAndStore for each snapshot processed', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15', '2024-01-14', '2024-01-13']
-      const progressCallback = createProgressCallback()
-
-      for (const snapshotId of snapshotIds) {
-        mockSnapshotStorage.getSnapshot.mockResolvedValueOnce(
-          createMockSnapshot(snapshotId)
-        )
-      }
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - computeAndStore should be called once per snapshot
-      // Validates: Requirements 2.1
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledTimes(3)
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledWith('2024-01-15', expect.any(Array))
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledWith('2024-01-14', expect.any(Array))
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledWith('2024-01-13', expect.any(Array))
-    })
-
-    it('should continue processing when computeAndStore fails', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
-
-      // Make computeAndStore fail
-      mockPreComputedAnalyticsService.computeAndStore.mockRejectedValue(
-        new Error('Failed to write analytics file')
-      )
-
-      // Act
-      const result = await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Snapshot should still be processed successfully for time-series
-      // Validates: Requirements 2.2
-      expect(result.success).toBe(true)
-      expect(result.processedItems).toBe(1)
-      expect(result.failedItems).toBe(0)
-    })
-
-    it('should still generate time-series data when computeAndStore fails', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
-        '42',
-        '61',
-      ])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
-
-      // Make computeAndStore fail
-      mockPreComputedAnalyticsService.computeAndStore.mockRejectedValue(
-        new Error('Storage error')
-      )
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - Time-series data should still be appended for each district
-      // Validates: Requirements 2.2
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledTimes(2)
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
-        '42',
-        expect.any(Object)
-      )
-      expect(mockTimeSeriesStorage.appendDataPoint).toHaveBeenCalledWith(
-        '61',
-        expect.any(Object)
-      )
-    })
-
-    it('should process multiple snapshots even when some computeAndStore calls fail', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15', '2024-01-14', '2024-01-13']
-      const progressCallback = createProgressCallback()
-
-      for (const snapshotId of snapshotIds) {
-        mockSnapshotStorage.getSnapshot.mockResolvedValueOnce(
-          createMockSnapshot(snapshotId)
-        )
-      }
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42'])
-      mockSnapshotStorage.readDistrictData.mockResolvedValue(
-        createMockDistrictData({ asOfDate: '2024-01-15' })
-      )
-
-      // Make computeAndStore fail for the second snapshot only
-      mockPreComputedAnalyticsService.computeAndStore
-        .mockResolvedValueOnce(undefined) // First succeeds
-        .mockRejectedValueOnce(new Error('Storage error')) // Second fails
-        .mockResolvedValueOnce(undefined) // Third succeeds
-
-      // Act
-      const result = await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - All snapshots should be processed successfully
-      // Validates: Requirements 2.2
-      expect(result.success).toBe(true)
-      expect(result.processedItems).toBe(3)
-      expect(result.failedItems).toBe(0)
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).toHaveBeenCalledTimes(3)
-    })
-
-    it('should not call computeAndStore when snapshot has no districts', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(
-        createMockSnapshot('2024-01-15')
-      )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([]) // No districts
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - computeAndStore should not be called for empty snapshots
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).not.toHaveBeenCalled()
-    })
-
-    it('should not call computeAndStore when snapshot is not found', async () => {
-      // Arrange
-      const snapshotIds = ['2024-01-15']
-      const progressCallback = createProgressCallback()
-
-      mockSnapshotStorage.getSnapshot.mockResolvedValue(null) // Snapshot not found
-
-      // Act
-      await analyticsGenerator.generateForSnapshots(
-        snapshotIds,
-        progressCallback
-      )
-
-      // Assert - computeAndStore should not be called for missing snapshots
-      expect(
-        mockPreComputedAnalyticsService.computeAndStore
-      ).not.toHaveBeenCalled()
+      expect(generator).toBeDefined()
+      expect(generator.isCancelled()).toBe(false)
     })
   })
 })

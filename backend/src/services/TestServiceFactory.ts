@@ -33,10 +33,6 @@ import {
 } from './ServiceContainer.js'
 import { CacheConfigService } from './CacheConfigService.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
-import {
-  BordaCountRankingCalculator,
-  type RankingCalculator,
-} from './RankingCalculator.js'
 import { RefreshService } from './RefreshService.js'
 import { BackfillService } from './UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
@@ -151,11 +147,6 @@ export interface TestServiceFactory {
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService
 
   /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator
-
-  /**
    * Create BackfillService instance
    */
   createBackfillService(
@@ -265,27 +256,18 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
     const store = snapshotStore || this.createSnapshotStore()
-    const rankingCalculator = this.createRankingCalculator()
     const mockCacheService = createMockCacheService()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     const service = new RefreshService(
       store,
       mockCacheService as unknown as RawCSVCacheService,
       undefined, // districtConfigService
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service
-  }
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator {
-    const calculator = new BordaCountRankingCalculator()
-    // RankingCalculator doesn't have dispose method, so we don't track it
-    return calculator
   }
 
   /**
@@ -306,15 +288,15 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       const storage = new LocalDistrictConfigStorage(cacheDir)
       config = new DistrictConfigurationService(storage)
     }
-    const rankingCalculator = this.createRankingCalculator()
 
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     const service = new BackfillService(
       refresh,
       store as FileSnapshotStore,
       config,
       undefined, // alertManager
       undefined, // circuitBreakerManager
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     // BackfillService doesn't have dispose method, so we don't track it
     return service
@@ -386,26 +368,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register RankingCalculator
-    container.register(
-      ServiceTokens.RankingCalculator,
-      createServiceFactory(
-        () => new BordaCountRankingCalculator(),
-        async () => {
-          // RankingCalculator doesn't have dispose method
-        }
-      )
-    )
-
     // Register RefreshService
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     container.register(
       ServiceTokens.RefreshService,
       createServiceFactory(
         (container: ServiceContainer) => {
           const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
           const mockCacheService = createMockCacheService()
 
           // RefreshService now uses SnapshotBuilder internally (no scraping)
@@ -413,7 +382,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
             snapshotStore,
             mockCacheService as unknown as RawCSVCacheService,
             undefined, // districtConfigService
-            rankingCalculator
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
           )
         },
         async () => {
@@ -423,15 +392,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     )
 
     // Register BackfillService
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     container.register(
       ServiceTokens.BackfillService,
       createServiceFactory(
         (container: ServiceContainer) => {
           const refreshService = container.resolve(ServiceTokens.RefreshService)
           const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
           // Create DistrictConfigurationService with storage
           const cacheConfig = container.resolve(
             ServiceTokens.CacheConfigService
@@ -446,7 +413,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
             configService,
             undefined, // alertManager
             undefined, // circuitBreakerManager
-            rankingCalculator
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
           )
         },
         async () => {
@@ -519,17 +486,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         () => this.createSnapshotStore(),
         async _instance => {
           // FileSnapshotStore doesn't have dispose method
-        }
-      )
-    )
-
-    // Register RankingCalculator
-    container.registerInterface(
-      'RankingCalculator',
-      createServiceFactory(
-        () => this.createRankingCalculator(),
-        async _instance => {
-          // RankingCalculator doesn't have dispose method
         }
       )
     )
@@ -638,10 +594,6 @@ export const ServiceTokens = {
   ),
   Logger: createServiceToken('Logger', TestLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
-  RankingCalculator: createServiceToken(
-    'RankingCalculator',
-    BordaCountRankingCalculator
-  ),
   RefreshService: createServiceToken('RefreshService', RefreshService),
   BackfillService: createServiceToken('BackfillService', BackfillService),
 }
@@ -658,8 +610,6 @@ export const InterfaceTokens = {
   ),
   ILogger: createInterfaceToken<ILogger>('ILogger'),
   SnapshotStore: createInterfaceToken<SnapshotStore>('SnapshotStore'),
-  RankingCalculator:
-    createInterfaceToken<RankingCalculator>('RankingCalculator'),
   RefreshService: createInterfaceToken<RefreshService>('RefreshService'),
   BackfillService: createInterfaceToken<BackfillService>('BackfillService'),
 

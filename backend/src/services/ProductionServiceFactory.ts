@@ -35,10 +35,6 @@ import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './SnapshotStore.js'
 import { RefreshService } from './RefreshService.js'
-import {
-  BordaCountRankingCalculator,
-  type RankingCalculator,
-} from './RankingCalculator.js'
 import { BackfillService } from './UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { MonthEndDataMapper } from './MonthEndDataMapper.js'
@@ -180,11 +176,6 @@ export interface ProductionServiceFactory {
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator
 
   /**
    * Create RawCSVCacheService instance
@@ -376,17 +367,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
-    // Register RankingCalculator
-    container.register(
-      ServiceTokens.RankingCalculator,
-      createServiceFactory(
-        () => new BordaCountRankingCalculator(),
-        async () => {
-          // RankingCalculator doesn't have dispose method
-        }
-      )
-    )
-
     // Register RefreshService
     container.register(
       ServiceTokens.RefreshService,
@@ -402,17 +382,15 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
           // - 'local' or unset: Uses LocalRawCSVStorage (reads from local filesystem)
           const rawCSVStorage =
             container.resolveInterface<IRawCSVStorage>('IRawCSVStorage')
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
 
           // RefreshService now uses SnapshotBuilder internally (no scraping)
           // and accepts ISnapshotStorage and IRawCSVStorage for storage abstraction
+          // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
           return new RefreshService(
             snapshotStorage,
             rawCSVStorage,
             undefined, // districtConfigService
-            rankingCalculator
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
           )
         },
         async () => {
@@ -428,9 +406,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
         (container: ServiceContainer) => {
           const refreshService = container.resolve(ServiceTokens.RefreshService)
           const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
           // Create DistrictConfigurationService with storage from StorageProviderFactory
           const storageProviders =
             StorageProviderFactory.createFromEnvironment()
@@ -438,13 +413,14 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
             storageProviders.districtConfigStorage
           )
 
+          // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
           return new BackfillService(
             refreshService,
             snapshotStore as FileSnapshotStore,
             configService,
             undefined, // alertManager
             undefined, // circuitBreakerManager
-            rankingCalculator
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
           )
         },
         async () => {
@@ -580,27 +556,18 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const storageProviders = StorageProviderFactory.createFromEnvironment()
     const store = snapshotStore || storageProviders.snapshotStorage
     const rawCSVStorage = storageProviders.rawCSVStorage
-    const rankingCalculator = this.createRankingCalculator()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
     // and accepts IRawCSVStorage for storage abstraction
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     const service = new RefreshService(
       store,
       rawCSVStorage,
       undefined, // districtConfigService
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service
-  }
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator {
-    const calculator = new BordaCountRankingCalculator()
-    // RankingCalculator doesn't have dispose method, so we don't track it
-    return calculator
   }
 
   /**
@@ -659,15 +626,15 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
         storageProviders.districtConfigStorage
       )
     }
-    const rankingCalculator = this.createRankingCalculator()
 
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     const service = new BackfillService(
       refresh,
       store,
       config,
       undefined, // alertManager
       undefined, // circuitBreakerManager
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     // BackfillService doesn't have dispose method, so we don't track it
     return service
@@ -718,10 +685,6 @@ export const ServiceTokens = {
   ),
   Logger: createServiceToken('Logger', ProductionLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
-  RankingCalculator: createServiceToken(
-    'RankingCalculator',
-    BordaCountRankingCalculator
-  ),
   RefreshService: createServiceToken('RefreshService', RefreshService),
   BackfillService: createServiceToken('BackfillService', BackfillService),
 }

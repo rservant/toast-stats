@@ -612,11 +612,17 @@ export class TransformService {
         paymentsRank: aggregate.paymentsRank,
         distinguishedRank: aggregate.distinguishedRank,
         aggregateScore: aggregate.aggregateScore,
+        overallRank: 0, // Will be set after sorting
       })
     }
 
-    // Sort by aggregate score (highest first)
+    // Sort by aggregate score (highest first) and assign overall ranks
     rankings.sort((a, b) => b.aggregateScore - a.aggregateScore)
+
+    // Assign overall ranks after sorting (1-based)
+    rankings.forEach((ranking, index) => {
+      ranking.overallRank = index + 1
+    })
 
     const calculatedAt = new Date().toISOString()
 

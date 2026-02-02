@@ -579,25 +579,8 @@ export interface IDistrictConfigStorage {
  */
 export interface ITimeSeriesIndexStorage {
   // ============================================================================
-  // Core Time-Series Operations
+  // Core Time-Series Operations (Read-Only)
   // ============================================================================
-
-  /**
-   * Append a data point to the time-series index
-   *
-   * Adds a new time-series data point for a district. The data point is
-   * automatically placed in the appropriate program year partition based
-   * on its date. If a data point with the same date already exists, it
-   * will be updated.
-   *
-   * @param districtId - The district identifier (e.g., "42", "61", "F")
-   * @param dataPoint - The time-series data point to append
-   * @throws StorageOperationError on write failure
-   */
-  appendDataPoint(
-    districtId: string,
-    dataPoint: TimeSeriesDataPoint
-  ): Promise<void>
 
   /**
    * Get trend data for a date range

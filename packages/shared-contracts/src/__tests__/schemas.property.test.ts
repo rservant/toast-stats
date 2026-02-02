@@ -156,6 +156,7 @@ const districtRankingArb = fc.record({
   paymentsRank: fc.nat(),
   distinguishedRank: fc.nat(),
   aggregateScore: fc.nat(),
+  overallRank: fc.nat(),
 })
 
 /**
