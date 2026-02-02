@@ -13,6 +13,7 @@
 #   --start-date YYYY-MM-DD   Start date (default: 2017-02-06)
 #   --end-date YYYY-MM-DD     End date (default: today)
 #   --districts LIST          Comma-separated district IDs (default: all)
+#   --cache-dir PATH          Cache directory path (default: uses CACHE_DIR env or ./cache)
 #   --scrape                  Also scrape data (default: only transform existing CSV)
 #   --skip-analytics          Skip analytics computation
 #   --force                   Force re-process even if data exists
@@ -30,6 +31,9 @@
 #   # Backfill specific districts
 #   ./scripts/backfill-historical-data.sh --districts 57,58,59
 #
+#   # Backfill with custom cache directory
+#   ./scripts/backfill-historical-data.sh --cache-dir /path/to/cache
+#
 #   # Resume interrupted backfill
 #   ./scripts/backfill-historical-data.sh --resume-from 2020-06-15
 #
@@ -46,6 +50,7 @@ FORCE=false
 VERBOSE=false
 DRY_RUN=false
 RESUME_FROM=""
+CACHE_DIR_OVERRIDE=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -96,6 +101,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --resume-from)
             RESUME_FROM="$2"
+            shift 2
+            ;;
+        --cache-dir)
+            CACHE_DIR_OVERRIDE="$2"
             shift 2
             ;;
         --help)
@@ -161,7 +170,7 @@ date_lte() {
     [[ "$date1" < "$date2" ]] || [[ "$date1" == "$date2" ]]
 }
 
-# Build CLI options
+# Build CLI options for transform/scrape commands
 build_cli_options() {
     local opts=""
     
@@ -180,14 +189,47 @@ build_cli_options() {
     echo "$opts"
 }
 
+# Build CLI options for compute-analytics command
+build_analytics_cli_options() {
+    local opts=""
+    
+    if [[ -n "$DISTRICTS" ]]; then
+        opts="$opts --districts $DISTRICTS"
+    fi
+    
+    if [[ "$FORCE" == "true" ]]; then
+        opts="$opts --force-analytics"
+    fi
+    
+    if [[ "$VERBOSE" == "true" ]]; then
+        opts="$opts --verbose"
+    fi
+    
+    echo "$opts"
+}
+
 # Run scraper-cli command
 run_cli() {
     local command="$1"
     local date="$2"
     local extra_opts="$3"
     
-    local cli_opts=$(build_cli_options)
+    # Use appropriate options builder based on command
+    local cli_opts
+    if [[ "$command" == "compute-analytics" ]]; then
+        cli_opts=$(build_analytics_cli_options)
+    else
+        cli_opts=$(build_cli_options)
+    fi
+    
     local full_cmd="npx scraper-cli $command --date $date $cli_opts $extra_opts"
+    
+    # Set CACHE_DIR environment variable if override is specified
+    local env_prefix=""
+    if [[ -n "$CACHE_DIR_OVERRIDE" ]]; then
+        env_prefix="CACHE_DIR=$CACHE_DIR_OVERRIDE "
+        full_cmd="${env_prefix}${full_cmd}"
+    fi
     
     if [[ "$DRY_RUN" == "true" ]]; then
         log INFO "[DRY-RUN] Would execute: $full_cmd"
@@ -266,6 +308,7 @@ main() {
     log INFO "Start date: $START_DATE"
     log INFO "End date: $END_DATE"
     log INFO "Districts: ${DISTRICTS:-all}"
+    log INFO "Cache dir: ${CACHE_DIR_OVERRIDE:-default (./cache or CACHE_DIR env)}"
     log INFO "Scrape: $DO_SCRAPE"
     log INFO "Skip analytics: $SKIP_ANALYTICS"
     log INFO "Force: $FORCE"
