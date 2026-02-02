@@ -74,6 +74,19 @@ interface DistrictRanking {
 }
 
 /**
+ * Per-district snapshot data structure
+ * Must match backend's PerDistrictData interface in SnapshotStore.ts
+ */
+interface PerDistrictData {
+  districtId: string
+  districtName: string
+  collectedAt: string
+  status: 'success' | 'failed'
+  errorMessage?: string
+  data: unknown // DistrictStatistics from analytics-core
+}
+
+/**
  * Internal structure for ranking metrics extraction
  */
 interface RankingMetrics {
@@ -946,7 +959,16 @@ export class TransformService {
 
       await fs.mkdir(snapshotDir, { recursive: true })
 
-      const snapshotContent = JSON.stringify(districtStats, null, 2)
+      // Wrap district data in PerDistrictData format expected by backend
+      const perDistrictData: PerDistrictData = {
+        districtId,
+        districtName: `District ${districtId}`,
+        collectedAt: new Date().toISOString(),
+        status: 'success',
+        data: districtStats,
+      }
+
+      const snapshotContent = JSON.stringify(perDistrictData, null, 2)
       const tempPath = `${snapshotPath}.tmp.${Date.now()}`
       await fs.writeFile(tempPath, snapshotContent, 'utf-8')
       await fs.rename(tempPath, snapshotPath)

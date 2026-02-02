@@ -199,10 +199,17 @@ describe('TransformService', () => {
       const snapshotContent = await fs.readFile(snapshotPath, 'utf-8')
       const snapshot = JSON.parse(snapshotContent)
 
+      // Verify PerDistrictData wrapper structure
       expect(snapshot.districtId).toBe(districtId)
-      expect(snapshot.snapshotDate).toBe(date)
-      expect(snapshot.clubs).toHaveLength(3)
-      expect(snapshot.divisions).toHaveLength(2)
+      expect(snapshot.districtName).toBe(`District ${districtId}`)
+      expect(snapshot.status).toBe('success')
+      expect(snapshot.collectedAt).toBeDefined()
+      
+      // Verify the actual district data inside the wrapper
+      expect(snapshot.data.districtId).toBe(districtId)
+      expect(snapshot.data.snapshotDate).toBe(date)
+      expect(snapshot.data.clubs).toHaveLength(3)
+      expect(snapshot.data.divisions).toHaveLength(2)
     })
 
     it('should force re-transform when force option is true', async () => {
@@ -247,7 +254,8 @@ describe('TransformService', () => {
         'utf-8'
       )
       const snapshot = JSON.parse(snapshotContent)
-      expect(snapshot.clubs).toHaveLength(3)
+      // Verify the data inside the PerDistrictData wrapper
+      expect(snapshot.data.clubs).toHaveLength(3)
     })
   })
 
