@@ -268,7 +268,80 @@ New features requiring data computation MUST:
 
 ---
 
-## 9. Enforcement
+## 9. Shared Contracts Requirements
+
+### 9.1 Purpose of shared-contracts
+
+The `packages/shared-contracts/` package defines the **data contract** between scraper-cli and backend:
+
+- TypeScript types for all pre-computed file formats
+- Zod schemas for runtime validation
+- Version constants for schema compatibility checking
+
+### 9.2 When to Update shared-contracts
+
+shared-contracts MUST be updated when:
+
+- Adding new pre-computed file types
+- Modifying existing file structures
+- Adding new fields to existing types
+- Changing validation rules
+
+### 9.3 Required Elements in shared-contracts
+
+For each pre-computed file type, shared-contracts MUST contain:
+
+1. **TypeScript type definition** in `src/types/`
+2. **Zod schema** in `src/schemas/`
+3. **Validation helper** in `src/validation/`
+4. **Export** from `src/index.ts`
+
+### 9.4 Version Management
+
+When modifying shared-contracts:
+
+1. Update `SCHEMA_VERSION` in `src/version.ts` for breaking changes
+2. Maintain backward compatibility where possible
+3. Document migration path for breaking changes
+
+### 9.5 Usage Pattern
+
+```typescript
+// scraper-cli: Writing pre-computed files
+import { TimeSeriesDataPointSchema, type TimeSeriesDataPoint } from '@toastmasters-tracker/shared-contracts'
+
+const dataPoint: TimeSeriesDataPoint = { ... }
+const validated = TimeSeriesDataPointSchema.parse(dataPoint)
+await fs.writeFile(path, JSON.stringify(validated))
+
+// backend: Reading pre-computed files
+import { TimeSeriesDataPointSchema, type TimeSeriesDataPoint } from '@toastmasters-tracker/shared-contracts'
+
+const raw = JSON.parse(await fs.readFile(path))
+const dataPoint = TimeSeriesDataPointSchema.parse(raw)
+```
+
+### 9.6 Prohibited Patterns
+
+The following patterns are FORBIDDEN:
+
+```typescript
+// ❌ FORBIDDEN - Defining file types in backend only
+// backend/src/types/myNewType.ts
+export interface MyNewFileType { ... }
+
+// ❌ FORBIDDEN - Defining file types in scraper-cli only
+// packages/scraper-cli/src/types/myNewType.ts
+export interface MyNewFileType { ... }
+
+// ✅ CORRECT - Define in shared-contracts, import everywhere
+// packages/shared-contracts/src/types/my-new-type.ts
+export interface MyNewFileType { ... }
+```
+
+---
+
+## 10. Enforcement
 
 ### 9.1 Code Review Requirements
 
@@ -303,7 +376,7 @@ The following operations are FORBIDDEN in the backend:
 
 ---
 
-## 10. Performance Requirements
+## 11. Performance Requirements
 
 ### 10.1 Backend Response Times
 
@@ -321,7 +394,7 @@ All computation time MUST be spent in the scraper-cli pipeline.
 
 ---
 
-## 11. Error Messages
+## 12. Error Messages
 
 When pre-computed data is missing, use these standard error messages:
 
@@ -350,10 +423,11 @@ When pre-computed data is missing, use these standard error messages:
 
 ---
 
-## 12. Final Rules
+## 13. Final Rules
 
 > **The backend is a read-only API server.**  
 > **All computation happens in scraper-cli.**  
 > **Pre-computed files are the contract between scraper-cli and backend.**  
 > **Missing data is an error, not a trigger for computation.**  
-> **Sub-10ms response times are non-negotiable.**
+> **Sub-10ms response times are non-negotiable.**  
+> **All pre-computed file types MUST be defined in shared-contracts.**
