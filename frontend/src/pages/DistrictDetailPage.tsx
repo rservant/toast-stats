@@ -48,6 +48,35 @@ type TabType =
   | 'analytics'
   | 'globalRankings'
 
+/**
+ * Helper function to extract distinguished projection value from either
+ * a number or an object (backend returns object from /analytics endpoint)
+ */
+function getDistinguishedProjectionValue(
+  projection:
+    | number
+    | {
+        projectedDistinguished?: number
+        projectedSelect?: number
+        projectedPresident?: number
+      }
+    | null
+    | undefined
+): number {
+  if (projection === null || projection === undefined) {
+    return 0
+  }
+  if (typeof projection === 'number') {
+    return projection
+  }
+  // It's an object - sum up the projected values
+  return (
+    (projection.projectedDistinguished ?? 0) +
+    (projection.projectedSelect ?? 0) +
+    (projection.projectedPresident ?? 0)
+  )
+}
+
 const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
   const navigate = useNavigate()
@@ -502,11 +531,10 @@ const DistrictDetailPage: React.FC = () => {
                         total: 0,
                       }
                     }
-                    distinguishedProjection={
+                    distinguishedProjection={getDistinguishedProjectionValue(
                       overviewData?.distinguishedProjection ??
-                      analytics?.distinguishedProjection ??
-                      0
-                    }
+                        analytics?.distinguishedProjection
+                    )}
                     totalClubs={
                       overviewData?.clubCounts.total ??
                       analytics?.allClubs.length ??

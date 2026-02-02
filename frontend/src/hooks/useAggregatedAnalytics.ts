@@ -221,6 +221,27 @@ function convertToAggregatedFormat(
     trends.payments = analytics.paymentsTrend
   }
 
+  // Handle distinguishedProjection - it may be a number or an object from the backend
+  // The /analytics endpoint returns an object, while /analytics-summary returns a number
+  let projectionValue: number
+  const projection = analytics.distinguishedProjection
+  if (typeof projection === 'number') {
+    projectionValue = projection
+  } else if (projection && typeof projection === 'object') {
+    // Extract the total projected distinguished clubs from the object
+    const projObj = projection as {
+      projectedDistinguished?: number
+      projectedSelect?: number
+      projectedPresident?: number
+    }
+    projectionValue =
+      (projObj.projectedDistinguished ?? 0) +
+      (projObj.projectedSelect ?? 0) +
+      (projObj.projectedPresident ?? 0)
+  } else {
+    projectionValue = 0
+  }
+
   // Build the base response
   const response: AggregatedAnalyticsResponse = {
     districtId: analytics.districtId,
@@ -244,7 +265,7 @@ function convertToAggregatedFormat(
         distinguished: analytics.distinguishedClubs.distinguished,
         total: analytics.distinguishedClubs.total,
       },
-      distinguishedProjection: analytics.distinguishedProjection,
+      distinguishedProjection: projectionValue,
     },
     trends,
     dataSource: 'computed',

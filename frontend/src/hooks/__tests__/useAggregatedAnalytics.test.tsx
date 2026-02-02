@@ -569,5 +569,47 @@ describe('useAggregatedAnalytics', () => {
       expect(result.current.data?.trends.payments).toBeUndefined()
       expect(result.current.data?.trends.membership).toHaveLength(1)
     })
+
+    /**
+     * Test handling distinguishedProjection as object from fallback endpoint
+     *
+     * The /analytics endpoint returns distinguishedProjection as an object,
+     * while /analytics-summary returns it as a number. The hook should
+     * convert the object to a number when falling back.
+     */
+    it('should convert distinguishedProjection object to number in fallback', async () => {
+      const aggregatedError = new Error('Aggregated endpoint failed')
+      const individualResponse = createMockIndividualAnalyticsResponse({
+        // Override with object format (as returned by /analytics endpoint)
+        distinguishedProjection: {
+          projectedDistinguished: 30,
+          projectedSelect: 20,
+          projectedPresident: 15,
+          currentDistinguished: 25,
+          currentSelect: 18,
+          currentPresident: 12,
+          projectionDate: '2024-06-30',
+        } as unknown as number, // Type assertion needed for test
+      })
+
+      mockedApiClient.get.mockImplementation((url: string) => {
+        if (url.includes('analytics-summary')) {
+          return Promise.reject(aggregatedError)
+        }
+        return Promise.resolve({ data: individualResponse })
+      })
+
+      const { result } = renderHook(() => useAggregatedAnalytics('42'), {
+        wrapper: createWrapper(),
+      })
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // Should have converted the object to a sum of projected values
+      // 30 + 20 + 15 = 65
+      expect(result.current.data?.summary.distinguishedProjection).toBe(65)
+    })
   })
 })

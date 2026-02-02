@@ -128,7 +128,21 @@ export interface DistrictAnalytics {
     distinguished: number
     total: number
   }
-  distinguishedProjection: number
+  /**
+   * Distinguished projection - can be a number (from analytics-summary)
+   * or an object (from full analytics endpoint)
+   */
+  distinguishedProjection:
+    | number
+    | {
+        projectedDistinguished: number
+        projectedSelect: number
+        projectedPresident: number
+        currentDistinguished?: number
+        currentSelect?: number
+        currentPresident?: number
+        projectionDate?: string
+      }
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: AreaAnalytics[]
   divisionRecognition?: DivisionRecognition[]
