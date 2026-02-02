@@ -1,0 +1,197 @@
+/**
+ * Validation helper functions for shared data contracts.
+ *
+ * These functions wrap Zod schema validation with a consistent interface,
+ * providing type-safe validation results with descriptive error messages.
+ *
+ * All validation functions accept `unknown` data and return a ValidationResult
+ * that indicates success or failure with the validated data or error message.
+ *
+ * @module validation/validators
+ * @see Requirements 6.4, 6.5
+ */
+
+import { PerDistrictDataSchema } from '../schemas/per-district-data.schema.js'
+import { AllDistrictsRankingsDataSchema } from '../schemas/all-districts-rankings.schema.js'
+import { SnapshotMetadataFileSchema } from '../schemas/snapshot-metadata.schema.js'
+import { SnapshotManifestSchema } from '../schemas/snapshot-manifest.schema.js'
+import type { PerDistrictData } from '../types/per-district-data.js'
+import type { AllDistrictsRankingsData } from '../types/all-districts-rankings.js'
+import type { SnapshotMetadataFile } from '../types/snapshot-metadata.js'
+import type { SnapshotManifest } from '../types/snapshot-manifest.js'
+
+/**
+ * Result of a validation operation.
+ *
+ * When validation succeeds, `success` is `true` and `data` contains
+ * the validated and typed data.
+ *
+ * When validation fails, `success` is `false` and `error` contains
+ * a descriptive error message indicating which fields are invalid.
+ *
+ * @template T - The type of the validated data
+ *
+ * @example
+ * ```typescript
+ * const result = validatePerDistrictData(jsonData)
+ * if (result.success) {
+ *   // result.data is typed as PerDistrictData
+ *   console.log(result.data.districtId)
+ * } else {
+ *   // result.error contains the validation error message
+ *   console.error(result.error)
+ * }
+ * ```
+ */
+export interface ValidationResult<T> {
+  /** Whether validation succeeded */
+  success: boolean
+  /** The validated data (only present when success is true) */
+  data?: T
+  /** Error message describing validation failure (only present when success is false) */
+  error?: string
+}
+
+/**
+ * Validates per-district data against the PerDistrictData schema.
+ *
+ * Use this function to validate district JSON files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed PerDistrictData on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validatePerDistrictData(jsonData)
+ * if (result.success) {
+ *   const districtData = result.data
+ *   console.log(`District ${districtData.districtId}: ${districtData.status}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 6.4, 6.5
+ */
+export function validatePerDistrictData(
+  data: unknown
+): ValidationResult<PerDistrictData> {
+  const result = PerDistrictDataSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `PerDistrictData validation failed: ${result.error.message}`,
+  }
+}
+
+/**
+ * Validates all-districts rankings data against the AllDistrictsRankingsData schema.
+ *
+ * Use this function to validate all-districts-rankings.json files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed AllDistrictsRankingsData on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateAllDistrictsRankings(jsonData)
+ * if (result.success) {
+ *   const rankingsData = result.data
+ *   console.log(`Total districts: ${rankingsData.metadata.totalDistricts}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 6.4, 6.5
+ */
+export function validateAllDistrictsRankings(
+  data: unknown
+): ValidationResult<AllDistrictsRankingsData> {
+  const result = AllDistrictsRankingsDataSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `AllDistrictsRankingsData validation failed: ${result.error.message}`,
+  }
+}
+
+/**
+ * Validates snapshot metadata against the SnapshotMetadataFile schema.
+ *
+ * Use this function to validate metadata.json files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed SnapshotMetadataFile on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateSnapshotMetadata(jsonData)
+ * if (result.success) {
+ *   const metadata = result.data
+ *   console.log(`Snapshot ID: ${metadata.snapshotId}, Status: ${metadata.status}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 6.4, 6.5
+ */
+export function validateSnapshotMetadata(
+  data: unknown
+): ValidationResult<SnapshotMetadataFile> {
+  const result = SnapshotMetadataFileSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `SnapshotMetadataFile validation failed: ${result.error.message}`,
+  }
+}
+
+/**
+ * Validates snapshot manifest against the SnapshotManifest schema.
+ *
+ * Use this function to validate manifest.json files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed SnapshotManifest on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateSnapshotManifest(jsonData)
+ * if (result.success) {
+ *   const manifest = result.data
+ *   console.log(`Total districts: ${manifest.totalDistricts}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 6.4, 6.5
+ */
+export function validateSnapshotManifest(
+  data: unknown
+): ValidationResult<SnapshotManifest> {
+  const result = SnapshotManifestSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `SnapshotManifest validation failed: ${result.error.message}`,
+  }
+}

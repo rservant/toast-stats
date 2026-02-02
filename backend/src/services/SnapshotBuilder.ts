@@ -84,6 +84,11 @@ export interface BuildResult {
     rejectedRecords: number
     rejectionDetails?: Array<{ districtId: string; reason: string }>
   }
+  /**
+   * District data from the snapshot (includes clubPerformance for time-series calculations)
+   * This is the original data before storage transformation, preserving all fields
+   */
+  districtData?: import('../types/districts.js').DistrictStatistics[]
 }
 
 /**
@@ -378,6 +383,7 @@ export class SnapshotBuilder {
         errors: allErrors,
         duration_ms: Date.now() - startTime,
         validation: rawData.validationSummary,
+        districtData: normalizedData.districts,
       }
     } catch (error) {
       const errorMessage =

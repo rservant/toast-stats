@@ -372,9 +372,13 @@ export class RefreshService {
     if (
       this.timeSeriesIndexService &&
       buildResult.success &&
-      buildResult.snapshotId
+      buildResult.snapshotId &&
+      buildResult.districtData
     ) {
-      await this.triggerTimeSeriesIndexUpdate(buildResult.snapshotId)
+      await this.triggerTimeSeriesIndexUpdate(
+        buildResult.snapshotId,
+        buildResult.districtData
+      )
     }
 
     logger.info('Refresh completed', {
@@ -475,14 +479,16 @@ export class RefreshService {
    *
    * Requirement 2.2: Append analytics summary to time-series index when snapshot is created
    *
-   * This method reads the pre-computed analytics for each district and appends
-   * the data points to the time-series index. Errors are logged but do not
-   * fail the snapshot creation.
+   * This method uses the original district data (with clubPerformance) to build
+   * time-series data points and appends them to the time-series index.
+   * Errors are logged but do not fail the snapshot creation.
    *
    * @param snapshotId - The snapshot ID to update time-series index for
+   * @param districtData - The original district data with clubPerformance preserved
    */
   private async triggerTimeSeriesIndexUpdate(
-    snapshotId: string
+    snapshotId: string,
+    districtData: import('../types/districts.js').DistrictStatistics[]
   ): Promise<void> {
     if (!this.timeSeriesIndexService) {
       return
@@ -494,22 +500,9 @@ export class RefreshService {
         snapshotId,
       })
 
-      // Load the snapshot to get district data
-      const snapshot = await this.snapshotStorage.getSnapshot(snapshotId)
-
-      if (!snapshot) {
-        logger.warn('Snapshot not found for time-series index update', {
-          operation: 'triggerTimeSeriesIndexUpdate',
-          snapshotId,
-        })
-        return
-      }
-
-      const districtData = snapshot.payload.districts
-
       if (districtData.length === 0) {
         logger.warn(
-          'No district data in snapshot for time-series index update',
+          'No district data provided for time-series index update',
           {
             operation: 'triggerTimeSeriesIndexUpdate',
             snapshotId,

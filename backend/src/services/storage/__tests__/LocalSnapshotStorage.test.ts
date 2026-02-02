@@ -253,27 +253,28 @@ describe('LocalSnapshotStorage', () => {
 
     const createTestDistrictData = (): DistrictStatistics => ({
       districtId,
-      districtName: 'Test District',
-      region: 1,
-      programYear: '2024-2025',
       asOfDate: snapshotId,
-      clubs: [],
-      divisions: [],
-      areas: [],
-      summary: {
-        totalClubs: 10,
-        totalMembers: 200,
-        distinguishedClubs: 5,
-        selectDistinguishedClubs: 2,
-        presidentDistinguishedClubs: 1,
-        suspendedClubs: 0,
-        lowMembershipClubs: 1,
-        goalsMet: {
-          dcpGoals: 8,
-          membershipGoals: 6,
-          trainingGoals: 4,
-          adminGoals: 2,
-        },
+      membership: {
+        total: 200,
+        change: 10,
+        changePercent: 5,
+        byClub: [
+          { clubId: '1001', clubName: 'Test Club 1', memberCount: 100 },
+          { clubId: '1002', clubName: 'Test Club 2', memberCount: 100 },
+        ],
+      },
+      clubs: {
+        total: 10,
+        active: 8,
+        suspended: 1,
+        ineligible: 0,
+        low: 1,
+        distinguished: 5,
+      },
+      education: {
+        totalAwards: 8,
+        byType: [],
+        topClubs: [],
       },
     })
 
@@ -323,8 +324,8 @@ describe('LocalSnapshotStorage', () => {
         await storage.writeDistrictData(snapshotId, districtId, districtData)
 
         const result = await storage.readDistrictData(snapshotId, districtId)
-        expect(result?.districtName).toBe('Test District')
-        expect(result?.summary.totalClubs).toBe(10)
+        expect(result?.districtId).toBe(districtId)
+        expect(result?.clubs.total).toBe(10)
       })
     })
 
@@ -384,23 +385,57 @@ describe('LocalSnapshotStorage', () => {
     const snapshotId = '2024-01-15'
 
     const createTestRankings = (): AllDistrictsRankingsData => ({
-      calculatedAt: new Date().toISOString(),
-      rankingVersion: '1.0.0',
-      totalDistricts: 2,
+      metadata: {
+        snapshotId: snapshotId,
+        calculatedAt: new Date().toISOString(),
+        schemaVersion: '1.0.0',
+        calculationVersion: '1.0.0',
+        rankingVersion: '1.0.0',
+        sourceCsvDate: snapshotId,
+        csvFetchedAt: new Date().toISOString(),
+        totalDistricts: 2,
+        fromCache: false,
+      },
       rankings: [
         {
           districtId: '42',
           districtName: 'District 42',
-          overallRank: 1,
-          overallScore: 100,
-          metrics: {},
+          region: 'Region 1',
+          paidClubs: 10,
+          paidClubBase: 8,
+          clubGrowthPercent: 25,
+          totalPayments: 100,
+          paymentBase: 80,
+          paymentGrowthPercent: 25,
+          activeClubs: 10,
+          distinguishedClubs: 5,
+          selectDistinguished: 2,
+          presidentsDistinguished: 1,
+          distinguishedPercent: 50,
+          clubsRank: 1,
+          paymentsRank: 1,
+          distinguishedRank: 1,
+          aggregateScore: 100,
         },
         {
           districtId: '43',
           districtName: 'District 43',
-          overallRank: 2,
-          overallScore: 90,
-          metrics: {},
+          region: 'Region 1',
+          paidClubs: 8,
+          paidClubBase: 8,
+          clubGrowthPercent: 0,
+          totalPayments: 80,
+          paymentBase: 80,
+          paymentGrowthPercent: 0,
+          activeClubs: 8,
+          distinguishedClubs: 3,
+          selectDistinguished: 1,
+          presidentsDistinguished: 0,
+          distinguishedPercent: 37.5,
+          clubsRank: 2,
+          paymentsRank: 2,
+          distinguishedRank: 2,
+          aggregateScore: 90,
         },
       ],
     })
@@ -450,7 +485,7 @@ describe('LocalSnapshotStorage', () => {
 
         const result = await storage.readAllDistrictsRankings(snapshotId)
         expect(result).not.toBeNull()
-        expect(result?.totalDistricts).toBe(2)
+        expect(result?.metadata.totalDistricts).toBe(2)
         expect(result?.rankings.length).toBe(2)
       })
     })
@@ -575,43 +610,65 @@ describe('LocalSnapshotStorage', () => {
       // 2. Write district data
       const districtData: DistrictStatistics = {
         districtId,
-        districtName: 'Test District',
-        region: 1,
-        programYear: '2024-2025',
         asOfDate: snapshotId,
-        clubs: [],
-        divisions: [],
-        areas: [],
-        summary: {
-          totalClubs: 10,
-          totalMembers: 200,
-          distinguishedClubs: 5,
-          selectDistinguishedClubs: 2,
-          presidentDistinguishedClubs: 1,
-          suspendedClubs: 0,
-          lowMembershipClubs: 1,
-          goalsMet: {
-            dcpGoals: 8,
-            membershipGoals: 6,
-            trainingGoals: 4,
-            adminGoals: 2,
-          },
+        membership: {
+          total: 200,
+          change: 10,
+          changePercent: 5,
+          byClub: [
+            { clubId: '1001', clubName: 'Test Club 1', memberCount: 100 },
+            { clubId: '1002', clubName: 'Test Club 2', memberCount: 100 },
+          ],
+        },
+        clubs: {
+          total: 10,
+          active: 8,
+          suspended: 0,
+          ineligible: 0,
+          low: 1,
+          distinguished: 5,
+        },
+        education: {
+          totalAwards: 8,
+          byType: [],
+          topClubs: [],
         },
       }
       await storage.writeDistrictData(snapshotId, districtId, districtData)
 
       // 3. Write rankings
       const rankings: AllDistrictsRankingsData = {
-        calculatedAt: new Date().toISOString(),
-        rankingVersion: '1.0.0',
-        totalDistricts: 1,
+        metadata: {
+          snapshotId: snapshotId,
+          calculatedAt: new Date().toISOString(),
+          schemaVersion: '1.0.0',
+          calculationVersion: '1.0.0',
+          rankingVersion: '1.0.0',
+          sourceCsvDate: snapshotId,
+          csvFetchedAt: new Date().toISOString(),
+          totalDistricts: 1,
+          fromCache: false,
+        },
         rankings: [
           {
             districtId,
             districtName: 'Test District',
-            overallRank: 1,
-            overallScore: 100,
-            metrics: {},
+            region: 'Region 1',
+            paidClubs: 10,
+            paidClubBase: 8,
+            clubGrowthPercent: 25,
+            totalPayments: 100,
+            paymentBase: 80,
+            paymentGrowthPercent: 25,
+            activeClubs: 10,
+            distinguishedClubs: 5,
+            selectDistinguished: 2,
+            presidentsDistinguished: 1,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 100,
           },
         ],
       }

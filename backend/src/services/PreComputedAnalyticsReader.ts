@@ -410,7 +410,8 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       }
 
       // Handle file not found
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      const errnoError = error as { code?: string }
+      if (errnoError.code === 'ENOENT') {
         logger.debug('Analytics file not found', {
           operation: 'readAnalyticsFile',
           filePath,
@@ -1053,7 +1054,8 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       }
 
       // Handle file not found
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      const errnoError = error as { code?: string }
+      if (errnoError.code === 'ENOENT') {
         logger.debug('Analytics manifest not found', {
           operation: 'getAnalyticsManifest',
           snapshotDate,

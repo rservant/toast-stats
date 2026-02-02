@@ -17,19 +17,19 @@ graph TB
         SC --> Validators[Validation Helpers]
         SC --> Versions[Version Constants]
     end
-    
+
     subgraph "Data Producer"
         CLI[scraper-cli]
         CLI -->|imports| SC
         CLI -->|writes| Files[(Snapshot Files)]
     end
-    
+
     subgraph "Data Consumer"
         BE[backend]
         BE -->|imports| SC
         BE -->|reads| Files
     end
-    
+
     subgraph "Existing Package"
         AC[analytics-core]
         AC -->|domain types| CLI
@@ -39,12 +39,12 @@ graph TB
 
 ### Package Responsibilities
 
-| Package | Responsibility |
-|---------|---------------|
+| Package                          | Responsibility                                |
+| -------------------------------- | --------------------------------------------- |
 | `@toastmasters/shared-contracts` | File format types (what gets written to disk) |
-| `@toastmasters/analytics-core` | Domain types and computation logic |
-| `@toastmasters/scraper-cli` | Data acquisition and file writing |
-| `backend` | Data serving and API responses |
+| `@toastmasters/analytics-core`   | Domain types and computation logic            |
+| `@toastmasters/scraper-cli`      | Data acquisition and file writing             |
+| `backend`                        | Data serving and API responses                |
 
 ## Components and Interfaces
 
@@ -226,7 +226,7 @@ export interface SnapshotMetadataFile {
   source: string
   /** Date the data represents */
   dataAsOfDate: string
-  
+
   // Optional closing period fields
   /** Whether this is closing period data */
   isClosingPeriodData?: boolean
@@ -435,11 +435,13 @@ export const SnapshotManifestSchema = z.object({
   totalDistricts: z.number(),
   successfulDistricts: z.number(),
   failedDistricts: z.number(),
-  allDistrictsRankings: z.object({
-    filename: z.string(),
-    size: z.number(),
-    status: z.enum(['present', 'missing']),
-  }).optional(),
+  allDistrictsRankings: z
+    .object({
+      filename: z.string(),
+      size: z.number(),
+      status: z.enum(['present', 'missing']),
+    })
+    .optional(),
 })
 ```
 
@@ -464,47 +466,55 @@ export interface ValidationResult<T> {
   error?: string
 }
 
-export function validatePerDistrictData(data: unknown): ValidationResult<PerDistrictData> {
+export function validatePerDistrictData(
+  data: unknown
+): ValidationResult<PerDistrictData> {
   const result = PerDistrictDataSchema.safeParse(data)
   if (result.success) {
     return { success: true, data: result.data }
   }
-  return { 
-    success: false, 
-    error: `PerDistrictData validation failed: ${result.error.message}` 
+  return {
+    success: false,
+    error: `PerDistrictData validation failed: ${result.error.message}`,
   }
 }
 
-export function validateAllDistrictsRankings(data: unknown): ValidationResult<AllDistrictsRankingsData> {
+export function validateAllDistrictsRankings(
+  data: unknown
+): ValidationResult<AllDistrictsRankingsData> {
   const result = AllDistrictsRankingsDataSchema.safeParse(data)
   if (result.success) {
     return { success: true, data: result.data }
   }
-  return { 
-    success: false, 
-    error: `AllDistrictsRankingsData validation failed: ${result.error.message}` 
+  return {
+    success: false,
+    error: `AllDistrictsRankingsData validation failed: ${result.error.message}`,
   }
 }
 
-export function validateSnapshotMetadata(data: unknown): ValidationResult<SnapshotMetadataFile> {
+export function validateSnapshotMetadata(
+  data: unknown
+): ValidationResult<SnapshotMetadataFile> {
   const result = SnapshotMetadataFileSchema.safeParse(data)
   if (result.success) {
     return { success: true, data: result.data }
   }
-  return { 
-    success: false, 
-    error: `SnapshotMetadataFile validation failed: ${result.error.message}` 
+  return {
+    success: false,
+    error: `SnapshotMetadataFile validation failed: ${result.error.message}`,
   }
 }
 
-export function validateSnapshotManifest(data: unknown): ValidationResult<SnapshotManifest> {
+export function validateSnapshotManifest(
+  data: unknown
+): ValidationResult<SnapshotManifest> {
   const result = SnapshotManifestSchema.safeParse(data)
   if (result.success) {
     return { success: true, data: result.data }
   }
-  return { 
-    success: false, 
-    error: `SnapshotManifest validation failed: ${result.error.message}` 
+  return {
+    success: false,
+    error: `SnapshotManifest validation failed: ${result.error.message}`,
   }
 }
 ```
@@ -556,9 +566,7 @@ export {
 } from './version.js'
 
 // File format types
-export type {
-  PerDistrictData,
-} from './types/per-district-data.js'
+export type { PerDistrictData } from './types/per-district-data.js'
 
 export type {
   DistrictStatisticsFile,
@@ -574,9 +582,7 @@ export type {
   DistrictRanking,
 } from './types/all-districts-rankings.js'
 
-export type {
-  SnapshotMetadataFile,
-} from './types/snapshot-metadata.js'
+export type { SnapshotMetadataFile } from './types/snapshot-metadata.js'
 
 export type {
   SnapshotManifest,
@@ -599,9 +605,7 @@ export {
   DistrictRankingSchema,
 } from './schemas/all-districts-rankings.schema.js'
 
-export {
-  SnapshotMetadataFileSchema,
-} from './schemas/snapshot-metadata.schema.js'
+export { SnapshotMetadataFileSchema } from './schemas/snapshot-metadata.schema.js'
 
 export {
   SnapshotManifestSchema,
@@ -622,12 +626,12 @@ export {
 
 ### File Structure Mapping
 
-| File | Type | Schema |
-|------|------|--------|
-| `district_{id}.json` | `PerDistrictData` | `PerDistrictDataSchema` |
+| File                          | Type                       | Schema                           |
+| ----------------------------- | -------------------------- | -------------------------------- |
+| `district_{id}.json`          | `PerDistrictData`          | `PerDistrictDataSchema`          |
 | `all-districts-rankings.json` | `AllDistrictsRankingsData` | `AllDistrictsRankingsDataSchema` |
-| `metadata.json` | `SnapshotMetadataFile` | `SnapshotMetadataFileSchema` |
-| `manifest.json` | `SnapshotManifest` | `SnapshotManifestSchema` |
+| `metadata.json`               | `SnapshotMetadataFile`     | `SnapshotMetadataFileSchema`     |
+| `manifest.json`               | `SnapshotManifest`         | `SnapshotManifestSchema`         |
 
 ### Type Relationship Diagram
 
@@ -641,7 +645,7 @@ classDiagram
         +string? errorMessage
         +DistrictStatisticsFile data
     }
-    
+
     class DistrictStatisticsFile {
         +string districtId
         +string snapshotDate
@@ -650,25 +654,25 @@ classDiagram
         +AreaStatisticsFile[] areas
         +DistrictTotalsFile totals
     }
-    
+
     class AllDistrictsRankingsData {
         +AllDistrictsRankingsMetadata metadata
         +DistrictRanking[] rankings
     }
-    
+
     class SnapshotMetadataFile {
         +string snapshotId
         +string createdAt
         +string schemaVersion
         +status: success|partial|failed
     }
-    
+
     class SnapshotManifest {
         +string snapshotId
         +DistrictManifestEntry[] districts
         +number totalDistricts
     }
-    
+
     PerDistrictData --> DistrictStatisticsFile
     DistrictStatisticsFile --> ClubStatisticsFile
     DistrictStatisticsFile --> DivisionStatisticsFile
@@ -680,24 +684,24 @@ classDiagram
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property Testing Decision Framework Compliance
 
 Per testing steering Section 7.3, each property test must pass the decision framework:
 
-| Question | Property 1 (Schema-Type) | Property 2 (Round-Trip) |
-|----------|-------------------------|------------------------|
-| 1. Clear universal property? | Yes: "valid objects accepted, invalid rejected" | Yes: "serialize then validate = original" |
-| 2. Would 5 examples suffice? | No: 10+ fields, nested objects, arrays, optionals | No: complex nested structures |
-| 3. Complex input space? | Yes: arbitrary JSON objects | Yes: same |
-| 4. Mathematical/algebraic? | Yes: parser validation | Yes: encoding/decoding roundtrip (7.1.1) |
+| Question                     | Property 1 (Schema-Type)                          | Property 2 (Round-Trip)                   |
+| ---------------------------- | ------------------------------------------------- | ----------------------------------------- |
+| 1. Clear universal property? | Yes: "valid objects accepted, invalid rejected"   | Yes: "serialize then validate = original" |
+| 2. Would 5 examples suffice? | No: 10+ fields, nested objects, arrays, optionals | No: complex nested structures             |
+| 3. Complex input space?      | Yes: arbitrary JSON objects                       | Yes: same                                 |
+| 4. Mathematical/algebraic?   | Yes: parser validation                            | Yes: encoding/decoding roundtrip (7.1.1)  |
 
 Per Section 7.4, this does not duplicate existing PBT coverage - the shared-contracts package is new.
 
 ### Property 1: Schema-Type Consistency
 
-*For any* valid object conforming to a shared-contracts TypeScript interface (PerDistrictData, AllDistrictsRankingsData, SnapshotMetadataFile, SnapshotManifest), the corresponding Zod schema SHALL parse the object without errors. *For any* object missing required fields or with incorrect field types, the schema SHALL reject it with a validation error.
+_For any_ valid object conforming to a shared-contracts TypeScript interface (PerDistrictData, AllDistrictsRankingsData, SnapshotMetadataFile, SnapshotManifest), the corresponding Zod schema SHALL parse the object without errors. _For any_ object missing required fields or with incorrect field types, the schema SHALL reject it with a validation error.
 
 **Rationale**: Zod schemas are parsers with complex input spaces (7.1.2). The input space includes 10+ fields per type, nested objects, arrays, and optional fields - manual enumeration is impractical.
 
@@ -705,7 +709,7 @@ Per Section 7.4, this does not duplicate existing PBT coverage - the shared-cont
 
 ### Property 2: Validation Round-Trip
 
-*For any* valid file format object (PerDistrictData, AllDistrictsRankingsData, SnapshotMetadataFile, SnapshotManifest), serializing to JSON string and then parsing and validating SHALL return `success: true` with data structurally equivalent to the original object.
+_For any_ valid file format object (PerDistrictData, AllDistrictsRankingsData, SnapshotMetadataFile, SnapshotManifest), serializing to JSON string and then parsing and validating SHALL return `success: true` with data structurally equivalent to the original object.
 
 **Rationale**: This is a classic encoding/decoding roundtrip property (7.1.1). JSON serialization must preserve all data without loss or corruption across complex nested structures.
 
@@ -716,12 +720,14 @@ Per Section 7.4, this does not duplicate existing PBT coverage - the shared-cont
 The following requirements are better served by unit tests with well-chosen examples per steering guidance (Section 7.2.4 - "Cases where examples are clearer"). These have bounded input spaces where 3-5 examples provide equivalent confidence:
 
 **Version Compatibility (Requirements 10.5)**:
+
 - Test `isSchemaCompatible("1.0.0")` returns `true` (same major)
 - Test `isSchemaCompatible("1.5.0")` returns `true` (same major, different minor)
 - Test `isSchemaCompatible("2.0.0")` returns `false` (different major)
 - Test `isSchemaCompatible("0.9.0")` returns `false` (different major)
 
 **Error Message Quality (Requirements 6.5)**:
+
 - Test missing required field produces error mentioning field name
 - Test wrong type produces error mentioning expected type
 - Test nested validation error includes path to invalid field
@@ -735,7 +741,7 @@ When validation fails, the system provides structured error information:
 ```typescript
 interface ValidationResult<T> {
   success: false
-  error: string  // Human-readable error message with field details
+  error: string // Human-readable error message with field details
 }
 ```
 
@@ -762,20 +768,24 @@ Per the testing steering document, we prefer the simplest test that provides con
 Unit tests verify specific examples and edge cases:
 
 **Version Compatibility**:
+
 - Same major version returns compatible
 - Different major version returns incompatible
 - Edge cases: "0.x.x", malformed strings
 
 **Error Message Quality**:
+
 - Missing required field error includes field name
 - Wrong type error includes expected type
 - Nested validation error includes path
 
 **Validation Helper Functions**:
+
 - Success case returns `{ success: true, data: ... }`
 - Failure case returns `{ success: false, error: "..." }`
 
 **Type Exports**:
+
 - All expected types are exported from index
 - All expected schemas are exported from index
 
@@ -784,12 +794,14 @@ Unit tests verify specific examples and edge cases:
 Property tests verify invariants across complex input spaces:
 
 **Property 1: Schema-Type Consistency**
+
 - Generate random valid objects using fast-check arbitraries
 - Verify schema accepts all valid objects
 - Verify schema rejects objects with missing/wrong fields
 - Tag: **Feature: shared-data-contracts, Property 1: Schema-Type Consistency**
 
 **Property 2: Validation Round-Trip**
+
 - Generate random valid file format objects
 - Serialize to JSON, parse, validate
 - Verify structural equivalence

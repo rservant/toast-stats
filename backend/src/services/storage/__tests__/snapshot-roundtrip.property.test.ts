@@ -158,17 +158,25 @@ const generateMembershipStats = (): fc.Arbitrary<
 
 /**
  * Generator for club stats
+ *
+ * Ensures total equals the sum of active + suspended + ineligible + low
+ * to maintain data consistency through round-trip operations.
  */
 const generateClubStats = (): fc.Arbitrary<DistrictStatistics['clubs']> =>
-  fc.record({
-    total: fc.integer({ min: 0, max: 500 }),
-    active: fc.integer({ min: 0, max: 500 }),
-    suspended: fc.integer({ min: 0, max: 50 }),
-    ineligible: fc.integer({ min: 0, max: 50 }),
-    low: fc.integer({ min: 0, max: 100 }),
-    distinguished: fc.integer({ min: 0, max: 200 }),
-    chartered: fc.option(fc.integer({ min: 0, max: 50 }), { nil: undefined }),
-  })
+  fc
+    .record({
+      active: fc.integer({ min: 0, max: 500 }),
+      suspended: fc.integer({ min: 0, max: 50 }),
+      ineligible: fc.integer({ min: 0, max: 50 }),
+      low: fc.integer({ min: 0, max: 100 }),
+      distinguished: fc.integer({ min: 0, max: 200 }),
+      chartered: fc.option(fc.integer({ min: 0, max: 50 }), { nil: undefined }),
+    })
+    .map(stats => ({
+      ...stats,
+      // total must equal sum of status counts for round-trip consistency
+      total: stats.active + stats.suspended + stats.ineligible + stats.low,
+    }))
 
 /**
  * Generator for education stats

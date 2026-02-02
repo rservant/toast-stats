@@ -262,7 +262,8 @@ export class UploadService implements IUploadService {
       // Sort newest first
       return dates.sort().reverse()
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      const errnoError = error as { code?: string }
+      if (errnoError.code === 'ENOENT') {
         this.logger.warn('Snapshots directory does not exist', {
           snapshotsDir,
         })

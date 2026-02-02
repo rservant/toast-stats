@@ -1,0 +1,66 @@
+// packages/shared-contracts/src/index.ts
+
+// Version constants
+export {
+  SCHEMA_VERSION,
+  CALCULATION_VERSION,
+  RANKING_VERSION,
+  isSchemaCompatible,
+} from './version.js'
+
+// File format types
+export type { PerDistrictData } from './types/per-district-data.js'
+
+export type {
+  DistrictStatisticsFile,
+  ClubStatisticsFile,
+  DivisionStatisticsFile,
+  AreaStatisticsFile,
+  DistrictTotalsFile,
+} from './types/district-statistics-file.js'
+
+export type {
+  AllDistrictsRankingsData,
+  AllDistrictsRankingsMetadata,
+  DistrictRanking,
+} from './types/all-districts-rankings.js'
+
+export type { SnapshotMetadataFile } from './types/snapshot-metadata.js'
+
+export type {
+  SnapshotManifest,
+  DistrictManifestEntry,
+} from './types/snapshot-manifest.js'
+
+// Zod schemas
+export { PerDistrictDataSchema } from './schemas/per-district-data.schema.js'
+
+export {
+  DistrictStatisticsFileSchema,
+  ClubStatisticsFileSchema,
+  DivisionStatisticsFileSchema,
+  AreaStatisticsFileSchema,
+  DistrictTotalsFileSchema,
+} from './schemas/district-statistics-file.schema.js'
+
+export {
+  AllDistrictsRankingsDataSchema,
+  AllDistrictsRankingsMetadataSchema,
+  DistrictRankingSchema,
+} from './schemas/all-districts-rankings.schema.js'
+
+export { SnapshotMetadataFileSchema } from './schemas/snapshot-metadata.schema.js'
+
+export {
+  SnapshotManifestSchema,
+  DistrictManifestEntrySchema,
+} from './schemas/snapshot-manifest.schema.js'
+
+// Validation helpers
+export {
+  validatePerDistrictData,
+  validateAllDistrictsRankings,
+  validateSnapshotMetadata,
+  validateSnapshotManifest,
+  type ValidationResult,
+} from './validation/validators.js'

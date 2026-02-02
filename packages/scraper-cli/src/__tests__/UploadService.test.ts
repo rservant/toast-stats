@@ -297,7 +297,8 @@ class MockUploadService {
 
       return dates.sort().reverse()
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      const errnoError = error as { code?: string }
+      if (errnoError.code === 'ENOENT') {
         return []
       }
       throw error

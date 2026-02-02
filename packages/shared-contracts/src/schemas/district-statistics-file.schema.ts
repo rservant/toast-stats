@@ -1,0 +1,204 @@
+/**
+ * Zod validation schemas for district statistics file format.
+ *
+ * These schemas provide runtime validation for district statistics data,
+ * ensuring that data written by scraper-cli and read by backend conforms
+ * to the expected structure.
+ *
+ * The schemas match the TypeScript interfaces in district-statistics-file.ts exactly.
+ *
+ * @module district-statistics-file.schema
+ * @see Requirements 6.1, 6.2
+ */
+
+import { z } from 'zod'
+
+/**
+ * Zod schema for individual club statistics.
+ * Validates ClubStatisticsFile interface structure.
+ */
+export const ClubStatisticsFileSchema = z.object({
+  /** Unique club identifier */
+  clubId: z.string(),
+
+  /** Display name of the club */
+  clubName: z.string(),
+
+  /** Division identifier this club belongs to */
+  divisionId: z.string(),
+
+  /** Area identifier this club belongs to */
+  areaId: z.string(),
+
+  /** Current membership count */
+  membershipCount: z.number(),
+
+  /** Total payments count */
+  paymentsCount: z.number(),
+
+  /** Number of DCP goals achieved */
+  dcpGoals: z.number(),
+
+  /** Club status string */
+  status: z.string(),
+
+  /** Charter date in ISO format (optional) */
+  charterDate: z.string().optional(),
+
+  /** Display name of the division */
+  divisionName: z.string(),
+
+  /** Display name of the area */
+  areaName: z.string(),
+
+  /** October renewal payments count */
+  octoberRenewals: z.number(),
+
+  /** April renewal payments count */
+  aprilRenewals: z.number(),
+
+  /** New member payments count */
+  newMembers: z.number(),
+
+  /** Membership base for net growth calculation */
+  membershipBase: z.number(),
+
+  /** Club operational status (Active, Suspended, Low, Ineligible) */
+  clubStatus: z.string().optional(),
+})
+
+/**
+ * Zod schema for division-level statistics.
+ * Validates DivisionStatisticsFile interface structure.
+ */
+export const DivisionStatisticsFileSchema = z.object({
+  /** Division identifier */
+  divisionId: z.string(),
+
+  /** Display name of the division */
+  divisionName: z.string(),
+
+  /** Number of clubs in this division */
+  clubCount: z.number(),
+
+  /** Total membership across all clubs in this division */
+  membershipTotal: z.number(),
+
+  /** Total payments across all clubs in this division */
+  paymentsTotal: z.number(),
+})
+
+/**
+ * Zod schema for area-level statistics.
+ * Validates AreaStatisticsFile interface structure.
+ */
+export const AreaStatisticsFileSchema = z.object({
+  /** Area identifier */
+  areaId: z.string(),
+
+  /** Display name of the area */
+  areaName: z.string(),
+
+  /** Division identifier this area belongs to */
+  divisionId: z.string(),
+
+  /** Number of clubs in this area */
+  clubCount: z.number(),
+
+  /** Total membership across all clubs in this area */
+  membershipTotal: z.number(),
+
+  /** Total payments across all clubs in this area */
+  paymentsTotal: z.number(),
+})
+
+/**
+ * Zod schema for district-level totals.
+ * Validates DistrictTotalsFile interface structure.
+ */
+export const DistrictTotalsFileSchema = z.object({
+  /** Total number of clubs in the district */
+  totalClubs: z.number(),
+
+  /** Total membership across all clubs */
+  totalMembership: z.number(),
+
+  /** Total payments across all clubs */
+  totalPayments: z.number(),
+
+  /** Number of Distinguished clubs */
+  distinguishedClubs: z.number(),
+
+  /** Number of Select Distinguished clubs */
+  selectDistinguishedClubs: z.number(),
+
+  /** Number of President's Distinguished clubs */
+  presidentDistinguishedClubs: z.number(),
+})
+
+/**
+ * Zod schema for district statistics file.
+ * Validates DistrictStatisticsFile interface structure.
+ *
+ * This is the main schema for validating district statistics data
+ * as stored in JSON files.
+ */
+export const DistrictStatisticsFileSchema = z.object({
+  /** District identifier (e.g., "42", "F") */
+  districtId: z.string(),
+
+  /** Snapshot date in YYYY-MM-DD format */
+  snapshotDate: z.string(),
+
+  /** Array of club statistics for all clubs in the district */
+  clubs: z.array(ClubStatisticsFileSchema),
+
+  /** Array of division statistics for all divisions in the district */
+  divisions: z.array(DivisionStatisticsFileSchema),
+
+  /** Array of area statistics for all areas in the district */
+  areas: z.array(AreaStatisticsFileSchema),
+
+  /** Aggregated totals for the entire district */
+  totals: DistrictTotalsFileSchema,
+})
+
+/**
+ * TypeScript type inferred from ClubStatisticsFileSchema.
+ * Can be used for type-safe validation results.
+ */
+export type ClubStatisticsFileSchemaType = z.infer<
+  typeof ClubStatisticsFileSchema
+>
+
+/**
+ * TypeScript type inferred from DivisionStatisticsFileSchema.
+ * Can be used for type-safe validation results.
+ */
+export type DivisionStatisticsFileSchemaType = z.infer<
+  typeof DivisionStatisticsFileSchema
+>
+
+/**
+ * TypeScript type inferred from AreaStatisticsFileSchema.
+ * Can be used for type-safe validation results.
+ */
+export type AreaStatisticsFileSchemaType = z.infer<
+  typeof AreaStatisticsFileSchema
+>
+
+/**
+ * TypeScript type inferred from DistrictTotalsFileSchema.
+ * Can be used for type-safe validation results.
+ */
+export type DistrictTotalsFileSchemaType = z.infer<
+  typeof DistrictTotalsFileSchema
+>
+
+/**
+ * TypeScript type inferred from DistrictStatisticsFileSchema.
+ * Can be used for type-safe validation results.
+ */
+export type DistrictStatisticsFileSchemaType = z.infer<
+  typeof DistrictStatisticsFileSchema
+>

@@ -204,7 +204,7 @@ describe('TransformService', () => {
       expect(snapshot.districtName).toBe(`District ${districtId}`)
       expect(snapshot.status).toBe('success')
       expect(snapshot.collectedAt).toBeDefined()
-      
+
       // Verify the actual district data inside the wrapper
       expect(snapshot.data.districtId).toBe(districtId)
       expect(snapshot.data.snapshotDate).toBe(date)

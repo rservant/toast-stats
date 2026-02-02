@@ -22,69 +22,20 @@ import {
   type Logger,
   type RawCSVData,
 } from '@toastmasters/analytics-core'
+import {
+  RANKING_VERSION,
+  validatePerDistrictData,
+  validateAllDistrictsRankings,
+  validateSnapshotMetadata,
+  validateSnapshotManifest,
+  type PerDistrictData,
+  type AllDistrictsRankingsData,
+  type DistrictRanking,
+  type SnapshotMetadataFile,
+  type SnapshotManifest,
+  type DistrictManifestEntry,
+} from '@toastmasters/shared-contracts'
 import type { AllDistrictsCSVRecord } from '../types/scraper.js'
-
-/**
- * Ranking version for the Borda count algorithm
- */
-const RANKING_VERSION = '2.0'
-
-/**
- * All districts rankings data structure
- * Compatible with backend's AllDistrictsRankingsData
- */
-interface AllDistrictsRankingsData {
-  metadata: {
-    snapshotId: string
-    calculatedAt: string
-    schemaVersion: string
-    calculationVersion: string
-    rankingVersion: string
-    sourceCsvDate: string
-    csvFetchedAt: string
-    totalDistricts: number
-    fromCache: boolean
-  }
-  rankings: DistrictRanking[]
-}
-
-/**
- * Individual district ranking information
- * Compatible with backend's DistrictRanking
- */
-interface DistrictRanking {
-  districtId: string
-  districtName: string
-  region: string
-  paidClubs: number
-  paidClubBase: number
-  clubGrowthPercent: number
-  totalPayments: number
-  paymentBase: number
-  paymentGrowthPercent: number
-  activeClubs: number
-  distinguishedClubs: number
-  selectDistinguished: number
-  presidentsDistinguished: number
-  distinguishedPercent: number
-  clubsRank: number
-  paymentsRank: number
-  distinguishedRank: number
-  aggregateScore: number
-}
-
-/**
- * Per-district snapshot data structure
- * Must match backend's PerDistrictData interface in SnapshotStore.ts
- */
-interface PerDistrictData {
-  districtId: string
-  districtName: string
-  collectedAt: string
-  status: 'success' | 'failed'
-  errorMessage?: string
-  data: unknown // DistrictStatistics from analytics-core
-}
 
 /**
  * Internal structure for ranking metrics extraction
@@ -179,66 +130,6 @@ export interface TransformOperationResult {
     timestamp: string
   }>
   duration_ms: number
-}
-
-/**
- * District manifest entry - compatible with backend's DistrictManifestEntry
- */
-interface DistrictManifestEntry {
-  districtId: string
-  fileName: string
-  status: 'success' | 'failed'
-  fileSize: number
-  lastModified: string
-  errorMessage?: string
-}
-
-/**
- * Snapshot manifest structure - compatible with backend's SnapshotManifest
- */
-interface SnapshotManifest {
-  snapshotId: string
-  createdAt: string
-  districts: DistrictManifestEntry[]
-  totalDistricts: number
-  successfulDistricts: number
-  failedDistricts: number
-  allDistrictsRankings?: {
-    filename: string
-    size: number
-    status: 'present' | 'missing'
-  }
-}
-
-/**
- * Snapshot metadata structure
- * Must be compatible with backend's PerDistrictSnapshotMetadata interface
- */
-interface SnapshotMetadataFile {
-  /** Snapshot ID (date in YYYY-MM-DD format) */
-  snapshotId: string
-  /** ISO timestamp when snapshot was created */
-  createdAt: string
-  /** Schema version for data structure compatibility */
-  schemaVersion: string
-  /** Calculation version for business logic compatibility */
-  calculationVersion: string
-  /** Status of the snapshot - required for backend compatibility */
-  status: 'success' | 'partial' | 'failed'
-  /** Districts that were configured for processing */
-  configuredDistricts: string[]
-  /** Districts that were successfully processed */
-  successfulDistricts: string[]
-  /** Districts that failed processing */
-  failedDistricts: string[]
-  /** Error messages (empty array for success) */
-  errors: string[]
-  /** Processing duration in milliseconds */
-  processingDuration: number
-  /** Source of the snapshot */
-  source: 'scraper-cli'
-  /** Date the data represents (same as snapshotId for scraper-cli) */
-  dataAsOfDate: string
 }
 
 /**
@@ -476,9 +367,7 @@ export class TransformService {
   /**
    * Get rejection reason for invalid district ID (for logging)
    */
-  private getDistrictIdRejectionReason(
-    districtId: string | undefined
-  ): string {
+  private getDistrictIdRejectionReason(districtId: string | undefined): string {
     if (!districtId || districtId.trim() === '') {
       return 'District ID is empty or whitespace-only'
     }
@@ -499,9 +388,7 @@ export class TransformService {
   /**
    * Calculate distinguished club percentage from raw data
    */
-  private calculateDistinguishedPercent(
-    record: AllDistrictsCSVRecord
-  ): number {
+  private calculateDistinguishedPercent(record: AllDistrictsCSVRecord): number {
     const distinguishedClubs = this.parseNumber(
       record['Total Distinguished Clubs']
     )
@@ -699,9 +586,7 @@ export class TransformService {
 
     // Build rankings data structure
     const metricsMap = new Map(metrics.map(m => [m.districtId, m]))
-    const rankingsMap = new Map(
-      aggregateRankings.map(r => [r.districtId, r])
-    )
+    const rankingsMap = new Map(aggregateRankings.map(r => [r.districtId, r]))
 
     const rankings: DistrictRanking[] = []
     for (const [districtId, aggregate] of rankingsMap) {
@@ -763,7 +648,18 @@ export class TransformService {
 
     await fs.mkdir(snapshotDir, { recursive: true })
 
-    const content = JSON.stringify(rankings, null, 2)
+    // Validate data before writing (Requirement 7.4, 7.5)
+    const validationResult = validateAllDistrictsRankings(rankings)
+    if (!validationResult.success) {
+      this.logger.error('Validation failed for all-districts rankings', {
+        error: validationResult.error,
+      })
+      throw new Error(
+        `Validation failed for all-districts rankings: ${validationResult.error}`
+      )
+    }
+
+    const content = JSON.stringify(validationResult.data, null, 2)
     const tempPath = `${rankingsPath}.tmp.${Date.now()}`
     await fs.writeFile(tempPath, content, 'utf-8')
     await fs.rename(tempPath, rankingsPath)
@@ -968,7 +864,18 @@ export class TransformService {
         data: districtStats,
       }
 
-      const snapshotContent = JSON.stringify(perDistrictData, null, 2)
+      // Validate data before writing (Requirement 7.4, 7.5)
+      const validationResult = validatePerDistrictData(perDistrictData)
+      if (!validationResult.success) {
+        this.logger.error(`Validation failed for district ${districtId}`, {
+          error: validationResult.error,
+        })
+        throw new Error(
+          `Validation failed for district ${districtId}: ${validationResult.error}`
+        )
+      }
+
+      const snapshotContent = JSON.stringify(validationResult.data, null, 2)
       const tempPath = `${snapshotPath}.tmp.${Date.now()}`
       await fs.writeFile(tempPath, snapshotContent, 'utf-8')
       await fs.rename(tempPath, snapshotPath)
@@ -1041,7 +948,18 @@ export class TransformService {
       dataAsOfDate: date,
     }
 
-    const content = JSON.stringify(metadata, null, 2)
+    // Validate data before writing (Requirement 7.4, 7.5)
+    const validationResult = validateSnapshotMetadata(metadata)
+    if (!validationResult.success) {
+      this.logger.error('Validation failed for snapshot metadata', {
+        error: validationResult.error,
+      })
+      throw new Error(
+        `Validation failed for snapshot metadata: ${validationResult.error}`
+      )
+    }
+
+    const content = JSON.stringify(validationResult.data, null, 2)
     const tempPath = `${metadataPath}.tmp.${Date.now()}`
     await fs.writeFile(tempPath, content, 'utf-8')
     await fs.rename(tempPath, metadataPath)
@@ -1069,7 +987,18 @@ export class TransformService {
       failedDistricts: failedDistrictIds.length,
     }
 
-    const content = JSON.stringify(manifest, null, 2)
+    // Validate data before writing (Requirement 7.4, 7.5)
+    const validationResult = validateSnapshotManifest(manifest)
+    if (!validationResult.success) {
+      this.logger.error('Validation failed for snapshot manifest', {
+        error: validationResult.error,
+      })
+      throw new Error(
+        `Validation failed for snapshot manifest: ${validationResult.error}`
+      )
+    }
+
+    const content = JSON.stringify(validationResult.data, null, 2)
     const tempPath = `${manifestPath}.tmp.${Date.now()}`
     await fs.writeFile(tempPath, content, 'utf-8')
     await fs.rename(tempPath, manifestPath)
@@ -1243,10 +1172,13 @@ export class TransformService {
             rankingsError instanceof Error
               ? rankingsError.message
               : 'Unknown error'
-          this.logger.error('Failed to calculate/write all-districts rankings', {
-            date,
-            error: rankingsErrorMessage,
-          })
+          this.logger.error(
+            'Failed to calculate/write all-districts rankings',
+            {
+              date,
+              error: rankingsErrorMessage,
+            }
+          )
           // Don't fail the entire transform for rankings failure
           errors.push({
             districtId: 'all-districts-rankings',
