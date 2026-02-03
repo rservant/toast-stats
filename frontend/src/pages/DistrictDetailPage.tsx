@@ -24,8 +24,6 @@ import { InterventionRequiredClubsPanel } from '../components/InterventionRequir
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
 import { ClubDetailModal } from '../components/ClubDetailModal'
-import { DivisionRankings } from '../components/DivisionRankings'
-import { AreaPerformanceChart } from '../components/AreaPerformanceChart'
 import { MembershipTrendChart } from '../components/MembershipTrendChart'
 import { MembershipPaymentsChart } from '../components/MembershipPaymentsChart'
 import { YearOverYearComparison } from '../components/YearOverYearComparison'
@@ -635,27 +633,6 @@ const DistrictDetailPage: React.FC = () => {
                     divisions={extractDivisionPerformance(districtStatistics)}
                     isLoading={isLoadingStatistics}
                   />
-                )}
-
-                {/* Division Rankings */}
-                {analytics && (
-                  <DivisionRankings
-                    divisions={analytics.divisionRankings}
-                    {...(analytics.divisionRecognition && {
-                      recognition: analytics.divisionRecognition,
-                    })}
-                    isLoading={isLoadingAnalytics}
-                  />
-                )}
-
-                {/* Area Performance Chart - Lazy Loaded */}
-                {analytics && (
-                  <LazyChart height="400px">
-                    <AreaPerformanceChart
-                      areas={analytics.topPerformingAreas}
-                      isLoading={isLoadingAnalytics}
-                    />
-                  </LazyChart>
                 )}
               </>
             )}
