@@ -5,7 +5,10 @@
  * the pre-computed analytics pipeline.
  */
 
-import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+import type {
+  AllDistrictsRankingsData,
+  ClubHealthStatus,
+} from '@toastmasters/shared-contracts'
 
 /**
  * Metadata included in every pre-computed analytics file.
@@ -75,12 +78,11 @@ export interface ClubRiskFactors {
 
 /**
  * Club health status classification.
+ * Re-exported from shared-contracts for consistency across all packages.
+ *
+ * @see Requirements 2.3
  */
-export type ClubHealthStatus =
-  | 'thriving'
-  | 'stable'
-  | 'vulnerable'
-  | 'intervention_required'
+export type { ClubHealthStatus } from '@toastmasters/shared-contracts'
 
 /**
  * Distinguished level classification for clubs.

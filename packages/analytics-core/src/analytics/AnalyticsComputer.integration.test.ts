@@ -491,7 +491,7 @@ describe('AnalyticsComputer Integration Tests', () => {
 
       // Verify vulnerable clubs have appropriate health status
       for (const club of analytics.vulnerableClubs) {
-        expect(['vulnerable', 'stable']).toContain(club.currentStatus)
+        expect(['vulnerable']).toContain(club.currentStatus)
       }
     })
 
@@ -543,7 +543,7 @@ describe('AnalyticsComputer Integration Tests', () => {
 
       // Verify intervention required clubs have appropriate status
       for (const club of analytics.interventionRequiredClubs) {
-        expect(club.currentStatus).toBe('intervention_required')
+        expect(club.currentStatus).toBe('intervention-required')
       }
 
       // Verify the struggling club is in intervention required
@@ -792,9 +792,8 @@ describe('AnalyticsComputer Integration Tests', () => {
       expect(typeof clubTrend.currentStatus).toBe('string')
       expect([
         'thriving',
-        'stable',
         'vulnerable',
-        'intervention_required',
+        'intervention-required',
       ]).toContain(clubTrend.currentStatus)
       expect(typeof clubTrend.healthScore).toBe('number')
 

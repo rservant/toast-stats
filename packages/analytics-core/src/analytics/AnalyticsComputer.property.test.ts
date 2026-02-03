@@ -12,7 +12,7 @@
  * Property 4: Vulnerable Clubs Partition
  * *For any* VulnerableClubsData, the union of vulnerableClubs and interventionRequired
  * arrays SHALL equal the set of clubs with currentStatus of 'vulnerable' or
- * 'intervention_required' in the district analytics.
+ * 'intervention-required' in the district analytics.
  * **Validates: Requirements 3.2, 3.3**
  */
 
@@ -69,8 +69,8 @@ const areaIdArb: fc.Arbitrary<string> = fc
  * Generate a valid club health status.
  */
 const clubHealthStatusArb: fc.Arbitrary<
-  'thriving' | 'vulnerable' | 'intervention_required'
-> = fc.constantFrom('thriving', 'vulnerable', 'intervention_required')
+  'thriving' | 'vulnerable' | 'intervention-required'
+> = fc.constantFrom('thriving', 'vulnerable', 'intervention-required')
 
 /**
  * Generate a valid distinguished level.
@@ -186,7 +186,7 @@ const clubHealthDataArb: fc.Arbitrary<ClubHealthData> = uniqueClubTrendListArb(
   const thrivingClubs = allClubs.filter(c => c.currentStatus === 'thriving')
   const vulnerableClubs = allClubs.filter(c => c.currentStatus === 'vulnerable')
   const interventionRequiredClubs = allClubs.filter(
-    c => c.currentStatus === 'intervention_required'
+    c => c.currentStatus === 'intervention-required'
   )
 
   return {
@@ -446,7 +446,7 @@ describe('Vulnerable Clubs Partition Property Tests', () => {
    *
    * *For any* VulnerableClubsData, the union of vulnerableClubs and interventionRequired
    * arrays SHALL equal the set of clubs with currentStatus of 'vulnerable' or
-   * 'intervention_required' in the district analytics.
+   * 'intervention-required' in the district analytics.
    *
    * **Validates: Requirements 3.2, 3.3**
    */
@@ -487,7 +487,7 @@ describe('Vulnerable Clubs Partition Property Tests', () => {
       )
     })
 
-    it('should partition clubs correctly: interventionRequired contains exactly clubs with intervention_required status', () => {
+    it('should partition clubs correctly: interventionRequired contains exactly clubs with intervention-required status', () => {
       // **Validates: Requirements 3.2, 3.3**
       const computer = new AnalyticsComputer()
 
@@ -496,19 +496,19 @@ describe('Vulnerable Clubs Partition Property Tests', () => {
           const vulnerableClubsData: VulnerableClubsData =
             computer.computeVulnerableClubs('D101', clubHealth)
 
-          // Get clubs with 'intervention_required' status from allClubs
+          // Get clubs with 'intervention-required' status from allClubs
           const expectedIntervention = clubHealth.allClubs.filter(
-            c => c.currentStatus === 'intervention_required'
+            c => c.currentStatus === 'intervention-required'
           )
 
-          // Property: interventionRequired array should contain exactly the clubs with 'intervention_required' status
+          // Property: interventionRequired array should contain exactly the clubs with 'intervention-required' status
           expect(vulnerableClubsData.interventionRequired.length).toBe(
             expectedIntervention.length
           )
 
-          // Verify each club in interventionRequired has 'intervention_required' status
+          // Verify each club in interventionRequired has 'intervention-required' status
           for (const club of vulnerableClubsData.interventionRequired) {
-            expect(club.currentStatus).toBe('intervention_required')
+            expect(club.currentStatus).toBe('intervention-required')
           }
 
           // Verify all expected intervention-required clubs are present
@@ -532,11 +532,11 @@ describe('Vulnerable Clubs Partition Property Tests', () => {
           const vulnerableClubsData: VulnerableClubsData =
             computer.computeVulnerableClubs('D101', clubHealth)
 
-          // Get all at-risk clubs from allClubs (vulnerable OR intervention_required)
+          // Get all at-risk clubs from allClubs (vulnerable OR intervention-required)
           const allAtRiskClubs = clubHealth.allClubs.filter(
             c =>
               c.currentStatus === 'vulnerable' ||
-              c.currentStatus === 'intervention_required'
+              c.currentStatus === 'intervention-required'
           )
 
           // Get union of vulnerableClubs and interventionRequired
@@ -750,7 +750,7 @@ describe('Vulnerable Clubs Partition Property Tests', () => {
           uniqueClubTrendListArb(1, 20).map(clubs =>
             clubs.map(club => ({
               ...club,
-              currentStatus: 'intervention_required' as const,
+              currentStatus: 'intervention-required' as const,
             }))
           ),
           interventionOnlyClubs => {

@@ -84,7 +84,7 @@ export class ClubHealthAnalyticsModule {
       thrivingClubs: clubTrends.filter(c => c.currentStatus === 'thriving'),
       vulnerableClubs: clubTrends.filter(c => c.currentStatus === 'vulnerable'),
       interventionRequiredClubs: clubTrends.filter(
-        c => c.currentStatus === 'intervention_required'
+        c => c.currentStatus === 'intervention-required'
       ),
     }
   }
@@ -290,7 +290,7 @@ export class ClubHealthAnalyticsModule {
     // Requirement 1.2: Intervention override rule
     // If membership < 12 AND net growth < 3, assign "Intervention Required" regardless of other criteria
     if (currentMembership < 12 && netGrowth < 3) {
-      status = 'intervention_required'
+      status = 'intervention-required'
       riskFactors.push('Membership below 12 (critical)')
       riskFactors.push(
         `Net growth since July: ${netGrowth} (need 3+ to override)`

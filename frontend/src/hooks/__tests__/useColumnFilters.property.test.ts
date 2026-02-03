@@ -50,7 +50,7 @@ const clubTrendGenerator = fc.record({
     }),
     { minLength: 1, maxLength: 10 }
   ),
-  currentStatus: fc.constantFrom('healthy', 'at-risk', 'critical'),
+  currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
   riskFactors: fc.array(fc.string(), { maxLength: 5 }),
   distinguishedLevel: fc.option(
     fc.constantFrom('Smedley', 'President', 'Select', 'Distinguished'),
@@ -119,7 +119,7 @@ const numericFilterGenerator = (field: 'membership' | 'dcpGoals') =>
 const categoricalFilterGenerator = (field: 'status' | 'distinguished') => {
   const options =
     field === 'status'
-      ? ['healthy', 'at-risk', 'critical']
+      ? ['thriving', 'vulnerable', 'intervention-required']
       : ['Smedley', 'President', 'Select', 'Distinguished']
 
   return fc.record({
@@ -170,7 +170,7 @@ const clubTrendWithDistinguishedGenerator = fc.record({
     }),
     { minLength: 1, maxLength: 10 }
   ),
-  currentStatus: fc.constantFrom('healthy', 'at-risk', 'critical'),
+  currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
   riskFactors: fc.array(fc.string(), { maxLength: 5 }),
   distinguishedLevel: fc.constantFrom(
     'Smedley',
@@ -484,9 +484,9 @@ describe('Property 4: Multiple filter combination (AND logic)', () => {
               return {
                 ...club,
                 currentStatus: statusValue as
-                  | 'healthy'
-                  | 'at-risk'
-                  | 'critical',
+                  | 'thriving'
+                  | 'vulnerable'
+                  | 'intervention-required',
               }
             }
             return club
@@ -813,9 +813,9 @@ describe('Property 5: Filter clearing restores state', () => {
               return {
                 ...club,
                 currentStatus: statusValue as
-                  | 'healthy'
-                  | 'at-risk'
-                  | 'critical',
+                  | 'thriving'
+                  | 'vulnerable'
+                  | 'intervention-required',
               }
             }
             return club
@@ -1020,9 +1020,9 @@ describe('Property 5: Filter clearing restores state', () => {
                   { date: '2024-01-01', goalsAchieved: targetDcpGoals },
                 ],
                 currentStatus: statusValue as
-                  | 'healthy'
-                  | 'at-risk'
-                  | 'critical',
+                  | 'thriving'
+                  | 'vulnerable'
+                  | 'intervention-required',
               }
             }
             return club

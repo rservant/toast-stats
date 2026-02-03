@@ -5,10 +5,9 @@
 // Re-export DistrictRanking for convenience
 export type { DistrictRanking } from './snapshots.js'
 
-export type ClubHealthStatus =
-  | 'thriving'
-  | 'vulnerable'
-  | 'intervention-required'
+// Import and re-export ClubHealthStatus from shared-contracts (Requirements: 4.1)
+import type { ClubHealthStatus as ClubHealthStatusType } from '@toastmasters/shared-contracts'
+export type ClubHealthStatus = ClubHealthStatusType
 export type TrendDirection = 'improving' | 'stable' | 'declining'
 export type DistinguishedLevel =
   | 'NotDistinguished'

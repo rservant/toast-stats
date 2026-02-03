@@ -863,9 +863,8 @@ describe('ClubHealthAnalyticsModule', () => {
       expect(clubTrend.currentStatus).toBeDefined()
       expect([
         'thriving',
-        'stable',
         'vulnerable',
-        'intervention_required',
+        'intervention-required',
       ]).toContain(clubTrend.currentStatus)
       expect(typeof clubTrend.healthScore).toBe('number')
       expect(clubTrend.healthScore).toBeGreaterThanOrEqual(0)
@@ -1177,7 +1176,7 @@ describe('ClubHealthAnalyticsModule', () => {
         `${context}: currentStatus should be defined`
       ).toBeDefined()
       expect(
-        ['thriving', 'stable', 'vulnerable', 'intervention_required'],
+        ['thriving', 'vulnerable', 'intervention-required'],
         `${context}: currentStatus should be valid`
       ).toContain(club.currentStatus)
       expect(

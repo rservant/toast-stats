@@ -82,7 +82,7 @@ interface ClubTrendInternal {
   areaName: string
   membershipTrend: Array<{ date: string; count: number }>
   dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
-  currentStatus: 'thriving' | 'stable' | 'vulnerable' | 'intervention_required'
+  currentStatus: 'thriving' | 'vulnerable' | 'intervention-required'
   riskFactors: string[]
   distinguishedLevel: string
 }

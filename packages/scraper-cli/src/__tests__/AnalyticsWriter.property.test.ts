@@ -170,9 +170,8 @@ const clubRiskFactorsArb: fc.Arbitrary<ClubRiskFactors> = fc.record({
  */
 const clubHealthStatusArb: fc.Arbitrary<ClubHealthStatus> = fc.constantFrom(
   'thriving',
-  'stable',
   'vulnerable',
-  'intervention_required'
+  'intervention-required'
 )
 
 /**
@@ -260,7 +259,7 @@ const clubHealthDataArb: fc.Arbitrary<ClubHealthData> = fc
       c => c.currentStatus === 'vulnerable'
     )
     const interventionRequiredClubs = allClubs.filter(
-      c => c.currentStatus === 'intervention_required'
+      c => c.currentStatus === 'intervention-required'
     )
 
     return {

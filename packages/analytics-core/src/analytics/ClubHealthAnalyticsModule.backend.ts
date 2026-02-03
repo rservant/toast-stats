@@ -397,7 +397,7 @@ export class ClubHealthAnalyticsModuleBackend {
     // Requirement 1.2: Intervention override rule
     // If membership < 12 AND net growth < 3, assign "Intervention Required" regardless of other criteria
     if (currentMembership < 12 && netGrowth < 3) {
-      status = 'intervention_required'
+      status = 'intervention-required'
       riskFactors.push('Membership below 12 (critical)')
       riskFactors.push(
         `Net growth since July: ${netGrowth} (need 3+ to override)`

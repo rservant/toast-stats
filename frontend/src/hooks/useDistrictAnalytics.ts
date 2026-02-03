@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
+import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
 
-export type ClubHealthStatus =
-  | 'thriving'
-  | 'vulnerable'
-  | 'intervention-required'
+// Re-export for backward compatibility with existing imports
+export type { ClubHealthStatus }
 
 export interface ClubTrend {
   clubId: string

@@ -413,9 +413,9 @@ describe('Club Categorization Partition Property Tests', () => {
             expect(club.currentStatus).toBe('vulnerable')
           }
 
-          // Verify intervention clubs have 'intervention_required' status
+          // Verify intervention clubs have 'intervention-required' status
           for (const club of result.interventionRequiredClubs) {
-            expect(club.currentStatus).toBe('intervention_required')
+            expect(club.currentStatus).toBe('intervention-required')
           }
         }),
         { numRuns: 100 }

@@ -43,6 +43,9 @@ export type {
   ClubHealthCounts,
 } from './types/time-series.js'
 
+// Club health status types
+export type { ClubHealthStatus } from './types/club-health-status.js'
+
 // Zod schemas
 export { PerDistrictDataSchema } from './schemas/per-district-data.schema.js'
 
@@ -76,6 +79,12 @@ export {
   TimeSeriesIndexMetadataSchema,
   ClubHealthCountsSchema,
 } from './schemas/time-series.schema.js'
+
+// Club health status Zod schemas
+export {
+  ClubHealthStatusSchema,
+  type ClubHealthStatusSchemaType,
+} from './schemas/club-health-status.schema.js'
 
 // Validation helpers
 export {

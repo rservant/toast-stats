@@ -798,7 +798,7 @@ describe('computeVulnerableClubs', () => {
     expect(interventionClub?.divisionId).toBe('C')
     expect(interventionClub?.areaId).toBe('C1')
     expect(interventionClub?.membershipCount).toBe(8)
-    expect(interventionClub?.currentStatus).toBe('intervention_required')
+    expect(interventionClub?.currentStatus).toBe('intervention-required')
   })
 })
 
