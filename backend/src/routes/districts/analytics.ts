@@ -29,6 +29,7 @@ import {
   isLegacyDistinguishedClubsFormat,
   transformLegacyDistinguishedClubs,
 } from '../../utils/legacyTransformation.js'
+import { transformPerformanceTargets } from '../../utils/performanceTargetsTransformation.js'
 
 export const analyticsRouter = Router()
 
@@ -335,6 +336,13 @@ analyticsRouter.get(
         return
       }
 
+      // Read performance targets for per-metric rankings (world rank, percentile, region rank)
+      // Per-metric-rankings spec: Include rankings in analytics response
+      const performanceTargets = await preComputedAnalyticsReader.readPerformanceTargets(
+        snapshotDate,
+        districtId
+      )
+
       // Requirement 4.1: Transform legacy distinguishedClubs array format to counts object
       // Note: Legacy pre-computed files may have distinguishedClubs as an array instead of counts object.
       // The type guard checks the runtime data format, not the TypeScript type.
@@ -373,12 +381,20 @@ analyticsRouter.get(
         snapshotDate,
         filePath: analyticsFilePath,
         schemaVersion: ANALYTICS_SCHEMA_VERSION,
+        hasPerformanceTargets: performanceTargets !== null,
       })
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
-      res.json(analytics)
+      // Include performanceTargets in response if available
+      // Per-metric-rankings spec: Frontend expects performanceTargets with rankings
+      // Transform from analytics-core format to frontend-expected format
+      const response = performanceTargets
+        ? { ...analytics, performanceTargets: transformPerformanceTargets(performanceTargets) }
+        : analytics
+
+      res.json(response)
     } catch (error) {
       // Requirement 4.5: IF the schema version is incompatible, return 500
       if (error instanceof SchemaVersionError) {
