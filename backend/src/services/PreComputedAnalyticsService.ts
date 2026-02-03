@@ -18,7 +18,10 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '../utils/logger.js'
-import type { PreComputedAnalyticsSummary, AnalyticsSummaryFile } from '../types/precomputedAnalytics.js'
+import type {
+  PreComputedAnalyticsSummary,
+  AnalyticsSummaryFile,
+} from '../types/precomputedAnalytics.js'
 
 /**
  * Configuration for PreComputedAnalyticsService

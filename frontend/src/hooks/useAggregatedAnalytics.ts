@@ -310,8 +310,7 @@ export function useAggregatedAnalytics(
   endDate?: string
 ): UseAggregatedAnalyticsResult {
   // Validate date range - don't make request if startDate > endDate
-  const hasValidDateRange =
-    !startDate || !endDate || startDate <= endDate
+  const hasValidDateRange = !startDate || !endDate || startDate <= endDate
 
   // Combined query that tries aggregated endpoint first, then falls back to individual
   const query = useQuery({

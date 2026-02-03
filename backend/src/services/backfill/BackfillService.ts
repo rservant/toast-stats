@@ -30,9 +30,7 @@ import {
 } from '../../utils/IntermediateCache.js'
 import { RefreshService } from '../RefreshService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
-import type {
-  DistrictStatistics,
-} from '../../types/districts.js'
+import type { DistrictStatistics } from '../../types/districts.js'
 import type {
   Snapshot,
   SnapshotStore,

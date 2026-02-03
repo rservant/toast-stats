@@ -255,7 +255,10 @@ export class TimeSeriesIndexWriter {
       const availableProgramYears: string[] = []
 
       for (const programYear of programYears) {
-        const indexFile = await this.readProgramYearIndex(districtId, programYear)
+        const indexFile = await this.readProgramYearIndex(
+          districtId,
+          programYear
+        )
         if (indexFile) {
           availableProgramYears.push(programYear)
           totalDataPoints += indexFile.dataPoints.length
@@ -502,7 +505,9 @@ export class TimeSeriesIndexWriter {
    *
    * @see Requirements 16.3
    */
-  calculateProgramYearSummary(dataPoints: TimeSeriesDataPoint[]): ProgramYearSummary {
+  calculateProgramYearSummary(
+    dataPoints: TimeSeriesDataPoint[]
+  ): ProgramYearSummary {
     if (dataPoints.length === 0) {
       return {
         totalDataPoints: 0,
@@ -562,13 +567,16 @@ export class TimeSeriesIndexWriter {
     const resolvedPath = path.resolve(filePath)
 
     if (!resolvedPath.startsWith(resolvedRoot + path.sep)) {
-      this.logger.error('Resolved index file path is outside of timeSeriesDir', {
-        operation: 'readProgramYearIndex',
-        districtId,
-        programYear,
-        timeSeriesDir: resolvedRoot,
-        resolvedPath,
-      })
+      this.logger.error(
+        'Resolved index file path is outside of timeSeriesDir',
+        {
+          operation: 'readProgramYearIndex',
+          districtId,
+          programYear,
+          timeSeriesDir: resolvedRoot,
+          resolvedPath,
+        }
+      )
       // Treat as not found to avoid exposing filesystem details
       return null
     }

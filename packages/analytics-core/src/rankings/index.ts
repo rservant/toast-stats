@@ -15,3 +15,9 @@ export {
   type AllDistrictsCSVRecord,
   type BordaCountRankingCalculatorConfig,
 } from './BordaCountRankingCalculator.js'
+
+export {
+  MetricRankingsCalculator,
+  type MetricType,
+  type RegionRankResult,
+} from './MetricRankingsCalculator.js'

@@ -58,6 +58,7 @@ Both LocalTimeSeriesIndexStorage and FirestoreTimeSeriesIndexStorage have:
 - **core.ts** - Computes `overallRank` by sorting rankings on-demand
 
 Per the `data-computation-separation.md` steering document:
+
 - "The backend MUST NOT perform any on-demand data computation"
 - "The backend has a computation budget of **0ms** for data computation"
 - "All computation happens in scraper-cli"
@@ -211,7 +212,7 @@ Per the `data-computation-separation.md` steering document:
 
 #### Acceptance Criteria
 
-1. THE time-series index files SHALL be stored in CACHE_DIR/time-series/district_{id}/
+1. THE time-series index files SHALL be stored in CACHE*DIR/time-series/district*{id}/
 2. THE program year index files SHALL be named {year}-{year+1}.json (e.g., "2023-2024.json")
 3. THE index-metadata.json file SHALL be updated with available program years
 4. THE ProgramYearIndexFile structure SHALL remain unchanged

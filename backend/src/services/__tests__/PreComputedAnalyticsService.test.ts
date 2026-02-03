@@ -19,7 +19,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import type { AnalyticsSummaryFile, PreComputedAnalyticsSummary } from '../../types/precomputedAnalytics.js'
+import type {
+  AnalyticsSummaryFile,
+  PreComputedAnalyticsSummary,
+} from '../../types/precomputedAnalytics.js'
 import { ANALYTICS_SUMMARY_SCHEMA_VERSION } from '../../types/precomputedAnalytics.js'
 
 describe('PreComputedAnalyticsService', () => {
@@ -360,37 +363,51 @@ describe('PreComputedAnalyticsService', () => {
   describe('read-only behavior verification', () => {
     it('should not have computeAndStore method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['computeAndStore']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['computeAndStore']
+      ).toBeUndefined()
     })
 
     it('should not have computeDistrictAnalytics method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['computeDistrictAnalytics']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['computeDistrictAnalytics']
+      ).toBeUndefined()
     })
 
     it('should not have calculateTotalMembership method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['calculateTotalMembership']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['calculateTotalMembership']
+      ).toBeUndefined()
     })
 
     it('should not have calculateClubHealthCounts method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['calculateClubHealthCounts']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['calculateClubHealthCounts']
+      ).toBeUndefined()
     })
 
     it('should not have calculateDistinguishedClubCounts method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['calculateDistinguishedClubCounts']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['calculateDistinguishedClubCounts']
+      ).toBeUndefined()
     })
 
     it('should not have calculateTotalPayments method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['calculateTotalPayments']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['calculateTotalPayments']
+      ).toBeUndefined()
     })
 
     it('should not have calculateTotalDCPGoals method', () => {
       // Assert - Service should not have computation methods
-      expect((service as Record<string, unknown>)['calculateTotalDCPGoals']).toBeUndefined()
+      expect(
+        (service as Record<string, unknown>)['calculateTotalDCPGoals']
+      ).toBeUndefined()
     })
 
     it('should only expose read methods', () => {

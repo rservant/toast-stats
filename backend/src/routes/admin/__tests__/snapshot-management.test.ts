@@ -202,7 +202,11 @@ describe('Snapshot Management Routes', () => {
     const programYear =
       month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
 
-    const districtDir = path.join(tempDir, 'time-series', `district_${districtId}`)
+    const districtDir = path.join(
+      tempDir,
+      'time-series',
+      `district_${districtId}`
+    )
     await fs.mkdir(districtDir, { recursive: true })
 
     const indexFilePath = path.join(districtDir, `${programYear}.json`)
@@ -214,7 +218,7 @@ describe('Snapshot Management Routes', () => {
       startDate: string
       endDate: string
       lastUpdated: string
-      dataPoints: typeof dataPoint[]
+      dataPoints: (typeof dataPoint)[]
       summary: {
         totalDataPoints: number
         membershipStart: number

@@ -223,8 +223,7 @@ export const useDistrictAnalytics = (
   endDate?: string
 ) => {
   // Validate date range - don't make request if startDate > endDate
-  const hasValidDateRange =
-    !startDate || !endDate || startDate <= endDate
+  const hasValidDateRange = !startDate || !endDate || startDate <= endDate
 
   return useQuery<DistrictAnalytics, Error>({
     queryKey: ['districtAnalytics', districtId, startDate, endDate],

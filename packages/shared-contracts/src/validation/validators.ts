@@ -208,7 +208,6 @@ export function validateSnapshotManifest(
   }
 }
 
-
 /**
  * Validates a time-series data point against the TimeSeriesDataPoint schema.
  *

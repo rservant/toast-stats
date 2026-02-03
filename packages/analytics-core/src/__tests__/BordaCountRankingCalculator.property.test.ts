@@ -96,7 +96,9 @@ const regionArb = fc.constantFrom(
 /**
  * Generate a valid AllDistrictsCSVRecord
  */
-const allDistrictsCSVRecordArb = (districtId: string): fc.Arbitrary<AllDistrictsCSVRecord> =>
+const allDistrictsCSVRecordArb = (
+  districtId: string
+): fc.Arbitrary<AllDistrictsCSVRecord> =>
   fc
     .tuple(
       regionArb,
@@ -170,7 +172,9 @@ const rankingDistrictStatisticsArb = (
         byType: [],
         topClubs: [],
       },
-      districtPerformance: [csvRecord as Record<string, string | number | null>],
+      districtPerformance: [
+        csvRecord as Record<string, string | number | null>,
+      ],
     }))
 
 /**
@@ -222,7 +226,10 @@ function getDistinguishedPercent(district: RankingDistrictStatistics): number {
 /**
  * Calculate expected Borda points for a given rank and total districts
  */
-function calculateExpectedBordaPoints(rank: number, totalDistricts: number): number {
+function calculateExpectedBordaPoints(
+  rank: number,
+  totalDistricts: number
+): number {
   return totalDistricts - rank + 1
 }
 
@@ -280,7 +287,9 @@ describe('BordaCountRankingCalculator Property Tests', () => {
             if (district.ranking) {
               expect(district.ranking.clubsRank).toBeGreaterThanOrEqual(1)
               expect(district.ranking.paymentsRank).toBeGreaterThanOrEqual(1)
-              expect(district.ranking.distinguishedRank).toBeGreaterThanOrEqual(1)
+              expect(district.ranking.distinguishedRank).toBeGreaterThanOrEqual(
+                1
+              )
 
               // Ranks should not exceed total number of districts
               expect(district.ranking.clubsRank).toBeLessThanOrEqual(
@@ -330,9 +339,13 @@ describe('BordaCountRankingCalculator Property Tests', () => {
               )
 
               const expectedAggregateScore =
-                clubsBordaPoints + paymentsBordaPoints + distinguishedBordaPoints
+                clubsBordaPoints +
+                paymentsBordaPoints +
+                distinguishedBordaPoints
 
-              expect(district.ranking.aggregateScore).toBe(expectedAggregateScore)
+              expect(district.ranking.aggregateScore).toBe(
+                expectedAggregateScore
+              )
             }
           }
 
@@ -433,7 +446,9 @@ describe('BordaCountRankingCalculator Property Tests', () => {
               const clubGrowthA = getClubGrowthPercent(districtA)
               const clubGrowthB = getClubGrowthPercent(districtB)
               if (clubGrowthA === clubGrowthB) {
-                expect(districtA.ranking.clubsRank).toBe(districtB.ranking.clubsRank)
+                expect(districtA.ranking.clubsRank).toBe(
+                  districtB.ranking.clubsRank
+                )
               }
 
               // Payment growth ties
@@ -535,25 +550,22 @@ describe('BordaCountRankingCalculator Property Tests', () => {
      */
     it('single district should get rank 1 in all categories', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          rankingDistrictStatisticsArb('42'),
-          async district => {
-            const rankedDistricts = await calculator.calculateRankings([district])
+        fc.asyncProperty(rankingDistrictStatisticsArb('42'), async district => {
+          const rankedDistricts = await calculator.calculateRankings([district])
 
-            expect(rankedDistricts).toHaveLength(1)
-            const ranked = rankedDistricts[0]!
+          expect(rankedDistricts).toHaveLength(1)
+          const ranked = rankedDistricts[0]!
 
-            if (ranked.ranking) {
-              expect(ranked.ranking.clubsRank).toBe(1)
-              expect(ranked.ranking.paymentsRank).toBe(1)
-              expect(ranked.ranking.distinguishedRank).toBe(1)
-              // Aggregate score = 1 + 1 + 1 = 3 (Borda points for rank 1 with 1 district)
-              expect(ranked.ranking.aggregateScore).toBe(3)
-            }
-
-            return true
+          if (ranked.ranking) {
+            expect(ranked.ranking.clubsRank).toBe(1)
+            expect(ranked.ranking.paymentsRank).toBe(1)
+            expect(ranked.ranking.distinguishedRank).toBe(1)
+            // Aggregate score = 1 + 1 + 1 = 3 (Borda points for rank 1 with 1 district)
+            expect(ranked.ranking.aggregateScore).toBe(3)
           }
-        ),
+
+          return true
+        }),
         { numRuns: 50 }
       )
     })
@@ -578,8 +590,12 @@ describe('BordaCountRankingCalculator Property Tests', () => {
 
           for (const district of rankedDistricts) {
             if (district.ranking) {
-              expect(district.ranking.aggregateScore).toBeGreaterThanOrEqual(minScore)
-              expect(district.ranking.aggregateScore).toBeLessThanOrEqual(maxScore)
+              expect(district.ranking.aggregateScore).toBeGreaterThanOrEqual(
+                minScore
+              )
+              expect(district.ranking.aggregateScore).toBeLessThanOrEqual(
+                maxScore
+              )
             }
           }
 
@@ -613,11 +629,19 @@ describe('BordaCountRankingCalculator Property Tests', () => {
             if (r1.ranking && r2.ranking) {
               expect(r1.ranking.clubsRank).toBe(r2.ranking.clubsRank)
               expect(r1.ranking.paymentsRank).toBe(r2.ranking.paymentsRank)
-              expect(r1.ranking.distinguishedRank).toBe(r2.ranking.distinguishedRank)
+              expect(r1.ranking.distinguishedRank).toBe(
+                r2.ranking.distinguishedRank
+              )
               expect(r1.ranking.aggregateScore).toBe(r2.ranking.aggregateScore)
-              expect(r1.ranking.clubGrowthPercent).toBe(r2.ranking.clubGrowthPercent)
-              expect(r1.ranking.paymentGrowthPercent).toBe(r2.ranking.paymentGrowthPercent)
-              expect(r1.ranking.distinguishedPercent).toBe(r2.ranking.distinguishedPercent)
+              expect(r1.ranking.clubGrowthPercent).toBe(
+                r2.ranking.clubGrowthPercent
+              )
+              expect(r1.ranking.paymentGrowthPercent).toBe(
+                r2.ranking.paymentGrowthPercent
+              )
+              expect(r1.ranking.distinguishedPercent).toBe(
+                r2.ranking.distinguishedPercent
+              )
             }
           }
 
@@ -639,8 +663,12 @@ describe('BordaCountRankingCalculator Property Tests', () => {
           districtStatisticsArrayArb(2, 10),
           snapshotDateArb,
           async (districts, snapshotId) => {
-            const rankedDistricts = await calculator.calculateRankings(districts)
-            const rankingsData = calculator.buildRankingsData(rankedDistricts, snapshotId)
+            const rankedDistricts =
+              await calculator.calculateRankings(districts)
+            const rankingsData = calculator.buildRankingsData(
+              rankedDistricts,
+              snapshotId
+            )
 
             // Verify metadata
             expect(rankingsData.metadata.snapshotId).toBe(snapshotId)
@@ -650,7 +678,9 @@ describe('BordaCountRankingCalculator Property Tests', () => {
 
             // Verify all ranked districts are in the output
             const districtsWithRankings = rankedDistricts.filter(d => d.ranking)
-            expect(rankingsData.rankings.length).toBe(districtsWithRankings.length)
+            expect(rankingsData.rankings.length).toBe(
+              districtsWithRankings.length
+            )
 
             // Verify ranking data is preserved
             for (const ranking of rankingsData.rankings) {
@@ -663,7 +693,9 @@ describe('BordaCountRankingCalculator Property Tests', () => {
               const sourceRanking = sourceDistrict!.ranking!
               expect(ranking.clubsRank).toBe(sourceRanking.clubsRank)
               expect(ranking.paymentsRank).toBe(sourceRanking.paymentsRank)
-              expect(ranking.distinguishedRank).toBe(sourceRanking.distinguishedRank)
+              expect(ranking.distinguishedRank).toBe(
+                sourceRanking.distinguishedRank
+              )
               expect(ranking.aggregateScore).toBe(sourceRanking.aggregateScore)
             }
 

@@ -271,9 +271,11 @@ describe('SnapshotBuilder Computation Removal', () => {
       // The method should not exist on the public interface
       // Note: It was a private method, so we check that it's not accessible
       const builderAsAny = snapshotBuilder as Record<string, unknown>
-      
+
       // Check that there's no public calculateAllDistrictsRankings method
-      expect(typeof builderAsAny['calculateAllDistrictsRankings']).not.toBe('function')
+      expect(typeof builderAsAny['calculateAllDistrictsRankings']).not.toBe(
+        'function'
+      )
     })
   })
 

@@ -2,7 +2,7 @@
  * RefreshService Tests
  *
  * Tests for RefreshService functionality using SnapshotBuilder
- * 
+ *
  * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
  * The backend no longer performs ranking calculations per the data-computation-separation
  * steering document.

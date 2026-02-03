@@ -19,13 +19,14 @@ import request from 'supertest'
 import { analyticsSummaryRouter } from '../analyticsSummary.js'
 
 // Use vi.hoisted to define mocks that are used in vi.mock factories
-const { mockSnapshotStore, mockReadYearOverYear, mockReadDistrictAnalytics } = vi.hoisted(() => ({
-  mockSnapshotStore: {
-    getLatestSuccessful: vi.fn(),
-  },
-  mockReadYearOverYear: vi.fn(),
-  mockReadDistrictAnalytics: vi.fn(),
-}))
+const { mockSnapshotStore, mockReadYearOverYear, mockReadDistrictAnalytics } =
+  vi.hoisted(() => ({
+    mockSnapshotStore: {
+      getLatestSuccessful: vi.fn(),
+    },
+    mockReadYearOverYear: vi.fn(),
+    mockReadDistrictAnalytics: vi.fn(),
+  }))
 
 // Mock the shared module
 vi.mock('../shared.js', () => ({
@@ -360,9 +361,12 @@ describe('Analytics Summary Route', () => {
 
         // Verify distinguishedProjection is read from pre-computed data (not computed on-demand)
         expect(response.body.summary.distinguishedProjection).toBe(35)
-        
+
         // Verify readDistrictAnalytics was called to get the projection
-        expect(mockReadDistrictAnalytics).toHaveBeenCalledWith('2024-01-15', '42')
+        expect(mockReadDistrictAnalytics).toHaveBeenCalledWith(
+          '2024-01-15',
+          '42'
+        )
       })
 
       /**

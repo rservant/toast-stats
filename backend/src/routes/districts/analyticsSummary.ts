@@ -256,15 +256,18 @@ analyticsSummaryRouter.get(
           }
         }
       } catch (projectionError) {
-        logger.debug('Failed to read distinguishedProjection from full analytics', {
-          operation: 'getAnalyticsSummary',
-          operationId,
-          districtId,
-          error:
-            projectionError instanceof Error
-              ? projectionError.message
-              : 'Unknown error',
-        })
+        logger.debug(
+          'Failed to read distinguishedProjection from full analytics',
+          {
+            operation: 'getAnalyticsSummary',
+            operationId,
+            districtId,
+            error:
+              projectionError instanceof Error
+                ? projectionError.message
+                : 'Unknown error',
+          }
+        )
         // Continue without projection - will use 0 as default
       }
 

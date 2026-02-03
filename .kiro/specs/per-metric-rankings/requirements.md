@@ -42,7 +42,7 @@ The ranking data must be computed in the scraper-cli pipeline (per the data-comp
 
 #### Acceptance Criteria
 
-1. WHEN computing world percentile, THE Analytics_Computer SHALL calculate as ((totalDistricts - worldRank) / totalDistricts) * 100
+1. WHEN computing world percentile, THE Analytics_Computer SHALL calculate as ((totalDistricts - worldRank) / totalDistricts) \* 100
 2. THE Analytics_Computer SHALL round world percentile to 1 decimal place
 3. IF totalDistricts is 0 or 1, THEN THE Analytics_Computer SHALL set world percentile to null
 4. IF worldRank is null, THEN THE Analytics_Computer SHALL set world percentile to null

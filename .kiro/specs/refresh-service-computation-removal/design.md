@@ -27,15 +27,15 @@ flowchart TB
         A1[RefreshService] --> B1[buildTimeSeriesDataPoint]
         A1 --> C1[calculateTotalMembership]
         A1 --> D1[calculateClubHealthCounts]
-        
+
         E1[BackfillService] --> B1
         E1 --> F1[isDistinguished]
-        
+
         G1[SnapshotBuilder] --> H1[RankingCalculator]
         H1 --> I1[calculateAllDistrictsRankings]
-        
+
         J1[PreComputedAnalyticsService] --> K1[computeDistrictAnalytics]
-        
+
         L1[Routes] --> M1[calculateDistinguishedProjection]
         L1 --> N1[overallRank sorting]
     end
@@ -44,19 +44,19 @@ flowchart TB
         subgraph "scraper-cli"
             S1[transform command] --> S2[BordaCountRankingCalculator]
             S2 --> S3[all-districts-rankings.json]
-            
+
             S4[compute-analytics] --> S5[TimeSeriesDataPointBuilder]
             S5 --> S6[time-series index files]
             S4 --> S7[AnalyticsComputer]
             S7 --> S8[analytics files]
         end
-        
+
         subgraph "analytics-core"
             AC1[TimeSeriesDataPointBuilder]
             AC2[BordaCountRankingCalculator]
             AC3[AnalyticsComputer]
         end
-        
+
         subgraph "backend (read-only)"
             B2[RefreshService] --> B3[Read pre-computed only]
             B4[BackfillService] --> B5[Read pre-computed only]
@@ -64,7 +64,7 @@ flowchart TB
             B8[TimeSeriesIndexService] --> B9[Read time-series only]
             B10[Routes] --> B11[Read pre-computed only]
         end
-        
+
         S2 --> AC2
         S5 --> AC1
         S7 --> AC3
@@ -80,12 +80,15 @@ Migrated from RefreshService. Computes time-series data points from district sta
 ```typescript
 // packages/analytics-core/src/timeseries/TimeSeriesDataPointBuilder.ts
 
-import type { TimeSeriesDataPoint, DistrictStatistics } from '@toastmasters/shared-contracts'
+import type {
+  TimeSeriesDataPoint,
+  DistrictStatistics,
+} from '@toastmasters/shared-contracts'
 
 /**
  * Builds TimeSeriesDataPoint objects from district statistics.
  * Migrated from backend/src/services/RefreshService.ts
- * 
+ *
  * CRITICAL: This code is migrated, not rewritten, to preserve bug fixes.
  */
 export class TimeSeriesDataPointBuilder {
@@ -114,12 +117,13 @@ export class TimeSeriesDataPointBuilder {
   private calculateTotalMembership(district: DistrictStatistics): number
   private calculateTotalPayments(district: DistrictStatistics): number
   private calculateTotalDCPGoals(district: DistrictStatistics): number
-  private calculateClubHealthCounts(district: DistrictStatistics): TimeSeriesDataPoint['clubCounts']
+  private calculateClubHealthCounts(
+    district: DistrictStatistics
+  ): TimeSeriesDataPoint['clubCounts']
   private calculateDistinguishedTotal(district: DistrictStatistics): number
   private isDistinguished(club: Record<string, unknown>): boolean
   private parseIntSafe(value: unknown): number
 }
-
 ```
 
 ### 2. BordaCountRankingCalculator (analytics-core)
@@ -134,7 +138,7 @@ import type { DistrictStatistics, AllDistrictsRankingsData } from '@toastmasters
 /**
  * Computes Borda count rankings for districts.
  * Migrated from backend/src/services/RankingCalculator.ts
- * 
+ *
  * CRITICAL: This code is migrated, not rewritten, to preserve bug fixes.
  */
 export class BordaCountRankingCalculator {
@@ -171,10 +175,10 @@ New service to write time-series index files during compute-analytics.
 // packages/scraper-cli/src/services/TimeSeriesIndexWriter.ts
 
 import { TimeSeriesDataPointBuilder } from '@toastmasters/analytics-core'
-import type { 
-  TimeSeriesDataPoint, 
+import type {
+  TimeSeriesDataPoint,
   ProgramYearIndexFile,
-  TimeSeriesIndexMetadata 
+  TimeSeriesIndexMetadata,
 } from '@toastmasters/shared-contracts'
 
 export interface TimeSeriesIndexWriterConfig {
@@ -187,7 +191,7 @@ export interface TimeSeriesIndexWriterConfig {
  */
 export class TimeSeriesIndexWriter {
   private readonly builder: TimeSeriesDataPointBuilder
-  
+
   constructor(config: TimeSeriesIndexWriterConfig)
 
   /**
@@ -219,18 +223,18 @@ Extended to generate time-series indexes alongside analytics.
 
 export class AnalyticsComputeService {
   private readonly timeSeriesWriter: TimeSeriesIndexWriter
-  
+
   async computeDistrictAnalytics(
     date: string,
     districtId: string,
     options?: { force?: boolean }
   ): Promise<DistrictComputeResult> {
     // ... existing analytics computation ...
-    
+
     // NEW: Write time-series data point
     const dataPoint = this.timeSeriesBuilder.build(snapshotId, snapshot)
     await this.timeSeriesWriter.writeDataPoint(districtId, dataPoint)
-    
+
     return result
   }
 }
@@ -250,14 +254,18 @@ export class TransformService {
 
   async transform(options: TransformOptions): Promise<TransformResult> {
     // ... existing transformation ...
-    
+
     // NEW: Compute and write rankings if all-districts data available
     if (allDistrictsData.length > 0) {
-      const rankedDistricts = this.rankingCalculator.calculateRankings(districtStats)
-      const rankingsData = this.rankingCalculator.buildRankingsData(rankedDistricts, snapshotId)
+      const rankedDistricts =
+        this.rankingCalculator.calculateRankings(districtStats)
+      const rankingsData = this.rankingCalculator.buildRankingsData(
+        rankedDistricts,
+        snapshotId
+      )
       await this.writeRankingsFile(date, rankingsData)
     }
-    
+
     return result
   }
 }
@@ -274,7 +282,7 @@ export interface ITimeSeriesIndexService {
   // READ-ONLY methods
   getTrendData(districtId: string, startDate: string, endDate: string): Promise<TimeSeriesDataPoint[]>
   getProgramYearData(districtId: string, programYear: string): Promise<ProgramYearIndex | null>
-  
+
   // REMOVED: appendDataPoint, rebuildIndex
 }
 
@@ -283,7 +291,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
   async getTrendData(...): Promise<TimeSeriesDataPoint[]> {
     // Read from pre-computed files only
   }
-  
+
   async getProgramYearData(...): Promise<ProgramYearIndex | null> {
     // Read from pre-computed files only
   }
@@ -302,7 +310,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
  * Contains aggregated metrics for a snapshot date.
  */
 export interface TimeSeriesDataPoint {
-  date: string           // YYYY-MM-DD
+  date: string // YYYY-MM-DD
   snapshotId: string
   membership: number
   payments: number
@@ -322,10 +330,10 @@ export interface TimeSeriesDataPoint {
  */
 export interface ProgramYearIndexFile {
   districtId: string
-  programYear: string    // e.g., "2023-2024"
-  startDate: string      // e.g., "2023-07-01"
-  endDate: string        // e.g., "2024-06-30"
-  lastUpdated: string    // ISO timestamp
+  programYear: string // e.g., "2023-2024"
+  startDate: string // e.g., "2023-07-01"
+  endDate: string // e.g., "2024-06-30"
+  lastUpdated: string // ISO timestamp
   dataPoints: TimeSeriesDataPoint[]
   summary: ProgramYearSummary
 }
@@ -377,30 +385,29 @@ CACHE_DIR/
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
-
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Time-Series Generation Completeness
 
-*For any* district with snapshot data, running compute-analytics SHALL produce a time-series data point containing all required fields (date, snapshotId, membership, payments, dcpGoals, distinguishedTotal, clubCounts) in the correct program-year-partitioned index file.
+_For any_ district with snapshot data, running compute-analytics SHALL produce a time-series data point containing all required fields (date, snapshotId, membership, payments, dcpGoals, distinguishedTotal, clubCounts) in the correct program-year-partitioned index file.
 
 **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
 
 ### Property 2: Ranking Algorithm Equivalence
 
-*For any* set of district statistics, the migrated BordaCountRankingCalculator in analytics-core SHALL produce identical rankings (clubsRank, paymentsRank, distinguishedRank, aggregateScore) as the original backend RankingCalculator.
+_For any_ set of district statistics, the migrated BordaCountRankingCalculator in analytics-core SHALL produce identical rankings (clubsRank, paymentsRank, distinguishedRank, aggregateScore) as the original backend RankingCalculator.
 
 **Validates: Requirements 5.3, 7.1, 7.2, 7.3, 7.4**
 
 ### Property 3: TimeSeriesDataPointBuilder Equivalence
 
-*For any* district statistics input, the migrated TimeSeriesDataPointBuilder in analytics-core SHALL produce identical TimeSeriesDataPoint output (membership, payments, dcpGoals, distinguishedTotal, clubCounts) as the original RefreshService computation methods.
+_For any_ district statistics input, the migrated TimeSeriesDataPointBuilder in analytics-core SHALL produce identical TimeSeriesDataPoint output (membership, payments, dcpGoals, distinguishedTotal, clubCounts) as the original RefreshService computation methods.
 
 **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8**
 
 ### Property 4: File Schema Validation
 
-*For any* time-series index file generated by scraper-cli, the file SHALL validate against the TimeSeriesDataPoint and ProgramYearIndexFile Zod schemas defined in shared-contracts.
+_For any_ time-series index file generated by scraper-cli, the file SHALL validate against the TimeSeriesDataPoint and ProgramYearIndexFile Zod schemas defined in shared-contracts.
 
 **Validates: Requirements 10.1, 10.2, 10.3, 10.4, 10.5, 13.1, 13.2, 13.3, 13.4, 13.5**
 
@@ -408,21 +415,21 @@ CACHE_DIR/
 
 ### Scraper-CLI Errors
 
-| Scenario | Handling | Recovery |
-|----------|----------|----------|
-| Snapshot not found | Log error, skip district | Continue with other districts |
-| Time-series write failure | Log error, fail district | Retry on next run |
-| Rankings computation failure | Log error, skip rankings | Snapshot created without rankings |
-| Invalid district data | Log warning, use defaults | Continue processing |
+| Scenario                     | Handling                  | Recovery                          |
+| ---------------------------- | ------------------------- | --------------------------------- |
+| Snapshot not found           | Log error, skip district  | Continue with other districts     |
+| Time-series write failure    | Log error, fail district  | Retry on next run                 |
+| Rankings computation failure | Log error, skip rankings  | Snapshot created without rankings |
+| Invalid district data        | Log warning, use defaults | Continue processing               |
 
 ### Backend Errors
 
-| Scenario | HTTP Code | Error Code | Message |
-|----------|-----------|------------|---------|
-| Time-series data not found | 200 | N/A | Return empty array |
-| Rankings file not found | 404 | RANKINGS_NOT_FOUND | Run scraper-cli transform |
-| Schema version mismatch | 500 | SCHEMA_VERSION_MISMATCH | Re-run scraper-cli |
-| Corrupted index file | 500 | CORRUPTED_FILE | Re-run compute-analytics |
+| Scenario                   | HTTP Code | Error Code              | Message                   |
+| -------------------------- | --------- | ----------------------- | ------------------------- |
+| Time-series data not found | 200       | N/A                     | Return empty array        |
+| Rankings file not found    | 404       | RANKINGS_NOT_FOUND      | Run scraper-cli transform |
+| Schema version mismatch    | 500       | SCHEMA_VERSION_MISMATCH | Re-run scraper-cli        |
+| Corrupted index file       | 500       | CORRUPTED_FILE          | Re-run compute-analytics  |
 
 ## Testing Strategy
 
@@ -430,12 +437,12 @@ Per the testing steering document, property-based tests are a tool, not a defaul
 
 ### Analysis: Which Properties Warrant PBT?
 
-| Property | PBT Warranted? | Rationale |
-|----------|----------------|-----------|
-| P1: Time-series completeness | No | File existence check, examples suffice |
-| P2: Ranking equivalence | **Yes** | Algorithm equivalence across all inputs |
-| P3: Builder equivalence | **Yes** | Algorithm equivalence across all inputs |
-| P4: Schema validation | No | Schema validation, examples suffice |
+| Property                     | PBT Warranted? | Rationale                               |
+| ---------------------------- | -------------- | --------------------------------------- |
+| P1: Time-series completeness | No             | File existence check, examples suffice  |
+| P2: Ranking equivalence      | **Yes**        | Algorithm equivalence across all inputs |
+| P3: Builder equivalence      | **Yes**        | Algorithm equivalence across all inputs |
+| P4: Schema validation        | No             | Schema validation, examples suffice     |
 
 ### Unit Tests (Preferred Approach)
 

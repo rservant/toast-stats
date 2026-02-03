@@ -24,7 +24,11 @@ import {
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
 } from '@toastmasters/analytics-core'
-import type { DistrictStatisticsInput, ScrapedRecord } from '@toastmasters/analytics-core'
+import type {
+  DistrictStatisticsInput,
+  ScrapedRecord,
+} from '@toastmasters/analytics-core'
+import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
 
@@ -434,7 +438,11 @@ export class AnalyticsComputeService {
       // Check if this is a PerDistrictData wrapper (has 'data' field with nested structure)
       // or direct DistrictStatistics format (has 'snapshotDate' at top level)
       const dataField = parsed['data']
-      if ('data' in parsed && typeof dataField === 'object' && dataField !== null) {
+      if (
+        'data' in parsed &&
+        typeof dataField === 'object' &&
+        dataField !== null
+      ) {
         // PerDistrictData wrapper format - extract the nested data
         const wrapper = parsed as { data: DistrictStatistics }
         return wrapper.data
@@ -443,12 +451,15 @@ export class AnalyticsComputeService {
         return parsed as unknown as DistrictStatistics
       } else {
         // Unknown format - log warning and try to use as-is
-        this.logger.warn('Unknown snapshot format, attempting to use as DistrictStatistics', {
-          date,
-          districtId,
-          hasData: 'data' in parsed,
-          hasSnapshotDate: 'snapshotDate' in parsed,
-        })
+        this.logger.warn(
+          'Unknown snapshot format, attempting to use as DistrictStatistics',
+          {
+            date,
+            districtId,
+            hasData: 'data' in parsed,
+            hasSnapshotDate: 'snapshotDate' in parsed,
+          }
+        )
         return parsed as unknown as DistrictStatistics
       }
     } catch (error) {
@@ -462,6 +473,44 @@ export class AnalyticsComputeService {
         return null
       }
       // Re-throw other errors (including JSON parse errors)
+      throw error
+    }
+  }
+
+  /**
+   * Load all-districts rankings from disk
+   *
+   * Requirements:
+   * - 5.1: Load the all-districts-rankings.json file for the snapshot date
+   * - 5.3: If the all-districts-rankings.json file is not available, log a warning
+   *        and compute performance targets with null rankings
+   * - 5.4: The Analytics_Compute_Service SHALL NOT fail if all-districts-rankings.json is missing
+   *
+   * @param date - Snapshot date in YYYY-MM-DD format
+   * @returns AllDistrictsRankingsData or null if not found
+   */
+  async loadAllDistrictsRankings(
+    date: string
+  ): Promise<AllDistrictsRankingsData | null> {
+    const rankingsPath = path.join(
+      this.getSnapshotDir(date),
+      'all-districts-rankings.json'
+    )
+
+    try {
+      const content = await fs.readFile(rankingsPath, 'utf-8')
+      return JSON.parse(content) as AllDistrictsRankingsData
+    } catch (error) {
+      const err = error as { code?: string }
+      if (err.code === 'ENOENT') {
+        // Requirement 5.3: Log warning when file not found
+        this.logger.warn('All-districts rankings not found', {
+          date,
+          path: rankingsPath,
+        })
+        return null
+      }
+      // Re-throw other errors (e.g., JSON parse errors, permission errors)
       throw error
     }
   }
@@ -516,11 +565,15 @@ export class AnalyticsComputeService {
    * - 5.3: Skip analytics recomputation if snapshot checksum is unchanged
    * - 5.4: Store the source snapshot checksum in the analytics metadata
    * - 5.5: The `--force-analytics` flag bypasses checksum comparison
+   * - 5.2 (per-metric-rankings): Pass all-districts rankings data to computePerformanceTargets
    */
   async computeDistrictAnalytics(
     date: string,
     districtId: string,
-    options?: { force?: boolean }
+    options?: {
+      force?: boolean
+      allDistrictsRankings?: AllDistrictsRankingsData | null
+    }
   ): Promise<DistrictComputeResult> {
     const force = options?.force ?? false
 
@@ -576,13 +629,35 @@ export class AnalyticsComputeService {
         status.currentChecksum ??
         (await this.calculateSnapshotChecksum(date, districtId))
 
+      // Requirement 5.2 (per-metric-rankings): Load all-districts rankings if not provided
+      // Rankings are loaded once per compute operation and passed to each district computation
+      let allDistrictsRankings = options?.allDistrictsRankings
+      if (allDistrictsRankings === undefined) {
+        // Load rankings if not already provided (for single-district computation)
+        allDistrictsRankings = await this.loadAllDistrictsRankings(date)
+        if (!allDistrictsRankings) {
+          this.logger.warn(
+            'All-districts rankings not available, rankings will be null',
+            {
+              date,
+              districtId,
+            }
+          )
+        }
+      }
+
       // Compute analytics using shared AnalyticsComputer
       // Note: AnalyticsComputer expects an array of snapshots for trend analysis
       // For single-date computation, we pass an array with one snapshot
+      // Requirement 5.2 (per-metric-rankings): Pass allDistrictsRankings via options
       const computationResult =
-        await this.analyticsComputer.computeDistrictAnalytics(districtId, [
-          snapshot,
-        ])
+        await this.analyticsComputer.computeDistrictAnalytics(
+          districtId,
+          [snapshot],
+          {
+            allDistrictsRankings: allDistrictsRankings ?? undefined,
+          }
+        )
 
       // Requirement 5.4: Pass source snapshot checksum to AnalyticsWriter
       const writeOptions = sourceSnapshotChecksum
@@ -706,11 +781,14 @@ export class AnalyticsComputeService {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error'
         timeSeriesError = errorMessage
-        this.logger.error('Failed to write time-series data point (continuing)', {
-          date,
-          districtId,
-          error: errorMessage,
-        })
+        this.logger.error(
+          'Failed to write time-series data point (continuing)',
+          {
+            date,
+            districtId,
+            error: errorMessage,
+          }
+        )
       }
 
       this.logger.info('Analytics computed and written', {
@@ -846,9 +924,20 @@ export class AnalyticsComputeService {
     const analyticsLocations: string[] = []
     const manifestEntries: AnalyticsManifestEntry[] = []
 
+    // Requirement 5.2 (per-metric-rankings): Load rankings once per compute operation
+    // This is more efficient than loading for each district
+    const allDistrictsRankings = await this.loadAllDistrictsRankings(date)
+    if (!allDistrictsRankings) {
+      this.logger.warn(
+        'All-districts rankings not available, per-metric rankings will be null',
+        { date }
+      )
+    }
+
     for (const districtId of districtsToCompute) {
       const result = await this.computeDistrictAnalytics(date, districtId, {
         force,
+        allDistrictsRankings,
       })
       results.push(result)
 

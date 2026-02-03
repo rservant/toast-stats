@@ -53,7 +53,9 @@ function refParseIntSafe(value: string | number | null | undefined): number {
 /**
  * Reference implementation of calculateTotalMembership from RefreshService
  */
-function refCalculateTotalMembership(district: DistrictStatisticsInput): number {
+function refCalculateTotalMembership(
+  district: DistrictStatisticsInput
+): number {
   if (district.membership?.total !== undefined) {
     return district.membership.total
   }
@@ -151,7 +153,9 @@ function refIsDistinguished(club: ScrapedRecord): boolean {
 /**
  * Reference implementation of calculateDistinguishedTotal from RefreshService
  */
-function refCalculateDistinguishedTotal(district: DistrictStatisticsInput): number {
+function refCalculateDistinguishedTotal(
+  district: DistrictStatisticsInput
+): number {
   const clubs = district.clubPerformance ?? []
   let total = 0
 
@@ -182,9 +186,7 @@ function refCalculateClubHealthCounts(district: DistrictStatisticsInput): {
 
   for (const club of clubs) {
     const membership = refParseIntSafe(
-      club['Active Members'] ??
-        club['Active Membership'] ??
-        club['Membership']
+      club['Active Members'] ?? club['Active Membership'] ?? club['Membership']
     )
     const dcpGoals = refParseIntSafe(club['Goals Met'])
     const memBase = refParseIntSafe(club['Mem. Base'])
@@ -232,14 +234,7 @@ const snapshotDateArb = fc
 /**
  * Generate a valid district ID
  */
-const districtIdArb = fc.constantFrom(
-  '42',
-  '101',
-  'F',
-  'D',
-  '1',
-  '999'
-)
+const districtIdArb = fc.constantFrom('42', '101', 'F', 'D', '1', '999')
 
 /**
  * Generate a valid snapshot ID
@@ -294,7 +289,7 @@ const cspStatusArb = fc.constantFrom(
 const distinguishedStatusArb = fc.constantFrom(
   'Distinguished',
   'Select Distinguished',
-  'President\'s Distinguished',
+  "President's Distinguished",
   'Smedley Distinguished',
   'None',
   'N/A',
@@ -315,7 +310,7 @@ const scrapedRecordArb: fc.Arbitrary<ScrapedRecord> = fc.record({
   'Oct. Ren.': paymentCountArb.map(String),
   'Apr. Ren.': paymentCountArb.map(String),
   'New Members': paymentCountArb.map(String),
-  'CSP': cspStatusArb,
+  CSP: cspStatusArb,
   'Club Distinguished Status': distinguishedStatusArb,
 })
 
@@ -331,7 +326,7 @@ const scrapedRecordAltFieldsArb: fc.Arbitrary<ScrapedRecord> = fc.record({
   'Goals Met': dcpGoalsArb.map(String),
   'Oct. Ren': paymentCountArb.map(String), // Alternative field name (no period)
   'Apr. Ren': paymentCountArb.map(String), // Alternative field name (no period)
-  'New': paymentCountArb.map(String), // Alternative field name
+  New: paymentCountArb.map(String), // Alternative field name
   'Club Success Plan': cspStatusArb, // Alternative field name
 })
 
@@ -356,19 +351,20 @@ const districtStatisticsWithClubsArb: fc.Arbitrary<DistrictStatisticsInput> = fc
 /**
  * Generate a valid DistrictStatisticsInput with membership.total
  */
-const districtStatisticsWithMembershipTotalArb: fc.Arbitrary<DistrictStatisticsInput> = fc
-  .tuple(
-    districtIdArb,
-    snapshotDateArb,
-    fc.integer({ min: 0, max: 5000 }),
-    fc.array(scrapedRecordArb, { minLength: 0, maxLength: 50 })
-  )
-  .map(([districtId, asOfDate, membershipTotal, clubPerformance]) => ({
-    districtId,
-    asOfDate,
-    membership: { total: membershipTotal },
-    clubPerformance,
-  }))
+const districtStatisticsWithMembershipTotalArb: fc.Arbitrary<DistrictStatisticsInput> =
+  fc
+    .tuple(
+      districtIdArb,
+      snapshotDateArb,
+      fc.integer({ min: 0, max: 5000 }),
+      fc.array(scrapedRecordArb, { minLength: 0, maxLength: 50 })
+    )
+    .map(([districtId, asOfDate, membershipTotal, clubPerformance]) => ({
+      districtId,
+      asOfDate,
+      membership: { total: membershipTotal },
+      clubPerformance,
+    }))
 
 /**
  * Generate a valid DistrictStatisticsInput (either with or without membership.total)
@@ -415,8 +411,12 @@ describe('TimeSeriesDataPointBuilder Property Tests', () => {
             fc.constant(-Infinity)
           ),
           value => {
-            const builderResult = builder.parseIntSafe(value as string | number | null | undefined)
-            const refResult = refParseIntSafe(value as string | number | null | undefined)
+            const builderResult = builder.parseIntSafe(
+              value as string | number | null | undefined
+            )
+            const refResult = refParseIntSafe(
+              value as string | number | null | undefined
+            )
             expect(builderResult).toBe(refResult)
             return true
           }
@@ -545,20 +545,30 @@ describe('TimeSeriesDataPointBuilder Property Tests', () => {
      */
     it('build() should produce TimeSeriesDataPoint matching reference implementation', () => {
       fc.assert(
-        fc.property(snapshotIdArb, districtStatisticsArb, (snapshotId, district) => {
-          const result = builder.build(snapshotId, district)
+        fc.property(
+          snapshotIdArb,
+          districtStatisticsArb,
+          (snapshotId, district) => {
+            const result = builder.build(snapshotId, district)
 
-          // Verify all fields match reference implementations
-          expect(result.date).toBe(district.asOfDate)
-          expect(result.snapshotId).toBe(snapshotId)
-          expect(result.membership).toBe(refCalculateTotalMembership(district))
-          expect(result.payments).toBe(refCalculateTotalPayments(district))
-          expect(result.dcpGoals).toBe(refCalculateTotalDCPGoals(district))
-          expect(result.distinguishedTotal).toBe(refCalculateDistinguishedTotal(district))
-          expect(result.clubCounts).toEqual(refCalculateClubHealthCounts(district))
+            // Verify all fields match reference implementations
+            expect(result.date).toBe(district.asOfDate)
+            expect(result.snapshotId).toBe(snapshotId)
+            expect(result.membership).toBe(
+              refCalculateTotalMembership(district)
+            )
+            expect(result.payments).toBe(refCalculateTotalPayments(district))
+            expect(result.dcpGoals).toBe(refCalculateTotalDCPGoals(district))
+            expect(result.distinguishedTotal).toBe(
+              refCalculateDistinguishedTotal(district)
+            )
+            expect(result.clubCounts).toEqual(
+              refCalculateClubHealthCounts(district)
+            )
 
-          return true
-        }),
+            return true
+          }
+        ),
         { numRuns: 100 }
       )
     })
@@ -640,9 +650,9 @@ describe('TimeSeriesDataPointBuilder Property Tests', () => {
         fc.property(districtStatisticsArb, district => {
           const result = builder.calculateClubHealthCounts(district)
 
-          expect(result.thriving + result.vulnerable + result.interventionRequired).toBe(
-            result.total
-          )
+          expect(
+            result.thriving + result.vulnerable + result.interventionRequired
+          ).toBe(result.total)
 
           return true
         }),
@@ -658,20 +668,26 @@ describe('TimeSeriesDataPointBuilder Property Tests', () => {
      */
     it('all computed values should be non-negative', () => {
       fc.assert(
-        fc.property(districtStatisticsArb, snapshotIdArb, (district, snapshotId) => {
-          const result = builder.build(snapshotId, district)
+        fc.property(
+          districtStatisticsArb,
+          snapshotIdArb,
+          (district, snapshotId) => {
+            const result = builder.build(snapshotId, district)
 
-          expect(result.membership).toBeGreaterThanOrEqual(0)
-          expect(result.payments).toBeGreaterThanOrEqual(0)
-          expect(result.dcpGoals).toBeGreaterThanOrEqual(0)
-          expect(result.distinguishedTotal).toBeGreaterThanOrEqual(0)
-          expect(result.clubCounts.total).toBeGreaterThanOrEqual(0)
-          expect(result.clubCounts.thriving).toBeGreaterThanOrEqual(0)
-          expect(result.clubCounts.vulnerable).toBeGreaterThanOrEqual(0)
-          expect(result.clubCounts.interventionRequired).toBeGreaterThanOrEqual(0)
+            expect(result.membership).toBeGreaterThanOrEqual(0)
+            expect(result.payments).toBeGreaterThanOrEqual(0)
+            expect(result.dcpGoals).toBeGreaterThanOrEqual(0)
+            expect(result.distinguishedTotal).toBeGreaterThanOrEqual(0)
+            expect(result.clubCounts.total).toBeGreaterThanOrEqual(0)
+            expect(result.clubCounts.thriving).toBeGreaterThanOrEqual(0)
+            expect(result.clubCounts.vulnerable).toBeGreaterThanOrEqual(0)
+            expect(
+              result.clubCounts.interventionRequired
+            ).toBeGreaterThanOrEqual(0)
 
-          return true
-        }),
+            return true
+          }
+        ),
         { numRuns: 100 }
       )
     })

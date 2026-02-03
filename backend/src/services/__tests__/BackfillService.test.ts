@@ -184,7 +184,9 @@ describe('BackfillService', () => {
           if (!processedOrder.includes(snapshotId)) {
             processedOrder.push(snapshotId)
           }
-          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
+          return Promise.resolve(
+            createMockDistrictStats(districtId, snapshotId)
+          )
         }
       )
 
@@ -254,7 +256,9 @@ describe('BackfillService', () => {
           if (!processedSnapshots.includes(snapshotId)) {
             processedSnapshots.push(snapshotId)
           }
-          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
+          return Promise.resolve(
+            createMockDistrictStats(districtId, snapshotId)
+          )
         }
       )
 
@@ -286,7 +290,9 @@ describe('BackfillService', () => {
           if (!processedSnapshots.includes(snapshotId)) {
             processedSnapshots.push(snapshotId)
           }
-          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
+          return Promise.resolve(
+            createMockDistrictStats(districtId, snapshotId)
+          )
         }
       )
 
@@ -401,7 +407,9 @@ describe('BackfillService', () => {
           if (snapshotId === '2024-02-15') {
             return Promise.reject(new Error('Read failed'))
           }
-          return Promise.resolve(createMockDistrictStats(districtId, snapshotId))
+          return Promise.resolve(
+            createMockDistrictStats(districtId, snapshotId)
+          )
         }
       )
 
@@ -539,10 +547,15 @@ describe('BackfillService', () => {
       expect(mockSnapshotStore.listSnapshots).toHaveBeenCalled()
       expect(mockSnapshotStore.getSnapshotManifest).toHaveBeenCalled()
       expect(mockSnapshotStore.readDistrictData).toHaveBeenCalled()
-      expect(mockPreComputedAnalyticsService.getAnalyticsSummary).toHaveBeenCalled()
-      
+      expect(
+        mockPreComputedAnalyticsService.getAnalyticsSummary
+      ).toHaveBeenCalled()
+
       // No computation methods should exist on the mock
-      expect((mockPreComputedAnalyticsService as Record<string, unknown>).computeAndStore).toBeUndefined()
+      expect(
+        (mockPreComputedAnalyticsService as Record<string, unknown>)
+          .computeAndStore
+      ).toBeUndefined()
     })
   })
 })

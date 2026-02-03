@@ -48,7 +48,9 @@ export const ClubHealthCountsSchema = z.object({
  */
 export const TimeSeriesDataPointSchema = z.object({
   /** Date of the snapshot in YYYY-MM-DD format */
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
 
   /** Unique identifier for the snapshot */
   snapshotId: z.string().min(1),
@@ -114,16 +116,24 @@ export const ProgramYearIndexFileSchema = z.object({
   districtId: z.string().min(1),
 
   /** Program year identifier (e.g., "2023-2024") */
-  programYear: z.string().regex(/^\d{4}-\d{4}$/, 'Program year must be in YYYY-YYYY format'),
+  programYear: z
+    .string()
+    .regex(/^\d{4}-\d{4}$/, 'Program year must be in YYYY-YYYY format'),
 
   /** Start date of the program year (e.g., "2023-07-01") */
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format'),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format'),
 
   /** End date of the program year (e.g., "2024-06-30") */
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format'),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format'),
 
   /** ISO timestamp when the index was last updated */
-  lastUpdated: z.string().datetime({ message: 'lastUpdated must be a valid ISO timestamp' }),
+  lastUpdated: z
+    .string()
+    .datetime({ message: 'lastUpdated must be a valid ISO timestamp' }),
 
   /** Array of time-series data points for this program year */
   dataPoints: z.array(TimeSeriesDataPointSchema),
@@ -153,11 +163,15 @@ export const TimeSeriesIndexMetadataSchema = z.object({
   districtId: z.string().min(1),
 
   /** ISO timestamp when the metadata was last updated */
-  lastUpdated: z.string().datetime({ message: 'lastUpdated must be a valid ISO timestamp' }),
+  lastUpdated: z
+    .string()
+    .datetime({ message: 'lastUpdated must be a valid ISO timestamp' }),
 
   /** List of available program years (e.g., ["2022-2023", "2023-2024"]) */
   availableProgramYears: z.array(
-    z.string().regex(/^\d{4}-\d{4}$/, 'Program year must be in YYYY-YYYY format')
+    z
+      .string()
+      .regex(/^\d{4}-\d{4}$/, 'Program year must be in YYYY-YYYY format')
   ),
 
   /** Total number of data points across all program years */
@@ -174,22 +188,30 @@ export type ClubHealthCountsSchemaType = z.infer<typeof ClubHealthCountsSchema>
  * TypeScript type inferred from TimeSeriesDataPointSchema.
  * Can be used for type-safe validation results.
  */
-export type TimeSeriesDataPointSchemaType = z.infer<typeof TimeSeriesDataPointSchema>
+export type TimeSeriesDataPointSchemaType = z.infer<
+  typeof TimeSeriesDataPointSchema
+>
 
 /**
  * TypeScript type inferred from ProgramYearSummarySchema.
  * Can be used for type-safe validation results.
  */
-export type ProgramYearSummarySchemaType = z.infer<typeof ProgramYearSummarySchema>
+export type ProgramYearSummarySchemaType = z.infer<
+  typeof ProgramYearSummarySchema
+>
 
 /**
  * TypeScript type inferred from ProgramYearIndexFileSchema.
  * Can be used for type-safe validation results.
  */
-export type ProgramYearIndexFileSchemaType = z.infer<typeof ProgramYearIndexFileSchema>
+export type ProgramYearIndexFileSchemaType = z.infer<
+  typeof ProgramYearIndexFileSchema
+>
 
 /**
  * TypeScript type inferred from TimeSeriesIndexMetadataSchema.
  * Can be used for type-safe validation results.
  */
-export type TimeSeriesIndexMetadataSchemaType = z.infer<typeof TimeSeriesIndexMetadataSchema>
+export type TimeSeriesIndexMetadataSchemaType = z.infer<
+  typeof TimeSeriesIndexMetadataSchema
+>

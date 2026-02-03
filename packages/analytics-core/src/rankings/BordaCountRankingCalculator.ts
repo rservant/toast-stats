@@ -454,8 +454,9 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
     for (const district of districts) {
       try {
         // Extract metrics from the raw district performance data
-        const districtPerformance = district
-          .districtPerformance?.[0] as AllDistrictsCSVRecord | undefined
+        const districtPerformance = district.districtPerformance?.[0] as
+          | AllDistrictsCSVRecord
+          | undefined
 
         if (!districtPerformance) {
           this.logger.warn('No district performance data found', {

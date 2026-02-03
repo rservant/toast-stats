@@ -466,7 +466,7 @@ export class BackfillService implements IBackfillService {
    * Process a single snapshot
    *
    * Generates pre-computed analytics for all districts in the snapshot.
-   * 
+   *
    * NOTE: Time-series index generation is now handled by scraper-cli during
    * the compute-analytics pipeline, not during backfill operations.
    */

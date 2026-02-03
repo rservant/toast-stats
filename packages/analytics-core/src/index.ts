@@ -176,9 +176,12 @@ export {
 // Rankings computation
 export {
   BordaCountRankingCalculator,
+  MetricRankingsCalculator,
   type IRankingCalculator,
   type RankingLogger,
   type RankingDistrictStatistics,
   type DistrictRankingData,
   type BordaCountRankingCalculatorConfig,
+  type MetricType,
+  type RegionRankResult,
 } from './rankings/index.js'

@@ -34,8 +34,11 @@ import type {
   ClubTrendsIndex,
   DistinguishedClubAnalyticsData,
   ExtendedAnalyticsComputationResult,
+  MetricRankings,
 } from '../types.js'
+import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
+import { MetricRankingsCalculator } from '../rankings/MetricRankingsCalculator.js'
 import { MembershipAnalyticsModule } from './MembershipAnalyticsModule.js'
 import { ClubHealthAnalyticsModule } from './ClubHealthAnalyticsModule.js'
 import { DistinguishedClubAnalyticsModule } from './DistinguishedClubAnalyticsModule.js'
@@ -65,6 +68,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
   private readonly divisionAreaModule: DivisionAreaAnalyticsModule
   private readonly leadershipModule: LeadershipAnalyticsModule
   private readonly areaDivisionRecognitionModule: AreaDivisionRecognitionModule
+  private readonly metricRankingsCalculator: MetricRankingsCalculator
 
   constructor() {
     this.membershipModule = new MembershipAnalyticsModule()
@@ -73,6 +77,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     this.divisionAreaModule = new DivisionAreaAnalyticsModule()
     this.leadershipModule = new LeadershipAnalyticsModule()
     this.areaDivisionRecognitionModule = new AreaDivisionRecognitionModule()
+    this.metricRankingsCalculator = new MetricRankingsCalculator()
   }
 
   /**
@@ -82,17 +87,17 @@ export class AnalyticsComputer implements IAnalyticsComputer {
    * an ExtendedAnalyticsComputationResult containing all pre-computed
    * analytics data types needed for the backend to serve.
    *
-   * Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1
+   * Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 5.2 (per-metric-rankings)
    *
    * @param districtId - The district identifier
    * @param snapshots - Array of district statistics snapshots (for trend analysis)
-   * @param options - Optional computation options
+   * @param options - Optional computation options (includes allDistrictsRankings for per-metric rankings)
    * @returns Promise resolving to the extended computation result
    */
   async computeDistrictAnalytics(
     districtId: string,
     snapshots: DistrictStatistics[],
-    _options?: ComputeOptions
+    options?: ComputeOptions
   ): Promise<ExtendedAnalyticsComputationResult> {
     // Sort snapshots by date ascending for trend analysis
     const sortedSnapshots = [...snapshots].sort((a, b) =>
@@ -180,9 +185,11 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       sortedSnapshots,
       currentDate
     )
+    // Requirement 5.2 (per-metric-rankings): Pass allDistrictsRankings to computePerformanceTargets
     const performanceTargets = this.computePerformanceTargets(
       districtId,
-      sortedSnapshots
+      sortedSnapshots,
+      options?.allDistrictsRankings
     )
     const clubTrendsIndex = this.buildClubTrendsIndex(districtId, clubHealth)
 
@@ -1193,18 +1200,64 @@ export class AnalyticsComputer implements IAnalyticsComputer {
    *
    * Projections are based on current progress vs. targets and trend analysis.
    *
-   * Requirements: 7.1, 7.2
+   * Per-metric rankings are computed using the MetricRankingsCalculator when
+   * allDistrictsRankings data is available. Rankings include world rank,
+   * world percentile, and region rank for each metric.
+   *
+   * Requirements: 7.1, 7.2, 1.1, 1.2, 1.3, 1.4, 1.5
    *
    * @param districtId - The district identifier
    * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
+   * @param allDistrictsRankings - Optional all-districts rankings data for computing per-metric rankings
    * @returns PerformanceTargetsData object for pre-computed file
    */
   computePerformanceTargets(
     districtId: string,
-    snapshots: DistrictStatistics[]
+    snapshots: DistrictStatistics[],
+    allDistrictsRankings?: AllDistrictsRankingsData
   ): PerformanceTargetsData {
     // Filter snapshots for the requested district
     const districtSnapshots = snapshots.filter(s => s.districtId === districtId)
+
+    // Default null rankings when all-districts data is not available
+    // Requirement 1.5: When all-districts-rankings.json is not available, set all rankings to null
+    const nullRankings: MetricRankings = {
+      worldRank: null,
+      worldPercentile: null,
+      regionRank: null,
+      totalDistricts: 0,
+      totalInRegion: 0,
+      region: null,
+    }
+
+    // Compute per-metric rankings using the calculator when data is available
+    // Requirements 1.1, 1.2, 1.3, 1.4: Use existing ranks from all-districts-rankings.json
+    let paidClubsRankings: MetricRankings = nullRankings
+    let membershipPaymentsRankings: MetricRankings = nullRankings
+    let distinguishedClubsRankings: MetricRankings = nullRankings
+
+    if (allDistrictsRankings) {
+      // Requirement 1.2: Per-metric world rank for paid clubs SHALL equal clubsRank
+      paidClubsRankings = this.metricRankingsCalculator.calculateMetricRankings(
+        districtId,
+        'clubs',
+        allDistrictsRankings
+      )
+      // Requirement 1.3: Per-metric world rank for membership payments SHALL equal paymentsRank
+      membershipPaymentsRankings =
+        this.metricRankingsCalculator.calculateMetricRankings(
+          districtId,
+          'payments',
+          allDistrictsRankings
+        )
+      // Requirement 1.4: Per-metric world rank for distinguished clubs SHALL equal distinguishedRank
+      distinguishedClubsRankings =
+        this.metricRankingsCalculator.calculateMetricRankings(
+          districtId,
+          'distinguished',
+          allDistrictsRankings
+        )
+    }
 
     // Handle empty snapshots case
     if (districtSnapshots.length === 0) {
@@ -1224,6 +1277,9 @@ export class AnalyticsComputer implements IAnalyticsComputer {
           distinguished: false,
           clubGrowth: false,
         },
+        paidClubsRankings,
+        membershipPaymentsRankings,
+        distinguishedClubsRankings,
       }
     }
 
@@ -1246,6 +1302,9 @@ export class AnalyticsComputer implements IAnalyticsComputer {
           distinguished: false,
           clubGrowth: false,
         },
+        paidClubsRankings,
+        membershipPaymentsRankings,
+        distinguishedClubsRankings,
       }
     }
 
@@ -1324,6 +1383,9 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         distinguished: projectedDistinguished,
         clubGrowth: projectedClubGrowth,
       },
+      paidClubsRankings,
+      membershipPaymentsRankings,
+      distinguishedClubsRankings,
     }
   }
 

@@ -110,10 +110,18 @@ async function writePreComputedIndexFile(
   programYear: string,
   dataPoints: TimeSeriesDataPoint[]
 ): Promise<void> {
-  const districtDir = path.join(testDir, 'time-series', `district_${districtId}`)
+  const districtDir = path.join(
+    testDir,
+    'time-series',
+    `district_${districtId}`
+  )
   await fs.mkdir(districtDir, { recursive: true })
 
-  const indexFile = createProgramYearIndexFile(districtId, programYear, dataPoints)
+  const indexFile = createProgramYearIndexFile(
+    districtId,
+    programYear,
+    dataPoints
+  )
   const filePath = path.join(districtDir, `${programYear}.json`)
   await fs.writeFile(filePath, JSON.stringify(indexFile, null, 2), 'utf-8')
 }
@@ -188,7 +196,11 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
      * Requirement 8.4: Return empty array when data is missing
      */
     it('should return empty array for non-existent district', async () => {
-      const result = await service.getTrendData('99', '2024-01-01', '2024-12-31')
+      const result = await service.getTrendData(
+        '99',
+        '2024-01-01',
+        '2024-12-31'
+      )
       expect(result).toEqual([])
     })
 
@@ -202,7 +214,11 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
       ])
 
       // Query a different date range
-      const result = await service.getTrendData('42', '2022-01-01', '2022-12-31')
+      const result = await service.getTrendData(
+        '42',
+        '2022-01-01',
+        '2022-12-31'
+      )
       expect(result).toEqual([])
     })
 
@@ -217,7 +233,11 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
         createSampleDataPoint('2024-06-15', 'snapshot-2024-06-15', 1100),
       ])
 
-      const result = await service.getTrendData('42', '2024-01-01', '2024-06-30')
+      const result = await service.getTrendData(
+        '42',
+        '2024-01-01',
+        '2024-06-30'
+      )
 
       expect(result).toHaveLength(3)
       expect(result[0]!.date).toBe('2024-01-10')
@@ -238,7 +258,11 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
         createSampleDataPoint('2024-08-15', 'snapshot-2024-08-15', 1200),
       ])
 
-      const result = await service.getTrendData('42', '2024-01-01', '2024-12-31')
+      const result = await service.getTrendData(
+        '42',
+        '2024-01-01',
+        '2024-12-31'
+      )
 
       expect(result).toHaveLength(3)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -252,7 +276,11 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
         createSampleDataPoint('2024-06-15', 'snapshot-2024-06-15', 1100),
       ])
 
-      const result = await service.getTrendData('42', '2024-01-15', '2024-06-15')
+      const result = await service.getTrendData(
+        '42',
+        '2024-01-15',
+        '2024-06-15'
+      )
 
       expect(result).toHaveLength(2)
       expect(result[0]!.date).toBe('2024-01-15')
@@ -270,7 +298,11 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
         createSampleDataPoint('2025-01-15', 'snapshot-2025-01-15', 1300),
       ])
 
-      const result = await service.getTrendData('42', '2023-07-01', '2025-06-30')
+      const result = await service.getTrendData(
+        '42',
+        '2023-07-01',
+        '2025-06-30'
+      )
 
       expect(result).toHaveLength(5)
       for (let i = 1; i < result.length; i++) {
@@ -286,10 +318,18 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
       const result1 = await service.getTrendData('', '2024-01-01', '2024-12-31')
       expect(result1).toEqual([])
 
-      const result2 = await service.getTrendData('district-42', '2024-01-01', '2024-12-31')
+      const result2 = await service.getTrendData(
+        'district-42',
+        '2024-01-01',
+        '2024-12-31'
+      )
       expect(result2).toEqual([])
 
-      const result3 = await service.getTrendData('../escape', '2024-01-01', '2024-12-31')
+      const result3 = await service.getTrendData(
+        '../escape',
+        '2024-01-01',
+        '2024-12-31'
+      )
       expect(result3).toEqual([])
     })
   })

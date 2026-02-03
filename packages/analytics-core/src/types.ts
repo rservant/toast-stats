@@ -5,6 +5,8 @@
  * the pre-computed analytics pipeline.
  */
 
+import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
+
 /**
  * Metadata included in every pre-computed analytics file.
  */
@@ -308,6 +310,13 @@ export interface ComputeOptions {
   force?: boolean
   /** Enable verbose logging */
   verbose?: boolean
+  /**
+   * All-districts rankings data for computing per-metric rankings.
+   * When provided, rankings (world rank, world percentile, region rank) will be
+   * computed for each metric in performance targets.
+   * Requirement 5.2: Pass all-districts rankings data to computePerformanceTargets
+   */
+  allDistrictsRankings?: AllDistrictsRankingsData
 }
 
 /**
@@ -1109,6 +1118,12 @@ export interface PerformanceTargetsData {
     /** Whether club growth target is projected to be achieved */
     clubGrowth: boolean
   }
+  /** Rankings for paid clubs metric (Requirements 4.1, 4.4) */
+  paidClubsRankings: MetricRankings
+  /** Rankings for membership payments metric (Requirements 4.2, 4.4) */
+  membershipPaymentsRankings: MetricRankings
+  /** Rankings for distinguished clubs metric (Requirements 4.3, 4.4) */
+  distinguishedClubsRankings: MetricRankings
 }
 
 // ========== Distinguished Club Analytics Data Types (for pre-computed files) ==========

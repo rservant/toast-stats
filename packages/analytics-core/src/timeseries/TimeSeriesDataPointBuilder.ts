@@ -70,7 +70,10 @@ export class TimeSeriesDataPointBuilder {
    *
    * @see Requirements 6.1, 6.8
    */
-  build(snapshotId: string, district: DistrictStatisticsInput): TimeSeriesDataPoint {
+  build(
+    snapshotId: string,
+    district: DistrictStatisticsInput
+  ): TimeSeriesDataPoint {
     // Calculate total membership
     const membership = this.calculateTotalMembership(district)
 
@@ -188,7 +191,9 @@ export class TimeSeriesDataPointBuilder {
    *
    * @see Requirements 6.6
    */
-  calculateClubHealthCounts(district: DistrictStatisticsInput): ClubHealthCounts {
+  calculateClubHealthCounts(
+    district: DistrictStatisticsInput
+  ): ClubHealthCounts {
     const clubs = district.clubPerformance ?? []
     const total = clubs.length
 

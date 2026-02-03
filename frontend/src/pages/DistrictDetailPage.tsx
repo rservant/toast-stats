@@ -152,21 +152,31 @@ const DistrictDetailPage: React.FC = () => {
   // Compute effective end date - must be within the effective program year
   const effectiveEndDate = React.useMemo(() => {
     if (!effectiveProgramYear) return null
-    if (selectedDate && isDateInProgramYear(selectedDate, effectiveProgramYear)) {
+    if (
+      selectedDate &&
+      isDateInProgramYear(selectedDate, effectiveProgramYear)
+    ) {
       return selectedDate
     }
     // Use the most recent date in the effective program year, or the program year end date
-    const mostRecent = getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
+    const mostRecent = getMostRecentDateInProgramYear(
+      allCachedDates,
+      effectiveProgramYear
+    )
     return mostRecent || effectiveProgramYear.endDate
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 
   // Determine if we have valid dates for API calls
-  const hasValidDates = effectiveProgramYear !== null && effectiveEndDate !== null
+  const hasValidDates =
+    effectiveProgramYear !== null && effectiveEndDate !== null
 
   // Reset selectedDate when it's outside the selected program year
   // This prevents invalid date ranges where startDate > endDate
   React.useEffect(() => {
-    if (selectedDate && !isDateInProgramYear(selectedDate, selectedProgramYear)) {
+    if (
+      selectedDate &&
+      !isDateInProgramYear(selectedDate, selectedProgramYear)
+    ) {
       // Clear the date so the next effect can pick a valid one
       setSelectedDate(undefined)
     }
@@ -201,7 +211,7 @@ const DistrictDetailPage: React.FC = () => {
     refetch: refetchAggregated,
     usedFallback: aggregatedUsedFallback,
   } = useAggregatedAnalytics(
-    hasValidDates ? (districtId || null) : null,
+    hasValidDates ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
   )
@@ -214,7 +224,7 @@ const DistrictDetailPage: React.FC = () => {
     error: analyticsError,
     refetch: refetchAnalytics,
   } = useDistrictAnalytics(
-    hasValidDates ? (districtId || null) : null,
+    hasValidDates ? districtId || null : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
   )
@@ -222,14 +232,14 @@ const DistrictDetailPage: React.FC = () => {
   // Fetch district statistics for division/area performance cards
   const { data: districtStatistics, isLoading: isLoadingStatistics } =
     useDistrictStatistics(
-      hasValidDates ? (districtId || null) : null,
+      hasValidDates ? districtId || null : null,
       effectiveEndDate ?? undefined
     )
 
   // Fetch leadership insights for analytics tab - use program year boundaries
   const { data: leadershipInsights, isLoading: isLoadingLeadership } =
     useLeadershipInsights(
-      hasValidDates ? (districtId || null) : null,
+      hasValidDates ? districtId || null : null,
       effectiveProgramYear?.startDate,
       effectiveEndDate ?? undefined
     )
@@ -237,7 +247,7 @@ const DistrictDetailPage: React.FC = () => {
   // Fetch distinguished club analytics for analytics tab - use program year boundaries
   const { data: distinguishedAnalytics, isLoading: isLoadingDistinguished } =
     useDistinguishedClubAnalytics(
-      hasValidDates ? (districtId || null) : null,
+      hasValidDates ? districtId || null : null,
       effectiveProgramYear?.startDate,
       effectiveEndDate ?? undefined
     )
@@ -245,7 +255,7 @@ const DistrictDetailPage: React.FC = () => {
   // Fetch payment trend data for trends tab - fetch 3 years for multi-year comparison
   const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
     usePaymentsTrend(
-      hasValidDates ? (districtId || null) : null,
+      hasValidDates ? districtId || null : null,
       undefined, // Let hook fetch 3 years automatically for comparison
       effectiveEndDate ?? undefined
     )
@@ -425,13 +435,16 @@ const DistrictDetailPage: React.FC = () => {
                       Actions
                     </label>
                     <div className="flex gap-2">
-                      {hasOverviewData && hasValidDates && effectiveProgramYear && effectiveEndDate && (
-                        <DistrictExportButton
-                          districtId={districtId}
-                          startDate={effectiveProgramYear.startDate}
-                          endDate={effectiveEndDate}
-                        />
-                      )}
+                      {hasOverviewData &&
+                        hasValidDates &&
+                        effectiveProgramYear &&
+                        effectiveEndDate && (
+                          <DistrictExportButton
+                            districtId={districtId}
+                            startDate={effectiveProgramYear.startDate}
+                            endDate={effectiveEndDate}
+                          />
+                        )}
                     </div>
                   </div>
                 )}
@@ -538,7 +551,9 @@ const DistrictDetailPage: React.FC = () => {
                   <DistrictOverview
                     districtId={districtId}
                     districtName={districtName}
-                    {...(effectiveEndDate && { selectedDate: effectiveEndDate })}
+                    {...(effectiveEndDate && {
+                      selectedDate: effectiveEndDate,
+                    })}
                     programYearStartDate={effectiveProgramYear.startDate}
                   />
                 )}

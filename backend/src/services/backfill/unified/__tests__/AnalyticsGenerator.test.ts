@@ -180,56 +180,72 @@ describe('AnalyticsGenerator', () => {
     it('should not have buildTimeSeriesDataPoint method', () => {
       // Validates: Requirement 15.1
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['buildTimeSeriesDataPoint']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'buildTimeSeriesDataPoint'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have calculateTotalMembership method', () => {
       // Validates: Requirement 15.2
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['calculateTotalMembership']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'calculateTotalMembership'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have calculateTotalPayments method', () => {
       // Validates: Requirement 15.3
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['calculateTotalPayments']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'calculateTotalPayments'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have calculateTotalDCPGoals method', () => {
       // Validates: Requirement 15.4
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['calculateTotalDCPGoals']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'calculateTotalDCPGoals'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have calculateClubHealthCounts method', () => {
       // Validates: Requirement 15.5
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['calculateClubHealthCounts']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'calculateClubHealthCounts'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have calculateDistinguishedTotal method', () => {
       // Validates: Requirement 15.6
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['calculateDistinguishedTotal']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'calculateDistinguishedTotal'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have isDistinguished method', () => {
       // Validates: Requirement 15.1-15.6 (helper method removed)
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['isDistinguished']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'isDistinguished'
+        ]
       ).toBeUndefined()
     })
 
     it('should not have parseIntSafe method', () => {
       // Validates: Requirement 15.1-15.6 (helper method removed)
       expect(
-        (analyticsGenerator as unknown as Record<string, unknown>)['parseIntSafe']
+        (analyticsGenerator as unknown as Record<string, unknown>)[
+          'parseIntSafe'
+        ]
       ).toBeUndefined()
     })
 
@@ -241,7 +257,10 @@ describe('AnalyticsGenerator', () => {
       mockSnapshotStorage.getSnapshot.mockResolvedValue(
         createMockSnapshot('2024-01-15')
       )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42', '61'])
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
+        '42',
+        '61',
+      ])
 
       await analyticsGenerator.generateForSnapshots(
         snapshotIds,
@@ -249,7 +268,9 @@ describe('AnalyticsGenerator', () => {
       )
 
       // computeAndStore should NOT be called - analytics are pre-computed by scraper-cli
-      expect(mockPreComputedAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+      expect(
+        mockPreComputedAnalyticsService.computeAndStore
+      ).not.toHaveBeenCalled()
     })
 
     it('should not read district data for computation', async () => {
@@ -260,7 +281,10 @@ describe('AnalyticsGenerator', () => {
       mockSnapshotStorage.getSnapshot.mockResolvedValue(
         createMockSnapshot('2024-01-15')
       )
-      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue(['42', '61'])
+      mockSnapshotStorage.listDistrictsInSnapshot.mockResolvedValue([
+        '42',
+        '61',
+      ])
 
       await analyticsGenerator.generateForSnapshots(
         snapshotIds,

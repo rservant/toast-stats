@@ -5,6 +5,7 @@
 This design adds per-metric ranking data (world rank, world percentile, region rank) to the district performance targets. The rankings are computed in the scraper-cli pipeline by leveraging the existing `all-districts-rankings.json` file, which already contains per-metric ranks (`clubsRank`, `paymentsRank`, `distinguishedRank`).
 
 The key insight is that we don't need to recompute rankings - we need to:
+
 1. Load the existing all-districts-rankings.json during analytics computation
 2. Extract the per-metric ranks for the target district
 3. Calculate world percentile from the existing ranks
@@ -22,12 +23,12 @@ flowchart TD
         AC --> |computes| PT[PerformanceTargetsData]
         ACS --> |writes| PTF[performance-targets.json]
     end
-    
+
     subgraph "Backend"
         BE[Backend API] --> |reads| PTF
         BE --> |serves| FE[Frontend]
     end
-    
+
     subgraph "Frontend"
         FE --> |displays| DO[DistrictOverview]
         DO --> |renders| TPC[TargetProgressCard]
@@ -63,7 +64,7 @@ async loadAllDistrictsRankings(date: string): Promise<AllDistrictsRankingsData |
     this.getSnapshotDir(date),
     'all-districts-rankings.json'
   )
-  
+
   try {
     const content = await fs.readFile(rankingsPath, 'utf-8')
     return JSON.parse(content) as AllDistrictsRankingsData
@@ -79,6 +80,7 @@ async loadAllDistrictsRankings(date: string): Promise<AllDistrictsRankingsData |
 ```
 
 The `computeDistrictAnalytics` method needs to:
+
 1. Load all-districts rankings before computing performance targets
 2. Pass the rankings data to `computePerformanceTargets`
 
@@ -111,12 +113,15 @@ export class MetricRankingsCalculator {
     metric: 'clubs' | 'payments' | 'distinguished',
     allDistrictsRankings: AllDistrictsRankingsData
   ): MetricRankings
-  
+
   /**
    * Calculate world percentile from rank and total
    */
-  calculateWorldPercentile(worldRank: number, totalDistricts: number): number | null
-  
+  calculateWorldPercentile(
+    worldRank: number,
+    totalDistricts: number
+  ): number | null
+
   /**
    * Calculate region rank for a district within its region
    */
@@ -158,7 +163,7 @@ export interface PerformanceTargetsData {
     distinguished: boolean
     clubGrowth: boolean
   }
-  
+
   // NEW: Per-metric rankings
   /** Rankings for paid clubs metric */
   paidClubsRankings: MetricRankings
@@ -192,21 +197,20 @@ export interface MetricRankings {
 
 The existing `DistrictRanking` type in all-districts-rankings.json contains:
 
-| Field | Maps To |
-|-------|---------|
-| `clubsRank` | `paidClubsRankings.worldRank` |
-| `paymentsRank` | `membershipPaymentsRankings.worldRank` |
-| `distinguishedRank` | `distinguishedClubsRankings.worldRank` |
-| `region` | All three `*.region` fields |
-| `metadata.totalDistricts` | All three `*.totalDistricts` fields |
-
-
+| Field                     | Maps To                                |
+| ------------------------- | -------------------------------------- |
+| `clubsRank`               | `paidClubsRankings.worldRank`          |
+| `paymentsRank`            | `membershipPaymentsRankings.worldRank` |
+| `distinguishedRank`       | `distinguishedClubsRankings.worldRank` |
+| `region`                  | All three `*.region` fields            |
+| `metadata.totalDistricts` | All three `*.totalDistricts` fields    |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Per the testing steering document, property-based tests are warranted here because:
+
 1. **Mathematical invariants exist**: Percentile calculation has algebraic properties
 2. **Business rules with universal properties**: "Rankings must be consistent with source data"
 3. **Existing PBT coverage**: This codebase already has PBT for ranking calculations
@@ -215,7 +219,7 @@ However, some requirements are better tested with well-chosen examples rather th
 
 ### Property 1: World Percentile Calculation Correctness
 
-*For any* valid world rank and total districts count (where totalDistricts > 1 and worldRank is not null), the world percentile SHALL equal `((totalDistricts - worldRank) / totalDistricts) * 100` rounded to 1 decimal place.
+_For any_ valid world rank and total districts count (where totalDistricts > 1 and worldRank is not null), the world percentile SHALL equal `((totalDistricts - worldRank) / totalDistricts) * 100` rounded to 1 decimal place.
 
 **Validates: Requirements 2.1, 2.2**
 
@@ -223,7 +227,7 @@ However, some requirements are better tested with well-chosen examples rather th
 
 ### Property 2: Region Rank Ordering Invariant
 
-*For any* set of districts in the same region, the district with the highest metric value SHALL have region rank 1, and districts with equal values SHALL have equal ranks.
+_For any_ set of districts in the same region, the district with the highest metric value SHALL have region rank 1, and districts with equal values SHALL have equal ranks.
 
 **Validates: Requirements 3.2, 6.1**
 
@@ -234,16 +238,19 @@ However, some requirements are better tested with well-chosen examples rather th
 The following requirements are better tested with specific examples:
 
 **World Rank Extraction (Requirements 1.2, 1.3, 1.4)**
+
 - 3-5 examples with known input/output pairs are sufficient
 - The mapping is straightforward (field A → field B)
 - Property test would just restate the implementation
 
 **Null Handling (Requirements 1.5, 2.3, 2.4, 3.4, 5.3)**
+
 - Edge cases are finite and enumerable
 - Examples: null rankings input, totalDistricts=0, totalDistricts=1, unknown region
 - Unit tests with specific examples provide clearer documentation
 
 **Region Filtering (Requirements 3.1, 3.3, 3.5)**
+
 - Can be covered by 3-5 examples with different region configurations
 - totalInRegion count is a simple aggregation
 
@@ -252,6 +259,7 @@ The following requirements are better tested with specific examples:
 ### Missing All-Districts Rankings File
 
 When `all-districts-rankings.json` is not found:
+
 1. Log a warning with the expected file path
 2. Continue with null rankings (do not fail the computation)
 3. Set all ranking fields to null in the output
@@ -259,10 +267,13 @@ When `all-districts-rankings.json` is not found:
 
 ```typescript
 if (!allDistrictsRankings) {
-  this.logger.warn('All-districts rankings not available, rankings will be null', {
-    date,
-    districtId,
-  })
+  this.logger.warn(
+    'All-districts rankings not available, rankings will be null',
+    {
+      date,
+      districtId,
+    }
+  )
   return createNullRankings()
 }
 ```
@@ -270,6 +281,7 @@ if (!allDistrictsRankings) {
 ### District Not Found in Rankings
 
 When the target district is not found in all-districts-rankings.json:
+
 1. Log a warning
 2. Return null rankings for that district
 3. Do not fail the computation
@@ -277,19 +289,20 @@ When the target district is not found in all-districts-rankings.json:
 ### Invalid Region Data
 
 When a district's region is "Unknown", empty, or null:
+
 1. Set `region` to null
 2. Set `regionRank` to null
 3. Set `totalInRegion` to 0
 
 ### Edge Cases
 
-| Scenario | Behavior |
-|----------|----------|
-| totalDistricts = 0 | worldPercentile = null |
-| totalDistricts = 1 | worldPercentile = null |
-| worldRank = null | worldPercentile = null |
-| region = "Unknown" | regionRank = null, region = null |
-| District not in rankings | All rankings = null |
+| Scenario                 | Behavior                         |
+| ------------------------ | -------------------------------- |
+| totalDistricts = 0       | worldPercentile = null           |
+| totalDistricts = 1       | worldPercentile = null           |
+| worldRank = null         | worldPercentile = null           |
+| region = "Unknown"       | regionRank = null, region = null |
+| District not in rankings | All rankings = null              |
 
 ## Testing Strategy
 

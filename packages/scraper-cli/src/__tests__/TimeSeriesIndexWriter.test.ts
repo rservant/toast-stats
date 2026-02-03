@@ -49,7 +49,6 @@ function createIsolatedCacheDir(): {
   }
 }
 
-
 /**
  * Create a sample TimeSeriesDataPoint for testing
  */
@@ -80,7 +79,11 @@ function createSampleDataPoint(
 function createMockLogger(): TimeSeriesIndexWriterLogger & {
   logs: { level: string; message: string; context?: Record<string, unknown> }[]
 } {
-  const logs: { level: string; message: string; context?: Record<string, unknown> }[] = []
+  const logs: {
+    level: string
+    message: string
+    context?: Record<string, unknown>
+  }[] = []
   return {
     logs,
     info: (message: string, context?: Record<string, unknown>) => {
@@ -141,7 +144,6 @@ async function readMetadataFile(
   }
 }
 
-
 // ========== Test Suite ==========
 
 describe('TimeSeriesIndexWriter', () => {
@@ -194,7 +196,6 @@ describe('TimeSeriesIndexWriter', () => {
       expect(typeof builder.build).toBe('function')
     })
   })
-
 
   // ========== getProgramYearForDate Tests ==========
 
@@ -266,7 +267,6 @@ describe('TimeSeriesIndexWriter', () => {
     })
   })
 
-
   // ========== calculateProgramYearSummary Tests ==========
 
   describe('calculateProgramYearSummary', () => {
@@ -327,7 +327,6 @@ describe('TimeSeriesIndexWriter', () => {
     })
   })
 
-
   // ========== writeDataPoint Tests ==========
 
   describe('writeDataPoint', () => {
@@ -337,7 +336,11 @@ describe('TimeSeriesIndexWriter', () => {
 
       await writer.writeDataPoint(districtId, dataPoint)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile).not.toBeNull()
       expect(indexFile?.districtId).toBe(districtId)
       expect(indexFile?.programYear).toBe('2023-2024')
@@ -351,7 +354,11 @@ describe('TimeSeriesIndexWriter', () => {
 
       await writer.writeDataPoint(districtId, dataPoint)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.startDate).toBe('2023-07-01')
       expect(indexFile?.endDate).toBe('2024-06-30')
     })
@@ -364,7 +371,11 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint1)
       await writer.writeDataPoint(districtId, dataPoint2)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.dataPoints).toHaveLength(2)
       expect(indexFile?.dataPoints[0]).toEqual(dataPoint1)
       expect(indexFile?.dataPoints[1]).toEqual(dataPoint2)
@@ -378,7 +389,11 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint1)
       await writer.writeDataPoint(districtId, dataPoint2)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.dataPoints).toHaveLength(1)
       expect(indexFile?.dataPoints[0]).toEqual(dataPoint2)
     })
@@ -394,7 +409,11 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint2)
       await writer.writeDataPoint(districtId, dataPoint3)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.dataPoints[0]?.date).toBe('2024-01-15')
       expect(indexFile?.dataPoints[1]?.date).toBe('2024-02-15')
       expect(indexFile?.dataPoints[2]?.date).toBe('2024-03-15')
@@ -408,7 +427,11 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint1)
       await writer.writeDataPoint(districtId, dataPoint2)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.summary.totalDataPoints).toBe(2)
       expect(indexFile?.summary.membershipStart).toBe(900)
       expect(indexFile?.summary.membershipEnd).toBe(1100)
@@ -424,10 +447,16 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint)
       const afterWrite = new Date()
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       const lastUpdated = new Date(indexFile?.lastUpdated ?? '')
 
-      expect(lastUpdated.getTime()).toBeGreaterThanOrEqual(beforeWrite.getTime())
+      expect(lastUpdated.getTime()).toBeGreaterThanOrEqual(
+        beforeWrite.getTime()
+      )
       expect(lastUpdated.getTime()).toBeLessThanOrEqual(afterWrite.getTime())
     })
 
@@ -439,8 +468,16 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint2023)
       await writer.writeDataPoint(districtId, dataPoint2024)
 
-      const indexFile2023 = await readProgramYearFile(testCache.path, districtId, '2023-2024')
-      const indexFile2024 = await readProgramYearFile(testCache.path, districtId, '2024-2025')
+      const indexFile2023 = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
+      const indexFile2024 = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2024-2025'
+      )
 
       expect(indexFile2023?.dataPoints).toHaveLength(1)
       expect(indexFile2024?.dataPoints).toHaveLength(1)
@@ -455,8 +492,16 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint('42', dataPoint42)
       await writer.writeDataPoint('61', dataPoint61)
 
-      const indexFile42 = await readProgramYearFile(testCache.path, '42', '2023-2024')
-      const indexFile61 = await readProgramYearFile(testCache.path, '61', '2023-2024')
+      const indexFile42 = await readProgramYearFile(
+        testCache.path,
+        '42',
+        '2023-2024'
+      )
+      const indexFile61 = await readProgramYearFile(
+        testCache.path,
+        '61',
+        '2023-2024'
+      )
 
       expect(indexFile42?.districtId).toBe('42')
       expect(indexFile61?.districtId).toBe('61')
@@ -471,11 +516,14 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint)
 
       const infoLogs = mockLogger.logs.filter(l => l.level === 'info')
-      expect(infoLogs.some(l => l.message.includes('Writing data point'))).toBe(true)
-      expect(infoLogs.some(l => l.message.includes('Successfully wrote'))).toBe(true)
+      expect(infoLogs.some(l => l.message.includes('Writing data point'))).toBe(
+        true
+      )
+      expect(infoLogs.some(l => l.message.includes('Successfully wrote'))).toBe(
+        true
+      )
     })
   })
-
 
   // ========== updateMetadata Tests ==========
 
@@ -495,8 +543,14 @@ describe('TimeSeriesIndexWriter', () => {
     it('should list available program years from index files', async () => {
       const districtId = '42'
       // Write data points to create index files
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-08-15', 'snap-2', 1100))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-08-15', 'snap-2', 1100)
+      )
 
       await writer.updateMetadata(districtId)
 
@@ -508,23 +562,44 @@ describe('TimeSeriesIndexWriter', () => {
     it('should sort program years chronologically', async () => {
       const districtId = '42'
       // Write in reverse order
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2025-01-15', 'snap-3', 1200))
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2023-08-15', 'snap-1', 1000))
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-08-15', 'snap-2', 1100))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2025-01-15', 'snap-3', 1200)
+      )
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2023-08-15', 'snap-1', 1000)
+      )
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-08-15', 'snap-2', 1100)
+      )
 
       await writer.updateMetadata(districtId)
 
       const metadata = await readMetadataFile(testCache.path, districtId)
-      expect(metadata?.availableProgramYears).toEqual(['2023-2024', '2024-2025'])
+      expect(metadata?.availableProgramYears).toEqual([
+        '2023-2024',
+        '2024-2025',
+      ])
     })
 
     it('should calculate total data points across all program years', async () => {
       const districtId = '42'
       // Write 2 data points to 2023-2024
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-02-15', 'snap-2', 1100))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-02-15', 'snap-2', 1100)
+      )
       // Write 1 data point to 2024-2025
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-08-15', 'snap-3', 1200))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-08-15', 'snap-3', 1200)
+      )
 
       await writer.updateMetadata(districtId)
 
@@ -534,7 +609,10 @@ describe('TimeSeriesIndexWriter', () => {
 
     it('should update lastUpdated timestamp', async () => {
       const districtId = '42'
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
 
       const beforeUpdate = new Date()
       await writer.updateMetadata(districtId)
@@ -543,16 +621,27 @@ describe('TimeSeriesIndexWriter', () => {
       const metadata = await readMetadataFile(testCache.path, districtId)
       const lastUpdated = new Date(metadata?.lastUpdated ?? '')
 
-      expect(lastUpdated.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime())
+      expect(lastUpdated.getTime()).toBeGreaterThanOrEqual(
+        beforeUpdate.getTime()
+      )
       expect(lastUpdated.getTime()).toBeLessThanOrEqual(afterUpdate.getTime())
     })
 
     it('should handle multiple districts independently', async () => {
       // District 42: 2 data points
-      await writer.writeDataPoint('42', createSampleDataPoint('2024-01-15', 'snap-1', 1000))
-      await writer.writeDataPoint('42', createSampleDataPoint('2024-02-15', 'snap-2', 1100))
+      await writer.writeDataPoint(
+        '42',
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
+      await writer.writeDataPoint(
+        '42',
+        createSampleDataPoint('2024-02-15', 'snap-2', 1100)
+      )
       // District 61: 1 data point
-      await writer.writeDataPoint('61', createSampleDataPoint('2024-01-15', 'snap-3', 2000))
+      await writer.writeDataPoint(
+        '61',
+        createSampleDataPoint('2024-01-15', 'snap-3', 2000)
+      )
 
       await writer.updateMetadata('42')
       await writer.updateMetadata('61')
@@ -566,16 +655,22 @@ describe('TimeSeriesIndexWriter', () => {
 
     it('should log info message when updating metadata', async () => {
       const districtId = '42'
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
 
       await writer.updateMetadata(districtId)
 
       const infoLogs = mockLogger.logs.filter(l => l.level === 'info')
-      expect(infoLogs.some(l => l.message.includes('Updating index metadata'))).toBe(true)
-      expect(infoLogs.some(l => l.message.includes('Successfully updated'))).toBe(true)
+      expect(
+        infoLogs.some(l => l.message.includes('Updating index metadata'))
+      ).toBe(true)
+      expect(
+        infoLogs.some(l => l.message.includes('Successfully updated'))
+      ).toBe(true)
     })
   })
-
 
   // ========== Validation Error Tests ==========
 
@@ -600,7 +695,9 @@ describe('TimeSeriesIndexWriter', () => {
       it('should throw error for district ID with path traversal attempt', async () => {
         const dataPoint = createSampleDataPoint('2024-01-15', 'snap-1', 1000)
 
-        await expect(writer.writeDataPoint('../etc', dataPoint)).rejects.toThrow(
+        await expect(
+          writer.writeDataPoint('../etc', dataPoint)
+        ).rejects.toThrow(
           'Invalid district ID format: only alphanumeric characters allowed'
         )
       })
@@ -617,7 +714,10 @@ describe('TimeSeriesIndexWriter', () => {
 
     describe('date validation', () => {
       it('should throw error for empty date', async () => {
-        const dataPoint = { ...createSampleDataPoint('2024-01-15', 'snap-1', 1000), date: '' }
+        const dataPoint = {
+          ...createSampleDataPoint('2024-01-15', 'snap-1', 1000),
+          date: '',
+        }
 
         await expect(writer.writeDataPoint('42', dataPoint)).rejects.toThrow(
           'Invalid dataPoint.date: empty or non-string value'
@@ -625,7 +725,10 @@ describe('TimeSeriesIndexWriter', () => {
       })
 
       it('should throw error for invalid date format', async () => {
-        const dataPoint = { ...createSampleDataPoint('2024-01-15', 'snap-1', 1000), date: '01-15-2024' }
+        const dataPoint = {
+          ...createSampleDataPoint('2024-01-15', 'snap-1', 1000),
+          date: '01-15-2024',
+        }
 
         await expect(writer.writeDataPoint('42', dataPoint)).rejects.toThrow(
           'Invalid dataPoint.date format: expected YYYY-MM-DD'
@@ -633,7 +736,10 @@ describe('TimeSeriesIndexWriter', () => {
       })
 
       it('should throw error for date with invalid characters', async () => {
-        const dataPoint = { ...createSampleDataPoint('2024-01-15', 'snap-1', 1000), date: '2024/01/15' }
+        const dataPoint = {
+          ...createSampleDataPoint('2024-01-15', 'snap-1', 1000),
+          date: '2024/01/15',
+        }
 
         await expect(writer.writeDataPoint('42', dataPoint)).rejects.toThrow(
           'Invalid dataPoint.date format: expected YYYY-MM-DD'
@@ -656,7 +762,6 @@ describe('TimeSeriesIndexWriter', () => {
     })
   })
 
-
   // ========== Atomic Write Tests ==========
 
   describe('atomic writes', () => {
@@ -667,7 +772,11 @@ describe('TimeSeriesIndexWriter', () => {
       await writer.writeDataPoint(districtId, dataPoint)
 
       // Check that no .tmp file exists
-      const districtDir = path.join(testCache.path, 'time-series', `district_${districtId}`)
+      const districtDir = path.join(
+        testCache.path,
+        'time-series',
+        `district_${districtId}`
+      )
       const files = await fs.readdir(districtDir)
       const tmpFiles = files.filter(f => f.endsWith('.tmp'))
       expect(tmpFiles).toHaveLength(0)
@@ -675,12 +784,19 @@ describe('TimeSeriesIndexWriter', () => {
 
     it('should write metadata atomically (no temp file left behind)', async () => {
       const districtId = '42'
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
 
       await writer.updateMetadata(districtId)
 
       // Check that no .tmp file exists
-      const districtDir = path.join(testCache.path, 'time-series', `district_${districtId}`)
+      const districtDir = path.join(
+        testCache.path,
+        'time-series',
+        `district_${districtId}`
+      )
       const files = await fs.readdir(districtDir)
       const tmpFiles = files.filter(f => f.endsWith('.tmp'))
       expect(tmpFiles).toHaveLength(0)
@@ -706,7 +822,10 @@ describe('TimeSeriesIndexWriter', () => {
 
     it('should produce valid JSON in metadata file', async () => {
       const districtId = '42'
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
 
       await writer.updateMetadata(districtId)
 
@@ -722,7 +841,6 @@ describe('TimeSeriesIndexWriter', () => {
       expect(() => JSON.parse(content)).not.toThrow()
     })
   })
-
 
   // ========== File Structure Tests ==========
 
@@ -746,10 +864,20 @@ describe('TimeSeriesIndexWriter', () => {
 
     it('should name program year files correctly', async () => {
       const districtId = '42'
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-08-15', 'snap-2', 1100))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-08-15', 'snap-2', 1100)
+      )
 
-      const districtDir = path.join(testCache.path, 'time-series', `district_${districtId}`)
+      const districtDir = path.join(
+        testCache.path,
+        'time-series',
+        `district_${districtId}`
+      )
       const files = await fs.readdir(districtDir)
 
       expect(files).toContain('2023-2024.json')
@@ -758,10 +886,17 @@ describe('TimeSeriesIndexWriter', () => {
 
     it('should name metadata file correctly', async () => {
       const districtId = '42'
-      await writer.writeDataPoint(districtId, createSampleDataPoint('2024-01-15', 'snap-1', 1000))
+      await writer.writeDataPoint(
+        districtId,
+        createSampleDataPoint('2024-01-15', 'snap-1', 1000)
+      )
       await writer.updateMetadata(districtId)
 
-      const districtDir = path.join(testCache.path, 'time-series', `district_${districtId}`)
+      const districtDir = path.join(
+        testCache.path,
+        'time-series',
+        `district_${districtId}`
+      )
       const files = await fs.readdir(districtDir)
 
       expect(files).toContain('index-metadata.json')
@@ -777,7 +912,11 @@ describe('TimeSeriesIndexWriter', () => {
 
       await writer.writeDataPoint(districtId, dataPoint)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.districtId).toBe('F')
     })
 
@@ -787,7 +926,11 @@ describe('TimeSeriesIndexWriter', () => {
 
       await writer.writeDataPoint(districtId, dataPoint)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.dataPoints[0]?.membership).toBe(999999)
     })
 
@@ -797,22 +940,38 @@ describe('TimeSeriesIndexWriter', () => {
 
       await writer.writeDataPoint(districtId, dataPoint)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.dataPoints[0]?.membership).toBe(0)
     })
 
     it('should handle dates at program year boundaries', async () => {
       const districtId = '42'
       // Last day of 2023-2024
-      const dataPointJune30 = createSampleDataPoint('2024-06-30', 'snap-1', 1000)
+      const dataPointJune30 = createSampleDataPoint(
+        '2024-06-30',
+        'snap-1',
+        1000
+      )
       // First day of 2024-2025
       const dataPointJuly1 = createSampleDataPoint('2024-07-01', 'snap-2', 1100)
 
       await writer.writeDataPoint(districtId, dataPointJune30)
       await writer.writeDataPoint(districtId, dataPointJuly1)
 
-      const indexFile2023 = await readProgramYearFile(testCache.path, districtId, '2023-2024')
-      const indexFile2024 = await readProgramYearFile(testCache.path, districtId, '2024-2025')
+      const indexFile2023 = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
+      const indexFile2024 = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2024-2025'
+      )
 
       expect(indexFile2023?.dataPoints).toHaveLength(1)
       expect(indexFile2024?.dataPoints).toHaveLength(1)
@@ -839,7 +998,11 @@ describe('TimeSeriesIndexWriter', () => {
 
       await writer.writeDataPoint(districtId, dataPoint)
 
-      const indexFile = await readProgramYearFile(testCache.path, districtId, '2023-2024')
+      const indexFile = await readProgramYearFile(
+        testCache.path,
+        districtId,
+        '2023-2024'
+      )
       expect(indexFile?.dataPoints[0]).toEqual(dataPoint)
     })
   })

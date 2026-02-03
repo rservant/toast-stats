@@ -67,7 +67,12 @@ describe('BordaCountRankingCalculator', () => {
         {
           districtId: '42',
           asOfDate: '2024-01-15',
-          membership: { total: 1000, change: 50, changePercent: 5.0, byClub: [] },
+          membership: {
+            total: 1000,
+            change: 50,
+            changePercent: 5.0,
+            byClub: [],
+          },
           clubs: {
             total: 105,
             active: 104,
@@ -136,7 +141,12 @@ describe('BordaCountRankingCalculator', () => {
         {
           districtId: '1',
           asOfDate: '2024-01-15',
-          membership: { total: 500, change: 25, changePercent: 5.0, byClub: [] },
+          membership: {
+            total: 500,
+            change: 25,
+            changePercent: 5.0,
+            byClub: [],
+          },
           clubs: {
             total: 55,
             active: 54,
@@ -152,7 +162,12 @@ describe('BordaCountRankingCalculator', () => {
           // District without ranking data - should be filtered out
           districtId: '2',
           asOfDate: '2024-01-15',
-          membership: { total: 300, change: 10, changePercent: 3.0, byClub: [] },
+          membership: {
+            total: 300,
+            change: 10,
+            changePercent: 3.0,
+            byClub: [],
+          },
           clubs: {
             total: 30,
             active: 29,
@@ -205,7 +220,12 @@ describe('BordaCountRankingCalculator', () => {
         {
           districtId: '42',
           asOfDate: '2024-01-15',
-          membership: { total: 1000, change: 50, changePercent: 5.0, byClub: [] },
+          membership: {
+            total: 1000,
+            change: 50,
+            changePercent: 5.0,
+            byClub: [],
+          },
           clubs: {
             total: 100,
             active: 100,
@@ -220,7 +240,12 @@ describe('BordaCountRankingCalculator', () => {
         {
           districtId: 'F',
           asOfDate: '2024-01-15',
-          membership: { total: 800, change: 40, changePercent: 5.0, byClub: [] },
+          membership: {
+            total: 800,
+            change: 40,
+            changePercent: 5.0,
+            byClub: [],
+          },
           clubs: {
             total: 80,
             active: 80,
@@ -235,7 +260,12 @@ describe('BordaCountRankingCalculator', () => {
         {
           districtId: '101',
           asOfDate: '2024-01-15',
-          membership: { total: 600, change: 30, changePercent: 5.0, byClub: [] },
+          membership: {
+            total: 600,
+            change: 30,
+            changePercent: 5.0,
+            byClub: [],
+          },
           clubs: {
             total: 60,
             active: 60,
