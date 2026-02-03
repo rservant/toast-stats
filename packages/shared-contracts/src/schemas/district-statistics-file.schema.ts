@@ -8,10 +8,24 @@
  * The schemas match the TypeScript interfaces in district-statistics-file.ts exactly.
  *
  * @module district-statistics-file.schema
- * @see Requirements 6.1, 6.2
+ * @see Requirements 6.1, 6.2, 2.5, 5.1, 5.2, 5.3
  */
 
 import { z } from 'zod'
+
+/**
+ * Zod schema for a single scraped record from CSV data.
+ *
+ * Validates that each record is an object with string keys and values
+ * that are either strings, numbers, or null. This matches the ScrapedRecord
+ * type definition in scraped-record.ts.
+ *
+ * @see Requirements 2.5, 5.3
+ */
+export const ScrapedRecordSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.number(), z.null()])
+)
 
 /**
  * Zod schema for individual club statistics.
@@ -142,6 +156,8 @@ export const DistrictTotalsFileSchema = z.object({
  *
  * This is the main schema for validating district statistics data
  * as stored in JSON files.
+ *
+ * @see Requirements 2.5, 5.1, 5.2, 5.3
  */
 export const DistrictStatisticsFileSchema = z.object({
   /** District identifier (e.g., "42", "F") */
@@ -161,6 +177,33 @@ export const DistrictStatisticsFileSchema = z.object({
 
   /** Aggregated totals for the entire district */
   totals: DistrictTotalsFileSchema,
+
+  /**
+   * Raw CSV data from Division.aspx scrape.
+   * Contains club-level data with Division, Area, Club Base fields, and visit award fields.
+   * Required for frontend division/area calculations.
+   *
+   * @see Requirements 2.1, 5.1
+   */
+  divisionPerformance: z.array(ScrapedRecordSchema),
+
+  /**
+   * Raw CSV data from Club.aspx scrape.
+   * Contains Club Status and Club Distinguished Status fields.
+   * Required for frontend division/area calculations.
+   *
+   * @see Requirements 2.2, 5.1
+   */
+  clubPerformance: z.array(ScrapedRecordSchema),
+
+  /**
+   * Raw CSV data from District.aspx scrape.
+   * Contains district-level performance data.
+   * Required for frontend division/area calculations.
+   *
+   * @see Requirements 2.3, 5.1
+   */
+  districtPerformance: z.array(ScrapedRecordSchema),
 })
 
 /**
@@ -202,3 +245,9 @@ export type DistrictTotalsFileSchemaType = z.infer<
 export type DistrictStatisticsFileSchemaType = z.infer<
   typeof DistrictStatisticsFileSchema
 >
+
+/**
+ * TypeScript type inferred from ScrapedRecordSchema.
+ * Can be used for type-safe validation results.
+ */
+export type ScrapedRecordSchemaType = z.infer<typeof ScrapedRecordSchema>

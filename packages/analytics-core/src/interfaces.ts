@@ -9,6 +9,7 @@ import type {
   ComputeOptions,
   ExtendedAnalyticsComputationResult,
 } from './types.js'
+import type { ScrapedRecord } from '@toastmasters/shared-contracts'
 
 /**
  * Raw CSV data structure from Toastmasters dashboard.
@@ -31,6 +32,11 @@ export interface DistrictStatistics {
   divisions: DivisionStatistics[]
   areas: AreaStatistics[]
   totals: DistrictTotals
+
+  // Raw CSV data arrays - required for frontend division/area calculations
+  divisionPerformance: ScrapedRecord[]
+  clubPerformance: ScrapedRecord[]
+  districtPerformance: ScrapedRecord[]
 }
 
 /**

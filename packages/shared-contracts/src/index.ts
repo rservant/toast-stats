@@ -11,6 +11,8 @@ export {
 // File format types
 export type { PerDistrictData } from './types/per-district-data.js'
 
+export type { ScrapedRecord } from './types/scraped-record.js'
+
 export type {
   DistrictStatisticsFile,
   ClubStatisticsFile,
@@ -50,6 +52,7 @@ export {
   DivisionStatisticsFileSchema,
   AreaStatisticsFileSchema,
   DistrictTotalsFileSchema,
+  ScrapedRecordSchema,
 } from './schemas/district-statistics-file.schema.js'
 
 export {

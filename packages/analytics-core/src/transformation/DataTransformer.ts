@@ -21,6 +21,7 @@ import type {
   Snapshot,
   SnapshotMetadata,
 } from '../interfaces.js'
+import type { ScrapedRecord } from '@toastmasters/shared-contracts'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 
 /**
@@ -54,9 +55,9 @@ export interface DataTransformerConfig {
 
 /**
  * Parsed CSV record with dynamic columns.
- * Matches the ScrapedRecord type from backend.
+ * Uses ScrapedRecord from shared-contracts for type consistency.
  */
-type ParsedRecord = Record<string, string | number | null>
+type ParsedRecord = ScrapedRecord
 
 /**
  * DataTransformer transforms raw CSV data from the Toastmasters dashboard
@@ -114,6 +115,11 @@ export class DataTransformer implements IDataTransformer {
       divisions,
       areas,
       totals,
+      // Include raw CSV arrays for frontend consumption
+      // These are required for division/area status and recognition level calculations
+      clubPerformance,
+      divisionPerformance,
+      districtPerformance,
     }
 
     this.logger.info('CSV transformation complete', {

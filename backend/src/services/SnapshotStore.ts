@@ -919,6 +919,10 @@ export class FileSnapshotStore
         selectDistinguishedClubs: 0,
         presidentDistinguishedClubs: 0,
       },
+      // Raw CSV data arrays - use values from input if available, otherwise empty arrays
+      divisionPerformance: data.divisionPerformance ?? [],
+      clubPerformance: data.clubPerformance ?? [],
+      districtPerformance: data.districtPerformance ?? [],
     }
 
     // Create PerDistrictData structure matching shared contracts schema

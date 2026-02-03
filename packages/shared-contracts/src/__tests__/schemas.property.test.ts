@@ -109,6 +109,19 @@ const areaStatisticsArb = fc.record({
 })
 
 /**
+ * Arbitrary for ScrapedRecord (raw CSV data record)
+ * Values can be strings, numbers, or null
+ */
+const scrapedRecordArb = fc.dictionary(
+  fc.string({ minLength: 1, maxLength: 20 }),
+  fc.oneof(
+    fc.string({ minLength: 0, maxLength: 50 }),
+    fc.integer(),
+    fc.constant(null)
+  )
+)
+
+/**
  * Arbitrary for DistrictStatisticsFile
  */
 const districtStatisticsFileArb = fc.record({
@@ -118,6 +131,9 @@ const districtStatisticsFileArb = fc.record({
   divisions: fc.array(divisionStatisticsArb, { maxLength: 3 }),
   areas: fc.array(areaStatisticsArb, { maxLength: 5 }),
   totals: districtTotalsArb,
+  divisionPerformance: fc.array(scrapedRecordArb, { maxLength: 3 }),
+  clubPerformance: fc.array(scrapedRecordArb, { maxLength: 3 }),
+  districtPerformance: fc.array(scrapedRecordArb, { maxLength: 3 }),
 })
 
 /**

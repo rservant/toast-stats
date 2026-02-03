@@ -712,6 +712,9 @@ function createValidDistrictStatistics() {
     divisions: [],
     areas: [],
     totals: createValidDistrictTotals(),
+    divisionPerformance: [],
+    clubPerformance: [],
+    districtPerformance: [],
   }
 }
 

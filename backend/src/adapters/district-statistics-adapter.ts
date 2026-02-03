@@ -64,6 +64,12 @@ export function adaptDistrictStatisticsFileToBackend(
     education,
     // Note: goals, performance, and ranking are not available in the file format
     // They would need to be populated from other sources if needed
+
+    // Pass through raw CSV data arrays for frontend division/area calculations
+    // These are required by the frontend's extractDivisionPerformance function
+    divisionPerformance: file.divisionPerformance,
+    clubPerformance: file.clubPerformance,
+    districtPerformance: file.districtPerformance,
   }
 }
 
@@ -107,6 +113,10 @@ export function adaptDistrictStatisticsToFile(
       selectDistinguishedClubs: 0, // Not available in backend format
       presidentDistinguishedClubs: 0, // Not available in backend format
     },
+    // Raw CSV data arrays - use values from stats if available, otherwise empty arrays
+    divisionPerformance: stats.divisionPerformance ?? [],
+    clubPerformance: stats.clubPerformance ?? [],
+    districtPerformance: stats.districtPerformance ?? [],
   }
 }
 

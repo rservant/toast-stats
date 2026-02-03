@@ -11,11 +11,13 @@
  * @module district-statistics-file
  */
 
+import type { ScrapedRecord } from './scraped-record.js'
+
 /**
  * District statistics as stored in files.
  * This matches the analytics-core DistrictStatistics structure.
  *
- * @see Requirements 9.1, 9.2
+ * @see Requirements 9.1, 9.2, 2.1, 2.2, 2.3
  */
 export interface DistrictStatisticsFile {
   /** District identifier (e.g., "42", "F") */
@@ -35,6 +37,33 @@ export interface DistrictStatisticsFile {
 
   /** Aggregated totals for the entire district */
   totals: DistrictTotalsFile
+
+  /**
+   * Raw CSV data from Division.aspx scrape.
+   * Contains club-level data with Division, Area, Club Base fields, and visit award fields.
+   * Required for frontend division/area calculations.
+   *
+   * @see Requirements 2.1
+   */
+  divisionPerformance: ScrapedRecord[]
+
+  /**
+   * Raw CSV data from Club.aspx scrape.
+   * Contains Club Status and Club Distinguished Status fields.
+   * Required for frontend division/area calculations.
+   *
+   * @see Requirements 2.2
+   */
+  clubPerformance: ScrapedRecord[]
+
+  /**
+   * Raw CSV data from District.aspx scrape.
+   * Contains district-level performance data.
+   * Required for frontend division/area calculations.
+   *
+   * @see Requirements 2.3
+   */
+  districtPerformance: ScrapedRecord[]
 }
 
 /**

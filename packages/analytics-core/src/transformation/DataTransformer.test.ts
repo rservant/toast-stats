@@ -829,6 +829,10 @@ describe('DataTransformer', () => {
             selectDistinguishedClubs: 0,
             presidentDistinguishedClubs: 0,
           },
+          // Raw CSV data arrays - required for frontend division/area calculations
+          clubPerformance: [],
+          divisionPerformance: [],
+          districtPerformance: [],
         },
       ]
 
@@ -858,6 +862,10 @@ describe('DataTransformer', () => {
             selectDistinguishedClubs: 1,
             presidentDistinguishedClubs: 0,
           },
+          // Raw CSV data arrays - required for frontend division/area calculations
+          clubPerformance: [],
+          divisionPerformance: [],
+          districtPerformance: [],
         },
         {
           districtId: 'D102',
@@ -873,6 +881,10 @@ describe('DataTransformer', () => {
             selectDistinguishedClubs: 2,
             presidentDistinguishedClubs: 1,
           },
+          // Raw CSV data arrays - required for frontend division/area calculations
+          clubPerformance: [],
+          divisionPerformance: [],
+          districtPerformance: [],
         },
       ]
 
@@ -919,6 +931,518 @@ describe('DataTransformer', () => {
       expect(
         logs.some(log => log.includes('CSV transformation complete'))
       ).toBe(true)
+    })
+  })
+
+  /**
+   * Raw Data Preservation Tests
+   *
+   * These tests verify that the DataTransformer preserves raw CSV arrays
+   * in the output for frontend consumption. The frontend's extractDivisionPerformance
+   * function requires these raw arrays to calculate division/area status and
+   * recognition levels.
+   *
+   * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
+   * - 1.1: Include original divisionPerformance records in output
+   * - 1.2: Include original clubPerformance records in output
+   * - 1.3: Include original districtPerformance records in output
+   * - 1.4: Convert raw CSV 2D arrays to arrays of ScrapedRecord objects
+   * - 1.5: Include empty array when raw CSV array is empty or missing
+   * - 1.6: Preserve all original column names and values from CSV files
+   */
+  describe('raw data preservation', () => {
+    /**
+     * Test CSV with Division Club Base, Area Club Base columns preserved
+     * Validates: Requirements 1.1, 1.6
+     */
+    it('should preserve Division Club Base and Area Club Base columns in divisionPerformance', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [],
+        divisionPerformance: [
+          [
+            'Division',
+            'Area',
+            'Club',
+            'Division Club Base',
+            'Area Club Base',
+            'Club Name',
+          ],
+          ['A', '1', '1234', '5', '3', 'Test Club A'],
+          ['A', '2', '5678', '5', '4', 'Test Club B'],
+          ['B', '1', '9012', '6', '2', 'Test Club C'],
+        ],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify divisionPerformance is included in output
+      expect(result.divisionPerformance).toBeDefined()
+      expect(result.divisionPerformance).toHaveLength(3)
+
+      // Verify Division Club Base and Area Club Base columns are preserved
+      expect(result.divisionPerformance[0]).toEqual({
+        Division: 'A',
+        Area: '1',
+        Club: '1234',
+        'Division Club Base': '5',
+        'Area Club Base': '3',
+        'Club Name': 'Test Club A',
+      })
+      expect(result.divisionPerformance[1]).toEqual({
+        Division: 'A',
+        Area: '2',
+        Club: '5678',
+        'Division Club Base': '5',
+        'Area Club Base': '4',
+        'Club Name': 'Test Club B',
+      })
+      expect(result.divisionPerformance[2]).toEqual({
+        Division: 'B',
+        Area: '1',
+        Club: '9012',
+        'Division Club Base': '6',
+        'Area Club Base': '2',
+        'Club Name': 'Test Club C',
+      })
+    })
+
+    /**
+     * Test CSV with Nov Visit award, May visit award columns preserved
+     * Validates: Requirements 1.1, 1.6
+     */
+    it('should preserve Nov Visit award and May visit award columns in divisionPerformance', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [],
+        divisionPerformance: [
+          [
+            'Division',
+            'Area',
+            'Club',
+            'Nov Visit award',
+            'May visit award',
+            'Club Name',
+          ],
+          ['A', '1', '1234', '1', '0', 'Test Club A'],
+          ['A', '2', '5678', '1', '1', 'Test Club B'],
+          ['B', '1', '9012', '0', '0', 'Test Club C'],
+        ],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify divisionPerformance is included in output
+      expect(result.divisionPerformance).toBeDefined()
+      expect(result.divisionPerformance).toHaveLength(3)
+
+      // Verify Nov Visit award and May visit award columns are preserved
+      expect(result.divisionPerformance[0]?.['Nov Visit award']).toBe('1')
+      expect(result.divisionPerformance[0]?.['May visit award']).toBe('0')
+      expect(result.divisionPerformance[1]?.['Nov Visit award']).toBe('1')
+      expect(result.divisionPerformance[1]?.['May visit award']).toBe('1')
+      expect(result.divisionPerformance[2]?.['Nov Visit award']).toBe('0')
+      expect(result.divisionPerformance[2]?.['May visit award']).toBe('0')
+    })
+
+    /**
+     * Test CSV with Club Status, Club Distinguished Status columns preserved
+     * Validates: Requirements 1.2, 1.6
+     */
+    it('should preserve Club Status and Club Distinguished Status columns in clubPerformance', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Club Status',
+            'Club Distinguished Status',
+          ],
+          ['1234', 'Test Club A', 'A', '1', 'Active', 'Distinguished'],
+          ['5678', 'Test Club B', 'A', '2', 'Suspended', ''],
+          ['9012', 'Test Club C', 'B', '1', 'Low', 'Select Distinguished'],
+          [
+            '3456',
+            'Test Club D',
+            'B',
+            '2',
+            'Active',
+            "President's Distinguished",
+          ],
+        ],
+        divisionPerformance: [],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify clubPerformance is included in output
+      expect(result.clubPerformance).toBeDefined()
+      expect(result.clubPerformance).toHaveLength(4)
+
+      // Verify Club Status and Club Distinguished Status columns are preserved
+      expect(result.clubPerformance[0]?.['Club Status']).toBe('Active')
+      expect(result.clubPerformance[0]?.['Club Distinguished Status']).toBe(
+        'Distinguished'
+      )
+      expect(result.clubPerformance[1]?.['Club Status']).toBe('Suspended')
+      expect(result.clubPerformance[1]?.['Club Distinguished Status']).toBe('')
+      expect(result.clubPerformance[2]?.['Club Status']).toBe('Low')
+      expect(result.clubPerformance[2]?.['Club Distinguished Status']).toBe(
+        'Select Distinguished'
+      )
+      expect(result.clubPerformance[3]?.['Club Status']).toBe('Active')
+      expect(result.clubPerformance[3]?.['Club Distinguished Status']).toBe(
+        "President's Distinguished"
+      )
+    })
+
+    /**
+     * Test empty CSV arrays produce empty arrays in output
+     * Validates: Requirements 1.5
+     */
+    it('should produce empty arrays when CSV arrays are empty', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [],
+        divisionPerformance: [],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify all raw arrays are empty arrays
+      expect(result.clubPerformance).toEqual([])
+      expect(result.divisionPerformance).toEqual([])
+      expect(result.districtPerformance).toEqual([])
+    })
+
+    /**
+     * Test missing CSV arrays produce empty arrays in output
+     * Validates: Requirements 1.5
+     */
+    it('should produce empty arrays when CSV arrays are missing (undefined)', async () => {
+      const csvData: RawCSVData = {
+        // All arrays are undefined/missing
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify all raw arrays are empty arrays
+      expect(result.clubPerformance).toEqual([])
+      expect(result.divisionPerformance).toEqual([])
+      expect(result.districtPerformance).toEqual([])
+    })
+
+    /**
+     * Test CSV with only header row produces empty arrays
+     * Validates: Requirements 1.5
+     */
+    it('should produce empty arrays when CSV contains only header row', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Club Status',
+            'Club Distinguished Status',
+          ],
+        ],
+        divisionPerformance: [
+          [
+            'Division',
+            'Area',
+            'Club',
+            'Division Club Base',
+            'Area Club Base',
+            'Nov Visit award',
+            'May visit award',
+          ],
+        ],
+        districtPerformance: [
+          ['District', 'Total Clubs', 'Total Membership', 'Distinguished'],
+        ],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify all raw arrays are empty (no data rows)
+      expect(result.clubPerformance).toEqual([])
+      expect(result.divisionPerformance).toEqual([])
+      expect(result.districtPerformance).toEqual([])
+    })
+
+    /**
+     * Test numeric values preserved correctly in raw arrays
+     * Validates: Requirements 1.4, 1.6
+     */
+    it('should preserve numeric string values correctly in raw arrays', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          ['Club Number', 'Active Members', 'Goals Met', 'Total to Date'],
+          ['1234', '25', '7', '150'],
+          ['5678', '18', '3', '95'],
+        ],
+        divisionPerformance: [
+          ['Division', 'Club Count', 'Membership'],
+          ['A', '5', '120'],
+        ],
+        districtPerformance: [
+          ['District', 'Total Clubs', 'Total Membership'],
+          ['D101', '50', '1250'],
+        ],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify numeric values are preserved as strings in raw arrays
+      expect(result.clubPerformance[0]?.['Club Number']).toBe('1234')
+      expect(result.clubPerformance[0]?.['Active Members']).toBe('25')
+      expect(result.clubPerformance[0]?.['Goals Met']).toBe('7')
+      expect(result.clubPerformance[0]?.['Total to Date']).toBe('150')
+
+      expect(result.divisionPerformance[0]?.['Division']).toBe('A')
+      expect(result.divisionPerformance[0]?.['Club Count']).toBe('5')
+      expect(result.divisionPerformance[0]?.['Membership']).toBe('120')
+
+      expect(result.districtPerformance[0]?.['District']).toBe('D101')
+      expect(result.districtPerformance[0]?.['Total Clubs']).toBe('50')
+      expect(result.districtPerformance[0]?.['Total Membership']).toBe('1250')
+    })
+
+    /**
+     * Test string values preserved correctly in raw arrays
+     * Validates: Requirements 1.4, 1.6
+     */
+    it('should preserve string values correctly in raw arrays', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          ['Club Number', 'Club Name', 'Division', 'Area', 'Club Status'],
+          ['1234', 'Sunrise Speakers', 'Division A', 'Area 12', 'Active'],
+          ['5678', "Leader's Edge", 'Division B', 'Area 5', 'Suspended'],
+        ],
+        divisionPerformance: [
+          ['Division', 'Division Name', 'Area'],
+          ['A', 'Division Alpha', '1'],
+          ['B', 'Division Beta', '2'],
+        ],
+        districtPerformance: [
+          ['District', 'District Name', 'Region'],
+          ['D101', 'District 101', 'Region 1'],
+        ],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify string values are preserved exactly
+      expect(result.clubPerformance[0]?.['Club Name']).toBe('Sunrise Speakers')
+      expect(result.clubPerformance[0]?.['Division']).toBe('Division A')
+      expect(result.clubPerformance[0]?.['Area']).toBe('Area 12')
+      expect(result.clubPerformance[0]?.['Club Status']).toBe('Active')
+
+      expect(result.clubPerformance[1]?.['Club Name']).toBe("Leader's Edge")
+      expect(result.clubPerformance[1]?.['Club Status']).toBe('Suspended')
+
+      expect(result.divisionPerformance[0]?.['Division Name']).toBe(
+        'Division Alpha'
+      )
+      expect(result.divisionPerformance[1]?.['Division Name']).toBe(
+        'Division Beta'
+      )
+
+      expect(result.districtPerformance[0]?.['District Name']).toBe(
+        'District 101'
+      )
+      expect(result.districtPerformance[0]?.['Region']).toBe('Region 1')
+    })
+
+    /**
+     * Test districtPerformance raw array is preserved
+     * Validates: Requirements 1.3, 1.6
+     */
+    it('should preserve districtPerformance raw array in output', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [],
+        divisionPerformance: [],
+        districtPerformance: [
+          [
+            'District',
+            'Total Clubs',
+            'Total Membership',
+            'Distinguished Clubs',
+            'Select Distinguished',
+            "President's Distinguished",
+          ],
+          ['D101', '50', '1250', '15', '8', '5'],
+        ],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify districtPerformance is included in output
+      expect(result.districtPerformance).toBeDefined()
+      expect(result.districtPerformance).toHaveLength(1)
+
+      // Verify all columns are preserved
+      expect(result.districtPerformance[0]).toEqual({
+        District: 'D101',
+        'Total Clubs': '50',
+        'Total Membership': '1250',
+        'Distinguished Clubs': '15',
+        'Select Distinguished': '8',
+        "President's Distinguished": '5',
+      })
+    })
+
+    /**
+     * Test all three raw arrays are included together
+     * Validates: Requirements 1.1, 1.2, 1.3
+     */
+    it('should include all three raw arrays in output simultaneously', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          ['Club Number', 'Club Name', 'Club Status'],
+          ['1234', 'Test Club', 'Active'],
+        ],
+        divisionPerformance: [
+          ['Division', 'Area', 'Division Club Base'],
+          ['A', '1', '5'],
+        ],
+        districtPerformance: [
+          ['District', 'Total Clubs'],
+          ['D101', '50'],
+        ],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify all three raw arrays are present
+      expect(result.clubPerformance).toHaveLength(1)
+      expect(result.divisionPerformance).toHaveLength(1)
+      expect(result.districtPerformance).toHaveLength(1)
+
+      // Verify each array has correct data
+      expect(result.clubPerformance[0]?.['Club Number']).toBe('1234')
+      expect(result.divisionPerformance[0]?.['Division Club Base']).toBe('5')
+      expect(result.districtPerformance[0]?.['Total Clubs']).toBe('50')
+    })
+
+    /**
+     * Test null/empty values in CSV are preserved correctly
+     * Validates: Requirements 1.4, 1.6
+     */
+    it('should preserve null values for missing cell data', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          ['Club Number', 'Club Name', 'Division', 'Area', 'Club Status'],
+          ['1234', 'Test Club', 'A', '1'], // Missing Club Status
+        ],
+        divisionPerformance: [],
+        districtPerformance: [],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify the record has the correct number of keys
+      expect(result.clubPerformance).toHaveLength(1)
+      expect(result.clubPerformance[0]?.['Club Number']).toBe('1234')
+      expect(result.clubPerformance[0]?.['Club Name']).toBe('Test Club')
+      expect(result.clubPerformance[0]?.['Division']).toBe('A')
+      expect(result.clubPerformance[0]?.['Area']).toBe('1')
+      // Missing value should be null
+      expect(result.clubPerformance[0]?.['Club Status']).toBeNull()
+    })
+
+    /**
+     * Test that raw arrays are independent of transformed data
+     * Validates: Requirements 1.1, 1.2, 1.3
+     */
+    it('should include raw arrays independent of transformed clubs/divisions/areas', async () => {
+      const csvData: RawCSVData = {
+        clubPerformance: [
+          [
+            'Club Number',
+            'Club Name',
+            'Division',
+            'Area',
+            'Active Members',
+            'Custom Field',
+          ],
+          ['1234', 'Test Club', 'A', '1', '25', 'Custom Value'],
+        ],
+        divisionPerformance: [
+          ['Division', 'Division Name', 'Extra Column'],
+          ['A', 'Division Alpha', 'Extra Data'],
+        ],
+        districtPerformance: [
+          ['District', 'Special Field'],
+          ['D101', 'Special Value'],
+        ],
+      }
+
+      const result = await transformer.transformRawCSV(
+        '2024-01-15',
+        'D101',
+        csvData
+      )
+
+      // Verify transformed data exists
+      expect(result.clubs).toHaveLength(1)
+      expect(result.clubs[0]?.clubId).toBe('1234')
+
+      // Verify raw arrays contain ALL columns including custom ones
+      expect(result.clubPerformance[0]?.['Custom Field']).toBe('Custom Value')
+      expect(result.divisionPerformance[0]?.['Extra Column']).toBe('Extra Data')
+      expect(result.districtPerformance[0]?.['Special Field']).toBe(
+        'Special Value'
+      )
     })
   })
 })
