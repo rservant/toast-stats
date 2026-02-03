@@ -1267,6 +1267,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         membershipTarget: 0,
         distinguishedTarget: 0,
         clubGrowthTarget: 0,
+        paidClubsCount: 0,
         currentProgress: {
           membership: 0,
           distinguished: 0,
@@ -1292,6 +1293,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         membershipTarget: 0,
         distinguishedTarget: 0,
         clubGrowthTarget: 0,
+        paidClubsCount: 0,
         currentProgress: {
           membership: 0,
           distinguished: 0,
@@ -1373,6 +1375,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       membershipTarget,
       distinguishedTarget,
       clubGrowthTarget,
+      paidClubsCount: totalPaidClubs,
       currentProgress: {
         membership: currentMembership,
         distinguished: currentDistinguished,

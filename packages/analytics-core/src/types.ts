@@ -1100,6 +1100,8 @@ export interface PerformanceTargetsData {
   distinguishedTarget: number
   /** Target for club growth (net new clubs) */
   clubGrowthTarget: number
+  /** Total count of paid clubs (clubs with "Active" status) */
+  paidClubsCount: number
   /** Current progress toward targets */
   currentProgress: {
     /** Current membership count */

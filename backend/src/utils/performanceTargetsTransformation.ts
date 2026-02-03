@@ -56,10 +56,7 @@ export function transformPerformanceTargets(
 ): DistrictPerformanceTargets {
   return {
     paidClubs: {
-      // currentProgress.clubGrowth is net change, not total clubs
-      // We don't have total paid clubs in PerformanceTargetsData
-      // This needs to be enhanced in analytics-core
-      current: 0, // Placeholder - frontend will use fallback
+      current: performanceTargets.paidClubsCount,
       base: null,
       targets: null,
       achievedLevel: null,

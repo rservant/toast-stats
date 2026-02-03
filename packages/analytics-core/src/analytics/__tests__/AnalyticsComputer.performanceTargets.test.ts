@@ -5,6 +5,8 @@
  * verifying that world ranks are correctly extracted from allDistrictsRankings data
  * and that null handling works correctly.
  *
+ * Also verifies that paidClubsCount is included in computation results.
+ *
  * **Validates: Requirements 1.2, 1.3, 1.4, 1.5**
  */
 
@@ -159,6 +161,13 @@ describe('computePerformanceTargets with rankings integration', () => {
       expect(result.distinguishedClubsRankings.worldRank).toBeNull()
       expect(result.distinguishedClubsRankings.worldPercentile).toBeNull()
       expect(result.distinguishedClubsRankings.regionRank).toBeNull()
+
+      // Verify paidClubsCount is included and correct (1 Active club)
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(1)
+      expect(Number.isInteger(result.paidClubsCount)).toBe(true)
+      expect(result.paidClubsCount).toBeGreaterThanOrEqual(0)
     })
 
     it('should return null rankings for empty snapshots with undefined allDistrictsRankings', () => {
@@ -167,6 +176,12 @@ describe('computePerformanceTargets with rankings integration', () => {
       expect(result.paidClubsRankings.worldRank).toBeNull()
       expect(result.membershipPaymentsRankings.worldRank).toBeNull()
       expect(result.distinguishedClubsRankings.worldRank).toBeNull()
+
+      // Verify paidClubsCount is included and zero for empty snapshots
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(0)
+      expect(Number.isInteger(result.paidClubsCount)).toBe(true)
     })
   })
 
@@ -209,6 +224,11 @@ describe('computePerformanceTargets with rankings integration', () => {
       )
 
       expect(result.paidClubsRankings.worldRank).toBe(5)
+
+      // Verify paidClubsCount is included (1 Active club)
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(1)
     })
 
     /**
@@ -361,6 +381,13 @@ describe('computePerformanceTargets with rankings integration', () => {
       expect(result.distinguishedClubsRankings.worldPercentile).toBe(97.0) // ((100-3)/100)*100
       expect(result.distinguishedClubsRankings.regionRank).toBe(1)
       expect(result.distinguishedClubsRankings.totalDistricts).toBe(100)
+
+      // Verify paidClubsCount is included and correct (1 Active club)
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(1)
+      expect(Number.isInteger(result.paidClubsCount)).toBe(true)
+      expect(result.paidClubsCount).toBeGreaterThanOrEqual(0)
     })
 
     it('should return null rankings when district not found in allDistrictsRankings', () => {
@@ -403,6 +430,11 @@ describe('computePerformanceTargets with rankings integration', () => {
 
       expect(result.membershipPaymentsRankings.worldRank).toBeNull()
       expect(result.distinguishedClubsRankings.worldRank).toBeNull()
+
+      // Verify paidClubsCount is still computed correctly even when rankings not found
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(1)
     })
 
     it('should still compute performance targets correctly when rankings are provided', () => {
@@ -446,6 +478,11 @@ describe('computePerformanceTargets with rankings integration', () => {
 
       // And rankings are also populated
       expect(result.paidClubsRankings.worldRank).toBe(5)
+
+      // Verify paidClubsCount is included and correct (1 Active club)
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(1)
     })
 
     it('should handle empty snapshots with valid allDistrictsRankings', () => {
@@ -477,6 +514,12 @@ describe('computePerformanceTargets with rankings integration', () => {
       expect(result.paidClubsRankings.worldRank).toBe(5)
       expect(result.membershipPaymentsRankings.worldRank).toBe(10)
       expect(result.distinguishedClubsRankings.worldRank).toBe(3)
+
+      // Verify paidClubsCount is zero for empty snapshots
+      // **Validates: Requirement 1.2**
+      expect(result.paidClubsCount).toBeDefined()
+      expect(result.paidClubsCount).toBe(0)
+      expect(Number.isInteger(result.paidClubsCount)).toBe(true)
     })
   })
 })

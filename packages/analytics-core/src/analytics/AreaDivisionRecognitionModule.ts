@@ -355,15 +355,32 @@ export class AreaDivisionRecognitionModule {
    * Check if a club has achieved any distinguished level
    * Includes: Distinguished, Select, Presidents, Smedley
    *
-   * Uses DCP goals to determine distinguished status:
-   * - 5+ goals = Distinguished
-   * - 7+ goals = Select Distinguished
-   * - 9+ goals = President's Distinguished
-   * - 10 goals + 25+ members = Smedley Distinguished
+   * Per official Toastmasters Distinguished Club Program requirements:
+   * - Smedley: 10 DCP goals AND 25+ members
+   * - President's Distinguished: 9+ DCP goals AND 20+ members
+   * - Select Distinguished: 7+ DCP goals AND (20+ members OR 5+ net growth)
+   * - Distinguished: 5+ DCP goals AND (20+ members OR 3+ net growth)
+   *
+   * Requirements: 2.1, 2.2
    */
   private isClubDistinguished(club: ClubStatistics): boolean {
-    // A club is distinguished if it has achieved 5 or more DCP goals
-    return club.dcpGoals >= 5
+    const dcpGoals = club.dcpGoals
+    const membership = club.membershipCount
+    const netGrowth = this.calculateNetGrowth(club)
+
+    // Smedley: 10 goals + 25 members
+    if (dcpGoals >= 10 && membership >= 25) return true
+
+    // President's: 9 goals + 20 members
+    if (dcpGoals >= 9 && membership >= 20) return true
+
+    // Select: 7 goals + (20 members OR 5+ net growth)
+    if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) return true
+
+    // Distinguished: 5 goals + (20 members OR 3+ net growth)
+    if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) return true
+
+    return false
   }
 
   /**
@@ -372,6 +389,23 @@ export class AreaDivisionRecognitionModule {
    */
   private isAreaPaid(area: AreaRecognition): boolean {
     return area.paidClubs > 0
+  }
+
+  /**
+   * Calculate net growth for a club.
+   * Net growth = current active members - membership base
+   *
+   * Per design document: Handle missing membershipBase gracefully (default to 0)
+   *
+   * Requirements: 2.1, 2.2
+   *
+   * @param club - Club statistics data
+   * @returns Net growth value (can be negative if membership declined)
+   */
+  private calculateNetGrowth(club: ClubStatistics): number {
+    const currentMembers = club.membershipCount
+    const membershipBase = club.membershipBase ?? 0
+    return currentMembers - membershipBase
   }
 
   /**
