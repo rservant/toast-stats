@@ -1313,7 +1313,16 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     // Get base snapshot (first in the period) for calculating growth
     const baseSnapshot = districtSnapshots[0]
 
-    // Calculate current membership
+    // Get totalPayments from allDistrictsRankings if available (official Toastmasters value)
+    // This matches the value shown on the landing page from the district rankings CSV
+    const districtRanking = allDistrictsRankings?.rankings.find(
+      r => r.districtId === districtId
+    )
+    const currentMembershipPayments =
+      districtRanking?.totalPayments ??
+      this.membershipModule.getTotalPayments(latestSnapshot)
+
+    // Calculate current membership (for membership target calculation)
     const currentMembership =
       this.membershipModule.getTotalMembership(latestSnapshot)
     const baseMembership = baseSnapshot
@@ -1377,7 +1386,8 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       clubGrowthTarget,
       paidClubsCount: totalPaidClubs,
       currentProgress: {
-        membership: currentMembership,
+        // Use totalPayments from rankings (official Toastmasters value) for membership payments
+        membership: currentMembershipPayments,
         distinguished: currentDistinguished,
         clubGrowth,
       },

@@ -1590,6 +1590,7 @@ describe('computePerformanceTargets', () => {
         areaName: 'Area A1',
         divisionId: 'A',
         membershipCount: 100,
+        paymentsCount: 100, // Set paymentsCount to match expected value
         dcpGoals: 5,
         status: 'Active',
       }),
@@ -1600,6 +1601,7 @@ describe('computePerformanceTargets', () => {
 
     // Membership target = ceil(100 * 1.05) = 105
     expect(result.membershipTarget).toBe(105)
+    // currentProgress.membership now uses totalPayments (sum of paymentsCount)
     expect(result.currentProgress.membership).toBe(100)
   })
 
@@ -1765,6 +1767,7 @@ describe('computePerformanceTargets', () => {
         areaId: 'A1',
         divisionId: 'A',
         membershipCount: 25,
+        paymentsCount: 25, // Set paymentsCount to match expected value
         status: 'Active',
       }),
     ])
@@ -1785,6 +1788,7 @@ describe('computePerformanceTargets', () => {
 
     // Should only include D101 data
     expect(result.districtId).toBe('D101')
+    // currentProgress.membership now uses totalPayments (sum of paymentsCount)
     expect(result.currentProgress.membership).toBe(25)
   })
 

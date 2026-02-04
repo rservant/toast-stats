@@ -459,6 +459,7 @@ describe('computePerformanceTargets with rankings integration', () => {
             paymentsRank: 10,
             distinguishedRank: 3,
             region: 'Region 10',
+            totalPayments: 100, // Set to match expected value
           },
         ],
         100
@@ -473,6 +474,7 @@ describe('computePerformanceTargets with rankings integration', () => {
       // Verify that performance targets are still computed correctly
       expect(result.districtId).toBe('D101')
       expect(result.membershipTarget).toBe(105) // ceil(100 * 1.05)
+      // currentProgress.membership now uses totalPayments from rankings
       expect(result.currentProgress.membership).toBe(100)
       expect(result.computedAt).toBeDefined()
 
