@@ -24,6 +24,9 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
   topDCPClubs,
   isLoading,
 }) => {
+  // Defensive null check - treat undefined/null as empty array
+  const safeTopGrowthClubs = topGrowthClubs ?? []
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -133,13 +136,13 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
           Clubs with the highest membership growth over the analyzed period
         </p>
 
-        {topGrowthClubs.length === 0 ? (
+        {safeTopGrowthClubs.length === 0 ? (
           <p className="text-gray-500 text-center py-8 font-tm-body">
             No growth data available
           </p>
         ) : (
           <div className="space-y-3">
-            {topGrowthClubs.map((club, index) => (
+            {safeTopGrowthClubs.map((club, index) => (
               <div
                 key={club.clubId}
                 className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -279,10 +282,10 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
               </h4>
             </div>
             <p className="text-3xl font-bold text-green-600 font-tm-headline">
-              +{topGrowthClubs.reduce((sum, club) => sum + club.growth, 0)}
+              +{safeTopGrowthClubs.reduce((sum, club) => sum + club.growth, 0)}
             </p>
             <p className="text-sm text-gray-600 mt-1 font-tm-body">
-              members across top {topGrowthClubs.length} clubs
+              members across top {safeTopGrowthClubs.length} clubs
             </p>
           </div>
 
