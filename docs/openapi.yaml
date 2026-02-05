@@ -1689,6 +1689,16 @@ paths:
                         - "Try a different date range"
                         - "Check available dates using GET /districts/{districtId}/cached-dates"
                         - "Initiate a backfill operation to collect historical data"
+                snapshotNotFound:
+                  summary: Requested snapshot does not exist
+                  value:
+                    error:
+                      code: SNAPSHOT_NOT_FOUND
+                      message: "Snapshot not found for date 2026-01-24"
+                      details: "No snapshot exists for the requested endDate"
+                      suggestions:
+                        - "Try a different date"
+                        - "Check available dates using GET /districts/{districtId}/cached-dates"
         '500':
           description: Internal server error - analytics generation failed
           content:
@@ -2225,6 +2235,16 @@ paths:
                         - "Try a different date range"
                         - "Check available dates using GET /districts/{districtId}/cached-dates"
                         - "Initiate a backfill operation to collect historical data"
+                snapshotNotFound:
+                  summary: Requested snapshot does not exist
+                  value:
+                    error:
+                      code: SNAPSHOT_NOT_FOUND
+                      message: "Snapshot not found for date 2026-01-24"
+                      details: "No snapshot exists for the requested endDate"
+                      suggestions:
+                        - "Try a different date"
+                        - "Check available dates using GET /districts/{districtId}/cached-dates"
         '500':
           description: Internal server error - analytics generation failed
           content:
@@ -2588,16 +2608,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundErrorResponse'
-              example:
-                error:
-                  code: ANALYTICS_NOT_FOUND
-                  message: "Pre-computed vulnerable clubs data not found"
-                  details: "No pre-computed vulnerable clubs file exists for district 57. \
-                    Run scraper-cli compute-analytics to generate analytics."
-                  suggestions:
-                    - "Run scraper-cli compute-analytics to generate vulnerable clubs data"
-                    - "Verify the district ID is correct"
-                    - "Check if analytics have been generated for this snapshot"
+              examples:
+                analyticsNotFound:
+                  summary: Pre-computed vulnerable clubs data not found
+                  value:
+                    error:
+                      code: ANALYTICS_NOT_FOUND
+                      message: "Pre-computed vulnerable clubs data not found"
+                      details: "No pre-computed vulnerable clubs file exists for district 57. \
+                        Run scraper-cli compute-analytics to generate analytics."
+                      suggestions:
+                        - "Run scraper-cli compute-analytics to generate vulnerable clubs data"
+                        - "Verify the district ID is correct"
+                        - "Check if analytics have been generated for this snapshot"
+                snapshotNotFound:
+                  summary: Requested snapshot does not exist
+                  value:
+                    error:
+                      code: SNAPSHOT_NOT_FOUND
+                      message: "Snapshot not found for date 2026-01-24"
+                      details: "No snapshot exists for the requested endDate"
+                      suggestions:
+                        - "Try a different date"
+                        - "Check available dates using GET /districts/{districtId}/cached-dates"
         '500':
           description: Internal server error - analytics calculation failed
           content:
@@ -2885,16 +2918,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundErrorResponse'
-              example:
-                error:
-                  code: ANALYTICS_NOT_FOUND
-                  message: "Pre-computed leadership insights not found"
-                  details: "No pre-computed leadership insights file exists for district 57. \
-                    Run scraper-cli compute-analytics to generate analytics."
-                  suggestions:
-                    - "Run scraper-cli compute-analytics to generate leadership insights"
-                    - "Verify the district ID is correct"
-                    - "Check if analytics have been generated for this snapshot"
+              examples:
+                analyticsNotFound:
+                  summary: Pre-computed leadership insights not found
+                  value:
+                    error:
+                      code: ANALYTICS_NOT_FOUND
+                      message: "Pre-computed leadership insights not found"
+                      details: "No pre-computed leadership insights file exists for district 57. \
+                        Run scraper-cli compute-analytics to generate analytics."
+                      suggestions:
+                        - "Run scraper-cli compute-analytics to generate leadership insights"
+                        - "Verify the district ID is correct"
+                        - "Check if analytics have been generated for this snapshot"
+                snapshotNotFound:
+                  summary: Requested snapshot does not exist
+                  value:
+                    error:
+                      code: SNAPSHOT_NOT_FOUND
+                      message: "Snapshot not found for date 2026-01-24"
+                      details: "No snapshot exists for the requested endDate"
+                      suggestions:
+                        - "Try a different date"
+                        - "Check available dates using GET /districts/{districtId}/cached-dates"
         '500':
           description: Internal server error - analytics calculation failed
           content:
@@ -3263,16 +3309,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFoundErrorResponse'
-              example:
-                error:
-                  code: ANALYTICS_NOT_FOUND
-                  message: "Pre-computed distinguished club analytics not found"
-                  details: "No pre-computed distinguished club analytics file exists. \
-                    Run scraper-cli compute-analytics to generate analytics."
-                  suggestions:
-                    - "Run scraper-cli compute-analytics to generate distinguished club analytics"
-                    - "Verify the district ID is correct"
-                    - "Check if analytics have been generated for this snapshot"
+              examples:
+                analyticsNotFound:
+                  summary: Pre-computed distinguished club analytics not found
+                  value:
+                    error:
+                      code: ANALYTICS_NOT_FOUND
+                      message: "Pre-computed distinguished club analytics not found"
+                      details: "No pre-computed distinguished club analytics file exists. \
+                        Run scraper-cli compute-analytics to generate analytics."
+                      suggestions:
+                        - "Run scraper-cli compute-analytics to generate distinguished club analytics"
+                        - "Verify the district ID is correct"
+                        - "Check if analytics have been generated for this snapshot"
+                snapshotNotFound:
+                  summary: Requested snapshot does not exist
+                  value:
+                    error:
+                      code: SNAPSHOT_NOT_FOUND
+                      message: "Snapshot not found for date 2026-01-24"
+                      details: "No snapshot exists for the requested endDate"
+                      suggestions:
+                        - "Try a different date"
+                        - "Check available dates using GET /districts/{districtId}/cached-dates"
         '500':
           description: Internal server error - analytics calculation failed
           content:

@@ -612,6 +612,7 @@ paths:
             Pre-computed analytics not available. This error is returned when:
             - No pre-computed analytics exist for the requested district and date
             - The snapshot directory exists but analytics have not been generated
+            - The requested endDate snapshot does not exist (SNAPSHOT_NOT_FOUND)
             
             Use the scraper-cli `compute-analytics` command to generate analytics.
         '500':
@@ -672,6 +673,7 @@ paths:
             Pre-computed membership analytics not found. This error is returned when:
             - No pre-computed analytics exist for the requested district
             - The snapshot directory exists but membership analytics have not been generated
+            - The requested endDate snapshot does not exist (SNAPSHOT_NOT_FOUND)
             
             Run scraper-cli `compute-analytics` to generate membership analytics.
         '500':
@@ -753,6 +755,14 @@ paths:
           type: string
           required: true
           description: District identifier (e.g., "57", "F")
+        - name: endDate
+          in: query
+          type: string
+          required: false
+          description: |
+            End date for analytics data in YYYY-MM-DD format.
+            When provided, returns vulnerable clubs data from the snapshot for that specific date.
+            When omitted, returns data from the latest available snapshot.
       responses:
         '200':
           description: Successfully retrieved pre-computed vulnerable clubs list
@@ -763,6 +773,7 @@ paths:
             Pre-computed vulnerable clubs data not found. This error is returned when:
             - No pre-computed vulnerable clubs file exists for the requested district
             - The snapshot directory exists but vulnerable clubs have not been generated
+            - The requested endDate snapshot does not exist (SNAPSHOT_NOT_FOUND)
             
             Run scraper-cli `compute-analytics` to generate vulnerable clubs data.
         '500':
@@ -818,6 +829,7 @@ paths:
             Pre-computed leadership insights not found. This error is returned when:
             - No pre-computed leadership insights file exists for the requested district
             - The snapshot directory exists but leadership insights have not been generated
+            - The requested endDate snapshot does not exist (SNAPSHOT_NOT_FOUND)
             
             Run scraper-cli `compute-analytics` to generate leadership insights.
         '500':
@@ -874,6 +886,7 @@ paths:
             Pre-computed distinguished club analytics not found. This error is returned when:
             - No pre-computed distinguished club analytics file exists for the requested district
             - The snapshot directory exists but distinguished club analytics have not been generated
+            - The requested endDate snapshot does not exist (SNAPSHOT_NOT_FOUND)
             
             Run scraper-cli `compute-analytics` to generate distinguished club analytics.
         '500':

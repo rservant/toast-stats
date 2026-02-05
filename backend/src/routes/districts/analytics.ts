@@ -18,6 +18,7 @@ import {
   extractStringParam,
   snapshotStore,
   cacheDirectory,
+  getSnapshotForDate,
 } from './shared.js'
 import {
   PreComputedAnalyticsReader,
@@ -79,10 +80,18 @@ analyticsRouter.get(
         return
       }
 
-      // Get the latest successful snapshot to determine the snapshot date
-      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 2.1, 2.2, 2.3 (Analytics Date Selection Fix)
+      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
+      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
 
-      if (!latestSnapshot) {
+      // Handle error when requested snapshot doesn't exist (Requirement 2.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
@@ -92,8 +101,6 @@ analyticsRouter.get(
         })
         return
       }
-
-      const snapshotDate = latestSnapshot.snapshot_id
 
       logger.info('Reading pre-computed membership analytics', {
         operation: 'getMembershipAnalytics',
@@ -287,10 +294,18 @@ analyticsRouter.get(
       }
 
       // Requirement 4.1: Read pre-computed analytics from the file system
-      // Get the latest successful snapshot to determine the snapshot date
-      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 1.1, 1.2, 1.3, 1.4 (Analytics Date Selection Fix)
+      const endDateParam = typeof endDate === 'string' ? endDate : undefined
+      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDateParam)
 
-      if (!latestSnapshot) {
+      // Handle error when requested snapshot doesn't exist (Requirement 1.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
         // No snapshots available at all
         res.status(404).json({
           error: {
@@ -301,8 +316,6 @@ analyticsRouter.get(
         })
         return
       }
-
-      const snapshotDate = latestSnapshot.snapshot_id
 
       logger.info('Reading pre-computed analytics', {
         operation: 'getDistrictAnalytics',
@@ -666,10 +679,18 @@ analyticsRouter.get(
         return
       }
 
-      // Get the latest successful snapshot to determine the snapshot date
-      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 5.1, 5.2, 5.3 (Analytics Date Selection Fix)
+      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
+      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
 
-      if (!latestSnapshot) {
+      // Handle error when requested snapshot doesn't exist (Requirement 5.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
@@ -679,8 +700,6 @@ analyticsRouter.get(
         })
         return
       }
-
-      const snapshotDate = latestSnapshot.snapshot_id
 
       logger.info('Reading pre-computed vulnerable clubs', {
         operation: 'getVulnerableClubs',
@@ -841,10 +860,18 @@ analyticsRouter.get(
         return
       }
 
-      // Get the latest successful snapshot to determine the snapshot date
-      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 3.1, 3.2, 3.3 (Analytics Date Selection Fix)
+      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
+      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
 
-      if (!latestSnapshot) {
+      // Handle error when requested snapshot doesn't exist (Requirement 3.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
@@ -854,8 +881,6 @@ analyticsRouter.get(
         })
         return
       }
-
-      const snapshotDate = latestSnapshot.snapshot_id
 
       logger.info('Reading pre-computed leadership insights', {
         operation: 'getLeadershipInsights',
@@ -1006,10 +1031,18 @@ analyticsRouter.get(
         return
       }
 
-      // Get the latest successful snapshot to determine the snapshot date
-      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 4.1, 4.2, 4.3 (Analytics Date Selection Fix)
+      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
+      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
 
-      if (!latestSnapshot) {
+      // Handle error when requested snapshot doesn't exist (Requirement 4.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
@@ -1019,8 +1052,6 @@ analyticsRouter.get(
         })
         return
       }
-
-      const snapshotDate = latestSnapshot.snapshot_id
 
       logger.info('Reading pre-computed distinguished club analytics', {
         operation: 'getDistinguishedClubAnalytics',

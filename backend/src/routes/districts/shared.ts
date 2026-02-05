@@ -320,6 +320,85 @@ export interface FindNearestSnapshotResult {
 }
 
 /**
+ * Result of getting a snapshot for a specific date
+ * Used by getSnapshotForDate helper for date-aware snapshot selection
+ *
+ * Requirements:
+ * - 1.1, 6.1, 6.2, 6.3, 6.4: Consistent error handling for missing snapshots
+ */
+export interface GetSnapshotForDateResult {
+  snapshot: Snapshot | null
+  snapshotDate: string | null
+  error?: {
+    code: string
+    message: string
+    details: string
+  }
+}
+
+/**
+ * Get a snapshot for a specific date, or the latest successful snapshot if no date provided.
+ *
+ * This helper centralizes date-aware snapshot selection logic for all analytics endpoints.
+ * It ensures consistent behavior:
+ * - When endDate is provided: retrieves the exact snapshot for that date
+ * - When endDate is not provided: retrieves the latest successful snapshot (backward compatible)
+ *
+ * Requirements:
+ * - 1.1, 2.1, 3.1, 4.1, 5.1: Use snapshotStore.getSnapshot(endDate) when date is provided
+ * - 1.2, 2.2, 3.2, 4.2, 5.2: Use snapshotStore.getLatestSuccessful() when no date provided
+ * - 1.3, 2.3, 3.3, 4.3, 5.3, 6.1, 6.2, 6.3, 6.4: Return proper error for non-existent snapshots
+ *
+ * @param endDate - Optional ISO date string (YYYY-MM-DD) for the requested snapshot
+ * @returns The snapshot and its date, or an error if the requested snapshot doesn't exist
+ */
+export async function getSnapshotForDate(
+  endDate?: string
+): Promise<GetSnapshotForDateResult> {
+  // When no endDate is provided, use the latest successful snapshot (backward compatibility)
+  // Requirements: 1.2, 2.2, 3.2, 4.2, 5.2
+  if (!endDate) {
+    const latestSnapshot = await snapshotStore.getLatestSuccessful()
+
+    if (!latestSnapshot) {
+      return {
+        snapshot: null,
+        snapshotDate: null,
+      }
+    }
+
+    return {
+      snapshot: latestSnapshot,
+      snapshotDate: latestSnapshot.snapshot_id,
+    }
+  }
+
+  // When endDate is provided, get the specific snapshot for that date
+  // Requirements: 1.1, 2.1, 3.1, 4.1, 5.1
+  const snapshot = await snapshotStore.getSnapshot(endDate)
+
+  if (!snapshot) {
+    // Return error structure for non-existent snapshot
+    // Requirements: 1.3, 2.3, 3.3, 4.3, 5.3, 6.1, 6.2, 6.3, 6.4
+    return {
+      snapshot: null,
+      snapshotDate: null,
+      error: {
+        code: 'SNAPSHOT_NOT_FOUND',
+        message: `Snapshot not found for date ${endDate}`,
+        details:
+          'The requested snapshot does not exist. Try a different date or check available snapshots.',
+      },
+    }
+  }
+
+  return {
+    snapshot,
+    snapshotDate: snapshot.snapshot_id,
+  }
+}
+
+/**
  * Find the nearest available snapshot to the requested date
  * Returns the closest snapshot before or after the requested date
  *
