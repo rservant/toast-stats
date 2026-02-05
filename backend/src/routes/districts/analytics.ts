@@ -1521,11 +1521,9 @@ function generateDistrictAnalyticsCSV(
   lines.push(
     `Distinguished Clubs (Distinguished),${analytics.distinguishedClubs.distinguished}`
   )
-  // Handle distinguishedProjection - sum up the projected values
+  // Handle distinguishedProjection - use the single projected value
   const projectionValue =
-    analytics.distinguishedProjection.projectedDistinguished +
-    analytics.distinguishedProjection.projectedSelect +
-    analytics.distinguishedProjection.projectedPresident
+    analytics.distinguishedProjection.projectedDistinguished
   lines.push(`Distinguished Projection,${projectionValue}`)
   lines.push('')
 

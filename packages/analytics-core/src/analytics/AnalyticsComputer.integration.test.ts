@@ -395,14 +395,13 @@ function isCompleteDistinguishedClubSummary(
 
 /**
  * Validates that a DistinguishedProjection object has all required fields.
+ * Simplified to check only projectedDistinguished (Requirements: 2.1, 2.2, 2.5)
  */
 function isCompleteDistinguishedProjection(
   projection: DistinguishedProjection
 ): boolean {
   return (
     typeof projection.projectedDistinguished === 'number' &&
-    typeof projection.projectedSelect === 'number' &&
-    typeof projection.projectedPresident === 'number' &&
     typeof projection.currentDistinguished === 'number' &&
     typeof projection.currentSelect === 'number' &&
     typeof projection.currentPresident === 'number' &&
@@ -706,14 +705,9 @@ describe('AnalyticsComputer Integration Tests', () => {
       ).toBe(true)
 
       // Verify projection values are non-negative
+      // Note: Only projectedDistinguished exists after simplification (Requirements: 2.1, 2.2, 2.5)
       expect(
         analytics.distinguishedProjection.projectedDistinguished
-      ).toBeGreaterThanOrEqual(0)
-      expect(
-        analytics.distinguishedProjection.projectedSelect
-      ).toBeGreaterThanOrEqual(0)
-      expect(
-        analytics.distinguishedProjection.projectedPresident
       ).toBeGreaterThanOrEqual(0)
       expect(
         analytics.distinguishedProjection.currentDistinguished

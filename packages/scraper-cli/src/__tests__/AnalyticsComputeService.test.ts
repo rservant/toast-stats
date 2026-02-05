@@ -1093,8 +1093,6 @@ describe('AnalyticsComputeService', () => {
           distinguishedClubs: [],
           distinguishedProjection: {
             projectedDistinguished: 0,
-            projectedSelect: 0,
-            projectedPresident: 0,
             currentDistinguished: 0,
             currentSelect: 0,
             currentPresident: 0,

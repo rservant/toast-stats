@@ -373,10 +373,16 @@ export class ClubHealthAnalyticsModule {
    * Requirement 3.2: Vulnerable if some but not all requirements met
    * Uses new classification logic based on monthly DCP checkpoints
    *
+   * This method MUST use the same logic as assessClubHealth() to ensure consistency.
+   *
    * @param snapshot - District statistics snapshot
    * @returns Count of vulnerable clubs
    */
   countVulnerableClubs(snapshot: DistrictStatistics): number {
+    // Get current program month from snapshot date for DCP checkpoint evaluation
+    const currentMonth = getCurrentProgramMonth(snapshot.snapshotDate)
+    const requiredDcpCheckpoint = getDCPCheckpoint(currentMonth)
+
     return snapshot.clubs.filter(club => {
       const membership = club.membershipCount
       const dcpGoals = club.dcpGoals
@@ -390,8 +396,8 @@ export class ClubHealthAnalyticsModule {
       // Membership requirement: >= 20 OR net growth >= 3
       const membershipRequirementMet = membership >= 20 || netGrowth >= 3
 
-      // DCP checkpoint: simplified check for counting
-      const dcpCheckpointMet = dcpGoals > 0
+      // DCP checkpoint requirement (varies by month) - MUST match assessClubHealth logic
+      const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
 
       // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
       const cspSubmitted = true
@@ -428,10 +434,17 @@ export class ClubHealthAnalyticsModule {
    * Requirement 3.2: Thriving if all requirements met (membership, DCP checkpoint, CSP)
    * Uses new classification logic based on monthly DCP checkpoints
    *
+   * This method MUST use the same logic as assessClubHealth() to ensure consistency
+   * between the thriving count used for projections and the actual club health status.
+   *
    * @param snapshot - District statistics snapshot
    * @returns Count of thriving clubs
    */
   countThrivingClubs(snapshot: DistrictStatistics): number {
+    // Get current program month from snapshot date for DCP checkpoint evaluation
+    const currentMonth = getCurrentProgramMonth(snapshot.snapshotDate)
+    const requiredDcpCheckpoint = getDCPCheckpoint(currentMonth)
+
     return snapshot.clubs.filter(club => {
       const membership = club.membershipCount
       const dcpGoals = club.dcpGoals
@@ -445,9 +458,8 @@ export class ClubHealthAnalyticsModule {
       // Membership requirement: >= 20 OR net growth >= 3
       const membershipRequirementMet = membership >= 20 || netGrowth >= 3
 
-      // DCP checkpoint: use current month (simplified - use latest snapshot date context)
-      // For counting purposes, we use a simplified check: dcpGoals > 0
-      const dcpCheckpointMet = dcpGoals > 0
+      // DCP checkpoint requirement (varies by month) - MUST match assessClubHealth logic
+      const dcpCheckpointMet = dcpGoals >= requiredDcpCheckpoint
 
       // CSP: for counting methods, assume submitted (actual CSP check is in assessClubHealth)
       const cspSubmitted = true

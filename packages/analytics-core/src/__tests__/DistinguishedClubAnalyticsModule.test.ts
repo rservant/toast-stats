@@ -373,6 +373,166 @@ describe('DistinguishedClubAnalyticsModule', () => {
     })
   })
 
+  describe('Projection Simplification (Req 1.1, 1.2)', () => {
+    /**
+     * Per Requirement 1.1: The projected year-end value equals the count of clubs with 'thriving' health status
+     * Per Requirement 1.2: No differentiation by distinguished level - just whether they will be distinguished or better
+     *
+     * When thrivingCount is provided to generateDistinguishedProjection(), all projected* fields
+     * should equal that count (projectedDistinguished, projectedSelect, projectedPresident).
+     */
+
+    describe('generateDistinguishedProjection with thrivingCount', () => {
+      /**
+       * Test: Projection equals thriving count for mixed health statuses
+       *
+       * Creates a snapshot with clubs in different health states:
+       * - Thriving: membership >= 20 OR net growth >= 3, AND dcpGoals > 0
+       * - Vulnerable: some requirements not met
+       * - Intervention-required: membership < 12 AND net growth < 3
+       *
+       * Verifies that when thrivingCount is passed, projectedDistinguished equals that count.
+       *
+       * Validates: Requirement 1.1, 2.1, 2.2
+       */
+      it('should set projectedDistinguished to thrivingCount for mixed health statuses', () => {
+        const module = new DistinguishedClubAnalyticsModule()
+
+        // Create clubs with different health statuses:
+        // Thriving clubs (membership >= 20 AND dcpGoals > 0):
+        const thrivingClub1 = createMockClub('1', 3, 22) // 22 members, 3 goals - thriving
+        const thrivingClub2 = createMockClub('2', 5, 20) // 20 members, 5 goals - thriving
+        const thrivingClub3 = createMockClub('3', 1, 25) // 25 members, 1 goal - thriving
+
+        // Vulnerable clubs (some requirements not met):
+        const vulnerableClub1 = createMockClub('4', 0, 20) // 20 members, 0 goals - vulnerable (no DCP goals)
+        const vulnerableClub2 = createMockClub('5', 2, 18) // 18 members, 2 goals - vulnerable (low membership, no net growth)
+
+        // Intervention-required clubs (membership < 12 AND net growth < 3):
+        const interventionClub = createMockClub('6', 1, 10) // 10 members, 1 goal - intervention required
+
+        const snapshot = createMockSnapshot([
+          thrivingClub1,
+          thrivingClub2,
+          thrivingClub3,
+          vulnerableClub1,
+          vulnerableClub2,
+          interventionClub,
+        ])
+
+        // 3 thriving clubs out of 6 total
+        const thrivingCount = 3
+
+        const projection = module.generateDistinguishedProjection(
+          [snapshot],
+          thrivingCount
+        )
+
+        // projectedDistinguished should equal the thriving count (Req 1.1, 2.1, 2.2)
+        // Note: projectedSelect and projectedPresident have been removed per Req 2.2
+        expect(projection.projectedDistinguished).toBe(thrivingCount)
+
+        // Current counts should reflect actual distinguished status (unchanged behavior)
+        // Note: current counts are based on DCP goals/membership thresholds, not health status
+        expect(projection.projectionDate).toBe(snapshot.snapshotDate)
+      })
+
+      /**
+       * Test: Projection returns 0 when no thriving clubs
+       *
+       * Creates a snapshot with only vulnerable and intervention-required clubs
+       * (no clubs meeting thriving criteria). When thrivingCount = 0 is passed,
+       * projectedDistinguished should equal 0.
+       *
+       * Validates: Requirement 1.4, 2.1, 2.2
+       */
+      it('should return 0 for projectedDistinguished when thrivingCount is 0', () => {
+        const module = new DistinguishedClubAnalyticsModule()
+
+        // Create clubs that are NOT thriving:
+        // Vulnerable clubs (some requirements not met):
+        const vulnerableClub1 = createMockClub('1', 0, 20) // 20 members, 0 goals - vulnerable (no DCP goals)
+        const vulnerableClub2 = createMockClub('2', 2, 18) // 18 members, 2 goals - vulnerable (low membership, no net growth)
+        const vulnerableClub3 = createMockClub('3', 0, 15) // 15 members, 0 goals - vulnerable
+
+        // Intervention-required clubs (membership < 12 AND net growth < 3):
+        const interventionClub1 = createMockClub('4', 1, 10) // 10 members, 1 goal - intervention required
+        const interventionClub2 = createMockClub('5', 0, 8) // 8 members, 0 goals - intervention required
+
+        const snapshot = createMockSnapshot([
+          vulnerableClub1,
+          vulnerableClub2,
+          vulnerableClub3,
+          interventionClub1,
+          interventionClub2,
+        ])
+
+        // No thriving clubs
+        const thrivingCount = 0
+
+        const projection = module.generateDistinguishedProjection(
+          [snapshot],
+          thrivingCount
+        )
+
+        // projectedDistinguished should equal 0 (Req 1.4, 2.1, 2.2)
+        // Note: projectedSelect and projectedPresident have been removed per Req 2.2
+        expect(projection.projectedDistinguished).toBe(0)
+
+        // Verify projection date is still set correctly
+        expect(projection.projectionDate).toBe(snapshot.snapshotDate)
+      })
+
+      /**
+       * Test: Projection equals total club count when all clubs are thriving
+       *
+       * Creates a snapshot where ALL clubs meet thriving criteria:
+       * - Membership >= 20 AND dcpGoals > 0
+       *
+       * When thrivingCount equals the total club count, projectedDistinguished
+       * should equal that total count.
+       *
+       * Validates: Requirement 1.5, 2.1, 2.2
+       */
+      it('should set projectedDistinguished to total club count when all clubs are thriving', () => {
+        const module = new DistinguishedClubAnalyticsModule()
+
+        // Create clubs that ALL meet thriving criteria (membership >= 20 AND dcpGoals > 0):
+        const thrivingClub1 = createMockClub('1', 3, 22) // 22 members, 3 goals - thriving
+        const thrivingClub2 = createMockClub('2', 5, 20) // 20 members, 5 goals - thriving
+        const thrivingClub3 = createMockClub('3', 1, 25) // 25 members, 1 goal - thriving
+        const thrivingClub4 = createMockClub('4', 7, 30) // 30 members, 7 goals - thriving
+        const thrivingClub5 = createMockClub('5', 10, 28) // 28 members, 10 goals - thriving
+
+        const allClubs = [
+          thrivingClub1,
+          thrivingClub2,
+          thrivingClub3,
+          thrivingClub4,
+          thrivingClub5,
+        ]
+
+        const snapshot = createMockSnapshot(allClubs)
+
+        // All 5 clubs are thriving, so thrivingCount equals total club count
+        const totalClubCount = allClubs.length
+        const thrivingCount = totalClubCount
+
+        const projection = module.generateDistinguishedProjection(
+          [snapshot],
+          thrivingCount
+        )
+
+        // projectedDistinguished should equal the total club count (Req 1.5, 2.1, 2.2)
+        // Note: projectedSelect and projectedPresident have been removed per Req 2.2
+        expect(projection.projectedDistinguished).toBe(totalClubCount)
+
+        // Verify projection date is still set correctly
+        expect(projection.projectionDate).toBe(snapshot.snapshotDate)
+      })
+    })
+  })
+
   describe('No Double Counting (Req 3.3)', () => {
     /**
      * Per Requirement 3.3: WHEN counting distinguished clubs, THE DistinguishedClubAnalyticsModule

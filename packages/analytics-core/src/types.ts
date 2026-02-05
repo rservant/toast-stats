@@ -223,11 +223,12 @@ export interface AreaAnalytics {
 
 /**
  * Distinguished club projection data.
+ * Simplified to a single projected field (projectedDistinguished = thriving count).
+ *
+ * Requirements: 2.1, 2.2
  */
 export interface DistinguishedProjection {
-  projectedDistinguished: number
-  projectedSelect: number
-  projectedPresident: number
+  projectedDistinguished: number // Single projected field = thriving count
   currentDistinguished: number
   currentSelect: number
   currentPresident: number

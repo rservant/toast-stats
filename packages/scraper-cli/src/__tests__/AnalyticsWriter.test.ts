@@ -117,8 +117,6 @@ function createSampleDistrictAnalytics(districtId: string): DistrictAnalytics {
     ],
     distinguishedProjection: {
       projectedDistinguished: 10,
-      projectedSelect: 5,
-      projectedPresident: 2,
       currentDistinguished: 8,
       currentSelect: 4,
       currentPresident: 1,
@@ -552,8 +550,6 @@ function createSampleDistinguishedClubAnalytics(
     ],
     distinguishedProjection: {
       projectedDistinguished: 15,
-      projectedSelect: 10,
-      projectedPresident: 7,
       currentDistinguished: 12,
       currentSelect: 8,
       currentPresident: 5,

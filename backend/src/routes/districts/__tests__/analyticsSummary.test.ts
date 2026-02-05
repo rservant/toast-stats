@@ -152,8 +152,6 @@ describe('Analytics Summary Route', () => {
     mockReadDistrictAnalytics.mockResolvedValue({
       distinguishedProjection: {
         projectedDistinguished: 30,
-        projectedSelect: 10,
-        projectedPresident: 5,
         currentDistinguished: 25,
         currentSelect: 8,
         currentPresident: 5,
@@ -346,8 +344,6 @@ describe('Analytics Summary Route', () => {
         mockReadDistrictAnalytics.mockResolvedValue({
           distinguishedProjection: {
             projectedDistinguished: 35,
-            projectedSelect: 12,
-            projectedPresident: 6,
             currentDistinguished: 25,
             currentSelect: 8,
             currentPresident: 5,

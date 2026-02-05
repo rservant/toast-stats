@@ -310,8 +310,6 @@ const areaPerformanceArb: fc.Arbitrary<AreaPerformance> = fc.record({
 const distinguishedProjectionArb: fc.Arbitrary<DistinguishedProjection> =
   fc.record({
     projectedDistinguished: fc.integer({ min: 0, max: 100 }),
-    projectedSelect: fc.integer({ min: 0, max: 50 }),
-    projectedPresident: fc.integer({ min: 0, max: 25 }),
     currentDistinguished: fc.integer({ min: 0, max: 100 }),
     currentSelect: fc.integer({ min: 0, max: 50 }),
     currentPresident: fc.integer({ min: 0, max: 25 }),

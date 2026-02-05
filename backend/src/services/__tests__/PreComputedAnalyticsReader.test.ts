@@ -80,8 +80,6 @@ describe('PreComputedAnalyticsReader', () => {
       distinguishedClubs: [],
       distinguishedProjection: {
         projectedDistinguished: 10,
-        projectedSelect: 5,
-        projectedPresident: 3,
         currentDistinguished: 8,
         currentSelect: 4,
         currentPresident: 2,

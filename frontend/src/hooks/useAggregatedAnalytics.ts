@@ -228,16 +228,11 @@ function convertToAggregatedFormat(
   if (typeof projection === 'number') {
     projectionValue = projection
   } else if (projection && typeof projection === 'object') {
-    // Extract the total projected distinguished clubs from the object
+    // Extract the projectedDistinguished value directly (simplified data model)
     const projObj = projection as {
       projectedDistinguished?: number
-      projectedSelect?: number
-      projectedPresident?: number
     }
-    projectionValue =
-      (projObj.projectedDistinguished ?? 0) +
-      (projObj.projectedSelect ?? 0) +
-      (projObj.projectedPresident ?? 0)
+    projectionValue = projObj.projectedDistinguished ?? 0
   } else {
     projectionValue = 0
   }

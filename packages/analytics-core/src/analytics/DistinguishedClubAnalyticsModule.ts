@@ -8,10 +8,14 @@
  * KEY FEATURES (preserved from backend):
  * 1. generateDistinguishedClubAnalytics() returning full DistinguishedClubAnalytics type
  * 2. calculateDistinguishedClubs() for counting clubs at each level
- * 3. calculateDistinguishedProjection() for trend-based projections
+ * 3. calculateDistinguishedProjection() for trend-based projections (DEPRECATED - see below)
  * 4. trackDistinguishedAchievements() for tracking when clubs achieve levels
  * 5. calculateDistinguishedYearOverYear() for year-over-year comparison
  * 6. analyzeDCPGoals() for identifying most/least commonly achieved goals
+ *
+ * NOTE: The linear regression projection in calculateDistinguishedProjection() is deprecated.
+ * Projections now use thriving club count directly via generateDistinguishedProjection(thrivingCount).
+ * See: projected-year-end-simplification spec, Requirement 1.3
  *
  * Requirements: 5.1, 5.2
  */
@@ -257,26 +261,29 @@ export class DistinguishedClubAnalyticsModule {
    * This method provides the projection object expected by the DistrictAnalytics type.
    * Used by AnalyticsComputer for the distinguishedProjection field.
    *
+   * When thrivingCount is provided, it is used directly as the projected year-end value
+   * for all projected* fields. This simplifies the projection by equating it to the
+   * count of thriving clubs (clubs on track for distinguished status).
+   *
+   * Requirements: 1.1, 1.2, 1.3
+   *
    * @param snapshots - Array of district statistics snapshots
+   * @param thrivingCount - Optional count of thriving clubs to use as projection
    * @returns DistinguishedProjection object
    */
   generateDistinguishedProjection(
-    snapshots: DistrictStatistics[]
+    snapshots: DistrictStatistics[],
+    thrivingCount?: number
   ): DistinguishedProjection {
     if (snapshots.length === 0) {
       return {
         projectedDistinguished: 0,
-        projectedSelect: 0,
-        projectedPresident: 0,
         currentDistinguished: 0,
         currentSelect: 0,
         currentPresident: 0,
         projectionDate: new Date().toISOString().split('T')[0] || '',
       }
     }
-
-    const dataEntries = this.convertToDataEntries(snapshots)
-    const projection = this.calculateDistinguishedProjection(dataEntries)
 
     const latestSnapshot = snapshots[snapshots.length - 1]
     const latestEntry = latestSnapshot
@@ -286,10 +293,25 @@ export class DistinguishedClubAnalyticsModule {
       ? this.calculateDistinguishedClubs(latestEntry)
       : { distinguished: 0, select: 0, presidents: 0 }
 
+    // When thrivingCount is provided, use it directly as the projection
+    // Single projectedDistinguished field = thriving count (no differentiation by level)
+    // Requirements: 1.1, 1.2, 1.3, 2.4
+    if (thrivingCount !== undefined) {
+      return {
+        projectedDistinguished: thrivingCount,
+        currentDistinguished: current.distinguished,
+        currentSelect: current.select,
+        currentPresident: current.presidents,
+        projectionDate: latestSnapshot?.snapshotDate || '',
+      }
+    }
+
+    // Fallback to linear regression when thrivingCount is not provided
+    const dataEntries = this.convertToDataEntries(snapshots)
+    const projection = this.calculateDistinguishedProjection(dataEntries)
+
     return {
       projectedDistinguished: projection.distinguished,
-      projectedSelect: projection.select,
-      projectedPresident: projection.presidents,
       currentDistinguished: current.distinguished,
       currentSelect: current.select,
       currentPresident: current.presidents,
@@ -520,6 +542,12 @@ export class DistinguishedClubAnalyticsModule {
 
   /**
    * Calculate distinguished club projection based on trends (Requirement 7.2)
+   *
+   * @deprecated This method uses linear regression which is no longer the primary
+   * projection method. The projection now uses thriving club count directly via
+   * the `thrivingCount` parameter in `generateDistinguishedProjection()`.
+   * This method is retained for backward compatibility only.
+   * See: projected-year-end-simplification spec, Requirement 1.3
    */
   private calculateDistinguishedProjection(dataEntries: DistrictCacheEntry[]): {
     smedley: number

@@ -203,12 +203,13 @@ export interface DistinguishedClubAnalytics {
   }
 
   // Projection for final count (Requirement 7.2)
+  // Simplified to single projectedDistinguished field = thriving club count
   distinguishedProjection: {
-    smedley: number
-    presidents: number
-    select: number
-    distinguished: number
-    total: number
+    projectedDistinguished: number // = thriving club count
+    currentDistinguished: number // actual current count
+    currentSelect: number // actual current count
+    currentPresident: number // actual current count
+    projectionDate: string // date of projection
   }
 
   // Clubs that achieved distinguished levels with dates (Requirement 7.3)

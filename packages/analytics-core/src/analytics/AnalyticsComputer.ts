@@ -121,8 +121,18 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       this.distinguishedModule.generateDistinguishedClubSummaries(
         sortedSnapshots
       )
+    // Get thriving count from latest snapshot for projection
+    // Requirements: 1.1 (projected-year-end-simplification)
+    const latestSnapshotForProjection =
+      sortedSnapshots[sortedSnapshots.length - 1]
+    const thrivingCount = latestSnapshotForProjection
+      ? this.clubHealthModule.countThrivingClubs(latestSnapshotForProjection)
+      : 0
     const distinguishedProjection =
-      this.distinguishedModule.generateDistinguishedProjection(sortedSnapshots)
+      this.distinguishedModule.generateDistinguishedProjection(
+        sortedSnapshots,
+        thrivingCount
+      )
 
     // Compute division and area rankings
     const divisionRankings =
@@ -683,8 +693,6 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         distinguishedClubsList: [],
         distinguishedProjection: {
           projectedDistinguished: 0,
-          projectedSelect: 0,
-          projectedPresident: 0,
           currentDistinguished: 0,
           currentSelect: 0,
           currentPresident: 0,
@@ -712,9 +720,17 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       )
 
     // Generate distinguished projection
+    // Get thriving count from latest snapshot for projection
+    // Requirements: 1.1 (projected-year-end-simplification)
+    const latestSnapshotForProjection =
+      districtSnapshots[districtSnapshots.length - 1]
+    const thrivingCount = latestSnapshotForProjection
+      ? this.clubHealthModule.countThrivingClubs(latestSnapshotForProjection)
+      : 0
     const distinguishedProjection =
       this.distinguishedModule.generateDistinguishedProjection(
-        districtSnapshots
+        districtSnapshots,
+        thrivingCount
       )
 
     // Calculate progress by level with trends
@@ -754,20 +770,22 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     // Determine trends based on historical data
     const trends = this.calculateDistinguishedTrends(snapshots)
 
+    // All levels use projectedDistinguished since we no longer differentiate by level
+    // Requirements: 2.4 (projected-year-end-simplification)
     return {
       smedley: {
         current: counts.smedley,
-        projected: projection.projectedPresident, // Smedley is highest, use president projection as proxy
+        projected: projection.projectedDistinguished,
         trend: trends.smedley,
       },
       presidents: {
         current: counts.presidents,
-        projected: projection.projectedPresident,
+        projected: projection.projectedDistinguished,
         trend: trends.presidents,
       },
       select: {
         current: counts.select,
-        projected: projection.projectedSelect,
+        projected: projection.projectedDistinguished,
         trend: trends.select,
       },
       distinguished: {

@@ -54,11 +54,7 @@ type TabType =
 function getDistinguishedProjectionValue(
   projection:
     | number
-    | {
-        projectedDistinguished?: number
-        projectedSelect?: number
-        projectedPresident?: number
-      }
+    | { projectedDistinguished?: number }
     | null
     | undefined
 ): number {
@@ -68,12 +64,7 @@ function getDistinguishedProjectionValue(
   if (typeof projection === 'number') {
     return projection
   }
-  // It's an object - sum up the projected values
-  return (
-    (projection.projectedDistinguished ?? 0) +
-    (projection.projectedSelect ?? 0) +
-    (projection.projectedPresident ?? 0)
-  )
+  return projection.projectedDistinguished ?? 0
 }
 
 const DistrictDetailPage: React.FC = () => {

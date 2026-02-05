@@ -174,8 +174,6 @@ describe('PreComputedAnalyticsReader - Extended Analytics', () => {
       distinguishedClubsList: [],
       distinguishedProjection: {
         projectedDistinguished: 20,
-        projectedSelect: 12,
-        projectedPresident: 8,
         currentDistinguished: 15,
         currentSelect: 8,
         currentPresident: 5,

@@ -85,7 +85,9 @@ const createMockAggregatedResponse = (
   ...overrides,
 })
 
-const createMockIndividualAnalyticsResponse = (): DistrictAnalytics => ({
+const createMockIndividualAnalyticsResponse = (
+  overrides: Partial<DistrictAnalytics> = {}
+): DistrictAnalytics => ({
   districtId: '42',
   dateRange: {
     start: '2024-07-01',
@@ -149,6 +151,7 @@ const createMockIndividualAnalyticsResponse = (): DistrictAnalytics => ({
     distinguishedChange: 10.5,
     clubHealthChange: 3.1,
   },
+  ...overrides,
 })
 
 // Create a wrapper with QueryClientProvider for testing hooks
@@ -575,7 +578,7 @@ describe('useAggregatedAnalytics', () => {
      *
      * The /analytics endpoint returns distinguishedProjection as an object,
      * while /analytics-summary returns it as a number. The hook should
-     * convert the object to a number when falling back.
+     * extract the projectedDistinguished value when falling back.
      */
     it('should convert distinguishedProjection object to number in fallback', async () => {
       const aggregatedError = new Error('Aggregated endpoint failed')
@@ -583,8 +586,6 @@ describe('useAggregatedAnalytics', () => {
         // Override with object format (as returned by /analytics endpoint)
         distinguishedProjection: {
           projectedDistinguished: 30,
-          projectedSelect: 20,
-          projectedPresident: 15,
           currentDistinguished: 25,
           currentSelect: 18,
           currentPresident: 12,
@@ -607,9 +608,8 @@ describe('useAggregatedAnalytics', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Should have converted the object to a sum of projected values
-      // 30 + 20 + 15 = 65
-      expect(result.current.data?.summary.distinguishedProjection).toBe(65)
+      // Should have extracted projectedDistinguished value directly
+      expect(result.current.data?.summary.distinguishedProjection).toBe(30)
     })
   })
 })

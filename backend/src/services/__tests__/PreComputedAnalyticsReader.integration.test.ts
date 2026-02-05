@@ -145,8 +145,6 @@ function createValidDistrictAnalyticsFile(
       ],
       distinguishedProjection: {
         projectedDistinguished: 10,
-        projectedSelect: 5,
-        projectedPresident: 3,
         currentDistinguished: 8,
         currentSelect: 4,
         currentPresident: 2,
@@ -623,10 +621,16 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
         'projectedDistinguished'
       )
       expect(analytics.distinguishedProjection).toHaveProperty(
-        'projectedSelect'
+        'currentDistinguished'
       )
       expect(analytics.distinguishedProjection).toHaveProperty(
-        'projectedPresident'
+        'currentSelect'
+      )
+      expect(analytics.distinguishedProjection).toHaveProperty(
+        'currentPresident'
+      )
+      expect(analytics.distinguishedProjection).toHaveProperty(
+        'projectionDate'
       )
       expect(analytics).toHaveProperty('divisionRankings')
       expect(Array.isArray(analytics.divisionRankings)).toBe(true)
