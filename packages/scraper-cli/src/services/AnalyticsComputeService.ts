@@ -31,6 +31,11 @@ import type {
 import type { AllDistrictsRankingsData } from '@toastmasters/shared-contracts'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import { TimeSeriesIndexWriter } from './TimeSeriesIndexWriter.js'
+import type { CacheMetadata } from '../types/scraper.js'
+import {
+  ClosingPeriodDetector,
+  type ClosingPeriodInfo,
+} from '../utils/ClosingPeriodDetector.js'
 
 /**
  * Configuration for AnalyticsComputeService
@@ -89,10 +94,21 @@ export interface DistrictComputeResult {
 
 /**
  * Result of the compute operation
+ *
+ * Requirements:
+ * - 8.2: WHEN computing analytics for closing period data THEN the JSON output
+ *        SHALL report the actual snapshot date used (not the requested date)
  */
 export interface ComputeOperationResult {
   success: boolean
+  /** The actual snapshot date used for analytics computation (may differ from requestedDate for closing periods) */
   date: string
+  /** The original date that was requested for analytics computation */
+  requestedDate: string
+  /** Whether a closing period adjustment was made */
+  isClosingPeriod: boolean
+  /** The data month in YYYY-MM format (only present for closing periods) */
+  dataMonth?: string
   districtsProcessed: string[]
   districtsSucceeded: string[]
   districtsFailed: string[]
@@ -158,6 +174,7 @@ export class AnalyticsComputeService {
   private readonly analyticsComputer: AnalyticsComputer
   private readonly analyticsWriter: AnalyticsWriter
   private readonly timeSeriesWriter: TimeSeriesIndexWriter
+  private readonly closingPeriodDetector: ClosingPeriodDetector
 
   constructor(config: AnalyticsComputeServiceConfig) {
     this.cacheDir = config.cacheDir
@@ -171,6 +188,7 @@ export class AnalyticsComputeService {
       cacheDir: config.cacheDir,
       logger: config.logger,
     })
+    this.closingPeriodDetector = new ClosingPeriodDetector()
   }
 
   /**
@@ -192,6 +210,98 @@ export class AnalyticsComputeService {
    */
   getAnalyticsDir(date: string): string {
     return this.analyticsWriter.getAnalyticsDir(date)
+  }
+
+  /**
+   * Get the raw CSV directory path for a date
+   */
+  private getRawCsvDir(date: string): string {
+    return path.join(this.cacheDir, 'raw-csv', date)
+  }
+
+  /**
+   * Read cache metadata for a given date.
+   *
+   * Reads the metadata.json file from the raw-csv directory to detect
+   * closing period information. This is used to determine the correct
+   * snapshot location when computing analytics.
+   *
+   * @param date - The date to read metadata for (YYYY-MM-DD format)
+   * @returns CacheMetadata if found and valid, null otherwise
+   *
+   * Requirements:
+   * - 6.1: WHEN computing analytics for a date THEN read cache metadata from CACHE_DIR/raw-csv/{date}/metadata.json
+   * - 6.2: WHEN cache metadata exists with isClosingPeriod: true THEN extract isClosingPeriod and dataMonth fields
+   * - 6.3: WHEN cache metadata does not exist THEN look for snapshots at the requested date
+   * - 6.4: IF reading cache metadata fails THEN log a warning and continue with non-closing-period behavior
+   */
+  async readCacheMetadata(date: string): Promise<CacheMetadata | null> {
+    const metadataPath = path.join(this.getRawCsvDir(date), 'metadata.json')
+
+    try {
+      const content = await fs.readFile(metadataPath, 'utf-8')
+      const parsed: unknown = JSON.parse(content)
+
+      // Validate the parsed object has the expected structure
+      if (typeof parsed !== 'object' || parsed === null) {
+        this.logger.warn('Cache metadata is not a valid object', {
+          date,
+          path: metadataPath,
+        })
+        return null
+      }
+
+      const metadata = parsed as Record<string, unknown>
+
+      // Extract and return the CacheMetadata fields
+      return {
+        date: typeof metadata['date'] === 'string' ? metadata['date'] : date,
+        isClosingPeriod:
+          typeof metadata['isClosingPeriod'] === 'boolean'
+            ? metadata['isClosingPeriod']
+            : undefined,
+        dataMonth:
+          typeof metadata['dataMonth'] === 'string'
+            ? metadata['dataMonth']
+            : undefined,
+      }
+    } catch (error) {
+      const err = error as { code?: string }
+
+      // File not found is expected - return null without warning
+      if (err.code === 'ENOENT') {
+        return null
+      }
+
+      // Log warning for parse errors or other issues
+      this.logger.warn('Failed to read cache metadata', {
+        date,
+        path: metadataPath,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      return null
+    }
+  }
+
+  /**
+   * Determine the actual snapshot date to use based on closing period detection.
+   *
+   * Uses ClosingPeriodDetector to detect if the data represents a closing period
+   * and returns the appropriate snapshot date (last day of data month for closing
+   * periods, or the requested date for non-closing periods).
+   *
+   * @param requestedDate - The date that was requested for analytics computation (YYYY-MM-DD)
+   * @param metadata - Cache metadata containing isClosingPeriod and dataMonth fields
+   * @returns ClosingPeriodInfo with appropriate snapshot date
+   *
+   * Requirements:
+   * - 7.1: WHEN `isClosingPeriod` is true THEN calculate the last day of the data month using the existing ClosingPeriodDetector utility
+   */
+  determineSnapshotDate(
+    requestedDate: string,
+    metadata: CacheMetadata | null
+  ): ClosingPeriodInfo {
+    return this.closingPeriodDetector.detect(requestedDate, metadata)
   }
 
   /**
@@ -848,6 +958,20 @@ export class AnalyticsComputeService {
    * - 1.3: Generate all analytics types
    * - 1.5: IF analytics computation fails for a district, THEN continue processing
    */
+  /**
+   * Compute analytics for all available districts
+   *
+   * Requirements:
+   * - 1.2: Compute analytics for each district
+   * - 1.3: Generate all analytics types
+   * - 1.5: IF analytics computation fails for a district, THEN continue processing
+   * - 7.1: WHEN `isClosingPeriod` is true THEN calculate the last day of the data month using ClosingPeriodDetector
+   * - 7.2: WHEN `isClosingPeriod` is true THEN look for snapshots at `CACHE_DIR/snapshots/{lastDayOfDataMonth}/`
+   * - 7.3: WHEN the data month is December and collection date is in January THEN look for snapshots dated December 31 of prior year
+   * - 7.4: WHEN `isClosingPeriod` is false or undefined THEN look for snapshots at the requested date
+   * - 8.1: WHEN computing analytics for closing period data THEN write analytics to `CACHE_DIR/snapshots/{lastDayOfDataMonth}/analytics/`
+   * - 8.3: WHEN computing analytics for non-closing-period data THEN write analytics to `CACHE_DIR/snapshots/{requestedDate}/analytics/`
+   */
   async compute(
     options: ComputeOperationOptions
   ): Promise<ComputeOperationResult> {
@@ -862,13 +986,38 @@ export class AnalyticsComputeService {
       })
     }
 
-    // Check if snapshot exists for the date
-    const snapshotExists = await this.snapshotExists(date)
+    // Step 1: Read cache metadata to detect closing periods (Requirement 6.1, 6.2, 6.3, 6.4)
+    const cacheMetadata = await this.readCacheMetadata(date)
+
+    // Step 2: Determine the correct snapshot date based on closing period detection
+    // (Requirements 7.1, 7.2, 7.3, 7.4)
+    const closingPeriodInfo = this.determineSnapshotDate(date, cacheMetadata)
+    const snapshotDate = closingPeriodInfo.snapshotDate
+
+    // Requirement 8.2: Log the date adjustment when verbose mode is enabled
+    if (closingPeriodInfo.isClosingPeriod && verbose) {
+      this.logger.info('Closing period detected - date adjustment applied', {
+        requestedDate: date,
+        actualSnapshotDate: snapshotDate,
+        dataMonth: closingPeriodInfo.dataMonth,
+        collectionDate: closingPeriodInfo.collectionDate,
+      })
+    }
+
+    // Check if snapshot exists for the adjusted date (Requirement 7.2)
+    const snapshotExists = await this.snapshotExists(snapshotDate)
     if (!snapshotExists) {
-      this.logger.error('Snapshot not found for date', { date })
+      this.logger.error('Snapshot not found for date', {
+        requestedDate: date,
+        snapshotDate,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
+      })
       return {
         success: false,
-        date,
+        date: snapshotDate,
+        requestedDate: date,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
+        dataMonth: closingPeriodInfo.isClosingPeriod ? closingPeriodInfo.dataMonth : undefined,
         districtsProcessed: [],
         districtsSucceeded: [],
         districtsFailed: [],
@@ -877,7 +1026,9 @@ export class AnalyticsComputeService {
         errors: [
           {
             districtId: 'N/A',
-            error: `Snapshot not found for date ${date}`,
+            error: closingPeriodInfo.isClosingPeriod
+              ? `Snapshot not found for closing period date ${snapshotDate} (requested: ${date}). Run transform first.`
+              : `Snapshot not found for date ${snapshotDate}`,
             timestamp: new Date().toISOString(),
           },
         ],
@@ -885,19 +1036,25 @@ export class AnalyticsComputeService {
       }
     }
 
-    // Discover available districts if not specified
+    // Discover available districts if not specified (using adjusted snapshot date)
     let districtsToCompute: string[]
     if (requestedDistricts && requestedDistricts.length > 0) {
       districtsToCompute = requestedDistricts
     } else {
-      districtsToCompute = await this.discoverAvailableDistricts(date)
+      districtsToCompute = await this.discoverAvailableDistricts(snapshotDate)
     }
 
     if (districtsToCompute.length === 0) {
-      this.logger.warn('No districts found to compute analytics for', { date })
+      this.logger.warn('No districts found to compute analytics for', {
+        requestedDate: date,
+        snapshotDate,
+      })
       return {
         success: false,
-        date,
+        date: snapshotDate,
+        requestedDate: date,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
+        dataMonth: closingPeriodInfo.isClosingPeriod ? closingPeriodInfo.dataMonth : undefined,
         districtsProcessed: [],
         districtsSucceeded: [],
         districtsFailed: [],
@@ -906,7 +1063,7 @@ export class AnalyticsComputeService {
         errors: [
           {
             districtId: 'N/A',
-            error: `No district snapshots found for date ${date}`,
+            error: `No district snapshots found for date ${snapshotDate}`,
             timestamp: new Date().toISOString(),
           },
         ],
@@ -926,16 +1083,18 @@ export class AnalyticsComputeService {
 
     // Requirement 5.2 (per-metric-rankings): Load rankings once per compute operation
     // This is more efficient than loading for each district
-    const allDistrictsRankings = await this.loadAllDistrictsRankings(date)
+    // Use snapshotDate for loading rankings (Requirement 8.1)
+    const allDistrictsRankings = await this.loadAllDistrictsRankings(snapshotDate)
     if (!allDistrictsRankings) {
       this.logger.warn(
         'All-districts rankings not available, per-metric rankings will be null',
-        { date }
+        { snapshotDate }
       )
     }
 
     for (const districtId of districtsToCompute) {
-      const result = await this.computeDistrictAnalytics(date, districtId, {
+      // Use snapshotDate for all computeDistrictAnalytics calls (Requirement 8.1, 8.3)
+      const result = await this.computeDistrictAnalytics(snapshotDate, districtId, {
         force,
         allDistrictsRankings,
       })
@@ -1047,12 +1206,13 @@ export class AnalyticsComputeService {
     }
 
     // Write analytics manifest if we have any successful computations
+    // Use snapshotDate for analytics output directory (Requirement 8.1, 8.3)
     const successfulResults = results.filter(r => r.success && !r.skipped)
     if (successfulResults.length > 0 && manifestEntries.length > 0) {
       try {
-        await this.analyticsWriter.writeAnalyticsManifest(date, manifestEntries)
+        await this.analyticsWriter.writeAnalyticsManifest(snapshotDate, manifestEntries)
         const manifestPath = path.join(
-          this.getAnalyticsDir(date),
+          this.getAnalyticsDir(snapshotDate),
           'manifest.json'
         )
         analyticsLocations.push(manifestPath)
@@ -1060,7 +1220,7 @@ export class AnalyticsComputeService {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error'
         this.logger.error('Failed to write analytics manifest', {
-          date,
+          snapshotDate,
           error: errorMessage,
         })
         errors.push({
@@ -1087,18 +1247,25 @@ export class AnalyticsComputeService {
 
     if (verbose) {
       this.logger.info('Compute-analytics operation completed', {
-        date,
+        requestedDate: date,
+        snapshotDate,
         success,
         processed: districtsProcessed.length,
         succeeded: districtsSucceeded.length,
         failed: districtsFailed.length,
         skipped: districtsSkipped.length,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
       })
     }
 
+    // Return snapshotDate as the date in the result (Requirement 8.2)
+    // Include requestedDate and closing period info so consumers know if an adjustment was made
     return {
       success,
-      date,
+      date: snapshotDate,
+      requestedDate: date,
+      isClosingPeriod: closingPeriodInfo.isClosingPeriod,
+      dataMonth: closingPeriodInfo.isClosingPeriod ? closingPeriodInfo.dataMonth : undefined,
       districtsProcessed,
       districtsSucceeded,
       districtsFailed,

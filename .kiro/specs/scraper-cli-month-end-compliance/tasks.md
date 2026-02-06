@@ -119,9 +119,78 @@ This implementation modifies the TransformService in the scraper-cli package to 
 - [x] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
+---
+
+## Compute-Analytics Closing Period Handling
+
+The following tasks extend the month-end compliance feature to the `compute-analytics` command.
+
+- [x] 10. Add cache metadata reading to AnalyticsComputeService
+  - [x] 10.1 Implement `readCacheMetadata(date)` method in AnalyticsComputeService
+    - Read from `CACHE_DIR/raw-csv/{date}/metadata.json`
+    - Parse JSON and extract `isClosingPeriod` and `dataMonth` fields
+    - Return null if file doesn't exist or parsing fails
+    - Log warning on parse errors
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+  - [x] 10.2 Add ClosingPeriodDetector to AnalyticsComputeService
+    - Import and instantiate ClosingPeriodDetector utility
+    - Add `determineSnapshotDate(requestedDate, metadata)` method
+    - _Requirements: 7.1_
+
+  - [x] 10.3 Write unit tests for cache metadata reading in AnalyticsComputeService
+    - Test with valid metadata file containing closing period info
+    - Test with missing metadata file
+    - Test with invalid JSON
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [x] 11. Modify AnalyticsComputeService compute flow
+  - [x] 11.1 Update `compute()` method to use closing period logic
+    - Call `readCacheMetadata()` at start of compute
+    - Call `determineSnapshotDate()` to get correct snapshot date
+    - Use adjusted snapshot date for `snapshotExists()` check
+    - Use adjusted snapshot date for `discoverAvailableDistricts()` call
+    - Use adjusted snapshot date for all `computeDistrictAnalytics()` calls
+    - Use adjusted snapshot date for analytics output directory
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.1, 8.3_
+
+  - [x] 11.2 Update JSON output to report actual snapshot date
+    - Include actual snapshot date used in result
+    - Log the date adjustment when verbose mode is enabled
+    - _Requirements: 8.2_
+
+  - [x] 11.3 Write unit tests for closing period snapshot lookup
+    - Test closing period metadata → looks for snapshot at last day of data month
+    - Test non-closing period → looks for snapshot at requested date
+    - Test missing metadata → looks for snapshot at requested date
+    - Test cross-year scenario (December data in January)
+    - _Requirements: 7.1, 7.2, 7.3, 7.4_
+
+- [x] 12. Checkpoint - Ensure AnalyticsComputeService tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 13. Integration testing for compute-analytics closing period handling
+  - [x] 13.1 Write integration test for full compute-analytics flow with closing period
+    - Create mock raw CSV files and cache metadata with closing period info
+    - Run transform to create snapshot at adjusted date
+    - Run compute-analytics with original requested date
+    - Verify analytics computed successfully using adjusted snapshot date
+    - Verify analytics written to correct directory (alongside snapshot)
+    - _Requirements: 7.2, 8.1_
+
+  - [x] 13.2 Write integration test for non-closing period behavior
+    - Create mock raw CSV files without closing period metadata
+    - Run transform and compute-analytics
+    - Verify analytics computed at requested date
+    - _Requirements: 7.4, 8.3_
+
+- [x] 14. Final checkpoint - Ensure all compute-analytics tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
 - The ClosingPeriodDetector utility is based on the existing backend implementation
 - The `SnapshotMetadataFile` interface in shared-contracts already has the required closing period fields
 - No API changes are required - this is purely a scraper-cli pipeline change
+- The ClosingPeriodDetector utility created in tasks 1.x can be reused directly for the AnalyticsComputeService

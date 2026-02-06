@@ -178,6 +178,38 @@ async function writeDistrictSnapshot(
   await fs.writeFile(snapshotPath, JSON.stringify(stats, null, 2), 'utf-8')
 }
 
+/**
+ * Mock logger for capturing log messages in tests
+ */
+function createMockLogger(): {
+  logger: {
+    info: (msg: string, data?: unknown) => void
+    warn: (msg: string, data?: unknown) => void
+    error: (msg: string, data?: unknown) => void
+    debug: (msg: string, data?: unknown) => void
+  }
+  warnings: Array<{ message: string; data?: unknown }>
+  errors: Array<{ message: string; data?: unknown }>
+} {
+  const warnings: Array<{ message: string; data?: unknown }> = []
+  const errors: Array<{ message: string; data?: unknown }> = []
+
+  return {
+    logger: {
+      info: () => {},
+      warn: (msg: string, data?: unknown) => {
+        warnings.push({ message: msg, data })
+      },
+      error: (msg: string, data?: unknown) => {
+        errors.push({ message: msg, data })
+      },
+      debug: () => {},
+    },
+    warnings,
+    errors,
+  }
+}
+
 describe('AnalyticsComputeService', () => {
   let testCache: { path: string; cleanup: () => Promise<void> }
   let analyticsComputeService: AnalyticsComputeService
@@ -203,6 +235,647 @@ describe('AnalyticsComputeService', () => {
       expect(analyticsDir).toBe(
         path.join(testCache.path, 'snapshots', date, 'analytics')
       )
+    })
+  })
+
+  /**
+   * Unit tests for readCacheMetadata method
+   *
+   * Requirements:
+   * - 6.1: WHEN computing analytics for a date THEN the AnalyticsComputeService SHALL read
+   *        the cache metadata from `CACHE_DIR/raw-csv/{date}/metadata.json`
+   * - 6.2: WHEN cache metadata exists with `isClosingPeriod: true` THEN the AnalyticsComputeService
+   *        SHALL extract `isClosingPeriod` and `dataMonth` fields
+   * - 6.3: WHEN cache metadata does not exist THEN the AnalyticsComputeService SHALL look for
+   *        snapshots at the requested date
+   * - 6.4: IF reading cache metadata fails THEN the AnalyticsComputeService SHALL log a warning
+   *        and continue with non-closing-period behavior
+   */
+  describe('readCacheMetadata', () => {
+    it('should read valid metadata with isClosingPeriod true and dataMonth fields', async () => {
+      // Requirement 6.1, 6.2: Read cache metadata and extract closing period fields
+      const date = '2025-01-05'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const metadata = {
+        date: '2025-01-05',
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      }
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata)
+      )
+
+      const result = await analyticsComputeService.readCacheMetadata(date)
+
+      expect(result).not.toBeNull()
+      expect(result?.date).toBe('2025-01-05')
+      expect(result?.isClosingPeriod).toBe(true)
+      expect(result?.dataMonth).toBe('2024-12')
+    })
+
+    it('should read valid metadata with isClosingPeriod false', async () => {
+      // Requirement 6.2: Extract isClosingPeriod field when false
+      const date = '2024-06-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const metadata = {
+        date: '2024-06-15',
+        isClosingPeriod: false,
+      }
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata)
+      )
+
+      const result = await analyticsComputeService.readCacheMetadata(date)
+
+      expect(result).not.toBeNull()
+      expect(result?.date).toBe('2024-06-15')
+      expect(result?.isClosingPeriod).toBe(false)
+      expect(result?.dataMonth).toBeUndefined()
+    })
+
+    it('should return null when metadata file does not exist', async () => {
+      // Requirement 6.3: When cache metadata does not exist, return null
+      // (service will then look for snapshots at the requested date)
+      const date = '2024-01-15'
+      // Don't create the metadata file
+
+      const result = await analyticsComputeService.readCacheMetadata(date)
+
+      expect(result).toBeNull()
+    })
+
+    it('should return null and log warning when metadata contains invalid JSON', async () => {
+      // Requirement 6.4: Log warning and continue with non-closing-period behavior
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // Write invalid JSON
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        '{ invalid json content'
+      )
+
+      // Create service with mock logger to verify warning
+      const mockLogger = createMockLogger()
+      const serviceWithLogger = new AnalyticsComputeService({
+        cacheDir: testCache.path,
+        logger: mockLogger.logger,
+      })
+
+      const result = await serviceWithLogger.readCacheMetadata(date)
+
+      expect(result).toBeNull()
+      expect(mockLogger.warnings.length).toBeGreaterThan(0)
+      expect(mockLogger.warnings[0]?.message).toBe(
+        'Failed to read cache metadata'
+      )
+    })
+
+    it('should handle metadata with missing optional fields', async () => {
+      // Requirement 6.2: Extract fields when some are missing
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // Metadata with only date field
+      const metadata = {
+        date: '2024-01-15',
+      }
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata)
+      )
+
+      const result = await analyticsComputeService.readCacheMetadata(date)
+
+      expect(result).not.toBeNull()
+      expect(result?.date).toBe('2024-01-15')
+      expect(result?.isClosingPeriod).toBeUndefined()
+      expect(result?.dataMonth).toBeUndefined()
+    })
+
+    it('should use requested date when metadata date field is missing', async () => {
+      // Requirement 6.2: Handle edge case where date field is missing
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // Metadata without date field
+      const metadata = {
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      }
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata)
+      )
+
+      const result = await analyticsComputeService.readCacheMetadata(date)
+
+      expect(result).not.toBeNull()
+      expect(result?.date).toBe(date) // Falls back to requested date
+      expect(result?.isClosingPeriod).toBe(true)
+      expect(result?.dataMonth).toBe('2024-12')
+    })
+
+    it('should return null and log warning when metadata is null JSON', async () => {
+      // Requirement 6.4: Handle null JSON value
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      await fs.writeFile(path.join(rawCsvDir, 'metadata.json'), 'null')
+
+      const mockLogger = createMockLogger()
+      const serviceWithLogger = new AnalyticsComputeService({
+        cacheDir: testCache.path,
+        logger: mockLogger.logger,
+      })
+
+      const result = await serviceWithLogger.readCacheMetadata(date)
+
+      expect(result).toBeNull()
+      expect(mockLogger.warnings.length).toBeGreaterThan(0)
+    })
+
+    it('should ignore fields with wrong types', async () => {
+      // Requirement 6.2: Type validation for extracted fields
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // Metadata with wrong types for optional fields
+      const metadata = {
+        date: '2024-01-15',
+        isClosingPeriod: 'yes', // Should be boolean
+        dataMonth: 12, // Should be string
+      }
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata)
+      )
+
+      const result = await analyticsComputeService.readCacheMetadata(date)
+
+      expect(result).not.toBeNull()
+      expect(result?.date).toBe('2024-01-15')
+      // Wrong types should result in undefined
+      expect(result?.isClosingPeriod).toBeUndefined()
+      expect(result?.dataMonth).toBeUndefined()
+    })
+  })
+
+  /**
+   * Unit tests for determineSnapshotDate method
+   *
+   * Tests the snapshot date determination logic based on closing period detection.
+   * The AnalyticsComputeService uses ClosingPeriodDetector to determine the correct
+   * snapshot location when computing analytics.
+   *
+   * Requirements:
+   * - 7.1: WHEN `isClosingPeriod` is true THEN calculate the last day of the data month
+   *        using the existing ClosingPeriodDetector utility
+   * - 7.2: WHEN `isClosingPeriod` is true THEN look for snapshots at
+   *        `CACHE_DIR/snapshots/{lastDayOfDataMonth}/`
+   * - 7.3: WHEN the data month is December and collection date is in January THEN
+   *        look for snapshots dated December 31 of prior year
+   * - 7.4: WHEN `isClosingPeriod` is false or undefined THEN look for snapshots at
+   *        the requested date
+   */
+  describe('determineSnapshotDate', () => {
+    it('should return last day of data month for closing period metadata (Requirement 7.1, 7.2)', () => {
+      // Closing period: January 5th collection date, December data month
+      const requestedDate = '2025-01-05'
+      const metadata = {
+        date: '2025-01-05',
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2024-12-31') // Last day of December
+      expect(result.dataMonth).toBe('2024-12')
+      expect(result.collectionDate).toBe('2025-01-05')
+      expect(result.logicalDate).toBe('2024-12-31')
+    })
+
+    it('should return requested date for non-closing period metadata (Requirement 7.4)', () => {
+      // Non-closing period: regular mid-month data
+      const requestedDate = '2024-06-15'
+      const metadata = {
+        date: '2024-06-15',
+        isClosingPeriod: false,
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.snapshotDate).toBe('2024-06-15') // Same as requested
+      expect(result.collectionDate).toBe('2024-06-15')
+      expect(result.logicalDate).toBe('2024-06-15')
+    })
+
+    it('should return requested date when metadata is null (Requirement 7.4)', () => {
+      // No metadata available - treat as non-closing period
+      const requestedDate = '2024-06-15'
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        null
+      )
+
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.snapshotDate).toBe('2024-06-15')
+      expect(result.collectionDate).toBe('2024-06-15')
+    })
+
+    it('should handle cross-year scenario - December data in January (Requirement 7.3)', () => {
+      // Cross-year: January 2025 collection, December 2024 data
+      const requestedDate = '2025-01-03'
+      const metadata = {
+        date: '2025-01-03',
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2024-12-31') // December 31 of PRIOR year
+      expect(result.dataMonth).toBe('2024-12')
+      expect(result.collectionDate).toBe('2025-01-03')
+    })
+
+    it('should handle cross-year with MM format data month (Requirement 7.3)', () => {
+      // Cross-year with short format: "12" means December of prior year when collected in January
+      const requestedDate = '2025-01-05'
+      const metadata = {
+        date: '2025-01-05',
+        isClosingPeriod: true,
+        dataMonth: '12', // Short format - should infer 2024
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2024-12-31') // December 31 of 2024
+      expect(result.dataMonth).toBe('2024-12')
+    })
+
+    it('should handle February closing period with leap year', () => {
+      // February closing period in a leap year (2024)
+      const requestedDate = '2024-03-05'
+      const metadata = {
+        date: '2024-03-05',
+        isClosingPeriod: true,
+        dataMonth: '2024-02',
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2024-02-29') // Leap year - 29 days
+      expect(result.dataMonth).toBe('2024-02')
+    })
+
+    it('should handle February closing period with non-leap year', () => {
+      // February closing period in a non-leap year (2023)
+      const requestedDate = '2023-03-05'
+      const metadata = {
+        date: '2023-03-05',
+        isClosingPeriod: true,
+        dataMonth: '2023-02',
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.snapshotDate).toBe('2023-02-28') // Non-leap year - 28 days
+      expect(result.dataMonth).toBe('2023-02')
+    })
+
+    it('should return requested date when isClosingPeriod is undefined (Requirement 7.4)', () => {
+      // Metadata exists but isClosingPeriod is not set
+      const requestedDate = '2024-06-15'
+      const metadata = {
+        date: '2024-06-15',
+        // isClosingPeriod not set
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.snapshotDate).toBe('2024-06-15')
+    })
+
+    it('should return requested date when dataMonth is missing for closing period', () => {
+      // Closing period flag set but no dataMonth - cannot determine snapshot date
+      const requestedDate = '2025-01-05'
+      const metadata = {
+        date: '2025-01-05',
+        isClosingPeriod: true,
+        // dataMonth missing
+      }
+
+      const result = analyticsComputeService.determineSnapshotDate(
+        requestedDate,
+        metadata
+      )
+
+      // Without dataMonth, falls back to non-closing period behavior
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.snapshotDate).toBe('2025-01-05')
+    })
+  })
+
+  /**
+   * Unit tests for compute() method closing period snapshot lookup
+   *
+   * Tests that the compute() method correctly uses closing period detection
+   * to find snapshots at the adjusted date location.
+   *
+   * Requirements:
+   * - 7.1: WHEN `isClosingPeriod` is true THEN calculate the last day of the data month
+   * - 7.2: WHEN `isClosingPeriod` is true THEN look for snapshots at adjusted date
+   * - 7.3: WHEN the data month is December and collection date is in January THEN
+   *        look for snapshots dated December 31 of prior year
+   * - 7.4: WHEN `isClosingPeriod` is false or undefined THEN look for snapshots at
+   *        the requested date
+   */
+  describe('compute() closing period snapshot lookup', () => {
+    it('should look for snapshot at last day of data month during closing period (Requirement 7.1, 7.2)', async () => {
+      // Setup: Create cache metadata indicating closing period
+      const requestedDate = '2025-01-05'
+      const snapshotDate = '2024-12-31' // Where snapshot should be found
+      const districtId = '1'
+
+      // Create cache metadata for the requested date
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', requestedDate)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: requestedDate,
+          isClosingPeriod: true,
+          dataMonth: '2024-12',
+        })
+      )
+
+      // Create snapshot at the adjusted date (last day of data month)
+      await writeDistrictSnapshot(
+        testCache.path,
+        snapshotDate,
+        districtId,
+        createSampleDistrictStatistics(districtId, snapshotDate)
+      )
+
+      // Run compute with the requested date
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Should succeed by finding snapshot at adjusted date
+      expect(result.success).toBe(true)
+      expect(result.date).toBe(snapshotDate) // Actual snapshot date used
+      expect(result.requestedDate).toBe(requestedDate) // Original requested date
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.dataMonth).toBe('2024-12')
+      expect(result.districtsSucceeded).toContain(districtId)
+    })
+
+    it('should look for snapshot at requested date for non-closing period (Requirement 7.4)', async () => {
+      // Setup: Create cache metadata indicating non-closing period
+      const requestedDate = '2024-06-15'
+      const districtId = '1'
+
+      // Create cache metadata for the requested date
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', requestedDate)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: requestedDate,
+          isClosingPeriod: false,
+        })
+      )
+
+      // Create snapshot at the requested date
+      await writeDistrictSnapshot(
+        testCache.path,
+        requestedDate,
+        districtId,
+        createSampleDistrictStatistics(districtId, requestedDate)
+      )
+
+      // Run compute
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Should succeed by finding snapshot at requested date
+      expect(result.success).toBe(true)
+      expect(result.date).toBe(requestedDate)
+      expect(result.requestedDate).toBe(requestedDate)
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.dataMonth).toBeUndefined()
+      expect(result.districtsSucceeded).toContain(districtId)
+    })
+
+    it('should look for snapshot at requested date when metadata is missing (Requirement 7.4)', async () => {
+      // Setup: No cache metadata exists
+      const requestedDate = '2024-06-15'
+      const districtId = '1'
+
+      // Create snapshot at the requested date (no metadata)
+      await writeDistrictSnapshot(
+        testCache.path,
+        requestedDate,
+        districtId,
+        createSampleDistrictStatistics(districtId, requestedDate)
+      )
+
+      // Run compute
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Should succeed by finding snapshot at requested date
+      expect(result.success).toBe(true)
+      expect(result.date).toBe(requestedDate)
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.districtsSucceeded).toContain(districtId)
+    })
+
+    it('should handle cross-year scenario - December data in January (Requirement 7.3)', async () => {
+      // Setup: January collection date, December data month (cross-year)
+      const requestedDate = '2025-01-03'
+      const snapshotDate = '2024-12-31' // December 31 of PRIOR year
+      const districtId = '1'
+
+      // Create cache metadata for the requested date
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', requestedDate)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: requestedDate,
+          isClosingPeriod: true,
+          dataMonth: '2024-12',
+        })
+      )
+
+      // Create snapshot at December 31 of prior year
+      await writeDistrictSnapshot(
+        testCache.path,
+        snapshotDate,
+        districtId,
+        createSampleDistrictStatistics(districtId, snapshotDate)
+      )
+
+      // Run compute with January date
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Should succeed by finding snapshot at December 31 of prior year
+      expect(result.success).toBe(true)
+      expect(result.date).toBe('2024-12-31')
+      expect(result.requestedDate).toBe('2025-01-03')
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.dataMonth).toBe('2024-12')
+    })
+
+    it('should fail with helpful error when closing period snapshot not found', async () => {
+      // Setup: Closing period metadata but no snapshot at adjusted date
+      const requestedDate = '2025-01-05'
+      const districtId = '1'
+
+      // Create cache metadata for the requested date
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', requestedDate)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: requestedDate,
+          isClosingPeriod: true,
+          dataMonth: '2024-12',
+        })
+      )
+
+      // Create snapshot at WRONG date (requested date instead of adjusted)
+      await writeDistrictSnapshot(
+        testCache.path,
+        requestedDate, // Wrong - should be at 2024-12-31
+        districtId,
+        createSampleDistrictStatistics(districtId, requestedDate)
+      )
+
+      // Run compute
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Should fail because snapshot is not at the adjusted date
+      expect(result.success).toBe(false)
+      expect(result.errors.length).toBeGreaterThan(0)
+      expect(result.errors[0]?.error).toContain('Snapshot not found')
+      expect(result.errors[0]?.error).toContain('2024-12-31') // Expected location
+      expect(result.isClosingPeriod).toBe(true)
+    })
+
+    it('should write analytics to adjusted date directory during closing period', async () => {
+      // Setup: Closing period with snapshot at adjusted date
+      const requestedDate = '2025-01-05'
+      const snapshotDate = '2024-12-31'
+      const districtId = '1'
+
+      // Create cache metadata
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', requestedDate)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: requestedDate,
+          isClosingPeriod: true,
+          dataMonth: '2024-12',
+        })
+      )
+
+      // Create snapshot at adjusted date
+      await writeDistrictSnapshot(
+        testCache.path,
+        snapshotDate,
+        districtId,
+        createSampleDistrictStatistics(districtId, snapshotDate)
+      )
+
+      // Run compute
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      expect(result.success).toBe(true)
+
+      // Verify analytics were written to the adjusted date directory
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        snapshotDate, // Should be at adjusted date, not requested date
+        'analytics'
+      )
+      const analyticsPath = path.join(
+        analyticsDir,
+        `district_${districtId}_analytics.json`
+      )
+
+      const analyticsExists = await fs
+        .access(analyticsPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(analyticsExists).toBe(true)
+
+      // Verify analytics were NOT written to the requested date directory
+      const wrongAnalyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'analytics'
+      )
+      const wrongAnalyticsExists = await fs
+        .access(wrongAnalyticsDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(wrongAnalyticsExists).toBe(false)
     })
   })
 

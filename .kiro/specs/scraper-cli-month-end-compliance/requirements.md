@@ -83,3 +83,41 @@ The TransformService currently:
 
 1. WHEN a closing period is detected THEN the TransformService SHALL NOT create a snapshot dated in the new month (the month of the collection date)
 2. WHEN transforming closing period data THEN the TransformService SHALL only create a snapshot for the last day of the data month
+
+---
+
+## Compute-Analytics Closing Period Handling
+
+The following requirements extend the month-end compliance feature to the `compute-analytics` command. The TransformService already handles closing periods by writing snapshots to the last day of the data month. The AnalyticsComputeService must also detect closing periods and look for snapshots at the adjusted date.
+
+### Requirement 6: Read Cache Metadata for Analytics Computation
+
+**User Story:** As a system operator, I want the compute-analytics command to read cache metadata, so that it can detect closing periods and find snapshots at the correct location.
+
+#### Acceptance Criteria
+
+1. WHEN computing analytics for a date THEN the AnalyticsComputeService SHALL read the cache metadata from `CACHE_DIR/raw-csv/{date}/metadata.json`
+2. WHEN cache metadata exists with `isClosingPeriod: true` THEN the AnalyticsComputeService SHALL extract `isClosingPeriod` and `dataMonth` fields
+3. WHEN cache metadata does not exist THEN the AnalyticsComputeService SHALL look for snapshots at the requested date
+4. IF reading cache metadata fails THEN the AnalyticsComputeService SHALL log a warning and continue with non-closing-period behavior
+
+### Requirement 7: Snapshot Date Adjustment for Analytics Computation
+
+**User Story:** As a system operator, I want compute-analytics to find snapshots at the correct location during closing periods, so that analytics are computed for the data that was actually transformed.
+
+#### Acceptance Criteria
+
+1. WHEN `isClosingPeriod` is true THEN the AnalyticsComputeService SHALL calculate the last day of the data month using the existing ClosingPeriodDetector utility
+2. WHEN `isClosingPeriod` is true THEN the AnalyticsComputeService SHALL look for snapshots at `CACHE_DIR/snapshots/{lastDayOfDataMonth}/` instead of `CACHE_DIR/snapshots/{requestedDate}/`
+3. WHEN the data month is December and the collection date is in January THEN the AnalyticsComputeService SHALL look for snapshots dated December 31 of the prior year
+4. WHEN `isClosingPeriod` is false or undefined THEN the AnalyticsComputeService SHALL look for snapshots at the requested date
+
+### Requirement 8: Analytics Output Location for Closing Periods
+
+**User Story:** As a system operator, I want analytics to be written alongside the snapshot they were computed from, so that the data pipeline remains consistent.
+
+#### Acceptance Criteria
+
+1. WHEN computing analytics for closing period data THEN the AnalyticsComputeService SHALL write analytics to `CACHE_DIR/snapshots/{lastDayOfDataMonth}/analytics/`
+2. WHEN computing analytics for closing period data THEN the JSON output SHALL report the actual snapshot date used (not the requested date)
+3. WHEN computing analytics for non-closing-period data THEN the AnalyticsComputeService SHALL write analytics to `CACHE_DIR/snapshots/{requestedDate}/analytics/`

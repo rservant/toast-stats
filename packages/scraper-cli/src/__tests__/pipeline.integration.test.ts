@@ -842,4 +842,866 @@ describe('Pipeline Integration Tests', () => {
       expect(analytics.data.allClubs.length).toBe(snapshot.clubs.length)
     })
   })
+
+  /**
+   * Closing Period Integration Tests
+   *
+   * Tests the full pipeline flow when handling month-end closing periods.
+   * During closing periods, the Toastmasters dashboard publishes data for a prior month
+   * with an "As of" date in the current month. The pipeline must:
+   * 1. TransformService: Write snapshots to the last day of the data month
+   * 2. AnalyticsComputeService: Find snapshots at the adjusted date and write analytics there
+   *
+   * Requirements:
+   * - 7.2: WHEN `isClosingPeriod` is true THEN look for snapshots at `CACHE_DIR/snapshots/{lastDayOfDataMonth}/`
+   * - 8.1: WHEN computing analytics for closing period data THEN write analytics to `CACHE_DIR/snapshots/{lastDayOfDataMonth}/analytics/`
+   */
+  describe('Closing Period Pipeline Integration', () => {
+    /**
+     * Helper function to write cache metadata for closing period detection.
+     * Creates the metadata.json file in the raw-csv directory.
+     */
+    async function writeCacheMetadata(
+      cacheDir: string,
+      date: string,
+      metadata: {
+        date: string
+        isClosingPeriod?: boolean
+        dataMonth?: string
+      }
+    ): Promise<void> {
+      const rawCsvDir = path.join(cacheDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata, null, 2),
+        'utf-8'
+      )
+    }
+
+    /**
+     * Integration test for full compute-analytics flow with closing period
+     *
+     * This test verifies the complete pipeline when handling closing period data:
+     * 1. Sets up cache metadata indicating a closing period (January 5th collection, December data)
+     * 2. Creates raw CSV files at the collection date
+     * 3. Runs transform which creates snapshot at adjusted date (December 31)
+     * 4. Runs compute-analytics with original requested date (January 5th)
+     * 5. Verifies analytics are computed successfully using adjusted snapshot date
+     * 6. Verifies analytics are written to correct directory (alongside December 31 snapshot)
+     *
+     * Requirements: 7.2, 8.1
+     */
+    it('should complete full pipeline for closing period data (Requirements 7.2, 8.1)', async () => {
+      // Scenario: January 5th collection date, December data month
+      const collectionDate = '2025-01-05' // When data was collected (As of date)
+      const adjustedSnapshotDate = '2024-12-31' // Where snapshot should be stored
+      const districtId = '1'
+
+      // Step 1: Write cache metadata indicating closing period
+      await writeCacheMetadata(testCache.path, collectionDate, {
+        date: collectionDate,
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      })
+
+      // Step 2: Write raw CSV files at the collection date
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Step 3: Run transform - should create snapshot at adjusted date (2024-12-31)
+      const transformResult = await transformService.transform({
+        date: collectionDate,
+      })
+
+      expect(transformResult.success).toBe(true)
+      expect(transformResult.districtsSucceeded).toContain(districtId)
+
+      // Verify snapshot was created at the adjusted date (last day of data month)
+      const snapshotDir = path.join(
+        testCache.path,
+        'snapshots',
+        adjustedSnapshotDate
+      )
+      const snapshotExists = await fs
+        .access(snapshotDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(snapshotExists).toBe(true)
+
+      // Verify snapshot was NOT created at the collection date
+      const wrongSnapshotDir = path.join(
+        testCache.path,
+        'snapshots',
+        collectionDate
+      )
+      const wrongSnapshotExists = await fs
+        .access(wrongSnapshotDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(wrongSnapshotExists).toBe(false)
+
+      // Step 4: Run compute-analytics with original requested date (collection date)
+      // The service should detect closing period and look for snapshot at adjusted date
+      const computeResult = await analyticsComputeService.compute({
+        date: collectionDate,
+      })
+
+      // Step 5: Verify analytics computed successfully
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.districtsSucceeded).toContain(districtId)
+      expect(computeResult.date).toBe(adjustedSnapshotDate) // Actual snapshot date used
+      expect(computeResult.requestedDate).toBe(collectionDate) // Original requested date
+      expect(computeResult.isClosingPeriod).toBe(true)
+      expect(computeResult.dataMonth).toBe('2024-12')
+
+      // Step 6: Verify analytics written to correct directory (alongside snapshot)
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        adjustedSnapshotDate,
+        'analytics'
+      )
+      const analyticsFiles = await fs.readdir(analyticsDir)
+
+      // Verify analytics files exist
+      expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
+      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
+      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain('manifest.json')
+
+      // Verify analytics were NOT written to the collection date directory
+      const wrongAnalyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        collectionDate,
+        'analytics'
+      )
+      const wrongAnalyticsExists = await fs
+        .access(wrongAnalyticsDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(wrongAnalyticsExists).toBe(false)
+
+      // Verify analytics file content has correct metadata
+      const analyticsPath = path.join(
+        analyticsDir,
+        `district_${districtId}_analytics.json`
+      )
+      const analyticsContent = await fs.readFile(analyticsPath, 'utf-8')
+      const analytics = JSON.parse(
+        analyticsContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
+
+      expect(analytics.metadata.snapshotDate).toBe(adjustedSnapshotDate)
+      expect(analytics.metadata.districtId).toBe(districtId)
+      expect(analytics.data.districtId).toBe(districtId)
+    })
+
+    /**
+     * Integration test for cross-year closing period scenario
+     *
+     * Tests the specific case where December data is collected in January,
+     * requiring the snapshot to be dated December 31 of the PRIOR year.
+     *
+     * Requirements: 7.2, 8.1
+     */
+    it('should handle cross-year closing period (December data in January)', async () => {
+      // Scenario: January 3rd 2025 collection, December 2024 data
+      const collectionDate = '2025-01-03'
+      const adjustedSnapshotDate = '2024-12-31' // December 31 of PRIOR year
+      const districtId = '1'
+
+      // Setup closing period metadata
+      await writeCacheMetadata(testCache.path, collectionDate, {
+        date: collectionDate,
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      })
+
+      // Write raw CSV files
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Run transform
+      const transformResult = await transformService.transform({
+        date: collectionDate,
+      })
+      expect(transformResult.success).toBe(true)
+
+      // Run compute-analytics
+      const computeResult = await analyticsComputeService.compute({
+        date: collectionDate,
+      })
+
+      // Verify success and correct date handling
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.date).toBe('2024-12-31') // December 31 of 2024
+      expect(computeResult.requestedDate).toBe('2025-01-03') // January 3 of 2025
+      expect(computeResult.isClosingPeriod).toBe(true)
+
+      // Verify analytics at correct location
+      const analyticsPath = path.join(
+        testCache.path,
+        'snapshots',
+        '2024-12-31',
+        'analytics',
+        `district_${districtId}_analytics.json`
+      )
+      const analyticsExists = await fs
+        .access(analyticsPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(analyticsExists).toBe(true)
+    })
+
+    /**
+     * Integration test for multiple districts during closing period
+     *
+     * Verifies that the closing period handling works correctly when
+     * processing multiple districts in a single pipeline run.
+     *
+     * Requirements: 7.2, 8.1
+     */
+    it('should handle closing period with multiple districts', async () => {
+      const collectionDate = '2025-01-05'
+      const adjustedSnapshotDate = '2024-12-31'
+      const districts = ['1', '2', '3']
+
+      // Setup closing period metadata
+      await writeCacheMetadata(testCache.path, collectionDate, {
+        date: collectionDate,
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      })
+
+      // Write raw CSV files for all districts
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        '1',
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        '2',
+        SAMPLE_CLUB_CSV_DISTRICT_2
+      )
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        '3',
+        SAMPLE_CLUB_CSV_DISTRICT_3
+      )
+
+      // Run transform
+      const transformResult = await transformService.transform({
+        date: collectionDate,
+      })
+      expect(transformResult.success).toBe(true)
+      expect(transformResult.districtsSucceeded).toEqual(districts)
+
+      // Run compute-analytics
+      const computeResult = await analyticsComputeService.compute({
+        date: collectionDate,
+      })
+
+      // Verify all districts processed successfully
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.districtsSucceeded).toEqual(districts)
+      expect(computeResult.date).toBe(adjustedSnapshotDate)
+
+      // Verify analytics files for all districts at correct location
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        adjustedSnapshotDate,
+        'analytics'
+      )
+      const analyticsFiles = await fs.readdir(analyticsDir)
+
+      for (const districtId of districts) {
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_analytics.json`
+        )
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_membership.json`
+        )
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_clubhealth.json`
+        )
+      }
+    })
+
+    /**
+     * Integration test for February closing period with leap year
+     *
+     * Verifies correct handling of February data in a leap year,
+     * where the last day should be February 29.
+     *
+     * Requirements: 7.2, 8.1
+     */
+    it('should handle February closing period in leap year correctly', async () => {
+      // Scenario: March 5th 2024 collection, February 2024 data (leap year)
+      const collectionDate = '2024-03-05'
+      const adjustedSnapshotDate = '2024-02-29' // Leap year - 29 days
+      const districtId = '1'
+
+      // Setup closing period metadata
+      await writeCacheMetadata(testCache.path, collectionDate, {
+        date: collectionDate,
+        isClosingPeriod: true,
+        dataMonth: '2024-02',
+      })
+
+      // Write raw CSV files
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Run transform
+      const transformResult = await transformService.transform({
+        date: collectionDate,
+      })
+      expect(transformResult.success).toBe(true)
+
+      // Run compute-analytics
+      const computeResult = await analyticsComputeService.compute({
+        date: collectionDate,
+      })
+
+      // Verify correct leap year handling
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.date).toBe('2024-02-29') // February 29 (leap year)
+
+      // Verify analytics at correct location
+      const analyticsPath = path.join(
+        testCache.path,
+        'snapshots',
+        '2024-02-29',
+        'analytics',
+        `district_${districtId}_analytics.json`
+      )
+      const analyticsExists = await fs
+        .access(analyticsPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(analyticsExists).toBe(true)
+    })
+
+    /**
+     * Integration test verifying snapshot metadata contains closing period fields
+     *
+     * Verifies that the snapshot metadata.json includes the closing period
+     * information for downstream consumers.
+     *
+     * Requirements: 7.2, 8.1
+     */
+    it('should include closing period fields in snapshot metadata', async () => {
+      const collectionDate = '2025-01-05'
+      const adjustedSnapshotDate = '2024-12-31'
+      const districtId = '1'
+
+      // Setup closing period
+      await writeCacheMetadata(testCache.path, collectionDate, {
+        date: collectionDate,
+        isClosingPeriod: true,
+        dataMonth: '2024-12',
+      })
+
+      await writeRawCSVFiles(
+        testCache.path,
+        collectionDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Run transform
+      await transformService.transform({ date: collectionDate })
+
+      // Read snapshot metadata
+      const metadataPath = path.join(
+        testCache.path,
+        'snapshots',
+        adjustedSnapshotDate,
+        'metadata.json'
+      )
+      const metadataContent = await fs.readFile(metadataPath, 'utf-8')
+      const metadata = JSON.parse(metadataContent) as {
+        snapshotId: string
+        isClosingPeriodData?: boolean
+        collectionDate?: string
+        logicalDate?: string
+      }
+
+      // Verify closing period fields in snapshot metadata
+      expect(metadata.snapshotId).toBe(adjustedSnapshotDate)
+      expect(metadata.isClosingPeriodData).toBe(true)
+      expect(metadata.collectionDate).toBe(collectionDate)
+      expect(metadata.logicalDate).toBe(adjustedSnapshotDate)
+    })
+  })
+
+  /**
+   * Non-Closing Period Integration Tests
+   *
+   * Tests the full pipeline flow when handling regular (non-closing period) data.
+   * When cache metadata has `isClosingPeriod: false` or is missing entirely,
+   * the pipeline should use the requested date directly without adjustment.
+   *
+   * Requirements:
+   * - 7.4: WHEN `isClosingPeriod` is false or undefined THEN look for snapshots at the requested date
+   * - 8.3: WHEN computing analytics for non-closing-period data THEN write analytics to `CACHE_DIR/snapshots/{requestedDate}/analytics/`
+   */
+  describe('Non-Closing Period Pipeline Integration', () => {
+    /**
+     * Helper function to write cache metadata for non-closing period scenarios.
+     * Creates the metadata.json file in the raw-csv directory.
+     */
+    async function writeCacheMetadata(
+      cacheDir: string,
+      date: string,
+      metadata: {
+        date: string
+        isClosingPeriod?: boolean
+        dataMonth?: string
+      }
+    ): Promise<void> {
+      const rawCsvDir = path.join(cacheDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify(metadata, null, 2),
+        'utf-8'
+      )
+    }
+
+    /**
+     * Integration test for non-closing period with isClosingPeriod: false
+     *
+     * This test verifies the pipeline behavior when cache metadata explicitly
+     * indicates this is NOT a closing period (isClosingPeriod: false).
+     * The snapshot and analytics should be stored at the requested date.
+     *
+     * Requirements: 7.4, 8.3
+     */
+    it('should use requested date when isClosingPeriod is false (Requirements 7.4, 8.3)', async () => {
+      const requestedDate = '2024-06-15' // Mid-month date (not a closing period)
+      const districtId = '1'
+
+      // Step 1: Write cache metadata with isClosingPeriod: false
+      await writeCacheMetadata(testCache.path, requestedDate, {
+        date: requestedDate,
+        isClosingPeriod: false,
+        dataMonth: '2024-06',
+      })
+
+      // Step 2: Write raw CSV files at the requested date
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Step 3: Run transform - should create snapshot at requested date (no adjustment)
+      const transformResult = await transformService.transform({
+        date: requestedDate,
+      })
+
+      expect(transformResult.success).toBe(true)
+      expect(transformResult.districtsSucceeded).toContain(districtId)
+
+      // Verify snapshot was created at the requested date (not adjusted)
+      const snapshotDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate
+      )
+      const snapshotExists = await fs
+        .access(snapshotDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(snapshotExists).toBe(true)
+
+      // Step 4: Run compute-analytics with the same requested date
+      const computeResult = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Step 5: Verify analytics computed successfully at requested date
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.districtsSucceeded).toContain(districtId)
+      expect(computeResult.date).toBe(requestedDate) // Should be the requested date
+      expect(computeResult.requestedDate).toBe(requestedDate) // Same as date
+      expect(computeResult.isClosingPeriod).toBe(false)
+
+      // Step 6: Verify analytics written to correct directory (at requested date)
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'analytics'
+      )
+      const analyticsFiles = await fs.readdir(analyticsDir)
+
+      // Verify analytics files exist at requested date
+      expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
+      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
+      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain('manifest.json')
+
+      // Verify analytics file content has correct metadata
+      const analyticsPath = path.join(
+        analyticsDir,
+        `district_${districtId}_analytics.json`
+      )
+      const analyticsContent = await fs.readFile(analyticsPath, 'utf-8')
+      const analytics = JSON.parse(
+        analyticsContent
+      ) as PreComputedAnalyticsFile<DistrictAnalytics>
+
+      expect(analytics.metadata.snapshotDate).toBe(requestedDate)
+      expect(analytics.metadata.districtId).toBe(districtId)
+    })
+
+    /**
+     * Integration test for non-closing period with missing cache metadata
+     *
+     * This test verifies the pipeline behavior when cache metadata is missing entirely.
+     * The pipeline should fall back to non-closing-period behavior and use the requested date.
+     *
+     * Requirements: 7.4, 8.3
+     */
+    it('should use requested date when cache metadata is missing (Requirements 7.4, 8.3)', async () => {
+      const requestedDate = '2024-07-20' // Mid-month date
+      const districtId = '1'
+
+      // Step 1: Write raw CSV files WITHOUT cache metadata
+      // (No writeCacheMetadata call - metadata.json does not exist)
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Step 2: Run transform - should create snapshot at requested date
+      const transformResult = await transformService.transform({
+        date: requestedDate,
+      })
+
+      expect(transformResult.success).toBe(true)
+      expect(transformResult.districtsSucceeded).toContain(districtId)
+
+      // Verify snapshot was created at the requested date
+      const snapshotDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate
+      )
+      const snapshotExists = await fs
+        .access(snapshotDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(snapshotExists).toBe(true)
+
+      // Step 3: Run compute-analytics with the same requested date
+      const computeResult = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Step 4: Verify analytics computed successfully at requested date
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.districtsSucceeded).toContain(districtId)
+      expect(computeResult.date).toBe(requestedDate) // Should be the requested date
+      expect(computeResult.requestedDate).toBe(requestedDate) // Same as date
+      expect(computeResult.isClosingPeriod).toBe(false) // Default to false when metadata missing
+
+      // Step 5: Verify analytics written to correct directory (at requested date)
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'analytics'
+      )
+      const analyticsFiles = await fs.readdir(analyticsDir)
+
+      // Verify analytics files exist at requested date
+      expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
+      expect(analyticsFiles).toContain(`district_${districtId}_membership.json`)
+      expect(analyticsFiles).toContain(`district_${districtId}_clubhealth.json`)
+      expect(analyticsFiles).toContain('manifest.json')
+    })
+
+    /**
+     * Integration test for non-closing period with isClosingPeriod: undefined
+     *
+     * This test verifies the pipeline behavior when cache metadata exists but
+     * isClosingPeriod is undefined (not set). Should behave as non-closing period.
+     *
+     * Requirements: 7.4, 8.3
+     */
+    it('should use requested date when isClosingPeriod is undefined (Requirements 7.4, 8.3)', async () => {
+      const requestedDate = '2024-08-10' // Mid-month date
+      const districtId = '1'
+
+      // Step 1: Write cache metadata WITHOUT isClosingPeriod field
+      await writeCacheMetadata(testCache.path, requestedDate, {
+        date: requestedDate,
+        // isClosingPeriod is intentionally omitted (undefined)
+        dataMonth: '2024-08',
+      })
+
+      // Step 2: Write raw CSV files
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Step 3: Run transform - should create snapshot at requested date
+      const transformResult = await transformService.transform({
+        date: requestedDate,
+      })
+
+      expect(transformResult.success).toBe(true)
+      expect(transformResult.districtsSucceeded).toContain(districtId)
+
+      // Verify snapshot was created at the requested date
+      const snapshotDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate
+      )
+      const snapshotExists = await fs
+        .access(snapshotDir)
+        .then(() => true)
+        .catch(() => false)
+      expect(snapshotExists).toBe(true)
+
+      // Step 4: Run compute-analytics
+      const computeResult = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Step 5: Verify analytics computed at requested date
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.date).toBe(requestedDate)
+      expect(computeResult.isClosingPeriod).toBe(false)
+
+      // Step 6: Verify analytics at correct location
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'analytics'
+      )
+      const analyticsFiles = await fs.readdir(analyticsDir)
+      expect(analyticsFiles).toContain(`district_${districtId}_analytics.json`)
+    })
+
+    /**
+     * Integration test for non-closing period with multiple districts
+     *
+     * Verifies that non-closing period handling works correctly when
+     * processing multiple districts in a single pipeline run.
+     *
+     * Requirements: 7.4, 8.3
+     */
+    it('should handle non-closing period with multiple districts (Requirements 7.4, 8.3)', async () => {
+      const requestedDate = '2024-09-15'
+      const districts = ['1', '2', '3']
+
+      // Setup non-closing period metadata
+      await writeCacheMetadata(testCache.path, requestedDate, {
+        date: requestedDate,
+        isClosingPeriod: false,
+        dataMonth: '2024-09',
+      })
+
+      // Write raw CSV files for all districts
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        '1',
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        '2',
+        SAMPLE_CLUB_CSV_DISTRICT_2
+      )
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        '3',
+        SAMPLE_CLUB_CSV_DISTRICT_3
+      )
+
+      // Run transform
+      const transformResult = await transformService.transform({
+        date: requestedDate,
+      })
+      expect(transformResult.success).toBe(true)
+      expect(transformResult.districtsSucceeded).toEqual(districts)
+
+      // Run compute-analytics
+      const computeResult = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Verify all districts processed successfully at requested date
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.districtsSucceeded).toEqual(districts)
+      expect(computeResult.date).toBe(requestedDate) // No date adjustment
+
+      // Verify analytics files for all districts at requested date
+      const analyticsDir = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'analytics'
+      )
+      const analyticsFiles = await fs.readdir(analyticsDir)
+
+      for (const districtId of districts) {
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_analytics.json`
+        )
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_membership.json`
+        )
+        expect(analyticsFiles).toContain(
+          `district_${districtId}_clubhealth.json`
+        )
+      }
+    })
+
+    /**
+     * Integration test verifying snapshot metadata does NOT contain closing period fields
+     *
+     * Verifies that the snapshot metadata.json does NOT include closing period
+     * information when the data is not from a closing period.
+     *
+     * Requirements: 7.4, 8.3
+     */
+    it('should NOT include closing period fields in snapshot metadata for non-closing period', async () => {
+      const requestedDate = '2024-10-20'
+      const districtId = '1'
+
+      // Setup non-closing period
+      await writeCacheMetadata(testCache.path, requestedDate, {
+        date: requestedDate,
+        isClosingPeriod: false,
+        dataMonth: '2024-10',
+      })
+
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Run transform
+      await transformService.transform({ date: requestedDate })
+
+      // Read snapshot metadata
+      const metadataPath = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'metadata.json'
+      )
+      const metadataContent = await fs.readFile(metadataPath, 'utf-8')
+      const metadata = JSON.parse(metadataContent) as {
+        snapshotId: string
+        isClosingPeriodData?: boolean
+        collectionDate?: string
+        logicalDate?: string
+      }
+
+      // Verify snapshot is at requested date
+      expect(metadata.snapshotId).toBe(requestedDate)
+
+      // Verify closing period fields are NOT set (or are false/undefined)
+      expect(metadata.isClosingPeriodData).toBeFalsy()
+      expect(metadata.collectionDate).toBeUndefined()
+      expect(metadata.logicalDate).toBeUndefined()
+    })
+
+    /**
+     * Integration test for end-of-month date that is NOT a closing period
+     *
+     * Verifies that even when the requested date is the last day of a month,
+     * if isClosingPeriod is false, no date adjustment occurs.
+     *
+     * Requirements: 7.4, 8.3
+     */
+    it('should NOT adjust date for end-of-month when isClosingPeriod is false', async () => {
+      // Even though this is the last day of the month, it's not a closing period
+      const requestedDate = '2024-11-30' // Last day of November
+      const districtId = '1'
+
+      // Explicitly mark as NOT a closing period
+      await writeCacheMetadata(testCache.path, requestedDate, {
+        date: requestedDate,
+        isClosingPeriod: false,
+        dataMonth: '2024-11',
+      })
+
+      await writeRawCSVFiles(
+        testCache.path,
+        requestedDate,
+        districtId,
+        SAMPLE_CLUB_CSV_DISTRICT_1
+      )
+
+      // Run transform
+      const transformResult = await transformService.transform({
+        date: requestedDate,
+      })
+      expect(transformResult.success).toBe(true)
+
+      // Run compute-analytics
+      const computeResult = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+
+      // Verify no date adjustment occurred
+      expect(computeResult.success).toBe(true)
+      expect(computeResult.date).toBe(requestedDate) // Same as requested
+      expect(computeResult.requestedDate).toBe(requestedDate)
+      expect(computeResult.isClosingPeriod).toBe(false)
+
+      // Verify analytics at the requested date (not adjusted)
+      const analyticsPath = path.join(
+        testCache.path,
+        'snapshots',
+        requestedDate,
+        'analytics',
+        `district_${districtId}_analytics.json`
+      )
+      const analyticsExists = await fs
+        .access(analyticsPath)
+        .then(() => true)
+        .catch(() => false)
+      expect(analyticsExists).toBe(true)
+    })
+  })
 })

@@ -29,6 +29,8 @@ function createComputeResult(
   return {
     success: true,
     date: '2024-01-15',
+    requestedDate: '2024-01-15',
+    isClosingPeriod: false,
     districtsProcessed: [],
     districtsSucceeded: [],
     districtsFailed: [],
@@ -373,6 +375,8 @@ describe('compute-analytics CLI command', () => {
       // Verify all required fields are present
       expect(summary).toHaveProperty('timestamp')
       expect(summary).toHaveProperty('date')
+      expect(summary).toHaveProperty('requestedDate')
+      expect(summary).toHaveProperty('isClosingPeriod')
       expect(summary).toHaveProperty('status')
       expect(summary).toHaveProperty('districts')
       expect(summary).toHaveProperty('analytics')
@@ -386,6 +390,42 @@ describe('compute-analytics CLI command', () => {
       expect(summary.districts).toHaveProperty('skipped')
       expect(summary.analytics).toHaveProperty('directory')
       expect(summary.analytics).toHaveProperty('filesCreated')
+    })
+
+    it('includes closing period info when date adjustment was made', () => {
+      // Requirement 8.2: Report actual snapshot date used
+      const result = createComputeResult({
+        date: '2024-01-31', // Adjusted date (last day of data month)
+        requestedDate: '2024-02-04', // Original requested date
+        isClosingPeriod: true,
+        dataMonth: '2024-01',
+        districtsProcessed: ['1'],
+        districtsSucceeded: ['1'],
+      })
+
+      const summary = formatComputeAnalyticsSummary(result, '/analytics')
+
+      expect(summary.date).toBe('2024-01-31')
+      expect(summary.requestedDate).toBe('2024-02-04')
+      expect(summary.isClosingPeriod).toBe(true)
+      expect(summary.dataMonth).toBe('2024-01')
+    })
+
+    it('does not include dataMonth when not a closing period', () => {
+      const result = createComputeResult({
+        date: '2024-01-15',
+        requestedDate: '2024-01-15',
+        isClosingPeriod: false,
+        districtsProcessed: ['1'],
+        districtsSucceeded: ['1'],
+      })
+
+      const summary = formatComputeAnalyticsSummary(result, '/analytics')
+
+      expect(summary.date).toBe('2024-01-15')
+      expect(summary.requestedDate).toBe('2024-01-15')
+      expect(summary.isClosingPeriod).toBe(false)
+      expect(summary.dataMonth).toBeUndefined()
     })
 
     it('timestamp is valid ISO format', () => {

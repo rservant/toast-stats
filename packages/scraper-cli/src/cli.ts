@@ -338,6 +338,7 @@ export function determineComputeAnalyticsExitCode(
 /**
  * Convert ComputeAnalyticsResult to ComputeAnalyticsSummary for JSON output
  * Requirement 8.4: compute-analytics command JSON output
+ * Requirement 8.2: Report the actual snapshot date used (not the requested date)
  */
 export function formatComputeAnalyticsSummary(
   result: ComputeAnalyticsResult,
@@ -357,6 +358,9 @@ export function formatComputeAnalyticsSummary(
   return {
     timestamp: new Date().toISOString(),
     date: result.date,
+    requestedDate: result.requestedDate,
+    isClosingPeriod: result.isClosingPeriod,
+    dataMonth: result.dataMonth,
     status,
     districts: {
       total: result.districtsProcessed.length,
@@ -1028,9 +1032,13 @@ export function createCLI(): Command {
       })
 
       // Convert ComputeOperationResult to ComputeAnalyticsResult for CLI output
+      // Requirement 8.2: Include actual snapshot date and closing period info
       const result: ComputeAnalyticsResult = {
         success: computeResult.success,
         date: computeResult.date,
+        requestedDate: computeResult.requestedDate,
+        isClosingPeriod: computeResult.isClosingPeriod,
+        dataMonth: computeResult.dataMonth,
         districtsProcessed: computeResult.districtsProcessed,
         districtsSucceeded: computeResult.districtsSucceeded,
         districtsFailed: computeResult.districtsFailed,

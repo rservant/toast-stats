@@ -312,12 +312,22 @@ export interface ComputeAnalyticsOptions {
 
 /**
  * Result of a compute-analytics operation
+ *
+ * Requirements:
+ * - 8.2: WHEN computing analytics for closing period data THEN the JSON output
+ *        SHALL report the actual snapshot date used (not the requested date)
  */
 export interface ComputeAnalyticsResult {
   /** Whether the overall operation succeeded */
   success: boolean
-  /** The date that was processed */
+  /** The actual snapshot date that was processed (may differ from requestedDate for closing periods) */
   date: string
+  /** The original date that was requested for analytics computation */
+  requestedDate: string
+  /** Whether a closing period adjustment was made */
+  isClosingPeriod: boolean
+  /** The data month in YYYY-MM format (only present for closing periods) */
+  dataMonth?: string
   /** All districts that were processed */
   districtsProcessed: string[]
   /** Districts that were successfully computed */
@@ -341,12 +351,19 @@ export interface ComputeAnalyticsResult {
 /**
  * JSON output summary for compute-analytics command
  * Requirement 8.4: THE `compute-analytics` command SHALL output a JSON summary
+ * Requirement 8.2: Report the actual snapshot date used (not the requested date)
  */
 export interface ComputeAnalyticsSummary {
   /** ISO timestamp when computation completed */
   timestamp: string
-  /** Date that was processed */
+  /** The actual snapshot date that was processed (may differ from requestedDate for closing periods) */
   date: string
+  /** The original date that was requested for analytics computation */
+  requestedDate: string
+  /** Whether a closing period adjustment was made */
+  isClosingPeriod: boolean
+  /** The data month in YYYY-MM format (only present for closing periods) */
+  dataMonth?: string
   /** Overall status: success, partial, or failed */
   status: 'success' | 'partial' | 'failed'
   /** District processing statistics */

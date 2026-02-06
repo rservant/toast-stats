@@ -309,3 +309,104 @@ The `parseDataMonth` function must handle this by checking if the data month is 
 ### Backward Compatibility
 
 Existing snapshots without closing period metadata will continue to work. The new fields are optional in the schema. When checking for updates, missing `collectionDate` in existing snapshots allows the update to proceed.
+
+---
+
+## AnalyticsComputeService Closing Period Handling
+
+This section extends the month-end compliance feature to the `compute-analytics` command. The TransformService already handles closing periods by writing snapshots to the last day of the data month. The AnalyticsComputeService must also detect closing periods and look for snapshots at the adjusted date.
+
+### Problem Statement
+
+When the backfill pipeline runs during a closing period:
+1. `transform` command detects closing period and writes snapshot to `2026-01-31` (last day of data month)
+2. `compute-analytics` command looks for snapshot at `2026-02-04` (requested date) and fails with "Snapshot not found"
+
+The fix is to have `compute-analytics` also read cache metadata and adjust the snapshot lookup date.
+
+### Architecture Extension
+
+```mermaid
+graph LR
+    subgraph "Current (Broken)"
+        REQ1[Requested Date: 2026-02-04] --> ACS1[AnalyticsComputeService]
+        ACS1 --> |looks for| SNAP1[snapshots/2026-02-04/]
+        SNAP1 --> |NOT FOUND| FAIL[❌ Fails]
+    end
+```
+
+```mermaid
+graph LR
+    subgraph "Fixed"
+        REQ2[Requested Date: 2026-02-04] --> META2[Read Cache Metadata]
+        META2 --> |isClosingPeriod: true| CPD2[ClosingPeriodDetector]
+        CPD2 --> |snapshotDate: 2026-01-31| ACS2[AnalyticsComputeService]
+        ACS2 --> |looks for| SNAP2[snapshots/2026-01-31/]
+        SNAP2 --> |FOUND| SUCCESS[✓ Computes Analytics]
+    end
+```
+
+### AnalyticsComputeService Modifications
+
+The AnalyticsComputeService needs the following modifications:
+
+```typescript
+class AnalyticsComputeService {
+  // Existing: ClosingPeriodDetector is already available as a utility
+  private readonly closingPeriodDetector: ClosingPeriodDetector
+
+  // New: Read cache metadata for a date (same logic as TransformService)
+  private async readCacheMetadata(date: string): Promise<CacheMetadata | null>
+
+  // New: Determine the actual snapshot date to use
+  private determineSnapshotDate(
+    requestedDate: string,
+    metadata: CacheMetadata | null
+  ): ClosingPeriodInfo
+
+  // Modified: Use closing period info for snapshot lookup
+  async compute(options: ComputeOperationOptions): Promise<ComputeOperationResult>
+}
+```
+
+### Key Changes to `compute()` Method
+
+1. At the start of `compute()`, read cache metadata for the requested date
+2. Use `ClosingPeriodDetector.detect()` to determine the actual snapshot date
+3. Use the adjusted snapshot date for:
+   - `snapshotExists()` check
+   - `discoverAvailableDistricts()` call
+   - `computeDistrictAnalytics()` calls
+   - Analytics output directory
+4. Report the actual snapshot date used in the JSON output
+
+### Reuse of Existing Components
+
+The implementation reuses:
+- **ClosingPeriodDetector**: Already created for TransformService, can be reused directly
+- **Cache metadata format**: Same `CacheMetadata` interface
+- **readCacheMetadata logic**: Can be extracted to a shared utility or duplicated (simple enough)
+
+### Unit Test Coverage for AnalyticsComputeService
+
+Unit tests with specific examples:
+
+- Cache metadata with `isClosingPeriod: true` → looks for snapshot at last day of data month
+- Cache metadata with `isClosingPeriod: false` → looks for snapshot at requested date
+- Missing cache metadata → looks for snapshot at requested date
+- Cross-year scenario (December data in January) → looks for snapshot at December 31 of prior year
+
+**Rationale**: The ClosingPeriodDetector is already tested with property-based tests. The AnalyticsComputeService integration only needs unit tests to verify correct wiring.
+
+### Integration Test Coverage
+
+Integration tests should verify:
+- Full compute-analytics flow with closing period cache metadata
+- Analytics written to correct directory (alongside snapshot)
+- JSON output reports actual snapshot date used
+
+### Error Handling
+
+- **Cache metadata not found**: Fall back to requested date (non-closing-period behavior)
+- **Cache metadata parse error**: Log warning, fall back to requested date
+- **Snapshot not found at adjusted date**: Report error with helpful message indicating the expected location
