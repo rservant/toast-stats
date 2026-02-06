@@ -35,7 +35,11 @@ import {
   type SnapshotManifest,
   type DistrictManifestEntry,
 } from '@toastmasters/shared-contracts'
-import type { AllDistrictsCSVRecord } from '../types/scraper.js'
+import type { AllDistrictsCSVRecord, CacheMetadata } from '../types/scraper.js'
+import {
+  ClosingPeriodDetector,
+  type ClosingPeriodInfo,
+} from '../utils/ClosingPeriodDetector.js'
 
 /**
  * Internal structure for ranking metrics extraction
@@ -185,6 +189,206 @@ export class TransformService {
    */
   private getDistrictSnapshotPath(date: string, districtId: string): string {
     return path.join(this.getSnapshotDir(date), `district_${districtId}.json`)
+  }
+
+  /**
+   * Read cache metadata for a given date.
+   *
+   * Reads from CACHE_DIR/raw-csv/{date}/metadata.json and extracts
+   * isClosingPeriod and dataMonth fields.
+   *
+   * @param date - The date in YYYY-MM-DD format
+   * @returns CacheMetadata if file exists and is valid, null otherwise
+   *
+   * Requirements: 1.1, 1.2, 1.3, 1.4
+   */
+  async readCacheMetadata(date: string): Promise<CacheMetadata | null> {
+    const metadataPath = path.join(this.getRawCsvDir(date), 'metadata.json')
+
+    try {
+      const content = await fs.readFile(metadataPath, 'utf-8')
+      const parsed: unknown = JSON.parse(content)
+
+      // Validate the parsed object has the expected structure
+      if (typeof parsed !== 'object' || parsed === null) {
+        this.logger.warn('Cache metadata is not a valid object', {
+          date,
+          path: metadataPath,
+        })
+        return null
+      }
+
+      const metadata = parsed as Record<string, unknown>
+
+      // Extract and return the CacheMetadata fields
+      return {
+        date: typeof metadata['date'] === 'string' ? metadata['date'] : date,
+        isClosingPeriod:
+          typeof metadata['isClosingPeriod'] === 'boolean'
+            ? metadata['isClosingPeriod']
+            : undefined,
+        dataMonth:
+          typeof metadata['dataMonth'] === 'string'
+            ? metadata['dataMonth']
+            : undefined,
+      }
+    } catch (error) {
+      const err = error as { code?: string }
+
+      // File not found is expected - return null without warning
+      if (err.code === 'ENOENT') {
+        return null
+      }
+
+      // Log warning for parse errors or other issues
+      this.logger.warn('Failed to read cache metadata', {
+        date,
+        path: metadataPath,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      return null
+    }
+  }
+
+  /**
+   * Determine the snapshot date based on closing period detection.
+   *
+   * Uses ClosingPeriodDetector to detect if the data represents a closing period
+   * and returns the appropriate snapshot date (last day of data month for closing
+   * periods, or the requested date for non-closing periods).
+   *
+   * @param requestedDate - The date that was requested for scraping (YYYY-MM-DD)
+   * @param metadata - Cache metadata containing isClosingPeriod and dataMonth fields
+   * @returns ClosingPeriodInfo with appropriate snapshot date
+   *
+   * Requirements:
+   * - 2.1: WHEN `isClosingPeriod` is true THEN calculate the last day of the data month
+   * - 2.2: WHEN `isClosingPeriod` is true THEN write snapshot to lastDayOfDataMonth
+   * - 2.3: WHEN data month is December and collection date is January THEN snapshot dated December 31 of prior year
+   * - 2.4: WHEN `isClosingPeriod` is false or undefined THEN use requested date as snapshot date
+   */
+  determineSnapshotDate(
+    requestedDate: string,
+    metadata: CacheMetadata | null
+  ): ClosingPeriodInfo {
+    const detector = new ClosingPeriodDetector()
+    return detector.detect(requestedDate, metadata)
+  }
+
+  /**
+   * Check if an existing snapshot should be updated with new data.
+   *
+   * Reads the existing snapshot metadata and compares collection dates
+   * to determine if the new data should overwrite the existing snapshot.
+   *
+   * @param snapshotDate - The snapshot date (YYYY-MM-DD format)
+   * @param newCollectionDate - The collection date of the new data (YYYY-MM-DD format)
+   * @returns true if the snapshot should be updated, false otherwise
+   *
+   * Requirements:
+   * - 4.1: WHEN a closing period snapshot already exists THEN read the existing snapshot's collection date
+   * - 4.2: WHEN the new data has a strictly newer collection date THEN overwrite the existing snapshot
+   * - 4.3: WHEN the new data has an equal or older collection date THEN skip the update and log a message
+   * - 4.4: WHEN the existing snapshot has no collection date metadata THEN allow the update
+   */
+  async shouldUpdateSnapshot(
+    snapshotDate: string,
+    newCollectionDate: string
+  ): Promise<boolean> {
+    const metadataPath = path.join(
+      this.getSnapshotDir(snapshotDate),
+      'metadata.json'
+    )
+
+    try {
+      const content = await fs.readFile(metadataPath, 'utf-8')
+      const parsed: unknown = JSON.parse(content)
+
+      // Validate the parsed object has the expected structure
+      if (typeof parsed !== 'object' || parsed === null) {
+        this.logger.warn(
+          'Existing snapshot metadata is not a valid object, allowing update',
+          {
+            snapshotDate,
+            path: metadataPath,
+          }
+        )
+        return true
+      }
+
+      const metadata = parsed as Record<string, unknown>
+
+      // Requirement 4.4: If existing snapshot has no collectionDate, allow update
+      // Fall back to dataAsOfDate if collectionDate is not present
+      const existingCollectionDate =
+        typeof metadata['collectionDate'] === 'string'
+          ? metadata['collectionDate']
+          : typeof metadata['dataAsOfDate'] === 'string'
+            ? metadata['dataAsOfDate']
+            : null
+
+      if (existingCollectionDate === null) {
+        this.logger.info(
+          'Existing snapshot has no collection date metadata, allowing update',
+          {
+            snapshotDate,
+            newCollectionDate,
+          }
+        )
+        return true
+      }
+
+      // Compare dates
+      const existingDate = new Date(existingCollectionDate)
+      const newDate = new Date(newCollectionDate)
+
+      // Requirement 4.2: New data is strictly newer - allow update
+      if (newDate > existingDate) {
+        this.logger.info('New data is newer, allowing snapshot update', {
+          snapshotDate,
+          existingCollectionDate,
+          newCollectionDate,
+        })
+        return true
+      }
+
+      // Requirement 4.3: New data is equal or older - skip update and log
+      this.logger.info(
+        'Skipping snapshot update: existing data is newer or equal',
+        {
+          snapshotDate,
+          existingCollectionDate,
+          newCollectionDate,
+          reason:
+            newDate.getTime() === existingDate.getTime()
+              ? 'equal_dates'
+              : 'existing_is_newer',
+        }
+      )
+      return false
+    } catch (error) {
+      const err = error as { code?: string }
+
+      // File not found means no existing snapshot - allow update
+      if (err.code === 'ENOENT') {
+        this.logger.debug('No existing snapshot found, allowing update', {
+          snapshotDate,
+          newCollectionDate,
+        })
+        return true
+      }
+
+      // For other errors (parse errors, etc.), log warning and allow update
+      this.logger.warn(
+        'Error reading existing snapshot metadata, allowing update',
+        {
+          snapshotDate,
+          path: metadataPath,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      )
+      return true
+    }
   }
 
   /**
@@ -643,43 +847,6 @@ export class TransformService {
   }
 
   /**
-   * Write all-districts rankings to snapshot directory
-   */
-  private async writeAllDistrictsRankings(
-    date: string,
-    rankings: AllDistrictsRankingsData
-  ): Promise<string> {
-    const snapshotDir = this.getSnapshotDir(date)
-    const rankingsPath = path.join(snapshotDir, 'all-districts-rankings.json')
-
-    await fs.mkdir(snapshotDir, { recursive: true })
-
-    // Validate data before writing (Requirement 7.4, 7.5)
-    const validationResult = validateAllDistrictsRankings(rankings)
-    if (!validationResult.success) {
-      this.logger.error('Validation failed for all-districts rankings', {
-        error: validationResult.error,
-      })
-      throw new Error(
-        `Validation failed for all-districts rankings: ${validationResult.error}`
-      )
-    }
-
-    const content = JSON.stringify(validationResult.data, null, 2)
-    const tempPath = `${rankingsPath}.tmp.${Date.now()}`
-    await fs.writeFile(tempPath, content, 'utf-8')
-    await fs.rename(tempPath, rankingsPath)
-
-    this.logger.info('All-districts rankings written', {
-      date,
-      path: rankingsPath,
-      totalDistricts: rankings.rankings.length,
-    })
-
-    return rankingsPath
-  }
-
-  /**
    * Read raw CSV file and return content
    */
   private async readCSVFile(filePath: string): Promise<string | null> {
@@ -916,13 +1083,20 @@ export class TransformService {
 
   /**
    * Write snapshot metadata file
+   *
+   * Requirements:
+   * - 3.1: WHEN creating a closing period snapshot THEN the metadata SHALL include `isClosingPeriodData: true`
+   * - 3.2: WHEN creating a closing period snapshot THEN the metadata SHALL include `collectionDate`
+   * - 3.3: WHEN creating a closing period snapshot THEN the metadata SHALL include `logicalDate`
+   * - 3.4: WHEN creating a non-closing-period snapshot THEN the metadata SHALL NOT include closing period fields
    */
   private async writeMetadata(
     date: string,
     successfulDistricts: string[],
     failedDistricts: string[],
     errors: string[],
-    processingDuration: number
+    processingDuration: number,
+    closingPeriodInfo?: ClosingPeriodInfo
   ): Promise<void> {
     const snapshotDir = this.getSnapshotDir(date)
     const metadataPath = path.join(snapshotDir, 'metadata.json')
@@ -952,6 +1126,14 @@ export class TransformService {
       processingDuration,
       source: 'scraper-cli',
       dataAsOfDate: date,
+    }
+
+    // Add closing period fields if this is a closing period snapshot (Requirements 3.1, 3.2, 3.3)
+    // For non-closing period snapshots, omit these fields (Requirement 3.4)
+    if (closingPeriodInfo?.isClosingPeriod) {
+      metadata.isClosingPeriodData = true
+      metadata.collectionDate = closingPeriodInfo.collectionDate
+      metadata.logicalDate = closingPeriodInfo.logicalDate
     }
 
     // Validate data before writing (Requirement 7.4, 7.5)
@@ -1042,12 +1224,182 @@ export class TransformService {
   }
 
   /**
+   * Transform a single district's raw CSV data into snapshot format,
+   * writing to a specific snapshot date directory.
+   *
+   * This method allows reading raw CSV from one date (sourceDate) and
+   * writing the snapshot to a different date directory (snapshotDate).
+   * This is needed for closing period handling where raw CSV is stored
+   * by collection date but snapshots are stored by logical date.
+   *
+   * @param sourceDate - The date where raw CSV files are stored (YYYY-MM-DD)
+   * @param snapshotDate - The date to use for the snapshot directory (YYYY-MM-DD)
+   * @param districtId - The district ID to transform
+   * @param options - Transform options (force flag)
+   * @returns Transform result for the district
+   */
+  private async transformDistrictToDate(
+    sourceDate: string,
+    snapshotDate: string,
+    districtId: string,
+    options?: { force?: boolean }
+  ): Promise<DistrictTransformResult> {
+    const force = options?.force ?? false
+
+    this.logger.info('Transforming district', {
+      sourceDate,
+      snapshotDate,
+      districtId,
+      force,
+    })
+
+    // Check if snapshot already exists at the target date (unless force is true)
+    if (!force) {
+      const exists = await this.snapshotExists(snapshotDate, districtId)
+      if (exists) {
+        this.logger.info('Snapshot already exists, skipping', {
+          snapshotDate,
+          districtId,
+        })
+        return {
+          districtId,
+          success: true,
+          skipped: true,
+        }
+      }
+    }
+
+    // Load raw CSV data from source date
+    const rawData = await this.loadRawCSVData(sourceDate, districtId)
+    if (!rawData) {
+      return {
+        districtId,
+        success: false,
+        error: `Raw CSV data not found for district ${districtId} on ${sourceDate}`,
+      }
+    }
+
+    try {
+      // Transform using shared DataTransformer - use snapshotDate for the data
+      const districtStats = await this.dataTransformer.transformRawCSV(
+        snapshotDate,
+        districtId,
+        rawData
+      )
+
+      // Write district snapshot file to snapshot date directory
+      const snapshotPath = this.getDistrictSnapshotPath(snapshotDate, districtId)
+      const snapshotDir = path.dirname(snapshotPath)
+
+      await fs.mkdir(snapshotDir, { recursive: true })
+
+      // Wrap district data in PerDistrictData format expected by backend
+      const perDistrictData: PerDistrictData = {
+        districtId,
+        districtName: `District ${districtId}`,
+        collectedAt: new Date().toISOString(),
+        status: 'success',
+        data: districtStats,
+      }
+
+      // Validate data before writing (Requirement 7.4, 7.5)
+      const validationResult = validatePerDistrictData(perDistrictData)
+      if (!validationResult.success) {
+        this.logger.error(`Validation failed for district ${districtId}`, {
+          error: validationResult.error,
+        })
+        throw new Error(
+          `Validation failed for district ${districtId}: ${validationResult.error}`
+        )
+      }
+
+      const snapshotContent = JSON.stringify(validationResult.data, null, 2)
+      const tempPath = `${snapshotPath}.tmp.${Date.now()}`
+      await fs.writeFile(tempPath, snapshotContent, 'utf-8')
+      await fs.rename(tempPath, snapshotPath)
+
+      this.logger.info('District snapshot written', {
+        snapshotDate,
+        districtId,
+        path: snapshotPath,
+        clubCount: districtStats.clubs.length,
+      })
+
+      return {
+        districtId,
+        success: true,
+        snapshotPath,
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      this.logger.error('Failed to transform district', {
+        sourceDate,
+        snapshotDate,
+        districtId,
+        error: errorMessage,
+      })
+      return {
+        districtId,
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
+   * Write all-districts rankings to a specific snapshot date directory
+   *
+   * @param snapshotDate - The date to use for the snapshot directory
+   * @param rankings - The rankings data to write
+   * @returns Path to the written rankings file
+   */
+  private async writeAllDistrictsRankingsToDate(
+    snapshotDate: string,
+    rankings: AllDistrictsRankingsData
+  ): Promise<string> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const rankingsPath = path.join(snapshotDir, 'all-districts-rankings.json')
+
+    await fs.mkdir(snapshotDir, { recursive: true })
+
+    // Validate data before writing (Requirement 7.4, 7.5)
+    const validationResult = validateAllDistrictsRankings(rankings)
+    if (!validationResult.success) {
+      this.logger.error('Validation failed for all-districts rankings', {
+        error: validationResult.error,
+      })
+      throw new Error(
+        `Validation failed for all-districts rankings: ${validationResult.error}`
+      )
+    }
+
+    const content = JSON.stringify(validationResult.data, null, 2)
+    const tempPath = `${rankingsPath}.tmp.${Date.now()}`
+    await fs.writeFile(tempPath, content, 'utf-8')
+    await fs.rename(tempPath, rankingsPath)
+
+    this.logger.info('All-districts rankings written', {
+      snapshotDate,
+      path: rankingsPath,
+      totalDistricts: rankings.rankings.length,
+    })
+
+    return rankingsPath
+  }
+
+  /**
    * Transform all available districts for a date
    *
    * Requirements:
    * - 2.2: Use the same DataTransformationService logic as the Backend
    * - 2.3: Store snapshots in CACHE_DIR/snapshots/{date}/
    * - 2.4: Write district JSON files, metadata.json, and manifest.json
+   * - 2.2 (closing period): WHEN `isClosingPeriod` is true THEN write snapshot to lastDayOfDataMonth
+   * - 4.2: WHEN the new data has a strictly newer collection date THEN overwrite the existing snapshot
+   * - 4.3: WHEN the new data has an equal or older collection date THEN skip the update
+   * - 5.1: WHEN a closing period is detected THEN do NOT create a snapshot dated in the new month
+   * - 5.2: WHEN transforming closing period data THEN only create a snapshot for the last day of the data month
    */
   async transform(
     options: TransformOperationOptions
@@ -1063,6 +1415,51 @@ export class TransformService {
       })
     }
 
+    // Step 1: Read cache metadata to detect closing periods (Requirement 1.1)
+    const cacheMetadata = await this.readCacheMetadata(date)
+
+    // Step 2: Determine the correct snapshot date based on closing period detection
+    // (Requirements 2.1, 2.2, 2.3, 2.4, 5.1, 5.2)
+    const closingPeriodInfo = this.determineSnapshotDate(date, cacheMetadata)
+    const snapshotDate = closingPeriodInfo.snapshotDate
+
+    if (closingPeriodInfo.isClosingPeriod) {
+      this.logger.info('Closing period detected', {
+        requestedDate: date,
+        dataMonth: closingPeriodInfo.dataMonth,
+        snapshotDate: closingPeriodInfo.snapshotDate,
+        collectionDate: closingPeriodInfo.collectionDate,
+      })
+    }
+
+    // Step 3: For closing periods, check if we should update the existing snapshot
+    // (Requirements 4.1, 4.2, 4.3, 4.4)
+    if (closingPeriodInfo.isClosingPeriod && !force) {
+      const shouldUpdate = await this.shouldUpdateSnapshot(
+        snapshotDate,
+        closingPeriodInfo.collectionDate
+      )
+
+      if (!shouldUpdate) {
+        this.logger.info('Skipping transform: existing snapshot is newer or equal', {
+          snapshotDate,
+          collectionDate: closingPeriodInfo.collectionDate,
+        })
+
+        return {
+          success: true,
+          date: snapshotDate,
+          districtsProcessed: [],
+          districtsSucceeded: [],
+          districtsFailed: [],
+          districtsSkipped: [],
+          snapshotLocations: [],
+          errors: [],
+          duration_ms: Date.now() - startTime,
+        }
+      }
+    }
+
     // Discover available districts if not specified
     let districtsToTransform: string[]
     if (requestedDistricts && requestedDistricts.length > 0) {
@@ -1075,7 +1472,7 @@ export class TransformService {
       this.logger.warn('No districts found to transform', { date })
       return {
         success: false,
-        date,
+        date: snapshotDate,
         districtsProcessed: [],
         districtsSucceeded: [],
         districtsFailed: [],
@@ -1092,7 +1489,7 @@ export class TransformService {
       }
     }
 
-    // Transform each district
+    // Transform each district - read from source date, write to snapshot date
     const results: DistrictTransformResult[] = []
     const errors: Array<{
       districtId: string
@@ -1103,7 +1500,13 @@ export class TransformService {
     const successfulDistricts: string[] = []
 
     for (const districtId of districtsToTransform) {
-      const result = await this.transformDistrict(date, districtId, { force })
+      // Transform district: read from 'date', write to 'snapshotDate'
+      const result = await this.transformDistrictToDate(
+        date,
+        snapshotDate,
+        districtId,
+        { force }
+      )
       results.push(result)
 
       if (result.success) {
@@ -1127,7 +1530,7 @@ export class TransformService {
     const allSuccessfulDistricts: string[] = []
 
     for (const districtId of districtsToTransform) {
-      const entry = await this.getDistrictManifestEntry(date, districtId)
+      const entry = await this.getDistrictManifestEntry(snapshotDate, districtId)
       if (entry) {
         districtEntries.push(entry)
         allSuccessfulDistricts.push(districtId)
@@ -1144,26 +1547,29 @@ export class TransformService {
         const errorMessages = errors.map(e => `${e.districtId}: ${e.error}`)
         const processingDuration = Date.now() - startTime
 
+        // Pass closing period info to writeMetadata for Task 7.2
         await this.writeMetadata(
-          date,
+          snapshotDate,
           allSuccessfulDistricts,
           failedDistrictIds,
           errorMessages,
-          processingDuration
+          processingDuration,
+          closingPeriodInfo
         )
-        await this.writeManifest(date, districtEntries, failedDistrictIds)
+        await this.writeManifest(snapshotDate, districtEntries, failedDistrictIds)
 
         // Add metadata and manifest to snapshot locations
-        const snapshotDir = this.getSnapshotDir(date)
+        const snapshotDir = this.getSnapshotDir(snapshotDate)
         snapshotLocations.push(path.join(snapshotDir, 'metadata.json'))
         snapshotLocations.push(path.join(snapshotDir, 'manifest.json'))
 
         // Calculate and write all-districts rankings (Requirement 2.4)
+        // Read rankings from source date, write to snapshot date
         try {
           const rankings = await this.calculateAllDistrictsRankings(date)
           if (rankings) {
-            const rankingsPath = await this.writeAllDistrictsRankings(
-              date,
+            const rankingsPath = await this.writeAllDistrictsRankingsToDate(
+              snapshotDate,
               rankings
             )
             snapshotLocations.push(rankingsPath)
@@ -1224,17 +1630,19 @@ export class TransformService {
     if (verbose) {
       this.logger.info('Transform operation completed', {
         date,
+        snapshotDate,
         success,
         processed: districtsProcessed.length,
         succeeded: districtsSucceeded.length,
         failed: districtsFailed.length,
         skipped: districtsSkipped.length,
+        isClosingPeriod: closingPeriodInfo.isClosingPeriod,
       })
     }
 
     return {
       success,
-      date,
+      date: snapshotDate,
       districtsProcessed,
       districtsSucceeded,
       districtsFailed,

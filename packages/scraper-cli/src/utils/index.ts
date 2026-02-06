@@ -22,3 +22,7 @@ export {
   type RetryOptions,
   type RetryResult,
 } from './RetryManager.js'
+export {
+  ClosingPeriodDetector,
+  type ClosingPeriodInfo,
+} from './ClosingPeriodDetector.js'
