@@ -42,3 +42,12 @@ export {
   stringArrayToRiskFactors,
   RISK_FACTOR_LABELS,
 } from './riskFactors.js'
+
+// Target calculation utilities (Requirements 2.1-2.6, 3.1-3.6, 4.1-4.6, 5.1-5.6)
+export {
+  calculateGrowthTargets,
+  calculatePercentageTargets,
+  determineAchievedLevel,
+  GROWTH_PERCENTAGES,
+  DISTINGUISHED_PERCENTAGES,
+} from './TargetCalculator.js'

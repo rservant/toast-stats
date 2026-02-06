@@ -37,19 +37,19 @@ const NULL_RANKINGS: MetricRankings = {
  * Transforms PerformanceTargetsData from analytics-core into DistrictPerformanceTargets
  * format expected by the frontend.
  *
- * Note: The analytics-core PerformanceTargetsData doesn't include base values or
- * recognition targets (distinguished/select/presidents/smedley thresholds).
- * These would need to be computed from additional data sources or added to
- * the analytics-core computation.
- *
- * For now, this transformation:
+ * This transformation maps the analytics-core computed data to the frontend format:
+ * - Maps base values (paidClubBase, paymentBase) to the appropriate metrics
+ * - Maps recognition targets for each metric
+ * - Maps achieved recognition levels for each metric
  * - Maps rankings from the analytics-core format
- * - Uses currentProgress values for current
- * - Sets base and targets to null (not available in current analytics-core output)
- * - Sets achievedLevel to null (not computed in current analytics-core output)
+ *
+ * Note: Distinguished clubs use paidClubBase (Club_Base) for their base value,
+ * as distinguished club targets are calculated as percentages of the club base.
  *
  * @param performanceTargets - PerformanceTargetsData from analytics-core
  * @returns DistrictPerformanceTargets for frontend consumption
+ *
+ * Requirements: 7.1-7.9
  */
 export function transformPerformanceTargets(
   performanceTargets: PerformanceTargetsData
@@ -57,23 +57,23 @@ export function transformPerformanceTargets(
   return {
     paidClubs: {
       current: performanceTargets.paidClubsCount,
-      base: null,
-      targets: null,
-      achievedLevel: null,
+      base: performanceTargets.paidClubBase,
+      targets: performanceTargets.paidClubsTargets,
+      achievedLevel: performanceTargets.paidClubsAchievedLevel,
       rankings: performanceTargets.paidClubsRankings ?? NULL_RANKINGS,
     },
     membershipPayments: {
       current: performanceTargets.currentProgress.membership,
-      base: null,
-      targets: null,
-      achievedLevel: null,
+      base: performanceTargets.paymentBase,
+      targets: performanceTargets.membershipPaymentsTargets,
+      achievedLevel: performanceTargets.membershipPaymentsAchievedLevel,
       rankings: performanceTargets.membershipPaymentsRankings ?? NULL_RANKINGS,
     },
     distinguishedClubs: {
       current: performanceTargets.currentProgress.distinguished,
-      base: null,
-      targets: null,
-      achievedLevel: null,
+      base: performanceTargets.paidClubBase, // Distinguished uses Club_Base
+      targets: performanceTargets.distinguishedClubsTargets,
+      achievedLevel: performanceTargets.distinguishedClubsAchievedLevel,
       rankings: performanceTargets.distinguishedClubsRankings ?? NULL_RANKINGS,
     },
   }

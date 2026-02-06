@@ -1129,6 +1129,28 @@ export interface PerformanceTargetsData {
   membershipPaymentsRankings: MetricRankings
   /** Rankings for distinguished clubs metric (Requirements 4.3, 4.4) */
   distinguishedClubsRankings: MetricRankings
+
+  // NEW: Base values from All Districts Rankings (Requirements 6.1, 6.2)
+  /** Base value for paid clubs from All Districts Rankings (Requirement 6.1) */
+  paidClubBase: number | null
+  /** Base value for membership payments from All Districts Rankings (Requirement 6.2) */
+  paymentBase: number | null
+
+  // NEW: Recognition level targets (Requirements 6.3, 6.4, 6.5)
+  /** Recognition level targets for paid clubs metric (Requirement 6.3) */
+  paidClubsTargets: RecognitionTargets | null
+  /** Recognition level targets for membership payments metric (Requirement 6.4) */
+  membershipPaymentsTargets: RecognitionTargets | null
+  /** Recognition level targets for distinguished clubs metric (Requirement 6.5) */
+  distinguishedClubsTargets: RecognitionTargets | null
+
+  // NEW: Achieved recognition levels (Requirements 6.6, 6.7, 6.8)
+  /** Achieved recognition level for paid clubs metric (Requirement 6.6) */
+  paidClubsAchievedLevel: RecognitionLevel | null
+  /** Achieved recognition level for membership payments metric (Requirement 6.7) */
+  membershipPaymentsAchievedLevel: RecognitionLevel | null
+  /** Achieved recognition level for distinguished clubs metric (Requirement 6.8) */
+  distinguishedClubsAchievedLevel: RecognitionLevel | null
 }
 
 // ========== Distinguished Club Analytics Data Types (for pre-computed files) ==========

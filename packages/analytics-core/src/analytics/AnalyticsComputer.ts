@@ -49,6 +49,11 @@ import {
   findPreviousProgramYearDate,
   calculatePercentageChange,
 } from './AnalyticsUtils.js'
+import {
+  calculateGrowthTargets,
+  calculatePercentageTargets,
+  determineAchievedLevel,
+} from './TargetCalculator.js'
 
 /**
  * AnalyticsComputer
@@ -148,8 +153,14 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     const totalMembership = latestSnapshot
       ? this.membershipModule.getTotalMembership(latestSnapshot)
       : 0
-    const membershipChange =
-      this.membershipModule.calculateMembershipChange(sortedSnapshots)
+
+    // Calculate membership change
+    // Requirements 8.1, 8.2, 8.3: Use paymentBase when available, fall back to snapshot-based calculation
+    const membershipChange = this.calculateMembershipChangeWithBase(
+      sortedSnapshots,
+      options?.allDistrictsRankings,
+      districtId
+    )
 
     // Get current date for year-over-year computation
     const currentDate =
@@ -241,6 +252,51 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       start: first?.snapshotDate || '',
       end: last?.snapshotDate || '',
     }
+  }
+
+  /**
+   * Calculate membership change using paymentBase when available.
+   *
+   * This method implements the membership change calculation per Requirements 8.1, 8.2, 8.3:
+   * - When paymentBase is available from All_Districts_Rankings, calculate membershipChange
+   *   as the difference between current total payments and paymentBase
+   * - When paymentBase is not available, fall back to the existing snapshot-based calculation
+   *
+   * Requirements: 8.1, 8.2, 8.3
+   *
+   * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
+   * @param allDistrictsRankings - Optional all-districts rankings data containing paymentBase
+   * @param districtId - The district identifier
+   * @returns Membership change (positive = growth, negative = decline)
+   */
+  private calculateMembershipChangeWithBase(
+    snapshots: DistrictStatistics[],
+    allDistrictsRankings: AllDistrictsRankingsData | undefined,
+    districtId: string
+  ): number {
+    // Try to get paymentBase from all-districts rankings
+    // Requirement 8.2: WHEN Payment_Base is available from All_Districts_Rankings, use it
+    const districtRanking = allDistrictsRankings?.rankings.find(
+      r => r.districtId === districtId
+    )
+
+    const paymentBase = districtRanking?.paymentBase
+
+    if (paymentBase !== undefined && paymentBase !== null) {
+      // Requirement 8.1: Calculate membershipChange as currentPayments - paymentBase
+      // Get current payments from rankings (official value) or from latest snapshot
+      const latestSnapshot = snapshots[snapshots.length - 1]
+      const currentPayments =
+        districtRanking?.totalPayments ??
+        (latestSnapshot
+          ? this.membershipModule.getTotalPayments(latestSnapshot)
+          : 0)
+
+      return currentPayments - paymentBase
+    }
+
+    // Requirement 8.3: Fall back to existing snapshot-based calculation when paymentBase unavailable
+    return this.membershipModule.calculateMembershipChange(snapshots)
   }
 
   /**
@@ -1277,6 +1333,26 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         )
     }
 
+    // Extract base values from all-districts rankings
+    // Requirements 1.1, 1.2, 1.3: Extract paidClubBase and paymentBase from rankings
+    const districtRanking = allDistrictsRankings?.rankings.find(
+      r => r.districtId === districtId
+    )
+
+    const paidClubBase = districtRanking?.paidClubBase ?? null
+    const paymentBase = districtRanking?.paymentBase ?? null
+
+    // Calculate recognition targets using TargetCalculator
+    // Requirements 2.1-2.5, 3.1-3.5, 4.1-4.5
+    const paidClubsTargets =
+      paidClubBase !== null ? calculateGrowthTargets(paidClubBase) : null
+
+    const membershipPaymentsTargets =
+      paymentBase !== null ? calculateGrowthTargets(paymentBase) : null
+
+    const distinguishedClubsTargets =
+      paidClubBase !== null ? calculatePercentageTargets(paidClubBase) : null
+
     // Handle empty snapshots case
     if (districtSnapshots.length === 0) {
       return {
@@ -1299,6 +1375,17 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         paidClubsRankings,
         membershipPaymentsRankings,
         distinguishedClubsRankings,
+        // NEW: Base values from All Districts Rankings (Requirements 1.1, 1.2, 1.3)
+        paidClubBase,
+        paymentBase,
+        // NEW: Recognition level targets (Requirements 2.1-2.5, 3.1-3.5, 4.1-4.5)
+        paidClubsTargets,
+        membershipPaymentsTargets,
+        distinguishedClubsTargets,
+        // NEW: Achieved recognition levels - null when no snapshots (Requirements 5.6)
+        paidClubsAchievedLevel: null,
+        membershipPaymentsAchievedLevel: null,
+        distinguishedClubsAchievedLevel: null,
       }
     }
 
@@ -1325,6 +1412,17 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         paidClubsRankings,
         membershipPaymentsRankings,
         distinguishedClubsRankings,
+        // NEW: Base values from All Districts Rankings (Requirements 1.1, 1.2, 1.3)
+        paidClubBase,
+        paymentBase,
+        // NEW: Recognition level targets (Requirements 2.1-2.5, 3.1-3.5, 4.1-4.5)
+        paidClubsTargets,
+        membershipPaymentsTargets,
+        distinguishedClubsTargets,
+        // NEW: Achieved recognition levels - null when no latest snapshot (Requirements 5.6)
+        paidClubsAchievedLevel: null,
+        membershipPaymentsAchievedLevel: null,
+        distinguishedClubsAchievedLevel: null,
       }
     }
 
@@ -1333,9 +1431,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
 
     // Get totalPayments from allDistrictsRankings if available (official Toastmasters value)
     // This matches the value shown on the landing page from the district rankings CSV
-    const districtRanking = allDistrictsRankings?.rankings.find(
-      r => r.districtId === districtId
-    )
+    // Note: districtRanking is already extracted above for base values
     const currentMembershipPayments =
       districtRanking?.totalPayments ??
       this.membershipModule.getTotalPayments(latestSnapshot)
@@ -1417,6 +1513,26 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       paidClubsRankings,
       membershipPaymentsRankings,
       distinguishedClubsRankings,
+      // NEW: Base values from All Districts Rankings (Requirements 1.1, 1.2, 1.3)
+      paidClubBase,
+      paymentBase,
+      // NEW: Recognition level targets (Requirements 2.1-2.5, 3.1-3.5, 4.1-4.5)
+      paidClubsTargets,
+      membershipPaymentsTargets,
+      distinguishedClubsTargets,
+      // NEW: Achieved recognition levels (Requirements 5.1-5.6)
+      paidClubsAchievedLevel: determineAchievedLevel(
+        totalPaidClubs,
+        paidClubsTargets
+      ),
+      membershipPaymentsAchievedLevel: determineAchievedLevel(
+        currentMembershipPayments,
+        membershipPaymentsTargets
+      ),
+      distinguishedClubsAchievedLevel: determineAchievedLevel(
+        currentDistinguished,
+        distinguishedClubsTargets
+      ),
     }
   }
 

@@ -54,6 +54,17 @@ function createTestPerformanceTargetsData(
     paidClubsRankings: defaultRankings,
     membershipPaymentsRankings: defaultRankings,
     distinguishedClubsRankings: defaultRankings,
+    // NEW: Base values from All Districts Rankings (Requirements 6.1, 6.2)
+    paidClubBase: null,
+    paymentBase: null,
+    // NEW: Recognition level targets (Requirements 6.3, 6.4, 6.5)
+    paidClubsTargets: null,
+    membershipPaymentsTargets: null,
+    distinguishedClubsTargets: null,
+    // NEW: Achieved recognition levels (Requirements 6.6, 6.7, 6.8)
+    paidClubsAchievedLevel: null,
+    membershipPaymentsAchievedLevel: null,
+    distinguishedClubsAchievedLevel: null,
     ...overrides,
   }
 }
@@ -231,11 +242,19 @@ describe('performanceTargetsTransformation', () => {
       })
 
       /**
-       * Test: Base and targets are null (not computed in current implementation)
-       * Rule: Base and targets should be null as they're not available in analytics-core output
+       * Test: Base and targets pass-through when null
+       * Rule: When base and targets are null in input, they should be null in output
+       *
+       * Requirements: 7.1-7.9
        */
-      it('sets base and targets to null for all metrics', () => {
-        const input = createTestPerformanceTargetsData()
+      it('passes through null base and targets when input has null values', () => {
+        const input = createTestPerformanceTargetsData({
+          paidClubBase: null,
+          paymentBase: null,
+          paidClubsTargets: null,
+          membershipPaymentsTargets: null,
+          distinguishedClubsTargets: null,
+        })
 
         const result = transformPerformanceTargets(input)
 
@@ -245,6 +264,264 @@ describe('performanceTargetsTransformation', () => {
         expect(result.membershipPayments.targets).toBeNull()
         expect(result.distinguishedClubs.base).toBeNull()
         expect(result.distinguishedClubs.targets).toBeNull()
+      })
+    })
+
+    describe('base value mappings (Requirements 7.1-7.3)', () => {
+      /**
+       * Test: paidClubBase maps to paidClubs.base
+       * Rule: THE Backend_Transformation SHALL map paidClubBase to paidClubs.base
+       *
+       * Requirement: 7.1
+       */
+      it('maps paidClubBase to paidClubs.base (Requirement 7.1)', () => {
+        const input = createTestPerformanceTargetsData({
+          paidClubBase: 95,
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.paidClubs.base).toBe(95)
+      })
+
+      /**
+       * Test: paymentBase maps to membershipPayments.base
+       * Rule: THE Backend_Transformation SHALL map paymentBase to membershipPayments.base
+       *
+       * Requirement: 7.2
+       */
+      it('maps paymentBase to membershipPayments.base (Requirement 7.2)', () => {
+        const input = createTestPerformanceTargetsData({
+          paymentBase: 2500,
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.membershipPayments.base).toBe(2500)
+      })
+
+      /**
+       * Test: paidClubBase maps to distinguishedClubs.base
+       * Rule: THE Backend_Transformation SHALL map paidClubBase to distinguishedClubs.base
+       *       (distinguished clubs use Club_Base for percentage calculation)
+       *
+       * Requirement: 7.3
+       */
+      it('maps paidClubBase to distinguishedClubs.base (Requirement 7.3)', () => {
+        const input = createTestPerformanceTargetsData({
+          paidClubBase: 95,
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.distinguishedClubs.base).toBe(95)
+      })
+    })
+
+    describe('targets mappings (Requirements 7.4-7.6)', () => {
+      const sampleTargets = {
+        distinguished: 96,
+        select: 98,
+        presidents: 100,
+        smedley: 103,
+      }
+
+      /**
+       * Test: paidClubsTargets maps to paidClubs.targets
+       * Rule: THE Backend_Transformation SHALL map paidClubsTargets to paidClubs.targets
+       *
+       * Requirement: 7.4
+       */
+      it('maps paidClubsTargets to paidClubs.targets (Requirement 7.4)', () => {
+        const input = createTestPerformanceTargetsData({
+          paidClubsTargets: sampleTargets,
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.paidClubs.targets).toEqual(sampleTargets)
+      })
+
+      /**
+       * Test: membershipPaymentsTargets maps to membershipPayments.targets
+       * Rule: THE Backend_Transformation SHALL map membershipPaymentsTargets to membershipPayments.targets
+       *
+       * Requirement: 7.5
+       */
+      it('maps membershipPaymentsTargets to membershipPayments.targets (Requirement 7.5)', () => {
+        const membershipTargets = {
+          distinguished: 2525,
+          select: 2575,
+          presidents: 2625,
+          smedley: 2700,
+        }
+        const input = createTestPerformanceTargetsData({
+          membershipPaymentsTargets: membershipTargets,
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.membershipPayments.targets).toEqual(membershipTargets)
+      })
+
+      /**
+       * Test: distinguishedClubsTargets maps to distinguishedClubs.targets
+       * Rule: THE Backend_Transformation SHALL map distinguishedClubsTargets to distinguishedClubs.targets
+       *
+       * Requirement: 7.6
+       */
+      it('maps distinguishedClubsTargets to distinguishedClubs.targets (Requirement 7.6)', () => {
+        const distinguishedTargets = {
+          distinguished: 43,
+          select: 48,
+          presidents: 53,
+          smedley: 57,
+        }
+        const input = createTestPerformanceTargetsData({
+          distinguishedClubsTargets: distinguishedTargets,
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.distinguishedClubs.targets).toEqual(distinguishedTargets)
+      })
+    })
+
+    describe('achieved level mappings (Requirements 7.7-7.9)', () => {
+      /**
+       * Test: paidClubsAchievedLevel maps to paidClubs.achievedLevel
+       * Rule: THE Backend_Transformation SHALL map paidClubsAchievedLevel to paidClubs.achievedLevel
+       *
+       * Requirement: 7.7
+       */
+      it('maps paidClubsAchievedLevel to paidClubs.achievedLevel (Requirement 7.7)', () => {
+        const input = createTestPerformanceTargetsData({
+          paidClubsAchievedLevel: 'select',
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.paidClubs.achievedLevel).toBe('select')
+      })
+
+      /**
+       * Test: membershipPaymentsAchievedLevel maps to membershipPayments.achievedLevel
+       * Rule: THE Backend_Transformation SHALL map membershipPaymentsAchievedLevel to membershipPayments.achievedLevel
+       *
+       * Requirement: 7.8
+       */
+      it('maps membershipPaymentsAchievedLevel to membershipPayments.achievedLevel (Requirement 7.8)', () => {
+        const input = createTestPerformanceTargetsData({
+          membershipPaymentsAchievedLevel: 'presidents',
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.membershipPayments.achievedLevel).toBe('presidents')
+      })
+
+      /**
+       * Test: distinguishedClubsAchievedLevel maps to distinguishedClubs.achievedLevel
+       * Rule: THE Backend_Transformation SHALL map distinguishedClubsAchievedLevel to distinguishedClubs.achievedLevel
+       *
+       * Requirement: 7.9
+       */
+      it('maps distinguishedClubsAchievedLevel to distinguishedClubs.achievedLevel (Requirement 7.9)', () => {
+        const input = createTestPerformanceTargetsData({
+          distinguishedClubsAchievedLevel: 'smedley',
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        expect(result.distinguishedClubs.achievedLevel).toBe('smedley')
+      })
+
+      /**
+       * Test: All recognition levels are correctly mapped
+       * Rule: All valid recognition levels should be passed through correctly
+       */
+      it('correctly maps all recognition level values', () => {
+        const levels = ['distinguished', 'select', 'presidents', 'smedley'] as const
+
+        for (const level of levels) {
+          const input = createTestPerformanceTargetsData({
+            paidClubsAchievedLevel: level,
+            membershipPaymentsAchievedLevel: level,
+            distinguishedClubsAchievedLevel: level,
+          })
+
+          const result = transformPerformanceTargets(input)
+
+          expect(result.paidClubs.achievedLevel).toBe(level)
+          expect(result.membershipPayments.achievedLevel).toBe(level)
+          expect(result.distinguishedClubs.achievedLevel).toBe(level)
+        }
+      })
+    })
+
+    describe('complete transformation with all fields populated (Requirements 7.1-7.9)', () => {
+      /**
+       * Test: Complete transformation with all fields
+       * Rule: All fields should be correctly mapped when fully populated
+       *
+       * Requirements: 7.1-7.9
+       */
+      it('correctly transforms complete PerformanceTargetsData with all fields populated', () => {
+        const paidClubsTargets = {
+          distinguished: 96,
+          select: 98,
+          presidents: 100,
+          smedley: 103,
+        }
+        const membershipPaymentsTargets = {
+          distinguished: 2525,
+          select: 2575,
+          presidents: 2625,
+          smedley: 2700,
+        }
+        const distinguishedClubsTargets = {
+          distinguished: 43,
+          select: 48,
+          presidents: 53,
+          smedley: 57,
+        }
+
+        const input = createTestPerformanceTargetsData({
+          paidClubsCount: 100,
+          currentProgress: {
+            membership: 2600,
+            distinguished: 50,
+            clubGrowth: 5,
+          },
+          paidClubBase: 95,
+          paymentBase: 2500,
+          paidClubsTargets,
+          membershipPaymentsTargets,
+          distinguishedClubsTargets,
+          paidClubsAchievedLevel: 'presidents',
+          membershipPaymentsAchievedLevel: 'select',
+          distinguishedClubsAchievedLevel: 'distinguished',
+        })
+
+        const result = transformPerformanceTargets(input)
+
+        // Verify paidClubs mapping (Requirements 7.1, 7.4, 7.7)
+        expect(result.paidClubs.current).toBe(100)
+        expect(result.paidClubs.base).toBe(95)
+        expect(result.paidClubs.targets).toEqual(paidClubsTargets)
+        expect(result.paidClubs.achievedLevel).toBe('presidents')
+
+        // Verify membershipPayments mapping (Requirements 7.2, 7.5, 7.8)
+        expect(result.membershipPayments.current).toBe(2600)
+        expect(result.membershipPayments.base).toBe(2500)
+        expect(result.membershipPayments.targets).toEqual(membershipPaymentsTargets)
+        expect(result.membershipPayments.achievedLevel).toBe('select')
+
+        // Verify distinguishedClubs mapping (Requirements 7.3, 7.6, 7.9)
+        expect(result.distinguishedClubs.current).toBe(50)
+        expect(result.distinguishedClubs.base).toBe(95) // Uses paidClubBase per Requirement 7.3
+        expect(result.distinguishedClubs.targets).toEqual(distinguishedClubsTargets)
+        expect(result.distinguishedClubs.achievedLevel).toBe('distinguished')
       })
     })
   })
