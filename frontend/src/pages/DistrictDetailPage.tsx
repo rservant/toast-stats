@@ -308,7 +308,8 @@ const DistrictDetailPage: React.FC = () => {
     { id: 'clubs', label: 'Clubs' },
     { id: 'divisions', label: 'Divisions & Areas' },
     { id: 'trends', label: 'Trends' },
-    { id: 'analytics', label: 'Analytics' },
+    // Hidden until DCP goal analysis data is available in the computation pipeline
+    // { id: 'analytics', label: 'Analytics' },
     { id: 'globalRankings', label: 'Global Rankings' },
   ]
 
