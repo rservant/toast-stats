@@ -238,9 +238,10 @@ export function usePaymentsTrend(
   districtId: string | null,
   programYearStartDate?: string,
   endDate?: string,
-  aggregatedPaymentsTrend?: Array<{ date: string; payments: number }>
+  aggregatedPaymentsTrend?: Array<{ date: string; payments: number }>,
+  selectedProgramYear?: ProgramYear
 ): UsePaymentsTrendResult {
-  const currentProgramYear = getCurrentProgramYear()
+  const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
 
   // Calculate date range for fetching data (3 years back for comparison)
   const startDate =
@@ -321,7 +322,7 @@ export function usePaymentsTrend(
         trendDirection: direction,
       },
     }
-  }, [analyticsData, aggregatedPaymentsTrend, currentProgramYear])
+  }, [analyticsData, aggregatedPaymentsTrend, currentProgramYear, selectedProgramYear])
 
   return {
     data: result,

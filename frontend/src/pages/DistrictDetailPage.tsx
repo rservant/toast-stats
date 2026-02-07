@@ -246,7 +246,8 @@ const DistrictDetailPage: React.FC = () => {
       hasValidDates ? districtId || null : null,
       undefined, // Let hook fetch 3 years automatically for comparison
       effectiveEndDate ?? undefined,
-      aggregatedAnalytics?.trends?.payments
+      aggregatedAnalytics?.trends?.payments,
+      effectiveProgramYear ?? undefined // Pass selected program year
     )
 
   const districtName = selectedDistrict?.name || 'Unknown District'

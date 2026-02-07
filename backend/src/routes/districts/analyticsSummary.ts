@@ -280,11 +280,34 @@ analyticsSummaryRouter.get(
       let paymentsTrend: Array<{ date: string; payments: number }> = []
 
       try {
-        const timeSeriesData = await timeSeriesIndexService.getTrendData(
+        let timeSeriesData = await timeSeriesIndexService.getTrendData(
           districtId,
           effectiveStartDate ?? '',
           effectiveEndDate ?? ''
         )
+
+        // Requirement 1.1: If the initial query returns zero data points,
+        // expand to the full program year range for the requested end date
+        if (timeSeriesData.length === 0) {
+          const programYearStart = getProgramYearStartDate(effectiveEndDate ?? '')
+          const programYearEnd = getProgramYearEndDate(effectiveEndDate ?? '')
+
+          logger.debug('Initial trend query returned empty, expanding to full program year', {
+            operation: 'getAnalyticsSummary',
+            operationId,
+            districtId,
+            originalStart: effectiveStartDate,
+            originalEnd: effectiveEndDate,
+            expandedStart: programYearStart,
+            expandedEnd: programYearEnd,
+          })
+
+          timeSeriesData = await timeSeriesIndexService.getTrendData(
+            districtId,
+            programYearStart,
+            programYearEnd
+          )
+        }
 
         trendData = timeSeriesData.map(dp => ({
           date: dp.date,
@@ -334,11 +357,13 @@ analyticsSummaryRouter.get(
             yoyComparison.metrics
           ) {
             yearOverYear = {
-              membershipChange: yoyComparison.metrics.membership.change,
+              membershipChange:
+                yoyComparison.metrics.membership.percentageChange,
               distinguishedChange:
-                yoyComparison.metrics.distinguishedClubs.change,
+                yoyComparison.metrics.distinguishedClubs.percentageChange,
               clubHealthChange:
-                yoyComparison.metrics.clubHealth.thrivingClubs.change,
+                yoyComparison.metrics.clubHealth.thrivingClubs
+                  .percentageChange,
             }
           }
         }
@@ -530,3 +555,26 @@ function getProgramYearStartDate(dateStr: string): string {
     return `${year - 1}-07-01`
   }
 }
+
+/**
+ * Calculate the program year end date for a given date
+ *
+ * Toastmasters program years run from July 1 to June 30.
+ * For example:
+ * - 2024-01-15 is in program year 2023-2024, which ends 2024-06-30
+ * - 2024-08-15 is in program year 2024-2025, which ends 2025-06-30
+ */
+function getProgramYearEndDate(dateStr: string): string {
+  const parts = dateStr.split('-')
+  const year = parseInt(parts[0] ?? '0', 10)
+  const month = parseInt(parts[1] ?? '0', 10)
+
+  // If month is July (7) or later, program year ends next year June 30
+  // If month is before July, program year ends this year June 30
+  if (month >= 7) {
+    return `${year + 1}-06-30`
+  } else {
+    return `${year}-06-30`
+  }
+}
+

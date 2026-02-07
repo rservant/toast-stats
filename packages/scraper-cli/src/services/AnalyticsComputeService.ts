@@ -18,6 +18,7 @@ import * as path from 'path'
 import * as crypto from 'crypto'
 import {
   AnalyticsComputer,
+  findPreviousProgramYearDate,
   type Logger,
   type DistrictStatistics,
   type AnalyticsManifestEntry,
@@ -734,6 +735,53 @@ export class AnalyticsComputeService {
         }
       }
 
+      // Requirement 3.1: Load previous program year's snapshot for YoY comparison
+      const previousYearDate = findPreviousProgramYearDate(date)
+      let previousSnapshot: DistrictStatistics | null = null
+      try {
+        previousSnapshot = await this.loadDistrictSnapshot(
+          previousYearDate,
+          districtId
+        )
+        if (previousSnapshot) {
+          this.logger.info(
+            'Loaded previous year snapshot for YoY comparison',
+            {
+              date,
+              districtId,
+              previousYearDate,
+            }
+          )
+        } else {
+          this.logger.info(
+            'No previous year snapshot found, YoY will use single snapshot',
+            {
+              date,
+              districtId,
+              previousYearDate,
+            }
+          )
+        }
+      } catch (error) {
+        // Requirement 3.4: Log warning and continue with single snapshot
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        this.logger.warn(
+          'Failed to load previous year snapshot, continuing with single snapshot',
+          {
+            date,
+            districtId,
+            previousYearDate,
+            error: errorMessage,
+          }
+        )
+      }
+
+      // Build snapshots array: previous year first (if available), then current
+      const snapshots = previousSnapshot
+        ? [previousSnapshot, snapshot]
+        : [snapshot]
+
       // Requirement 5.1: Calculate checksum of source snapshot
       const sourceSnapshotChecksum =
         status.currentChecksum ??
@@ -758,12 +806,13 @@ export class AnalyticsComputeService {
 
       // Compute analytics using shared AnalyticsComputer
       // Note: AnalyticsComputer expects an array of snapshots for trend analysis
-      // For single-date computation, we pass an array with one snapshot
+      // With two snapshots (previous + current), computeYearOverYear will use distinct data
+      // With one snapshot, it falls back to single-snapshot behavior (dataAvailable: false)
       // Requirement 5.2 (per-metric-rankings): Pass allDistrictsRankings via options
       const computationResult =
         await this.analyticsComputer.computeDistrictAnalytics(
           districtId,
-          [snapshot],
+          snapshots,
           {
             allDistrictsRankings: allDistrictsRankings ?? undefined,
           }
