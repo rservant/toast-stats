@@ -22,7 +22,6 @@ import { transformErrorResponse } from '../../utils/transformers.js'
 import {
   getValidDistrictId,
   validateDateFormat,
-  getPreComputedAnalyticsService,
   getTimeSeriesIndexService,
   extractStringParam,
   snapshotStore,
@@ -217,8 +216,37 @@ analyticsSummaryRouter.get(
       }
 
       // Get services
-      const preComputedAnalyticsService = await getPreComputedAnalyticsService()
       const timeSeriesIndexService = await getTimeSeriesIndexService()
+
+      // Get the latest successful snapshot first - needed for all analytics reads
+      // Requirement 1.5: Return 404 when no successful snapshot exists
+      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+      if (!latestSnapshot) {
+        const duration = Date.now() - startTime
+
+        logger.error('No successful snapshot available', {
+          operation: 'analyticsRequest',
+          operationId,
+          districtId,
+          analytics_gap: true,
+          recommendation: 'Run scraper-cli to generate snapshots',
+          duration_ms: duration,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_AVAILABLE',
+            message: `Pre-computed analytics are not available for district ${districtId}. No successful snapshot exists.`,
+            details: {
+              districtId,
+              recommendation:
+                "Use the unified backfill service with job type 'analytics-generation' to generate pre-computed analytics for this snapshot.",
+              backfillJobType: 'analytics-generation',
+            },
+          },
+        })
+        return
+      }
 
       // Determine date range for queries
       const effectiveEndDate =
@@ -234,42 +262,18 @@ analyticsSummaryRouter.get(
               effectiveEndDate ?? new Date().toISOString().split('T')[0] ?? ''
             )
 
-      // Try to get pre-computed analytics
+      // Read summary data from per-district analytics file (single call for all per-district data)
+      // Requirement 1.1: Read summary data from PreComputedAnalyticsReader.readDistrictAnalytics()
+      // Requirement 3.1: Single call for summary, distinguished projection, and all per-district data
       const summary =
-        await preComputedAnalyticsService.getLatestSummary(districtId)
-
-      // Try to get full district analytics for distinguishedProjection
-      // Requirement 17.2: distinguishedProjection SHALL be read from pre-computed analytics files
-      let distinguishedProjectionValue = 0
-      try {
-        const latestSnapshot = await snapshotStore.getLatestSuccessful()
-        if (latestSnapshot) {
-          const fullAnalytics =
-            await preComputedAnalyticsReader.readDistrictAnalytics(
-              latestSnapshot.snapshot_id,
-              districtId
-            )
-          if (fullAnalytics?.distinguishedProjection) {
-            // Use the projectedDistinguished value from the full analytics
-            distinguishedProjectionValue =
-              fullAnalytics.distinguishedProjection.projectedDistinguished
-          }
-        }
-      } catch (projectionError) {
-        logger.debug(
-          'Failed to read distinguishedProjection from full analytics',
-          {
-            operation: 'getAnalyticsSummary',
-            operationId,
-            districtId,
-            error:
-              projectionError instanceof Error
-                ? projectionError.message
-                : 'Unknown error',
-          }
+        await preComputedAnalyticsReader.readDistrictAnalytics(
+          latestSnapshot.snapshot_id,
+          districtId
         )
-        // Continue without projection - will use 0 as default
-      }
+
+      // Requirement 3.3: Extract distinguishedProjection from the single readDistrictAnalytics() result
+      const distinguishedProjectionValue =
+        summary?.distinguishedProjection?.projectedDistinguished ?? 0
 
       // Get trend data from time-series index
       let trendData: Array<{ date: string; count: number }> = []
@@ -394,10 +398,10 @@ analyticsSummaryRouter.get(
           totalMembership: summary.totalMembership,
           membershipChange: summary.membershipChange,
           clubCounts: {
-            total: summary.clubCounts.total,
-            thriving: summary.clubCounts.thriving,
-            vulnerable: summary.clubCounts.vulnerable,
-            interventionRequired: summary.clubCounts.interventionRequired,
+            total: summary.allClubs.length,
+            thriving: summary.thrivingClubs.length,
+            vulnerable: summary.vulnerableClubs.length,
+            interventionRequired: summary.interventionRequiredClubs.length,
           },
           distinguishedClubs: {
             smedley: summary.distinguishedClubs.smedley,
@@ -414,7 +418,7 @@ analyticsSummaryRouter.get(
         },
         yearOverYear,
         dataSource: 'precomputed',
-        computedAt: summary.computedAt,
+        computedAt: latestSnapshot.created_at,
       }
 
       const duration = Date.now() - startTime

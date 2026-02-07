@@ -123,11 +123,6 @@ export async function getBackfillService(): Promise<BackfillService> {
   return _backfillService!
 }
 
-export async function getPreComputedAnalyticsService(): Promise<PreComputedAnalyticsService> {
-  await initializeServices()
-  return _preComputedAnalyticsService!
-}
-
 export async function getTimeSeriesIndexService(): Promise<ITimeSeriesIndexService> {
   await initializeServices()
   return _timeSeriesIndexService!
