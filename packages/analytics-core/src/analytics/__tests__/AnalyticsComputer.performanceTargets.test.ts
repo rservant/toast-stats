@@ -1383,14 +1383,15 @@ describe('computeDistrictAnalytics membership change calculation', () => {
       const snapshot2 = createMockSnapshot('D101', '2024-01-15', clubs2)
 
       // Call without allDistrictsRankings - should use snapshot-based calculation
-      // Fallback calculates: last membership - first membership = 125 - 100 = 25
+      // Fallback calculates: sum(paymentsCount) - sum(membershipBase) from latest snapshot
+      // Latest snapshot2: paymentsCount=75, membershipBase=20 (default) → 75 - 20 = 55
       const result = await computer.computeDistrictAnalytics('D101', [
         snapshot1,
         snapshot2,
       ])
 
-      // Should use snapshot-based calculation (membership difference)
-      expect(result.districtAnalytics.membershipChange).toBe(25)
+      // Should use snapshot-based fallback: sum(paymentsCount) - sum(membershipBase) from latest
+      expect(result.districtAnalytics.membershipChange).toBe(55)
     })
 
     /**
@@ -1446,8 +1447,9 @@ describe('computeDistrictAnalytics membership change calculation', () => {
         { allDistrictsRankings }
       )
 
-      // Should fall back to snapshot-based calculation: 150 - 100 = 50
-      expect(result.districtAnalytics.membershipChange).toBe(50)
+      // Should fall back to snapshot-based calculation: sum(paymentsCount) - sum(membershipBase) from latest
+      // Latest snapshot2: paymentsCount=80, membershipBase=20 (default) → 80 - 20 = 60
+      expect(result.districtAnalytics.membershipChange).toBe(60)
     })
 
     /**
@@ -1472,8 +1474,9 @@ describe('computeDistrictAnalytics membership change calculation', () => {
       // Call without allDistrictsRankings and with single snapshot
       const result = await computer.computeDistrictAnalytics('D101', [snapshot])
 
-      // Fallback with single snapshot should return 0
-      expect(result.districtAnalytics.membershipChange).toBe(0)
+      // Fallback with single snapshot: sum(paymentsCount) - sum(membershipBase)
+      // paymentsCount=50, membershipBase=20 (default) → 50 - 20 = 30
+      expect(result.districtAnalytics.membershipChange).toBe(30)
     })
 
     /**
@@ -1566,8 +1569,9 @@ describe('computeDistrictAnalytics membership change calculation', () => {
         { allDistrictsRankings }
       )
 
-      // Should fall back to snapshot-based calculation: 130 - 100 = 30
-      expect(result.districtAnalytics.membershipChange).toBe(30)
+      // Should fall back to snapshot-based calculation: sum(paymentsCount) - sum(membershipBase) from latest
+      // Latest snapshot2: paymentsCount=70, membershipBase=20 (default) → 70 - 20 = 50
+      expect(result.districtAnalytics.membershipChange).toBe(50)
     })
   })
 })

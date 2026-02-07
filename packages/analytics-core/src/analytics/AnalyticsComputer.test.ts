@@ -9,6 +9,10 @@
 import { describe, it, expect } from 'vitest'
 import { AnalyticsComputer } from './AnalyticsComputer.js'
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
+import type {
+  AllDistrictsRankingsData,
+  DistrictRanking,
+} from '@toastmasters/shared-contracts'
 
 /**
  * Helper to create a mock club
@@ -113,10 +117,10 @@ describe('AnalyticsComputer', () => {
       const computer = new AnalyticsComputer()
 
       const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 20 }),
+        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 15 }),
       ])
       const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 25 }),
+        createMockClub({ clubId: '1', membershipCount: 25, paymentsCount: 22, membershipBase: 15 }),
       ])
 
       const result = await computer.computeDistrictAnalytics('D101', [
@@ -124,7 +128,9 @@ describe('AnalyticsComputer', () => {
         snapshot2,
       ])
 
-      expect(result.districtAnalytics.membershipChange).toBe(5) // 25 - 20
+      // Without rankings, falls back to snapshot-based: sum(paymentsCount) - sum(membershipBase) from latest
+      // = 22 - 15 = 7
+      expect(result.districtAnalytics.membershipChange).toBe(7)
       expect(result.districtAnalytics.totalMembership).toBe(25) // Latest
     })
 
@@ -133,10 +139,10 @@ describe('AnalyticsComputer', () => {
 
       // Provide snapshots out of order
       const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 30 }),
+        createMockClub({ clubId: '1', membershipCount: 30, paymentsCount: 28, membershipBase: 18 }),
       ])
       const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 20 }),
+        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 18 }),
       ])
 
       const result = await computer.computeDistrictAnalytics('D101', [
@@ -144,8 +150,9 @@ describe('AnalyticsComputer', () => {
         snapshot1,
       ])
 
-      // Should use sorted order: snapshot1 (Jan) -> snapshot2 (Feb)
-      expect(result.districtAnalytics.membershipChange).toBe(10) // 30 - 20
+      // Without rankings, falls back to snapshot-based: sum(paymentsCount) - sum(membershipBase) from latest
+      // Latest is snapshot2 (Feb, sorted): 28 - 18 = 10
+      expect(result.districtAnalytics.membershipChange).toBe(10)
       expect(result.districtAnalytics.totalMembership).toBe(30) // Latest (Feb)
     })
 
@@ -2088,5 +2095,260 @@ describe('buildClubTrendsIndex', () => {
     // Should have only one entry (last one wins)
     expect(Object.keys(result.clubs)).toHaveLength(1)
     expect(result.clubs['1001']?.clubName).toBe('Second Club (Same ID)')
+  })
+})
+
+
+/**
+ * Membership Change Calculation Unit Tests
+ *
+ * Tests for calculateMembershipChangeWithBase via computeDistrictAnalytics.
+ * Covers all calculation paths: rankings-based, normalized lookup, and snapshot-based fallback.
+ *
+ * Requirements: 3.1, 3.2, 3.3, 3.4
+ */
+
+/**
+ * Helper to create a minimal AllDistrictsRankingsData structure for testing.
+ */
+function createRankingsData(
+  rankings: Partial<DistrictRanking>[],
+  totalDistricts?: number
+): AllDistrictsRankingsData {
+  const fullRankings: DistrictRanking[] = rankings.map((r, index) => ({
+    districtId: r.districtId ?? `${index + 1}`,
+    districtName: r.districtName ?? `District ${index + 1}`,
+    region: r.region ?? 'Region 1',
+    paidClubs: r.paidClubs ?? 100,
+    paidClubBase: r.paidClubBase ?? 95,
+    clubGrowthPercent: r.clubGrowthPercent ?? 5.0,
+    totalPayments: r.totalPayments ?? 5000,
+    paymentBase: r.paymentBase ?? 4800,
+    paymentGrowthPercent: r.paymentGrowthPercent ?? 4.0,
+    activeClubs: r.activeClubs ?? 98,
+    distinguishedClubs: r.distinguishedClubs ?? 45,
+    selectDistinguished: r.selectDistinguished ?? 15,
+    presidentsDistinguished: r.presidentsDistinguished ?? 10,
+    distinguishedPercent: r.distinguishedPercent ?? 45.0,
+    clubsRank: r.clubsRank ?? index + 1,
+    paymentsRank: r.paymentsRank ?? index + 1,
+    distinguishedRank: r.distinguishedRank ?? index + 1,
+    aggregateScore: r.aggregateScore ?? 150,
+    overallRank: r.overallRank ?? index + 1,
+  }))
+
+  return {
+    metadata: {
+      snapshotId: '2024-01-15',
+      calculatedAt: '2024-01-15T00:00:00.000Z',
+      schemaVersion: '1.0',
+      calculationVersion: '1.0',
+      rankingVersion: '2.0',
+      sourceCsvDate: '2024-01-15',
+      csvFetchedAt: '2024-01-15T00:00:00.000Z',
+      totalDistricts: totalDistricts ?? fullRankings.length,
+      fromCache: false,
+    },
+    rankings: fullRankings,
+  }
+}
+
+describe('calculateMembershipChangeWithBase (via computeDistrictAnalytics)', () => {
+  /**
+   * Requirement 3.1: Verify that membershipChange is correctly computed
+   * when All_Districts_Rankings contains the district with valid paymentBase and totalPayments.
+   */
+  it('should compute membershipChange from rankings when exact districtId match exists', async () => {
+    const computer = new AnalyticsComputer()
+
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 30, membershipBase: 25 }),
+    ]
+    const snapshot = createMockSnapshot('42', '2024-01-15', clubs)
+
+    const rankings = createRankingsData([
+      { districtId: '42', totalPayments: 500, paymentBase: 450 },
+    ])
+
+    const result = await computer.computeDistrictAnalytics('42', [snapshot], {
+      allDistrictsRankings: rankings,
+    })
+
+    // Rankings path: totalPayments(500) - paymentBase(450) = 50
+    expect(result.districtAnalytics.membershipChange).toBe(50)
+  })
+
+  /**
+   * Requirement 3.2: Verify that membershipChange is correctly computed
+   * via normalized districtId lookup when exact match fails.
+   */
+  it('should compute membershipChange via normalized lookup when exact match fails (e.g., "D42" vs "42")', async () => {
+    const computer = new AnalyticsComputer()
+
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 30, membershipBase: 25 }),
+    ]
+    // Snapshot uses "D42" as districtId
+    const snapshot = createMockSnapshot('D42', '2024-01-15', clubs)
+
+    // Rankings use "42" as districtId (no "D" prefix)
+    const rankings = createRankingsData([
+      { districtId: '42', totalPayments: 600, paymentBase: 520 },
+    ])
+
+    const result = await computer.computeDistrictAnalytics('D42', [snapshot], {
+      allDistrictsRankings: rankings,
+    })
+
+    // Normalized lookup: "D42" → "42" matches "42" → totalPayments(600) - paymentBase(520) = 80
+    expect(result.districtAnalytics.membershipChange).toBe(80)
+  })
+
+  /**
+   * Requirement 3.3: Verify that membershipChange falls back to snapshot-based
+   * calculation when rankings are unavailable (undefined).
+   */
+  it('should fall back to snapshot-based calculation when rankings are unavailable', async () => {
+    const computer = new AnalyticsComputer()
+
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 30, membershipBase: 22 }),
+      createMockClub({ clubId: '2', paymentsCount: 25, membershipBase: 20 }),
+    ]
+    const snapshot = createMockSnapshot('D101', '2024-01-15', clubs)
+
+    // No rankings provided (undefined)
+    const result = await computer.computeDistrictAnalytics('D101', [snapshot])
+
+    // Snapshot fallback: sum(paymentsCount) - sum(membershipBase)
+    // = (30 + 25) - (22 + 20) = 55 - 42 = 13
+    expect(result.districtAnalytics.membershipChange).toBe(13)
+  })
+
+  /**
+   * Requirement 3.3: Verify that membershipChange falls back to snapshot-based
+   * calculation when rankings exist but district is not found.
+   */
+  it('should fall back to snapshot-based calculation when district not found in rankings', async () => {
+    const computer = new AnalyticsComputer()
+
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 40, membershipBase: 35 }),
+      createMockClub({ clubId: '2', paymentsCount: 20, membershipBase: 18 }),
+    ]
+    const snapshot = createMockSnapshot('D999', '2024-01-15', clubs)
+
+    // Rankings exist but don't contain district D999
+    const rankings = createRankingsData([
+      { districtId: '42', totalPayments: 500, paymentBase: 450 },
+      { districtId: '101', totalPayments: 600, paymentBase: 520 },
+    ])
+
+    const result = await computer.computeDistrictAnalytics('D999', [snapshot], {
+      allDistrictsRankings: rankings,
+    })
+
+    // Snapshot fallback: sum(paymentsCount) - sum(membershipBase)
+    // = (40 + 20) - (35 + 18) = 60 - 53 = 7
+    expect(result.districtAnalytics.membershipChange).toBe(7)
+  })
+
+  /**
+   * Requirement 3.3: Verify that membershipChange falls back to snapshot-based
+   * calculation when paymentBase is null on the matched ranking.
+   *
+   * Note: The DistrictRanking type defines paymentBase as `number`, so we use
+   * a type assertion to simulate the runtime scenario where paymentBase could
+   * be null (e.g., from malformed JSON data).
+   */
+  it('should fall back to snapshot-based calculation when paymentBase is null', async () => {
+    const computer = new AnalyticsComputer()
+
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 50, membershipBase: 45 }),
+    ]
+    const snapshot = createMockSnapshot('42', '2024-01-15', clubs)
+
+    // Create rankings where paymentBase is null (simulating runtime data issue)
+    const rankings = createRankingsData([
+      { districtId: '42', totalPayments: 500 },
+    ])
+    // Override paymentBase to null to simulate the runtime scenario
+    // The DistrictRanking type says number, but runtime data may have null
+    ;(rankings.rankings[0] as DistrictRanking & { paymentBase: number | null }).paymentBase = null as unknown as number
+
+    const result = await computer.computeDistrictAnalytics('42', [snapshot], {
+      allDistrictsRankings: rankings,
+    })
+
+    // Snapshot fallback: sum(paymentsCount) - sum(membershipBase)
+    // = 50 - 45 = 5
+    expect(result.districtAnalytics.membershipChange).toBe(5)
+  })
+
+  /**
+   * Requirement 3.4: Verify that membershipChange is 0 when both rankings
+   * and snapshot-based fallback yield no meaningful data (empty snapshots).
+   */
+  it('should return 0 for empty snapshots with no rankings', async () => {
+    const computer = new AnalyticsComputer()
+
+    const result = await computer.computeDistrictAnalytics('D101', [])
+
+    expect(result.districtAnalytics.membershipChange).toBe(0)
+  })
+
+  /**
+   * Additional: Verify that rankings totalPayments is used (not snapshot totalPayments)
+   * when the district is found in rankings.
+   * Requirement 2.4: Use totalPayments from rankings when district is found.
+   */
+  it('should use totalPayments from rankings data, not from snapshot', async () => {
+    const computer = new AnalyticsComputer()
+
+    // Snapshot has different paymentsCount than rankings totalPayments
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 100, membershipBase: 80 }),
+    ]
+    const snapshot = createMockSnapshot('42', '2024-01-15', clubs)
+
+    // Rankings have totalPayments=700, paymentBase=600
+    const rankings = createRankingsData([
+      { districtId: '42', totalPayments: 700, paymentBase: 600 },
+    ])
+
+    const result = await computer.computeDistrictAnalytics('42', [snapshot], {
+      allDistrictsRankings: rankings,
+    })
+
+    // Should use rankings totalPayments(700) - paymentBase(600) = 100
+    // NOT snapshot-based: paymentsCount(100) - membershipBase(80) = 20
+    expect(result.districtAnalytics.membershipChange).toBe(100)
+  })
+
+  /**
+   * Additional: Verify normalized lookup works in reverse direction
+   * (rankings has "D42", search uses "42").
+   */
+  it('should find district via normalized lookup when rankings has prefix and search does not', async () => {
+    const computer = new AnalyticsComputer()
+
+    const clubs = [
+      createMockClub({ clubId: '1', paymentsCount: 30, membershipBase: 25 }),
+    ]
+    const snapshot = createMockSnapshot('42', '2024-01-15', clubs)
+
+    // Rankings use "D42" as districtId (with prefix)
+    const rankings = createRankingsData([
+      { districtId: 'D42', totalPayments: 300, paymentBase: 250 },
+    ])
+
+    const result = await computer.computeDistrictAnalytics('42', [snapshot], {
+      allDistrictsRankings: rankings,
+    })
+
+    // Normalized lookup: "42" → "42" matches "D42" → "42"
+    // totalPayments(300) - paymentBase(250) = 50
+    expect(result.districtAnalytics.membershipChange).toBe(50)
   })
 })

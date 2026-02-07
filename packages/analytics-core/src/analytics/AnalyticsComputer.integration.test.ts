@@ -934,10 +934,10 @@ describe('AnalyticsComputer Integration Tests', () => {
       const result = await computer.computeDistrictAnalytics('D101', snapshots)
       const analytics = result.districtAnalytics
 
-      // Total membership in Jan: 24 + 22 + 18 = 64
-      // Total membership in Mar: 28 + 25 + 22 = 75
-      // Change: 75 - 64 = 11
-      expect(analytics.membershipChange).toBe(11)
+      // Without rankings, falls back to snapshot-based: sum(paymentsCount) - sum(membershipBase) from latest
+      // Latest (Mar): 3 clubs, each with default paymentsCount=20, membershipBase=18
+      // = (20+20+20) - (18+18+18) = 60 - 54 = 6
+      expect(analytics.membershipChange).toBe(6)
       expect(analytics.totalMembership).toBe(75)
     })
   })

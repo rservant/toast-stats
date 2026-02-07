@@ -149,6 +149,7 @@ const clubStatisticsArb: fc.Arbitrary<ClubStatistics> = fc.record({
   paymentsCount: paymentsCountArb,
   dcpGoals: dcpGoalsArb,
   status: clubStatusArb,
+  membershipBase: fc.integer({ min: 0, max: 100 }),
 })
 
 /**
@@ -329,13 +330,13 @@ describe('AnalyticsComputer Property Tests', () => {
     })
 
     /**
-     * Property 1.3: Membership Change Consistency
-     * The membership change should equal the difference between the latest and earliest
-     * snapshot membership totals.
+     * Property 1.3: Membership Change Consistency (Snapshot-Based Fallback)
+     * Without rankings data, the membership change should equal
+     * sum(paymentsCount) - sum(membershipBase) from the latest snapshot.
      *
      * **Validates: Requirements 7.2**
      */
-    it('should compute membership change as difference between latest and earliest snapshots', async () => {
+    it('should compute membership change as snapshot-based fallback without rankings', async () => {
       testDir = createIsolatedTestDir()
 
       await fc.assert(
@@ -353,25 +354,26 @@ describe('AnalyticsComputer Property Tests', () => {
               a.snapshotDate.localeCompare(b.snapshotDate)
             )
 
-            if (sortedSnapshots.length < 2) {
+            if (sortedSnapshots.length === 0) {
               expect(result.districtAnalytics.membershipChange).toBe(0)
               return true
             }
 
-            const firstSnapshot = sortedSnapshots[0]!
+            // Without rankings, fallback uses latest snapshot:
+            // sum(paymentsCount) - sum(membershipBase)
             const lastSnapshot = sortedSnapshots[sortedSnapshots.length - 1]!
 
-            const firstTotal = firstSnapshot.clubs.reduce(
-              (sum, club) => sum + club.membershipCount,
+            const totalPayments = lastSnapshot.clubs.reduce(
+              (sum, club) => sum + club.paymentsCount,
               0
             )
-            const lastTotal = lastSnapshot.clubs.reduce(
-              (sum, club) => sum + club.membershipCount,
+            const totalMembershipBase = lastSnapshot.clubs.reduce(
+              (sum, club) => sum + (club.membershipBase ?? 0),
               0
             )
 
             expect(result.districtAnalytics.membershipChange).toBe(
-              lastTotal - firstTotal
+              totalPayments - totalMembershipBase
             )
             return true
           }
