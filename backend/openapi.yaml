@@ -604,7 +604,15 @@ paths:
           required: false
       responses:
         '200':
-          description: Successfully retrieved pre-computed district analytics
+          description: |
+            Successfully retrieved pre-computed district analytics.
+            
+            Response includes:
+            - Core analytics data (membership, clubs, educational awards, etc.)
+            - performanceTargets: Per-metric rankings (world rank, percentile, region rank)
+            - paymentsTrend: Array of payment trend data points (date, payments) from membership analytics
+            
+            Note: paymentsTrend is optional and only included when membership analytics are available.
         '400':
           description: Bad request - invalid district ID or date format
         '404':

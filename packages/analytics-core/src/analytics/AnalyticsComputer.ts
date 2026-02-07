@@ -175,6 +175,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       totalMembership,
       membershipChange,
       membershipTrend: membershipTrends.membershipTrend,
+      paymentsTrend: membershipTrends.paymentsTrend,
       allClubs: clubHealth.allClubs,
       vulnerableClubs: clubHealth.vulnerableClubs,
       thrivingClubs: clubHealth.thrivingClubs,

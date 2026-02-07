@@ -356,6 +356,27 @@ analyticsRouter.get(
         districtId
       )
 
+      // Read membership analytics to get paymentsTrend data
+      // This provides the payment trend data that the frontend expects
+      let paymentsTrend: Array<{ date: string; payments: number }> | undefined
+      try {
+        const membershipAnalytics = await preComputedAnalyticsReader.readMembershipAnalytics(
+          snapshotDate,
+          districtId
+        )
+        if (membershipAnalytics?.paymentsTrend) {
+          paymentsTrend = membershipAnalytics.paymentsTrend
+        }
+      } catch (membershipError) {
+        // Log but don't fail - paymentsTrend is optional
+        logger.debug('Could not read membership analytics for paymentsTrend', {
+          operation: 'getDistrictAnalytics',
+          districtId,
+          snapshotDate,
+          error: membershipError instanceof Error ? membershipError.message : 'Unknown error',
+        })
+      }
+
       // Requirement 4.1: Transform legacy distinguishedClubs array format to counts object
       // Note: Legacy pre-computed files may have distinguishedClubs as an array instead of counts object.
       // The type guard checks the runtime data format, not the TypeScript type.
@@ -395,17 +416,20 @@ analyticsRouter.get(
         filePath: analyticsFilePath,
         schemaVersion: ANALYTICS_SCHEMA_VERSION,
         hasPerformanceTargets: performanceTargets !== null,
+        hasPaymentsTrend: paymentsTrend !== undefined && paymentsTrend.length > 0,
       })
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
-      // Include performanceTargets in response if available
+      // Include performanceTargets and paymentsTrend in response if available
       // Per-metric-rankings spec: Frontend expects performanceTargets with rankings
       // Transform from analytics-core format to frontend-expected format
-      const response = performanceTargets
-        ? { ...analytics, performanceTargets: transformPerformanceTargets(performanceTargets) }
-        : analytics
+      const response = {
+        ...analytics,
+        ...(performanceTargets && { performanceTargets: transformPerformanceTargets(performanceTargets) }),
+        ...(paymentsTrend && { paymentsTrend }),
+      }
 
       res.json(response)
     } catch (error) {

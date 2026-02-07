@@ -281,6 +281,8 @@ export interface DistrictAnalytics {
   totalMembership: number
   membershipChange: number
   membershipTrend: MembershipTrendPoint[]
+  /** Payments trend over time (optional for backward compatibility) */
+  paymentsTrend?: PaymentsTrendPoint[]
   allClubs: ClubTrend[]
   vulnerableClubs: ClubTrend[]
   thrivingClubs: ClubTrend[]
