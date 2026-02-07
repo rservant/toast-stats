@@ -96,8 +96,8 @@ export class DataTransformer implements IDataTransformer {
       csvData.districtPerformance ?? []
     )
 
-    // Extract clubs from club performance data
-    const clubs = this.extractClubs(clubPerformance)
+    // Extract clubs from club performance data, merging payment fields from district performance
+    const clubs = this.extractClubs(clubPerformance, districtPerformance)
 
     // Extract divisions from division performance data
     const divisions = this.extractDivisions(divisionPerformance)
@@ -219,95 +219,152 @@ export class DataTransformer implements IDataTransformer {
    * @param clubPerformance - Array of club performance records
    * @returns Array of club statistics
    */
-  private extractClubs(clubPerformance: ParsedRecord[]): ClubStatistics[] {
-    const clubs: ClubStatistics[] = []
+  private extractClubs(
+      clubPerformance: ParsedRecord[],
+      districtPerformance: ParsedRecord[]
+    ): ClubStatistics[] {
+      const clubs: ClubStatistics[] = []
 
-    for (const record of clubPerformance) {
-      const clubId = this.extractString(record, 'Club Number', 'ClubId', 'Club')
-      const clubName = this.extractString(
-        record,
-        'Club Name',
-        'ClubName',
-        'Name'
-      )
+      // Build lookup map from districtPerformance records keyed by normalized club ID
+      const dpLookup = this.buildDistrictPerformanceLookup(districtPerformance)
 
-      if (!clubId || !clubName) {
+      for (const record of clubPerformance) {
+        const clubId = this.extractString(record, 'Club Number', 'ClubId', 'Club')
+        const clubName = this.extractString(
+          record,
+          'Club Name',
+          'ClubName',
+          'Name'
+        )
+
+        if (!clubId || !clubName) {
+          continue
+        }
+
+        // Extract division ID and name
+        const divisionRaw = this.extractString(record, 'Division', 'Div') ?? ''
+        const { id: divisionId, name: divisionName } =
+          this.parseDivision(divisionRaw)
+
+        // Extract area ID and name
+        const areaRaw = this.extractString(record, 'Area') ?? ''
+        const { id: areaId, name: areaName } = this.parseArea(areaRaw)
+
+        // Look up matching districtPerformance record by normalized club ID
+        const normalizedId = this.normalizeClubId(clubId)
+        const dpRecord = dpLookup.get(normalizedId)
+
+        // Source payment/renewal fields from districtPerformance when available,
+        // falling back to clubPerformance record
+        const paymentSource = dpRecord ?? record
+
+        const club: ClubStatistics = {
+          clubId,
+          clubName,
+          divisionId,
+          areaId,
+          divisionName: divisionName || 'Unknown Division',
+          areaName: areaName || 'Unknown Area',
+          membershipCount: this.extractNumber(
+            record,
+            'Active Members',
+            'Membership',
+            'Members'
+          ),
+          paymentsCount: this.extractNumber(
+            paymentSource,
+            'Total to Date',
+            'Payments',
+            'Total'
+          ),
+          dcpGoals: this.extractNumber(record, 'Goals Met', 'DCP Goals', 'Goals'),
+          status: this.extractClubStatus(record),
+          // Payment breakdown fields - sourced from districtPerformance when available
+          octoberRenewals: this.extractNumber(
+            paymentSource,
+            'Oct. Ren.',
+            'Oct. Ren',
+            'October Renewals',
+            'Oct Ren'
+          ),
+          aprilRenewals: this.extractNumber(
+            paymentSource,
+            'Apr. Ren.',
+            'Apr. Ren',
+            'April Renewals',
+            'Apr Ren'
+          ),
+          newMembers: this.extractNumber(paymentSource, 'New Members', 'New'),
+          // Membership base for net growth calculation
+          membershipBase: this.extractNumber(
+            record,
+            'Mem. Base',
+            'Membership Base',
+            'Base'
+          ),
+        }
+
+        const charterDate = this.extractString(
+          record,
+          'Charter Date',
+          'Chartered'
+        )
+        if (charterDate) {
+          club.charterDate = charterDate
+        }
+
+        // Extract club operational status (Active, Suspended, Low, Ineligible)
+        const clubStatus = this.extractString(record, 'Club Status', 'Status')
+        if (clubStatus) {
+          club.clubStatus = clubStatus
+        }
+
+        clubs.push(club)
+      }
+
+      return clubs
+    }
+
+  /**
+   * Normalizes a club ID by stripping leading zeros.
+   * If the result would be empty (all-zeros input like "0000"),
+   * preserves the original value.
+   *
+   * @param clubId - The raw club ID string
+   * @returns The normalized club ID
+   */
+  private normalizeClubId(clubId: string): string {
+    const stripped = clubId.replace(/^0+/, '')
+    return stripped === '' ? clubId : stripped
+  }
+
+  /**
+   * Builds a lookup map from districtPerformance records keyed by normalized club ID.
+   * Tries column names 'Club', 'Club Number', or 'Club ID' to extract the club identifier.
+   * Records without a valid club ID are skipped.
+   *
+   * @param districtPerformance - Parsed records from district-performance.csv
+   * @returns Map of normalized club ID to ParsedRecord
+   */
+  private buildDistrictPerformanceLookup(
+    districtPerformance: ParsedRecord[]
+  ): Map<string, ParsedRecord> {
+    const lookup = new Map<string, ParsedRecord>()
+
+    for (const record of districtPerformance) {
+      const rawClubId = this.extractString(record, 'Club', 'Club Number', 'Club ID')
+      if (rawClubId === undefined || rawClubId === '') {
         continue
       }
 
-      // Extract division ID and name
-      const divisionRaw = this.extractString(record, 'Division', 'Div') ?? ''
-      const { id: divisionId, name: divisionName } =
-        this.parseDivision(divisionRaw)
-
-      // Extract area ID and name
-      const areaRaw = this.extractString(record, 'Area') ?? ''
-      const { id: areaId, name: areaName } = this.parseArea(areaRaw)
-
-      const club: ClubStatistics = {
-        clubId,
-        clubName,
-        divisionId,
-        areaId,
-        divisionName: divisionName || 'Unknown Division',
-        areaName: areaName || 'Unknown Area',
-        membershipCount: this.extractNumber(
-          record,
-          'Active Members',
-          'Membership',
-          'Members'
-        ),
-        paymentsCount: this.extractNumber(
-          record,
-          'Total to Date',
-          'Payments',
-          'Total'
-        ),
-        dcpGoals: this.extractNumber(record, 'Goals Met', 'DCP Goals', 'Goals'),
-        status: this.extractClubStatus(record),
-        // Payment breakdown fields
-        octoberRenewals: this.extractNumber(
-          record,
-          'Oct. Ren.',
-          'October Renewals',
-          'Oct Ren'
-        ),
-        aprilRenewals: this.extractNumber(
-          record,
-          'Apr. Ren.',
-          'April Renewals',
-          'Apr Ren'
-        ),
-        newMembers: this.extractNumber(record, 'New Members', 'New'),
-        // Membership base for net growth calculation
-        membershipBase: this.extractNumber(
-          record,
-          'Mem. Base',
-          'Membership Base',
-          'Base'
-        ),
-      }
-
-      const charterDate = this.extractString(
-        record,
-        'Charter Date',
-        'Chartered'
-      )
-      if (charterDate) {
-        club.charterDate = charterDate
-      }
-
-      // Extract club operational status (Active, Suspended, Low, Ineligible)
-      const clubStatus = this.extractString(record, 'Club Status', 'Status')
-      if (clubStatus) {
-        club.clubStatus = clubStatus
-      }
-
-      clubs.push(club)
+      const normalizedId = this.normalizeClubId(rawClubId)
+      lookup.set(normalizedId, record)
     }
 
-    return clubs
+    return lookup
   }
+
+
 
   /**
    * Parses a division field value to extract ID and name.

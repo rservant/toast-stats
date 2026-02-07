@@ -51,12 +51,8 @@ describe('DataTransformer', () => {
             'Division',
             'Area',
             'Active Members',
-            'Total to Date',
             'Goals Met',
             'Club Status',
-            'Oct. Ren.',
-            'Apr. Ren.',
-            'New Members',
             'Mem. Base',
           ],
           [
@@ -65,12 +61,8 @@ describe('DataTransformer', () => {
             'A',
             '1',
             '25',
-            '30',
             '5',
             'Active',
-            '10',
-            '8',
-            '7',
             '20',
           ],
           [
@@ -79,17 +71,23 @@ describe('DataTransformer', () => {
             'A',
             '2',
             '18',
-            '22',
             '3',
             'Active',
-            '6',
-            '5',
-            '7',
             '15',
           ],
         ],
         divisionPerformance: [],
-        districtPerformance: [],
+        districtPerformance: [
+          [
+            'Club',
+            'Oct. Ren.',
+            'Apr. Ren.',
+            'New Members',
+            'Total to Date',
+          ],
+          ['1234', '10', '8', '7', '30'],
+          ['5678', '6', '5', '7', '22'],
+        ],
       }
 
       const result = await transformer.transformRawCSV(
@@ -352,12 +350,14 @@ describe('DataTransformer', () => {
             'Division',
             'Area',
             'Active Members',
-            'Total to Date',
           ],
-          ['1234', 'Test Club', 'A', '1', '25', '30'],
+          ['1234', 'Test Club', 'A', '1', '25'],
         ],
         divisionPerformance: [],
-        districtPerformance: [],
+        districtPerformance: [
+          ['Club', 'Total to Date'],
+          ['1234', '30'],
+        ],
       }
 
       const result = await transformer.transformRawCSV(
@@ -493,24 +493,28 @@ describe('DataTransformer', () => {
 
     /**
      * Payment field extraction tests
-     * Requirements: 2.4
-     * - Extract octoberRenewals, aprilRenewals, newMembers from CSV
+     * Requirements: 1.2, 1.3, 1.4, 1.5
+     * - Payment fields (octoberRenewals, aprilRenewals, newMembers, paymentsCount)
+     *   are sourced from districtPerformance records, matched by club ID
      */
     describe('payment field extraction', () => {
-      it('should extract all payment fields when present', async () => {
+      it('should extract all payment fields from districtPerformance when present', async () => {
         const csvData: RawCSVData = {
           clubPerformance: [
+            ['Club Number', 'Club Name'],
+            ['1234', 'Test Club'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [
             [
-              'Club Number',
-              'Club Name',
+              'Club',
               'Oct. Ren.',
               'Apr. Ren.',
               'New Members',
+              'Total to Date',
             ],
-            ['1234', 'Test Club', '15', '12', '8'],
+            ['1234', '15', '12', '8', '35'],
           ],
-          divisionPerformance: [],
-          districtPerformance: [],
         }
 
         const result = await transformer.transformRawCSV(
@@ -522,9 +526,10 @@ describe('DataTransformer', () => {
         expect(result.clubs[0]?.octoberRenewals).toBe(15)
         expect(result.clubs[0]?.aprilRenewals).toBe(12)
         expect(result.clubs[0]?.newMembers).toBe(8)
+        expect(result.clubs[0]?.paymentsCount).toBe(35)
       })
 
-      it('should default payment fields to 0 when missing', async () => {
+      it('should default payment fields to 0 when missing from both sources', async () => {
         const csvData: RawCSVData = {
           clubPerformance: [
             ['Club Number', 'Club Name'],
@@ -543,22 +548,26 @@ describe('DataTransformer', () => {
         expect(result.clubs[0]?.octoberRenewals).toBe(0)
         expect(result.clubs[0]?.aprilRenewals).toBe(0)
         expect(result.clubs[0]?.newMembers).toBe(0)
+        expect(result.clubs[0]?.paymentsCount).toBe(0)
       })
 
-      it('should handle alternative payment column names', async () => {
+      it('should handle alternative payment column names in districtPerformance', async () => {
         const csvData: RawCSVData = {
           clubPerformance: [
-            [
-              'Club Number',
-              'Club Name',
-              'October Renewals',
-              'April Renewals',
-              'New',
-            ],
-            ['1234', 'Test Club', '10', '5', '3'],
+            ['Club Number', 'Club Name'],
+            ['1234', 'Test Club'],
           ],
           divisionPerformance: [],
-          districtPerformance: [],
+          districtPerformance: [
+            [
+              'Club',
+              'Oct. Ren',
+              'Apr. Ren',
+              'New',
+              'Total to Date',
+            ],
+            ['1234', '10', '5', '3', '18'],
+          ],
         }
 
         const result = await transformer.transformRawCSV(
@@ -570,22 +579,26 @@ describe('DataTransformer', () => {
         expect(result.clubs[0]?.octoberRenewals).toBe(10)
         expect(result.clubs[0]?.aprilRenewals).toBe(5)
         expect(result.clubs[0]?.newMembers).toBe(3)
+        expect(result.clubs[0]?.paymentsCount).toBe(18)
       })
 
-      it('should handle non-numeric payment values gracefully', async () => {
+      it('should handle non-numeric payment values in districtPerformance gracefully', async () => {
         const csvData: RawCSVData = {
           clubPerformance: [
+            ['Club Number', 'Club Name'],
+            ['1234', 'Test Club'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [
             [
-              'Club Number',
-              'Club Name',
+              'Club',
               'Oct. Ren.',
               'Apr. Ren.',
               'New Members',
+              'Total to Date',
             ],
-            ['1234', 'Test Club', 'N/A', '', 'invalid'],
+            ['1234', 'N/A', '', 'invalid', 'bad'],
           ],
-          divisionPerformance: [],
-          districtPerformance: [],
         }
 
         const result = await transformer.transformRawCSV(
@@ -597,6 +610,249 @@ describe('DataTransformer', () => {
         expect(result.clubs[0]?.octoberRenewals).toBe(0)
         expect(result.clubs[0]?.aprilRenewals).toBe(0)
         expect(result.clubs[0]?.newMembers).toBe(0)
+        expect(result.clubs[0]?.paymentsCount).toBe(0)
+      })
+    })
+
+    /**
+     * District performance merge behavior tests
+     * Requirements: 1.6, 1.7, 3.1, 3.2
+     * - Fallback to clubPerformance when no districtPerformance match exists
+     * - Backward compatibility with empty districtPerformance
+     * - Non-payment fields always sourced from clubPerformance
+     */
+    describe('district performance merge behavior', () => {
+      it('should fall back to clubPerformance values when no districtPerformance match exists', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'Division',
+              'Area',
+              'Active Members',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+              'Total to Date',
+            ],
+            ['1234', 'Fallback Club', 'A', '1', '20', '3', '2', '1', '6'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [
+            [
+              'Club',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+              'Total to Date',
+            ],
+            ['9999', '50', '40', '30', '120'],
+          ],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs).toHaveLength(1)
+        expect(result.clubs[0]?.clubId).toBe('1234')
+        expect(result.clubs[0]?.octoberRenewals).toBe(3)
+        expect(result.clubs[0]?.aprilRenewals).toBe(2)
+        expect(result.clubs[0]?.newMembers).toBe(1)
+        expect(result.clubs[0]?.paymentsCount).toBe(6)
+      })
+
+      it('should produce identical output with empty districtPerformance as old implementation', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'Division',
+              'Area',
+              'Active Members',
+              'Goals Met',
+              'Mem. Base',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+              'Total to Date',
+              'Club Status',
+            ],
+            ['5678', 'Legacy Club', 'B', '3', '22', '4', '18', '7', '5', '3', '15', 'Active'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs).toHaveLength(1)
+        expect(result.clubs[0]).toEqual({
+          clubId: '5678',
+          clubName: 'Legacy Club',
+          divisionId: 'B',
+          areaId: '3',
+          divisionName: 'Division B',
+          areaName: 'Area 3',
+          membershipCount: 22,
+          dcpGoals: 4,
+          membershipBase: 18,
+          status: 'Active',
+          clubStatus: 'Active',
+          octoberRenewals: 7,
+          aprilRenewals: 5,
+          newMembers: 3,
+          paymentsCount: 15,
+        })
+      })
+
+      it('should source non-payment fields from clubPerformance even when districtPerformance has different values', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'Division',
+              'Area',
+              'Active Members',
+              'Goals Met',
+              'Mem. Base',
+              'Club Status',
+            ],
+            ['1234', 'Club From CP', 'A', '1', '25', '5', '20', 'Active'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [
+            [
+              'Club',
+              'Club Name',
+              'Division',
+              'Area',
+              'Active Members',
+              'Goals Met',
+              'Mem. Base',
+              'Club Status',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+              'Total to Date',
+            ],
+            ['1234', 'Club From DP', 'Z', '99', '999', '10', '888', 'Suspended', '12', '8', '4', '24'],
+          ],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs).toHaveLength(1)
+        const club = result.clubs[0]
+
+        // Non-payment fields MUST come from clubPerformance
+        expect(club?.clubName).toBe('Club From CP')
+        expect(club?.divisionId).toBe('A')
+        expect(club?.areaId).toBe('1')
+        expect(club?.membershipCount).toBe(25)
+        expect(club?.dcpGoals).toBe(5)
+        expect(club?.membershipBase).toBe(20)
+        expect(club?.clubStatus).toBe('Active')
+
+        // Payment fields MUST come from districtPerformance
+        expect(club?.octoberRenewals).toBe(12)
+        expect(club?.aprilRenewals).toBe(8)
+        expect(club?.newMembers).toBe(4)
+        expect(club?.paymentsCount).toBe(24)
+      })
+    })
+
+    /**
+     * Real-world regression tests
+     *
+     * These tests reproduce actual bugs found in production data.
+     * Each test documents the specific club/data that triggered the bug
+     * so future-you understands why the test exists and what it protects.
+     *
+     * Requirements: 1.2, 1.3, 1.4, 1.5, 2.1, 2.2
+     */
+    describe('real-world regression tests', () => {
+      /**
+       * Bug report: Club 00009905 had payment data in district-performance.csv
+       * but NOT in club-performance.csv. The club ID appears as '00009905' in
+       * club-performance.csv (with leading zeros) and '9905' in
+       * district-performance.csv (without leading zeros). The normalizeClubId
+       * logic must strip leading zeros so these IDs match during the merge.
+       *
+       * Expected values from the bug report:
+       *   octoberRenewals = 9
+       *   aprilRenewals   = 4
+       *   newMembers       = 2
+       *   paymentsCount    = 16
+       *
+       * Validates: Requirements 1.2, 1.3, 1.4, 1.5, 2.1, 2.2
+       */
+      it('should merge payment data for Club 00009905 despite leading-zero mismatch between CSV sources', async () => {
+        const csvData: RawCSVData = {
+          clubPerformance: [
+            [
+              'Club Number',
+              'Club Name',
+              'Division',
+              'Area',
+              'Active Members',
+              'Goals Met',
+              'Mem. Base',
+              'Club Status',
+            ],
+            ['00009905', 'Regression Test Club', 'C', '7', '15', '3', '12', 'Active'],
+          ],
+          divisionPerformance: [],
+          districtPerformance: [
+            [
+              'Club',
+              'Oct. Ren.',
+              'Apr. Ren.',
+              'New Members',
+              'Total to Date',
+            ],
+            ['9905', '9', '4', '2', '16'],
+          ],
+        }
+
+        const result = await transformer.transformRawCSV(
+          '2024-01-15',
+          'D101',
+          csvData
+        )
+
+        expect(result.clubs).toHaveLength(1)
+        const club = result.clubs[0]
+
+        // Payment fields MUST come from districtPerformance (club ID '9905')
+        // despite clubPerformance using '00009905' — normalization bridges the gap
+        expect(club?.octoberRenewals).toBe(9)
+        expect(club?.aprilRenewals).toBe(4)
+        expect(club?.newMembers).toBe(2)
+        expect(club?.paymentsCount).toBe(16)
+
+        // Non-payment fields MUST still come from clubPerformance
+        expect(club?.clubId).toBe('00009905')
+        expect(club?.clubName).toBe('Regression Test Club')
+        expect(club?.divisionId).toBe('C')
+        expect(club?.areaId).toBe('7')
+        expect(club?.membershipCount).toBe(15)
+        expect(club?.dcpGoals).toBe(3)
+        expect(club?.membershipBase).toBe(12)
+        expect(club?.clubStatus).toBe('Active')
       })
     })
 
