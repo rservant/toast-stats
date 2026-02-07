@@ -245,7 +245,8 @@ const DistrictDetailPage: React.FC = () => {
     usePaymentsTrend(
       hasValidDates ? districtId || null : null,
       undefined, // Let hook fetch 3 years automatically for comparison
-      effectiveEndDate ?? undefined
+      effectiveEndDate ?? undefined,
+      aggregatedAnalytics?.trends?.payments
     )
 
   const districtName = selectedDistrict?.name || 'Unknown District'
@@ -606,11 +607,11 @@ const DistrictDetailPage: React.FC = () => {
             {activeTab === 'trends' && (
               <>
                 {/* Membership Trend Chart - Lazy Loaded */}
-                {analytics && (
+                {aggregatedAnalytics && (
                   <LazyChart height="400px">
                     <MembershipTrendChart
-                      membershipTrend={analytics.membershipTrend}
-                      isLoading={isLoadingAnalytics}
+                      membershipTrend={aggregatedAnalytics.trends.membership}
+                      isLoading={isLoadingAggregated}
                     />
                   </LazyChart>
                 )}
@@ -628,19 +629,19 @@ const DistrictDetailPage: React.FC = () => {
                 )}
 
                 {/* Year-Over-Year Comparison - Lazy Loaded */}
-                {analytics && (
+                {aggregatedAnalytics && (
                   <LazyChart height="300px">
                     <YearOverYearComparison
-                      {...(analytics.yearOverYear && {
-                        yearOverYear: analytics.yearOverYear,
+                      {...(aggregatedAnalytics.yearOverYear && {
+                        yearOverYear: aggregatedAnalytics.yearOverYear,
                       })}
                       currentYear={{
-                        totalMembership: analytics.totalMembership,
-                        distinguishedClubs: analytics.distinguishedClubs.total,
-                        thrivingClubs: analytics.thrivingClubs.length,
-                        totalClubs: analytics.allClubs.length,
+                        totalMembership: aggregatedAnalytics.summary.totalMembership,
+                        distinguishedClubs: aggregatedAnalytics.summary.distinguishedClubs.total,
+                        thrivingClubs: aggregatedAnalytics.summary.clubCounts.thriving,
+                        totalClubs: aggregatedAnalytics.summary.clubCounts.total,
                       }}
-                      isLoading={isLoadingAnalytics}
+                      isLoading={isLoadingAggregated}
                     />
                   </LazyChart>
                 )}
