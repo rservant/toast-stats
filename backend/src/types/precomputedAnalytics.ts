@@ -94,6 +94,14 @@ export interface PreComputedAnalyticsSummary {
   membershipChange: number
 
   /**
+   * Change in actual member count (totalMembership) between the current
+   * snapshot and the baseline snapshot. Represents real membership growth
+   * or decline, as opposed to membershipChange which tracks payment changes.
+   * Requirement 5.1
+   */
+  memberCountChange: number
+
+  /**
    * Club health status distribution
    * Requirement 1.2: Includes thriving, vulnerable, and intervention-required counts
    */

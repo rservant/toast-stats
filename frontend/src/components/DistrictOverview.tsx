@@ -210,13 +210,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             badges={
               <span
                 className={`text-xs px-2 py-1 rounded ${
-                  analytics.membershipChange >= 0
+                  (analytics.memberCountChange ?? analytics.membershipChange) >=
+                  0
                     ? 'text-green-700 bg-green-100'
                     : 'text-red-700 bg-red-100'
                 }`}
               >
-                {analytics.membershipChange >= 0 ? '+' : ''}
-                {analytics.membershipChange} members
+                {(analytics.memberCountChange ?? analytics.membershipChange) >=
+                0
+                  ? '+'
+                  : ''}
+                {analytics.memberCountChange ?? analytics.membershipChange}{' '}
+                members
               </span>
             }
           />

@@ -58,6 +58,8 @@ export interface AnalyticsSummary {
   totalMembership: number
   /** Change in membership from previous period */
   membershipChange: number
+  /** Change in actual member count between snapshots */
+  memberCountChange: number
   /** Club counts by health status */
   clubCounts: ClubCounts
   /** Distinguished clubs by level */
@@ -244,6 +246,7 @@ function convertToAggregatedFormat(
     summary: {
       totalMembership: analytics.totalMembership,
       membershipChange: analytics.membershipChange,
+      memberCountChange: analytics.memberCountChange ?? 0,
       clubCounts: {
         total:
           analytics.thrivingClubs.length +

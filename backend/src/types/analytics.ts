@@ -392,6 +392,7 @@ export interface DistrictAnalytics {
   // Membership insights
   totalMembership: number
   membershipChange: number
+  memberCountChange: number
   membershipTrend: Array<{ date: string; count: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
 

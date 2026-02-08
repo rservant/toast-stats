@@ -62,3 +62,4 @@ logs
 .firebase/
 logs.json
 backfill-logs/
+logs.txt

@@ -371,6 +371,79 @@ describe('AnalyticsComputer', () => {
       expect(result.districtAnalytics.dateRange.start).toBe('2024-01-01')
       expect(result.districtAnalytics.dateRange.end).toBe('2024-03-15')
     })
+
+    /**
+     * memberCountChange tests
+     *
+     * Validates: Requirements 6.1, 6.2
+     *
+     * memberCountChange represents the actual change in member count (sum of membershipCount
+     * across all clubs) between the first and last snapshots. This is distinct from
+     * membershipChange which tracks payment-based change.
+     */
+    it('should compute memberCountChange as difference in total membership between two snapshots', async () => {
+      const computer = new AnalyticsComputer()
+
+      const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
+        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 15 }),
+        createMockClub({ clubId: '2', membershipCount: 30, paymentsCount: 25, membershipBase: 20 }),
+      ])
+      const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
+        createMockClub({ clubId: '1', membershipCount: 25, paymentsCount: 22, membershipBase: 15 }),
+        createMockClub({ clubId: '2', membershipCount: 35, paymentsCount: 30, membershipBase: 20 }),
+      ])
+
+      const result = await computer.computeDistrictAnalytics('D101', [
+        snapshot1,
+        snapshot2,
+      ])
+
+      // Total membership: snapshot1 = 20 + 30 = 50, snapshot2 = 25 + 35 = 60
+      // memberCountChange = 60 - 50 = 10
+      expect(result.districtAnalytics.memberCountChange).toBe(10)
+    })
+
+    it('should set memberCountChange to 0 when only a single snapshot is provided', async () => {
+      const computer = new AnalyticsComputer()
+
+      const snapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ clubId: '1', membershipCount: 25 }),
+        createMockClub({ clubId: '2', membershipCount: 15 }),
+      ])
+
+      const result = await computer.computeDistrictAnalytics('D101', [snapshot])
+
+      // With a single snapshot there is no baseline to compare against
+      expect(result.districtAnalytics.memberCountChange).toBe(0)
+    })
+
+    it('should preserve payment-based membershipChange alongside memberCountChange', async () => {
+      const computer = new AnalyticsComputer()
+
+      const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
+        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 15 }),
+      ])
+      const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
+        createMockClub({ clubId: '1', membershipCount: 28, paymentsCount: 24, membershipBase: 15 }),
+      ])
+
+      const result = await computer.computeDistrictAnalytics('D101', [
+        snapshot1,
+        snapshot2,
+      ])
+
+      // memberCountChange: actual member count difference = 28 - 20 = 8
+      expect(result.districtAnalytics.memberCountChange).toBe(8)
+
+      // membershipChange: payment-based, without rankings falls back to
+      // snapshot-based: sum(paymentsCount) - sum(membershipBase) from latest = 24 - 15 = 9
+      expect(result.districtAnalytics.membershipChange).toBe(9)
+
+      // Both fields coexist — they measure different things
+      expect(result.districtAnalytics.memberCountChange).not.toBe(
+        result.districtAnalytics.membershipChange
+      )
+    })
   })
 
   describe('computeMembershipAnalytics', () => {

@@ -113,6 +113,7 @@ export interface DistrictAnalytics {
   dateRange: { start: string; end: string }
   totalMembership: number
   membershipChange: number
+  memberCountChange?: number
   membershipTrend: Array<{ date: string; count: number }>
   paymentsTrend?: Array<{ date: string; payments: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>

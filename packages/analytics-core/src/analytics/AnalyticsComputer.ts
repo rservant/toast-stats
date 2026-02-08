@@ -166,13 +166,18 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       ? this.membershipModule.getTotalMembership(latestSnapshot)
       : 0
 
-    // Calculate membership change
+    // Calculate membership change (payment-based)
     // Requirements 8.1, 8.2, 8.3: Use paymentBase when available, fall back to snapshot-based calculation
     const membershipChange = this.calculateMembershipChangeWithBase(
       sortedSnapshots,
       options?.allDistrictsRankings,
       districtId
     )
+
+    // Calculate actual member count change
+    // Requirements 4.2, 4.3: Difference in totalMembership between last and first snapshot (0 for single snapshot)
+    const memberCountChange =
+      this.membershipModule.calculateMembershipChange(sortedSnapshots)
 
     // Get current date for year-over-year computation
     const currentDate =
@@ -186,6 +191,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       dateRange,
       totalMembership,
       membershipChange,
+      memberCountChange,
       membershipTrend: membershipTrends.membershipTrend,
       paymentsTrend: membershipTrends.paymentsTrend,
       allClubs: clubHealth.allClubs,

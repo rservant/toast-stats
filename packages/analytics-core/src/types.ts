@@ -280,6 +280,7 @@ export interface DistrictAnalytics {
   dateRange: DateRange
   totalMembership: number
   membershipChange: number
+  memberCountChange: number
   membershipTrend: MembershipTrendPoint[]
   /** Payments trend over time (optional for backward compatibility) */
   paymentsTrend?: PaymentsTrendPoint[]

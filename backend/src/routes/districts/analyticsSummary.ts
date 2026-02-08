@@ -50,6 +50,7 @@ interface AggregatedAnalyticsResponse {
   summary: {
     totalMembership: number
     membershipChange: number
+    memberCountChange: number
     clubCounts: {
       total: number
       thriving: number
@@ -422,6 +423,7 @@ analyticsSummaryRouter.get(
         summary: {
           totalMembership: summary.totalMembership,
           membershipChange: summary.membershipChange,
+          memberCountChange: summary.memberCountChange ?? 0,
           clubCounts: {
             total: summary.allClubs.length,
             thriving: summary.thrivingClubs.length,

@@ -946,6 +946,106 @@ paths:
       responses:
         '200':
           description: Successfully retrieved aggregated analytics summary
+          schema:
+            type: object
+            properties:
+              districtId:
+                type: string
+                description: District identifier
+              dateRange:
+                type: object
+                properties:
+                  start:
+                    type: string
+                    format: date
+                    description: Start date of the analytics range
+                  end:
+                    type: string
+                    format: date
+                    description: End date of the analytics range
+              summary:
+                type: object
+                properties:
+                  totalMembership:
+                    type: integer
+                    description: Total membership count for the district
+                  membershipChange:
+                    type: integer
+                    description: Change in membership payments between current and baseline (payment-based)
+                  memberCountChange:
+                    type: integer
+                    description: Change in actual member count between current and baseline snapshot
+                  clubCounts:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        description: Total number of clubs
+                      thriving:
+                        type: integer
+                        description: Number of thriving clubs
+                      vulnerable:
+                        type: integer
+                        description: Number of vulnerable clubs
+                      interventionRequired:
+                        type: integer
+                        description: Number of clubs requiring intervention
+                  distinguishedClubs:
+                    type: object
+                    properties:
+                      smedley:
+                        type: integer
+                        description: Number of Smedley Distinguished clubs
+                      presidents:
+                        type: integer
+                        description: Number of Presidents Distinguished clubs
+                      select:
+                        type: integer
+                        description: Number of Select Distinguished clubs
+                      distinguished:
+                        type: integer
+                        description: Number of Distinguished clubs
+                      total:
+                        type: integer
+                        description: Total number of distinguished clubs
+                  distinguishedProjection:
+                    type: number
+                    description: Projected number of distinguished clubs
+              trends:
+                type: object
+                properties:
+                  membership:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        count:
+                          type: integer
+                  payments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        payments:
+                          type: integer
+              yearOverYear:
+                type: object
+                properties:
+                  membershipChange:
+                    type: number
+                    description: Year-over-year membership change
+                  distinguishedChange:
+                    type: number
+                    description: Year-over-year distinguished clubs change
+                  clubHealthChange:
+                    type: number
+                    description: Year-over-year club health change
         '400':
           description: Bad request - invalid parameters
         '404':
