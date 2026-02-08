@@ -112,6 +112,22 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
     )
   }
 
+  // All-zero changes indicate the backend couldn't find distinct previous year data
+  const allChangesZero =
+    yearOverYear.membershipChange === 0 &&
+    yearOverYear.distinguishedChange === 0 &&
+    yearOverYear.clubHealthChange === 0
+
+  if (allChangesZero) {
+    return (
+      <EmptyState
+        title="No Historical Data"
+        message="Year-over-year comparison requires data from previous program years. Continue collecting data to enable this feature."
+        icon="data"
+      />
+    )
+  }
+
   // Calculate previous year values from percentage changes
   // Formula: previous = current / (1 + percentageChange/100)
   // The yearOverYear values are percentage changes, not absolute changes

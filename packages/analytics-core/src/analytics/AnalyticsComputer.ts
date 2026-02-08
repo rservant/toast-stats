@@ -1143,6 +1143,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     // If no snapshots from the same year, find the closest one
     let closestSnapshot: DistrictStatistics | undefined
     let closestDiff = Infinity
+    const MAX_PROXIMITY_MS = 180 * 24 * 60 * 60 * 1000 // 180 days
 
     for (const snapshot of snapshots) {
       const diff = Math.abs(
@@ -1153,6 +1154,11 @@ export class AnalyticsComputer implements IAnalyticsComputer {
         closestDiff = diff
         closestSnapshot = snapshot
       }
+    }
+
+    // Reject if closest snapshot is too far from target
+    if (closestDiff > MAX_PROXIMITY_MS) {
+      return undefined
     }
 
     return closestSnapshot

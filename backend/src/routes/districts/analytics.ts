@@ -19,6 +19,7 @@ import {
   snapshotStore,
   cacheDirectory,
   getSnapshotForDate,
+  getTimeSeriesIndexService,
 } from './shared.js'
 import {
   PreComputedAnalyticsReader,
@@ -356,25 +357,30 @@ analyticsRouter.get(
         districtId
       )
 
-      // Read membership analytics to get paymentsTrend data
-      // This provides the payment trend data that the frontend expects
+      // Read payments trend from time-series index (pre-computed by scraper-cli)
+      // Requirements 1.1, 1.2, 1.3, 1.4: Use time-series index instead of single snapshot
       let paymentsTrend: Array<{ date: string; payments: number }> | undefined
-      try {
-        const membershipAnalytics = await preComputedAnalyticsReader.readMembershipAnalytics(
-          snapshotDate,
-          districtId
-        )
-        if (membershipAnalytics?.paymentsTrend) {
-          paymentsTrend = membershipAnalytics.paymentsTrend
+      if (typeof startDate === 'string' && typeof endDate === 'string') {
+        try {
+          const timeSeriesIndexService = await getTimeSeriesIndexService()
+          const timeSeriesData = await timeSeriesIndexService.getTrendData(
+            districtId,
+            startDate,
+            endDate
+          )
+          if (timeSeriesData.length > 0) {
+            paymentsTrend = timeSeriesData.map(dp => ({
+              date: dp.date,
+              payments: dp.payments,
+            }))
+          }
+        } catch (trendError) {
+          logger.debug('Could not read payments trend from time-series index', {
+            operation: 'getDistrictAnalytics',
+            districtId,
+            error: trendError instanceof Error ? trendError.message : 'Unknown error',
+          })
         }
-      } catch (membershipError) {
-        // Log but don't fail - paymentsTrend is optional
-        logger.debug('Could not read membership analytics for paymentsTrend', {
-          operation: 'getDistrictAnalytics',
-          districtId,
-          snapshotDate,
-          error: membershipError instanceof Error ? membershipError.message : 'Unknown error',
-        })
       }
 
       // Requirement 4.1: Transform legacy distinguishedClubs array format to counts object

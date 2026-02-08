@@ -1226,7 +1226,10 @@ describe('computeYearOverYear', () => {
 
   it('should return dataAvailable=false when no previous year data available', () => {
     const computer = new AnalyticsComputer()
-    // Only current year snapshot, no previous year
+    // Only current year snapshot (2024-01-15), no previous year.
+    // The previous year target is 2023-01-15, which is 366 days away.
+    // The proximity guard (180 days) rejects the only snapshot for the
+    // previous-year lookup, so computeYearOverYear returns dataAvailable=false.
     const snapshot = createMockSnapshot('D101', '2024-01-15', [
       createMockClub({ membershipCount: 25 }),
     ])
@@ -1237,14 +1240,9 @@ describe('computeYearOverYear', () => {
       '2024-01-15'
     )
 
-    // With only one snapshot, we can't do year-over-year comparison
-    // The implementation finds the closest snapshot, so if there's only one year,
-    // it will use that for both current and previous (same snapshot)
-    // This results in dataAvailable=true but with 0 changes
     expect(result.districtId).toBe('D101')
-    // When there's only one snapshot, the implementation still returns data
-    // but the comparison will show no change since it compares to itself
-    expect(result.dataAvailable).toBe(true)
+    expect(result.dataAvailable).toBe(false)
+    expect(result.message).toContain('Previous year data not available')
   })
 
   it('should compute year-over-year metrics when both years have data', () => {
@@ -1554,6 +1552,138 @@ describe('computeYearOverYear', () => {
     expect(result.dataAvailable).toBe(true)
     // When previous is 0 and current > 0, percentage change should be 100
     expect(result.metrics?.distinguishedClubs.percentageChange).toBe(100)
+  })
+
+  describe('findSnapshotForDate proximity guard', () => {
+    it('should reject a snapshot more than 180 days from the target date', () => {
+      const computer = new AnalyticsComputer()
+      // Single snapshot at 2024-01-15. Target for previous year is 2023-01-15.
+      // Distance: ~366 days — well beyond the 180-day threshold.
+      // No same-year match for 2023, so the fallback path triggers and rejects.
+      const snapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ membershipCount: 30 }),
+      ])
+
+      const result = computer.computeYearOverYear(
+        'D101',
+        [snapshot],
+        '2024-01-15'
+      )
+
+      expect(result.dataAvailable).toBe(false)
+      expect(result.message).toContain('Previous year data not available')
+    })
+
+    it('should return a snapshot within 179 days of the target date', () => {
+      const computer = new AnalyticsComputer()
+      // Current date: 2024-01-15 → previous year target: 2023-01-15
+      // Snapshot at 2022-07-20 is 179 days before 2023-01-15 — within threshold.
+      // 2022-07-20 is NOT in the same year as 2023, so the fallback path triggers.
+      const nearbySnapshot = createMockSnapshot('D101', '2022-07-20', [
+        createMockClub({ membershipCount: 20 }),
+      ])
+      const currentSnapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ membershipCount: 25 }),
+      ])
+
+      const result = computer.computeYearOverYear(
+        'D101',
+        [nearbySnapshot, currentSnapshot],
+        '2024-01-15'
+      )
+
+      // Previous year target is 2023-01-15.
+      // nearbySnapshot (2022-07-20) is 179 days away — within 180-day threshold.
+      // currentSnapshot (2024-01-15) is 365 days away — exceeds threshold.
+      // So nearbySnapshot is returned as the previous year data.
+      expect(result.dataAvailable).toBe(true)
+      expect(result.metrics).toBeDefined()
+      expect(result.metrics?.membership.previous).toBe(20)
+      expect(result.metrics?.membership.current).toBe(25)
+    })
+
+    it('should reject a snapshot 181 days from the target date', () => {
+      const computer = new AnalyticsComputer()
+      // Current date: 2024-07-15 → previous year target: 2023-07-15
+      // Snapshot at 2023-01-15 is 181 days before 2023-07-15 — exceeds threshold.
+      // No same-year match for 2023 (only one snapshot in 2023, and it's not
+      // in the same year as the target when the target year is 2023 — wait,
+      // 2023-01-15 IS in the same year as 2023-07-15. We need a cross-year scenario.
+      //
+      // Use: current date 2024-01-15 → previous year target 2023-01-15
+      // Only snapshot available for previous year lookup: 2022-07-18
+      // Distance from 2022-07-18 to 2023-01-15 = 181 days — exceeds threshold.
+      const distantSnapshot = createMockSnapshot('D101', '2022-07-18', [
+        createMockClub({ membershipCount: 15 }),
+      ])
+      const currentSnapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ membershipCount: 30 }),
+      ])
+
+      const result = computer.computeYearOverYear(
+        'D101',
+        [distantSnapshot, currentSnapshot],
+        '2024-01-15'
+      )
+
+      // Previous year target is 2023-01-15.
+      // distantSnapshot (2022-07-18) is 181 days away and not same year as 2023.
+      // currentSnapshot (2024-01-15) is ~365 days away and not same year as 2023.
+      // Both exceed 180 days, so findSnapshotForDate returns undefined.
+      expect(result.dataAvailable).toBe(false)
+      expect(result.message).toContain('Previous year data not available')
+    })
+
+    it('should return an exact date match regardless of other distant snapshots', () => {
+      const computer = new AnalyticsComputer()
+      // Exact match for previous year target (2023-01-15) should always be returned,
+      // even when other snapshots are much closer in absolute distance.
+      const exactMatchSnapshot = createMockSnapshot('D101', '2023-01-15', [
+        createMockClub({ membershipCount: 18 }),
+      ])
+      const distantSnapshot = createMockSnapshot('D101', '2020-06-01', [
+        createMockClub({ membershipCount: 10 }),
+      ])
+      const currentSnapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ membershipCount: 28 }),
+      ])
+
+      const result = computer.computeYearOverYear(
+        'D101',
+        [distantSnapshot, exactMatchSnapshot, currentSnapshot],
+        '2024-01-15'
+      )
+
+      expect(result.dataAvailable).toBe(true)
+      expect(result.metrics).toBeDefined()
+      // The exact match (2023-01-15) with membership 18 should be used as previous
+      expect(result.metrics?.membership.previous).toBe(18)
+      expect(result.metrics?.membership.current).toBe(28)
+    })
+
+    it('should return a same-year snapshot preserving existing behavior', () => {
+      const computer = new AnalyticsComputer()
+      // Previous year target: 2023-01-15
+      // Snapshot at 2023-06-01 is in the same year (2023) — same-year match wins.
+      const sameYearSnapshot = createMockSnapshot('D101', '2023-06-01', [
+        createMockClub({ membershipCount: 22 }),
+      ])
+      const currentSnapshot = createMockSnapshot('D101', '2024-01-15', [
+        createMockClub({ membershipCount: 30 }),
+      ])
+
+      const result = computer.computeYearOverYear(
+        'D101',
+        [sameYearSnapshot, currentSnapshot],
+        '2024-01-15'
+      )
+
+      expect(result.dataAvailable).toBe(true)
+      expect(result.metrics).toBeDefined()
+      // Same-year snapshot (2023-06-01) with membership 22 should be used as previous
+      expect(result.metrics?.membership.previous).toBe(22)
+      expect(result.metrics?.membership.current).toBe(30)
+    })
   })
 })
 
