@@ -226,10 +226,7 @@ export function findComparablePayment(
  * @param districtId - The district ID to fetch data for
  * @param programYearStartDate - Optional start date (defaults to current program year)
  * @param endDate - Optional end date
- * @param aggregatedPaymentsTrend - Optional time-series payments data from aggregated analytics.
- *   When provided, this is used for the trend chart instead of the single-snapshot paymentsTrend
- *   from useDistrictAnalytics. The single-snapshot endpoint is still used for performanceTargets
- *   (current payments, payment base).
+ * @param selectedProgramYear - Optional program year to use as the current year for grouping and statistics
  * @returns UsePaymentsTrendResult with payment trend data, loading, and error states
  *
  * Requirements: 2.1, 2.4, 6.2
@@ -238,7 +235,6 @@ export function usePaymentsTrend(
   districtId: string | null,
   programYearStartDate?: string,
   endDate?: string,
-  aggregatedPaymentsTrend?: Array<{ date: string; payments: number }>,
   selectedProgramYear?: ProgramYear
 ): UsePaymentsTrendResult {
   const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
@@ -268,10 +264,9 @@ export function usePaymentsTrend(
     const paymentBase =
       analyticsData.performanceTargets?.membershipPayments.base ?? null
 
-    // Build trend data: prefer aggregated time-series data (many points) over
-    // single-snapshot paymentsTrend (one point) when available
-    // Requirements: 3.1, 3.2, 3.3
-    const rawTrend = aggregatedPaymentsTrend ?? analyticsData.paymentsTrend
+    // Build trend data from multi-year analytics data
+    // Requirements: 1.1
+    const rawTrend = analyticsData.paymentsTrend
     const trendData = rawTrend
       ? buildPaymentTrend(
           rawTrend.map(point => ({
@@ -322,7 +317,7 @@ export function usePaymentsTrend(
         trendDirection: direction,
       },
     }
-  }, [analyticsData, aggregatedPaymentsTrend, currentProgramYear, selectedProgramYear])
+  }, [analyticsData, currentProgramYear, selectedProgramYear])
 
   return {
     data: result,
