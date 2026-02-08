@@ -24,16 +24,19 @@ import {
 } from '@toastmasters/analytics-core'
 import {
   RANKING_VERSION,
+  SCHEMA_VERSION,
   validatePerDistrictData,
   validateAllDistrictsRankings,
   validateSnapshotMetadata,
   validateSnapshotManifest,
+  validateSnapshotPointer,
   type PerDistrictData,
   type AllDistrictsRankingsData,
   type DistrictRanking,
   type SnapshotMetadataFile,
   type SnapshotManifest,
   type DistrictManifestEntry,
+  type SnapshotPointer,
 } from '@toastmasters/shared-contracts'
 import type { AllDistrictsCSVRecord, CacheMetadata } from '../types/scraper.js'
 import {
@@ -1200,6 +1203,64 @@ export class TransformService {
   }
 
   /**
+   * Write the snapshot pointer file (`latest-successful.json`) to the snapshots directory.
+   *
+   * The pointer file enables the backend to resolve the latest successful snapshot
+   * in O(1) instead of scanning all snapshot directories.
+   *
+   * Concurrency guard: reads the existing pointer and only overwrites if the new
+   * snapshot date is chronologically >= the existing pointer's snapshot date.
+   * This prevents a slower-running older transform from overwriting a newer pointer.
+   *
+   * The write is atomic: data is written to a temp file first, then renamed.
+   *
+   * Requirements: 1.1, 1.3, 1.4, 1.5
+   */
+  private async writeSnapshotPointer(snapshotDate: string): Promise<void> {
+    const pointerPath = path.join(this.cacheDir, 'snapshots', 'latest-successful.json')
+
+    // Read existing pointer to check if we should update (Requirement 1.5)
+    try {
+      const existing = JSON.parse(await fs.readFile(pointerPath, 'utf-8')) as unknown
+      const validation = validateSnapshotPointer(existing)
+      if (validation.success && validation.data && validation.data.snapshotId > snapshotDate) {
+        // Existing pointer is newer, don't overwrite
+        this.logger.info('Existing snapshot pointer is newer, skipping update', {
+          existing: validation.data.snapshotId,
+          incoming: snapshotDate,
+        })
+        return
+      }
+    } catch {
+      // No existing pointer or invalid - proceed with write
+    }
+
+    // Build the pointer object (Requirement 1.4)
+    const pointer: SnapshotPointer = {
+      snapshotId: snapshotDate,
+      updatedAt: new Date().toISOString(),
+      schemaVersion: SCHEMA_VERSION,
+    }
+
+    // Validate before writing (Requirement 4.4)
+    const validated = validateSnapshotPointer(pointer)
+    if (!validated.success) {
+      throw new Error(`Invalid snapshot pointer: ${validated.error}`)
+    }
+
+    // Atomic write via temp file + rename (Requirement 1.3)
+    const tempPath = `${pointerPath}.tmp.${Date.now()}`
+    await fs.writeFile(tempPath, JSON.stringify(validated.data, null, 2), 'utf-8')
+    await fs.rename(tempPath, pointerPath)
+
+    this.logger.info('Snapshot pointer written', {
+      snapshotDate,
+      path: pointerPath,
+    })
+  }
+
+
+  /**
    * Get manifest entry for a district snapshot file
    */
   private async getDistrictManifestEntry(
@@ -1626,6 +1687,19 @@ export class TransformService {
       .map(r => r.districtId)
 
     const success = districtsFailed.length === 0 && errors.length === 0
+
+    // Write snapshot pointer only for fully successful transforms (Requirements 1.1, 1.2)
+    if (success) {
+      try {
+        await this.writeSnapshotPointer(snapshotDate)
+      } catch (pointerError: unknown) {
+        // Pointer is an optimization, not critical — log and continue
+        this.logger.error('Failed to write snapshot pointer', {
+          snapshotDate,
+          error: pointerError instanceof Error ? pointerError.message : 'Unknown error',
+        })
+      }
+    }
 
     if (verbose) {
       this.logger.info('Transform operation completed', {

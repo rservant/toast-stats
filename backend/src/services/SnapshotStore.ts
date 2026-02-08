@@ -49,11 +49,14 @@ import type {
   SnapshotManifest,
   DistrictManifestEntry,
   AllDistrictsRankingsData,
+  SnapshotPointer,
 } from '@toastmasters/shared-contracts'
 import {
   validatePerDistrictData,
   validateAllDistrictsRankings,
   validateSnapshotManifest,
+  validateSnapshotPointer,
+  SCHEMA_VERSION,
 } from '@toastmasters/shared-contracts'
 import { adaptDistrictStatisticsFileToBackend } from '../adapters/district-statistics-adapter.js'
 
@@ -426,8 +429,9 @@ export class FileSnapshotStore
         return result
       }
 
-      // Start new read operation using directory scanning
-      const readPromise = this.findLatestSuccessfulByScanning()
+      // Start new read operation using two-phase approach:
+      // Phase 1: Try pointer file (fast path), Phase 2: Fall back to directory scan
+      const readPromise = this.findLatestSuccessful()
       this.activeReads.set(cacheKey, readPromise)
 
       try {
@@ -2089,14 +2093,29 @@ export class FileSnapshotStore
    * Called when snapshots are written or deleted to ensure consistency
    */
   private invalidateCaches(): void {
-    this.currentSnapshotCache = null
-    this.snapshotListCache = null
+      this.currentSnapshotCache = null
+      this.snapshotListCache = null
 
-    logger.debug('Invalidated all in-memory caches', {
-      operation: 'invalidateCaches',
-      invalidated: ['currentSnapshotCache', 'snapshotListCache'],
-    })
-  }
+      // Also remove the on-disk snapshot pointer since it may reference a stale
+      // snapshot after a new snapshot has been written via writeSnapshot.
+      // The pointer will be repaired on the next findLatestSuccessful fallback.
+      const pointerPath = this.resolvePathUnderBase(
+        this.snapshotsDir,
+        'latest-successful.json'
+      )
+      fs.unlink(pointerPath).catch(() => {
+        // Ignore errors — the file may not exist yet
+      })
+
+      logger.debug('Invalidated all in-memory caches and snapshot pointer', {
+        operation: 'invalidateCaches',
+        invalidated: [
+          'currentSnapshotCache',
+          'snapshotListCache',
+          'snapshotPointerFile',
+        ],
+      })
+    }
 
   /**
    * Invalidate cached data for a specific snapshot
@@ -2331,6 +2350,150 @@ export class FileSnapshotStore
     })
 
     return snapshot
+  }
+
+  /**
+   * Attempt to find the latest successful snapshot via the pointer file (O(1) fast path).
+   * Reads `latest-successful.json` from the snapshots directory, validates it against
+   * the Zod schema, and verifies the referenced snapshot directory exists with status "success".
+   * Returns null on any failure (missing file, invalid JSON, bad reference), logging warnings
+   * for each failure mode.
+   *
+   * Requirements: 2.1, 2.3, 3.1, 3.2, 3.3
+   */
+  private async findLatestSuccessfulViaPointer(): Promise<Snapshot | null> {
+    const pointerPath = this.resolvePathUnderBase(
+      this.snapshotsDir,
+      'latest-successful.json'
+    )
+
+    try {
+      const raw = await fs.readFile(pointerPath, 'utf-8')
+      const parsed: unknown = JSON.parse(raw)
+      const validation = validateSnapshotPointer(parsed)
+
+      if (!validation.success) {
+        logger.warn('Invalid snapshot pointer file', {
+          operation: 'findLatestSuccessfulViaPointer',
+          error: validation.error,
+        })
+        return null
+      }
+
+      const { snapshotId } = validation.data!
+      const snapshot = await this.readSnapshotFromDirectory(snapshotId)
+
+      if (snapshot && snapshot.status === 'success') {
+        logger.info('Resolved latest successful snapshot via pointer', {
+          operation: 'findLatestSuccessfulViaPointer',
+          snapshot_id: snapshotId,
+        })
+        return snapshot
+      }
+
+      logger.warn('Snapshot pointer references non-success snapshot', {
+        operation: 'findLatestSuccessfulViaPointer',
+        snapshotId,
+        status: snapshot?.status ?? 'not_found',
+      })
+      return null
+    } catch (error: unknown) {
+      const fsError = error as { code?: string }
+      if (fsError.code === 'ENOENT') {
+        logger.warn('Snapshot pointer file not found, will fall back to scan', {
+          operation: 'findLatestSuccessfulViaPointer',
+        })
+      } else if (error instanceof SyntaxError) {
+        logger.warn('Snapshot pointer file contains invalid JSON', {
+          operation: 'findLatestSuccessfulViaPointer',
+          error: error.message,
+        })
+      } else {
+        logger.error('Failed to read snapshot pointer', {
+          operation: 'findLatestSuccessfulViaPointer',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+      return null
+    }
+  }
+
+  /**
+   * Repair the snapshot pointer file after a successful fallback directory scan.
+   * This writes a valid pointer file so that subsequent cold starts can use the
+   * fast path instead of repeating the full directory scan.
+   *
+   * This is a narrow exception to the "backend is read-only" rule, justified as
+   * cache/index repair — the data written is derived from what was just read,
+   * not computed.
+   *
+   * Non-fatal: catches and logs all errors without propagating.
+   *
+   * Requirements: 3.4
+   */
+  private async repairSnapshotPointer(snapshotId: string): Promise<void> {
+    try {
+      const pointer: SnapshotPointer = {
+        snapshotId,
+        updatedAt: new Date().toISOString(),
+        schemaVersion: SCHEMA_VERSION,
+      }
+      const validated = validateSnapshotPointer(pointer)
+      if (!validated.success) return
+
+      const pointerPath = this.resolvePathUnderBase(
+        this.snapshotsDir,
+        'latest-successful.json'
+      )
+      const tempPath = `${pointerPath}.tmp.${Date.now()}`
+      await fs.writeFile(
+        tempPath,
+        JSON.stringify(validated.data, null, 2),
+        'utf-8'
+      )
+      await fs.rename(tempPath, pointerPath)
+
+      logger.info('Repaired snapshot pointer after fallback scan', {
+        operation: 'repairSnapshotPointer',
+        snapshotId,
+      })
+    } catch (error: unknown) {
+      // Non-fatal: log and continue
+      logger.warn('Failed to repair snapshot pointer', {
+        operation: 'repairSnapshotPointer',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  /**
+   * Find the latest successful snapshot using a two-phase approach:
+   *
+   * Phase 1 (fast path): Try reading the snapshot pointer file for O(1) resolution.
+   * Phase 2 (fallback): Fall back to the full directory scan if the pointer is
+   *   missing, invalid, or references a non-success snapshot.
+   *
+   * After a successful fallback scan, the pointer file is repaired so that
+   * subsequent cold starts can use the fast path.
+   *
+   * Requirements: 2.1, 2.4, 3.4
+   */
+  private async findLatestSuccessful(): Promise<Snapshot | null> {
+    // Phase 1: Try pointer (fast path)
+    const viaPointer = await this.findLatestSuccessfulViaPointer()
+    if (viaPointer) {
+      return viaPointer
+    }
+
+    // Phase 2: Fall back to directory scan (slow path)
+    const viaScanning = await this.findLatestSuccessfulByScanning()
+
+    // Repair: Write pointer for future fast starts
+    if (viaScanning) {
+      await this.repairSnapshotPointer(viaScanning.snapshot_id)
+    }
+
+    return viaScanning
   }
 
   /**

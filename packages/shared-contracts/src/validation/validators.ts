@@ -15,6 +15,7 @@ import { PerDistrictDataSchema } from '../schemas/per-district-data.schema.js'
 import { AllDistrictsRankingsDataSchema } from '../schemas/all-districts-rankings.schema.js'
 import { SnapshotMetadataFileSchema } from '../schemas/snapshot-metadata.schema.js'
 import { SnapshotManifestSchema } from '../schemas/snapshot-manifest.schema.js'
+import { SnapshotPointerSchema } from '../schemas/snapshot-pointer.schema.js'
 import {
   TimeSeriesDataPointSchema,
   ProgramYearIndexFileSchema,
@@ -25,6 +26,7 @@ import type { PerDistrictData } from '../types/per-district-data.js'
 import type { AllDistrictsRankingsData } from '../types/all-districts-rankings.js'
 import type { SnapshotMetadataFile } from '../types/snapshot-metadata.js'
 import type { SnapshotManifest } from '../types/snapshot-manifest.js'
+import type { SnapshotPointer } from '../types/snapshot-pointer.js'
 import type {
   TimeSeriesDataPoint,
   ProgramYearIndexFile,
@@ -354,3 +356,40 @@ export function validateProgramYearSummary(
     error: `ProgramYearSummary validation failed: ${result.error.message}`,
   }
 }
+
+/**
+ * Validates snapshot pointer data against the SnapshotPointer schema.
+ *
+ * Use this function to validate latest-successful.json files read from disk
+ * or received from external sources.
+ *
+ * @param data - Unknown data to validate
+ * @returns ValidationResult with typed SnapshotPointer on success, or error message on failure
+ *
+ * @example
+ * ```typescript
+ * const jsonData = JSON.parse(fileContent)
+ * const result = validateSnapshotPointer(jsonData)
+ * if (result.success) {
+ *   const pointer = result.data
+ *   console.log(`Snapshot: ${pointer.snapshotId}, Updated: ${pointer.updatedAt}`)
+ * } else {
+ *   console.error(`Validation failed: ${result.error}`)
+ * }
+ * ```
+ *
+ * @see Requirements 4.4
+ */
+export function validateSnapshotPointer(
+  data: unknown
+): ValidationResult<SnapshotPointer> {
+  const result = SnapshotPointerSchema.safeParse(data)
+  if (result.success) {
+    return { success: true, data: result.data }
+  }
+  return {
+    success: false,
+    error: `SnapshotPointer validation failed: ${result.error.message}`,
+  }
+}
+

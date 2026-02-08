@@ -34,6 +34,9 @@ export type {
   DistrictManifestEntry,
 } from './types/snapshot-manifest.js'
 
+// Snapshot pointer type
+export type { SnapshotPointer } from './types/snapshot-pointer.js'
+
 // Time-series types
 export type {
   TimeSeriesDataPoint,
@@ -71,6 +74,12 @@ export {
   DistrictManifestEntrySchema,
 } from './schemas/snapshot-manifest.schema.js'
 
+// Snapshot pointer Zod schema
+export {
+  SnapshotPointerSchema,
+  type SnapshotPointerSchemaType,
+} from './schemas/snapshot-pointer.schema.js'
+
 // Time-series Zod schemas
 export {
   TimeSeriesDataPointSchema,
@@ -92,6 +101,7 @@ export {
   validateAllDistrictsRankings,
   validateSnapshotMetadata,
   validateSnapshotManifest,
+  validateSnapshotPointer,
   validateTimeSeriesDataPoint,
   validateProgramYearIndexFile,
   validateTimeSeriesIndexMetadata,
