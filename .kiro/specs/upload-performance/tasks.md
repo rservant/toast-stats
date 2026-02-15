@@ -1,0 +1,215 @@
+# Implementation Plan: Upload Performance
+
+## Overview
+
+Incrementally enhance the scraper-cli upload command across seven areas: dependency injection seams, conditional checksum computation, streaming file collection, date range filtering, local upload manifest with fast-path, concurrent uploads, and progress reporting. Each task builds on the previous, with tests wired in alongside implementation.
+
+## Tasks
+
+- [x] 1. Introduce dependency injection interfaces and wire into UploadService
+  - [x] 1.1 Define `FileSystem`, `Hasher`, `BucketClient`, `Clock`, and `ProgressReporter` interfaces in `UploadService.ts`
+    - FileSystem: readdir, stat, readFile, writeFile, rename, access
+    - Hasher: sha256(filePath): Promise of string
+    - BucketClient: uploadStream(remotePath, stream, contentType, metadata): Promise of void — accepts a Readable stream, not a Buffer. No `exists()` method.
+    - Clock: now(): string (ISO timestamp)
+    - ProgressReporter: onDateComplete, onFileUploaded, onComplete (no onDateStart — file count is only known after scanning)
+    - _Requirements: 8.1, 8.3_
+  - [x] 1.2 Create default production implementations for each interface
+    - DefaultFileSystem: wraps `fs/promises`
+    - DefaultHasher: wraps `crypto.createHash('sha256')`
+    - DefaultBucketClient: wraps existing `this.bucket.file().save()` logic using `createWriteStream` for stream-based upload
+    - DefaultClock: wraps `new Date().toISOString()`
+    - DefaultProgressReporter: writes to `process.stderr`
+    - _Requirements: 8.2_
+  - [x] 1.3 Extend `UploadServiceConfig` with optional dependency fields and wire into constructor
+    - Add optional `fs?`, `hasher?`, `bucketClient?`, `clock?`, `progressReporter?` to config
+    - Constructor assigns defaults when not provided
+    - Replace direct `fs/promises`, `crypto`, `this.bucket`, `Date`, and `console.error` calls with injected deps
+    - _Requirements: 8.1, 8.2_
+  - [x] 1.4 Create fake implementations for testing
+    - FakeFileSystem: in-memory directory tree
+    - FakeHasher: deterministic (e.g., hash of path string)
+    - FakeBucketClient: records uploadStream calls, can simulate failures (no `exists()` method)
+    - FakeClock: returns fixed timestamp
+    - FakeProgressReporter: captures calls for assertion
+    - Place in `packages/scraper-cli/src/__tests__/fakes/`
+    - _Requirements: 8.4_
+
+- [x] 2. Add date range filtering and new CLI options
+  - [x] 2.1 Add `since`, `until`, and `concurrency` fields to `UploadOperationOptions` and `UploadOptions` in `types/index.ts`
+    - Add optional `since?: string`, `until?: string`, `concurrency?: number` to both interfaces
+    - _Requirements: 3.1, 3.2, 5.2_
+  - [x] 2.2 Implement `filterDatesByRange` method on `UploadService`
+    - Pure function: accepts sorted date array, optional since/until strings
+    - Returns dates where `since <= date <= until` using lexicographic comparison
+    - Handle cases where only since, only until, or both are provided
+    - _Requirements: 3.1, 3.2, 3.3, 3.7_
+  - [x] 2.3 Wire `filterDatesByRange` into the `upload` method after `getAvailableDates`
+    - Apply filter before processing dates
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [x] 2.4 Add `--since`, `--until`, and `--concurrency` CLI options in `cli.ts`
+    - Add date format validation for `--since` and `--until` (reuse existing `validateDateFormat`)
+    - Add mutual exclusivity check: `--date` with `--since`/`--until` exits with code 2
+    - Add `--since > --until` validation, exits with code 2
+    - Add `--concurrency` with positive integer validation, exits with code 2 for invalid values
+    - Pass new options through to `uploadService.upload()`
+    - _Requirements: 3.4, 3.5, 3.6, 5.2, 5.5_
+  - [x] 2.5 Write property test for date range filtering (Property 2)
+    - **Property 2: Date range filtering**
+    - **Validates: Requirements 3.1, 3.2, 3.3, 3.7**
+  - [x] 2.6 Write unit tests for CLI validation edge cases
+    - Test `--date` with `--since` mutual exclusivity
+    - Test `--since` after `--until` rejection
+    - Test invalid `--concurrency` values (0, -1, non-integer)
+    - _Requirements: 3.5, 3.6, 5.5_
+
+- [x] 3. Convert file collection to async generator with conditional checksums
+  - [x] 3.1 Change `collectFiles` from returning `Promise<FileInfo[]>` to `AsyncGenerator<FileInfo>`
+    - Add `computeChecksums: boolean` parameter
+    - Add `mtimeMs` to `FileInfo` (always collected via stat)
+    - When `computeChecksums` is false, yield `FileInfo` with `checksum: undefined`
+    - When `computeChecksums` is true, compute SHA256 via injected Hasher and yield with checksum
+    - Make `FileInfo.checksum` type `string | undefined`
+    - Use `yield` instead of pushing to array; use `yield*` for recursive subdirectories
+    - Use injected FileSystem for all fs operations
+    - _Requirements: 1.1, 1.2, 1.4, 1.5, 6.1_
+  - [x] 3.2 Update `upload` method to consume async generator with conditional checksum logic
+    - Collect files from generator into per-date batches for upload processing
+    - When `dryRun`: pass `computeChecksums=false`
+    - When `incremental && !dryRun`: pass `computeChecksums=false` (checksums computed selectively after fast-path)
+    - When `!incremental && !dryRun`: pass `computeChecksums=false` (checksums not needed)
+    - When `dryRun && incremental`: skip manifest comparison, treat all as candidates
+    - Maintain accurate counters for filesProcessed, filesUploaded, filesSkipped, filesFailed
+    - _Requirements: 1.1, 1.3, 1.4, 1.5, 6.2, 6.3_
+  - [x] 3.3 Write property test for file collector completeness (Property 5)
+    - **Property 5: File collector completeness**
+    - Use FakeFileSystem to generate arbitrary directory trees
+    - **Validates: Requirements 6.1**
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Implement local upload manifest with fast-path for incremental mode
+  - [x] 5.1 Define `UploadManifest` and `UploadManifestEntry` interfaces in `UploadService.ts`
+    - `UploadManifestEntry`: `{ checksum: string, size: number, mtimeMs: number, uploadedAt: string }`
+    - `UploadManifest`: `{ schemaVersion: '1.0.0', entries: Record<string, UploadManifestEntry> }`
+    - _Requirements: 4.9_
+  - [x] 5.2 Implement `loadManifest` and `saveManifest` methods using injected FileSystem
+    - `loadManifest`: reads `.upload-manifest.json` from cacheDir, returns empty manifest if missing/corrupted, logs warning on corruption
+    - `saveManifest`: writes atomically via injected FileSystem (writeFile to tmp path, rename to final path). Retries once on failure. Returns boolean indicating success. On double failure, logs error.
+    - _Requirements: 4.6, 4.7, 4.8, 4.9_
+  - [x] 5.3 Implement `shouldSkipFastPath` method
+    - Compare file size and mtimeMs against manifest entry
+    - Return true if both match (skip without hashing)
+    - Return false if either differs or no entry exists
+    - _Requirements: 4.2, 4.3_
+  - [x] 5.4 Wire manifest into `upload` method for incremental mode
+    - Load manifest at start if incremental
+    - For each file: fast-path check first, then hash only if needed, then compare checksum
+    - After successful upload, update manifest entry in memory
+    - Flush manifest to disk after each date completes. If flush fails after retry, set `manifestWriteError: true` on result.
+    - Remove old `getRemoteMetadata` GCS calls from incremental path
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.9_
+  - [x] 5.5 Write property test for manifest fast-path correctness (Property 3)
+    - **Property 3: Manifest fast-path correctness**
+    - **Validates: Requirements 4.2, 4.3**
+  - [x] 5.6 Write unit tests for manifest edge cases
+    - Test missing manifest file recovery
+    - Test corrupted manifest file (invalid JSON) recovery
+    - Test corrupted manifest file (wrong schema version) recovery
+    - Test atomic write (temp file + rename)
+    - Test manifest write failure: retry once, then set manifestWriteError flag
+    - Test manifest schema version field presence
+    - _Requirements: 4.6, 4.7, 4.8, 4.9, 4.10_
+
+- [x] 6. Implement concurrent GCS uploads
+  - [x] 6.1 Implement `runWithConcurrency` utility function in `UploadService.ts`
+    - Accepts array of task functions, concurrency limit, and abort signal `{ aborted: boolean }`
+    - Returns `PromiseSettledResult` array
+    - Semaphore pattern: maintain pool of active promises, start new ones as others complete
+    - Before starting each task, check `abortSignal.aborted` — if true, skip remaining
+    - _Requirements: 5.1, 5.3, 5.4_
+  - [x] 6.2 Implement `uploadBatch` method using `runWithConcurrency`
+    - Wraps each file upload in a task function using injected BucketClient.uploadStream with a file read stream (not Buffer)
+    - Detects auth errors using deterministic code-based check only: error `code` property matching `UNAUTHENTICATED` or `PERMISSION_DENIED`, or numeric code 7 or 16. No message-pattern heuristics. Sets abort flag on auth error.
+    - Collects uploaded/failed/error results
+    - Default concurrency: 10
+    - _Requirements: 5.1, 5.3, 5.4_
+  - [x] 6.3 Replace sequential file upload loop in `upload` method with `uploadBatch`
+    - Pass `options.concurrency ?? 10` as the limit
+    - Preserve existing error handling behavior (continue on file errors, abort on auth errors)
+    - Ensure complete summary is emitted even on partial abort
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.6_
+  - [x] 6.4 Write property test for summary count invariant (Property 4)
+    - **Property 4: Summary count invariant**
+    - Use FakeBucketClient with configurable failures
+    - **Validates: Requirements 5.6, 6.3**
+  - [x] 6.5 Write unit test for auth error cancellation in concurrent pool
+    - Test that auth error sets abort flag and stops scheduling new tasks
+    - Test that already-completed uploads are still recorded
+    - Test that summary counts are accurate after abort
+    - _Requirements: 5.4, 5.6_
+
+- [x] 7. Add progress reporting
+  - [x] 7.1 Wire ProgressReporter into `upload` method
+    - Use injected ProgressReporter (from constructor)
+    - Call `onDateComplete` after collecting files for each date (with file count)
+    - Call `onFileUploaded` for each file only when verbose is true
+    - Call `onComplete` at the end with summary counts
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [x] 7.2 Write unit tests for progress reporter behavior
+    - Use FakeProgressReporter to capture calls
+    - Verify date-level progress (onDateComplete) is always emitted after scanning
+    - Verify file-level progress is emitted only when verbose is true
+    - Verify file count in onDateComplete matches actual files discovered
+    - _Requirements: 2.1, 2.4_
+
+- [x] 8. Integration tests and backward compatibility verification
+  - [x] 8.1 Write integration test: dry-run scans dates, emits progress, outputs JSON, no hashing, no GCS calls
+    - Use all fake dependencies
+    - Verify FakeHasher.sha256 is never called
+    - Verify FakeBucketClient.upload is never called
+    - Verify FakeProgressReporter captures date-level progress
+    - Verify stdout JSON matches UploadSummary shape
+    - _Requirements: 1.1, 1.2, 2.1, 7.1_
+  - [x] 8.2 Write integration test: non-incremental upload uploads all files with concurrency
+    - Verify all files uploaded via FakeBucketClient.uploadStream (stream-based, not Buffer)
+    - Verify no manifest comparison occurs
+    - Verify concurrency limit is respected (track concurrent active uploads)
+    - _Requirements: 1.5, 5.1, 7.3_
+  - [x] 8.3 Write integration test: incremental no-change (second run uploads nothing via fast-path)
+    - First run: upload all, manifest written
+    - Second run: same files, fast-path matches, zero uploads, zero hashing
+    - Verify FakeHasher.sha256 is never called on second run
+    - _Requirements: 4.2, 4.3_
+  - [x] 8.4 Write integration test: incremental with one changed file
+    - First run: upload all
+    - Modify one file (change size or mtime)
+    - Second run: exactly one upload, manifest updated for that file only
+    - _Requirements: 4.4, 4.5_
+  - [x] 8.5 Write integration test: corrupted manifest falls back to full upload
+    - Write invalid JSON to `.upload-manifest.json`
+    - Run upload: all files uploaded, warning logged, completes successfully
+    - _Requirements: 4.8_
+  - [x] 8.6 Write integration test: manifest write failure surfaces in summary
+    - Configure FakeFileSystem to fail on writeFile for manifest path
+    - Run upload: files uploaded successfully, but manifestWriteError is true in result
+    - Verify retry was attempted (two writeFile calls for manifest)
+    - _Requirements: 4.9_
+  - [x] 8.7 Write backward compatibility snapshot test
+    - Verify UploadSummary JSON output contains all existing fields with correct types
+    - Verify no fields removed or renamed from baseline
+    - _Requirements: 7.1_
+
+- [x] 9. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional property/unit tests that can be skipped for faster MVP
+- Integration tests (task 8) are required — they provide the highest ROI for regression detection
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- No backend or API changes are needed — this is entirely within `packages/scraper-cli/`
+- DI seams (task 1) are implemented first because all subsequent tasks depend on them for testability
+- The existing `getRemoteMetadata` GCS call path is removed in task 5.4, replaced by manifest lookups

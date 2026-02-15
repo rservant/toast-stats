@@ -394,6 +394,10 @@ export interface ComputeAnalyticsSummary {
 export interface UploadOptions {
   /** Target date in YYYY-MM-DD format, if not specified uploads all available dates */
   date?: string
+  /** Inclusive start date in YYYY-MM-DD format for date range filtering */
+  since?: string
+  /** Inclusive end date in YYYY-MM-DD format for date range filtering */
+  until?: string
   /** Only upload files that have changed (compare checksums) */
   incremental: boolean
   /** Show what would be uploaded without actually uploading */
@@ -402,6 +406,8 @@ export interface UploadOptions {
   verbose: boolean
   /** Path to alternative configuration file */
   config?: string
+  /** Maximum number of concurrent GCS uploads (default: 10) */
+  concurrency?: number
 }
 
 /**
@@ -434,6 +440,12 @@ export interface UploadResult {
    * Requirement 6.4: GCS authentication failure should exit with code 2.
    */
   authError?: boolean
+  /**
+   * Indicates that the upload manifest failed to write to disk after retry.
+   * When true, the next incremental run may re-upload files from this run.
+   * Requirement 4.9: Surface manifest write failures in the summary.
+   */
+  manifestWriteError?: boolean
 }
 
 /**

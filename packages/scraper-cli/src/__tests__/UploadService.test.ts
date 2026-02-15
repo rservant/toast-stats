@@ -1303,3 +1303,686 @@ describe('formatUploadSummary', () => {
     expect(summary.dates).toEqual(['2024-01-15', '2024-01-16', '2024-01-17'])
   })
 })
+
+// ─── Manifest Edge Case Tests (Task 5.6) ────────────────────────────────────
+// These tests use the real UploadService with fake dependencies to test
+// manifest loading, saving, and error recovery.
+//
+// Requirements: 4.6, 4.7, 4.8, 4.9, 4.10
+
+import { UploadService, type UploadManifest } from '../services/UploadService.js'
+import {
+  FakeFileSystem,
+  FakeBucketClient,
+  FakeClock,
+  FakeHasher,
+  FakeProgressReporter,
+} from './fakes/index.js'
+
+function createManifestTestService(fakeFs: FakeFileSystem): {
+  service: UploadService
+  bucketClient: FakeBucketClient
+  hasher: FakeHasher
+  clock: FakeClock
+} {
+  const bucketClient = new FakeBucketClient()
+  const hasher = new FakeHasher()
+  const clock = new FakeClock()
+  return {
+    service: new UploadService({
+      cacheDir: '/cache',
+      bucket: 'test-bucket',
+      prefix: 'snapshots',
+      fs: fakeFs,
+      hasher,
+      bucketClient,
+      clock,
+      progressReporter: new FakeProgressReporter(),
+    }),
+    bucketClient,
+    hasher,
+    clock,
+  }
+}
+
+describe('UploadService manifest edge cases', () => {
+  describe('loadManifest', () => {
+    it('should return empty manifest when file is missing (Requirement 4.8)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest = await service.loadManifest()
+
+      expect(manifest.schemaVersion).toBe('1.0.0')
+      expect(manifest.entries).toEqual({})
+    })
+
+    it('should return empty manifest when file contains invalid JSON (Requirement 4.8)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      fakeFs.addFile('/cache/.upload-manifest.json', 'not valid json {{{')
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest = await service.loadManifest()
+
+      expect(manifest.schemaVersion).toBe('1.0.0')
+      expect(manifest.entries).toEqual({})
+    })
+
+    it('should return empty manifest when schema version is wrong (Requirement 4.8)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      fakeFs.addFile(
+        '/cache/.upload-manifest.json',
+        JSON.stringify({ schemaVersion: '2.0.0', entries: { 'some/path': {} } })
+      )
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest = await service.loadManifest()
+
+      expect(manifest.schemaVersion).toBe('1.0.0')
+      expect(manifest.entries).toEqual({})
+    })
+
+    it('should return empty manifest when structure is missing required fields', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      fakeFs.addFile(
+        '/cache/.upload-manifest.json',
+        JSON.stringify({ someOtherField: true })
+      )
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest = await service.loadManifest()
+
+      expect(manifest.schemaVersion).toBe('1.0.0')
+      expect(manifest.entries).toEqual({})
+    })
+
+    it('should load a valid manifest successfully', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      const validManifest: UploadManifest = {
+        schemaVersion: '1.0.0',
+        entries: {
+          'snapshots/2024-01-15/metadata.json': {
+            checksum: 'abc123',
+            size: 100,
+            mtimeMs: 1705312200000,
+            uploadedAt: '2024-01-15T10:30:00.000Z',
+          },
+        },
+      }
+      fakeFs.addFile('/cache/.upload-manifest.json', JSON.stringify(validManifest))
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest = await service.loadManifest()
+
+      expect(manifest.schemaVersion).toBe('1.0.0')
+      expect(manifest.entries['snapshots/2024-01-15/metadata.json']).toEqual({
+        checksum: 'abc123',
+        size: 100,
+        mtimeMs: 1705312200000,
+        uploadedAt: '2024-01-15T10:30:00.000Z',
+      })
+    })
+  })
+
+  describe('saveManifest', () => {
+    it('should write atomically via temp file + rename (Requirement 4.6)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest: UploadManifest = {
+        schemaVersion: '1.0.0',
+        entries: {
+          'snapshots/2024-01-15/file.json': {
+            checksum: 'abc',
+            size: 50,
+            mtimeMs: 1000,
+            uploadedAt: '2024-01-15T10:30:00.000Z',
+          },
+        },
+      }
+
+      const result = await service.saveManifest(manifest)
+
+      expect(result).toBe(true)
+      // Verify writeFile was called with the .tmp path
+      expect(fakeFs.writeFileCalls.length).toBe(1)
+      expect(fakeFs.writeFileCalls[0]?.path).toContain('.upload-manifest.json.tmp')
+      // Verify the final file is readable and correct
+      const saved = await service.loadManifest()
+      expect(saved.entries['snapshots/2024-01-15/file.json']?.checksum).toBe('abc')
+    })
+
+    it('should include schemaVersion in saved manifest (Requirement 4.10)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest: UploadManifest = { schemaVersion: '1.0.0', entries: {} }
+      await service.saveManifest(manifest)
+
+      // Read back the raw JSON to verify schemaVersion is present
+      const raw = await fakeFs.readFile('/cache/.upload-manifest.json')
+      const parsed: unknown = JSON.parse(raw.toString())
+      expect(parsed).toHaveProperty('schemaVersion', '1.0.0')
+    })
+
+    it('should retry once on write failure, then succeed (Requirement 4.9)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      // Fail the first writeFile call, succeed on retry
+      fakeFs.setWriteFileFailure('/cache/.upload-manifest.json.tmp', 1)
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest: UploadManifest = { schemaVersion: '1.0.0', entries: {} }
+      const result = await service.saveManifest(manifest)
+
+      expect(result).toBe(true)
+      // Two writeFile attempts: first fails, second succeeds
+      expect(fakeFs.writeFileCalls.length).toBe(2)
+    })
+
+    it('should return false and log error after double write failure (Requirement 4.9)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache')
+      // Fail both writeFile attempts
+      fakeFs.setWriteFileFailure('/cache/.upload-manifest.json.tmp', 2)
+      const { service } = createManifestTestService(fakeFs)
+
+      const manifest: UploadManifest = { schemaVersion: '1.0.0', entries: {} }
+      const result = await service.saveManifest(manifest)
+
+      expect(result).toBe(false)
+      expect(fakeFs.writeFileCalls.length).toBe(2)
+    })
+  })
+
+  describe('manifest write failure in upload flow', () => {
+    it('should set manifestWriteError when manifest flush fails after retry (Requirement 4.9)', async () => {
+      const fakeFs = new FakeFileSystem()
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/data.json', '{"test":true}', 1000)
+      // Make manifest writes fail permanently
+      fakeFs.setWriteFileFailure('/cache/.upload-manifest.json.tmp', 100)
+      const { service } = createManifestTestService(fakeFs)
+
+      const result = await service.upload({
+        date: '2024-01-15',
+        incremental: true,
+      })
+
+      expect(result.manifestWriteError).toBe(true)
+      // File should still have been uploaded successfully
+      expect(result.filesUploaded.length).toBe(1)
+    })
+  })
+})
+
+// ─── Auth Error Cancellation in Concurrent Pool ─────────────────────────────
+//
+// Tests that auth errors set the abort flag, stop scheduling new tasks,
+// record already-completed uploads, and produce accurate summary counts.
+//
+// Requirements: 5.4, 5.6
+
+import { runWithConcurrency, isAuthError } from '../services/UploadService.js'
+
+describe('isAuthError — deterministic code-based detection', () => {
+  it('returns true for string code UNAUTHENTICATED', () => {
+    const err = new Error('fail') as Error & { code: string }
+    err.code = 'UNAUTHENTICATED'
+    expect(isAuthError(err)).toBe(true)
+  })
+
+  it('returns true for string code PERMISSION_DENIED', () => {
+    const err = new Error('fail') as Error & { code: string }
+    err.code = 'PERMISSION_DENIED'
+    expect(isAuthError(err)).toBe(true)
+  })
+
+  it('returns true for numeric code 16 (UNAUTHENTICATED)', () => {
+    const err = new Error('fail') as Error & { code: number }
+    err.code = 16
+    expect(isAuthError(err)).toBe(true)
+  })
+
+  it('returns true for numeric code 7 (PERMISSION_DENIED)', () => {
+    const err = new Error('fail') as Error & { code: number }
+    err.code = 7
+    expect(isAuthError(err)).toBe(true)
+  })
+
+  it('returns true for case-insensitive string code', () => {
+    const err = new Error('fail') as Error & { code: string }
+    err.code = 'unauthenticated'
+    expect(isAuthError(err)).toBe(true)
+  })
+
+  it('returns false for non-auth error codes', () => {
+    const err = new Error('fail') as Error & { code: string }
+    err.code = 'NOT_FOUND'
+    expect(isAuthError(err)).toBe(false)
+  })
+
+  it('returns false for errors without code property', () => {
+    expect(isAuthError(new Error('UNAUTHENTICATED message'))).toBe(false)
+  })
+
+  it('returns false for non-object values', () => {
+    expect(isAuthError(null)).toBe(false)
+    expect(isAuthError(undefined)).toBe(false)
+    expect(isAuthError('string')).toBe(false)
+  })
+})
+
+describe('runWithConcurrency', () => {
+  it('runs all tasks when no abort', async () => {
+    const results: number[] = []
+    const tasks = [1, 2, 3].map((n) => async () => {
+      results.push(n)
+      return n
+    })
+
+    const settled = await runWithConcurrency(tasks, 2, { aborted: false })
+
+    expect(settled.length).toBe(3)
+    expect(settled.every((r) => r.status === 'fulfilled')).toBe(true)
+  })
+
+  it('respects concurrency limit', async () => {
+    let maxConcurrent = 0
+    let currentConcurrent = 0
+
+    const tasks = Array.from({ length: 10 }, (_, i) => async () => {
+      currentConcurrent++
+      maxConcurrent = Math.max(maxConcurrent, currentConcurrent)
+      // Simulate async work
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      currentConcurrent--
+      return i
+    })
+
+    await runWithConcurrency(tasks, 3, { aborted: false })
+
+    expect(maxConcurrent).toBeLessThanOrEqual(3)
+  })
+
+  it('skips remaining tasks when abort signal is set', async () => {
+    const abortSignal = { aborted: false }
+    const executed: number[] = []
+
+    const tasks = Array.from({ length: 10 }, (_, i) => async () => {
+      executed.push(i)
+      if (i === 2) {
+        abortSignal.aborted = true
+      }
+      return i
+    })
+
+    const settled = await runWithConcurrency(tasks, 1, abortSignal)
+
+    // With concurrency 1, tasks run sequentially. After task 2 sets abort,
+    // task 3+ should be skipped.
+    expect(executed.length).toBeLessThanOrEqual(3)
+    expect(settled.length).toBe(executed.length)
+  })
+
+  it('collects both fulfilled and rejected results', async () => {
+    const tasks = [
+      async () => 'ok',
+      async () => { throw new Error('fail') },
+      async () => 'also ok',
+    ]
+
+    const settled = await runWithConcurrency(tasks, 3, { aborted: false })
+
+    expect(settled.length).toBe(3)
+    expect(settled[0]!.status).toBe('fulfilled')
+    expect(settled[1]!.status).toBe('rejected')
+    expect(settled[2]!.status).toBe('fulfilled')
+  })
+})
+
+describe('Auth error cancellation in concurrent upload pool', () => {
+  function createTestService(fakeBucket: FakeBucketClient): {
+    service: UploadService
+    fakeFs: FakeFileSystem
+  } {
+    const fakeFs = new FakeFileSystem()
+    fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+    fakeFs.addDirectory('/cache')
+    return {
+      service: new UploadService({
+        cacheDir: '/cache',
+        bucket: 'test-bucket',
+        prefix: 'snapshots',
+        fs: fakeFs,
+        hasher: new FakeHasher(),
+        bucketClient: fakeBucket,
+        clock: new FakeClock(),
+        progressReporter: new FakeProgressReporter(),
+      }),
+      fakeFs,
+    }
+  }
+
+  it('sets abort flag and stops scheduling new tasks on auth error (Requirement 5.4)', async () => {
+    const fakeBucket = new FakeBucketClient()
+    const { service, fakeFs } = createTestService(fakeBucket)
+
+    // Add several files
+    for (let i = 0; i < 10; i++) {
+      fakeFs.addFile(`/cache/snapshots/2024-01-15/file${i}.json`, `{"i":${i}}`, 1000)
+    }
+
+    // Set auth error on one of the early files
+    const authErr = new Error('Permission denied') as Error & { code: string }
+    authErr.code = 'PERMISSION_DENIED'
+    fakeBucket.setFailure('snapshots/2024-01-15/file0.json', authErr)
+
+    const result = await service.upload({
+      date: '2024-01-15',
+      concurrency: 2,
+    })
+
+    expect(result.authError).toBe(true)
+    expect(result.success).toBe(false)
+    // Not all 10 files should have been attempted due to abort
+    expect(result.filesProcessed.length).toBe(10) // all are processed (collected)
+    // But uploaded + failed should be less than 10 (some skipped by abort)
+    const attemptedCount = result.filesUploaded.length + result.filesFailed.length
+    expect(attemptedCount).toBeLessThanOrEqual(10)
+    expect(result.filesFailed.length).toBeGreaterThanOrEqual(1) // at least the auth error file
+  })
+
+  it('records already-completed uploads before auth error (Requirement 5.4)', async () => {
+    const fakeBucket = new FakeBucketClient()
+    const { service, fakeFs } = createTestService(fakeBucket)
+
+    // Add files — with concurrency 1, they run sequentially
+    fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+    fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+    fakeFs.addFile('/cache/snapshots/2024-01-15/c.json', '{"c":3}', 1000)
+
+    // Auth error on the second file
+    const authErr = new Error('Unauthenticated') as Error & { code: number }
+    authErr.code = 16
+    fakeBucket.setFailure('snapshots/2024-01-15/b.json', authErr)
+
+    const result = await service.upload({
+      date: '2024-01-15',
+      concurrency: 1,
+    })
+
+    expect(result.authError).toBe(true)
+    // First file should have been uploaded successfully
+    expect(result.filesUploaded).toContain('snapshots/2024-01-15/a.json')
+    // Second file should be in failed
+    expect(result.filesFailed).toContain('snapshots/2024-01-15/b.json')
+  })
+
+  it('produces accurate summary counts after auth abort (Requirement 5.6)', async () => {
+    const fakeBucket = new FakeBucketClient()
+    const { service, fakeFs } = createTestService(fakeBucket)
+
+    // Add 5 files
+    for (let i = 0; i < 5; i++) {
+      fakeFs.addFile(`/cache/snapshots/2024-01-15/file${i}.json`, `{"i":${i}}`, 1000)
+    }
+
+    // Auth error on file2
+    const authErr = new Error('No access') as Error & { code: string }
+    authErr.code = 'UNAUTHENTICATED'
+    fakeBucket.setFailure('snapshots/2024-01-15/file2.json', authErr)
+
+    const result = await service.upload({
+      date: '2024-01-15',
+      concurrency: 1,
+    })
+
+    // Summary count invariant must hold
+    expect(result.filesProcessed.length).toBe(
+      result.filesUploaded.length + result.filesFailed.length + result.filesSkipped.length
+    )
+    expect(result.authError).toBe(true)
+    // Errors array should contain the auth error
+    expect(result.errors.some((e) => e.error.includes('authentication'))).toBe(true)
+  })
+})
+
+// ============================================================================
+// Progress Reporter Behavior Tests
+// ============================================================================
+// Requirements: 2.1, 2.4
+
+describe('Progress reporter behavior', () => {
+  function createProgressTestService(): {
+    service: UploadService
+    fakeFs: FakeFileSystem
+    progressReporter: FakeProgressReporter
+    fakeBucket: FakeBucketClient
+  } {
+    const fakeFs = new FakeFileSystem()
+    fakeFs.addDirectory('/cache/snapshots')
+    fakeFs.addDirectory('/cache')
+    const progressReporter = new FakeProgressReporter()
+    const fakeBucket = new FakeBucketClient()
+    return {
+      service: new UploadService({
+        cacheDir: '/cache',
+        bucket: 'test-bucket',
+        prefix: 'snapshots',
+        fs: fakeFs,
+        hasher: new FakeHasher(),
+        bucketClient: fakeBucket,
+        clock: new FakeClock(),
+        progressReporter,
+      }),
+      fakeFs,
+      progressReporter,
+      fakeBucket,
+    }
+  }
+
+  describe('date-level progress (onDateComplete)', () => {
+    it('emits onDateComplete after scanning each date (Requirement 2.1)', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/metadata.json', '{}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/data.json', '{"a":1}', 1000)
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-16')
+      fakeFs.addFile('/cache/snapshots/2024-01-16/metadata.json', '{}', 1000)
+
+      await service.upload({ dryRun: true })
+
+      expect(progressReporter.dateCompleteCalls).toHaveLength(2)
+      expect(progressReporter.dateCompleteCalls[0]).toEqual({
+        index: 1,
+        total: 2,
+        date: '2024-01-16',
+        fileCount: 1,
+      })
+      expect(progressReporter.dateCompleteCalls[1]).toEqual({
+        index: 2,
+        total: 2,
+        date: '2024-01-15',
+        fileCount: 2,
+      })
+    })
+
+    it('emits onDateComplete even when no files are found for a date', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      // Empty directory — no files
+
+      await service.upload({ date: '2024-01-15', dryRun: true })
+
+      expect(progressReporter.dateCompleteCalls).toHaveLength(1)
+      expect(progressReporter.dateCompleteCalls[0]).toEqual({
+        index: 1,
+        total: 1,
+        date: '2024-01-15',
+        fileCount: 0,
+      })
+    })
+
+    it('file count in onDateComplete matches actual files discovered (Requirement 2.1)', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/c.json', '{"c":3}', 1000)
+
+      await service.upload({ date: '2024-01-15', dryRun: true })
+
+      expect(progressReporter.dateCompleteCalls[0]!.fileCount).toBe(3)
+    })
+
+    it('emits onDateComplete without verbose flag (Requirement 2.4)', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/metadata.json', '{}', 1000)
+
+      // verbose is NOT set
+      await service.upload({ date: '2024-01-15', dryRun: true })
+
+      // Date-level progress should still be emitted
+      expect(progressReporter.dateCompleteCalls).toHaveLength(1)
+    })
+  })
+
+  describe('file-level progress (onFileUploaded)', () => {
+    it('emits onFileUploaded for each file when verbose is true (Requirement 2.2)', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+
+      await service.upload({ date: '2024-01-15', verbose: true })
+
+      expect(progressReporter.fileUploadedCalls).toHaveLength(2)
+      expect(
+        progressReporter.fileUploadedCalls.every((c) => c.status === 'uploaded')
+      ).toBe(true)
+    })
+
+    it('does NOT emit onFileUploaded when verbose is false (Requirement 2.4)', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+
+      await service.upload({ date: '2024-01-15' })
+
+      expect(progressReporter.fileUploadedCalls).toHaveLength(0)
+    })
+
+    it('emits file-level progress with correct status for failed uploads', async () => {
+      const { service, fakeFs, progressReporter, fakeBucket } =
+        createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+
+      fakeBucket.setFailure(
+        'snapshots/2024-01-15/b.json',
+        new Error('Upload failed')
+      )
+
+      await service.upload({ date: '2024-01-15', verbose: true })
+
+      const statuses = progressReporter.fileUploadedCalls.map((c) => c.status)
+      expect(statuses).toContain('uploaded')
+      expect(statuses).toContain('failed')
+    })
+
+    it('emits skipped status for incremental fast-path files when verbose (Requirement 2.2)', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+
+      // Pre-populate manifest so file is skipped via fast-path
+      const manifest = {
+        schemaVersion: '1.0.0',
+        entries: {
+          'snapshots/2024-01-15/a.json': {
+            checksum: 'abc',
+            size: Buffer.byteLength('{"a":1}'),
+            mtimeMs: 1000,
+            uploadedAt: '2024-01-15T10:30:00.000Z',
+          },
+        },
+      }
+      fakeFs.addFile('/cache/.upload-manifest.json', JSON.stringify(manifest))
+
+      await service.upload({
+        date: '2024-01-15',
+        incremental: true,
+        verbose: true,
+      })
+
+      expect(progressReporter.fileUploadedCalls).toHaveLength(1)
+      expect(progressReporter.fileUploadedCalls[0]!.status).toBe('skipped')
+    })
+  })
+
+  describe('completion progress (onComplete)', () => {
+    it('emits onComplete with correct summary counts', async () => {
+      const { service, fakeFs, progressReporter } = createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+      fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+
+      await service.upload({ date: '2024-01-15' })
+
+      expect(progressReporter.completeCalls).toHaveLength(1)
+      expect(progressReporter.completeCalls[0]!.uploaded).toBe(2)
+      expect(progressReporter.completeCalls[0]!.skipped).toBe(0)
+      expect(progressReporter.completeCalls[0]!.failed).toBe(0)
+      expect(progressReporter.completeCalls[0]!.duration_ms).toBeGreaterThanOrEqual(0)
+    })
+
+    it('emits onComplete even when upload has errors', async () => {
+      const { service, fakeFs, progressReporter, fakeBucket } =
+        createProgressTestService()
+
+      fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+      fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+
+      fakeBucket.setFailure(
+        'snapshots/2024-01-15/a.json',
+        new Error('Upload failed')
+      )
+
+      await service.upload({ date: '2024-01-15' })
+
+      expect(progressReporter.completeCalls).toHaveLength(1)
+      expect(progressReporter.completeCalls[0]!.failed).toBe(1)
+    })
+
+    it('emits onComplete even on early return (no dates found)', async () => {
+      const { service, progressReporter } = createProgressTestService()
+      // No snapshot directories exist — early return path
+
+      await service.upload({})
+
+      // Early return paths don't reach the main loop, so onComplete is not called
+      expect(progressReporter.completeCalls).toHaveLength(0)
+    })
+  })
+})

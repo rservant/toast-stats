@@ -1095,7 +1095,63 @@ export function createCLI(): Command {
     )
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .option('-c, --config <path>', 'Alternative configuration file path')
+    .option(
+      '--since <YYYY-MM-DD>',
+      'Only upload snapshot dates on or after this date (inclusive)',
+      (value: string) => {
+        if (!validateDateFormat(value)) {
+          console.error(
+            `Error: Invalid date format "${value}" for --since. Use YYYY-MM-DD.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return value
+      }
+    )
+    .option(
+      '--until <YYYY-MM-DD>',
+      'Only upload snapshot dates on or before this date (inclusive)',
+      (value: string) => {
+        if (!validateDateFormat(value)) {
+          console.error(
+            `Error: Invalid date format "${value}" for --until. Use YYYY-MM-DD.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return value
+      }
+    )
+    .option(
+      '--concurrency <number>',
+      'Maximum number of concurrent GCS uploads (default: 10)',
+      (value: string) => {
+        const num = Number(value)
+        if (!Number.isInteger(num) || num < 1) {
+          console.error(
+            `Error: Invalid concurrency value "${value}". Must be a positive integer.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return num
+      }
+    )
     .action(async (options: UploadOptions) => {
+      // Validate mutual exclusivity: --date with --since/--until
+      if (options.date && (options.since !== undefined || options.until !== undefined)) {
+        console.error(
+          'Error: --date cannot be used together with --since or --until. Use either --date for a single date or --since/--until for a range.'
+        )
+        process.exit(ExitCode.COMPLETE_FAILURE)
+      }
+
+      // Validate --since <= --until
+      if (options.since !== undefined && options.until !== undefined && options.since > options.until) {
+        console.error(
+          `Error: --since "${options.since}" is after --until "${options.until}". The start date must be on or before the end date.`
+        )
+        process.exit(ExitCode.COMPLETE_FAILURE)
+      }
+
       // Date is optional - if not specified, upload all available dates
       const targetDate = options.date
 
@@ -1164,9 +1220,12 @@ export function createCLI(): Command {
       // Requirement 6.4: IF upload fails for any file, THEN THE Scraper_CLI SHALL report the failure and continue with remaining files
       const result = await uploadService.upload({
         date: targetDate,
+        since: options.since,
+        until: options.until,
         incremental: options.incremental,
         dryRun: options.dryRun,
         verbose: options.verbose,
+        concurrency: options.concurrency,
       })
 
       // Format and output JSON summary
