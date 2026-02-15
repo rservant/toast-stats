@@ -73,6 +73,8 @@ export interface BucketClient {
     contentType: string,
     metadata: Record<string, string>
   ): Promise<void>
+  /** Lightweight auth check — throws on auth/permission failure */
+  checkAuth(): Promise<void>
 }
 
 /**
@@ -220,6 +222,10 @@ export class DefaultBucketClient implements BucketClient {
       metadata: { metadata },
     })
     await pipeline(stream, writeStream)
+  }
+
+  async checkAuth(): Promise<void> {
+    await this.bucket.getMetadata()
   }
 }
 
@@ -1068,6 +1074,42 @@ export class UploadService implements IUploadService {
             },
           ],
           duration_ms: Date.now() - startTime,
+        }
+      }
+    }
+
+    // Preflight check: verify GCS bucket is accessible before processing any files.
+    // Fails fast with a clear message instead of failing on every file upload.
+    if (!dryRun) {
+      try {
+        await this.bucketClient.checkAuth()
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const isAuth = isAuthError(error) || isGCSAuthError(error)
+        const hint = isAuth
+          ? 'Run "gcloud auth application-default login" to re-authenticate, then retry.'
+          : 'Check that the GCS_BUCKET environment variable is correct and the bucket exists.'
+
+        this.logger.error('GCS preflight check failed', {
+          error: errorMessage,
+          isAuthError: isAuth,
+        })
+        return {
+          success: false,
+          dates: datesToUpload,
+          filesProcessed: [],
+          filesUploaded: [],
+          filesFailed: [],
+          filesSkipped: [],
+          errors: [
+            {
+              file: 'preflight-check',
+              error: `GCS preflight check failed: ${errorMessage}. ${hint}`,
+              timestamp: this.clock.now(),
+            },
+          ],
+          duration_ms: Date.now() - startTime,
+          authError: isAuth,
         }
       }
     }

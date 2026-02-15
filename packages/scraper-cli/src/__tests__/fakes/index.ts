@@ -348,6 +348,16 @@ export class FakeBucketClient implements BucketClient {
   /** Paths that should trigger failures when uploaded */
   private failures: Map<string, Error> = new Map()
 
+  /** If set, checkAuth() will throw this error */
+  private authError: Error | null = null
+
+  /**
+   * Configure checkAuth() to throw an error (simulates bad credentials).
+   */
+  setAuthError(error: Error): void {
+    this.authError = error
+  }
+
   /**
    * Configure a specific remote path to fail on upload.
    */
@@ -360,6 +370,12 @@ export class FakeBucketClient implements BucketClient {
    */
   clearFailures(): void {
     this.failures.clear()
+  }
+
+  async checkAuth(): Promise<void> {
+    if (this.authError) {
+      throw this.authError
+    }
   }
 
   async uploadStream(

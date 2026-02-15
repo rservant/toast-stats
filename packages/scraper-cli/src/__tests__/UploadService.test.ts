@@ -1756,6 +1756,99 @@ describe('Auth error cancellation in concurrent upload pool', () => {
 })
 
 // ============================================================================
+// Preflight Auth Check Tests
+// ============================================================================
+
+describe('Preflight auth check', () => {
+  function createPreflightTestService(): {
+    service: UploadService
+    fakeFs: FakeFileSystem
+    fakeBucket: FakeBucketClient
+  } {
+    const fakeFs = new FakeFileSystem()
+    fakeFs.addDirectory('/cache/snapshots/2024-01-15')
+    fakeFs.addDirectory('/cache')
+    fakeFs.addFile('/cache/snapshots/2024-01-15/a.json', '{"a":1}', 1000)
+    fakeFs.addFile('/cache/snapshots/2024-01-15/b.json', '{"b":2}', 1000)
+    const fakeBucket = new FakeBucketClient()
+    return {
+      service: new UploadService({
+        cacheDir: '/cache',
+        bucket: 'test-bucket',
+        prefix: 'snapshots',
+        fs: fakeFs,
+        hasher: new FakeHasher(),
+        bucketClient: fakeBucket,
+        clock: new FakeClock(),
+        progressReporter: new FakeProgressReporter(),
+      }),
+      fakeFs,
+      fakeBucket,
+    }
+  }
+
+  it('fails fast with authError when preflight check detects auth failure', async () => {
+    const { service, fakeBucket } = createPreflightTestService()
+
+    const authErr = new Error('invalid_grant: reauth related error (invalid_rapt)') as Error & { code: number }
+    authErr.code = 16 // UNAUTHENTICATED
+    fakeBucket.setAuthError(authErr)
+
+    const result = await service.upload({ date: '2024-01-15' })
+
+    expect(result.success).toBe(false)
+    expect(result.authError).toBe(true)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]!.error).toContain('GCS preflight check failed')
+    expect(result.errors[0]!.error).toContain('gcloud auth application-default login')
+    // No files should have been processed at all
+    expect(result.filesProcessed).toHaveLength(0)
+    expect(result.filesUploaded).toHaveLength(0)
+    expect(fakeBucket.calls).toHaveLength(0)
+  })
+
+  it('fails fast with config hint when bucket does not exist', async () => {
+    const { service, fakeBucket } = createPreflightTestService()
+
+    fakeBucket.setAuthError(new Error('The specified bucket does not exist.'))
+
+    const result = await service.upload({ date: '2024-01-15' })
+
+    expect(result.success).toBe(false)
+    expect(result.authError).toBeFalsy()
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]!.error).toContain('GCS preflight check failed')
+    expect(result.errors[0]!.error).toContain('GCS_BUCKET')
+    expect(result.filesProcessed).toHaveLength(0)
+    expect(fakeBucket.calls).toHaveLength(0)
+  })
+
+  it('does not run preflight check in dry-run mode', async () => {
+    const { service, fakeBucket } = createPreflightTestService()
+
+    fakeBucket.setAuthError(new Error('invalid_grant'))
+
+    const result = await service.upload({ date: '2024-01-15', dryRun: true })
+
+    // Should succeed despite auth error being configured — dry-run skips the check
+    expect(result.success).toBe(true)
+    expect(result.authError).toBeFalsy()
+    expect(result.filesUploaded.length).toBeGreaterThan(0)
+  })
+
+  it('proceeds normally when preflight check passes', async () => {
+    const { service, fakeBucket } = createPreflightTestService()
+
+    // No auth error configured — checkAuth() passes
+    const result = await service.upload({ date: '2024-01-15' })
+
+    expect(result.success).toBe(true)
+    expect(result.filesUploaded.length).toBe(2)
+    expect(fakeBucket.calls.length).toBe(2)
+  })
+})
+
+// ============================================================================
 // Progress Reporter Behavior Tests
 // ============================================================================
 // Requirements: 2.1, 2.4
