@@ -63,10 +63,6 @@ describe('Functionality Preservation Property Tests', () => {
         )
       )
 
-    const validBackfillIdGenerator = fc
-      .stringMatching(/^[a-zA-Z0-9-]{8,36}$/)
-      .filter(s => s.length >= 8)
-
     /**
      * Test: Core district endpoints preserve response structure
      *
@@ -147,43 +143,6 @@ describe('Functionality Preservation Property Tests', () => {
         { numRuns: 10 }
       )
     }, 60000)
-
-    /**
-     * Test: Backfill endpoints preserve response structure
-     *
-     * Verifies that backfill endpoints return responses with consistent
-     * structure after being moved to the backfill module.
-     */
-    it('should preserve response structure for backfill endpoints', async () => {
-      await fc.assert(
-        fc.asyncProperty(
-          validDistrictIdGenerator,
-          validBackfillIdGenerator,
-          async (districtId, backfillId) => {
-            // Test global backfill status endpoint
-            const globalStatusResponse = await request(app).get(
-              `/api/districts/backfill/${backfillId}`
-            )
-
-            expect(globalStatusResponse.body).toBeDefined()
-            expect(globalStatusResponse.body).toHaveProperty('error')
-            expect(globalStatusResponse.body.error).toHaveProperty('code')
-
-            // Test district-specific backfill status endpoint
-            const districtStatusResponse = await request(app).get(
-              `/api/districts/${districtId}/backfill/${backfillId}`
-            )
-
-            expect(districtStatusResponse.body).toBeDefined()
-            expect(districtStatusResponse.body).toHaveProperty('error')
-            expect(districtStatusResponse.body.error).toHaveProperty('code')
-
-            return true
-          }
-        ),
-        { numRuns: 20 }
-      )
-    })
 
     /**
      * Test: Snapshot/cache endpoints preserve response structure
@@ -284,57 +243,6 @@ describe('Functionality Preservation Property Tests', () => {
           }
         ),
         { numRuns: 20 }
-      )
-    })
-
-    /**
-     * Test: Backfill initiation preserves request validation
-     *
-     * Verifies that backfill initiation endpoints validate requests
-     * consistently after the route split.
-     */
-    it('should preserve request validation for backfill initiation', async () => {
-      await fc.assert(
-        fc.asyncProperty(
-          fc.record({
-            startDate: fc.oneof(
-              fc.constant(undefined),
-              validDateGenerator,
-              fc.string({ minLength: 1, maxLength: 10 })
-            ),
-            endDate: fc.oneof(
-              fc.constant(undefined),
-              validDateGenerator,
-              fc.string({ minLength: 1, maxLength: 10 })
-            ),
-            targetDistricts: fc.oneof(
-              fc.constant(undefined),
-              fc.array(validDistrictIdGenerator, { maxLength: 3 })
-            ),
-          }),
-          async requestBody => {
-            const response = await request(app)
-              .post('/api/districts/backfill')
-              .send(requestBody)
-              .set('Content-Type', 'application/json')
-
-            expect(response.body).toBeDefined()
-
-            // Response should have consistent structure
-            if (response.status === 202) {
-              // Success response should have backfill info
-              expect(response.body).toHaveProperty('backfillId')
-              expect(response.body).toHaveProperty('status')
-            } else if (response.status === 400) {
-              // Validation error should have error details
-              expect(response.body).toHaveProperty('error')
-              expect(response.body.error).toHaveProperty('code')
-            }
-
-            return true
-          }
-        ),
-        { numRuns: 15 }
       )
     })
 

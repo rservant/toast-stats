@@ -9,41 +9,7 @@
 
 | Priority | Items | Description                                            |
 | -------- | ----- | ------------------------------------------------------ |
-| Medium   | 3     | Cascading dead code from backfill.ts removal + orphan  |
 | Low      | 6     | Deprecated aliases still consumed by tests             |
-
----
-
-## Medium Priority — Cascading Dead Code & Orphans
-
-### 1. `backend/src/routes/districts/shared.ts` — Backfill-related functions now orphaned
-
-The removal of `backfill.ts` left several functions in `shared.ts` with zero importers:
-
-- `validateBackfillRequest()` — was only called by the deleted `backfill.ts`
-- `estimateCompletionTime()` — was only called by the deleted `backfill.ts`
-- `startBackfillCleanupInterval()` / `stopBackfillCleanupInterval()` — re-exported from `index.ts` but never imported by any other module
-
-The corresponding re-exports in `backend/src/routes/districts/index.ts` (`getBackfillService`, `startBackfillCleanupInterval`, `stopBackfillCleanupInterval`) are also unused — no file imports them from the districts index.
-
-**Recommendation:** Remove the orphaned functions from `shared.ts` and their re-exports from `index.ts`.
-
-### 2. Test files reference deleted `/api/districts/backfill` endpoints
-
-Two test files still exercise the now-removed deprecated district backfill endpoints:
-
-- `backend/src/__tests__/districts.integration.test.ts` — "Unified Backfill Endpoints" describe block tests `POST /api/districts/backfill`, `GET /api/districts/backfill/:backfillId`, `DELETE /api/districts/backfill/:backfillId`
-- `backend/src/__tests__/functionality-preservation.property.test.ts` — references `/api/districts/backfill` in property tests
-
-These tests will now get 404s since the routes no longer exist. The admin backfill endpoints at `/api/admin/unified-backfill` are the active replacement and have their own tests.
-
-**Recommendation:** Remove the test blocks that exercise the deleted district backfill endpoints.
-
-### 3. `frontend/src/hooks/useContrastCheck.ts` — No longer imported by anything
-
-With the removal of `useResponsiveDesign.ts` (which was its only consumer), `useContrastCheck` is now completely orphaned. No component, hook, or test file imports it.
-
-**Recommendation:** Delete the file.
 
 ---
 
@@ -109,3 +75,10 @@ The following items were identified and removed on 2026-02-16:
 **High priority (third pass):**
 
 9. ~~No-op transformer functions in `backend/src/utils/transformers.ts`~~ — Removed `transformDistrictsResponse`, `transformDistrictStatisticsResponse`, `transformMembershipHistoryResponse`, `transformClubsResponse`, `transformDailyReportsResponse`, `transformDailyReportDetailResponse` and their imports from `core.ts`
+
+**Medium priority (fourth pass):**
+
+10. ~~Orphaned backfill functions in `backend/src/routes/districts/shared.ts`~~ — Removed `validateBackfillRequest()`, `estimateCompletionTime()`, `startBackfillCleanupInterval()`, `stopBackfillCleanupInterval()`, `BackfillValidationResult` interface, `cleanupIntervalId` variable, auto-start call, and `BackfillRequest` import
+11. ~~Orphaned backfill re-exports in `backend/src/routes/districts/index.ts`~~ — Removed `getBackfillService`, `startBackfillCleanupInterval`, `stopBackfillCleanupInterval` re-exports
+12. ~~Orphaned backfill test blocks~~ — Removed "Unified Backfill Endpoints" describe block from `districts.integration.test.ts`, two backfill tests from `functionality-preservation.property.test.ts`, two backfill tests from `route-composition.property.test.ts`
+13. ~~`frontend/src/hooks/useContrastCheck.ts`~~ — Deleted (no importers after `useResponsiveDesign.ts` removal)

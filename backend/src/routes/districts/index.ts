@@ -42,9 +42,6 @@ export {
   perDistrictSnapshotStore,
   districtDataAggregator,
   snapshotStore,
-  getBackfillService,
   getRefreshService,
   getTimeSeriesIndexService,
-  startBackfillCleanupInterval,
-  stopBackfillCleanupInterval,
 } from './shared.js'
