@@ -13,6 +13,8 @@ import { StorageProviderFactory } from './services/storage/StorageProviderFactor
 import { UnifiedBackfillService } from './services/backfill/unified/UnifiedBackfillService.js'
 import { DistrictConfigurationService } from './services/DistrictConfigurationService.js'
 import { PreComputedAnalyticsService } from './services/PreComputedAnalyticsService.js'
+import { validateHeapConfiguration } from './utils/heapValidator.js'
+import { MemoryMonitor } from './utils/memoryMonitor.js'
 
 const app = express()
 const PORT = process.env['PORT'] || 5001
@@ -174,12 +176,22 @@ app.use(
   }
 )
 
+// Validate V8 heap configuration before server starts (Requirement 2.4)
+validateHeapConfiguration()
+
+// Module-level reference for graceful shutdown cleanup (Requirements 3.1, 3.2)
+let memoryMonitor: MemoryMonitor | null = null
+
 const server = app.listen(PORT, async () => {
   logger.info('Server started', {
     port: PORT,
     environment: process.env['NODE_ENV'] || 'development',
     healthCheck: `http://localhost:${PORT}/health`,
   })
+
+  // Start periodic memory monitoring (Requirements 3.1, 3.2)
+  memoryMonitor = new MemoryMonitor()
+  memoryMonitor.start(60000)
 
   // Initialize and log cache configuration
   try {
@@ -284,6 +296,7 @@ const server = app.listen(PORT, async () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server')
+  memoryMonitor?.stop()
   server.close(() => {
     logger.info('HTTP server closed')
     process.exit(0)
@@ -292,6 +305,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   logger.info('SIGINT signal received: closing HTTP server')
+  memoryMonitor?.stop()
   server.close(() => {
     logger.info('HTTP server closed')
     process.exit(0)

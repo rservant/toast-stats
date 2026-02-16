@@ -64,6 +64,7 @@ USER nodejs
 ENV NODE_ENV=production
 ENV PORT=5001
 ENV CACHE_DIR=/app/cache
+ENV NODE_OPTIONS="--max-old-space-size=384"
 
 # Expose the application port
 EXPOSE 5001
