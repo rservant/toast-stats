@@ -120,7 +120,9 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const requestId = `rankings_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const requestedDate = req.query['date'] as string | undefined
+    const rawDate = req.query['date']
+    const requestedDate =
+      typeof rawDate === 'string' ? rawDate : Array.isArray(rawDate) ? rawDate[0] : undefined
     const enableFallback = req.query['fallback'] !== 'false' // Default to true
 
     logger.info('Received request for district rankings', {
@@ -328,7 +330,13 @@ coreRouter.get(
         req.params['districtId'],
         'districtId'
       )
-      const date = req.query['date'] as string | undefined
+      const rawDate = req.query['date']
+      const date =
+        typeof rawDate === 'string'
+          ? rawDate
+          : Array.isArray(rawDate)
+          ? rawDate[0]
+          : undefined
       // Include date in cache key for proper cache invalidation (Requirement 6.1)
       return generateDistrictCacheKey(
         districtId,
@@ -339,7 +347,13 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const rawDistrictId = req.params['districtId']
-    const requestedDate = req.query['date'] as string | undefined
+    const rawRequestedDate = req.query['date']
+    const requestedDate =
+      typeof rawRequestedDate === 'string'
+        ? rawRequestedDate
+        : Array.isArray(rawRequestedDate)
+        ? rawRequestedDate[0]
+        : undefined
 
     // Handle string | string[] type from Express
     const districtIdStr = Array.isArray(rawDistrictId)

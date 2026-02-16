@@ -225,6 +225,16 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
   // ==========================================================================
 
   private validateSnapshotId(snapshotId: string): void {
+    // Type check to prevent type confusion from untrusted inputs
+    if (typeof snapshotId !== 'string') {
+      throw new StorageOperationError(
+        `Invalid snapshot ID type: expected string but received ${typeof snapshotId}.`,
+        'validateSnapshotId',
+        'gcs',
+        false
+      )
+    }
+
     // Regex format check
     if (!/^\d{4}-\d{2}-\d{2}$/.test(snapshotId)) {
       throw new StorageOperationError(
