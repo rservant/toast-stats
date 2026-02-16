@@ -77,16 +77,6 @@ export interface DivisionAreaProgressSummaryProps {
 }
 
 /**
- * @deprecated Use DivisionAreaProgressSummaryProps instead
- */
-export interface AreaProgressSummaryProps {
-  /** All areas from all divisions */
-  areas: AreaWithDivision[]
-  /** Loading state indicator */
-  isLoading?: boolean
-}
-
-/**
  * Processed area data for display
  */
 interface ProcessedArea {
@@ -523,62 +513,6 @@ export const DivisionAreaProgressSummary: React.FC<
         </p>
       </footer>
     </section>
-  )
-}
-
-/**
- * @deprecated Use DivisionAreaProgressSummary instead.
- * This alias is provided for backward compatibility during migration.
- */
-export const AreaProgressSummary: React.FC<AreaProgressSummaryProps> = ({
-  areas,
-  isLoading = false,
-}) => {
-  // Convert AreaWithDivision[] to DivisionPerformance[] for backward compatibility
-  const divisions: DivisionPerformance[] = useMemo(() => {
-    if (!areas || areas.length === 0) {
-      return []
-    }
-
-    // Group areas by division
-    const divisionMap = new Map<string, AreaPerformance[]>()
-
-    for (const area of areas) {
-      const divisionId = area.divisionId
-      if (!divisionMap.has(divisionId)) {
-        divisionMap.set(divisionId, [])
-      }
-      divisionMap.get(divisionId)!.push(area)
-    }
-
-    // Convert to DivisionPerformance array
-    return Array.from(divisionMap.entries()).map(
-      ([divisionId, divisionAreas]) => {
-        // Calculate division-level metrics from areas
-        const clubBase = divisionAreas.reduce((sum, a) => sum + a.clubBase, 0)
-        const paidClubs = divisionAreas.reduce((sum, a) => sum + a.paidClubs, 0)
-        const distinguishedClubs = divisionAreas.reduce(
-          (sum, a) => sum + a.distinguishedClubs,
-          0
-        )
-        const netGrowth = paidClubs - clubBase
-
-        return {
-          divisionId,
-          status: 'not-distinguished' as const,
-          clubBase,
-          paidClubs,
-          netGrowth,
-          distinguishedClubs,
-          requiredDistinguishedClubs: Math.ceil(clubBase * 0.5),
-          areas: divisionAreas,
-        }
-      }
-    )
-  }, [areas])
-
-  return (
-    <DivisionAreaProgressSummary divisions={divisions} isLoading={isLoading} />
   )
 }
 

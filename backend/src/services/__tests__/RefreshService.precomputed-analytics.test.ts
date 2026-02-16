@@ -18,7 +18,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { RefreshService } from '../RefreshService.js'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
-import { PerDistrictFileSnapshotStore } from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
 import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
@@ -91,7 +91,7 @@ class MockLogger implements ILogger {
 describe('RefreshService - Pre-Computed Analytics Integration', () => {
   let testDir: string
   let snapshotsDir: string
-  let snapshotStorage: PerDistrictFileSnapshotStore
+  let snapshotStorage: FileSnapshotStore
   let rawCSVCache: RawCSVCacheService
   let districtConfigService: DistrictConfigurationService
   let preComputedAnalyticsService: PreComputedAnalyticsService
@@ -120,7 +120,7 @@ describe('RefreshService - Pre-Computed Analytics Integration', () => {
     mockLogger = new MockLogger()
 
     // Initialize services
-    snapshotStorage = new PerDistrictFileSnapshotStore({
+    snapshotStorage = new FileSnapshotStore({
       cacheDir: testDir,
       maxSnapshots: 100,
       maxAgeDays: 30,

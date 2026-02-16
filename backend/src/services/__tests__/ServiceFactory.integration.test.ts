@@ -48,16 +48,13 @@ describe('Service Factory Integration', () => {
     it('should create services with proper dependency chain', () => {
       const factory = getProductionServiceFactory()
 
-      // Create services in dependency order
-      const snapshotStore = factory.createSnapshotStore()
-      const refreshService = factory.createRefreshService(snapshotStore)
-      const backfillService = factory.createBackfillService(
-        refreshService,
-        snapshotStore
-      )
+      // Create services - each creates its own internal dependencies
+      const snapshotStorage = factory.createSnapshotStorage()
+      const refreshService = factory.createRefreshService()
+      const backfillService = factory.createBackfillService()
 
       // Verify all services were created
-      expect(snapshotStore).toBeDefined()
+      expect(snapshotStorage).toBeDefined()
       expect(refreshService).toBeDefined()
       expect(backfillService).toBeDefined()
 
@@ -91,16 +88,13 @@ describe('Service Factory Integration', () => {
     it('should create services with proper dependency chain', () => {
       const factory = getTestServiceFactory()
 
-      // Create services in dependency order
-      const snapshotStore = factory.createSnapshotStore()
-      const refreshService = factory.createRefreshService(snapshotStore)
-      const backfillService = factory.createBackfillService(
-        refreshService,
-        snapshotStore
-      )
+      // Create services - each creates its own internal dependencies
+      const snapshotStorage = factory.createSnapshotStorage()
+      const refreshService = factory.createRefreshService()
+      const backfillService = factory.createBackfillService()
 
       // Verify all services were created
-      expect(snapshotStore).toBeDefined()
+      expect(snapshotStorage).toBeDefined()
       expect(refreshService).toBeDefined()
       expect(backfillService).toBeDefined()
 

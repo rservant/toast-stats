@@ -15,13 +15,12 @@ import fs from 'fs/promises'
 import path from 'path'
 import {
   FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
 } from '../SnapshotStore.js'
 import { AllDistrictsRankingsData } from '../../types/snapshots.js'
 
 describe('PerDistrictSnapshotStore Rankings File Operations', () => {
   let testCacheDir: string
-  let store: PerDistrictFileSnapshotStore
+  let store: FileSnapshotStore
 
   beforeEach(async () => {
     // Create unique test cache directory for each test run
@@ -35,7 +34,7 @@ describe('PerDistrictSnapshotStore Rankings File Operations', () => {
 
     await fs.mkdir(testCacheDir, { recursive: true })
 
-    store = new PerDistrictFileSnapshotStore({
+    store = new FileSnapshotStore({
       cacheDir: testCacheDir,
       maxSnapshots: 50,
       maxAgeDays: 7,

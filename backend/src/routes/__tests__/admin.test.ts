@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
-import adminRoutes from '../admin.js'
+import adminRoutes from '../admin/index.js'
 import { Snapshot, SnapshotMetadata } from '../../types/snapshots.js'
 
 // Use vi.hoisted to ensure mocks are available when vi.mock is hoisted
@@ -48,7 +48,6 @@ const {
 
   const mockFactory = {
     createSnapshotStorage: vi.fn(() => mockSnapshotStore),
-    createSnapshotStore: vi.fn(() => mockSnapshotStore),
     createCacheConfigService: vi.fn(() => mockCacheConfigService),
   }
 

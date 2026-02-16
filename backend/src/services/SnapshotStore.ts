@@ -2715,11 +2715,6 @@ export class FileSnapshotStore
 // ============================================================================
 
 /**
- * @deprecated Use FileSnapshotStore instead
- */
-export const PerDistrictFileSnapshotStore = FileSnapshotStore
-
-/**
  * @deprecated Use PerDistrictSnapshotStoreInterface instead
  */
 export type PerDistrictSnapshotStore = PerDistrictSnapshotStoreInterface

@@ -137,9 +137,9 @@ export interface TestServiceFactory {
   createCircuitBreakerManager(): ICircuitBreakerManager
 
   /**
-   * Create SnapshotStore instance
+   * Create ISnapshotStorage instance
    */
-  createSnapshotStore(cacheConfig?: ICacheConfigService): SnapshotStore
+  createSnapshotStorage(): ISnapshotStorage
 
   /**
    * Create RefreshService instance
@@ -238,9 +238,11 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
-   * Create SnapshotStore instance
+   * Create SnapshotStore instance (private helper for internal use)
    */
-  createSnapshotStore(cacheConfig?: ICacheConfigService): SnapshotStore {
+  private createSnapshotStoreInstance(
+    cacheConfig?: ICacheConfigService
+  ): SnapshotStore {
     const config = cacheConfig || this.createCacheConfigService()
     const service = new FileSnapshotStore({
       cacheDir: config.getCacheDirectory(),
@@ -252,10 +254,20 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
+   * Create ISnapshotStorage instance for test environments
+   */
+  createSnapshotStorage(): ISnapshotStorage {
+    const cacheConfig = this.createCacheConfigService()
+    return new LocalSnapshotStorage({
+      cacheDir: cacheConfig.getCacheDirectory(),
+    })
+  }
+
+  /**
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
-    const store = snapshotStore || this.createSnapshotStore()
+    const store = snapshotStore || this.createSnapshotStoreInstance()
     const mockCacheService = createMockCacheService()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
@@ -279,7 +291,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     configService?: DistrictConfigurationService
   ): BackfillService {
     const refresh = refreshService || this.createRefreshService()
-    const store = snapshotStore || this.createSnapshotStore()
+    const store = snapshotStore || this.createSnapshotStoreInstance()
     // Create DistrictConfigurationService with storage if not provided
     let config = configService
     if (!config) {
@@ -483,7 +495,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     container.registerInterface(
       'SnapshotStore',
       createServiceFactory(
-        () => this.createSnapshotStore(),
+        () => this.createSnapshotStoreInstance(),
         async _instance => {
           // FileSnapshotStore doesn't have dispose method
         }

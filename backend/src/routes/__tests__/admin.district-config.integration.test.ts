@@ -11,7 +11,7 @@ import express from 'express'
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import adminRoutes from '../admin.js'
+import adminRoutes from '../admin/index.js'
 
 // Use vi.hoisted to ensure mock factory is available when vi.mock is hoisted
 const { mockFactory, setTestCacheDir } = vi.hoisted(() => {
@@ -33,7 +33,7 @@ const { mockFactory, setTestCacheDir } = vi.hoisted(() => {
   return {
     mockFactory: {
       createCacheConfigService: () => mockCacheConfigService,
-      createSnapshotStore: () => ({}), // Not used in district config tests
+      createSnapshotStorage: () => ({}), // Not used in district config tests
     },
     setTestCacheDir: (dir: string) => {
       testCacheDir = dir

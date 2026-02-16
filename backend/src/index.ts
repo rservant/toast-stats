@@ -6,7 +6,7 @@ dotenv.config()
 import express from 'express'
 import cors from 'cors'
 import districtRoutes from './routes/districts/index.js'
-import adminRoutes from './routes/admin.js'
+import adminRoutes from './routes/admin/index.js'
 import { logger } from './utils/logger.js'
 import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
 import { StorageProviderFactory } from './services/storage/StorageProviderFactory.js'

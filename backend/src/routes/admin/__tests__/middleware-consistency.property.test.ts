@@ -50,7 +50,6 @@ const { mockFactory, setTestSnapshotStore, setTempDir } = vi.hoisted(() => {
   return {
     mockFactory: {
       createSnapshotStorage: () => hoistedSnapshotStore,
-      createSnapshotStore: () => hoistedSnapshotStore,
       createCacheConfigService: () => ({
         getConfiguration: () => ({
           baseDirectory: hoistedTempDir,

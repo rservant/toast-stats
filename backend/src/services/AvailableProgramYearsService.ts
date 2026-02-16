@@ -23,12 +23,6 @@ export type { ProgramYearWithData, AvailableRankingYearsResponse }
 export type { IAvailableProgramYearsService }
 
 /**
- * Result type alias for backward compatibility
- * @deprecated Use AvailableRankingYearsResponse instead
- */
-export type AvailableProgramYearsResult = AvailableRankingYearsResponse
-
-/**
  * Helper function to calculate program year info from a date
  * Toastmasters program year runs July 1 to June 30
  */

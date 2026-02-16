@@ -1,7 +1,7 @@
 /**
- * AreaProgressSummary Component Tests
+ * DivisionAreaProgressSummary Component Tests
  *
- * Tests for the Area Progress Summary component that displays all areas
+ * Tests for the Division Area Progress Summary component that displays all areas
  * with concise English paragraphs describing their progress toward
  * Distinguished Area recognition.
  *
@@ -22,10 +22,8 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import {
-  AreaProgressSummary,
-  AreaWithDivision,
-} from '../DivisionAreaProgressSummary'
+import { DivisionAreaProgressSummary } from '../DivisionAreaProgressSummary'
+import type { DivisionPerformance, AreaPerformance } from '../../utils/divisionStatus'
 import {
   renderWithProviders,
   cleanupAllResources,
@@ -35,10 +33,9 @@ import {
  * Test data factory for creating area data
  */
 const createArea = (
-  overrides: Partial<AreaWithDivision> = {}
-): AreaWithDivision => ({
+  overrides: Partial<AreaPerformance> = {}
+): AreaPerformance => ({
   areaId: 'A1',
-  divisionId: 'A',
   clubBase: 4,
   paidClubs: 4,
   distinguishedClubs: 2,
@@ -61,6 +58,51 @@ const createArea = (
   ...overrides,
 })
 
+/**
+ * Helper to group flat area data into DivisionPerformance[] format.
+ * Each area must include a divisionId field for grouping.
+ * Division-level metrics are aggregated from the contained areas.
+ */
+function buildDivisions(
+  areas: (AreaPerformance & { divisionId: string })[]
+): DivisionPerformance[] {
+  const grouped = new Map<string, AreaPerformance[]>()
+  for (const { divisionId, ...area } of areas) {
+    const existing = grouped.get(divisionId) ?? []
+    existing.push(area)
+    grouped.set(divisionId, existing)
+  }
+
+  return Array.from(grouped.entries()).map(([divisionId, divAreas]) => {
+    const clubBase = divAreas.reduce((sum, a) => sum + a.clubBase, 0)
+    const paidClubs = divAreas.reduce((sum, a) => sum + a.paidClubs, 0)
+    const distinguishedClubs = divAreas.reduce((sum, a) => sum + a.distinguishedClubs, 0)
+    const netGrowth = paidClubs - clubBase
+    const requiredDistinguishedClubs = Math.ceil(clubBase * 0.5)
+
+    // Compute division status using same logic as calculateDivisionStatus
+    let status: DivisionPerformance['status'] = 'not-distinguished'
+    if (distinguishedClubs >= requiredDistinguishedClubs + 1 && netGrowth >= 1) {
+      status = 'presidents-distinguished'
+    } else if (distinguishedClubs >= requiredDistinguishedClubs + 1 && paidClubs >= clubBase) {
+      status = 'select-distinguished'
+    } else if (distinguishedClubs >= requiredDistinguishedClubs && paidClubs >= clubBase) {
+      status = 'distinguished'
+    }
+
+    return {
+      divisionId,
+      status,
+      clubBase,
+      paidClubs,
+      netGrowth,
+      distinguishedClubs,
+      requiredDistinguishedClubs,
+      areas: divAreas,
+    }
+  })
+}
+
 describe('AreaProgressSummary', () => {
   afterEach(() => {
     cleanupAllResources()
@@ -73,14 +115,14 @@ describe('AreaProgressSummary', () => {
      * as concise English paragraphs
      */
     it('should display all areas from all divisions exactly once', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-        createArea({ areaId: 'C1', divisionId: 'C' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+        { ...createArea({ areaId: 'C1' }), divisionId: 'C' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Each area should appear exactly once as a heading
       expect(screen.getByText('Area A1')).toBeInTheDocument()
@@ -94,17 +136,19 @@ describe('AreaProgressSummary', () => {
      * Each area should have a progress paragraph
      */
     it('should display progress paragraph for each area', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should contain progress text with metrics (both division and area narratives)
       const paidClubsTexts = screen.getAllByText(/4 of 4 clubs paid/)
@@ -118,11 +162,11 @@ describe('AreaProgressSummary', () => {
      * Single area should display correctly
      */
     it('should display single area correctly', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText('Area A1')).toBeInTheDocument()
       expect(screen.getByText('1 area in 1 division')).toBeInTheDocument()
@@ -133,11 +177,11 @@ describe('AreaProgressSummary', () => {
      * Progress text should include area label with division context
      */
     it('should include area label with division context in progress text', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Progress text should mention "Area A1 (Division A)"
       expect(screen.getByText(/Area A1 \(Division A\)/)).toBeInTheDocument()
@@ -150,13 +194,13 @@ describe('AreaProgressSummary', () => {
      * THE progress descriptions SHALL be grouped by division for context
      */
     it('should group areas by division', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Division headers should be present
       expect(screen.getByText('Division A')).toBeInTheDocument()
@@ -168,14 +212,14 @@ describe('AreaProgressSummary', () => {
      * Areas should be sorted within divisions
      */
     it('should sort areas within each division', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A3', divisionId: 'A' }),
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A3' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Get all area headings within Division A section (excluding division narrative heading)
@@ -197,14 +241,14 @@ describe('AreaProgressSummary', () => {
      * Divisions should be sorted alphabetically
      */
     it('should sort divisions alphabetically', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'C1', divisionId: 'C' }),
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'C1' }), divisionId: 'C' },
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Get all division headings
@@ -220,13 +264,13 @@ describe('AreaProgressSummary', () => {
      * Each division section should have proper aria-labelledby
      */
     it('should have proper aria-labelledby on division sections', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Each division section should reference its heading
@@ -244,10 +288,10 @@ describe('AreaProgressSummary', () => {
 
   describe('Empty State', () => {
     /**
-     * Tests empty state when no areas provided
+     * Tests empty state when no divisions provided
      */
     it('should display empty state message when no areas', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} />)
 
       expect(screen.getByText('No Division Data')).toBeInTheDocument()
     })
@@ -256,7 +300,7 @@ describe('AreaProgressSummary', () => {
      * Tests empty state description text
      */
     it('should display empty state description', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} />)
 
       expect(
         screen.getByText(/No division performance data is available/i)
@@ -267,7 +311,7 @@ describe('AreaProgressSummary', () => {
      * Tests that section header is still displayed in empty state
      */
     it('should still display section header in empty state', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} />)
 
       expect(
         screen.getByText('Division and Area Progress Summary')
@@ -279,7 +323,7 @@ describe('AreaProgressSummary', () => {
      */
     it('should not render division groups in empty state', () => {
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={[]} />
+        <DivisionAreaProgressSummary divisions={[]} />
       )
 
       // No division sections should be present
@@ -290,13 +334,13 @@ describe('AreaProgressSummary', () => {
     })
 
     /**
-     * Tests empty state when areas is undefined (defensive)
+     * Tests empty state when divisions is undefined (defensive)
      */
     it('should handle undefined areas gracefully', () => {
       // TypeScript would normally prevent this, but testing defensive behavior
       renderWithProviders(
-        <AreaProgressSummary
-          areas={undefined as unknown as AreaWithDivision[]}
+        <DivisionAreaProgressSummary
+          divisions={undefined as unknown as DivisionPerformance[]}
         />
       )
 
@@ -309,7 +353,7 @@ describe('AreaProgressSummary', () => {
      * Tests loading state display
      */
     it('should display loading skeleton when isLoading is true', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
 
       // Loading state should have role="status" and aria-label
       expect(
@@ -323,7 +367,7 @@ describe('AreaProgressSummary', () => {
      * Tests aria-busy attribute during loading
      */
     it('should set aria-busy attribute when loading', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
 
       const loadingContainer = screen.getByRole('status', {
         name: /loading division and area progress summaries/i,
@@ -335,12 +379,12 @@ describe('AreaProgressSummary', () => {
      * Tests that content is not rendered during loading
      */
     it('should not render area content during loading', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
       renderWithProviders(
-        <AreaProgressSummary areas={areas} isLoading={true} />
+        <DivisionAreaProgressSummary divisions={divisions} isLoading={true} />
       )
 
       // Area content should not be visible
@@ -351,7 +395,7 @@ describe('AreaProgressSummary', () => {
      * Tests that empty state is not shown during loading
      */
     it('should not show empty state during loading', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
 
       expect(screen.queryByText('No Division Data')).not.toBeInTheDocument()
     })
@@ -360,7 +404,7 @@ describe('AreaProgressSummary', () => {
      * Tests loading skeleton has screen reader text
      */
     it('should have screen reader text during loading', () => {
-      renderWithProviders(<AreaProgressSummary areas={[]} isLoading={true} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
 
       expect(
         screen.getByText('Loading division and area progress summaries...')
@@ -374,9 +418,11 @@ describe('AreaProgressSummary', () => {
      * THE Criteria_Display SHALL use semantic HTML with appropriate ARIA labels
      */
     it('should have proper role="region" on main section', () => {
-      const areas: AreaWithDivision[] = [createArea()]
+      const divisions = buildDivisions([
+        { ...createArea(), divisionId: 'A' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       const section = screen.getByRole('region', {
         name: /division and area progress summary/i,
@@ -389,13 +435,13 @@ describe('AreaProgressSummary', () => {
      * Each area should be an article element
      */
     it('should use article elements for each area', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Articles include: 1 division narrative + 2 area narratives = 3 total
@@ -408,12 +454,12 @@ describe('AreaProgressSummary', () => {
      * Each area article should have aria-labelledby
      */
     it('should have aria-labelledby on area articles', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Get the area article (not the division narrative article)
@@ -432,17 +478,19 @@ describe('AreaProgressSummary', () => {
      * Recognition badges should have aria-label
      */
     it('should have aria-label on recognition badges', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Both division and area badges should have aria-label describing the recognition status
       const badges = screen.getAllByLabelText(/recognition status/i)
@@ -454,10 +502,12 @@ describe('AreaProgressSummary', () => {
      * Section should use semantic header element
      */
     it('should use semantic header element', () => {
-      const areas: AreaWithDivision[] = [createArea()]
+      const divisions = buildDivisions([
+        { ...createArea(), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       const header = container.querySelector('header')
@@ -469,10 +519,12 @@ describe('AreaProgressSummary', () => {
      * Section should use semantic footer element
      */
     it('should use semantic footer element', () => {
-      const areas: AreaWithDivision[] = [createArea()]
+      const divisions = buildDivisions([
+        { ...createArea(), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       const footer = container.querySelector('footer')
@@ -485,18 +537,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for President's Distinguished
      */
     it("should display President's Distinguished badge with correct styling", () => {
-      const areas: AreaWithDivision[] = [
+      const divisions = buildDivisions([
         // President's Distinguished: clubBase+1 paid AND 50%+1 distinguished
-        createArea({
-          areaId: 'A1',
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 5,
+            distinguishedClubs: 3,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 5,
-          distinguishedClubs: 3,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText("President's Distinguished")).toBeInTheDocument()
     })
@@ -505,18 +559,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for Select Distinguished
      */
     it('should display Select Distinguished badge', () => {
-      const areas: AreaWithDivision[] = [
+      const divisions = buildDivisions([
         // Select Distinguished: clubBase paid AND 50%+1 distinguished
-        createArea({
-          areaId: 'A1',
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 3,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 3,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText('Select Distinguished')).toBeInTheDocument()
     })
@@ -525,18 +581,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for Distinguished
      */
     it('should display Distinguished badge', () => {
-      const areas: AreaWithDivision[] = [
+      const divisions = buildDivisions([
         // Distinguished: clubBase paid AND 50% distinguished
-        createArea({
-          areaId: 'A1',
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Use getAllByText since "Distinguished" may appear in multiple places
       const badges = screen.getAllByText('Distinguished')
@@ -547,18 +605,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for Not Distinguished
      */
     it('should display Not Distinguished badge', () => {
-      const areas: AreaWithDivision[] = [
+      const divisions = buildDivisions([
         // Not Distinguished: below 50% distinguished
-        createArea({
-          areaId: 'A1',
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 1,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 1,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Both division and area may show Not Distinguished badge
       const badges = screen.getAllByText('Not Distinguished')
@@ -569,18 +629,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for Net Loss
      */
     it('should display Net Loss badge when paidClubs < clubBase', () => {
-      const areas: AreaWithDivision[] = [
+      const divisions = buildDivisions([
         // Net Loss: paidClubs < clubBase
-        createArea({
-          areaId: 'A1',
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 3,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 3,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Both division and area may show Net Loss badge
       const badges = screen.getAllByText('Net Loss')
@@ -593,13 +655,13 @@ describe('AreaProgressSummary', () => {
      * Tests header shows correct area count
      */
     it('should display correct area count in header', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText('3 areas in 2 divisions')).toBeInTheDocument()
     })
@@ -608,11 +670,11 @@ describe('AreaProgressSummary', () => {
      * Tests singular form for single area
      */
     it('should use singular form for single area', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText('1 area in 1 division')).toBeInTheDocument()
     })
@@ -621,12 +683,12 @@ describe('AreaProgressSummary', () => {
      * Tests plural form for multiple areas
      */
     it('should use plural form for multiple areas', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText('2 areas in 1 division')).toBeInTheDocument()
     })
@@ -635,13 +697,13 @@ describe('AreaProgressSummary', () => {
      * Tests plural form for multiple divisions
      */
     it('should use plural form for multiple divisions', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-        createArea({ areaId: 'C1', divisionId: 'C' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+        { ...createArea({ areaId: 'C1' }), divisionId: 'C' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       expect(screen.getByText('3 areas in 3 divisions')).toBeInTheDocument()
     })
@@ -652,17 +714,19 @@ describe('AreaProgressSummary', () => {
      * Tests area with zero clubs (clubBase = 0)
      */
     it('should handle area with zero clubs', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 0,
+            paidClubs: 0,
+            distinguishedClubs: 0,
+          }),
           divisionId: 'A',
-          clubBase: 0,
-          paidClubs: 0,
-          distinguishedClubs: 0,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should render without crashing
       expect(screen.getByText('Area A1')).toBeInTheDocument()
@@ -672,17 +736,19 @@ describe('AreaProgressSummary', () => {
      * Tests area with 1 club (minimum case)
      */
     it('should handle area with single club', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 1,
+            paidClubs: 1,
+            distinguishedClubs: 1,
+          }),
           divisionId: 'A',
-          clubBase: 1,
-          paidClubs: 1,
-          distinguishedClubs: 1,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should render and show metrics (both division and area narratives)
       const paidClubsTexts = screen.getAllByText(/1 of 1 clubs paid/)
@@ -693,50 +759,60 @@ describe('AreaProgressSummary', () => {
      * Tests multiple areas with different recognition levels
      */
     it('should display multiple areas with different recognition levels', () => {
-      const areas: AreaWithDivision[] = [
+      const divisions = buildDivisions([
         // President's Distinguished
-        createArea({
-          areaId: 'A1',
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 5,
+            distinguishedClubs: 3,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 5,
-          distinguishedClubs: 3,
-        }),
+        },
         // Select Distinguished
-        createArea({
-          areaId: 'A2',
+        {
+          ...createArea({
+            areaId: 'A2',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 3,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 3,
-        }),
+        },
         // Distinguished
-        createArea({
-          areaId: 'B1',
+        {
+          ...createArea({
+            areaId: 'B1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'B',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
+        },
         // Not Distinguished
-        createArea({
-          areaId: 'B2',
+        {
+          ...createArea({
+            areaId: 'B2',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 1,
+          }),
           divisionId: 'B',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 1,
-        }),
+        },
         // Net Loss
-        createArea({
-          areaId: 'C1',
+        {
+          ...createArea({
+            areaId: 'C1',
+            clubBase: 4,
+            paidClubs: 3,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'C',
-          clubBase: 4,
-          paidClubs: 3,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Use getAllByText since division and area badges may both show these statuses
       const presidentsDistinguishedBadges = screen.getAllByText(
@@ -756,27 +832,27 @@ describe('AreaProgressSummary', () => {
     })
 
     /**
-     * Tests that component re-renders correctly when areas change
+     * Tests that component re-renders correctly when divisions change
      */
     it('should update when areas prop changes', () => {
-      const initialAreas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const initialDivisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
       const { rerender } = renderWithProviders(
-        <AreaProgressSummary areas={initialAreas} />
+        <DivisionAreaProgressSummary divisions={initialDivisions} />
       )
 
       expect(screen.getByText('1 area in 1 division')).toBeInTheDocument()
 
-      // Update areas
-      const updatedAreas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-      ]
+      // Update divisions
+      const updatedDivisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+      ])
 
-      rerender(<AreaProgressSummary areas={updatedAreas} />)
+      rerender(<DivisionAreaProgressSummary divisions={updatedDivisions} />)
 
       expect(screen.getByText('3 areas in 2 divisions')).toBeInTheDocument()
     })
@@ -787,26 +863,28 @@ describe('AreaProgressSummary', () => {
      * Tests that progress text mentions club visit status with actual data
      */
     it('should include actual club visit status in progress text', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            firstRoundVisits: {
+              completed: 3,
+              required: 3,
+              percentage: 75,
+              meetsThreshold: true,
+            },
+            secondRoundVisits: {
+              completed: 2,
+              required: 3,
+              percentage: 50,
+              meetsThreshold: false,
+            },
+          }),
           divisionId: 'A',
-          firstRoundVisits: {
-            completed: 3,
-            required: 3,
-            percentage: 75,
-            meetsThreshold: true,
-          },
-          secondRoundVisits: {
-            completed: 2,
-            required: 3,
-            percentage: 50,
-            meetsThreshold: false,
-          },
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Club visit status should show progress toward 75% threshold
       expect(screen.getByText(/Club visits:/)).toBeInTheDocument()
@@ -817,29 +895,31 @@ describe('AreaProgressSummary', () => {
      * Tests that both rounds meeting threshold shows appropriate message
      */
     it('should show both rounds meet threshold when 75% is achieved', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 5,
+            distinguishedClubs: 3,
+            firstRoundVisits: {
+              completed: 3,
+              required: 3,
+              percentage: 75,
+              meetsThreshold: true,
+            },
+            secondRoundVisits: {
+              completed: 3,
+              required: 3,
+              percentage: 75,
+              meetsThreshold: true,
+            },
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 5,
-          distinguishedClubs: 3,
-          firstRoundVisits: {
-            completed: 3,
-            required: 3,
-            percentage: 75,
-            meetsThreshold: true,
-          },
-          secondRoundVisits: {
-            completed: 3,
-            required: 3,
-            percentage: 75,
-            meetsThreshold: true,
-          },
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should show both rounds meet 75% threshold for President's Distinguished
       expect(
@@ -851,17 +931,19 @@ describe('AreaProgressSummary', () => {
      * Tests progress text for area with net club loss
      */
     it('should describe eligibility requirement for net club loss', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 3,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 3,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should mention net club loss and eligibility (both division and area narratives)
       const netLossTexts = screen.getAllByText(/has a net club loss/)
@@ -874,17 +956,19 @@ describe('AreaProgressSummary', () => {
      * Tests progress text for achieved President's Distinguished
      */
     it("should describe President's Distinguished achievement", () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 5,
+            distinguishedClubs: 3,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 5,
-          distinguishedClubs: 3,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should mention achievement (area narrative)
       const achievementTexts = screen.getAllByText(
@@ -897,17 +981,19 @@ describe('AreaProgressSummary', () => {
      * Tests progress text includes incremental gaps
      */
     it('should describe incremental gaps for not distinguished area', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 1,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 1,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Should mention gaps to each level (both division and area narratives may contain these)
       const notDistinguishedTexts = screen.getAllByText(
@@ -926,12 +1012,12 @@ describe('AreaProgressSummary', () => {
      * FOR EACH division, THE System SHALL first display the division's progress narrative
      */
     it('should display division progress narrative for each division', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Each division should have a progress narrative heading
       expect(screen.getByText('Division A Progress')).toBeInTheDocument()
@@ -945,13 +1031,13 @@ describe('AreaProgressSummary', () => {
      * FOR EACH division, THE System SHALL then display the area progress narratives
      */
     it('should display division narrative before area narratives within each division', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'A2', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'A2' }), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Get the Division A section
@@ -985,17 +1071,19 @@ describe('AreaProgressSummary', () => {
      * THE division narratives SHALL use the same paragraph-based format as area narratives
      */
     it('should use paragraph-based format for division narratives', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Division narrative should contain progress text with metrics
       // Division A has 4 clubs paid, 2 distinguished (same as the single area)
@@ -1009,12 +1097,12 @@ describe('AreaProgressSummary', () => {
      * THE division narratives SHALL be visually distinguished from area narratives
      */
     it('should visually distinguish division narratives from area narratives', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Division narrative article should have distinct styling
@@ -1042,12 +1130,12 @@ describe('AreaProgressSummary', () => {
      * Division narrative heading should be bold and use brand color
      */
     it('should have bold heading with brand color for division narratives', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Division narrative heading should be bold and use tm-loyal-blue
@@ -1064,17 +1152,19 @@ describe('AreaProgressSummary', () => {
      * Division narratives should include recognition badge
      */
     it('should display recognition badge for division narratives', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Division narrative should have a recognition badge with aria-label
       const divisionBadge = screen.getByLabelText(
@@ -1088,24 +1178,28 @@ describe('AreaProgressSummary', () => {
      * Division narrative should show division-level metrics (aggregated from areas)
      */
     it('should show division-level metrics in division narrative', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({
-          areaId: 'A1',
+      const divisions = buildDivisions([
+        {
+          ...createArea({
+            areaId: 'A1',
+            clubBase: 4,
+            paidClubs: 4,
+            distinguishedClubs: 2,
+          }),
           divisionId: 'A',
-          clubBase: 4,
-          paidClubs: 4,
-          distinguishedClubs: 2,
-        }),
-        createArea({
-          areaId: 'A2',
+        },
+        {
+          ...createArea({
+            areaId: 'A2',
+            clubBase: 6,
+            paidClubs: 6,
+            distinguishedClubs: 3,
+          }),
           divisionId: 'A',
-          clubBase: 6,
-          paidClubs: 6,
-          distinguishedClubs: 3,
-        }),
-      ]
+        },
+      ])
 
-      renderWithProviders(<AreaProgressSummary areas={areas} />)
+      renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
       // Division A should show aggregated metrics: 10 clubs paid, 5 distinguished
       // (4+6 = 10 paid, 2+3 = 5 distinguished)
@@ -1118,14 +1212,14 @@ describe('AreaProgressSummary', () => {
      * Each division should have its own division narrative followed by its areas
      */
     it('should group division narrative with its areas for multiple divisions', () => {
-      const areas: AreaWithDivision[] = [
-        createArea({ areaId: 'A1', divisionId: 'A' }),
-        createArea({ areaId: 'B1', divisionId: 'B' }),
-        createArea({ areaId: 'B2', divisionId: 'B' }),
-      ]
+      const divisions = buildDivisions([
+        { ...createArea({ areaId: 'A1' }), divisionId: 'A' },
+        { ...createArea({ areaId: 'B1' }), divisionId: 'B' },
+        { ...createArea({ areaId: 'B2' }), divisionId: 'B' },
+      ])
 
       const { container } = renderWithProviders(
-        <AreaProgressSummary areas={areas} />
+        <DivisionAreaProgressSummary divisions={divisions} />
       )
 
       // Division A section should have 1 division narrative + 1 area = 2 articles

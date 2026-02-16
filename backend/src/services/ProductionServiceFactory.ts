@@ -120,23 +120,12 @@ export interface ProductionServiceFactory {
   createCircuitBreakerManager(): ICircuitBreakerManager
 
   /**
-   * Create SnapshotStore instance
-   *
-   * @deprecated Use createSnapshotStorage() for storage abstraction layer support.
-   * This method returns FileSnapshotStore directly for backward compatibility.
-   */
-  createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore
-
-  /**
    * Create ISnapshotStorage instance using the storage abstraction layer
    *
    * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
    * environment variable:
    * - 'local' (default): Returns LocalSnapshotStorage (wraps FileSnapshotStore)
    * - 'gcp': Returns FirestoreSnapshotStorage
-   *
-   * This method should be preferred over createSnapshotStore() for new code
-   * to ensure compatibility with both local and cloud storage backends.
    *
    * Requirements: 1.3, 1.4
    */
@@ -470,32 +459,12 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
-   * Create SnapshotStore instance
-   *
-   * @deprecated Use createSnapshotStorage() for storage abstraction layer support.
-   * This method returns FileSnapshotStore directly for backward compatibility.
-   */
-  createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore {
-    const config = cacheConfig || this.createCacheConfigService()
-    const service = new FileSnapshotStore({
-      cacheDir: config.getCacheDirectory(),
-      maxSnapshots: 100,
-      maxAgeDays: 30,
-    })
-    // FileSnapshotStore doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
    * Create ISnapshotStorage instance using the storage abstraction layer
    *
    * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
    * environment variable:
    * - 'local' (default): Returns LocalSnapshotStorage (wraps FileSnapshotStore)
    * - 'gcp': Returns FirestoreSnapshotStorage
-   *
-   * This method should be preferred over createSnapshotStore() for new code
-   * to ensure compatibility with both local and cloud storage backends.
    *
    * Requirements: 1.3, 1.4
    */

@@ -35,7 +35,6 @@ const mockRefreshService = {
 // Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
   createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
-  createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: vi.fn(),
   createRefreshService: () => mockRefreshService,
 }

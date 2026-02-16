@@ -45,7 +45,7 @@ program
   .action(async options => {
     try {
       const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      const snapshotStore = factory.createSnapshotStorage()
 
       const limit = parseInt(options.limit)
       const filters: SnapshotFilters = {}
@@ -116,7 +116,7 @@ program
   .action(async (snapshotId, options) => {
     try {
       const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      const snapshotStore = factory.createSnapshotStorage()
 
       const snapshot = await snapshotStore.getSnapshot(snapshotId)
 
@@ -206,7 +206,7 @@ program
   .action(async options => {
     try {
       const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      const snapshotStore = factory.createSnapshotStorage()
 
       const isReady = await snapshotStore.isReady()
       const currentSnapshot = await snapshotStore.getLatestSuccessful()
@@ -313,7 +313,7 @@ program
   .action(async options => {
     try {
       const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      const snapshotStore = factory.createSnapshotStorage()
 
       // Get performance metrics (if available)
       const performanceMetrics = (
@@ -416,7 +416,7 @@ program
   .action(async options => {
     try {
       const factory = getProductionServiceFactory()
-      const snapshotStore = factory.createSnapshotStore()
+      const snapshotStore = factory.createSnapshotStorage()
 
       // Validate integrity (if available)
       const integrityResult = (await (

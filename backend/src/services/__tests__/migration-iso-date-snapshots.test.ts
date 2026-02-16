@@ -14,13 +14,12 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import {
   FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
 } from '../SnapshotStore.js'
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 
 describe('ISO Date-based Snapshot Migration', () => {
   let testCacheDir: string
-  let snapshotStore: PerDistrictFileSnapshotStore
+  let snapshotStore: FileSnapshotStore
 
   beforeEach(async () => {
     // Create unique test cache directory
@@ -34,7 +33,7 @@ describe('ISO Date-based Snapshot Migration', () => {
 
     await fs.mkdir(testCacheDir, { recursive: true })
 
-    snapshotStore = new PerDistrictFileSnapshotStore({
+    snapshotStore = new FileSnapshotStore({
       cacheDir: testCacheDir,
       maxSnapshots: 50,
       maxAgeDays: 7,

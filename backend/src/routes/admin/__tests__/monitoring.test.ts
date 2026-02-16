@@ -32,7 +32,6 @@ let currentTempDir: string = ''
 // Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
   createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
-  createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: () => ({
     getCacheDirectory: () => currentTempDir,
   }),

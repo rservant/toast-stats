@@ -7,39 +7,9 @@
 
 ## Summary
 
-| Priority | Items | Description                                            |
-| -------- | ----- | ------------------------------------------------------ |
-| Low      | 6     | Deprecated aliases still consumed by tests             |
-
----
-
-## Low Priority — Deprecated Aliases (Still Used in Tests)
-
-These items are properly marked `@deprecated` and still consumed by test files. They are not urgent but represent cleanup debt.
-
-### 4. `PerDistrictFileSnapshotStore` alias in `SnapshotStore.ts`
-
-Alias for `FileSnapshotStore`. Used extensively in test files (8+ test files reference it). Removing it requires updating all those test imports to use `FileSnapshotStore` directly.
-
-### 5. `AreaProgressSummary` / `AreaProgressSummaryProps` / `AreaWithDivision` in `DivisionAreaProgressSummary.tsx`
-
-Deprecated aliases for the renamed component. `AreaProgressSummary` is used in `AreaProgressSummary.test.tsx` and `AreaWithDivision` is used in `areaProgressText.ts` and its tests. Production code uses the new names.
-
-### 6. `AreaRecognitionPanel` / `AreaRecognitionPanelProps` in `DivisionAreaRecognitionPanel.tsx`
-
-Deprecated aliases exported from `components/index.ts`. No production page imports them — only the new `DivisionAreaRecognitionPanel` name is used.
-
-### 7. `createSnapshotStore()` on `ProductionServiceFactory`
-
-Not deprecated in code but has a comment saying `createSnapshotStorage()` should be preferred. Still used in test mocks and the `snapshot-debug.ts` script.
-
-### 8. `AvailableProgramYearsResult` type alias
-
-Deprecated alias for `AvailableRankingYearsResponse` in `AvailableProgramYearsService.ts`. Not imported anywhere outside its definition file.
-
-### 9. `backend/src/routes/admin.ts` — Deprecated re-export shim
-
-Re-exports `default` from `./admin/index.js`. Still imported by `backend/src/index.ts` as `adminRoutes`. Functional but unnecessary indirection — `index.ts` could import from `./routes/admin/index.js` directly.
+| Priority | Items | Description |
+| -------- | ----- | ----------- |
+| —        | 0     | All identified dead code has been resolved |
 
 ---
 
@@ -56,7 +26,18 @@ The following were investigated and confirmed to be in active use:
 
 ## Resolved
 
-The following items were identified and removed on 2026-02-16:
+The following items were identified and removed on 2026-02-16.
+
+**Low priority (fifth pass — dead-code-low-cleanup spec):**
+
+14. ~~`AvailableProgramYearsResult` type alias in `AvailableProgramYearsService.ts`~~ — Removed (zero consumers)
+15. ~~`AreaRecognitionPanel` / `AreaRecognitionPanelProps` aliases in `DivisionAreaRecognitionPanel.tsx`~~ — Removed aliases, re-exports from `components/index.ts`, and alias verification test
+16. ~~`backend/src/routes/admin.ts` re-export shim~~ — Deleted; `backend/src/index.ts` updated to import from `./routes/admin/index.js` directly
+17. ~~`PerDistrictFileSnapshotStore` alias in `SnapshotStore.ts`~~ — Removed alias and updated ~11 test files to use `FileSnapshotStore` directly
+18. ~~`AreaProgressSummary` / `AreaProgressSummaryProps` aliases in `DivisionAreaProgressSummary.tsx`~~ — Removed aliases, re-exports from `components/index.ts`, and updated `AreaProgressSummary.test.tsx` to use `DivisionAreaProgressSummary` directly with `DivisionPerformance[]` data format
+19. ~~`createSnapshotStore()` on `ProductionServiceFactory` / `TestServiceFactory`~~ — Removed method from both factory interfaces, updated `snapshot-debug.ts` (5 occurrences) and ~10 test mock objects to use `createSnapshotStorage()`
+
+**Previously resolved:**
 
 **High priority (first pass):**
 

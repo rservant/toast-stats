@@ -13,7 +13,6 @@ import { RefreshService } from '../RefreshService.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
 import {
   FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
 } from '../SnapshotStore.js'
 import {
   createTestSelfCleanup,
@@ -22,7 +21,7 @@ import {
 
 describe('RefreshService', () => {
   let refreshService: RefreshService
-  let mockSnapshotStore: PerDistrictFileSnapshotStore
+  let mockSnapshotStore: FileSnapshotStore
   let mockRawCSVCache: RawCSVCacheService
   let testCleanup: { cleanup: TestSelfCleanup; afterEach: () => Promise<void> }
 
@@ -37,7 +36,7 @@ describe('RefreshService', () => {
       listSnapshots: vi.fn(),
       getSnapshot: vi.fn(),
       isReady: vi.fn().mockResolvedValue(true),
-    } as unknown as PerDistrictFileSnapshotStore
+    } as unknown as FileSnapshotStore
 
     mockRawCSVCache = {
       getAllDistrictsCached: vi.fn(),

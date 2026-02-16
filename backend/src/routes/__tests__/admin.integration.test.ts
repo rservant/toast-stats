@@ -11,7 +11,7 @@ import express from 'express'
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import adminRoutes from '../admin.js'
+import adminRoutes from '../admin/index.js'
 import { FileSnapshotStore } from '../../services/SnapshotStore.js'
 import { Snapshot } from '../../types/snapshots.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
@@ -22,7 +22,6 @@ const { mockFactory, setTestSnapshotStore } = vi.hoisted(() => {
   return {
     mockFactory: {
       createSnapshotStorage: () => testSnapshotStore,
-      createSnapshotStore: () => testSnapshotStore,
       createCacheConfigService: () => ({
         getConfiguration: () => ({
           baseDirectory: './test-cache',

@@ -27,7 +27,6 @@ const { mockFactory, setTestSnapshotStore } = vi.hoisted(() => {
   return {
     mockFactory: {
       createSnapshotStorage: () => testSnapshotStore,
-      createSnapshotStore: () => testSnapshotStore,
       createCacheConfigService: () => ({
         getConfiguration: () => ({
           baseDirectory: './test-cache',
