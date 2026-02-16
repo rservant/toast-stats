@@ -8,7 +8,6 @@ import { Router } from 'express'
 import { coreRouter } from './core.js'
 import { analyticsRouter } from './analytics.js'
 import { analyticsSummaryRouter } from './analyticsSummary.js'
-import { backfillRouter } from './backfill.js'
 import { snapshotsRouter } from './snapshots.js'
 import { rankingsRouter } from './rankings.js'
 
@@ -19,9 +18,6 @@ const router = Router()
 
 // Snapshots routes (includes /cache/dates which must come before /:districtId)
 router.use('/', snapshotsRouter)
-
-// Backfill routes (includes /backfill which must come before /:districtId)
-router.use('/', backfillRouter)
 
 // Core routes (includes / and /:districtId routes)
 router.use('/', coreRouter)
