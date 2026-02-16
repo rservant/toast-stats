@@ -2738,12 +2738,4 @@ export function createFileSnapshotStore(cacheDir?: string): FileSnapshotStore {
   })
 }
 
-/**
- * Factory function to create a PerDistrictFileSnapshotStore
- * @deprecated Use createFileSnapshotStore instead
- */
-export function createPerDistrictSnapshotStore(
-  cacheDir?: string
-): FileSnapshotStore {
-  return createFileSnapshotStore(cacheDir)
-}
+
